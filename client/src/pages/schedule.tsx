@@ -129,15 +129,15 @@ export default function Schedule() {
   });
 
   // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, shift: Shift) => {
+  const handleDragStart = (e: any, shift: Shift) => {
     e.dataTransfer.setData("shiftId", shift.id);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: any) => {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
+  const handleDrop = (e: any, targetDate: Date) => {
     e.preventDefault();
     const shiftId = e.dataTransfer.getData("shiftId");
     const shift = shifts.find(s => s.id === shiftId);

@@ -69,11 +69,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      const updated = await storage.updateWorkspace(workspace.id, req.body);
+      // Validate partial update, ensure no ownerId override
+      const { ownerId, ...updateData } = req.body;
+      const validated = insertWorkspaceSchema.partial().parse(updateData);
+
+      const updated = await storage.updateWorkspace(workspace.id, validated);
       res.json(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating workspace:", error);
-      res.status(500).json({ message: "Failed to update workspace" });
+      res.status(400).json({ message: error.message || "Failed to update workspace" });
     }
   });
 
