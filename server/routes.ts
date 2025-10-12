@@ -5,6 +5,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { sendShiftAssignmentEmail, sendInvoiceGeneratedEmail, sendEmployeeOnboardingEmail } from "./email";
 import { 
   insertWorkspaceSchema,
   insertEmployeeSchema,
@@ -118,6 +119,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const employee = await storage.createEmployee(validated);
+      
+      // Send onboarding email if employee has email
+      if (employee.email) {
+        sendEmployeeOnboardingEmail(employee.email, {
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          workspaceName: workspace.name,
+          role: employee.role || undefined
+        }).catch(err => console.error('Failed to send onboarding email:', err));
+      }
+      
       res.json(employee);
     } catch (error: any) {
       console.error("Error creating employee:", error);
@@ -298,6 +309,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const shift = await storage.createShift(validated);
+      
+      // Send shift assignment email if employee has email
+      if (shift.employeeId) {
+        const employee = await storage.getEmployee(shift.employeeId, workspace.id);
+        const client = shift.clientId ? await storage.getClient(shift.clientId, workspace.id) : null;
+        
+        if (employee?.email) {
+          const startTime = new Date(shift.startTime).toLocaleString('en-US', {
+            dateStyle: 'full',
+            timeStyle: 'short'
+          });
+          const endTime = new Date(shift.endTime).toLocaleString('en-US', {
+            timeStyle: 'short'
+          });
+          
+          sendShiftAssignmentEmail(employee.email, {
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            shiftTitle: shift.title || 'Shift',
+            startTime,
+            endTime,
+            clientName: client ? `${client.firstName} ${client.lastName}` : undefined
+          }).catch(err => console.error('Failed to send shift assignment email:', err));
+        }
+      }
+      
       res.json(shift);
     } catch (error: any) {
       console.error("Error creating shift:", error);
@@ -521,6 +557,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: entry.totalAmount as string || "0",
           timeEntryId: entry.id,
         });
+      }
+
+      // Send invoice notification email to workspace owner
+      const client = await storage.getClient(clientId, workspace.id);
+      const owner = await storage.getUser(workspace.ownerId);
+      
+      if (owner?.email) {
+        const dueDate = invoice.dueDate 
+          ? new Date(invoice.dueDate).toLocaleDateString('en-US', { dateStyle: 'long' })
+          : 'No due date';
+        
+        sendInvoiceGeneratedEmail(owner.email, {
+          clientName: client ? `${client.firstName} ${client.lastName}` : 'Unknown Client',
+          invoiceNumber: invoice.invoiceNumber,
+          total: total.toFixed(2),
+          dueDate
+        }).catch(err => console.error('Failed to send invoice email:', err));
       }
 
       res.json(invoice);
