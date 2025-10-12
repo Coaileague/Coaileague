@@ -28,7 +28,7 @@ import {
   type InsertInvoiceLineItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
 
 // Storage Interface with Multi-Tenant Methods
 export interface IStorage {
@@ -335,15 +335,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnbilledTimeEntries(workspaceId: string, clientId: string): Promise<TimeEntry[]> {
-    // TODO: Add check for entries not yet included in invoices
-    return await db
+    // Get all time entries for this client
+    const allEntries = await db
       .select()
       .from(timeEntries)
       .where(and(
         eq(timeEntries.workspaceId, workspaceId),
-        eq(timeEntries.clientId, clientId)
+        eq(timeEntries.clientId, clientId),
+        isNotNull(timeEntries.clockOut) // Only completed entries
       ))
       .orderBy(desc(timeEntries.clockIn));
+
+    // Get all time entry IDs that are already billed in THIS workspace
+    // Join with invoices to ensure workspace isolation
+    const billedEntries = await db
+      .select({ timeEntryId: invoiceLineItems.timeEntryId })
+      .from(invoiceLineItems)
+      .innerJoin(invoices, eq(invoiceLineItems.invoiceId, invoices.id))
+      .where(and(
+        eq(invoices.workspaceId, workspaceId),
+        isNotNull(invoiceLineItems.timeEntryId)
+      ));
+
+    const billedIds = new Set(billedEntries.map(e => e.timeEntryId).filter(Boolean));
+
+    // Filter out billed entries
+    return allEntries.filter(entry => !billedIds.has(entry.id));
   }
 
   async updateTimeEntry(id: string, workspaceId: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry | undefined> {

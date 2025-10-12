@@ -7,10 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Plus, 
   Search,
   FileText,
+  Clock,
 } from "lucide-react";
 import {
   Table,
@@ -37,17 +39,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Invoice, Client } from "@shared/schema";
+import type { Invoice, Client, TimeEntry } from "@shared/schema";
 
 export default function Invoices() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     clientId: "",
     dueDate: "",
     subtotal: "",
     taxRate: "0",
+  });
+  const [generateFormData, setGenerateFormData] = useState({
+    clientId: "",
+    dueDate: "",
+    taxRate: "8.5",
+    selectedTimeEntries: [] as string[],
   });
 
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
@@ -56,6 +65,11 @@ export default function Invoices() {
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+  });
+
+  const { data: unbilledTimeEntries = [] } = useQuery<TimeEntry[]>({
+    queryKey: ["/api/time-entries/unbilled", generateFormData.clientId],
+    enabled: !!generateFormData.clientId && isGenerateDialogOpen,
   });
 
   const createInvoiceMutation = useMutation({
@@ -96,6 +110,45 @@ export default function Invoices() {
     },
   });
 
+  const generateInvoiceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/invoices/generate-from-time", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/unbilled", generateFormData.clientId] });
+      toast({
+        title: "Success",
+        description: "Invoice generated from time entries successfully",
+      });
+      setIsGenerateDialogOpen(false);
+      setGenerateFormData({
+        clientId: "",
+        dueDate: "",
+        taxRate: "8.5",
+        selectedTimeEntries: [],
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate invoice",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = () => {
     if (!formData.clientId || !formData.dueDate || !formData.subtotal) {
       toast({
@@ -119,6 +172,48 @@ export default function Invoices() {
       total,
       status: "draft",
     });
+  };
+
+  const handleGenerateFromTime = () => {
+    if (!generateFormData.clientId || !generateFormData.dueDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a client and due date",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (generateFormData.selectedTimeEntries.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one time entry",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    generateInvoiceMutation.mutate({
+      clientId: generateFormData.clientId,
+      timeEntryIds: generateFormData.selectedTimeEntries,
+      dueDate: generateFormData.dueDate,
+      taxRate: parseFloat(generateFormData.taxRate),
+    });
+  };
+
+  const toggleTimeEntry = (id: string) => {
+    setGenerateFormData(prev => ({
+      ...prev,
+      selectedTimeEntries: prev.selectedTimeEntries.includes(id)
+        ? prev.selectedTimeEntries.filter(entryId => entryId !== id)
+        : [...prev.selectedTimeEntries, id],
+    }));
+  };
+
+  const calculateTimeEntryTotal = () => {
+    return unbilledTimeEntries
+      .filter(entry => generateFormData.selectedTimeEntries.includes(entry.id))
+      .reduce((sum, entry) => sum + parseFloat(entry.totalAmount as string || "0"), 0);
   };
 
   const getStatusColor = (status: string) => {
@@ -153,13 +248,124 @@ export default function Invoices() {
             </p>
           </div>
           
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-invoice">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Invoice
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-generate-from-time">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Generate from Time
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Generate Invoice from Time Entries</DialogTitle>
+                  <DialogDescription>
+                    Select unbilled time entries to create an invoice
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client *</Label>
+                      <Select value={generateFormData.clientId} onValueChange={(value) => setGenerateFormData({ ...generateFormData, clientId: value, selectedTimeEntries: [] })}>
+                        <SelectTrigger data-testid="select-generate-client">
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.firstName} {client.lastName}
+                              {client.companyName && ` - ${client.companyName}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Due Date *</Label>
+                      <Input 
+                        type="date" 
+                        value={generateFormData.dueDate}
+                        onChange={(e) => setGenerateFormData({ ...generateFormData, dueDate: e.target.value })}
+                        data-testid="input-generate-duedate" 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tax Rate (%)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.1" 
+                      value={generateFormData.taxRate}
+                      onChange={(e) => setGenerateFormData({ ...generateFormData, taxRate: e.target.value })}
+                      data-testid="input-generate-tax" 
+                    />
+                  </div>
+
+                  {generateFormData.clientId && (
+                    <div className="space-y-3">
+                      <Label>Select Time Entries</Label>
+                      {unbilledTimeEntries.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-4">
+                          No unbilled time entries for this client
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-3">
+                          {unbilledTimeEntries.map((entry) => (
+                            <div key={entry.id} className="flex items-start gap-3 p-3 rounded-md hover-elevate">
+                              <Checkbox
+                                checked={generateFormData.selectedTimeEntries.includes(entry.id)}
+                                onCheckedChange={() => toggleTimeEntry(entry.id)}
+                                data-testid={`checkbox-time-entry-${entry.id}`}
+                              />
+                              <div className="flex-1 space-y-1">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      {new Date(entry.clockIn).toLocaleDateString()} - {entry.totalHours} hrs
+                                    </p>
+                                    {entry.notes && (
+                                      <p className="text-xs text-muted-foreground mt-1">{entry.notes}</p>
+                                    )}
+                                  </div>
+                                  <p className="text-sm font-semibold">${entry.totalAmount}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {generateFormData.selectedTimeEntries.length > 0 && (
+                        <div className="flex justify-between items-center p-3 bg-muted rounded-md">
+                          <span className="font-medium">Total Selected:</span>
+                          <span className="text-lg font-semibold">${calculateTimeEntryTotal().toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleGenerateFromTime}
+                    disabled={generateInvoiceMutation.isPending || generateFormData.selectedTimeEntries.length === 0}
+                    data-testid="button-generate-invoice"
+                  >
+                    {generateInvoiceMutation.isPending ? "Generating..." : "Generate Invoice"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-invoice">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Invoice
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Create Invoice</DialogTitle>
@@ -240,6 +446,7 @@ export default function Invoices() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="relative max-w-md">

@@ -444,6 +444,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/invoices/generate-from-time', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { clientId, timeEntryIds, dueDate, taxRate } = req.body;
+
+      if (!clientId || !timeEntryIds || !Array.isArray(timeEntryIds) || timeEntryIds.length === 0) {
+        return res.status(400).json({ message: "Client ID and time entry IDs are required" });
+      }
+
+      // Get the time entries
+      const timeEntries = [];
+      for (const id of timeEntryIds) {
+        const entry = await storage.getTimeEntry(id, workspace.id);
+        if (entry && entry.clientId === clientId && entry.clockOut) {
+          timeEntries.push(entry);
+        }
+      }
+
+      if (timeEntries.length === 0) {
+        return res.status(400).json({ message: "No valid time entries found" });
+      }
+
+      // Calculate totals with NaN guards
+      let subtotal = 0;
+      for (const entry of timeEntries) {
+        const amount = parseFloat(entry.totalAmount as string || "0");
+        if (!isNaN(amount)) {
+          subtotal += amount;
+        }
+      }
+
+      // Tax rate is percentage, taxAmount is dollars
+      const taxRatePercent = parseFloat(taxRate || "0");
+      const taxAmount = isNaN(taxRatePercent) ? 0 : subtotal * (taxRatePercent / 100);
+      const total = subtotal + taxAmount;
+
+      // Calculate platform fee
+      const platformFeePercent = parseFloat(workspace.platformFeePercentage as string || "0");
+      const platformFeeAmount = isNaN(platformFeePercent) ? 0 : total * (platformFeePercent / 100);
+      const businessAmount = total - platformFeeAmount;
+
+      // Generate invoice number
+      const invoiceNumber = `INV-${Date.now()}`;
+
+      // Create invoice - store tax rate as percentage, not dollar amount
+      const invoice = await storage.createInvoice({
+        workspaceId: workspace.id,
+        clientId,
+        invoiceNumber,
+        issueDate: new Date().toISOString(),
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        subtotal: subtotal.toFixed(2),
+        taxRate: taxRatePercent.toFixed(2), // Store percentage, not dollar amount
+        taxAmount: taxAmount.toFixed(2),
+        total: total.toFixed(2),
+        platformFeePercentage: platformFeePercent.toFixed(2),
+        platformFeeAmount: platformFeeAmount.toFixed(2),
+        businessAmount: businessAmount.toFixed(2),
+        status: "draft",
+      });
+
+      // Create line items for each time entry
+      for (const entry of timeEntries) {
+        await storage.createInvoiceLineItem({
+          invoiceId: invoice.id,
+          description: entry.notes || `Time entry - ${new Date(entry.clockIn).toLocaleDateString()}`,
+          quantity: entry.totalHours as string || "0",
+          unitPrice: entry.hourlyRate as string || "0",
+          amount: entry.totalAmount as string || "0",
+          timeEntryId: entry.id,
+        });
+      }
+
+      res.json(invoice);
+    } catch (error: any) {
+      console.error("Error generating invoice from time entries:", error);
+      res.status(400).json({ message: error.message || "Failed to generate invoice" });
+    }
+  });
+
   // ============================================================================
   // TIME TRACKING ROUTES
   // ============================================================================
