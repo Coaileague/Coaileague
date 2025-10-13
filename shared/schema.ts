@@ -94,6 +94,16 @@ export const insertWorkspaceSchema = createInsertSchema(workspaces).omit({
 export type InsertWorkspace = z.infer<typeof insertWorkspaceSchema>;
 export type Workspace = typeof workspaces.$inferSelect;
 
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+export const workspaceRoleEnum = pgEnum('workspace_role', ['owner', 'manager', 'employee']);
+
+// ============================================================================
+// EMPLOYEE & CLIENT TABLES
+// ============================================================================
+
 // Employees (Staff within a workspace)
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -107,7 +117,8 @@ export const employees = pgTable("employees", {
   phone: varchar("phone"),
   
   // Employment details
-  role: varchar("role"), // e.g., "Technician", "Consultant", "Driver"
+  role: varchar("role"), // e.g., "Technician", "Consultant", "Driver" - job title
+  workspaceRole: workspaceRoleEnum("workspace_role").default("employee"), // Permission level
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   color: varchar("color").default("#3b82f6"), // For calendar display
   
@@ -337,6 +348,30 @@ export const insertInvoiceLineItemSchema = createInsertSchema(invoiceLineItems).
 
 export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
 export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
+
+// ============================================================================
+// ROLE-BASED ACCESS CONTROL
+// ============================================================================
+
+// Manager Assignments (which managers oversee which employees)
+export const managerAssignments = pgTable("manager_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  managerId: varchar("manager_id").notNull().references(() => employees.id, { onDelete: 'cascade' }), // Employee with manager role
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }), // Employee being managed
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertManagerAssignmentSchema = createInsertSchema(managerAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertManagerAssignment = z.infer<typeof insertManagerAssignmentSchema>;
+export type ManagerAssignment = typeof managerAssignments.$inferSelect;
 
 // ============================================================================
 // RELATIONS
