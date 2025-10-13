@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
-import { employees } from '@shared/schema';
+import { employees, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 export type WorkspaceRole = 'owner' | 'manager' | 'employee';
@@ -12,6 +12,7 @@ export interface AuthenticatedRequest extends Request {
     firstName?: string;
     lastName?: string;
   };
+  workspaceId?: string;
   workspaceRole?: WorkspaceRole;
   employeeId?: string;
 }
@@ -37,22 +38,123 @@ export async function getUserWorkspaceRole(
   };
 }
 
-export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const workspaceId = req.body.workspaceId || req.query.workspaceId || req.params.workspaceId;
-    
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'Workspace ID is required' });
+export async function resolveWorkspaceForUser(userId: string, requestedWorkspaceId?: string): Promise<{
+  workspaceId: string | null;
+  role: WorkspaceRole | null;
+  employeeId: string | null;
+  error?: string;
+}> {
+  // If workspaceId is explicitly provided, validate user has access to it
+  if (requestedWorkspaceId) {
+    // Check if user owns this workspace
+    const [ownedWorkspace] = await db
+      .select()
+      .from(workspaces)
+      .where(and(
+        eq(workspaces.id, requestedWorkspaceId),
+        eq(workspaces.ownerId, userId)
+      ))
+      .limit(1);
+
+    if (ownedWorkspace) {
+      // User is the owner of this workspace
+      const employee = await db.query.employees.findFirst({
+        where: and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, requestedWorkspaceId)
+        ),
+      });
+      return {
+        workspaceId: requestedWorkspaceId,
+        role: 'owner',
+        employeeId: employee?.id || null,
+      };
     }
 
+    // Check if user has employee access to this workspace
+    const { role, employeeId } = await getUserWorkspaceRole(userId, requestedWorkspaceId);
+    if (!role) {
+      return { 
+        workspaceId: null, 
+        role: null, 
+        employeeId: null,
+        error: 'You do not have access to this workspace' 
+      };
+    }
+    return { workspaceId: requestedWorkspaceId, role, employeeId };
+  }
+
+  // No workspaceId provided - resolve from user's memberships
+  const [ownedWorkspaces, userEmployees] = await Promise.all([
+    db.select().from(workspaces).where(eq(workspaces.ownerId, userId)),
+    db.query.employees.findMany({
+      where: eq(employees.userId, userId),
+    }),
+  ]);
+
+  // If user owns multiple workspaces, require explicit selection
+  if (ownedWorkspaces.length > 1) {
+    return {
+      workspaceId: null,
+      role: null,
+      employeeId: null,
+      error: 'Please specify workspaceId - you own multiple workspaces',
+    };
+  }
+
+  // If user owns exactly one workspace, use it
+  if (ownedWorkspaces.length === 1) {
+    const workspace = ownedWorkspaces[0];
+    const employee = userEmployees.find(e => e.workspaceId === workspace.id);
+    return {
+      workspaceId: workspace.id,
+      role: 'owner',
+      employeeId: employee?.id || null,
+    };
+  }
+
+  // User doesn't own any workspaces - check employee memberships
+  if (userEmployees.length === 0) {
+    return { 
+      workspaceId: null, 
+      role: null, 
+      employeeId: null,
+      error: 'User is not a member of any workspace' 
+    };
+  }
+
+  if (userEmployees.length === 1) {
+    const emp = userEmployees[0];
+    return {
+      workspaceId: emp.workspaceId,
+      role: (emp.workspaceRole as WorkspaceRole) || 'employee',
+      employeeId: emp.id,
+    };
+  }
+
+  // User has multiple employee records (multi-workspace scenario)
+  return {
+    workspaceId: null,
+    role: null,
+    employeeId: null,
+    error: 'Please specify workspaceId - you have access to multiple workspaces',
+  };
+}
+
+export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { role, employeeId } = await getUserWorkspaceRole(req.user.id, workspaceId as string);
+    const requestedWorkspaceId = req.body.workspaceId || req.query.workspaceId || req.params.workspaceId;
+    const { workspaceId, role, employeeId, error } = await resolveWorkspaceForUser(
+      req.user.id,
+      requestedWorkspaceId as string | undefined
+    );
 
-    if (!role) {
-      return res.status(403).json({ error: 'You do not have access to this workspace' });
+    if (!workspaceId || !role) {
+      return res.status(error?.includes('specify workspaceId') ? 400 : 403).json({ error });
     }
 
     if (!allowedRoles.includes(role)) {
@@ -62,6 +164,7 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
       });
     }
 
+    req.workspaceId = workspaceId;
     req.workspaceRole = role;
     req.employeeId = employeeId || undefined;
     next();

@@ -6,6 +6,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { sendShiftAssignmentEmail, sendInvoiceGeneratedEmail, sendEmployeeOnboardingEmail } from "./email";
+import { requireOwner, requireManager, validateManagerAssignment, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
   insertEmployeeSchema,
@@ -13,6 +14,7 @@ import {
   insertShiftSchema,
   insertTimeEntrySchema,
   insertInvoiceSchema,
+  insertManagerAssignmentSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -865,6 +867,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // ============================================================================
+  // MANAGER ASSIGNMENT ROUTES
+  // ============================================================================
+  
+  // Create manager assignment (owners only)
+  app.post('/api/manager-assignments', isAuthenticated, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+
+      const parsed = insertManagerAssignmentSchema.safeParse({
+        ...req.body,
+        workspaceId,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          message: "Invalid manager assignment data",
+          errors: parsed.error.errors 
+        });
+      }
+
+      // Validate manager assignment (cross-tenant check + role check)
+      const validation = await validateManagerAssignment(
+        parsed.data.managerId,
+        parsed.data.employeeId,
+        workspaceId
+      );
+
+      if (!validation.valid) {
+        return res.status(400).json({ message: validation.error });
+      }
+
+      const assignment = await storage.createManagerAssignment(parsed.data);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error creating manager assignment:", error);
+      res.status(500).json({ message: "Failed to create manager assignment" });
+    }
+  });
+
+  // Get manager assignments by workspace
+  app.get('/api/manager-assignments', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const assignments = await storage.getManagerAssignmentsByWorkspace(workspaceId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching manager assignments:", error);
+      res.status(500).json({ message: "Failed to fetch manager assignments" });
+    }
+  });
+
+  // Get assignments for a specific manager
+  app.get('/api/manager-assignments/manager/:managerId', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const assignments = await storage.getManagerAssignmentsByManager(req.params.managerId, workspaceId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching manager assignments:", error);
+      res.status(500).json({ message: "Failed to fetch manager assignments" });
+    }
+  });
+
+  // Get assignments for a specific employee
+  app.get('/api/manager-assignments/employee/:employeeId', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const assignments = await storage.getManagerAssignmentsByEmployee(req.params.employeeId, workspaceId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching manager assignments:", error);
+      res.status(500).json({ message: "Failed to fetch manager assignments" });
+    }
+  });
+
+  // Delete manager assignment (owners only)
+  app.delete('/api/manager-assignments/:id', isAuthenticated, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const success = await storage.deleteManagerAssignment(req.params.id, workspaceId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Manager assignment not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting manager assignment:", error);
+      res.status(500).json({ message: "Failed to delete manager assignment" });
     }
   });
 
