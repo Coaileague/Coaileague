@@ -7,6 +7,7 @@ import {
   employees,
   clients,
   shifts,
+  shiftTemplates,
   timeEntries,
   invoices,
   invoiceLineItems,
@@ -20,6 +21,8 @@ import {
   type InsertClient,
   type Shift,
   type InsertShift,
+  type ShiftTemplate,
+  type InsertShiftTemplate,
   type TimeEntry,
   type InsertTimeEntry,
   type Invoice,
@@ -62,6 +65,13 @@ export interface IStorage {
   getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date): Promise<Shift[]>;
   updateShift(id: string, workspaceId: string, data: Partial<InsertShift>): Promise<Shift | undefined>;
   deleteShift(id: string, workspaceId: string): Promise<boolean>;
+  
+  // Shift Template operations
+  createShiftTemplate(template: InsertShiftTemplate): Promise<ShiftTemplate>;
+  getShiftTemplate(id: string, workspaceId: string): Promise<ShiftTemplate | undefined>;
+  getShiftTemplatesByWorkspace(workspaceId: string): Promise<ShiftTemplate[]>;
+  updateShiftTemplate(id: string, workspaceId: string, data: Partial<InsertShiftTemplate>): Promise<ShiftTemplate | undefined>;
+  deleteShiftTemplate(id: string, workspaceId: string): Promise<boolean>;
   
   // Time Entry operations
   createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
@@ -311,6 +321,59 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(shifts.id, id),
         eq(shifts.workspaceId, workspaceId)
+      ));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ============================================================================
+  // SHIFT TEMPLATE OPERATIONS (with multi-tenant isolation)
+  // ============================================================================
+  
+  async createShiftTemplate(templateData: InsertShiftTemplate): Promise<ShiftTemplate> {
+    const [template] = await db
+      .insert(shiftTemplates)
+      .values(templateData)
+      .returning();
+    return template;
+  }
+
+  async getShiftTemplate(id: string, workspaceId: string): Promise<ShiftTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(shiftTemplates)
+      .where(and(
+        eq(shiftTemplates.id, id),
+        eq(shiftTemplates.workspaceId, workspaceId)
+      ));
+    return template;
+  }
+
+  async getShiftTemplatesByWorkspace(workspaceId: string): Promise<ShiftTemplate[]> {
+    return await db
+      .select()
+      .from(shiftTemplates)
+      .where(eq(shiftTemplates.workspaceId, workspaceId))
+      .orderBy(desc(shiftTemplates.createdAt));
+  }
+
+  async updateShiftTemplate(id: string, workspaceId: string, data: Partial<InsertShiftTemplate>): Promise<ShiftTemplate | undefined> {
+    const [template] = await db
+      .update(shiftTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(
+        eq(shiftTemplates.id, id),
+        eq(shiftTemplates.workspaceId, workspaceId)
+      ))
+      .returning();
+    return template;
+  }
+
+  async deleteShiftTemplate(id: string, workspaceId: string): Promise<boolean> {
+    const result = await db
+      .delete(shiftTemplates)
+      .where(and(
+        eq(shiftTemplates.id, id),
+        eq(shiftTemplates.workspaceId, workspaceId)
       ));
     return result.rowCount ? result.rowCount > 0 : false;
   }

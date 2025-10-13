@@ -204,6 +204,30 @@ export const insertShiftSchema = createInsertSchema(shifts).omit({
 export type InsertShift = z.infer<typeof insertShiftSchema>;
 export type Shift = typeof shifts.$inferSelect;
 
+// Shift Templates (Reusable shift patterns)
+export const shiftTemplates = pgTable("shift_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  name: varchar("name").notNull(),
+  title: varchar("title"),
+  description: text("description"),
+  durationHours: decimal("duration_hours", { precision: 5, scale: 2 }).notNull(),
+  billableToClient: boolean("billable_to_client").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertShiftTemplateSchema = createInsertSchema(shiftTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertShiftTemplate = z.infer<typeof insertShiftTemplateSchema>;
+export type ShiftTemplate = typeof shiftTemplates.$inferSelect;
+
 // Time Entries (Actual clock-in/clock-out for billing)
 export const timeEntries = pgTable("time_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

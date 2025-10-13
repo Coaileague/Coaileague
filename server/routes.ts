@@ -387,6 +387,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk create shifts (recurring)
+  app.post('/api/shifts/bulk', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { employeeId, clientId, title, description, startDate, endDate, startTime, endTime, recurrence, days } = req.body;
+      
+      // Create shifts based on recurrence pattern
+      const createdShifts = [];
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      while (start <= end) {
+        // Check if this day matches the recurrence pattern
+        let shouldCreate = false;
+        if (recurrence === 'daily') {
+          shouldCreate = true;
+        } else if (recurrence === 'weekly' && days?.includes(start.getDay())) {
+          shouldCreate = true;
+        }
+        
+        if (shouldCreate) {
+          const shiftStart = new Date(start);
+          const [hours, minutes] = startTime.split(':');
+          shiftStart.setHours(parseInt(hours), parseInt(minutes), 0);
+          
+          const shiftEnd = new Date(start);
+          const [endHours, endMinutes] = endTime.split(':');
+          shiftEnd.setHours(parseInt(endHours), parseInt(endMinutes), 0);
+          
+          const shift = await storage.createShift({
+            workspaceId: workspace.id,
+            employeeId,
+            clientId: clientId || null,
+            title: title || null,
+            description: description || null,
+            startTime: shiftStart.toISOString(),
+            endTime: shiftEnd.toISOString(),
+            status: 'scheduled',
+          });
+          
+          createdShifts.push(shift);
+        }
+        
+        start.setDate(start.getDate() + 1);
+      }
+      
+      res.json({ shifts: createdShifts, count: createdShifts.length });
+    } catch (error: any) {
+      console.error("Error creating bulk shifts:", error);
+      res.status(400).json({ message: error.message || "Failed to create bulk shifts" });
+    }
+  });
+
+  // ============================================================================
+  // SHIFT TEMPLATE ROUTES (Multi-tenant isolated)
+  // ============================================================================
+  
+  app.get('/api/shift-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const templates = await storage.getShiftTemplatesByWorkspace(workspace.id);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching shift templates:", error);
+      res.status(500).json({ message: "Failed to fetch shift templates" });
+    }
+  });
+
+  app.post('/api/shift-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const template = await storage.createShiftTemplate({
+        ...req.body,
+        workspaceId: workspace.id,
+      });
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error creating shift template:", error);
+      res.status(400).json({ message: error.message || "Failed to create shift template" });
+    }
+  });
+
+  app.delete('/api/shift-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const deleted = await storage.deleteShiftTemplate(req.params.id, workspace.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting shift template:", error);
+      res.status(500).json({ message: "Failed to delete shift template" });
+    }
+  });
+
   // ============================================================================
   // TIME ENTRY ROUTES (Multi-tenant isolated)
   // ============================================================================
