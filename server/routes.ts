@@ -697,8 +697,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workspaceId: workspace.id,
         clientId,
         invoiceNumber,
-        issueDate: new Date().toISOString(),
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        issueDate: new Date(),
+        dueDate: dueDate ? new Date(dueDate) : undefined,
         subtotal: subtotal.toFixed(2),
         taxRate: taxRatePercent.toFixed(2), // Store percentage, not dollar amount
         taxAmount: taxAmount.toFixed(2),

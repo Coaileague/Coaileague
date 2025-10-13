@@ -138,10 +138,25 @@ Business Amount = Total - Platform Fee
 - Multi-tenant isolation verified and secure
 - Ready for notification systems and calendar integrations
 
+## Demo System ✨ *New*
+- **Interactive Demo Workspace** - Prospects can try the platform without signing up
+- Landing page "View Demo" button (/api/demo-login)
+- Pre-populated with realistic sample data:
+  * 5 employees (varied roles and rates)
+  * 3 clients (with company info)
+  * 10 shifts (past and future)
+  * 5 time entries (3 billed, 2 unbilled)
+  * 2 invoices (1 paid, 1 sent)
+- Demo mode banner with "Sign Up for Free" CTA
+- Reset script: `tsx scripts/reset-demo.ts` (manual cleanup)
+- Shared workspace model (low cost, resets every 24hrs)
+
 ## Next Priorities
-1. Email notification system (shift assignments, reminders, invoices)
-2. SMS notifications via Twilio integration
-3. Calendar export (iCal) and Google Calendar sync
-4. Advanced scheduling (recurring shifts, shift swaps, availability)
-5. Comprehensive end-to-end testing
-6. Production deployment preparation
+1. **Autonomous Scheduling** - Smart auto-assignment based on availability
+2. **Time-off Management** - Request/approval workflow
+3. **GPS Clock-in** - Location verification for shifts
+4. **Attendance Intelligence** - Late detection & manager alerts
+5. **PDF Reports** - Hours worked, client billing reports
+6. **Role-Based Access** - Owner/Manager/Employee permissions
+7. **Push Notifications** - Shift alerts, approvals, reminders
+8. **Production deployment preparation**
