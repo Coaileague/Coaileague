@@ -46,22 +46,34 @@ ShiftSync is a comprehensive multi-tenant scheduling and workforce management pl
   - Invoice statistics and payment rates
   - Subscription tier display
 
+- ✅ **Role-Based Access Control (RBAC)**
+  - Three role levels: Owner, Manager, Employee
+  - Hybrid workspace resolution (explicit workspaceId or auto-detect)
+  - Manager assignment system for hierarchical workflows
+  - Route-level authorization middleware
+  - Multi-workspace support with explicit selection
+
+- ✅ **Advanced Scheduling**
+  - Shift templates (reusable patterns)
+  - Recurring shifts (daily/weekly with date ranges)
+  
 - 🚧 **Email Notifications** (Planned)
 - 🚧 **SMS Notifications** (Planned)
 - 🚧 **Calendar Export/Import** (Planned)
-- 🚧 **Advanced Scheduling** (Recurring shifts, shift swaps, templates)
 
 ## Database Schema
 
 ### Core Tables
 - **users**: User accounts (Replit Auth integration)
 - **workspaces**: Business tenants with subscription info
-- **employees**: Workspace-scoped employee records
+- **employees**: Workspace-scoped employee records with workspaceRole (owner/manager/employee)
 - **clients**: Workspace-scoped client records
 - **shifts**: Scheduled work periods (employee + client + time)
+- **shift_templates**: Reusable shift patterns
 - **time_entries**: Clock-in/out records with billing calculations
 - **invoices**: Client invoices with platform fee tracking
 - **invoice_line_items**: Individual invoice items (linked to time entries)
+- **manager_assignments**: Manager-employee hierarchical relationships
 
 ## Multi-Tenant Security
 
@@ -75,6 +87,45 @@ ShiftSync is a comprehensive multi-tenant scheduling and workforce management pl
 - Invoice generation filters unbilled time entries with workspace-scoped joins
 - Analytics calculations scoped to workspace data only
 - Storage layer enforces workspace isolation on all operations
+
+## Role-Based Access Control (RBAC)
+
+### Role Hierarchy
+- **Owner**: Full workspace control, can assign managers, manage billing
+- **Manager**: Can manage assigned employees, approve requests, view reports
+- **Employee**: Can clock in/out, view own schedule, submit requests
+
+### Workspace Resolution (Hybrid Model)
+The RBAC middleware uses a hybrid workspace resolution strategy:
+
+1. **Explicit workspaceId**: If provided in request, validates user has access
+   - Checks workspace ownership first (for owners)
+   - Then checks employee membership (for managers/employees)
+   - Rejects unauthorized access with 403
+
+2. **Auto-detection**: If no workspaceId provided
+   - Single workspace owner → uses owned workspace
+   - Single employee membership → uses that workspace
+   - Multiple workspaces → returns 400 error requiring explicit selection
+
+### Manager Assignment System
+- **Table**: `manager_assignments` links managers to employees
+- **Validation**: Cross-tenant checks ensure manager/employee in same workspace
+- **Role Check**: Only employees with 'manager' or 'owner' role can be assigned as managers
+- **Unique Constraint**: Prevents duplicate manager-employee pairs
+
+### API Authorization Patterns
+```typescript
+requireOwner    // Owners only (e.g., billing, workspace settings)
+requireManager  // Owners and managers (e.g., reports, approvals)
+requireEmployee // All roles (e.g., view schedule, clock in/out)
+```
+
+### Security Guarantees
+- No cross-tenant data access (validated at middleware level)
+- Role-based route protection (enforced before business logic)
+- Multi-workspace support (explicit selection when ambiguous)
+- Manager assignments validated for workspace membership and role
 
 ## Payment Architecture
 
