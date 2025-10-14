@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import ModernLayout from "@/components/ModernLayout";
 import { 
   Plus, 
@@ -463,9 +464,32 @@ export default function Invoices() {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-          </div>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice #</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         ) : filteredInvoices.length === 0 && !searchQuery ? (
           <Card data-testid="card-no-invoices">
             <CardContent className="flex flex-col items-center justify-center py-16">
@@ -498,11 +522,11 @@ export default function Invoices() {
                   <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`}>
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getClientName(invoice.clientId)}</TableCell>
-                    <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                    <TableCell>${invoice.total.toFixed(2)}</TableCell>
+                    <TableCell>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell>${typeof invoice.total === 'number' ? invoice.total.toFixed(2) : parseFloat(invoice.total as string || '0').toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusColor(invoice.status)}>
-                        {invoice.status}
+                      <Badge variant={getStatusColor(invoice.status || 'draft')}>
+                        {invoice.status || 'draft'}
                       </Badge>
                     </TableCell>
                     <TableCell>
