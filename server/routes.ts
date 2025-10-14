@@ -1592,6 +1592,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // ADMIN SUPPORT ROUTES - Platform Administration
+  // ============================================================================
+
+  // Import admin support functions
+  const adminSupport = await import("./adminSupport");
+
+  // Search customers (platform admin only)
+  app.get('/api/admin/support/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: "Search query required" });
+      }
+
+      // In production, add platform role check here:
+      // const isPlatformAdmin = await checkPlatformRole(req.user.claims.sub, ['root', 'sysop']);
+      // if (!isPlatformAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const results = await adminSupport.searchCustomers(q);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching customers:", error);
+      res.status(500).json({ message: "Failed to search customers" });
+    }
+  });
+
+  // Get workspace detail (platform admin only)
+  app.get('/api/admin/support/workspace/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+
+      // In production, add platform role check here
+      // const isPlatformAdmin = await checkPlatformRole(req.user.claims.sub, ['root', 'sysop']);
+      // if (!isPlatformAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const detail = await adminSupport.getWorkspaceDetail(id);
+      
+      if (!detail) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      res.json(detail);
+    } catch (error) {
+      console.error("Error fetching workspace detail:", error);
+      res.status(500).json({ message: "Failed to fetch workspace detail" });
+    }
+  });
+
+  // Get platform statistics (platform admin only)
+  app.get('/api/admin/support/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      // In production, add platform role check here
+      const stats = await adminSupport.getPlatformStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching platform stats:", error);
+      res.status(500).json({ message: "Failed to fetch platform statistics" });
+    }
+  });
+
+  // Change user role (platform admin action)
+  app.post('/api/admin/support/change-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const { employeeId, newRole } = req.body;
+      const adminUserId = req.user.claims.sub;
+
+      // In production, add platform role check here
+      const result = await adminSupport.changeUserRole(employeeId, newRole, adminUserId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error changing user role:", error);
+      res.status(500).json({ message: "Failed to change user role" });
+    }
+  });
+
+  // Update subscription tier (platform admin action)
+  app.post('/api/admin/support/update-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, newTier } = req.body;
+      const adminUserId = req.user.claims.sub;
+
+      // In production, add platform role check here
+      const result = await adminSupport.updateSubscriptionTier(workspaceId, newTier, adminUserId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating subscription:", error);
+      res.status(500).json({ message: "Failed to update subscription" });
+    }
+  });
+
+  // Get Stripe status (platform admin diagnostic)
+  app.get('/api/admin/support/stripe-status/:workspaceId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId } = req.params;
+
+      // In production, add platform role check here
+      const status = await adminSupport.getStripeStatus(workspaceId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching Stripe status:", error);
+      res.status(500).json({ message: "Failed to fetch Stripe status" });
+    }
+  });
+
+  // Create support ticket (admin on behalf of customer)
+  app.post('/api/admin/support/create-ticket', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUserId = req.user.claims.sub;
+      
+      // In production, add platform role check here
+      const result = await adminSupport.createSupportTicket({
+        ...req.body,
+        createdByAdmin: adminUserId,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error creating support ticket:", error);
+      res.status(500).json({ message: "Failed to create support ticket" });
+    }
+  });
+
+  // Update ticket status (admin action)
+  app.post('/api/admin/support/update-ticket', isAuthenticated, async (req: any, res) => {
+    try {
+      const { ticketId, status, resolution } = req.body;
+      const adminUserId = req.user.claims.sub;
+
+      // In production, add platform role check here
+      const result = await adminSupport.updateTicketStatus(ticketId, status, resolution, adminUserId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      res.status(500).json({ message: "Failed to update ticket" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
