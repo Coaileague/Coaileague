@@ -36,6 +36,7 @@ import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
 import AdminUsage from "@/pages/admin-usage";
 import AdminSupport from "@/pages/admin-support";
+import CustomerSupport from "@/pages/customer-support";
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -96,6 +97,7 @@ function AppContent() {
                 <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/contact" component={Contact} />
+                <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support" component={Support} />
                 <Route component={NotFound} />
               </Switch>

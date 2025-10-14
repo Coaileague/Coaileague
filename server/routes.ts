@@ -1593,9 +1593,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Support Tickets - Create ticket
-  app.post('/api/support-tickets', async (req, res) => {
+  // Support Tickets - Create ticket (requires authentication to get workspaceId)
+  app.post('/api/support/tickets', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
       const validated = insertSupportTicketSchema.parse(req.body);
       
       // Generate ticket number
@@ -1604,6 +1610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ticket = await storage.createSupportTicket({
         ...validated,
         ticketNumber,
+        workspaceId: user.currentWorkspaceId,
       });
 
       res.json(ticket);
@@ -1613,8 +1620,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get support tickets
-  app.get('/api/support-tickets', isAuthenticated, async (req: any, res) => {
+  // Get support tickets for current workspace
+  app.get('/api/support/tickets', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1631,7 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update support ticket status
-  app.patch('/api/support-tickets/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/support/tickets/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       const ticket = await storage.updateSupportTicket(id, req.body);
