@@ -7,12 +7,198 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, ClipboardCheck, Clock, AlertCircle, CheckCircle2, XCircle, Play, Pause } from "lucide-react";
+import { FileText, ClipboardCheck, Clock, AlertCircle, CheckCircle2, XCircle, Play, Pause, Plus } from "lucide-react";
 import type { ReportTemplate, ReportSubmission } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+interface TemplateField {
+  name: string;
+  type: string;
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
+interface ReportSubmissionFormProps {
+  template: ReportTemplate;
+  onSubmit: (data: Record<string, any>) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+}
+
+function ReportSubmissionForm({ template, onSubmit, onCancel, isSubmitting }: ReportSubmissionFormProps) {
+  const fields = (template.fields as TemplateField[]) || [];
+  const hasFileFields = fields.some(f => f.type === "file");
+  
+  const formSchema = z.object(
+    fields.reduce((acc, field) => {
+      let validator: any;
+      
+      if (field.type === "number") {
+        if (field.required) {
+          validator = z.string()
+            .min(1, `${field.label} is required`)
+            .refine((val) => !isNaN(Number(val)), {
+              message: `${field.label} must be a valid number`,
+            })
+            .transform((val) => Number(val));
+        } else {
+          validator = z.string()
+            .optional()
+            .transform((val) => val && val.trim() !== "" ? Number(val) : undefined)
+            .refine((val) => val === undefined || !isNaN(val as number), {
+              message: `${field.label} must be a valid number`,
+            });
+        }
+      } else if (field.type === "file") {
+        validator = z.any().optional();
+      } else {
+        validator = z.string();
+        if (field.required) {
+          validator = validator.min(1, `${field.label} is required`);
+        } else {
+          validator = validator.optional();
+        }
+      }
+      
+      acc[field.name] = validator;
+      return acc;
+    }, {} as Record<string, any>)
+  );
+
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: fields.reduce((acc, field) => {
+      acc[field.name] = "";
+      return acc;
+    }, {} as Record<string, any>),
+  });
+
+  const handleSubmit = (data: Record<string, any>) => {
+    onSubmit(data);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        {hasFileFields && (
+          <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md text-sm text-yellow-600 dark:text-yellow-500">
+            <AlertCircle className="w-4 h-4 inline mr-2" />
+            Note: File upload fields are displayed but attachments must be added separately after submission.
+          </div>
+        )}
+        {fields.map((field) => (
+          <FormField
+            key={field.name}
+            control={form.control}
+            name={field.name}
+            render={({ field: formField }) => (
+              <FormItem>
+                <FormLabel>
+                  {field.label}
+                  {field.required && <span className="text-destructive ml-1">*</span>}
+                </FormLabel>
+                <FormControl>
+                  {field.type === "textarea" ? (
+                    <Textarea
+                      {...formField}
+                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      data-testid={`input-${field.name}`}
+                    />
+                  ) : field.type === "select" && field.options ? (
+                    <Select 
+                      onValueChange={formField.onChange} 
+                      value={formField.value || undefined}
+                      defaultValue={formField.value || undefined}
+                    >
+                      <SelectTrigger data-testid={`select-${field.name}`}>
+                        <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : field.type === "number" ? (
+                    <Input
+                      {...formField}
+                      type="number"
+                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      data-testid={`input-${field.name}`}
+                    />
+                  ) : field.type === "date" ? (
+                    <Input
+                      {...formField}
+                      type="date"
+                      data-testid={`input-${field.name}`}
+                    />
+                  ) : field.type === "file" ? (
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files) {
+                          formField.onChange(Array.from(files));
+                        }
+                      }}
+                      data-testid={`input-${field.name}`}
+                    />
+                  ) : (
+                    <Input
+                      {...formField}
+                      type="text"
+                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      data-testid={`input-${field.name}`}
+                    />
+                  )}
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ))}
+        
+        <div className="flex gap-2 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            data-testid="button-cancel-report"
+          >
+            Back
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            data-testid="button-submit-report"
+            className="flex-1"
+          >
+            {isSubmitting ? "Submitting..." : "Submit Report"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("templates");
+  const [isNewReportOpen, setIsNewReportOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
   const { toast } = useToast();
 
   const { data: templates = [], isLoading: templatesLoading, error: templatesError } = useQuery<ReportTemplate[]>({
@@ -43,6 +229,35 @@ export default function ReportsPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to update template",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const submitReport = useMutation({
+    mutationFn: async (data: { templateId: string; formData: Record<string, any> }) => {
+      const res = await fetch("/api/reports/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to submit report");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/submissions"] });
+      toast({
+        title: "Report Submitted",
+        description: "Your report has been submitted for review",
+      });
+      setIsNewReportOpen(false);
+      setSelectedTemplate(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit report",
         variant: "destructive",
       });
     },
@@ -101,6 +316,64 @@ export default function ReportsPage() {
               Create, review, and manage organizational reports
             </p>
           </div>
+          <Dialog open={isNewReportOpen} onOpenChange={setIsNewReportOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-new-report">
+                <Plus className="w-4 h-4 mr-2" />
+                New Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Report</DialogTitle>
+                <DialogDescription>
+                  {selectedTemplate ? `Complete the ${selectedTemplate.name}` : "Select a template to get started"}
+                </DialogDescription>
+              </DialogHeader>
+              {!selectedTemplate ? (
+                <div className="space-y-3">
+                  {activeTemplates.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">
+                      No active templates available. Please contact your administrator.
+                    </p>
+                  ) : (
+                    activeTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => setSelectedTemplate(template)}
+                        className="w-full p-4 border rounded-md hover-elevate active-elevate-2 text-left"
+                        data-testid={`button-select-template-${template.id}`}
+                      >
+                        <h3 className="font-semibold">{template.name}</h3>
+                        {template.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {template.description}
+                          </p>
+                        )}
+                        {template.category && (
+                          <Badge variant="outline" className="text-xs capitalize mt-2">
+                            {template.category.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <ReportSubmissionForm 
+                  template={selectedTemplate} 
+                  onSubmit={(formData) => {
+                    submitReport.mutate({
+                      templateId: selectedTemplate.id,
+                      formData,
+                    });
+                  }}
+                  onCancel={() => setSelectedTemplate(null)}
+                  isSubmitting={submitReport.isPending}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
         {/* Header Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
