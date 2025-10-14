@@ -12,6 +12,10 @@ import {
   invoices,
   invoiceLineItems,
   managerAssignments,
+  onboardingInvites,
+  onboardingApplications,
+  documentSignatures,
+  employeeCertifications,
   type User,
   type UpsertUser,
   type Workspace,
@@ -32,9 +36,17 @@ import {
   type InsertInvoiceLineItem,
   type ManagerAssignment,
   type InsertManagerAssignment,
+  type OnboardingInvite,
+  type InsertOnboardingInvite,
+  type OnboardingApplication,
+  type InsertOnboardingApplication,
+  type DocumentSignature,
+  type InsertDocumentSignature,
+  type EmployeeCertification,
+  type InsertEmployeeCertification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { eq, and, desc, isNotNull, or, like } from "drizzle-orm";
 
 // Storage Interface with Multi-Tenant Methods
 export interface IStorage {
@@ -111,6 +123,32 @@ export interface IStorage {
   getManagerAssignmentsByManager(managerId: string, workspaceId: string): Promise<ManagerAssignment[]>;
   getManagerAssignmentsByEmployee(employeeId: string, workspaceId: string): Promise<ManagerAssignment[]>;
   deleteManagerAssignment(id: string, workspaceId: string): Promise<boolean>;
+  
+  // Onboarding Invite operations
+  createOnboardingInvite(invite: InsertOnboardingInvite): Promise<OnboardingInvite>;
+  getOnboardingInviteByToken(token: string): Promise<OnboardingInvite | undefined>;
+  getOnboardingInvitesByWorkspace(workspaceId: string): Promise<OnboardingInvite[]>;
+  updateOnboardingInvite(id: string, data: Partial<InsertOnboardingInvite>): Promise<OnboardingInvite | undefined>;
+  
+  // Onboarding Application operations
+  createOnboardingApplication(application: InsertOnboardingApplication): Promise<OnboardingApplication>;
+  getOnboardingApplication(id: string, workspaceId: string): Promise<OnboardingApplication | undefined>;
+  getOnboardingApplicationsByWorkspace(workspaceId: string): Promise<OnboardingApplication[]>;
+  updateOnboardingApplication(id: string, workspaceId: string, data: Partial<InsertOnboardingApplication>): Promise<OnboardingApplication | undefined>;
+  searchEmployeesAndApplications(workspaceId: string, query: string): Promise<(Employee | OnboardingApplication)[]>;
+  generateEmployeeNumber(workspaceId: string): Promise<string>;
+  
+  // Document Signature operations
+  createDocumentSignature(signature: InsertDocumentSignature): Promise<DocumentSignature>;
+  getDocumentSignature(id: string, workspaceId: string): Promise<DocumentSignature | undefined>;
+  getDocumentSignaturesByApplication(applicationId: string): Promise<DocumentSignature[]>;
+  updateDocumentSignature(id: string, workspaceId: string, data: Partial<InsertDocumentSignature>): Promise<DocumentSignature | undefined>;
+  
+  // Employee Certification operations
+  createEmployeeCertification(certification: InsertEmployeeCertification): Promise<EmployeeCertification>;
+  getEmployeeCertificationsByEmployee(employeeId: string, workspaceId: string): Promise<EmployeeCertification[]>;
+  getEmployeeCertificationsByApplication(applicationId: string): Promise<EmployeeCertification[]>;
+  updateEmployeeCertification(id: string, workspaceId: string, data: Partial<InsertEmployeeCertification>): Promise<EmployeeCertification | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -645,6 +683,236 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result.rowCount !== null && result.rowCount > 0;
+  }
+  
+  // ============================================================================
+  // ONBOARDING INVITE OPERATIONS
+  // ============================================================================
+  
+  async createOnboardingInvite(invite: InsertOnboardingInvite): Promise<OnboardingInvite> {
+    const [newInvite] = await db.insert(onboardingInvites).values(invite).returning();
+    return newInvite;
+  }
+  
+  async getOnboardingInviteByToken(token: string): Promise<OnboardingInvite | undefined> {
+    const [invite] = await db.select().from(onboardingInvites).where(eq(onboardingInvites.inviteToken, token));
+    return invite;
+  }
+  
+  async getOnboardingInvitesByWorkspace(workspaceId: string): Promise<OnboardingInvite[]> {
+    return await db
+      .select()
+      .from(onboardingInvites)
+      .where(eq(onboardingInvites.workspaceId, workspaceId))
+      .orderBy(desc(onboardingInvites.createdAt));
+  }
+  
+  async updateOnboardingInvite(id: string, data: Partial<InsertOnboardingInvite>): Promise<OnboardingInvite | undefined> {
+    const [updated] = await db
+      .update(onboardingInvites)
+      .set(data)
+      .where(eq(onboardingInvites.id, id))
+      .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // ONBOARDING APPLICATION OPERATIONS
+  // ============================================================================
+  
+  async createOnboardingApplication(application: InsertOnboardingApplication): Promise<OnboardingApplication> {
+    const [newApplication] = await db.insert(onboardingApplications).values(application).returning();
+    return newApplication;
+  }
+  
+  async getOnboardingApplication(id: string, workspaceId: string): Promise<OnboardingApplication | undefined> {
+    const [application] = await db
+      .select()
+      .from(onboardingApplications)
+      .where(
+        and(
+          eq(onboardingApplications.id, id),
+          eq(onboardingApplications.workspaceId, workspaceId)
+        )
+      );
+    return application;
+  }
+  
+  async getOnboardingApplicationsByWorkspace(workspaceId: string): Promise<OnboardingApplication[]> {
+    return await db
+      .select()
+      .from(onboardingApplications)
+      .where(eq(onboardingApplications.workspaceId, workspaceId))
+      .orderBy(desc(onboardingApplications.createdAt));
+  }
+  
+  async updateOnboardingApplication(
+    id: string,
+    workspaceId: string,
+    data: Partial<InsertOnboardingApplication>
+  ): Promise<OnboardingApplication | undefined> {
+    const [updated] = await db
+      .update(onboardingApplications)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(onboardingApplications.id, id),
+          eq(onboardingApplications.workspaceId, workspaceId)
+        )
+      )
+      .returning();
+    return updated;
+  }
+  
+  async searchEmployeesAndApplications(workspaceId: string, query: string): Promise<(Employee | OnboardingApplication)[]> {
+    const searchPattern = `%${query}%`;
+    
+    const employeeResults = await db
+      .select()
+      .from(employees)
+      .where(
+        and(
+          eq(employees.workspaceId, workspaceId),
+          or(
+            like(employees.firstName, searchPattern),
+            like(employees.lastName, searchPattern),
+            like(employees.email, searchPattern)
+          )
+        )
+      );
+    
+    const applicationResults = await db
+      .select()
+      .from(onboardingApplications)
+      .where(
+        and(
+          eq(onboardingApplications.workspaceId, workspaceId),
+          or(
+            like(onboardingApplications.firstName, searchPattern),
+            like(onboardingApplications.lastName, searchPattern),
+            like(onboardingApplications.email, searchPattern),
+            like(onboardingApplications.employeeNumber, searchPattern)
+          )
+        )
+      );
+    
+    return [...employeeResults, ...applicationResults];
+  }
+  
+  async generateEmployeeNumber(workspaceId: string): Promise<string> {
+    // Get count of employees and applications for this workspace
+    const employeeCount = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.workspaceId, workspaceId));
+    
+    const applicationCount = await db
+      .select()
+      .from(onboardingApplications)
+      .where(eq(onboardingApplications.workspaceId, workspaceId));
+    
+    const totalCount = employeeCount.length + applicationCount.length + 1;
+    
+    // Generate employee number: EMP-YYYY-XXXX
+    const year = new Date().getFullYear();
+    const paddedNumber = String(totalCount).padStart(4, '0');
+    return `EMP-${year}-${paddedNumber}`;
+  }
+  
+  // ============================================================================
+  // DOCUMENT SIGNATURE OPERATIONS
+  // ============================================================================
+  
+  async createDocumentSignature(signature: InsertDocumentSignature): Promise<DocumentSignature> {
+    const [newSignature] = await db.insert(documentSignatures).values(signature).returning();
+    return newSignature;
+  }
+  
+  async getDocumentSignature(id: string, workspaceId: string): Promise<DocumentSignature | undefined> {
+    const [signature] = await db
+      .select()
+      .from(documentSignatures)
+      .where(
+        and(
+          eq(documentSignatures.id, id),
+          eq(documentSignatures.workspaceId, workspaceId)
+        )
+      );
+    return signature;
+  }
+  
+  async getDocumentSignaturesByApplication(applicationId: string): Promise<DocumentSignature[]> {
+    return await db
+      .select()
+      .from(documentSignatures)
+      .where(eq(documentSignatures.applicationId, applicationId))
+      .orderBy(desc(documentSignatures.createdAt));
+  }
+  
+  async updateDocumentSignature(
+    id: string,
+    workspaceId: string,
+    data: Partial<InsertDocumentSignature>
+  ): Promise<DocumentSignature | undefined> {
+    const [updated] = await db
+      .update(documentSignatures)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(documentSignatures.id, id),
+          eq(documentSignatures.workspaceId, workspaceId)
+        )
+      )
+      .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // EMPLOYEE CERTIFICATION OPERATIONS
+  // ============================================================================
+  
+  async createEmployeeCertification(certification: InsertEmployeeCertification): Promise<EmployeeCertification> {
+    const [newCertification] = await db.insert(employeeCertifications).values(certification).returning();
+    return newCertification;
+  }
+  
+  async getEmployeeCertificationsByEmployee(employeeId: string, workspaceId: string): Promise<EmployeeCertification[]> {
+    return await db
+      .select()
+      .from(employeeCertifications)
+      .where(
+        and(
+          eq(employeeCertifications.employeeId, employeeId),
+          eq(employeeCertifications.workspaceId, workspaceId)
+        )
+      )
+      .orderBy(desc(employeeCertifications.createdAt));
+  }
+  
+  async getEmployeeCertificationsByApplication(applicationId: string): Promise<EmployeeCertification[]> {
+    return await db
+      .select()
+      .from(employeeCertifications)
+      .where(eq(employeeCertifications.applicationId, applicationId))
+      .orderBy(desc(employeeCertifications.createdAt));
+  }
+  
+  async updateEmployeeCertification(
+    id: string,
+    workspaceId: string,
+    data: Partial<InsertEmployeeCertification>
+  ): Promise<EmployeeCertification | undefined> {
+    const [updated] = await db
+      .update(employeeCertifications)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(employeeCertifications.id, id),
+          eq(employeeCertifications.workspaceId, workspaceId)
+        )
+      )
+      .returning();
+    return updated;
   }
 }
 
