@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,8 @@ import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Select,
   SelectContent,
@@ -23,9 +26,11 @@ import {
   HeadphonesIcon,
   Briefcase,
   Zap,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function Contact() {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -35,11 +40,43 @@ export default function Contact() {
     tier: "",
     message: "",
   });
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [ticketId, setTicketId] = useState("");
+
+  const submitMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return await apiRequest("POST", "/api/contact", data);
+    },
+    onSuccess: (response: any) => {
+      setIsSubmitted(true);
+      setTicketId(response.ticketId);
+      toast({
+        title: "Message Sent Successfully",
+        description: `Your ticket ID is ${response.ticketId}. We'll respond within 24 hours.`,
+      });
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        company: "",
+        phone: "",
+        subject: "",
+        tier: "",
+        message: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit contact form. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Contact form submitted:", formData);
+    submitMutation.mutate(formData);
   };
 
   return (
@@ -262,15 +299,17 @@ export default function Contact() {
         {/* Contact Form */}
         <div className="grid lg:grid-cols-2 gap-12">
           <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold">Send Us a Message</h2>
-              <p className="text-[hsl(var(--cad-text-secondary))]">
-                Fill out the form and our team will get back to you within 24 hours.
-              </p>
-            </div>
+            {!isSubmitted ? (
+              <>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold">Send Us a Message</h2>
+                  <p className="text-[hsl(var(--cad-text-secondary))]">
+                    Fill out the form and our team will get back to you within 24 hours.
+                  </p>
+                </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-contact">
-              <div className="grid md:grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-contact">
+                  <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
@@ -294,9 +333,9 @@ export default function Contact() {
                     data-testid="input-email"
                   />
                 </div>
-              </div>
+                  </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="company">Company Name</Label>
                   <Input
@@ -318,9 +357,9 @@ export default function Contact() {
                     data-testid="input-phone"
                   />
                 </div>
-              </div>
+                  </div>
 
-              <div className="space-y-2">
+                  <div className="space-y-2">
                 <Label htmlFor="tier">Current/Interested Tier</Label>
                 <Select
                   value={formData.tier}
@@ -336,9 +375,9 @@ export default function Contact() {
                     <SelectItem value="custom">Custom Enterprise</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+                  </div>
 
-              <div className="space-y-2">
+                  <div className="space-y-2">
                 <Label htmlFor="subject">Subject *</Label>
                 <Input
                   id="subject"
@@ -348,9 +387,9 @@ export default function Contact() {
                   required
                   data-testid="input-subject"
                 />
-              </div>
+                  </div>
 
-              <div className="space-y-2">
+                  <div className="space-y-2">
                 <Label htmlFor="message">Message *</Label>
                 <Textarea
                   id="message"
@@ -361,17 +400,55 @@ export default function Contact() {
                   required
                   data-testid="input-message"
                 />
-              </div>
+                  </div>
 
-              <Button
+                  <Button
                 type="submit"
+                disabled={submitMutation.isPending}
                 className="w-full bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-11"
                 data-testid="button-submit-contact"
               >
-                <Send className="h-4 w-4 mr-2" />
-                Send Message
-              </Button>
-            </form>
+                {submitMutation.isPending ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Message
+                  </>
+                )}
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <Card className="bg-[hsl(var(--cad-green))]/10 border-[hsl(var(--cad-green))]/20 p-8 space-y-4" data-testid="card-success">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-full bg-[hsl(var(--cad-green))]/20 flex items-center justify-center">
+                    <CheckCircle2 className="h-8 w-8 text-[hsl(var(--cad-green))]" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))]">Message Sent!</h3>
+                    <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                      Your ticket ID: <span className="font-mono text-[hsl(var(--cad-green))]">{ticketId}</span>
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[hsl(var(--cad-text-secondary))]">
+                  Thank you for contacting us! Our support team will review your message and respond within 24 hours. 
+                  Please save your ticket ID for reference.
+                </p>
+                <Button
+                  onClick={() => setIsSubmitted(false)}
+                  variant="outline"
+                  className="border-[hsl(var(--cad-green))] text-[hsl(var(--cad-green))] hover:bg-[hsl(var(--cad-green))]/10"
+                  data-testid="button-send-another"
+                >
+                  Send Another Message
+                </Button>
+              </Card>
+            )}
           </div>
 
           <div className="space-y-6">

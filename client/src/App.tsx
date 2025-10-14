@@ -86,6 +86,8 @@ function AppContent() {
                 <Route path="/invoices" component={Invoices} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/settings" component={Settings} />
+                <Route path="/contact" component={Contact} />
+                <Route path="/support" component={Support} />
                 <Route component={NotFound} />
               </Switch>
             </main>

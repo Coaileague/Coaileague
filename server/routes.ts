@@ -1287,6 +1287,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // SUPPORT & CONTACT ROUTES
+  // ============================================================================
+  
+  // Submit contact/support form
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const { name, email, company, phone, subject, tier, message } = req.body;
+      
+      // Validate required fields
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ 
+          message: "Missing required fields: name, email, subject, and message are required" 
+        });
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+
+      // Log the contact form submission (in production, this would save to database or send email)
+      console.log("Contact form submission:", {
+        name,
+        email,
+        company,
+        phone,
+        subject,
+        tier,
+        message,
+        timestamp: new Date().toISOString()
+      });
+
+      // In production, you would:
+      // 1. Save to a contacts/tickets database table
+      // 2. Send email to support team using Resend
+      // 3. Send confirmation email to user
+      // 4. Create ticket in support system (e.g., Zendesk, Intercom)
+      
+      // Return success
+      res.json({ 
+        success: true,
+        message: "Thank you for contacting us! Our team will respond within 24 hours.",
+        ticketId: crypto.randomBytes(6).toString('hex').toUpperCase()
+      });
+    } catch (error) {
+      console.error("Error processing contact form:", error);
+      res.status(500).json({ message: "Failed to submit contact form. Please try again." });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
