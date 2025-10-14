@@ -16,6 +16,10 @@ import {
   Mail,
   Phone,
   DollarSign,
+  Send,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -34,6 +38,8 @@ export default function Employees() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -119,6 +125,66 @@ export default function Employees() {
       ...formData,
       hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
     });
+  };
+
+  const inviteMutation = useMutation({
+    mutationFn: async (employeeId: string) => {
+      return await apiRequest("/api/onboarding/invite", "POST", { employeeId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      toast({
+        title: "Invitation Sent",
+        description: "Onboarding invitation email has been sent successfully",
+      });
+      setIsInviteDialogOpen(false);
+      setSelectedEmployee(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendInvite = () => {
+    if (selectedEmployee?.id) {
+      inviteMutation.mutate(selectedEmployee.id);
+    }
+  };
+
+  const getOnboardingStatusBadge = (status?: string) => {
+    if (!status || status === 'not_started') {
+      return (
+        <Badge variant="secondary" className="text-xs">
+          <Clock className="h-3 w-3 mr-1" />
+          Not Started
+        </Badge>
+      );
+    }
+    if (status === 'in_progress') {
+      return (
+        <Badge variant="default" className="text-xs">
+          <Clock className="h-3 w-3 mr-1" />
+          In Progress
+        </Badge>
+      );
+    }
+    if (status === 'completed') {
+      return (
+        <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          Completed
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-xs">
+        {status}
+      </Badge>
+    );
   };
 
   const filteredEmployees = employees?.filter(emp =>
@@ -279,9 +345,17 @@ export default function Employees() {
                     <CardTitle className="text-base truncate">
                       {employee.firstName} {employee.lastName}
                     </CardTitle>
-                    <Badge variant="secondary" className="mt-1 text-xs">
-                      {employee.role || "Employee"}
-                    </Badge>
+                    {employee.employeeNumber && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        ID: {employee.employeeNumber}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {employee.role || "Employee"}
+                      </Badge>
+                      {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -299,11 +373,77 @@ export default function Employees() {
                       ${employee.hourlyRate || "0"}/hr
                     </span>
                   </div>
+                  {employee.onboardingStatus !== 'completed' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => {
+                        setSelectedEmployee(employee);
+                        setIsInviteDialogOpen(true);
+                      }}
+                      data-testid={`button-invite-${employee.id}`}
+                    >
+                      <Send className="h-3 w-3 mr-2" />
+                      Send Onboarding Invite
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
+
+        {/* Invite Dialog */}
+        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Onboarding Invitation</DialogTitle>
+              <DialogDescription>
+                This will send an email invitation to {selectedEmployee?.firstName} {selectedEmployee?.lastName} to begin their onboarding process.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Employee:</span>
+                  <span className="font-medium">
+                    {selectedEmployee?.firstName} {selectedEmployee?.lastName}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="font-medium">{selectedEmployee?.email}</span>
+                </div>
+                {selectedEmployee?.employeeNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Employee ID:</span>
+                    <span className="font-medium">{selectedEmployee.employeeNumber}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsInviteDialogOpen(false);
+                  setSelectedEmployee(null);
+                }}
+                data-testid="button-cancel-invite"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendInvite}
+                disabled={inviteMutation.isPending}
+                data-testid="button-confirm-invite"
+              >
+                {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

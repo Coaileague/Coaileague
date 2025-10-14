@@ -112,6 +112,7 @@ export const employees = pgTable("employees", {
   userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }), // Optional link to user account
   
   // Employee information
+  employeeNumber: varchar("employee_number"), // Unique employee ID (generated after onboarding)
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   email: varchar("email"),
@@ -122,6 +123,9 @@ export const employees = pgTable("employees", {
   workspaceRole: workspaceRoleEnum("workspace_role").default("employee"), // Permission level
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   color: varchar("color").default("#3b82f6"), // For calendar display
+  
+  // Onboarding status
+  onboardingStatus: varchar("onboarding_status").default("not_started"), // not_started, in_progress, completed
   
   // Availability
   isActive: boolean("is_active").default(true),
