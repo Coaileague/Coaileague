@@ -336,7 +336,8 @@ export default function ReportsPage() {
 
   return (
     <ModernLayout>
-      <div className="p-4 space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div className="space-y-4 sm:space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -788,6 +789,7 @@ export default function ReportsPage() {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </ModernLayout>
   );
