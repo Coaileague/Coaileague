@@ -256,8 +256,11 @@ export default function Pricing() {
               <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
-                Documentation
+              <a href="/support" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-support">
+                Support Center
+              </a>
+              <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-contact">
+                Contact Us
               </a>
               <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
                 Privacy

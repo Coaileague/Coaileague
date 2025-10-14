@@ -119,13 +119,13 @@ export function CADMenuBar() {
     {
       label: "Help",
       items: [
-        { label: "Documentation", shortcut: "F1" },
+        { label: "Support Center", shortcut: "F1", action: () => window.open("/support", "_blank") },
         { label: "Keyboard Shortcuts", shortcut: "Ctrl+/" },
-        { label: "Video Tutorials" },
+        { label: "Video Tutorials", action: () => window.open("/support", "_blank") },
         { separator: true },
-        { label: "Contact Support" },
-        { label: "Report Bug" },
-        { label: "Feature Request" },
+        { label: "Contact Support", action: () => window.open("/contact", "_blank") },
+        { label: "Report Bug", action: () => window.open("/contact", "_blank") },
+        { label: "Feature Request", action: () => window.open("/contact", "_blank") },
         { separator: true },
         { label: "About WorkforceOS" },
       ],
