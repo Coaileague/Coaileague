@@ -171,14 +171,19 @@ export function CADToolbar() {
           <Tooltip key={button.label}>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 hover:bg-[hsl(var(--cad-chrome-hover))] active:bg-[hsl(var(--cad-chrome-active))]"
+                variant={button.label === "Publish" ? "default" : "ghost"}
+                size={button.label === "Publish" ? "sm" : "icon"}
+                className={
+                  button.label === "Publish"
+                    ? "h-9 px-4 gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white font-semibold shadow-lg shadow-indigo-500/30"
+                    : "h-9 w-9 hover:bg-[hsl(var(--cad-chrome-hover))] active:bg-[hsl(var(--cad-chrome-active))]"
+                }
                 onClick={button.action}
                 disabled={button.disabled}
                 data-testid={`toolbar-${button.label.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 {button.icon}
+                {button.label === "Publish" && <span>Publish</span>}
               </Button>
             </TooltipTrigger>
             <TooltipContent

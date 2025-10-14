@@ -456,37 +456,15 @@ export default function Schedule() {
     <ModernLayout>
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
-          {/* Header with Stats */}
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-schedule-title">
-                Schedule
+                Schedule Management
               </h2>
-              <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]" data-testid="text-schedule-subtitle">
-                Week {formatWeekRange()}
+              <p className="text-sm text-[hsl(var(--cad-text-secondary))]" data-testid="text-schedule-subtitle">
+                Drag and drop shifts to assign employees · Week {formatWeekRange()}
               </p>
-              
-              {/* Week Statistics */}
-              <div className="flex flex-wrap gap-4 mt-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[hsl(var(--cad-blue))]" />
-                  <span className="text-sm">
-                    <span className="font-semibold">{weekStats.totalHours}</span> hours
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-emerald-500" />
-                  <span className="text-sm">
-                    <span className="font-semibold">${weekStats.estimatedCost}</span> labor cost
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm">
-                    <span className="font-semibold">{weekStats.clientShifts}</span> billable shifts
-                  </span>
-                </div>
-              </div>
             </div>
           
             <div className="flex items-center gap-3">
@@ -630,6 +608,61 @@ export default function Schedule() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            </div>
+          </div>
+
+          {/* Modern Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-card border border-border rounded-xl p-5 hover-elevate transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-indigo-500/10 to-indigo-600/10 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-indigo-500" />
+                </div>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-0">
+                  +8%
+                </Badge>
+              </div>
+              <div className="text-3xl font-bold text-foreground mb-1">{weekStats.totalHours}</div>
+              <div className="text-sm text-muted-foreground">Hours Scheduled</div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-5 hover-elevate transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-emerald-500" />
+                </div>
+                <Badge variant="secondary" className="bg-rose-500/10 text-rose-600 border-0">
+                  +5%
+                </Badge>
+              </div>
+              <div className="text-3xl font-bold text-foreground mb-1">${weekStats.estimatedCost}</div>
+              <div className="text-sm text-muted-foreground">Labor Cost</div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-5 hover-elevate transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-amber-500/10 to-amber-600/10 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-amber-500" />
+                </div>
+                <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-600 border-0">
+                  Active
+                </Badge>
+              </div>
+              <div className="text-3xl font-bold text-foreground mb-1">{weekStats.clientShifts}</div>
+              <div className="text-sm text-muted-foreground">Billable Shifts</div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-5 hover-elevate transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-violet-500/10 to-violet-600/10 flex items-center justify-center">
+                  <Zap className="h-6 w-6 text-violet-500" />
+                </div>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-0">
+                  98.2%
+                </Badge>
+              </div>
+              <div className="text-3xl font-bold text-foreground mb-1">{weekStats.totalShifts}</div>
+              <div className="text-sm text-muted-foreground">Total Shifts</div>
             </div>
           </div>
 
