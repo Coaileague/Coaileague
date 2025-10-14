@@ -523,7 +523,7 @@ export default function Invoices() {
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getClientName(invoice.clientId)}</TableCell>
                     <TableCell>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
-                    <TableCell>${typeof invoice.total === 'number' ? invoice.total.toFixed(2) : parseFloat(invoice.total as string || '0').toFixed(2)}</TableCell>
+                    <TableCell>${parseFloat(String(invoice.total || 0)).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusColor(invoice.status || 'draft')}>
                         {invoice.status || 'draft'}
