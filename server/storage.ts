@@ -17,6 +17,11 @@ import {
   onboardingApplications,
   documentSignatures,
   employeeCertifications,
+  reportTemplates,
+  reportSubmissions,
+  reportAttachments,
+  customerReportAccess,
+  supportTickets,
   type User,
   type UpsertUser,
   type Workspace,
@@ -46,6 +51,16 @@ import {
   type InsertDocumentSignature,
   type EmployeeCertification,
   type InsertEmployeeCertification,
+  type ReportTemplate,
+  type InsertReportTemplate,
+  type ReportSubmission,
+  type InsertReportSubmission,
+  type ReportAttachment,
+  type InsertReportAttachment,
+  type CustomerReportAccess,
+  type InsertCustomerReportAccess,
+  type SupportTicket,
+  type InsertSupportTicket,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, or, like } from "drizzle-orm";
@@ -154,6 +169,21 @@ export interface IStorage {
   getEmployeeCertificationsByEmployee(employeeId: string, workspaceId: string): Promise<EmployeeCertification[]>;
   getEmployeeCertificationsByApplication(applicationId: string): Promise<EmployeeCertification[]>;
   updateEmployeeCertification(id: string, workspaceId: string, data: Partial<InsertEmployeeCertification>): Promise<EmployeeCertification | undefined>;
+  
+  // Report Management System (RMS) operations
+  getReportTemplatesByWorkspace(workspaceId: string): Promise<ReportTemplate[]>;
+  toggleReportTemplateActivation(templateId: string, workspaceId: string): Promise<ReportTemplate>;
+  createReportSubmission(submission: InsertReportSubmission): Promise<ReportSubmission>;
+  getReportSubmissions(workspaceId: string, filters?: { status?: string; employeeId?: string }): Promise<ReportSubmission[]>;
+  getReportSubmissionById(id: string): Promise<ReportSubmission | undefined>;
+  updateReportSubmission(id: string, data: Partial<InsertReportSubmission>): Promise<ReportSubmission>;
+  reviewReportSubmission(id: string, review: { approved: boolean; reviewNotes: string; reviewedBy: string }): Promise<ReportSubmission>;
+  createCustomerReportAccess(access: InsertCustomerReportAccess): Promise<CustomerReportAccess>;
+  getCustomerReportAccessByToken(token: string): Promise<CustomerReportAccess | undefined>;
+  trackCustomerReportAccess(accessId: string): Promise<void>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  getSupportTickets(workspaceId: string): Promise<SupportTicket[]>;
+  updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -925,6 +955,183 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // REPORT MANAGEMENT SYSTEM (RMS) OPERATIONS
+  // ============================================================================
+  
+  async getReportTemplatesByWorkspace(workspaceId: string): Promise<ReportTemplate[]> {
+    return await db
+      .select()
+      .from(reportTemplates)
+      .where(eq(reportTemplates.workspaceId, workspaceId))
+      .orderBy(desc(reportTemplates.createdAt));
+  }
+  
+  async toggleReportTemplateActivation(templateId: string, workspaceId: string): Promise<ReportTemplate> {
+    const [template] = await db
+      .select()
+      .from(reportTemplates)
+      .where(
+        and(
+          eq(reportTemplates.id, templateId),
+          eq(reportTemplates.workspaceId, workspaceId)
+        )
+      );
+    
+    const [updated] = await db
+      .update(reportTemplates)
+      .set({ isActive: !template.isActive, updatedAt: new Date() })
+      .where(eq(reportTemplates.id, templateId))
+      .returning();
+    
+    return updated;
+  }
+  
+  async createReportSubmission(submission: InsertReportSubmission): Promise<ReportSubmission> {
+    // Generate report number
+    const year = new Date().getFullYear();
+    const existingReports = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.workspaceId, submission.workspaceId));
+    
+    const reportNumber = `RPT-${year}-${String(existingReports.length + 1).padStart(4, '0')}`;
+    
+    const [newSubmission] = await db
+      .insert(reportSubmissions)
+      .values({ ...submission, reportNumber })
+      .returning();
+    
+    return newSubmission;
+  }
+  
+  async getReportSubmissions(
+    workspaceId: string,
+    filters?: { status?: string; employeeId?: string }
+  ): Promise<ReportSubmission[]> {
+    let query = db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.workspaceId, workspaceId));
+    
+    const conditions = [eq(reportSubmissions.workspaceId, workspaceId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(reportSubmissions.status, filters.status));
+    }
+    
+    if (filters?.employeeId) {
+      conditions.push(eq(reportSubmissions.employeeId, filters.employeeId));
+    }
+    
+    return await db
+      .select()
+      .from(reportSubmissions)
+      .where(and(...conditions))
+      .orderBy(desc(reportSubmissions.createdAt));
+  }
+  
+  async getReportSubmissionById(id: string): Promise<ReportSubmission | undefined> {
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, id));
+    
+    return submission;
+  }
+  
+  async updateReportSubmission(id: string, data: Partial<InsertReportSubmission>): Promise<ReportSubmission> {
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(reportSubmissions.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  async reviewReportSubmission(
+    id: string,
+    review: { approved: boolean; reviewNotes: string; reviewedBy: string }
+  ): Promise<ReportSubmission> {
+    const newStatus = review.approved ? 'approved' : 'rejected';
+    
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({
+        status: newStatus,
+        reviewedBy: review.reviewedBy,
+        reviewedAt: new Date(),
+        reviewNotes: review.reviewNotes,
+        updatedAt: new Date(),
+      })
+      .where(eq(reportSubmissions.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  async createCustomerReportAccess(access: InsertCustomerReportAccess): Promise<CustomerReportAccess> {
+    const [newAccess] = await db
+      .insert(customerReportAccess)
+      .values(access)
+      .returning();
+    
+    return newAccess;
+  }
+  
+  async getCustomerReportAccessByToken(token: string): Promise<CustomerReportAccess | undefined> {
+    const [access] = await db
+      .select()
+      .from(customerReportAccess)
+      .where(eq(customerReportAccess.accessToken, token));
+    
+    return access;
+  }
+  
+  async trackCustomerReportAccess(accessId: string): Promise<void> {
+    // Get current access count and increment it
+    const [access] = await db
+      .select()
+      .from(customerReportAccess)
+      .where(eq(customerReportAccess.id, accessId));
+    
+    await db
+      .update(customerReportAccess)
+      .set({
+        accessCount: (access?.accessCount || 0) + 1,
+        lastAccessedAt: new Date(),
+      })
+      .where(eq(customerReportAccess.id, accessId));
+  }
+  
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    const [newTicket] = await db
+      .insert(supportTickets)
+      .values(ticket)
+      .returning();
+    
+    return newTicket;
+  }
+  
+  async getSupportTickets(workspaceId: string): Promise<SupportTicket[]> {
+    return await db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.workspaceId, workspaceId))
+      .orderBy(desc(supportTickets.createdAt));
+  }
+  
+  async updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket> {
+    const [updated] = await db
+      .update(supportTickets)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    
     return updated;
   }
 }
