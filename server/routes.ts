@@ -6,6 +6,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { auditContextMiddleware } from "./middleware/audit";
+import { apiLimiter, authLimiter, mutationLimiter, readLimiter } from "./middleware/rateLimiter";
 import { 
   sendShiftAssignmentEmail, 
   sendInvoiceGeneratedEmail, 
@@ -32,13 +33,46 @@ import {
   insertSupportTicketSchema,
 } from "@shared/schema";
 import crypto from "crypto";
+import { sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
   
+  // Trust proxy for accurate IP detection behind load balancers
+  app.set('trust proxy', 1);
+  
   // Audit logging middleware (captures request context for all authenticated requests)
   app.use(auditContextMiddleware);
+
+  // ============================================================================
+  // HEALTH CHECK & MONITORING (No rate limiting)
+  // ============================================================================
+  
+  // Health check endpoint for uptime monitoring (no auth or rate limit required)
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Basic health check - verify database connection
+      await storage.db.execute(sql`SELECT 1`);
+      
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: '1.0.0'
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: 'Database connection failed'
+      });
+    }
+  });
+  
+  // Apply general rate limiting to all API routes (after health check)
+  app.use('/api', apiLimiter);
 
   // ============================================================================
   // AUTH ROUTES

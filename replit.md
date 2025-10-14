@@ -45,38 +45,56 @@ The platform features a CAD-style professional interface with an application fra
 - **Database Schema Ready (Needs UI)**: GPS location tracking for clock-ins, automated payroll processing, customer portal for RMS, support ticket system.
 - **Planned Features**: SMS notifications, calendar export/import, full GPS tracking UI, payroll processing UI, RMS customer portal, RMS help desk.
 
-### Enterprise Security Roadmap
-**Critical Security Enhancements (Fortune-500 Grade):**
-1. **Audit Logging & Compliance**:
-   - Immutable audit trail for all data mutations (create, update, delete operations)
-   - Track user actions, IP addresses, timestamps for SOC2/GDPR compliance
-   - Audit log viewer with filtering and export capabilities
-   - Data retention policies and automated archival
+### Security & Reliability (October 2025)
 
-2. **Authentication & Access Control**:
-   - Multi-Factor Authentication (MFA/2FA) for sensitive operations
-   - SSO integration for enterprise clients (SAML/OAuth)
-   - Session management with token rotation
-   - Conditional access policies (IP whitelisting, device trust)
+**✅ Implemented**:
+1. **Enterprise Audit Logging** (`server/middleware/audit.ts`):
+   - Immutable audit trail for all data mutations
+   - Tracks user actions, IP addresses, timestamps for SOC2/GDPR compliance
+   - Integrated with all authenticated API routes
 
-3. **Data Protection**:
-   - Encryption at rest for sensitive fields (SSN, bank details, documents)
-   - TLS enforcement across all endpoints
-   - Tenant-scoped secrets management
-   - Secure file upload/storage with virus scanning
+2. **Rate Limiting & DDoS Protection** (`server/middleware/rateLimiter.ts`):
+   - IP-based rate limiting: 1000 requests per 15 minutes
+   - Trust proxy configured for accurate IP detection
+   - Health check endpoint excluded from rate limiting
+   - **Note**: Basic protection only - no per-workspace/user rate limiting yet
 
-4. **API Security**:
-   - Rate limiting per workspace/user to prevent abuse
-   - API key management for third-party integrations
-   - OAuth client management for public API access
-   - WAF (Web Application Firewall) integration
+3. **Error Handling** (`client/src/components/ErrorBoundary.tsx`):
+   - Global React error boundary for graceful degradation
+   - User-friendly fallback UI with recovery options
+   - Development error details for debugging
 
-5. **Monitoring & Incident Response**:
-   - Centralized logging with OpenTelemetry
-   - Real-time security alerts and anomaly detection
-   - Vulnerability scanning (SAST/DAST)
-   - Dependency security audits
-   - Disaster recovery dashboard with backup verification
+4. **Health Monitoring** (`/api/health` endpoint):
+   - Database connection verification
+   - Uptime tracking for SLA monitoring
+   - Version reporting for deployment tracking
+
+5. **Documentation**:
+   - `docs/SECURITY.md` - Comprehensive security controls and compliance roadmap
+   - `docs/RUNBOOK.md` - Operational procedures, incident response, disaster recovery
+
+**⚠️ Security Gaps (SOC2 Critical)**:
+- ❌ **Per-workspace/user rate limiting** (requires Redis or similar)
+- ❌ **Route-specific rate limits** for auth/mutations
+- ❌ **MFA/2FA** for sensitive operations
+- ❌ **Penetration testing** external audit
+- ❌ **Vulnerability scanning** (SAST/DAST)
+- ❌ **Disaster recovery** tested backup/restore
+- ❌ **Secrets rotation** automated policy
+- ❌ **API key management** per-workspace
+
+### Enterprise Security Roadmap (Planned)
+**Critical Security Enhancements for Full Fortune 500/SOC2 Compliance:**
+1. **Per-Workspace Rate Limiting**: Redis-backed sliding window with workspace/user keys
+2. **Multi-Factor Authentication (MFA/2FA)**: For sensitive operations and role changes
+3. **SSO Integration**: Enterprise clients (SAML/OAuth)
+4. **Encryption at Rest**: Column-level encryption for SSN, bank details, documents
+5. **API Key Management**: Per-workspace API keys for third-party integrations
+6. **Vulnerability Scanning**: Automated SAST/DAST in CI/CD pipeline
+7. **Penetration Testing**: External security audit and remediation
+8. **Disaster Recovery**: Tested backup/restore procedures with RTO/RPO SLAs
+9. **Centralized Logging**: OpenTelemetry integration with real-time alerts
+10. **WAF Integration**: Web Application Firewall for advanced threat protection
 
 ### Monetization Strategy & Feature Tiers
 **Pricing Architecture (Cost-Plus Model):**
