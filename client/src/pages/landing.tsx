@@ -42,13 +42,23 @@ export default function Landing() {
           >
             View Demo
           </Button>
+          <div className="h-6 w-px bg-[hsl(var(--cad-border))]" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.location.href = "/api/login"}
+            className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+            data-testid="button-login"
+          >
+            Login
+          </Button>
           <Button
             size="sm"
             onClick={() => window.location.href = "/api/login"}
             className="h-8 text-xs bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
             data-testid="button-get-started"
           >
-            Launch Platform
+            Get Started Free
           </Button>
         </div>
       </div>
