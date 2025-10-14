@@ -34,7 +34,7 @@ The platform features a CAD-style professional interface with an application fra
 - **Time Tracking**: Clock-in/out functionality with real-time timers, automatic hourly rate calculation, and server-side calculation of total hours and amounts.
 - **Invoice Generation**: Automated generation from unbilled time entries, including multi-client selection, tax and platform fee calculation, and status tracking (draft/sent/paid).
 - **Analytics Dashboard**: Tracks total revenue (post-platform-fee), total hours worked, active employee/client counts, workspace usage metrics, and invoice statistics.
-- **Advanced Scheduling**: Includes shift templates and recurring shifts (daily/weekly).
+- **Advanced Scheduling System** (Better than Sling): Sling-style grid layout with drag-and-drop shift management, real-time week statistics (hours, labor cost, billable shifts), bulk operations (copy week forward), automated invoice generation from scheduled shifts, shift conflict detection with visual warnings, quick actions menu (duplicate, delete), color-coded shifts by client, normalized week boundaries for accurate filtering.
 - **Employee Onboarding System**: Features an email invitation workflow with secure, single-use tokens, a multi-step onboarding flow (personal info, tax classification, availability, document upload, e-signature capture), legal compliance features (W-4/W-9 tracking, contract signatures, SOP acknowledgements), and automatic employee number generation.
 - **Demo System**: An interactive demo workspace pre-populated with sample data is available, resetting every 24 hours.
 
