@@ -200,8 +200,9 @@ export default function Dashboard() {
                   </div>
                 </button>
               </Link>
+            </div>
+          </div>
         </div>
-      </div>
-    </ModernLayout>
-  );
-}
+      </ModernLayout>
+    );
+  }

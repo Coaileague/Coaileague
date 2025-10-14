@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import {
 import ModernLayout from "@/components/ModernLayout";
+import {
   Building2,
   CreditCard,
   Bell,
