@@ -345,6 +345,64 @@ export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
 export type TimeEntry = typeof timeEntries.$inferSelect;
 
 // ============================================================================
+// SHIFT ORDERS & POST ORDERS
+// ============================================================================
+
+export const shiftOrderPriorityEnum = pgEnum('shift_order_priority', ['normal', 'high', 'urgent']);
+
+// Shift Orders (Post Orders) - Special instructions/tasks for shifts
+export const shiftOrders = pgTable("shift_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  shiftId: varchar("shift_id").notNull().references(() => shifts.id, { onDelete: 'cascade' }),
+  
+  // Order details
+  title: varchar("title").notNull(),
+  description: text("description"),
+  priority: shiftOrderPriorityEnum("priority").default('normal'),
+  
+  // Requirements
+  requiresAcknowledgment: boolean("requires_acknowledgment").default(true),
+  
+  // Metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertShiftOrderSchema = createInsertSchema(shiftOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertShiftOrder = z.infer<typeof insertShiftOrderSchema>;
+export type ShiftOrder = typeof shiftOrders.$inferSelect;
+
+// Shift Order Acknowledgments - Track who acknowledged which orders
+export const shiftOrderAcknowledgments = pgTable("shift_order_acknowledgments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  shiftOrderId: varchar("shift_order_id").notNull().references(() => shiftOrders.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Acknowledgment details
+  acknowledgedAt: timestamp("acknowledged_at").defaultNow(),
+  notes: text("notes"), // Optional employee notes
+}, (table) => [
+  // Prevent duplicate acknowledgments
+  uniqueIndex("unique_acknowledgment").on(table.shiftOrderId, table.employeeId)
+]);
+
+export const insertShiftOrderAcknowledgmentSchema = createInsertSchema(shiftOrderAcknowledgments).omit({
+  id: true,
+  acknowledgedAt: true,
+});
+
+export type InsertShiftOrderAcknowledgment = z.infer<typeof insertShiftOrderAcknowledgmentSchema>;
+export type ShiftOrderAcknowledgment = typeof shiftOrderAcknowledgments.$inferSelect;
+
+// ============================================================================
 // INVOICING & BILLING TABLES
 // ============================================================================
 
@@ -506,6 +564,7 @@ export const shiftsRelations = relations(shifts, ({ one, many }) => ({
     references: [clients.id],
   }),
   timeEntries: many(timeEntries),
+  shiftOrders: many(shiftOrders),
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
@@ -524,6 +583,37 @@ export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
   client: one(clients, {
     fields: [timeEntries.clientId],
     references: [clients.id],
+  }),
+}));
+
+export const shiftOrdersRelations = relations(shiftOrders, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [shiftOrders.workspaceId],
+    references: [workspaces.id],
+  }),
+  shift: one(shifts, {
+    fields: [shiftOrders.shiftId],
+    references: [shifts.id],
+  }),
+  createdByUser: one(users, {
+    fields: [shiftOrders.createdBy],
+    references: [users.id],
+  }),
+  acknowledgments: many(shiftOrderAcknowledgments),
+}));
+
+export const shiftOrderAcknowledgmentsRelations = relations(shiftOrderAcknowledgments, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [shiftOrderAcknowledgments.workspaceId],
+    references: [workspaces.id],
+  }),
+  shiftOrder: one(shiftOrders, {
+    fields: [shiftOrderAcknowledgments.shiftOrderId],
+    references: [shiftOrders.id],
+  }),
+  employee: one(employees, {
+    fields: [shiftOrderAcknowledgments.employeeId],
+    references: [employees.id],
   }),
 }));
 
@@ -1276,6 +1366,12 @@ export const reportTemplates = pgTable("report_templates", {
   // Example: [{ name: "location", label: "Location", type: "text", required: true }, ...]
   fields: jsonb("fields").notNull(),
   
+  // Photo requirements for transparency and accountability
+  requiresPhotos: boolean("requires_photos").default(false), // Mandatory for DAR, incident, safety reports
+  minPhotos: integer("min_photos").default(0), // Minimum photos required (e.g., 1 for incidents)
+  maxPhotos: integer("max_photos").default(10), // Maximum allowed photos
+  photoInstructions: text("photo_instructions"), // e.g., "Photos must be clear, well-lighted, showing full scene"
+  
   // Activation status
   isActive: boolean("is_active").default(false), // Whether activated for this workspace
   isSystemTemplate: boolean("is_system_template").default(false), // Built-in vs custom
@@ -1308,6 +1404,10 @@ export const reportSubmissions = pgTable("report_submissions", {
   
   // Form data (JSON object with filled field values)
   formData: jsonb("form_data").notNull(),
+  
+  // Photo attachments with automatic timestamping
+  // Format: [{ url: "...", timestamp: "2024-10-14T21:30:00Z", caption: "...", metadata: {...} }, ...]
+  photos: jsonb("photos"), // Array of photo objects with timestamp, URL, metadata
   
   // Workflow status
   status: varchar("status").default("draft"), // 'draft', 'pending_review', 'approved', 'rejected', 'sent_to_customer'
