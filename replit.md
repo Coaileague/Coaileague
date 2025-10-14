@@ -1,346 +1,38 @@
 # Clockwork - Fortune 500 Workforce Management Platform
 
-## Project Overview
-Clockwork is a professional CAD-style workforce management platform with Fortune 500-grade architecture. The platform features drag-and-drop scheduling with templates, real-time time tracking with clock-in/out, automated invoice generation, multi-tenant security, role-based access control, and comprehensive analytics. The platform is ready to process payments from end customers with configurable platform fees (Stripe integration ready when API keys are provided).
+## Overview
+Clockwork is a professional CAD-style workforce management platform designed for Fortune 500-grade operations. It offers drag-and-drop scheduling with templates, real-time time tracking, automated invoice generation, multi-tenant security, role-based access control, and comprehensive analytics. The platform supports payment processing via Stripe Connect and aims to provide significant savings by streamlining workforce operations.
 
-## Architecture
-- **Frontend**: React + Vite + TypeScript + Wouter (routing) + TanStack Query + shadcn/ui
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL (Neon) with Drizzle ORM
-- **Authentication**: Replit Auth (OIDC)
-- **Payment Processing**: Stripe Connect (ready for when API keys are provided)
-- **Multi-Tenancy**: Workspace-based isolation with strict data scoping
+## User Preferences
+I prefer detailed explanations.
+Do not make changes to the folder `Z`.
+Do not make changes to the file `Y`.
 
-## Key Features Implemented
+## System Architecture
+### UI/UX Decisions
+The platform features a CAD-style professional interface with an application frame (menu bar, toolbar, status bar) and a dark mode theme with precision color schemes. It prioritizes a program-like interface for precision and control, rather than a typical website. It includes real-time indicators such as live clocks and connection status.
 
-### Phase 1 - MVP (Completed)
-- ✅ Multi-tenant workspace system with subscription tiers
-- ✅ Replit Auth integration for secure authentication
-- ✅ Drag-and-drop schedule builder with visual timeline
-- ✅ Employee management (CRUD with hourly rates, roles, availability)
-- ✅ Client management (CRUD with contact info, billing details)
-- ✅ Shift scheduling with employee-client assignments
-- ✅ Multi-tenant data isolation and security
-- ✅ Responsive design with dark mode support
+### Technical Implementations
+- **Frontend**: React, Vite, TypeScript, Wouter (routing), TanStack Query, shadcn/ui. Form validation uses `react-hook-form` and `zod`.
+- **Backend**: Express.js, TypeScript. Request bodies are validated with Zod schemas.
+- **Database**: PostgreSQL (Neon) with Drizzle ORM.
+- **Authentication**: Replit Auth (OIDC).
+- **Multi-Tenancy**: Workspace-based isolation with `workspaceId` foreign keys on all core tables and strict data scoping enforced at the API and database levels.
+- **Role-Based Access Control (RBAC)**: Supports Owner, Manager, and Employee roles with a hybrid workspace resolution strategy. Manager assignments (`manager_assignments` table) define hierarchical relationships. API routes are protected by `requireOwner`, `requireManager`, and `requireEmployee` middleware.
+- **Time Tracking**: Clock-in/out functionality with real-time timers, automatic hourly rate calculation, and server-side calculation of total hours and amounts.
+- **Invoice Generation**: Automated generation from unbilled time entries, including multi-client selection, tax and platform fee calculation, and status tracking (draft/sent/paid).
+- **Analytics Dashboard**: Tracks total revenue (post-platform-fee), total hours worked, active employee/client counts, workspace usage metrics, and invoice statistics.
+- **Advanced Scheduling**: Includes shift templates and recurring shifts (daily/weekly).
+- **Employee Onboarding System**: Features an email invitation workflow with secure, single-use tokens, a multi-step onboarding flow (personal info, tax classification, availability, document upload, e-signature capture), legal compliance features (W-4/W-9 tracking, contract signatures, SOP acknowledgements), and automatic employee number generation.
+- **Demo System**: An interactive demo workspace pre-populated with sample data is available, resetting every 24 hours.
 
-### Phase 2 - Advanced Features (In Progress)
-- ✅ **Time Tracking System**
-  - Clock-in/clock-out functionality
-  - Real-time elapsed timers (updates every 10 seconds)
-  - Shift-linked time entries
-  - Automatic hourly rate calculation
-  - Total amount computation from hours × rate
-  
-- ✅ **Automated Invoice Generation**
-  - Generate invoices from unbilled time entries
-  - Multi-client time entry selection
-  - Automatic tax and platform fee calculation
-  - Invoice line items linked to time entries
-  - Status tracking (draft/sent/paid)
-  
-- ✅ **Analytics Dashboard**
-  - Total revenue tracking (after platform fees)
-  - Total hours worked across all time entries
-  - Active employee and client counts
-  - Workspace usage metrics (employee/client capacity)
-  - Invoice statistics and payment rates
-  - Subscription tier display
+### Feature Specifications
+- **Core Features**: Employee management (CRUD), client management (CRUD), shift scheduling, multi-tenant data isolation, responsive design, dark mode.
+- **Advanced Features**: Time tracking (clock-in/out, real-time timers, linked to shifts), automated invoice generation (from time entries, tax/fee calculation), comprehensive analytics dashboard, RBAC (Owner, Manager, Employee roles, manager assignments), advanced scheduling (templates, recurring shifts), employee onboarding (invitations, multi-step flow, e-signatures, document upload, tax classification, status tracking).
+- **Planned Features**: Email and SMS notifications, calendar export/import.
 
-- ✅ **Role-Based Access Control (RBAC)**
-  - Three role levels: Owner, Manager, Employee
-  - Hybrid workspace resolution (explicit workspaceId or auto-detect)
-  - Manager assignment system for hierarchical workflows
-  - Route-level authorization middleware
-  - Multi-workspace support with explicit selection
-
-- ✅ **Advanced Scheduling**
-  - Shift templates (reusable patterns)
-  - Recurring shifts (daily/weekly with date ranges)
-  
-- 🚧 **Email Notifications** (Planned)
-- 🚧 **SMS Notifications** (Planned)
-- 🚧 **Calendar Export/Import** (Planned)
-
-## Database Schema
-
-### Core Tables
-- **users**: User accounts (Replit Auth integration)
-- **workspaces**: Business tenants with subscription info
-- **employees**: Workspace-scoped employee records with workspaceRole (owner/manager/employee)
-- **clients**: Workspace-scoped client records
-- **shifts**: Scheduled work periods (employee + client + time)
-- **shift_templates**: Reusable shift patterns
-- **time_entries**: Clock-in/out records with billing calculations
-- **invoices**: Client invoices with platform fee tracking
-- **invoice_line_items**: Individual invoice items (linked to time entries)
-- **manager_assignments**: Manager-employee hierarchical relationships
-
-## Multi-Tenant Security
-
-### Data Isolation Strategy
-1. All tables include `workspaceId` foreign key
-2. Every API route validates workspace ownership via authenticated user
-3. Database queries always filter by `workspaceId`
-4. Cross-tenant data leakage prevented through joins and filters
-
-### Critical Security Patterns
-- Invoice generation filters unbilled time entries with workspace-scoped joins
-- Analytics calculations scoped to workspace data only
-- Storage layer enforces workspace isolation on all operations
-
-## Role-Based Access Control (RBAC)
-
-### Role Hierarchy
-- **Owner**: Full workspace control, can assign managers, manage billing
-- **Manager**: Can manage assigned employees, approve requests, view reports
-- **Employee**: Can clock in/out, view own schedule, submit requests
-
-### Workspace Resolution (Hybrid Model)
-The RBAC middleware uses a hybrid workspace resolution strategy:
-
-1. **Explicit workspaceId**: If provided in request, validates user has access
-   - Checks workspace ownership first (for owners)
-   - Then checks employee membership (for managers/employees)
-   - Rejects unauthorized access with 403
-
-2. **Auto-detection**: If no workspaceId provided
-   - Single workspace owner → uses owned workspace
-   - Single employee membership → uses that workspace
-   - Multiple workspaces → returns 400 error requiring explicit selection
-
-### Manager Assignment System
-- **Table**: `manager_assignments` links managers to employees
-- **Validation**: Cross-tenant checks ensure manager/employee in same workspace
-- **Role Check**: Only employees with 'manager' or 'owner' role can be assigned as managers
-- **Unique Constraint**: Prevents duplicate manager-employee pairs
-
-### API Authorization Patterns
-```typescript
-requireOwner    // Owners only (e.g., billing, workspace settings)
-requireManager  // Owners and managers (e.g., reports, approvals)
-requireEmployee // All roles (e.g., view schedule, clock in/out)
-```
-
-### Security Guarantees
-- No cross-tenant data access (validated at middleware level)
-- Role-based route protection (enforced before business logic)
-- Multi-workspace support (explicit selection when ambiguous)
-- Manager assignments validated for workspace membership and role
-
-## Payment Architecture
-
-### Stripe Connect Integration (Ready)
-- Platform acts as payment facilitator
-- End customers pay through platform
-- Platform fee (configurable per workspace) deducted automatically
-- Remainder transferred to business subscriber
-- Structure ready for activation when Stripe API keys are provided
-
-### Fee Calculation
-```
-Customer Payment → Invoice Total (with tax)
-Platform Fee = Total × platformFeePercentage
-Business Amount = Total - Platform Fee
-```
-
-## Recent Technical Decisions
-
-### Time Tracking
-- Time entries must link to shifts via `shiftId`
-- Real-time timers use interval-based state updates (every 10 seconds)
-- Clock-out calculates `totalHours` and `totalAmount` server-side
-
-### Invoice Generation
-- Tax rate stored as percentage (not dollar amount)
-- All monetary calculations use `parseFloat()` with NaN guards
-- Two-decimal precision enforced with `.toFixed(2)`
-- Unbilled entries filtered through workspace-scoped invoice joins
-
-### Analytics
-- Revenue calculated from `businessAmount` (post-platform-fee)
-- Hours aggregated from completed time entries
-- Usage metrics show current vs. tier limits
-- String-to-number conversions use `String()` wrapper for safety
-
-## Development Guidelines
-
-### Frontend Patterns
-- Use TanStack Query for all API calls (no custom `queryFn`)
-- Invalidate cache after mutations using `queryClient.invalidateQueries()`
-- Form validation with `react-hook-form` + `zod` + shadcn Form components
-- Add `data-testid` to all interactive elements
-
-### Backend Patterns
-- Validate request bodies with Zod schemas
-- Always verify workspace ownership in routes
-- Use storage interface methods (never raw DB queries in routes)
-- Return 404 for missing workspace, 400 for validation errors
-
-### Styling
-- Follow `design_guidelines.md` for colors and spacing
-- Use shadcn components (Button, Card, Badge) for consistency
-- Leverage `hover-elevate` and `active-elevate-2` utility classes
-- Never implement custom hover states on shadcn components
-
-## Current State
-- ✅ Complete CAD-style Fortune 500 interface transformation
-- ✅ Rebranded to Clockwork with professional logo and landing page
-- ✅ All core scheduling and time tracking features complete
-- ✅ Invoice generation from time entries working
-- ✅ Analytics dashboard displaying comprehensive metrics
-- ✅ Multi-tenant isolation verified and secure
-- ✅ RBAC system with manager assignments fully implemented
-- 🚧 Ready for notification systems and calendar integrations
-
-## CAD-Style Professional Interface ✨ *New*
-- **Application Frame**: Menu bar (File/Edit/View/Tools/Help), context-aware toolbar, real-time status bar
-- **Professional Theme**: CAD dark mode with precision color scheme (blue/green/orange/red status indicators)
-- **Real-Time Indicators**: Live clocks in menu bar and status bar, connection status, workspace metrics
-- **Clockwork Branding**: Professional gear-based logo, Fortune 500-grade landing page
-- **Design Philosophy**: Program-like interface, not website - built for precision and control
-
-## Demo System ✨
-- **Interactive Demo Workspace** - Prospects can try the platform without signing up
-- Landing page "View Demo" button (/api/demo-login)
-- Pre-populated with realistic sample data:
-  * 5 employees (varied roles and rates)
-  * 3 clients (with company info)
-  * 10 shifts (past and future)
-  * 5 time entries (3 billed, 2 unbilled)
-  * 2 invoices (1 paid, 1 sent)
-- Demo mode banner with "Sign Up for Free" CTA
-- Reset script: `tsx scripts/reset-demo.ts` (manual cleanup)
-- Shared workspace model (low cost, resets every 24hrs)
-
-## API Endpoint Coverage (99.9% Complete)
-
-### Authentication & Authorization (✅ Complete)
-- `GET /api/auth/user` - Get authenticated user
-- `GET /api/demo-login` - Interactive demo access
-- RBAC middleware: `requireOwner`, `requireManager`, `requireEmployee`
-
-### Workspace Management (✅ Complete)
-- `GET /api/workspace` - Get/create workspace
-- `PATCH /api/workspace` - Update workspace settings
-
-### Employee Management (✅ Complete)
-- `GET /api/employees` - List all employees
-- `POST /api/employees` - Create employee (with email notification)
-- `PATCH /api/employees/:id` - Update employee
-- `DELETE /api/employees/:id` - Delete employee
-
-### Client Management (✅ Complete)
-- `GET /api/clients` - List all clients
-- `POST /api/clients` - Create client
-- `PATCH /api/clients/:id` - Update client
-- `DELETE /api/clients/:id` - Delete client
-
-### Schedule Management (✅ Complete)
-- `GET /api/shifts` - List all shifts
-- `POST /api/shifts` - Create shift
-- `PATCH /api/shifts/:id` - Update shift
-- `DELETE /api/shifts/:id` - Delete shift
-- `POST /api/shifts/bulk` - Create recurring shifts
-- `GET /api/shift-templates` - List templates
-- `POST /api/shift-templates` - Create template
-- `DELETE /api/shift-templates/:id` - Delete template
-
-### Time Tracking (✅ Complete)
-- `GET /api/time-entries` - List time entries
-- `POST /api/time-entries` - Create time entry
-- `POST /api/time-entries/clock-in` - Clock in
-- `PATCH /api/time-entries/:id/clock-out` - Clock out
-- `GET /api/time-entries/unbilled/:clientId` - Get unbilled entries
-
-### Invoicing & Billing (✅ Complete)
-- `GET /api/invoices` - List invoices
-- `POST /api/invoices` - Create invoice
-- `POST /api/invoices/generate-from-time` - Auto-generate from time entries
-
-### Analytics & Reporting (✅ Complete)
-- `GET /api/analytics` - Dashboard metrics (revenue, hours, usage)
-
-### RBAC & Manager Assignments (✅ Complete)
-- `POST /api/manager-assignments` - Create assignment (owners only)
-- `GET /api/manager-assignments` - List assignments (managers+)
-- `GET /api/manager-assignments/manager/:id` - Get by manager
-- `GET /api/manager-assignments/employee/:id` - Get by employee
-- `DELETE /api/manager-assignments/:id` - Delete assignment (owners only)
-
-### Payment Processing (🚧 Ready for Stripe API Keys)
-- `POST /api/stripe/connect-account` - Setup connected account
-- `POST /api/stripe/create-payment` - Process payment
-
-**Total**: 35 fully functional endpoints + 2 ready for Stripe activation
-
-## Pricing Tiers (Fortune 500 Value-Based)
-
-### Starter - $199/month
-**Replaces manual scheduling ($45k/year in savings)**
-- Up to 15 employees
-- Smart scheduling with AI suggestions
-- Shift templates & recurring shifts
-- Time tracking with clock-in/out
-- Auto-invoice generation
-- Basic analytics dashboard
-- Employee portal access
-- Email & chat support
-
-### Professional - $799/month (Most Popular)
-**Replaces HR + Scheduling teams ($130k/year in savings)**
-- Up to 100 employees
-- Everything in Starter
-- **GPS clock-in verification**
-- **Job posting & hiring workflow**
-- **Employee file management**
-- **Audit compliance tools**
-- Multi-client management
-- Manager assignments (RBAC)
-- Advanced analytics & forecasting
-- Priority support
-
-### Enterprise - $2,499/month
-**Replaces entire workforce operations ($250k+/year in savings)**
-- Unlimited employees
-- Everything in Professional
-- **Auto-payroll processing**
-- **API access & webhooks**
-- **SSO/SAML integration**
-- **White-label branding**
-- Custom integrations (ADP, Workday, QuickBooks)
-- Dedicated account manager
-- 99.9% uptime SLA
-- Priority phone support
-- Custom feature development
-
-## Fortune 500 Feature Roadmap
-
-### Phase 3 - Compliance & Security (Priority 1)
-- SSO/SAML + SCIM provisioning
-- Mandatory MFA/2FA
-- Immutable audit logs
-- FLSA/overtime rules engine
-- eDiscovery-ready data export
-- SOC 2 Type II certification
-
-### Phase 4 - Advanced Workforce Operations (Priority 2)
-- PTO/leave management with accrual
-- Shift swap marketplace
-- Credential/licensure tracking
-- Job posting & internal hiring
-- Employee file management (documents, certifications)
-- Multilingual support
-
-### Phase 5 - Analytics & Integrations (Priority 3)
-- Self-serve report builder
-- BI tool integrations (Tableau, PowerBI)
-- Payroll system connectors (ADP, Paychex)
-- HRIS integrations (Workday, SuccessFactors)
-- Accounting software (QuickBooks, NetSuite)
-
-### Phase 6 - Mobile & Communication (Priority 4)
-- Native iOS/Android apps
-- Offline clock-in capability
-- Push/SMS/Email notifications
-- In-app announcements
-- Shift reminders (geofenced)
+## External Dependencies
+- **Authentication**: Replit Auth
+- **Database**: Neon (PostgreSQL)
+- **ORM**: Drizzle ORM
+- **Payment Processing**: Stripe Connect (ready for activation with API keys)
