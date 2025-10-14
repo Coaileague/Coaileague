@@ -1,7 +1,7 @@
 # Clockwork - Fortune 500 Workforce Management Platform
 
 ## Project Overview
-Clockwork is a professional CAD-style workforce management platform with Fortune 500-grade precision. The platform features autonomous scheduling, GPS clock-in verification, time tracking, and automated invoicing. The platform processes payments from end customers, takes a configurable platform fee, and distributes the remainder to business subscribers (similar to QuickBooks model).
+Clockwork is a professional CAD-style workforce management platform with Fortune 500-grade architecture. The platform features drag-and-drop scheduling with templates, real-time time tracking with clock-in/out, automated invoice generation, multi-tenant security, role-based access control, and comprehensive analytics. The platform is ready to process payments from end customers with configurable platform fees (Stripe integration ready when API keys are provided).
 
 ## Architecture
 - **Frontend**: React + Vite + TypeScript + Wouter (routing) + TanStack Query + shadcn/ui
@@ -278,27 +278,26 @@ Business Amount = Total - Platform Fee
 ### Starter - $49/month
 - Up to 15 employees
 - Drag-drop scheduling
-- Time tracking
-- Basic reporting
+- Shift templates & recurring shifts
+- Time tracking with clock-in/out
+- Auto-invoice generation
+- Basic analytics
 - Email support
 
 ### Professional - $149/month (Most Popular)
 - Up to 100 employees
 - All Starter features
-- **Automated scheduling AI**
-- **GPS clock-in verification**
-- **Auto-payroll processing**
-- **Audit compliance tools**
-- **Advanced analytics**
+- Multi-client management
+- Manager assignments (RBAC)
+- Advanced analytics
+- Priority support
 
 ### Enterprise - Custom Pricing
 - Unlimited employees
 - All Professional features
-- **SSO/SAML integration**
-- **API access**
-- **Dedicated account manager**
-- **Custom integrations**
-- **SLA guarantee**
+- Priority support & SLA
+- Dedicated account manager
+- Future features (2025): Custom integrations, API access & webhooks, white-label options, SSO/SAML, audit compliance, auto-payroll, GPS verification
 
 ## Fortune 500 Feature Roadmap
 
