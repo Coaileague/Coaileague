@@ -51,17 +51,20 @@ export default function ReportsPage() {
   const activeTemplates = templates.filter(t => t.isActive);
   const inactiveTemplates = templates.filter(t => !t.isActive);
 
-  const pendingReports = submissions.filter(s => s.status === "pending");
-  const approvedReports = submissions.filter(s => s.status === "approved");
+  // Schema status values: 'draft', 'pending_review', 'approved', 'rejected', 'sent_to_customer'
+  const pendingReports = submissions.filter(s => s.status === "pending_review" || s.status === "draft");
+  const approvedReports = submissions.filter(s => s.status === "approved" || s.status === "sent_to_customer");
   const rejectedReports = submissions.filter(s => s.status === "rejected");
 
   const getStatusIcon = (status: string | null) => {
     if (!status) return <AlertCircle className="w-4 h-4" />;
     
     switch (status) {
-      case "pending":
+      case "draft":
+      case "pending_review":
         return <Clock className="w-4 h-4 text-yellow-500" />;
       case "approved":
+      case "sent_to_customer":
         return <CheckCircle2 className="w-4 h-4 text-green-500" />;
       case "rejected":
         return <XCircle className="w-4 h-4 text-red-500" />;
@@ -74,12 +77,14 @@ export default function ReportsPage() {
     if (!status) return <Badge variant="outline">Unknown</Badge>;
     
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
-      pending: { variant: "secondary", label: "Pending Review" },
+      draft: { variant: "outline", label: "Draft" },
+      pending_review: { variant: "secondary", label: "Pending Review" },
       approved: { variant: "default", label: "Approved" },
       rejected: { variant: "destructive", label: "Rejected" },
+      sent_to_customer: { variant: "default", label: "Sent to Customer" },
     };
     
-    const config = variants[status] || { variant: "outline", label: status };
+    const config = variants[status] || { variant: "outline", label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) };
     return <Badge variant={config.variant} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
   };
 
