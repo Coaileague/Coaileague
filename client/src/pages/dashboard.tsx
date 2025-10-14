@@ -358,6 +358,319 @@ export default function Dashboard() {
     );
   }
 
+  // Render Employee Dashboard
+  if (workspaceRole === 'employee') {
+    return (
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6 lg:p-8 space-y-8 relative z-10">
+          {/* Top Bar */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-4xl lg:text-5xl font-black tracking-tight mb-2" data-testid="text-dashboard-title">
+                Welcome back, {firstName}
+              </h1>
+              <p className="text-lg text-muted-foreground" data-testid="text-dashboard-subtitle">
+                Track your time and manage your schedule
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                variant="outline" 
+                size="default" 
+                asChild
+                data-testid="button-view-schedule"
+              >
+                <Link href="/schedule">
+                  <Clock className="mr-2 h-4 w-4" />
+                  My Schedule
+                </Link>
+              </Button>
+              <Button 
+                size="default"
+                asChild
+                data-testid="button-clock-in"
+              >
+                <Link href="/time-tracking">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Clock In
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Employee Stats Grid */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="glass-card rounded-2xl p-7" data-testid="card-metric-hours-week">
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Hours This Week
+                </div>
+                <div className="icon-box w-10 h-10">
+                  <Clock className="h-5 w-5 text-red-500" />
+                </div>
+              </div>
+              <div className="text-4xl font-black mb-2 stat-value-gradient" data-testid="text-metric-hours-week">
+                38.5
+              </div>
+              <div className="text-sm font-semibold text-chart-2 flex items-center gap-1">
+                <span>↑ 2.5 hrs vs last week</span>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-7" data-testid="card-metric-earnings-week">
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Earnings This Week
+                </div>
+                <div className="icon-box w-10 h-10">
+                  <DollarSign className="h-5 w-5 text-red-500" />
+                </div>
+              </div>
+              <div className="text-4xl font-black mb-2 stat-value-gradient" data-testid="text-metric-earnings-week">
+                $1,155
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">
+                At $30/hr
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-7" data-testid="card-metric-upcoming-shifts">
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Upcoming Shifts
+                </div>
+                <div className="icon-box w-10 h-10">
+                  <Clock className="h-5 w-5 text-red-500" />
+                </div>
+              </div>
+              <div className="text-4xl font-black mb-2 stat-value-gradient" data-testid="text-metric-upcoming-shifts">
+                5
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">
+                Next 7 days
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-7" data-testid="card-metric-status">
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Current Status
+                </div>
+                <div className="icon-box w-10 h-10">
+                  <CheckCircle2 className="h-5 w-5 text-red-500" />
+                </div>
+              </div>
+              <div className="text-4xl font-black mb-2" data-testid="text-metric-status">
+                <Badge className="bg-gray-500/15 text-gray-400 border-0 font-semibold text-xl px-4 py-2">
+                  Clocked Out
+                </Badge>
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">
+                Since 5:00 PM
+              </div>
+            </div>
+          </div>
+
+          {/* Employee Main Grid */}
+          <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+            {/* Recent Time Entries */}
+            <Card className="glass-card rounded-2xl p-8 border-0" data-testid="card-time-entries">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black">Recent Time Entries</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  asChild
+                  data-testid="button-view-all-time"
+                >
+                  <Link href="/time-tracking">
+                    View All <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {[
+                  { date: "Today", clockIn: "9:00 AM", clockOut: "5:00 PM", hours: "8.0", amount: "$240", status: "approved" },
+                  { date: "Yesterday", clockIn: "8:30 AM", clockOut: "5:30 PM", hours: "8.5", amount: "$255", status: "approved" },
+                  { date: "Oct 12", clockIn: "9:15 AM", clockOut: "6:00 PM", hours: "8.25", amount: "$247.50", status: "pending" },
+                  { date: "Oct 11", clockIn: "9:00 AM", clockOut: "5:00 PM", hours: "7.5", amount: "$225", status: "approved" },
+                ].map((entry, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 rounded-xl list-item-hover bg-white/[0.03]"
+                    data-testid={`time-entry-item-${index}`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-bold">{entry.date}</h4>
+                        {entry.status === 'approved' ? (
+                          <Badge className="bg-green-500/15 text-green-500 border-0 font-semibold text-xs">
+                            Approved
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-yellow-500/15 text-yellow-500 border-0 font-semibold text-xs">
+                            Pending
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {entry.clockIn} - {entry.clockOut} • {entry.hours} hrs • {entry.amount}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="glass-card rounded-2xl p-8 border-0" data-testid="card-employee-actions">
+              <h2 className="text-2xl font-black mb-8">Quick Actions</h2>
+              
+              <div className="space-y-4">
+                <Link href="/time-tracking" data-testid="link-action-clock-in">
+                  <div className="flex items-center gap-4 p-5 rounded-xl list-item-hover bg-white/[0.03] cursor-pointer border border-white/[0.08]">
+                    <div className="icon-box w-11 h-11">
+                      <CheckCircle2 className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold mb-1">Clock In/Out</h4>
+                      <p className="text-sm text-muted-foreground">Track your time</p>
+                    </div>
+                  </div>
+                </Link>
+
+                <Link href="/schedule" data-testid="link-action-view-schedule">
+                  <div className="flex items-center gap-4 p-5 rounded-xl list-item-hover bg-white/[0.03] cursor-pointer border border-white/[0.08]">
+                    <div className="icon-box w-11 h-11">
+                      <Clock className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold mb-1">My Schedule</h4>
+                      <p className="text-sm text-muted-foreground">View upcoming shifts</p>
+                    </div>
+                  </div>
+                </Link>
+
+                <Link href="/time-tracking" data-testid="link-action-time-history">
+                  <div className="flex items-center gap-4 p-5 rounded-xl list-item-hover bg-white/[0.03] cursor-pointer border border-white/[0.08]">
+                    <div className="icon-box w-11 h-11">
+                      <BarChart3 className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold mb-1">Time History</h4>
+                      <p className="text-sm text-muted-foreground">View all time entries</p>
+                    </div>
+                  </div>
+                </Link>
+
+                <Link href="/settings" data-testid="link-action-my-profile">
+                  <div className="flex items-center gap-4 p-5 rounded-xl list-item-hover bg-white/[0.03] cursor-pointer border border-white/[0.08]">
+                    <div className="icon-box w-11 h-11">
+                      <FileText className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold mb-1">My Profile</h4>
+                      <p className="text-sm text-muted-foreground">Update information</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </Card>
+          </div>
+
+          {/* Bottom Section */}
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Upcoming Shifts */}
+            <Card className="glass-card rounded-2xl p-8 border-0" data-testid="card-upcoming-shifts">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black">Upcoming Shifts</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  asChild
+                  data-testid="button-view-all-shifts"
+                >
+                  <Link href="/schedule">
+                    View All <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {[
+                  { day: "Tomorrow", date: "Oct 15", time: "9:00 AM - 5:00 PM", location: "Site A" },
+                  { day: "Wednesday", date: "Oct 16", time: "8:00 AM - 4:00 PM", location: "Site B" },
+                  { day: "Thursday", date: "Oct 17", time: "9:00 AM - 5:00 PM", location: "Site A" },
+                ].map((shift, index) => (
+                  <div key={index} className="flex gap-4 p-4 rounded-xl bg-white/[0.02]" data-testid={`shift-item-${index}`}>
+                    <div className="icon-box w-10 h-10 flex-shrink-0">
+                      <Clock className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm mb-1">{shift.day} - {shift.date}</h4>
+                      <p className="text-sm text-muted-foreground mb-1">{shift.time}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <MapPin className="inline h-3 w-3 mr-1" />
+                        {shift.location}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Documents & Compliance */}
+            <Card className="glass-card rounded-2xl p-8 border-0" data-testid="card-documents">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black">Documents</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  data-testid="button-view-all-docs"
+                >
+                  View All <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex gap-4 p-4 rounded-xl bg-white/[0.02]">
+                  <div className="icon-box w-10 h-10 flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm mb-1">Tax Forms</h4>
+                    <p className="text-sm text-muted-foreground">W-4 completed</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-4 rounded-xl bg-white/[0.02]">
+                  <div className="icon-box w-10 h-10 flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm mb-1">Contract</h4>
+                    <p className="text-sm text-muted-foreground">Signed on Oct 1, 2024</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-4 rounded-xl bg-white/[0.02]">
+                  <div className="icon-box w-10 h-10 flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm mb-1">Safety Training</h4>
+                    <p className="text-sm text-muted-foreground">Completed Oct 2, 2024</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Render Owner Dashboard (default)
   return (
     <div className="flex-1 overflow-auto">
