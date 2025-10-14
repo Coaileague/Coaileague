@@ -35,6 +35,7 @@ import Settings from "@/pages/settings";
 import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
 import AdminUsage from "@/pages/admin-usage";
+import AdminSupport from "@/pages/admin-support";
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -92,6 +93,7 @@ function AppContent() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/admin/usage" component={AdminUsage} />
+                <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/support" component={Support} />

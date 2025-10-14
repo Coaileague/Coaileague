@@ -1,5 +1,5 @@
 // Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity } from "lucide-react";
+import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity, Headphones } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -71,6 +71,11 @@ const adminMenuItems = [
     title: "Usage & Credits",
     url: "/admin/usage",
     icon: Activity,
+  },
+  {
+    title: "Support Dashboard",
+    url: "/admin/support",
+    icon: Headphones,
   },
 ];
 
