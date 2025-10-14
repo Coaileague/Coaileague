@@ -1,7 +1,16 @@
-# Clockwork - Fortune 500 Workforce Management Platform
+# WorkforceOS - Replace Your Entire HR Department
 
 ## Overview
-Clockwork is a professional CAD-style workforce management platform designed for Fortune 500-grade operations. It offers drag-and-drop scheduling with templates, real-time time tracking, automated invoice generation, multi-tenant security, role-based access control, and comprehensive analytics. The platform supports payment processing via Stripe Connect and aims to provide significant savings by streamlining workforce operations.
+WorkforceOS is a Fortune 500-grade operating system for workforce management. It's a complete office work automation platform for any business, featuring GPS clock-in, automated payroll, smart hiring, compliance audit trails, and real-time analytics. The platform replaces multiple HR staff positions with one automated system, delivering $130K-$250K in annual cost savings through drag-and-drop scheduling, real-time time tracking, automated invoice generation, multi-tenant security, role-based access control, and comprehensive analytics.
+
+## Brand Identity
+- **Name**: WorkforceOS
+- **Tagline**: "Replace Your Entire Workforce Department"
+- **Value Proposition**: Fortune 500-grade platform with GPS clock-in, automated payroll, hiring, and compliance
+- **Primary Color**: Red (#ef4444 / #dc2626) - Bold, action-oriented, enterprise-ready
+- **Logo**: Gradient "W" icon in red square with shimmer effect
+- **Design System**: CAD-style professional interface with dark theme, precision typography, and aggressive ROI-focused messaging
+- **Target Savings**: $130K-$250K per year by replacing HR staff with automation
 
 ## User Preferences
 I prefer detailed explanations.
