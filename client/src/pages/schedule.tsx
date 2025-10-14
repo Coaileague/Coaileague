@@ -558,12 +558,12 @@ export default function Schedule() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="client">Client (Optional)</Label>
-                        <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
+                        <Select value={formData.clientId || "none"} onValueChange={(value) => setFormData({ ...formData, clientId: value === "none" ? "" : value })}>
                           <SelectTrigger id="client" data-testid="select-shift-client">
                             <SelectValue placeholder="Select client" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
                             {clients.map((client) => (
                               <SelectItem key={client.id} value={client.id}>
                                 {client.firstName} {client.lastName}
@@ -710,11 +710,33 @@ export default function Schedule() {
                     return (
                       <div
                         key={dateIndex}
-                        className="border-r border-[hsl(var(--cad-border))] last:border-r-0 p-2 min-h-[80px] relative"
+                        className="border-r border-[hsl(var(--cad-border))] last:border-r-0 p-2 min-h-[80px] relative group/cell"
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, employee.id, date)}
                         data-testid={`cell-${employee.id}-${dateIndex}`}
                       >
+                        {/* GetSling-style: Click + to create shift for this date/employee */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/cell:opacity-100 transition-opacity bg-[hsl(var(--cad-chrome))] hover:bg-[hsl(var(--cad-blue))]/20 hover:text-[hsl(var(--cad-blue))] z-10"
+                          onClick={() => {
+                            const dateStr = date.toISOString().split('T')[0];
+                            setFormData({
+                              employeeId: employee.id,
+                              clientId: "",
+                              startDate: dateStr,
+                              startTime: "09:00",
+                              endTime: "17:00",
+                              description: ""
+                            });
+                            setIsAddShiftOpen(true);
+                          }}
+                          data-testid={`button-quick-add-${employee.id}-${dateIndex}`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        
                         <div className="space-y-1">
                           {dayShifts.map((shift) => {
                             const startTime = new Date(shift.startTime);
