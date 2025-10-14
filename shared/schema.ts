@@ -589,6 +589,204 @@ export type InsertEmployeeFile = z.infer<typeof insertEmployeeFileSchema>;
 export type EmployeeFile = typeof employeeFiles.$inferSelect;
 
 // ============================================================================
+// FORTUNE 500 FEATURES - Employee Onboarding System
+// ============================================================================
+
+export const onboardingStatusEnum = pgEnum('onboarding_status', ['invited', 'in_progress', 'pending_review', 'completed', 'rejected']);
+export const taxClassificationEnum = pgEnum('tax_classification', ['w4_employee', 'w9_contractor']);
+export const onboardingStepEnum = pgEnum('onboarding_step', [
+  'personal_info', 'tax_selection', 'tax_forms', 'contract_signature', 
+  'document_upload', 'work_availability', 'certifications', 'acknowledgements', 'completed'
+]);
+
+// Onboarding Invites
+export const onboardingInvites = pgTable("onboarding_invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }),
+  
+  email: varchar("email").notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  
+  inviteToken: varchar("invite_token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  
+  acceptedAt: timestamp("accepted_at"),
+  isUsed: boolean("is_used").default(false),
+  
+  sentBy: varchar("sent_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOnboardingInviteSchema = createInsertSchema(onboardingInvites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOnboardingInvite = z.infer<typeof insertOnboardingInviteSchema>;
+export type OnboardingInvite = typeof onboardingInvites.$inferSelect;
+
+// Onboarding Applications
+export const onboardingApplications = pgTable("onboarding_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'set null' }),
+  inviteId: varchar("invite_id").references(() => onboardingInvites.id),
+  
+  // Generated employee number
+  employeeNumber: varchar("employee_number").unique(),
+  
+  // Personal Information
+  firstName: varchar("first_name").notNull(),
+  middleName: varchar("middle_name"),
+  lastName: varchar("last_name").notNull(),
+  dateOfBirth: timestamp("date_of_birth"),
+  ssn: varchar("ssn"), // Encrypted in production
+  
+  // Contact
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  
+  // Emergency Contact
+  emergencyContactName: varchar("emergency_contact_name"),
+  emergencyContactPhone: varchar("emergency_contact_phone"),
+  emergencyContactRelation: varchar("emergency_contact_relation"),
+  
+  // Tax Classification
+  taxClassification: taxClassificationEnum("tax_classification"),
+  
+  // Work Availability (for AI scheduling)
+  availableMonday: boolean("available_monday").default(true),
+  availableTuesday: boolean("available_tuesday").default(true),
+  availableWednesday: boolean("available_wednesday").default(true),
+  availableThursday: boolean("available_thursday").default(true),
+  availableFriday: boolean("available_friday").default(true),
+  availableSaturday: boolean("available_saturday").default(false),
+  availableSunday: boolean("available_sunday").default(false),
+  preferredShiftTime: varchar("preferred_shift_time"), // 'morning', 'afternoon', 'evening', 'night'
+  maxHoursPerWeek: integer("max_hours_per_week"),
+  availabilityNotes: text("availability_notes"),
+  
+  // Onboarding Status
+  currentStep: onboardingStepEnum("current_step").default("personal_info"),
+  status: onboardingStatusEnum("status").default("in_progress"),
+  completedAt: timestamp("completed_at"),
+  
+  // Tracking
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOnboardingApplicationSchema = createInsertSchema(onboardingApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOnboardingApplication = z.infer<typeof insertOnboardingApplicationSchema>;
+export type OnboardingApplication = typeof onboardingApplications.$inferSelect;
+
+// Legal Documents & Signatures
+export const documentSignatureStatusEnum = pgEnum('signature_status', ['pending', 'signed', 'declined']);
+export const documentTypeSignatureEnum = pgEnum('document_type_signature', [
+  'employee_contract', 'contractor_agreement', 'sop_acknowledgement', 
+  'drug_free_policy', 'handbook', 'confidentiality', 'i9_form', 'w4_form', 'w9_form'
+]);
+
+export const documentSignatures = pgTable("document_signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  applicationId: varchar("application_id").references(() => onboardingApplications.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").references(() => employees.id),
+  
+  documentType: documentTypeSignatureEnum("document_type").notNull(),
+  documentTitle: varchar("document_title").notNull(),
+  documentContent: text("document_content"), // Full text for legal record
+  documentUrl: varchar("document_url"), // PDF/file URL
+  
+  status: documentSignatureStatusEnum("status").default("pending"),
+  
+  // Signature Data (legal defensibility)
+  signatureData: text("signature_data"), // Base64 signature image
+  signedByName: varchar("signed_by_name"),
+  signedAt: timestamp("signed_at"),
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  geoLocation: varchar("geo_location"), // Optional: lat,lon
+  
+  // Witness/Notary (if required)
+  witnessName: varchar("witness_name"),
+  witnessSignature: text("witness_signature"),
+  witnessedAt: timestamp("witnessed_at"),
+  
+  // Audit Trail
+  viewedAt: timestamp("viewed_at"),
+  viewCount: integer("view_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDocumentSignatureSchema = createInsertSchema(documentSignatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDocumentSignature = z.infer<typeof insertDocumentSignatureSchema>;
+export type DocumentSignature = typeof documentSignatures.$inferSelect;
+
+// Certification & License Tracking
+export const certificationStatusEnum = pgEnum('certification_status', ['pending', 'verified', 'expired', 'invalid']);
+
+export const employeeCertifications = pgTable("employee_certifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  applicationId: varchar("application_id").references(() => onboardingApplications.id),
+  
+  certificationType: varchar("certification_type").notNull(), // 'driver_license', 'medical_cert', 'professional_license'
+  certificationName: varchar("certification_name").notNull(),
+  certificationNumber: varchar("certification_number"),
+  issuingAuthority: varchar("issuing_authority"),
+  
+  issuedDate: timestamp("issued_date"),
+  expirationDate: timestamp("expiration_date"),
+  
+  status: certificationStatusEnum("status").default("pending"),
+  
+  // Document proof
+  documentUrl: varchar("document_url"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  
+  // Required for job
+  isRequired: boolean("is_required").default(false),
+  
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEmployeeCertificationSchema = createInsertSchema(employeeCertifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEmployeeCertification = z.infer<typeof insertEmployeeCertificationSchema>;
+export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
+
+// ============================================================================
 // FORTUNE 500 FEATURES - Audit Trail System
 // ============================================================================
 
