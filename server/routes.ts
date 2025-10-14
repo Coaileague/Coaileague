@@ -5,7 +5,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { sendShiftAssignmentEmail, sendInvoiceGeneratedEmail, sendEmployeeOnboardingEmail } from "./email";
+import { 
+  sendShiftAssignmentEmail, 
+  sendInvoiceGeneratedEmail, 
+  sendEmployeeOnboardingEmail,
+  sendOnboardingInviteEmail 
+} from "./email";
 import { requireOwner, requireManager, validateManagerAssignment, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
@@ -15,7 +20,12 @@ import {
   insertTimeEntrySchema,
   insertInvoiceSchema,
   insertManagerAssignmentSchema,
+  insertOnboardingInviteSchema,
+  insertOnboardingApplicationSchema,
+  insertDocumentSignatureSchema,
+  insertEmployeeCertificationSchema,
 } from "@shared/schema";
+import crypto from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -960,6 +970,269 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting manager assignment:", error);
       res.status(500).json({ message: "Failed to delete manager assignment" });
+    }
+  });
+
+  // ============================================================================
+  // ONBOARDING ROUTES
+  // ============================================================================
+  
+  // Create onboarding invite (Owners/Managers only)
+  app.post('/api/onboarding/invite', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user.claims.sub;
+      
+      const { email, firstName, lastName } = req.body;
+      
+      if (!email || !firstName || !lastName) {
+        return res.status(400).json({ message: "Email, first name, and last name are required" });
+      }
+      
+      // Generate unique invite token
+      const inviteToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      
+      const workspace = await storage.getWorkspace(workspaceId);
+      
+      const invite = await storage.createOnboardingInvite({
+        workspaceId,
+        email,
+        firstName,
+        lastName,
+        inviteToken,
+        expiresAt,
+        sentBy: userId,
+      });
+      
+      // Send invitation email
+      const onboardingUrl = `${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://localhost:5000'}/onboarding/${inviteToken}`;
+      
+      await sendOnboardingInviteEmail(email, {
+        employeeName: `${firstName} ${lastName}`,
+        workspaceName: workspace?.name || 'Our Team',
+        onboardingUrl,
+        expiresIn: '7 days',
+      });
+      
+      res.json(invite);
+    } catch (error: any) {
+      console.error("Error creating onboarding invite:", error);
+      res.status(400).json({ message: error.message || "Failed to create invite" });
+    }
+  });
+  
+  // Get invite by token (public route)
+  app.get('/api/onboarding/invite/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const invite = await storage.getOnboardingInviteByToken(token);
+      
+      if (!invite) {
+        return res.status(404).json({ message: "Invite not found" });
+      }
+      
+      if (invite.isUsed) {
+        return res.status(400).json({ message: "Invite has already been used" });
+      }
+      
+      if (new Date() > new Date(invite.expiresAt)) {
+        return res.status(400).json({ message: "Invite has expired" });
+      }
+      
+      res.json(invite);
+    } catch (error) {
+      console.error("Error fetching invite:", error);
+      res.status(500).json({ message: "Failed to fetch invite" });
+    }
+  });
+  
+  // List all invites for workspace
+  app.get('/api/onboarding/invites', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const invites = await storage.getOnboardingInvitesByWorkspace(workspaceId);
+      res.json(invites);
+    } catch (error) {
+      console.error("Error fetching invites:", error);
+      res.status(500).json({ message: "Failed to fetch invites" });
+    }
+  });
+  
+  // Create/start onboarding application (public route with valid token)
+  app.post('/api/onboarding/application', async (req, res) => {
+    try {
+      const { inviteToken, ...applicationData } = req.body;
+      
+      if (!inviteToken) {
+        return res.status(400).json({ message: "Invite token is required" });
+      }
+      
+      const invite = await storage.getOnboardingInviteByToken(inviteToken);
+      
+      if (!invite || invite.isUsed || new Date() > new Date(invite.expiresAt)) {
+        return res.status(400).json({ message: "Invalid or expired invite" });
+      }
+      
+      // Generate employee number
+      const employeeNumber = await storage.generateEmployeeNumber(invite.workspaceId);
+      
+      // Create application
+      const application = await storage.createOnboardingApplication({
+        workspaceId: invite.workspaceId,
+        inviteId: invite.id,
+        firstName: applicationData.firstName || invite.firstName,
+        lastName: applicationData.lastName || invite.lastName,
+        email: applicationData.email || invite.email,
+        employeeNumber,
+        currentStep: 'personal_info',
+        status: 'in_progress',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        ...applicationData,
+      });
+      
+      // Mark invite as used
+      await storage.updateOnboardingInvite(invite.id, {
+        isUsed: true,
+        acceptedAt: new Date(),
+      });
+      
+      res.json(application);
+    } catch (error: any) {
+      console.error("Error creating application:", error);
+      res.status(400).json({ message: error.message || "Failed to create application" });
+    }
+  });
+  
+  // Get onboarding application
+  app.get('/api/onboarding/application/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const workspaceId = req.query.workspaceId as string;
+      
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+      
+      const application = await storage.getOnboardingApplication(id, workspaceId);
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(application);
+    } catch (error) {
+      console.error("Error fetching application:", error);
+      res.status(500).json({ message: "Failed to fetch application" });
+    }
+  });
+  
+  // Update onboarding application (public route during onboarding, or authenticated)
+  app.patch('/api/onboarding/application/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { workspaceId, ...updateData } = req.body;
+      
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+      
+      const updated = await storage.updateOnboardingApplication(id, workspaceId, updateData);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating application:", error);
+      res.status(400).json({ message: error.message || "Failed to update application" });
+    }
+  });
+  
+  // List all applications for workspace
+  app.get('/api/onboarding/applications', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const applications = await storage.getOnboardingApplicationsByWorkspace(workspaceId);
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      res.status(500).json({ message: "Failed to fetch applications" });
+    }
+  });
+  
+  // Search employees and applications
+  app.get('/api/employees/search', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const query = req.query.q as string;
+      
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      
+      const results = await storage.searchEmployeesAndApplications(workspaceId, query);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching employees:", error);
+      res.status(500).json({ message: "Failed to search employees" });
+    }
+  });
+  
+  // Create document signature
+  app.post('/api/onboarding/signatures', async (req, res) => {
+    try {
+      const signatureData = req.body;
+      
+      const signature = await storage.createDocumentSignature({
+        ...signatureData,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        signedAt: new Date(),
+      });
+      
+      res.json(signature);
+    } catch (error: any) {
+      console.error("Error creating signature:", error);
+      res.status(400).json({ message: error.message || "Failed to create signature" });
+    }
+  });
+  
+  // Get signatures for application
+  app.get('/api/onboarding/signatures/:applicationId', async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const signatures = await storage.getDocumentSignaturesByApplication(applicationId);
+      res.json(signatures);
+    } catch (error) {
+      console.error("Error fetching signatures:", error);
+      res.status(500).json({ message: "Failed to fetch signatures" });
+    }
+  });
+  
+  // Create certification
+  app.post('/api/onboarding/certifications', async (req, res) => {
+    try {
+      const certificationData = req.body;
+      const certification = await storage.createEmployeeCertification(certificationData);
+      res.json(certification);
+    } catch (error: any) {
+      console.error("Error creating certification:", error);
+      res.status(400).json({ message: error.message || "Failed to create certification" });
+    }
+  });
+  
+  // Get certifications for application
+  app.get('/api/onboarding/certifications/:applicationId', async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const certifications = await storage.getEmployeeCertificationsByApplication(applicationId);
+      res.json(certifications);
+    } catch (error) {
+      console.error("Error fetching certifications:", error);
+      res.status(500).json({ message: "Failed to fetch certifications" });
     }
   });
 

@@ -142,6 +142,42 @@ export const emailTemplates = {
         </p>
       </div>
     `
+  }),
+  
+  onboardingInvite: (data: {
+    employeeName: string;
+    workspaceName: string;
+    onboardingUrl: string;
+    expiresIn: string;
+  }) => ({
+    subject: `Complete Your Onboarding for ${data.workspaceName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">You're Invited to Join ${data.workspaceName}</h2>
+        <p>Hello ${data.employeeName},</p>
+        <p>You have been invited to join ${data.workspaceName}. To complete your onboarding, please click the button below:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${data.onboardingUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+            Complete Onboarding
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">This link will expire in ${data.expiresIn}.</p>
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+          <p style="margin: 5px 0; font-weight: 600;">What to expect:</p>
+          <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.6;">
+            <li>Complete personal information</li>
+            <li>Submit tax classification (W-4 or W-9)</li>
+            <li>Upload required documents (ID, certifications)</li>
+            <li>Set work availability for scheduling</li>
+            <li>Sign necessary agreements</li>
+          </ul>
+        </div>
+        <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+          If you did not expect this invitation, please ignore this email.<br>
+          This is an automated message from Clockwork.
+        </p>
+      </div>
+    `
   })
 };
 
@@ -230,6 +266,28 @@ export async function sendEmployeeOnboardingEmail(
     return { success: true, data: result };
   } catch (error) {
     console.error('Error sending onboarding email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendOnboardingInviteEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.onboardingInvite>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.onboardingInvite(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending onboarding invite email:', error);
     return { success: false, error };
   }
 }
