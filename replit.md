@@ -1,12 +1,14 @@
 # WorkforceOS - Replace Your Entire HR Department
 
 ## Overview
-WorkforceOS is a Fortune 500-grade operating system for workforce management. It's a complete office work automation platform for any business, featuring GPS clock-in, automated payroll, smart hiring, compliance audit trails, and real-time analytics. The platform replaces multiple HR staff positions with one automated system, delivering $130K-$250K in annual cost savings through drag-and-drop scheduling, real-time time tracking, automated invoice generation, multi-tenant security, role-based access control, and comprehensive analytics.
+WorkforceOS is a Fortune 500-grade operating system for workforce management. It's a complete office work automation platform for any business, featuring time tracking, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform replaces multiple HR staff positions with one automated system, delivering $130K-$250K in annual cost savings through drag-and-drop scheduling, multi-tenant security, role-based access control, and comprehensive analytics.
+
+**Note**: GPS clock-in and automated payroll have database schemas ready but require UI implementation. Stripe Connect and email notifications are configured but require API key activation.
 
 ## Brand Identity
 - **Name**: WorkforceOS
 - **Tagline**: "Replace Your Entire Workforce Department"
-- **Value Proposition**: Fortune 500-grade platform with GPS clock-in, automated payroll, hiring, and compliance
+- **Value Proposition**: Fortune 500-grade platform with time tracking, automated invoicing, hiring, and compliance (GPS clock-in and payroll processing schemas ready for implementation)
 - **Primary Color**: Red (#ef4444 / #dc2626) - Bold, action-oriented, enterprise-ready
 - **Logo**: Gradient "W" icon in red square with shimmer effect
 - **Design System**: CAD-style professional interface with dark theme, precision typography, and aggressive ROI-focused messaging
@@ -36,9 +38,11 @@ The platform features a CAD-style professional interface with an application fra
 - **Demo System**: An interactive demo workspace pre-populated with sample data is available, resetting every 24 hours.
 
 ### Feature Specifications
-- **Core Features**: Employee management (CRUD), client management (CRUD), shift scheduling, multi-tenant data isolation, responsive design, dark mode.
+- **Core Features**: Employee management (CRUD), client management (CRUD), shift scheduling, multi-tenant data isolation, responsive design, dark mode, demo system with 24-hour reset.
 - **Advanced Features**: Time tracking (clock-in/out, real-time timers, linked to shifts), automated invoice generation (from time entries, tax/fee calculation), comprehensive analytics dashboard, RBAC (Owner, Manager, Employee roles, manager assignments), advanced scheduling (templates, recurring shifts), employee onboarding (invitations, multi-step flow, e-signatures, document upload, tax classification, status tracking).
-- **Planned Features**: Email and SMS notifications, calendar export/import.
+- **Implemented but Requires Activation**: Email notifications (Resend integration ready), Stripe Connect payment processing.
+- **Database Schema Ready (Needs UI)**: GPS location tracking for clock-ins, automated payroll processing.
+- **Planned Features**: SMS notifications, calendar export/import, full GPS tracking UI, payroll processing UI.
 
 ## External Dependencies
 - **Authentication**: Replit Auth
