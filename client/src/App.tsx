@@ -36,6 +36,8 @@ import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
 import AdminUsage from "@/pages/admin-usage";
 import AdminSupport from "@/pages/admin-support";
+import AdminCommandCenter from "@/pages/admin-command-center";
+import EmployeePortal from "@/pages/employee-portal";
 import CustomerSupport from "@/pages/customer-support";
 
 function AppContent() {
@@ -95,6 +97,8 @@ function AppContent() {
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
+                <Route path="/admin/command" component={AdminCommandCenter} />
+                <Route path="/employee/portal" component={EmployeePortal} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
