@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClockworkLogo } from "@/components/clockwork-logo";
+import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import {
   Settings,
   Cpu,
@@ -22,7 +22,7 @@ export default function Landing() {
     <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
       {/* CAD-Style Top Bar */}
       <div className="h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] flex items-center justify-between px-6">
-        <ClockworkLogo size={28} variant="wordmark" className="text-[hsl(var(--cad-text-primary))]" />
+        <WorkforceOSLogo size="sm" showText={true} />
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -317,7 +317,7 @@ export default function Landing() {
               Ready for Fortune 500-Grade Control?
             </h2>
             <p className="text-lg text-[hsl(var(--cad-text-secondary))]">
-              Join businesses using Clockwork to manage workforce operations with precision
+              Join businesses using WorkforceOS to manage workforce operations with precision
             </p>
             <div className="flex justify-center gap-4">
               <Button
@@ -347,8 +347,8 @@ export default function Landing() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
-              <ClockworkLogo size={24} variant="icon" />
-              <span>© 2024 Clockwork. Professional workforce management.</span>
+              <WorkforceOSLogo size="sm" showText={false} />
+              <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
               <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">Documentation</a>

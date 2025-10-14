@@ -127,7 +127,7 @@ export function CADMenuBar() {
         { label: "Report Bug" },
         { label: "Feature Request" },
         { separator: true },
-        { label: "About Clockwork" },
+        { label: "About WorkforceOS" },
       ],
     },
   ];

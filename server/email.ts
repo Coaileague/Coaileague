@@ -174,7 +174,7 @@ export const emailTemplates = {
         </div>
         <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
           If you did not expect this invitation, please ignore this email.<br>
-          This is an automated message from Clockwork.
+          This is an automated message from WorkforceOS.
         </p>
       </div>
     `

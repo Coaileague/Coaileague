@@ -84,7 +84,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
       'Your logo everywhere',
       'Custom domain (schedule.yourcompany.com)',
       'Branded emails & invoices',
-      'Remove all Clockwork branding',
+      'Remove all WorkforceOS branding',
       'White-labeled mobile app',
     ],
     roi: {
