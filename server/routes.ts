@@ -197,6 +197,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available business categories
+  app.get('/api/business-categories', isAuthenticated, async (req: any, res) => {
+    try {
+      const { businessCategories } = await import("./seedFormTemplates");
+      res.json(businessCategories);
+    } catch (error) {
+      console.error("Error fetching business categories:", error);
+      res.status(500).json({ message: "Failed to fetch business categories" });
+    }
+  });
+
+  // Seed form templates for workspace based on business category
+  app.post('/api/workspace/seed-form-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { getTemplatesForCategory } = await import("./seedFormTemplates");
+      const templates = getTemplatesForCategory(workspace.businessCategory || 'general');
+      
+      // Create form templates for this workspace
+      const createdTemplates = [];
+      for (const template of templates) {
+        const created = await storage.createReportTemplate({
+          workspaceId: workspace.id,
+          name: template.name,
+          description: template.description,
+          category: template.category,
+          fields: template.fields,
+          isSystemTemplate: true,
+          isActive: true,
+          createdBy: userId,
+        });
+        createdTemplates.push(created);
+      }
+
+      res.json({
+        message: `Seeded ${createdTemplates.length} form templates for ${workspace.businessCategory || 'general'} category`,
+        templates: createdTemplates
+      });
+    } catch (error: any) {
+      console.error("Error seeding form templates:", error);
+      res.status(500).json({ message: error.message || "Failed to seed form templates" });
+    }
+  });
+
   // ============================================================================
   // EMPLOYEE ROUTES (Multi-tenant isolated)
   // ============================================================================

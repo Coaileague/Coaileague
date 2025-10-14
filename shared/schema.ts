@@ -55,6 +55,21 @@ export type User = typeof users.$inferSelect;
 // MULTI-TENANT CORE TABLES
 // ============================================================================
 
+// Business category enum - determines available forms and features
+export const businessCategoryEnum = pgEnum('business_category', [
+  'general', // Default - basic forms only
+  'security', // Security guards, surveillance - DAR, incident reports
+  'healthcare', // Healthcare providers - patient logs, incident reports, compliance forms
+  'construction', // Construction companies - safety checklists, OJT forms, equipment logs
+  'cleaning', // Cleaning services - inspection checklists, supply logs
+  'hospitality', // Hotels, restaurants - service logs, maintenance reports
+  'retail', // Retail stores - inventory logs, shift reports
+  'transportation', // Logistics, delivery - vehicle logs, route reports
+  'manufacturing', // Factories - production logs, quality control
+  'education', // Schools, training centers - attendance, assessment forms
+  'custom' // Fully custom forms configured by admin
+]);
+
 // Workspaces (Business accounts that subscribe to the platform)
 export const workspaces = pgTable("workspaces", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -63,6 +78,8 @@ export const workspaces = pgTable("workspaces", {
   
   // Business information
   companyName: varchar("company_name"),
+  businessCategory: businessCategoryEnum("business_category").default("general"), // Industry type
+  industryDescription: text("industry_description"), // Additional context
   taxId: varchar("tax_id"),
   address: text("address"),
   phone: varchar("phone"),

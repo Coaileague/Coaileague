@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,17 +10,100 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ModernLayout from "@/components/ModernLayout";
 import {
   Building2,
   CreditCard,
   Bell,
   Shield,
+  Briefcase,
+  FileText,
 } from "lucide-react";
 
 export default function Settings() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  // Fetch workspace data
+  const { data: workspace } = useQuery({
+    queryKey: ['/api/workspace'],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch business categories
+  const { data: businessCategories } = useQuery<any[]>({
+    queryKey: ['/api/business-categories'],
+    enabled: isAuthenticated,
+  });
+
+  // Update workspace mutation
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/workspace', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to update workspace');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      toast({
+        title: "Success",
+        description: "Workspace updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update workspace",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Seed form templates mutation
+  const seedTemplatesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/workspace/seed-form-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to seed templates');
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Success",
+        description: data.message || "Form templates seeded successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to seed form templates",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Initialize selected category when workspace loads
+  useEffect(() => {
+    if ((workspace as any)?.businessCategory) {
+      setSelectedCategory((workspace as any).businessCategory);
+    }
+  }, [workspace]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -33,6 +118,15 @@ export default function Settings() {
       return;
     }
   }, [isAuthenticated, isLoading, toast]);
+
+  const handleCategoryChange = async (category: string) => {
+    setSelectedCategory(category);
+    await updateWorkspaceMutation.mutateAsync({ businessCategory: category });
+  };
+
+  const handleSeedTemplates = async () => {
+    await seedTemplatesMutation.mutateAsync();
+  };
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -96,6 +190,72 @@ export default function Settings() {
               <Input id="website" type="url" placeholder="https://example.com" data-testid="input-company-website" />
             </div>
             <Button data-testid="button-save-workspace">Save Changes</Button>
+          </CardContent>
+        </Card>
+
+        {/* Business Category & Form Templates */}
+        <Card data-testid="card-business-category">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Briefcase className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Business Category & Forms</CardTitle>
+                <CardDescription>Configure industry-specific forms and features</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="businessCategory">Industry Type</Label>
+                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                  <SelectTrigger id="businessCategory" data-testid="select-business-category">
+                    <SelectValue placeholder="Select your industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {businessCategories?.map((category: any) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{category.label}</span>
+                          <span className="text-xs text-muted-foreground">{category.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select your business type to unlock industry-specific forms and features
+                </p>
+              </div>
+
+              {selectedCategory && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 text-primary mt-0.5" />
+                    <div className="flex-1 space-y-2">
+                      <h4 className="text-sm font-semibold">Available Forms for {businessCategories?.find((c: any) => c.value === selectedCategory)?.label}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedCategory === 'general' && "Standard forms: Disciplinary Action, Incident Reports"}
+                        {selectedCategory === 'security' && "Security forms: Daily Activity Reports (DAR), Incident Reports, Vehicle Logs"}
+                        {selectedCategory === 'healthcare' && "Healthcare forms: Patient Activity Logs, Incident Reports, Compliance Forms"}
+                        {selectedCategory === 'construction' && "Construction forms: Safety Checklists, On-Job Training (OJT), Equipment Inspection Logs"}
+                        {selectedCategory === 'cleaning' && "Cleaning forms: Inspection Checklists, Supply Inventory Logs"}
+                        {selectedCategory === 'retail' && "Retail forms: Opening/Closing Shift Reports, Inventory Logs"}
+                        {selectedCategory === 'custom' && "Custom forms configured by WorkforceOS support team"}
+                      </p>
+                      <Button 
+                        size="sm" 
+                        onClick={handleSeedTemplates}
+                        disabled={seedTemplatesMutation.isPending}
+                        data-testid="button-seed-templates"
+                      >
+                        {seedTemplatesMutation.isPending ? "Installing..." : "Install Form Templates"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
