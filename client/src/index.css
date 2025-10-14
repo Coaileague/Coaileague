@@ -442,4 +442,83 @@
   .animate-shimmer {
     animation: shimmer 4s infinite;
   }
+
+  /* Animated Background Mesh - WorkforceOS Style */
+  @keyframes mesh-flow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.5; }
+  }
+
+  .bg-mesh {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    background: 
+      radial-gradient(at 20% 20%, rgba(239, 68, 68, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 80%, rgba(220, 38, 38, 0.1) 0px, transparent 50%);
+    animation: mesh-flow 20s ease-in-out infinite;
+  }
+
+  /* Glass Morphism Card Effects */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(30px);
+  }
+
+  /* Stat Card Gradient Values */
+  .stat-value-gradient {
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Status Badge Animations */
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .pulse-dot {
+    animation: pulse-dot 2s infinite;
+  }
+
+  /* Enhanced Sidebar Glass */
+  .sidebar-glass {
+    background: rgba(15, 15, 15, 0.95);
+    backdrop-filter: blur(30px);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+
+  /* Employee/Item List Hover - Use with hover-elevate */
+  .list-item-hover {
+    @apply hover-elevate overflow-visible;
+  }
+
+  /* Icon Box Styling */
+  .icon-box {
+    background: rgba(239, 68, 68, 0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Smooth Grid Layouts */
+  .dashboard-grid {
+    display: grid;
+    gap: 1.875rem;
+  }
+
+  @media (min-width: 1024px) {
+    .dashboard-grid-2-1 {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
 }

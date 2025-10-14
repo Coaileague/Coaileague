@@ -61,14 +61,17 @@ function AppContent() {
   return (
     <ProtectedRoute>
       <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex flex-col h-screen w-full bg-[hsl(var(--cad-background))]">
+        <div className="flex flex-col h-screen w-full bg-[hsl(var(--cad-background))] relative">
+          {/* Animated Background Mesh */}
+          <div className="bg-mesh" aria-hidden="true" />
+          
           <DemoBanner />
           <CADMenuBar />
           <CADToolbar />
           
-          <div className="flex flex-1 min-h-0">
+          <div className="flex flex-1 min-h-0 relative z-10">
             <AppSidebar />
-            <main className="flex-1 overflow-hidden bg-[hsl(var(--cad-background))]">
+            <main className="flex-1 overflow-hidden bg-transparent">
               <Switch>
                 <Route path="/" component={Dashboard} />
                 <Route path="/dashboard" component={Dashboard} />
