@@ -142,10 +142,10 @@ export default function Landing() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 pt-4">
                 <Button
                   size="lg"
-                  onClick={() => window.location.href = "/api/login"}
+                  onClick={() => setLocation("/register")}
                   className="w-full sm:w-auto bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-12 text-base"
                   data-testid="button-launch-platform"
                 >
@@ -404,7 +404,7 @@ export default function Landing() {
               <div className="pt-4">
                 <Button
                   size="lg"
-                  onClick={() => window.location.href = "/pricing"}
+                  onClick={() => setLocation("/pricing")}
                   className="bg-[hsl(var(--cad-green))] hover:bg-[hsl(var(--cad-green))]/90 text-white h-12 px-8"
                   data-testid="button-view-pricing"
                 >
@@ -465,7 +465,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-4">
               <Button
                 size="lg"
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => setLocation("/register")}
                 className="w-full sm:w-auto bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-12 px-8"
                 data-testid="button-start-free"
               >
