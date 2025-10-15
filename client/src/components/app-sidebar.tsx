@@ -1,5 +1,5 @@
 // Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity, Headphones, CreditCard, Heart, Star, Plane, UserX, MessageSquare } from "lucide-react";
+import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity, Headphones, CreditCard, Heart, Star, Plane, UserX, MessageSquare, Shield, UserCog } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -96,19 +96,42 @@ const hrMenuItems = [
 
 const adminMenuItems = [
   {
+    title: "Command Center",
+    url: "/admin/command",
+    icon: Activity,
+  },
+  {
     title: "Usage & Credits",
     url: "/admin/usage",
-    icon: Activity,
+    icon: BarChart3,
+  },
+  {
+    title: "Admin Support",
+    url: "/admin/support",
+    icon: Headphones,
   },
   {
     title: "Support Dashboard",
     url: "/support/dashboard",
-    icon: Headphones,
+    icon: MessageSquare,
   },
   {
     title: "Live Chat",
     url: "/support/chat",
     icon: MessageSquare,
+  },
+];
+
+const platformAdminMenuItems = [
+  {
+    title: "Platform Admin",
+    url: "/platform/admin",
+    icon: Shield,
+  },
+  {
+    title: "Platform Users",
+    url: "/platform/users",
+    icon: UserCog,
   },
 ];
 
@@ -185,6 +208,31 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {adminMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === item.url}
+                    data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    className="hover-elevate active-elevate-2 overflow-visible"
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span className="font-semibold">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-3 mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground/70">
+            Platform
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {platformAdminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 

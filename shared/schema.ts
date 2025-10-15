@@ -118,6 +118,22 @@ export const workspaces = pgTable("workspaces", {
   // Platform fee
   platformFeePercentage: decimal("platform_fee_percentage", { precision: 5, scale: 2 }).default("3.00"),
   
+  // Account control & admin actions
+  isSuspended: boolean("is_suspended").default(false), // General suspension
+  suspendedReason: text("suspended_reason"), // Why suspended
+  suspendedAt: timestamp("suspended_at"),
+  suspendedBy: varchar("suspended_by"), // Admin user ID who suspended
+  
+  isFrozen: boolean("is_frozen").default(false), // Freeze for non-payment
+  frozenReason: text("frozen_reason"),
+  frozenAt: timestamp("frozen_at"),
+  frozenBy: varchar("frozen_by"),
+  
+  isLocked: boolean("is_locked").default(false), // Emergency lock
+  lockedReason: text("locked_reason"),
+  lockedAt: timestamp("locked_at"),
+  lockedBy: varchar("locked_by"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

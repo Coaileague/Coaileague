@@ -2603,6 +2603,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ACCOUNT CONTROL ACTIONS - Suspend/Freeze/Lock accounts
+  
+  // Suspend account (general suspension)
+  app.post('/api/admin/support/suspend-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      await storage.updateWorkspace(workspaceId, {
+        isSuspended: true,
+        suspendedReason: reason,
+        suspendedAt: new Date(),
+        suspendedBy: adminUserId,
+        subscriptionStatus: 'suspended',
+      });
+      
+      res.json({ success: true, message: "Account suspended successfully" });
+    } catch (error) {
+      console.error("Error suspending account:", error);
+      res.status(500).json({ message: "Failed to suspend account" });
+    }
+  });
+  
+  // Unsuspend account
+  app.post('/api/admin/support/unsuspend-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId } = req.body;
+      
+      await storage.updateWorkspace(workspaceId, {
+        isSuspended: false,
+        suspendedReason: null,
+        suspendedAt: null,
+        suspendedBy: null,
+        subscriptionStatus: 'active',
+      });
+      
+      res.json({ success: true, message: "Account unsuspended successfully" });
+    } catch (error) {
+      console.error("Error unsuspending account:", error);
+      res.status(500).json({ message: "Failed to unsuspend account" });
+    }
+  });
+  
+  // Freeze account (for non-payment)
+  app.post('/api/admin/support/freeze-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      await storage.updateWorkspace(workspaceId, {
+        isFrozen: true,
+        frozenReason: reason || "Account frozen for non-payment",
+        frozenAt: new Date(),
+        frozenBy: adminUserId,
+      });
+      
+      res.json({ success: true, message: "Account frozen successfully" });
+    } catch (error) {
+      console.error("Error freezing account:", error);
+      res.status(500).json({ message: "Failed to freeze account" });
+    }
+  });
+  
+  // Unfreeze account
+  app.post('/api/admin/support/unfreeze-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId } = req.body;
+      
+      await storage.updateWorkspace(workspaceId, {
+        isFrozen: false,
+        frozenReason: null,
+        frozenAt: null,
+        frozenBy: null,
+      });
+      
+      res.json({ success: true, message: "Account unfrozen successfully" });
+    } catch (error) {
+      console.error("Error unfreezing account:", error);
+      res.status(500).json({ message: "Failed to unfreeze account" });
+    }
+  });
+  
+  // Lock account (emergency lock)
+  app.post('/api/admin/support/lock-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      await storage.updateWorkspace(workspaceId, {
+        isLocked: true,
+        lockedReason: reason || "Account locked for security reasons",
+        lockedAt: new Date(),
+        lockedBy: adminUserId,
+      });
+      
+      res.json({ success: true, message: "Account locked successfully" });
+    } catch (error) {
+      console.error("Error locking account:", error);
+      res.status(500).json({ message: "Failed to lock account" });
+    }
+  });
+  
+  // Unlock account
+  app.post('/api/admin/support/unlock-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId } = req.body;
+      
+      await storage.updateWorkspace(workspaceId, {
+        isLocked: false,
+        lockedReason: null,
+        lockedAt: null,
+        lockedBy: null,
+      });
+      
+      res.json({ success: true, message: "Account unlocked successfully" });
+    } catch (error) {
+      console.error("Error unlocking account:", error);
+      res.status(500).json({ message: "Failed to unlock account" });
+    }
+  });
+
   // Update subscription tier (platform admin action)
   app.post('/api/admin/support/update-subscription', isAuthenticated, async (req: any, res) => {
     try {
