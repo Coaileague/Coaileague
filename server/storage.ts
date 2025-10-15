@@ -199,6 +199,15 @@ export interface IStorage {
   getFeatureFlags(workspaceId: string): Promise<FeatureFlag | undefined>;
   createFeatureFlags(flags: InsertFeatureFlag): Promise<FeatureFlag>;
   updateFeatureFlags(workspaceId: string, data: Partial<InsertFeatureFlag>): Promise<FeatureFlag>;
+  
+  // Platform Revenue operations (Monetization tracking)
+  createPlatformRevenue(revenue: InsertPlatformRevenue): Promise<PlatformRevenue>;
+  getPlatformRevenue(workspaceId: string, filters?: { revenueType?: string; startDate?: Date; endDate?: Date }): Promise<PlatformRevenue[]>;
+  
+  // AI Usage Tracking operations
+  createAiUsage(usage: InsertWorkspaceAiUsage): Promise<WorkspaceAiUsage>;
+  getAiUsage(workspaceId: string, filters?: { feature?: string; billingPeriod?: string }): Promise<WorkspaceAiUsage[]>;
+  getAiUsageSummary(workspaceId: string, billingPeriod: string): Promise<{ totalCost: number; totalCharge: number; operationCount: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1237,6 +1246,101 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+  
+  // ============================================================================
+  // PLATFORM REVENUE OPERATIONS (Monetization Tracking)
+  // ============================================================================
+  
+  async createPlatformRevenue(revenue: InsertPlatformRevenue): Promise<PlatformRevenue> {
+    const [newRevenue] = await db
+      .insert(platformRevenue)
+      .values(revenue)
+      .returning();
+    
+    return newRevenue;
+  }
+  
+  async getPlatformRevenue(
+    workspaceId: string,
+    filters?: { revenueType?: string; startDate?: Date; endDate?: Date }
+  ): Promise<PlatformRevenue[]> {
+    const conditions = [eq(platformRevenue.workspaceId, workspaceId)];
+    
+    if (filters?.revenueType) {
+      conditions.push(eq(platformRevenue.revenueType, filters.revenueType));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${platformRevenue.createdAt} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${platformRevenue.createdAt} <= ${filters.endDate}`);
+    }
+    
+    return await db
+      .select()
+      .from(platformRevenue)
+      .where(and(...conditions))
+      .orderBy(desc(platformRevenue.createdAt));
+  }
+  
+  // ============================================================================
+  // AI USAGE TRACKING OPERATIONS
+  // ============================================================================
+  
+  async createAiUsage(usage: InsertWorkspaceAiUsage): Promise<WorkspaceAiUsage> {
+    const [newUsage] = await db
+      .insert(workspaceAiUsage)
+      .values(usage)
+      .returning();
+    
+    return newUsage;
+  }
+  
+  async getAiUsage(
+    workspaceId: string,
+    filters?: { feature?: string; billingPeriod?: string }
+  ): Promise<WorkspaceAiUsage[]> {
+    const conditions = [eq(workspaceAiUsage.workspaceId, workspaceId)];
+    
+    if (filters?.feature) {
+      conditions.push(eq(workspaceAiUsage.feature, filters.feature));
+    }
+    if (filters?.billingPeriod) {
+      conditions.push(eq(workspaceAiUsage.billingPeriod, filters.billingPeriod));
+    }
+    
+    return await db
+      .select()
+      .from(workspaceAiUsage)
+      .where(and(...conditions))
+      .orderBy(desc(workspaceAiUsage.createdAt));
+  }
+  
+  async getAiUsageSummary(
+    workspaceId: string,
+    billingPeriod: string
+  ): Promise<{ totalCost: number; totalCharge: number; operationCount: number }> {
+    const usage = await db
+      .select()
+      .from(workspaceAiUsage)
+      .where(
+        and(
+          eq(workspaceAiUsage.workspaceId, workspaceId),
+          eq(workspaceAiUsage.billingPeriod, billingPeriod)
+        )
+      );
+    
+    const summary = usage.reduce(
+      (acc, record) => ({
+        totalCost: acc.totalCost + parseFloat(record.providerCostUsd as string || "0"),
+        totalCharge: acc.totalCharge + parseFloat(record.clientChargeUsd as string || "0"),
+        operationCount: acc.operationCount + 1,
+      }),
+      { totalCost: 0, totalCharge: 0, operationCount: 0 }
+    );
+    
+    return summary;
   }
 }
 
