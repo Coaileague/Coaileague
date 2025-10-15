@@ -39,20 +39,20 @@ businessAmount: $974.25 (subscriber receives this)
 
 ## 📊 Revenue Tiers & Platform Fees
 
-| Subscription Tier | Monthly Fee | Platform Fee % | Use Case |
-|------------------|-------------|----------------|----------|
-| **Free** | $0 | 10% | Testing, small teams |
-| **Starter** | $99/mo | 7% | Small businesses (5-25 employees) |
-| **Professional** | $299/mo | 5% | Growing companies (25-100 employees) |
-| **Enterprise** | $799/mo | 3% | Large operations (100-500 employees) |
-| **Fortune 500** | $2,999/mo | 2% | Enterprise corporations (500+ employees) |
+| Subscription Tier | Monthly Fee | Platform Fee % | Use Case | Value Delivered |
+|------------------|-------------|----------------|----------|-----------------|
+| **Free** | $0 | 10% | Testing, very small teams | Free trial period |
+| **Starter** | $299/mo | 7% | Small businesses (5-25 employees) | Saves $5k-$8k/month |
+| **Professional** | $799/mo | 5% | Growing companies (25-100 employees) | Saves $10k-$15k/month |
+| **Enterprise** | $2,999/mo | 3% | Large operations (100-500 employees) | Saves $25k-$40k/month |
+| **Fortune 500** | $7,999/mo | 2% | Enterprise corporations (500+ employees) | Saves $60k-$120k/month |
 
 ### Revenue Calculation Example:
 **Professional Tier Client** (5% platform fee):
 - Monthly transaction volume: $100,000
 - Platform fee revenue: $5,000/month
-- Subscription revenue: $299/month
-- **Total revenue from client: $5,299/month**
+- Subscription revenue: $799/month
+- **Total revenue from client: $5,799/month**
 
 ---
 
@@ -114,19 +114,19 @@ businessAmount: decimal         // Subscriber gets this
 ### Conservative Growth Model:
 
 **Year 1:**
-- 100 subscribers × $299/mo subscription = $29,900/mo
+- 100 subscribers × $799/mo subscription = $79,900/mo
 - Avg transaction volume per subscriber: $50,000/mo
 - Platform fee (5%): $2,500/mo per subscriber
-- **Total: $250,000/mo platform fees + $29,900/mo subscriptions = $279,900/mo**
-- **Annual: $3.36M**
+- **Total: $250,000/mo platform fees + $79,900/mo subscriptions = $329,900/mo**
+- **Annual: $3.96M**
 
 **Year 2:**
-- 500 subscribers × $299/mo = $149,500/mo
+- 500 subscribers × $799/mo = $399,500/mo
 - Platform fees: $1.25M/mo
 - **Annual: $16.8M**
 
 **Year 3:**
-- 2,000 subscribers × $299/mo = $598,000/mo
+- 2,000 subscribers × $799/mo = $1,598,000/mo
 - Platform fees: $5M/mo
 - **Annual: $67.2M**
 

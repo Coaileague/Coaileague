@@ -249,10 +249,10 @@ export function getUpgradeMessage(currentTier: string | null | undefined, featur
   const tier = currentTier?.toLowerCase() || 'free';
   
   const upgradeMap: Record<string, string> = {
-    free: 'Upgrade to Starter ($99/mo) to unlock this feature',
-    starter: 'Upgrade to Professional ($299/mo) to unlock this feature',
-    professional: 'Upgrade to Enterprise ($799/mo) to unlock this feature',
-    enterprise: 'Upgrade to Fortune 500 ($2,999/mo) for unlimited access',
+    free: 'Upgrade to Starter ($299/mo) to unlock this feature',
+    starter: 'Upgrade to Professional ($799/mo) to unlock this feature',
+    professional: 'Upgrade to Enterprise ($2,999/mo) to unlock this feature',
+    enterprise: 'Upgrade to Fortune 500 ($7,999/mo) for unlimited access',
   };
   
   return upgradeMap[tier] || 'Upgrade your plan to unlock this feature';
