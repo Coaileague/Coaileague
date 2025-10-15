@@ -34,18 +34,37 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - Required for Replit Auth
+// User storage table - Universal authentication (portable to any platform)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").unique().notNull(),
+  
+  // Password authentication
+  passwordHash: varchar("password_hash"), // Bcrypt hash
+  emailVerified: boolean("email_verified").default(false),
+  verificationToken: varchar("verification_token"),
+  verificationTokenExpiry: timestamp("verification_token_expiry"),
+  
+  // Password reset
+  resetToken: varchar("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
+  
+  // Profile
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  
+  // Multi-tenant
+  currentWorkspaceId: varchar("current_workspace_id"),
+  role: varchar("role").default("user"), // 'user', 'admin', 'support_staff'
+  
+  // Security
+  lastLoginAt: timestamp("last_login_at"),
+  loginAttempts: integer("login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  // Additional fields for multi-tenant
-  currentWorkspaceId: varchar("current_workspace_id"),
-  role: varchar("role").default("user"), // 'user', 'admin'
 });
 
 export type UpsertUser = typeof users.$inferInsert;

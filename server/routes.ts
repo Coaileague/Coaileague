@@ -5,6 +5,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom auth
+import authRoutes from "./authRoutes"; // Custom auth routes
 import { auditContextMiddleware } from "./middleware/audit";
 import { apiLimiter, authLimiter, mutationLimiter, readLimiter } from "./middleware/rateLimiter";
 import { 
@@ -37,7 +39,10 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
+  // Setup custom auth (portable, session-based)
+  setupCustomAuth(app);
+  
+  // Also setup Replit auth (for backward compatibility)
   await setupAuth(app);
   
   // Trust proxy for accurate IP detection behind load balancers
@@ -72,8 +77,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Apply general rate limiting to all API routes (after health check)
+  // SECURITY: Apply rate limiting BEFORE auth routes to prevent brute-force attacks
   app.use('/api', apiLimiter);
+  app.use('/api/auth', authLimiter); // Extra strict for auth endpoints
+  
+  // Register custom auth routes (AFTER rate limiters for security)
+  app.use(authRoutes);
 
   // ============================================================================
   // AUTH ROUTES
