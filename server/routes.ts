@@ -3377,6 +3377,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     industry: z.string().optional(),
   });
 
+  // Zod validation for AI lead generation
+  const aiLeadGenerationSchema = z.object({
+    industry: z.string().min(1, "Industry is required"),
+    targetRegion: z.string().optional(),
+    numberOfLeads: z.number().int().min(1).max(20).default(5), // Limit to prevent cost abuse
+  });
+
+  // Zod validation for AI-generated lead output
+  const aiGeneratedLeadSchema = z.object({
+    companyName: z.string().min(1),
+    contactName: z.string().min(1),
+    contactTitle: z.string().min(1),
+    contactEmail: z.string().email(),
+    estimatedEmployees: z.number().int().positive(),
+    painPoints: z.string(),
+    leadScore: z.number().int().min(0).max(100),
+  });
+
+  // AI Lead Generation - Discover potential clients automatically
+  app.post('/api/sales/ai-generate-leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Validate request body
+      const validationResult = aiLeadGenerationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const { industry, targetRegion, numberOfLeads } = validationResult.data;
+
+      // Check if OpenAI is configured
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ 
+          message: "AI lead generation requires OpenAI API key. Please configure OPENAI_API_KEY.",
+          error: "OPENAI_NOT_CONFIGURED"
+        });
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Use AI to generate qualified leads
+      const aiResponse = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a B2B sales research assistant for WorkforceOS, a Fortune 500-grade workforce management platform. Your job is to identify potential clients who would benefit from automated scheduling, time tracking, HR management, and compliance reporting.`
+          },
+          {
+            role: 'user',
+            content: `Generate ${numberOfLeads} SYNTHETIC/EXAMPLE sales leads for the ${industry} industry${targetRegion ? ` in the ${targetRegion} region` : ''}. 
+
+IMPORTANT: Create FICTIONAL companies and contacts for demonstration purposes only. Do NOT use real company names or real people.
+
+For each SYNTHETIC lead, provide:
+1. Company Name (fictional example: "Example Security Services LLC")
+2. Contact Name (fictional: "John Doe" / "Jane Smith")
+3. Contact Title (realistic title like "HR Director" or "Operations Manager")
+4. Contact Email (use example.com domain: firstname.lastname@example.com)
+5. Estimated Employees (realistic for industry)
+6. Why they need WorkforceOS (2-3 pain points)
+7. Lead Score (0-100 based on fit)
+
+Return ONLY valid JSON array with this exact structure:
+[
+  {
+    "companyName": "string",
+    "contactName": "string", 
+    "contactTitle": "string",
+    "contactEmail": "string",
+    "estimatedEmployees": number,
+    "painPoints": "string",
+    "leadScore": number
+  }
+]`
+          }
+        ],
+        temperature: 0.8,
+        max_tokens: 2000,
+      });
+
+      const aiContent = aiResponse.choices[0]?.message?.content || '[]';
+      
+      // Parse AI response
+      let generatedLeads;
+      try {
+        // Extract JSON from response (AI might wrap it in markdown)
+        const jsonMatch = aiContent.match(/\[[\s\S]*\]/);
+        generatedLeads = JSON.parse(jsonMatch ? jsonMatch[0] : aiContent);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", aiContent);
+        return res.status(500).json({ message: "AI generated invalid response format" });
+      }
+
+      // Validate each generated lead with strict schema
+      const insertedLeads = [];
+      const validationErrors = [];
+
+      for (let i = 0; i < generatedLeads.length; i++) {
+        const leadValidation = aiGeneratedLeadSchema.safeParse(generatedLeads[i]);
+        
+        if (!leadValidation.success) {
+          validationErrors.push({
+            leadIndex: i,
+            errors: leadValidation.error.errors
+          });
+          continue; // Skip invalid leads
+        }
+
+        const validLead = leadValidation.data;
+
+        // Additional safety: Ensure email uses example.com or clearly synthetic domain
+        if (!validLead.contactEmail.includes('example.com') && 
+            !validLead.contactEmail.includes('demo.com') &&
+            !validLead.contactEmail.includes('test.com')) {
+          validationErrors.push({
+            leadIndex: i,
+            error: "Email must use synthetic domain (example.com, demo.com, or test.com)"
+          });
+          continue;
+        }
+
+        // Insert validated lead into database
+        const [newLead] = await db.insert(leads).values({
+          companyName: validLead.companyName,
+          contactName: validLead.contactName,
+          contactTitle: validLead.contactTitle,
+          contactEmail: validLead.contactEmail,
+          estimatedEmployees: validLead.estimatedEmployees,
+          industry,
+          leadStatus: 'new',
+          leadScore: validLead.leadScore,
+          notes: `🤖 AI Generated Lead (Synthetic Demo Data)\n\nPain Points:\n${validLead.painPoints}`,
+          source: 'ai_generated',
+        }).returning();
+        
+        insertedLeads.push(newLead);
+      }
+
+      res.json({ 
+        success: true, 
+        count: insertedLeads.length,
+        leads: insertedLeads,
+        validationErrors: validationErrors.length > 0 ? validationErrors : undefined,
+        warning: insertedLeads.length === 0 ? "No valid leads generated. AI may have produced invalid data." : undefined
+      });
+    } catch (error) {
+      console.error("Error generating AI leads:", error);
+      res.status(500).json({ message: "Failed to generate leads" });
+    }
+  });
+
+  // Update lead status and notes
+  app.patch('/api/sales/leads/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { leadStatus, notes, nextFollowUpDate, leadScore, estimatedValue } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+      
+      if (leadStatus) updateData.leadStatus = leadStatus;
+      if (notes !== undefined) updateData.notes = notes;
+      if (nextFollowUpDate !== undefined) updateData.nextFollowUpDate = nextFollowUpDate ? new Date(nextFollowUpDate) : null;
+      if (leadScore !== undefined) updateData.leadScore = leadScore;
+      if (estimatedValue !== undefined) updateData.estimatedValue = estimatedValue;
+
+      // Update last contacted timestamp if status changed to contacted
+      if (leadStatus && ['contacted', 'qualified', 'demo_scheduled', 'proposal_sent'].includes(leadStatus)) {
+        updateData.lastContactedAt = new Date();
+      }
+
+      const [updatedLead] = await db
+        .update(leads)
+        .set(updateData)
+        .where(eq(leads.id, id))
+        .returning();
+
+      if (!updatedLead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+
+      res.json(updatedLead);
+    } catch (error) {
+      console.error("Error updating lead:", error);
+      res.status(500).json({ message: "Failed to update lead" });
+    }
+  });
+
   // Send email with AI personalization
   app.post('/api/sales/send-email', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
