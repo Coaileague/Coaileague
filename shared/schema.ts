@@ -1850,3 +1850,79 @@ export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({
 
 export type InsertFeatureFlag = z.infer<typeof insertFeatureFlagSchema>;
 export type FeatureFlag = typeof featureFlags.$inferSelect;
+
+// ============================================================================
+// LIVE CHAT SUPPORT SYSTEM
+// ============================================================================
+
+// Chat Conversations - Track chat sessions between support and customers
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Participants
+  customerId: varchar("customer_id").references(() => users.id, { onDelete: 'set null' }),
+  customerName: varchar("customer_name"),
+  customerEmail: varchar("customer_email"),
+  
+  supportAgentId: varchar("support_agent_id").references(() => users.id, { onDelete: 'set null' }),
+  supportAgentName: varchar("support_agent_name"),
+  
+  // Conversation metadata
+  subject: varchar("subject"),
+  status: varchar("status").notNull().default("active"), // 'active', 'resolved', 'closed'
+  priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
+  
+  // Ratings (post-conversation)
+  rating: integer("rating"), // 1-5 stars
+  feedback: text("feedback"),
+  
+  // Session tracking
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat Messages - Individual messages in conversations
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  
+  // Message details
+  senderId: varchar("sender_id").references(() => users.id, { onDelete: 'set null' }),
+  senderName: varchar("sender_name").notNull(),
+  senderType: varchar("sender_type").notNull(), // 'customer', 'support', 'system'
+  
+  // Content
+  message: text("message").notNull(),
+  messageType: varchar("message_type").default("text"), // 'text', 'file', 'system'
+  
+  // File attachments
+  attachmentUrl: varchar("attachment_url"),
+  attachmentName: varchar("attachment_name"),
+  
+  // Status
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;

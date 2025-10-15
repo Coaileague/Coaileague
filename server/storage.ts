@@ -30,6 +30,8 @@ import {
   featureFlags,
   platformRevenue,
   workspaceAiUsage,
+  chatConversations,
+  chatMessages,
   type User,
   type UpsertUser,
   type Workspace,
@@ -85,6 +87,10 @@ import {
   type InsertPlatformRevenue,
   type WorkspaceAiUsage,
   type InsertWorkspaceAiUsage,
+  type ChatConversation,
+  type InsertChatConversation,
+  type ChatMessage,
+  type InsertChatMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, or, like, sql } from "drizzle-orm";
@@ -258,6 +264,17 @@ export interface IStorage {
   getEmployeeTerminationsByWorkspace(workspaceId: string): Promise<EmployeeTermination[]>;
   updateEmployeeTermination(id: string, workspaceId: string, data: Partial<InsertEmployeeTermination>): Promise<EmployeeTermination | undefined>;
   completeTermination(id: string, workspaceId: string): Promise<EmployeeTermination | undefined>;
+  
+  // Live Chat operations (Support System)
+  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
+  getChatConversation(id: string): Promise<ChatConversation | undefined>;
+  getChatConversationsByWorkspace(workspaceId: string, filters?: { status?: string }): Promise<ChatConversation[]>;
+  updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined>;
+  closeChatConversation(id: string): Promise<ChatConversation | undefined>;
+  
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
+  markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1679,6 +1696,102 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return completed;
+  }
+
+  // ============================================================================
+  // LIVE CHAT OPERATIONS (Support System)
+  // ============================================================================
+  
+  async createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation> {
+    const [newConversation] = await db
+      .insert(chatConversations)
+      .values(conversation)
+      .returning();
+    
+    return newConversation;
+  }
+  
+  async getChatConversation(id: string): Promise<ChatConversation | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.id, id));
+    
+    return conversation;
+  }
+  
+  async getChatConversationsByWorkspace(workspaceId: string, filters?: { status?: string }): Promise<ChatConversation[]> {
+    const conditions = [eq(chatConversations.workspaceId, workspaceId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(chatConversations.status, filters.status as any));
+    }
+    
+    return await db
+      .select()
+      .from(chatConversations)
+      .where(and(...conditions))
+      .orderBy(desc(chatConversations.lastMessageAt));
+  }
+  
+  async updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined> {
+    const [updated] = await db
+      .update(chatConversations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  async closeChatConversation(id: string): Promise<ChatConversation | undefined> {
+    const [closed] = await db
+      .update(chatConversations)
+      .set({
+        status: "closed",
+        closedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    
+    return closed;
+  }
+  
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [newMessage] = await db
+      .insert(chatMessages)
+      .values(message)
+      .returning();
+    
+    // Update conversation's lastMessageAt
+    await db
+      .update(chatConversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(chatConversations.id, message.conversationId));
+    
+    return newMessage;
+  }
+  
+  async getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt);
+  }
+  
+  async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
+    await db
+      .update(chatMessages)
+      .set({ isRead: true, readAt: new Date() })
+      .where(
+        and(
+          eq(chatMessages.conversationId, conversationId),
+          eq(chatMessages.isRead, false),
+          sql`${chatMessages.senderId} != ${userId}` // Only mark messages from other users as read
+        )
+      );
   }
 }
 

@@ -33,12 +33,24 @@ import {
   insertReportAttachmentSchema,
   insertCustomerReportAccessSchema,
   insertSupportTicketSchema,
+  insertChatConversationSchema,
+  insertChatMessageSchema,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
+import { setupWebSocket } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create HTTP server
+  const server = createServer(app);
+  
+  // SECURITY: WebSocket disabled until authentication is implemented
+  // WebSocket currently lacks proper auth and violates multi-tenant isolation
+  // Use REST API endpoints instead - they are fully secured
+  // TODO: Implement WebSocket authentication before enabling
+  // setupWebSocket(server);
+  
   // Setup custom auth (portable, session-based)
   setupCustomAuth(app);
   
@@ -2595,6 +2607,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await createPlatformUser(req, res);
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // ============================================================================
+  // LIVE CHAT ROUTES (WebSocket Support System)
+  // ============================================================================
+  
+  // Get all conversations for workspace
+  app.get('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const status = req.query.status as string | undefined;
+      const conversations = await storage.getChatConversationsByWorkspace(workspace.id, { status });
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  // Create new conversation
+  app.post('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const validated = insertChatConversationSchema.parse({
+        ...req.body,
+        workspaceId: workspace.id,
+      });
+
+      const conversation = await storage.createChatConversation(validated);
+      res.status(201).json(conversation);
+    } catch (error: any) {
+      console.error("Error creating conversation:", error);
+      res.status(400).json({ message: error.message || "Failed to create conversation" });
+    }
+  });
+
+  // Get conversation messages
+  app.get('/api/chat/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Verify conversation belongs to workspace
+      const conversation = await storage.getChatConversation(id);
+      if (!conversation || conversation.workspaceId !== workspace.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const messages = await storage.getChatMessagesByConversation(id);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Update conversation (assign agent, change status, etc.)
+  app.patch('/api/chat/conversations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Verify conversation belongs to workspace
+      const conversation = await storage.getChatConversation(id);
+      if (!conversation || conversation.workspaceId !== workspace.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const validated = insertChatConversationSchema
+        .partial()
+        .omit({ workspaceId: true })
+        .parse(req.body);
+      
+      const updated = await storage.updateChatConversation(id, validated);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating conversation:", error);
+      res.status(400).json({ message: error.message || "Failed to update conversation" });
+    }
+  });
+
+  // Close conversation
+  app.post('/api/chat/conversations/:id/close', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Verify conversation belongs to workspace
+      const conversation = await storage.getChatConversation(id);
+      if (!conversation || conversation.workspaceId !== workspace.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const closed = await storage.closeChatConversation(id);
+      
+      if (!closed) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      res.json(closed);
+    } catch (error) {
+      console.error("Error closing conversation:", error);
+      res.status(500).json({ message: "Failed to close conversation" });
+    }
+  });
+
+  // Return the server we created at the top with WebSocket
+  return server;
 }
