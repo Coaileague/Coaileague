@@ -253,27 +253,27 @@ export default function Pricing() {
               {[
                 {
                   plan: "Professional",
-                  price: "$799/mo",
-                  replaces: ["Scheduler ($45k/yr)", "Billing Clerk ($40k/yr)"],
-                  totalSaved: "$85k/yr",
-                  costOfPlan: "$9.5k/yr",
-                  netSavings: "$75.5k/yr"
+                  price: "$2,999/mo",
+                  replaces: ["Scheduler ($50k/yr)", "Billing Clerk ($45k/yr)", "Payroll Staff ($55k/yr)"],
+                  totalSaved: "$150k/yr",
+                  costOfPlan: "$36k/yr",
+                  netSavings: "$114k/yr"
                 },
                 {
                   plan: "Enterprise",
-                  price: "$2,999/mo",
-                  replaces: ["HR Manager ($65k/yr)", "Payroll ($50k/yr)", "Scheduler ($45k/yr)", "Billing ($40k/yr)"],
-                  totalSaved: "$200k/yr",
-                  costOfPlan: "$36k/yr",
-                  netSavings: "$164k/yr"
+                  price: "$7,999/mo",
+                  replaces: ["HR Manager ($85k/yr)", "Payroll ($70k/yr)", "Scheduler ($50k/yr)", "Billing ($45k/yr)", "Compliance ($80k/yr)"],
+                  totalSaved: "$330k/yr",
+                  costOfPlan: "$96k/yr",
+                  netSavings: "$234k/yr"
                 },
                 {
                   plan: "Fortune 500",
-                  price: "$7,999/mo",
-                  replaces: ["Full HR Dept ($255k/yr)", "Compliance ($55k/yr)", "Benefits ($195k/yr)"],
-                  totalSaved: "$505k/yr",
-                  costOfPlan: "$96k/yr",
-                  netSavings: "$409k/yr"
+                  price: "$19,999/mo",
+                  replaces: ["Full HR Dept ($300k/yr)", "Compliance ($100k/yr)", "Benefits ($150k/yr)", "Payroll ($120k/yr)"],
+                  totalSaved: "$670k/yr",
+                  costOfPlan: "$240k/yr",
+                  netSavings: "$430k/yr"
                 },
               ].map((breakdown) => (
                 <div key={breakdown.plan} className="bg-slate-900/50 border border-indigo-500/20 rounded-lg p-6 space-y-4">
@@ -324,7 +324,7 @@ export default function Pricing() {
             {[
               {
                 q: "Why are the prices higher than competitors?",
-                a: "Because we replace 3-5 full-time staff positions with complete automation. Our Enterprise plan costs $36k/year but saves you $164k annually - that's a 4.5x return. Most competitors only replace scheduling, not your entire HR department.",
+                a: "Because we replace 3-5 full-time staff positions with complete automation. Our Enterprise plan costs $96k/year but saves you $234k annually - that's a 5x return. Most competitors only replace scheduling, not your entire HR department.",
               },
               {
                 q: "What's included in the free trial?",
