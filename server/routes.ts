@@ -1852,6 +1852,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // PLATFORM ADMIN ROUTES (Root Command Center)
+  // ============================================================================
+
+  const { 
+    getPlatformStats, 
+    searchWorkspaces, 
+    getWorkspaceAdminDetail,
+    createPlatformUser,
+    getPlatformUsers
+  } = await import("./platformAdmin");
+
+  // Platform dashboard statistics
+  app.get('/api/platform/stats', isAuthenticated, async (req, res) => {
+    await getPlatformStats(req, res);
+  });
+
+  // Search workspaces (cross-tenant admin search)
+  app.get('/api/platform/workspaces/search', isAuthenticated, async (req, res) => {
+    await searchWorkspaces(req, res);
+  });
+
+  // Get workspace admin detail
+  app.get('/api/platform/workspaces/:workspaceId', isAuthenticated, async (req, res) => {
+    await getWorkspaceAdminDetail(req, res);
+  });
+
+  // Get all platform users
+  app.get('/api/platform/users', isAuthenticated, async (req, res) => {
+    await getPlatformUsers(req, res);
+  });
+
+  // Create platform user (admin or support staff)
+  app.post('/api/platform/users', isAuthenticated, async (req, res) => {
+    await createPlatformUser(req, res);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
