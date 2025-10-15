@@ -62,8 +62,42 @@ The platform features a CAD-style professional interface with a dark mode theme,
 ### Monetization Strategy
 The platform offers Professional, Enterprise, and Fortune 500 tiers with increasing features and cost savings. Additional offerings include a White-Label RMS capability for custom branding and a database-backed feature flag system for granular control over feature availability based on billing tiers.
 
+## Security Hardening (Launch Ready - October 2025)
+### Platform Role-Based Access Control (RBAC)
+- **Implementation Complete**: All critical security vulnerabilities resolved and architect-approved for production launch
+- **Platform Roles System**: Separate `platform_roles` table with revocation tracking (platform_admin, deputy_admin, deputy_assistant, sysop)
+- **Middleware Protection**: `requirePlatformStaff` and `requirePlatformAdmin` middleware on ALL sensitive endpoints
+- **Secured Endpoints** (21+ endpoints protected):
+  - ALL `/api/admin/support/*` routes → requirePlatformStaff
+  - ALL `/api/platform/*` routes → requirePlatformStaff or requirePlatformAdmin
+  - Custom forms CRUD (POST/PATCH/DELETE) → requirePlatformStaff
+  - Admin workspace updates → requirePlatformStaff (full control)
+
+### Workspace Security
+- **Dual Update System**: 
+  - Regular users: PATCH `/api/workspace` (restricted to name, companyWebsite, companyPhone, logoUrl only)
+  - Platform staff: PATCH `/api/admin/workspace/:workspaceId` (full organizational control)
+- **Prevented Tampering**: Users cannot modify organizationId, subscriptionTier, platformFeePercentage, or billing settings
+
+### Custom Forms Security
+- **Platform Staff Only**: All CRUD operations require platform role verification
+- **Zod Validation**: Request body validation with field whitelisting on all form endpoints
+- **Submission Security**: Form submissions validate workspace access, verify form ownership, enforce workspace scoping
+- **Data Integrity**: OrganizationId tampering prevention, validated payloads only
+
+### Documentation Cleanup
+- **Removed Competitive References**: Eliminated all competitor company mentions (e.g., "Sling-style" → "Professional grid interface")
+- **Updated Status**: Custom Forms marked as "Production Ready" with complete security implementation
+
+### Launch Status
+- ✅ **ARCHITECT APPROVED**: All critical security fixes reviewed and approved for production
+- ✅ **API Security**: Platform role guards on all admin/platform endpoints
+- ✅ **Data Protection**: Workspace isolation, field whitelisting, tampering prevention
+- ✅ **RBAC Complete**: Platform staff vs regular user access properly segregated
+- ⏳ **Pending**: Stripe test keys for final E2E validation (user will provide before marketing launch)
+
 ## External Dependencies
 - **Database**: Neon (PostgreSQL)
 - **ORM**: Drizzle ORM
-- **Payment Processing**: Stripe Connect (ready for activation)
+- **Payment Processing**: Stripe Connect (ready for activation - requires test keys for final validation)
 - **Email**: Resend (for notifications and password reset)
