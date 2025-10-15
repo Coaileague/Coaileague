@@ -56,7 +56,6 @@ export const users = pgTable("users", {
   
   // Multi-tenant
   currentWorkspaceId: varchar("current_workspace_id"),
-  role: varchar("role").default("user"), // 'user', 'admin', 'support_staff'
   
   // Security
   lastLoginAt: timestamp("last_login_at"),
@@ -198,11 +197,27 @@ export type InsertWorkspaceTheme = z.infer<typeof insertWorkspaceThemeSchema>;
 export type WorkspaceTheme = typeof workspaceThemes.$inferSelect;
 
 // ============================================================================
-// ENUMS
+// ROLE HIERARCHY ENUMS
 // ============================================================================
 
-export const workspaceRoleEnum = pgEnum('workspace_role', ['owner', 'manager', 'supervisor', 'employee']);
-export const platformRoleEnum = pgEnum('platform_role', ['root', 'sysop', 'auditor']);
+// Platform Support Staff Roles (WFOS Organization - Platform Level)
+// Platform Admin → Deputy Admin → Deputy Assistant → Sysop
+export const platformRoleEnum = pgEnum('platform_role', [
+  'platform_admin',      // Creator - Highest authority
+  'deputy_admin',        // Assistant to creator  
+  'deputy_assistant',    // Deputy assistant
+  'sysop',              // System operators/help support staff
+  'none'                // Regular subscriber user (not platform staff)
+]);
+
+// Subscriber/Workspace Roles (Customer Organizations - Subscriber Level)
+// Owner (Client) → Manager → Supervisor → Employee
+export const workspaceRoleEnum = pgEnum('workspace_role', [
+  'owner',              // Client/Subscriber - Organization owner
+  'manager',            // Manager - Mid-level authority
+  'supervisor',         // Supervisor - Oversees employees
+  'employee'            // Employee - Frontline worker
+]);
 
 // ============================================================================
 // EMPLOYEE & CLIENT TABLES
@@ -1804,6 +1819,106 @@ export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit
 
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type SupportTicket = typeof supportTickets.$inferSelect;
+
+// ============================================================================
+// CUSTOM FORMS SYSTEM (Organization-Specific)
+// ============================================================================
+
+// Custom Form Templates - Organization-specific forms for onboarding and RMS
+// Each organization can have custom forms added by platform admins/support
+export const customForms = pgTable("custom_forms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Form details
+  name: varchar("name").notNull(), // "Consent for Sildenafil", "Background Check Authorization", etc.
+  description: text("description"),
+  category: varchar("category"), // 'onboarding', 'rms', 'compliance', 'custom'
+  
+  // Form template (JSON structure)
+  // Example: { title: "...", sections: [{ heading: "...", fields: [...], consent: {...} }] }
+  template: jsonb("template").notNull(),
+  
+  // E-signature configuration
+  requiresSignature: boolean("requires_signature").default(false),
+  signatureType: varchar("signature_type").default("typed_name"), // 'typed_name', 'drawn', 'uploaded'
+  signatureText: text("signature_text"), // Legal text above signature field
+  
+  // Document upload configuration
+  requiresDocuments: boolean("requires_documents").default(false),
+  documentTypes: jsonb("document_types"), // [{ type: 'id', label: 'Government ID', required: true }, ...]
+  maxDocuments: integer("max_documents").default(5),
+  
+  // Access control
+  isActive: boolean("is_active").default(true),
+  accessibleBy: jsonb("accessible_by"), // ['employee', 'manager', 'admin'] - who can fill out this form
+  
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id), // Platform admin/support who created it
+  createdByRole: varchar("created_by_role"), // 'platform_admin', 'support_manager', 'support_staff'
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCustomFormSchema = createInsertSchema(customForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCustomForm = z.infer<typeof insertCustomFormSchema>;
+export type CustomForm = typeof customForms.$inferSelect;
+
+// Custom Form Submissions - Completed forms with e-signatures and documents
+export const customFormSubmissions = pgTable("custom_form_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => customForms.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Who submitted
+  submittedBy: varchar("submitted_by").references(() => users.id),
+  submittedByType: varchar("submitted_by_type"), // 'employee', 'client', 'external'
+  employeeId: varchar("employee_id").references(() => employees.id),
+  
+  // Form data (filled values)
+  formData: jsonb("form_data").notNull(), // User's responses to all fields
+  
+  // E-signature data
+  signatureData: jsonb("signature_data"), // { name: "...", signedAt: "...", ipAddress: "...", userAgent: "..." }
+  hasAccepted: boolean("has_accepted").default(false), // Checkbox acceptance
+  acceptedAt: timestamp("accepted_at"),
+  
+  // Document uploads
+  documents: jsonb("documents"), // [{ type: 'id', fileName: '...', fileUrl: '...', uploadedAt: '...' }, ...]
+  
+  // Metadata
+  ipAddress: varchar("ip_address"), // For legal audit trail
+  userAgent: text("user_agent"),
+  
+  // Associated context
+  onboardingTokenId: varchar("onboarding_token_id"), // If used during onboarding (token reference)
+  reportSubmissionId: varchar("report_submission_id").references(() => reportSubmissions.id), // If used in RMS
+  
+  // Status
+  status: varchar("status").default("completed"), // 'draft', 'completed', 'archived'
+  
+  // Timestamps
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCustomFormSubmissionSchema = createInsertSchema(customFormSubmissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  submittedAt: true,
+});
+
+export type InsertCustomFormSubmission = z.infer<typeof insertCustomFormSubmissionSchema>;
+export type CustomFormSubmission = typeof customFormSubmissions.$inferSelect;
 
 // ============================================================================
 // SECURITY & COMPLIANCE
