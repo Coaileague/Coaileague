@@ -93,101 +93,104 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
-      {/* CAD-Style Top Bar */}
-      <div className="h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] flex items-center justify-between px-6">
-        <WorkforceOSLogo size="sm" showText={true} />
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.location.href = "/"}
-            className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
-          >
-            Back
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => window.location.href = "/api/login"}
-            className="h-8 text-xs bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
-          >
-            Launch Platform
-          </Button>
+    <div className="min-h-screen bg-slate-gradient text-white">
+      {/* Modern Header */}
+      <div className="bg-card-translucent border-b border-indigo-500/20 backdrop-blur-sm">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <WorkforceOSLogo size="sm" showText={true} />
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = "/"}
+              className="text-slate-400 hover:text-white"
+            >
+              Back
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => window.location.href = "/api/login"}
+              className="bg-indigo-gradient btn-scale"
+            >
+              Launch Platform
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Pricing Hero */}
       <section className="container mx-auto px-6 py-16">
-        <div className="text-center space-y-4 mb-12">
-          <Badge className="bg-[hsl(var(--cad-green))]/10 text-[hsl(var(--cad-green))] border-none mb-2">
+        <div className="text-center space-y-4 mb-12 animate-slide-up">
+          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 mb-2">
             <Sparkles className="h-3 w-3 mr-1" />
             Enterprise-Grade ROI
           </Badge>
           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
-            Investment That <span className="text-[hsl(var(--cad-green))]">Pays Itself</span> In Weeks
+            <span className="gradient-text">Investment That Pays Itself</span> In Weeks
           </h1>
-          <p className="text-lg text-[hsl(var(--cad-text-secondary))] max-w-2xl mx-auto">
+          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
             Replace entire departments. Save $100k-$500k annually. All plans include 14-day free trial.
           </p>
         </div>
 
         {/* Pricing Tiers */}
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {tiers.map((tier) => (
+          {tiers.map((tier, index) => (
             <Card
               key={tier.name}
-              className={`bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-8 space-y-6 relative ${
-                tier.popular ? "ring-2 ring-[hsl(var(--cad-green))]" : ""
+              className={`card-interactive hover-lift p-8 space-y-6 relative animate-slide-up ${
+                tier.popular ? "border-indigo-500/50" : ""
               }`}
+              style={{ animationDelay: `${index * 0.1}s` }}
               data-testid={`card-pricing-${tier.name.toLowerCase().replace(/\s+/g, "-")}`}
             >
               {tier.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[hsl(var(--cad-green))] text-white border-none">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-gradient text-white border-none">
                   Best Value
                 </Badge>
               )}
 
               <div className="space-y-3">
-                <h3 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))]">
+                <h3 className="text-2xl font-bold text-white">
                   {tier.name}
                 </h3>
-                <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                <p className="text-sm text-slate-400">
                   {tier.description}
                 </p>
                 
                 {/* ROI Badge */}
                 <div className="flex items-center gap-2 pt-2">
-                  <TrendingUp className="h-4 w-4 text-[hsl(var(--cad-green))]" />
-                  <span className="text-sm font-semibold text-[hsl(var(--cad-green))]">
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-400">
                     {tier.roi}
                   </span>
-                  <span className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                  <span className="text-xs text-slate-500">
                     • Save {tier.savings}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-4xl font-bold font-mono">
+                <div className="text-4xl font-bold font-mono gradient-text">
                   {tier.price}
                   {tier.price !== "Contact Sales" && (
-                    <span className="text-lg font-normal text-[hsl(var(--cad-text-tertiary))]">
+                    <span className="text-lg font-normal text-slate-400">
                       /mo
                     </span>
                   )}
                 </div>
                 {tier.price !== "Contact Sales" && (
-                  <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                  <p className="text-xs text-slate-500">
                     Billed annually • 14-day free trial
                   </p>
                 )}
               </div>
 
               <Button
-                className={`w-full h-11 ${
+                className={`w-full h-11 btn-scale ${
                   tier.popular
-                    ? "bg-[hsl(var(--cad-green))] hover:bg-[hsl(var(--cad-green))]/90 text-white"
-                    : "border-[hsl(var(--cad-border-strong))] text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+                    ? "bg-indigo-gradient"
+                    : ""
                 }`}
                 variant={tier.popular ? "default" : "outline"}
                 onClick={() => window.location.href = tier.cta === "Contact Sales" ? "mailto:sales@workforceos.com" : "/api/login"}
@@ -196,22 +199,22 @@ export default function Pricing() {
                 {tier.cta}
               </Button>
 
-              <div className="space-y-3 pt-4 border-t border-[hsl(var(--cad-border))]">
+              <div className="space-y-3 pt-4 border-t border-slate-700">
                 {tier.features.map((feature) => (
                   <div
                     key={feature.name}
                     className="flex items-start gap-3 text-sm"
                   >
                     {feature.included ? (
-                      <Check className="h-5 w-5 text-[hsl(var(--cad-green))] flex-shrink-0 mt-0.5" />
+                      <Check className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
                     ) : (
-                      <X className="h-5 w-5 text-[hsl(var(--cad-text-tertiary))]/30 flex-shrink-0 mt-0.5" />
+                      <X className="h-5 w-5 text-slate-600 flex-shrink-0 mt-0.5" />
                     )}
                     <span
                       className={
                         feature.included
-                          ? "text-[hsl(var(--cad-text-primary))]"
-                          : "text-[hsl(var(--cad-text-tertiary))]/60"
+                          ? "text-slate-300"
+                          : "text-slate-600"
                       }
                     >
                       {feature.name}
@@ -224,11 +227,11 @@ export default function Pricing() {
         </div>
 
         {/* Cost Breakdown */}
-        <Card className="mt-16 max-w-4xl mx-auto bg-gradient-to-br from-[hsl(var(--cad-green))]/10 via-[hsl(var(--cad-surface-elevated))] to-[hsl(var(--cad-cyan))]/10 border-[hsl(var(--cad-border-strong))] p-8">
+        <div className="mt-16 max-w-4xl mx-auto card-interactive hover-lift p-8">
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">Why Our Pricing Makes Sense</h2>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+              <h2 className="text-2xl font-bold gradient-text">Why Our Pricing Makes Sense</h2>
+              <p className="text-sm text-slate-400">
                 Compare our monthly fee to the staff costs you're replacing
               </p>
             </div>
@@ -260,48 +263,48 @@ export default function Pricing() {
                   netSavings: "$409k/yr"
                 },
               ].map((breakdown) => (
-                <div key={breakdown.plan} className="bg-[hsl(var(--cad-surface))] border border-[hsl(var(--cad-border))] rounded-lg p-6 space-y-4">
+                <div key={breakdown.plan} className="bg-slate-900/50 border border-indigo-500/20 rounded-lg p-6 space-y-4">
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-lg text-[hsl(var(--cad-text-primary))]">
+                    <h3 className="font-semibold text-lg text-white">
                       {breakdown.plan}
                     </h3>
-                    <div className="text-2xl font-bold text-[hsl(var(--cad-blue))] font-mono">
+                    <div className="text-2xl font-bold text-indigo-400 font-mono">
                       {breakdown.price}
                     </div>
                   </div>
 
                   <div className="space-y-2 text-sm">
-                    <div className="text-xs text-[hsl(var(--cad-text-tertiary))] uppercase tracking-wide">
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">
                       Replaces:
                     </div>
                     {breakdown.replaces.map((item) => (
-                      <div key={item} className="flex items-center gap-2 text-[hsl(var(--cad-text-secondary))]">
-                        <Check className="h-3 w-3 text-[hsl(var(--cad-green))]" />
+                      <div key={item} className="flex items-center gap-2 text-slate-300">
+                        <Check className="h-3 w-3 text-emerald-400" />
                         {item}
                       </div>
                     ))}
                   </div>
 
-                  <div className="pt-4 border-t border-[hsl(var(--cad-border))] space-y-1">
+                  <div className="pt-4 border-t border-slate-700 space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-[hsl(var(--cad-text-tertiary))]">Annual plan cost:</span>
-                      <span className="text-[hsl(var(--cad-red))] font-mono">-{breakdown.costOfPlan}</span>
+                      <span className="text-slate-400">Annual plan cost:</span>
+                      <span className="text-rose-400 font-mono">-{breakdown.costOfPlan}</span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold pt-2">
-                      <span className="text-[hsl(var(--cad-text-primary))]">Net savings:</span>
-                      <span className="text-[hsl(var(--cad-green))] font-mono text-lg">+{breakdown.netSavings}</span>
+                      <span className="text-white">Net savings:</span>
+                      <span className="text-emerald-400 font-mono text-lg">+{breakdown.netSavings}</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* FAQ */}
         <div className="mt-20 max-w-3xl mx-auto space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold">Frequently Asked Questions</h2>
+            <h2 className="text-3xl font-bold gradient-text">Frequently Asked Questions</h2>
           </div>
 
           <div className="space-y-4">
@@ -331,41 +334,41 @@ export default function Pricing() {
                 a: "Fortune 500 plans include custom feature development. We'll work with your team to build integrations, custom reports, or workflow automations specific to your business.",
               },
             ].map((faq) => (
-              <Card
+              <div
                 key={faq.q}
-                className="bg-[hsl(var(--cad-surface))] border-[hsl(var(--cad-border))] p-6"
+                className="card-interactive p-6 hover-lift"
               >
-                <h3 className="font-semibold mb-2 text-[hsl(var(--cad-text-primary))]">
+                <h3 className="font-semibold mb-2 text-white">
                   {faq.q}
                 </h3>
-                <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                <p className="text-sm text-slate-400">
                   {faq.a}
                 </p>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[hsl(var(--cad-border))] bg-[hsl(var(--cad-chrome))]">
+      <footer className="border-t border-indigo-500/20 bg-card-translucent backdrop-blur-sm">
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
+            <div className="flex items-center gap-2 text-sm text-slate-400">
               <WorkforceOSLogo size="sm" showText={false} />
               <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
             </div>
-            <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
-              <a href="/support" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-support">
+            <div className="flex gap-6 text-xs text-slate-400">
+              <a href="/support" className="hover:text-white transition-colors" data-testid="link-support">
                 Support Center
               </a>
-              <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-contact">
+              <a href="/contact" className="hover:text-white transition-colors" data-testid="link-contact">
                 Contact Us
               </a>
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
+              <a href="#" className="hover:text-white transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
+              <a href="#" className="hover:text-white transition-colors">
                 Terms
               </a>
             </div>
