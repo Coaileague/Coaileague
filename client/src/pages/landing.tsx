@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { useLocation } from "wouter";
 import {
   Settings,
   Cpu,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 
 export default function Landing() {
+  const [, setLocation] = useLocation();
   return (
     <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
       {/* CAD-Style Top Bar - Desktop */}
@@ -33,7 +35,7 @@ export default function Landing() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.location.href = "/pricing"}
+            onClick={() => setLocation("/pricing")}
             className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
             data-testid="button-pricing"
           >
@@ -52,7 +54,7 @@ export default function Landing() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.location.href = "/login"}
+            onClick={() => setLocation("/login")}
             className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
             data-testid="button-login"
           >
@@ -60,7 +62,7 @@ export default function Landing() {
           </Button>
           <Button
             size="sm"
-            onClick={() => window.location.href = "/register"}
+            onClick={() => setLocation("/register")}
             className="h-8 text-xs bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
             data-testid="button-get-started"
           >
@@ -75,13 +77,13 @@ export default function Landing() {
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            onClick={() => window.location.href = "/login"}
+            onClick={() => setLocation("/login")}
             className="h-12 text-sm text-[hsl(var(--cad-text-secondary))]"
           >
             Login
           </Button>
           <Button
-            onClick={() => window.location.href = "/register"}
+            onClick={() => setLocation("/register")}
             className="h-12 text-sm bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
             data-testid="button-get-started-mobile"
           >
@@ -125,18 +127,18 @@ export default function Landing() {
               </p>
 
               {/* Key Metrics */}
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-4">
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-cyan))] font-mono">$250k/yr</div>
-                  <div className="text-[10px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Cost Savings</div>
+              <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-6">
+                <div className="space-y-2">
+                  <div className="text-lg sm:text-2xl lg:text-3xl font-bold text-[hsl(var(--cad-cyan))] font-mono">$250k/yr</div>
+                  <div className="text-[9px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase leading-tight">Cost<br className="sm:hidden" /> Savings</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-green))] font-mono">5 Staff</div>
-                  <div className="text-[10px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Replaced</div>
+                <div className="space-y-2">
+                  <div className="text-lg sm:text-2xl lg:text-3xl font-bold text-[hsl(var(--cad-green))] font-mono">5 Staff</div>
+                  <div className="text-[9px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase leading-tight">Staff<br className="sm:hidden" /> Replaced</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-purple))] font-mono">100%</div>
-                  <div className="text-[10px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Automated</div>
+                <div className="space-y-2">
+                  <div className="text-lg sm:text-2xl lg:text-3xl font-bold text-[hsl(var(--cad-purple))] font-mono">100%</div>
+                  <div className="text-[9px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase leading-tight">Fully<br className="sm:hidden" /> Automated</div>
                 </div>
               </div>
 

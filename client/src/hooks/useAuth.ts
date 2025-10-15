@@ -1,16 +1,21 @@
-// Reference: javascript_log_in_with_replit blueprint
+// Custom session-based authentication
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
+interface AuthResponse {
+  user: User;
+}
+
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
+  const { data, isLoading } = useQuery<AuthResponse>({
+    queryKey: ["/api/auth/me"],
     retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   return {
-    user,
+    user: data?.user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!data?.user,
   };
 }
