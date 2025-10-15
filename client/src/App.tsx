@@ -46,6 +46,10 @@ import AuditorPortal from "@/pages/auditor-portal";
 import ClientPortal from "@/pages/client-portal";
 import CustomerSupport from "@/pages/customer-support";
 import Billing from "@/pages/billing";
+import HRBenefits from "@/pages/hr-benefits";
+import HRReviews from "@/pages/hr-reviews";
+import HRPTO from "@/pages/hr-pto";
+import HRTerminations from "@/pages/hr-terminations";
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -105,6 +109,10 @@ function AppContent() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/billing" component={Billing} />
+                <Route path="/hr/benefits" component={HRBenefits} />
+                <Route path="/hr/reviews" component={HRReviews} />
+                <Route path="/hr/pto" component={HRPTO} />
+                <Route path="/hr/terminations" component={HRTerminations} />
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/admin/command" component={AdminCommandCenter} />
