@@ -41,6 +41,12 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
+  Trash2,
+  UserCog,
+  UserPlus,
+  Receipt,
+  RefreshCw,
+  Power,
 } from "lucide-react";
 
 interface CustomerSearchResult {
@@ -221,6 +227,89 @@ export default function AdminSupportPage() {
       toast({ title: "Account Unlocked", description: "Account has been unlocked successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/support/search"] });
+      setActionDialog(null);
+    },
+  });
+
+  // Power Tool Mutations - User Management
+  const deleteUserMutation = useMutation({
+    mutationFn: (data: { userId: string; workspaceId: string; reason: string }) =>
+      apiRequest("/api/admin/support/delete-user", "POST", data),
+    onSuccess: () => {
+      toast({ title: "User Deleted", description: "User has been removed from the workspace" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  const changeUserRoleMutation = useMutation({
+    mutationFn: (data: { userId: string; newRole: string; workspaceId: string }) =>
+      apiRequest("/api/admin/support/change-user-role", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Role Changed", description: "User role has been updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  // Power Tool Mutations - Client Management
+  const createClientMutation = useMutation({
+    mutationFn: (data: { workspaceId: string; clientData: any }) =>
+      apiRequest("/api/admin/support/create-client", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Client Created", description: "New client has been added to the workspace" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  const deleteClientMutation = useMutation({
+    mutationFn: (data: { clientId: string; workspaceId: string; reason: string }) =>
+      apiRequest("/api/admin/support/delete-client", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Client Deleted", description: "Client has been removed from the workspace" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  // Power Tool Mutations - Payment/Invoice Control
+  const processPaymentMutation = useMutation({
+    mutationFn: (data: { invoiceId: string; workspaceId: string; amount: string; method: string; note: string }) =>
+      apiRequest("/api/admin/support/process-payment", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Payment Processed", description: "Invoice has been marked as paid" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  const forceClearInvoiceMutation = useMutation({
+    mutationFn: (data: { invoiceId: string; workspaceId: string; reason: string }) =>
+      apiRequest("/api/admin/support/force-clear-invoice", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Invoice Cleared", description: "Invoice has been force cleared" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  // Power Tool Mutations - Service Control
+  const resetChatMutation = useMutation({
+    mutationFn: (data: { workspaceId: string; reason: string }) =>
+      apiRequest("/api/admin/support/reset-chat", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Chat Reset", description: "All chat conversations have been closed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/workspace", selectedWorkspace] });
+      setActionDialog(null);
+    },
+  });
+
+  const forceCloseServiceMutation = useMutation({
+    mutationFn: (data: { workspaceId: string; service: string; reason: string }) =>
+      apiRequest("/api/admin/support/force-close-service", "POST", data),
+    onSuccess: () => {
+      toast({ title: "Service Closed", description: "Service has been force closed" });
       setActionDialog(null);
     },
   });

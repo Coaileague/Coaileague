@@ -95,6 +95,12 @@ import {
 import { db } from "./db";
 import { eq, and, desc, isNotNull, or, like, sql } from "drizzle-orm";
 
+// Generate unique organization ID: wfosupport-#########
+function generateOrganizationId(): string {
+  const randomNum = Math.floor(100000000 + Math.random() * 900000000); // 9-digit number
+  return `wfosupport-${randomNum}`;
+}
+
 // Storage Interface with Multi-Tenant Methods
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -307,9 +313,15 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
   
   async createWorkspace(workspaceData: InsertWorkspace): Promise<Workspace> {
+    // Auto-generate unique organization ID if not provided
+    const dataWithOrgId = {
+      ...workspaceData,
+      organizationId: workspaceData.organizationId || generateOrganizationId(),
+    };
+    
     const [workspace] = await db
       .insert(workspaces)
-      .values(workspaceData)
+      .values(dataWithOrgId)
       .returning();
     return workspace;
   }
