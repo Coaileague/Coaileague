@@ -178,6 +178,142 @@ export const emailTemplates = {
         </p>
       </div>
     `
+  }),
+
+  ptoApproved: (data: {
+    employeeName: string;
+    startDate: string;
+    endDate: string;
+    ptoType: string;
+    days: number;
+  }) => ({
+    subject: `PTO Request Approved - ${data.ptoType}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">PTO Request Approved</h2>
+        <p>Hello ${data.employeeName},</p>
+        <p>Your PTO request has been approved!</p>
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 5px 0;"><strong>Type:</strong> ${data.ptoType}</p>
+          <p style="margin: 5px 0;"><strong>Start Date:</strong> ${data.startDate}</p>
+          <p style="margin: 5px 0;"><strong>End Date:</strong> ${data.endDate}</p>
+          <p style="margin: 5px 0;"><strong>Total Days:</strong> ${data.days}</p>
+        </div>
+        <p>Enjoy your time off!</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS.
+        </p>
+      </div>
+    `
+  }),
+
+  ptoDenied: (data: {
+    employeeName: string;
+    startDate: string;
+    endDate: string;
+    ptoType: string;
+    denialReason?: string;
+  }) => ({
+    subject: `PTO Request Denied - ${data.ptoType}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">PTO Request Denied</h2>
+        <p>Hello ${data.employeeName},</p>
+        <p>Unfortunately, your PTO request has been denied.</p>
+        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <p style="margin: 5px 0;"><strong>Type:</strong> ${data.ptoType}</p>
+          <p style="margin: 5px 0;"><strong>Requested Dates:</strong> ${data.startDate} to ${data.endDate}</p>
+          ${data.denialReason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${data.denialReason}</p>` : ''}
+        </div>
+        <p>Please contact your manager if you have questions about this decision.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS.
+        </p>
+      </div>
+    `
+  }),
+
+  performanceReview: (data: {
+    employeeName: string;
+    reviewType: string;
+    reviewDate: string;
+    reviewerName: string;
+  }) => ({
+    subject: `Performance Review Scheduled - ${data.reviewType}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6366f1;">Performance Review Scheduled</h2>
+        <p>Hello ${data.employeeName},</p>
+        <p>A performance review has been scheduled for you.</p>
+        <div style="background-color: #eef2ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1;">
+          <p style="margin: 5px 0;"><strong>Review Type:</strong> ${data.reviewType}</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${data.reviewDate}</p>
+          <p style="margin: 5px 0;"><strong>Reviewer:</strong> ${data.reviewerName}</p>
+        </div>
+        <p>Please prepare for the review and be ready to discuss your accomplishments, challenges, and goals.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS.
+        </p>
+      </div>
+    `
+  }),
+
+  benefitEnrollment: (data: {
+    employeeName: string;
+    benefitType: string;
+    startDate: string;
+    monthlyContribution?: string;
+  }) => ({
+    subject: `Benefit Enrollment Confirmation - ${data.benefitType}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">Benefit Enrollment Confirmed</h2>
+        <p>Hello ${data.employeeName},</p>
+        <p>Your benefit enrollment has been processed successfully.</p>
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 5px 0;"><strong>Benefit Type:</strong> ${data.benefitType}</p>
+          <p style="margin: 5px 0;"><strong>Start Date:</strong> ${data.startDate}</p>
+          ${data.monthlyContribution ? `<p style="margin: 5px 0;"><strong>Monthly Contribution:</strong> $${data.monthlyContribution}</p>` : ''}
+        </div>
+        <p>You will receive additional documentation about your benefits coverage shortly.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS.
+        </p>
+      </div>
+    `
+  }),
+
+  terminationNotice: (data: {
+    employeeName: string;
+    terminationDate: string;
+    terminationType: string;
+    hrContactEmail: string;
+  }) => ({
+    subject: `Important: Offboarding Information`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6366f1;">Offboarding Information</h2>
+        <p>Hello ${data.employeeName},</p>
+        <p>This email contains important information regarding your departure from the company.</p>
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1;">
+          <p style="margin: 5px 0;"><strong>Departure Type:</strong> ${data.terminationType}</p>
+          <p style="margin: 5px 0;"><strong>Last Day:</strong> ${data.terminationDate}</p>
+        </div>
+        <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="margin: 5px 0; font-weight: 600;">Next Steps:</p>
+          <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.6;">
+            <li>Exit interview will be scheduled</li>
+            <li>Return all company property</li>
+            <li>Complete final paperwork</li>
+            <li>Review final paycheck details</li>
+          </ul>
+        </div>
+        <p>If you have any questions, please contact HR at <a href="mailto:${data.hrContactEmail}">${data.hrContactEmail}</a></p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS.
+        </p>
+      </div>
+    `
   })
 };
 
@@ -288,6 +424,116 @@ export async function sendOnboardingInviteEmail(
     return { success: true, data: result };
   } catch (error) {
     console.error('Error sending onboarding invite email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendPTOApprovedEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.ptoApproved>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.ptoApproved(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending PTO approved email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendPTODeniedEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.ptoDenied>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.ptoDenied(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending PTO denied email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendPerformanceReviewEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.performanceReview>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.performanceReview(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending performance review email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendBenefitEnrollmentEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.benefitEnrollment>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.benefitEnrollment(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending benefit enrollment email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendTerminationNoticeEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.terminationNotice>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.terminationNotice(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending termination notice email:', error);
     return { success: false, error };
   }
 }
