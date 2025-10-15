@@ -25,7 +25,7 @@ The platform features a CAD-style professional interface with a dark mode theme,
     - **Analytics Dashboard**: Tracks revenue, hours worked, active users, and invoice statistics.
     - **Advanced Scheduling System**: Sling-style grid with drag-and-drop, real-time week statistics (hours, labor cost), bulk operations, shift conflict detection, and quick actions.
     - **Employee Onboarding**: Email invitation workflow, multi-step onboarding (personal info, tax, availability, documents, e-signature), legal compliance features, and automatic employee number generation.
-    - **Report Management System (RMS)**: Template management, dynamic submissions, supervisor approval, mandatory photo requirements with timestamping for compliance reports.
+    - **Report Management System (RMS)**: Template management, dynamic submissions, supervisor approval, mandatory photo requirements with timestamping for compliance reports, automated email delivery to clients with unique tracking IDs.
     - **Industry-Specific Business Categories**: Vertical SaaS approach providing tailored form templates based on selected business category (e.g., Security, Healthcare, Construction).
     - **Shift Orders/Post Orders**: Special instructions attached to shifts requiring employee acknowledgment.
 - **Admin Dashboards**: Admin Usage, Support, and Command Center for platform monitoring, customer management, and system health.
