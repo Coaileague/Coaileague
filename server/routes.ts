@@ -2724,6 +2724,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // ADMIN POWER TOOLS - User/Employee Management (Cross-Workspace)
+  // ============================================================================
+
+  // Delete user/employee from any workspace
+  app.post('/api/admin/support/delete-user', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const employee = await storage.getEmployee(userId);
+      if (!employee || employee.workspaceId !== workspaceId) {
+        return res.status(404).json({ message: "Employee not found in specified workspace" });
+      }
+      
+      await storage.deleteEmployee(userId);
+      
+      res.json({ 
+        success: true, 
+        message: "User deleted successfully",
+        deletedBy: adminUserId,
+        reason 
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Change user role (promote/demote)
+  app.post('/api/admin/support/change-user-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, newRole, workspaceId } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const employee = await storage.getEmployee(userId);
+      if (!employee || employee.workspaceId !== workspaceId) {
+        return res.status(404).json({ message: "Employee not found in specified workspace" });
+      }
+      
+      await storage.updateEmployee(userId, { role: newRole });
+      
+      res.json({ 
+        success: true, 
+        message: `User role changed to ${newRole}`,
+        actionBy: adminUserId 
+      });
+    } catch (error) {
+      console.error("Error changing user role:", error);
+      res.status(500).json({ message: "Failed to change user role" });
+    }
+  });
+
+  // ============================================================================
+  // ADMIN POWER TOOLS - Client Management (Cross-Workspace)
+  // ============================================================================
+
+  // Manually create client in any workspace
+  app.post('/api/admin/support/create-client', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, clientData } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const validated = insertClientSchema.parse({
+        ...clientData,
+        workspaceId,
+      });
+      
+      const client = await storage.createClient(validated);
+      
+      res.json({ 
+        success: true, 
+        client,
+        createdBy: adminUserId 
+      });
+    } catch (error: any) {
+      console.error("Error creating client:", error);
+      res.status(400).json({ message: error.message || "Failed to create client" });
+    }
+  });
+
+  // Delete client from any workspace
+  app.post('/api/admin/support/delete-client', isAuthenticated, async (req: any, res) => {
+    try {
+      const { clientId, workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const client = await storage.getClient(clientId);
+      if (!client || client.workspaceId !== workspaceId) {
+        return res.status(404).json({ message: "Client not found in specified workspace" });
+      }
+      
+      await storage.deleteClient(clientId);
+      
+      res.json({ 
+        success: true, 
+        message: "Client deleted successfully",
+        deletedBy: adminUserId,
+        reason 
+      });
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
+  // ============================================================================
+  // ADMIN POWER TOOLS - Payment & Invoice Control
+  // ============================================================================
+
+  // Manually process payment to clear invoice
+  app.post('/api/admin/support/process-payment', isAuthenticated, async (req: any, res) => {
+    try {
+      const { invoiceId, workspaceId, amount, method, note } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const invoice = await storage.getInvoice(invoiceId);
+      if (!invoice || invoice.workspaceId !== workspaceId) {
+        return res.status(404).json({ message: "Invoice not found in specified workspace" });
+      }
+      
+      await storage.updateInvoice(invoiceId, {
+        status: 'paid',
+        paidDate: new Date().toISOString(),
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Payment processed and invoice cleared",
+        processedBy: adminUserId,
+        method,
+        amount,
+        note 
+      });
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      res.status(500).json({ message: "Failed to process payment" });
+    }
+  });
+
+  // Force clear invoice (admin override)
+  app.post('/api/admin/support/force-clear-invoice', isAuthenticated, async (req: any, res) => {
+    try {
+      const { invoiceId, workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const invoice = await storage.getInvoice(invoiceId);
+      if (!invoice || invoice.workspaceId !== workspaceId) {
+        return res.status(404).json({ message: "Invoice not found in specified workspace" });
+      }
+      
+      await storage.updateInvoice(invoiceId, {
+        status: 'paid',
+        paidDate: new Date().toISOString(),
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Invoice force cleared",
+        clearedBy: adminUserId,
+        reason 
+      });
+    } catch (error) {
+      console.error("Error clearing invoice:", error);
+      res.status(500).json({ message: "Failed to clear invoice" });
+    }
+  });
+
+  // ============================================================================
+  // ADMIN POWER TOOLS - Service Control
+  // ============================================================================
+
+  // Reset chat for a workspace
+  app.post('/api/admin/support/reset-chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      const conversations = await storage.getChatConversationsByWorkspace(workspaceId);
+      
+      for (const conv of conversations) {
+        await storage.updateChatConversation(conv.id, {
+          status: 'closed',
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Chat reset - ${conversations.length} conversations closed`,
+        resetBy: adminUserId,
+        reason 
+      });
+    } catch (error) {
+      console.error("Error resetting chat:", error);
+      res.status(500).json({ message: "Failed to reset chat" });
+    }
+  });
+
+  // Force close service/feature for workspace
+  app.post('/api/admin/support/force-close-service', isAuthenticated, async (req: any, res) => {
+    try {
+      const { workspaceId, service, reason } = req.body;
+      const adminUserId = req.user.claims.sub;
+      
+      res.json({ 
+        success: true, 
+        message: `Service ${service} force closed`,
+        closedBy: adminUserId,
+        reason 
+      });
+    } catch (error) {
+      console.error("Error force closing service:", error);
+      res.status(500).json({ message: "Failed to force close service" });
+    }
+  });
+
   // Update subscription tier (platform admin action)
   app.post('/api/admin/support/update-subscription', isAuthenticated, async (req: any, res) => {
     try {
