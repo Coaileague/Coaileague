@@ -1873,6 +1873,11 @@ export const chatConversations = pgTable("chat_conversations", {
   status: varchar("status").notNull().default("active"), // 'active', 'resolved', 'closed'
   priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
   
+  // Voice/Silence permissions (IRC-style moderation)
+  isSilenced: boolean("is_silenced").default(true), // Users start silenced until support grants voice
+  voiceGrantedBy: varchar("voice_granted_by").references(() => users.id, { onDelete: 'set null' }),
+  voiceGrantedAt: timestamp("voice_granted_at"),
+  
   // Ratings (post-conversation)
   rating: integer("rating"), // 1-5 stars
   feedback: text("feedback"),
@@ -1894,7 +1899,7 @@ export const chatMessages = pgTable("chat_messages", {
   // Message details
   senderId: varchar("sender_id").references(() => users.id, { onDelete: 'set null' }),
   senderName: varchar("sender_name").notNull(),
-  senderType: varchar("sender_type").notNull(), // 'customer', 'support', 'system'
+  senderType: varchar("sender_type").notNull(), // 'customer', 'support', 'system', 'bot'
   
   // Content
   message: text("message").notNull(),
