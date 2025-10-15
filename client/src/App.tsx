@@ -39,6 +39,7 @@ import OnboardingPage from "@/pages/onboarding";
 import AdminUsage from "@/pages/admin-usage";
 import AdminSupport from "@/pages/admin-support";
 import AdminCommandCenter from "@/pages/admin-command-center";
+import AdminCustomForms from "@/pages/admin-custom-forms";
 import PlatformAdmin from "@/pages/platform-admin";
 import PlatformUsers from "@/pages/platform-users";
 import EmployeePortal from "@/pages/employee-portal";
@@ -118,6 +119,7 @@ function AppContent() {
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/admin/command" component={AdminCommandCenter} />
+                <Route path="/admin/custom-forms" component={AdminCustomForms} />
                 <Route path="/support/dashboard" component={SupportDashboard} />
                 <Route path="/platform/admin" component={PlatformAdmin} />
                 <Route path="/platform/users" component={PlatformUsers} />

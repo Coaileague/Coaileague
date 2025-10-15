@@ -3266,6 +3266,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // CUSTOM FORMS - Organization-Specific Form Templates
+  // ============================================================================
+
+  // Get all custom forms for organization
+  app.get('/api/custom-forms', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const forms = await storage.getCustomFormsByOrganization(workspace.id);
+      res.json(forms);
+    } catch (error) {
+      console.error("Error fetching custom forms:", error);
+      res.status(500).json({ message: "Failed to fetch custom forms" });
+    }
+  });
+
+  // Get custom form by ID
+  app.get('/api/custom-forms/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const form = await storage.getCustomForm(id);
+      
+      if (!form) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+
+      // Verify form belongs to organization
+      if (form.organizationId !== workspace.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(form);
+    } catch (error) {
+      console.error("Error fetching custom form:", error);
+      res.status(500).json({ message: "Failed to fetch custom form" });
+    }
+  });
+
+  // Create custom form (Platform Admin/Support only)
+  app.post('/api/custom-forms', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // TODO: Add platform role check - only platform admins/support can create forms
+      // For now, allow workspace owners to create forms for their organization
+      
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const formData = {
+        ...req.body,
+        organizationId: workspace.id,
+        createdBy: userId,
+      };
+
+      const form = await storage.createCustomForm(formData);
+      res.json(form);
+    } catch (error) {
+      console.error("Error creating custom form:", error);
+      res.status(500).json({ message: "Failed to create custom form" });
+    }
+  });
+
+  // Update custom form (Platform Admin/Support only)
+  app.patch('/api/custom-forms/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      
+      const form = await storage.getCustomForm(id);
+      if (!form) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+
+      // TODO: Add platform role check
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      if (!workspace || workspace.id !== form.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.updateCustomForm(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating custom form:", error);
+      res.status(500).json({ message: "Failed to update custom form" });
+    }
+  });
+
+  // Delete custom form (Platform Admin/Support only)
+  app.delete('/api/custom-forms/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      
+      const form = await storage.getCustomForm(id);
+      if (!form) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+
+      // TODO: Add platform role check
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      if (!workspace || workspace.id !== form.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.deleteCustomForm(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting custom form:", error);
+      res.status(500).json({ message: "Failed to delete custom form" });
+    }
+  });
+
+  // ============================================================================
+  // CUSTOM FORM SUBMISSIONS
+  // ============================================================================
+
+  // Get all form submissions for organization
+  app.get('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const submissions = await storage.getCustomFormSubmissionsByOrganization(workspace.id);
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching form submissions:", error);
+      res.status(500).json({ message: "Failed to fetch form submissions" });
+    }
+  });
+
+  // Get form submission by ID
+  app.get('/api/custom-form-submissions/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const submission = await storage.getCustomFormSubmission(id);
+      
+      if (!submission) {
+        return res.status(404).json({ message: "Submission not found" });
+      }
+
+      // Verify submission belongs to organization
+      if (submission.organizationId !== workspace.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(submission);
+    } catch (error) {
+      console.error("Error fetching form submission:", error);
+      res.status(500).json({ message: "Failed to fetch form submission" });
+    }
+  });
+
+  // Submit custom form
+  app.post('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const submissionData = {
+        ...req.body,
+        organizationId: workspace.id,
+        submittedBy: userId,
+        submittedAt: new Date(),
+      };
+
+      const submission = await storage.createCustomFormSubmission(submissionData);
+      res.json(submission);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      res.status(500).json({ message: "Failed to submit form" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }

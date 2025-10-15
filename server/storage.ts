@@ -32,6 +32,8 @@ import {
   workspaceAiUsage,
   chatConversations,
   chatMessages,
+  customForms,
+  customFormSubmissions,
   type User,
   type UpsertUser,
   type Workspace,
@@ -91,6 +93,10 @@ import {
   type InsertChatConversation,
   type ChatMessage,
   type InsertChatMessage,
+  type CustomForm,
+  type InsertCustomForm,
+  type CustomFormSubmission,
+  type InsertCustomFormSubmission,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, or, like, sql } from "drizzle-orm";
@@ -281,6 +287,20 @@ export interface IStorage {
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
+  
+  // Custom Forms operations (Organization-specific forms)
+  createCustomForm(form: InsertCustomForm): Promise<CustomForm>;
+  getCustomForm(id: string): Promise<CustomForm | undefined>;
+  getCustomFormsByOrganization(organizationId: string): Promise<CustomForm[]>;
+  updateCustomForm(id: string, data: Partial<InsertCustomForm>): Promise<CustomForm | undefined>;
+  deleteCustomForm(id: string): Promise<boolean>;
+  
+  // Custom Form Submission operations
+  createCustomFormSubmission(submission: InsertCustomFormSubmission): Promise<CustomFormSubmission>;
+  getCustomFormSubmission(id: string): Promise<CustomFormSubmission | undefined>;
+  getCustomFormSubmissionsByOrganization(organizationId: string): Promise<CustomFormSubmission[]>;
+  getCustomFormSubmissionsByForm(formId: string): Promise<CustomFormSubmission[]>;
+  updateCustomFormSubmission(id: string, data: Partial<InsertCustomFormSubmission>): Promise<CustomFormSubmission | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1804,6 +1824,103 @@ export class DatabaseStorage implements IStorage {
           sql`${chatMessages.senderId} != ${userId}` // Only mark messages from other users as read
         )
       );
+  }
+
+  // ============================================================================
+  // CUSTOM FORMS OPERATIONS (Organization-Specific Forms)
+  // ============================================================================
+  
+  async createCustomForm(formData: InsertCustomForm): Promise<CustomForm> {
+    const [form] = await db
+      .insert(customForms)
+      .values(formData)
+      .returning();
+    
+    return form;
+  }
+  
+  async getCustomForm(id: string): Promise<CustomForm | undefined> {
+    const [form] = await db
+      .select()
+      .from(customForms)
+      .where(eq(customForms.id, id));
+    
+    return form;
+  }
+  
+  async getCustomFormsByOrganization(organizationId: string): Promise<CustomForm[]> {
+    return await db
+      .select()
+      .from(customForms)
+      .where(eq(customForms.organizationId, organizationId))
+      .orderBy(desc(customForms.createdAt));
+  }
+  
+  async updateCustomForm(id: string, data: Partial<InsertCustomForm>): Promise<CustomForm | undefined> {
+    const [updated] = await db
+      .update(customForms)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(customForms.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  async deleteCustomForm(id: string): Promise<boolean> {
+    const result = await db
+      .delete(customForms)
+      .where(eq(customForms.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  // ============================================================================
+  // CUSTOM FORM SUBMISSION OPERATIONS
+  // ============================================================================
+  
+  async createCustomFormSubmission(submissionData: InsertCustomFormSubmission): Promise<CustomFormSubmission> {
+    const [submission] = await db
+      .insert(customFormSubmissions)
+      .values(submissionData)
+      .returning();
+    
+    return submission;
+  }
+  
+  async getCustomFormSubmission(id: string): Promise<CustomFormSubmission | undefined> {
+    const [submission] = await db
+      .select()
+      .from(customFormSubmissions)
+      .where(eq(customFormSubmissions.id, id));
+    
+    return submission;
+  }
+  
+  async getCustomFormSubmissionsByOrganization(organizationId: string): Promise<CustomFormSubmission[]> {
+    return await db
+      .select()
+      .from(customFormSubmissions)
+      .where(eq(customFormSubmissions.organizationId, organizationId))
+      .orderBy(desc(customFormSubmissions.submittedAt));
+  }
+  
+  async getCustomFormSubmissionsByForm(formId: string): Promise<CustomFormSubmission[]> {
+    return await db
+      .select()
+      .from(customFormSubmissions)
+      .where(eq(customFormSubmissions.formId, formId))
+      .orderBy(desc(customFormSubmissions.submittedAt));
+  }
+  
+  async updateCustomFormSubmission(id: string, data: Partial<InsertCustomFormSubmission>): Promise<CustomFormSubmission | undefined> {
+    const [updated] = await db
+      .update(customFormSubmissions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(customFormSubmissions.id, id))
+      .returning();
+    
+    return updated;
   }
 }
 

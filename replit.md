@@ -51,6 +51,17 @@ The platform features a CAD-style professional interface with a dark mode theme,
     - **Email Notifications**: Fully activated Resend integration with templates for HR workflows, shift assignments, invoicing, onboarding, and report delivery to clients.
 - **Implemented but Requires Activation**: Stripe Connect payment processing.
 - **Database Schema Ready (Needs UI)**: GPS clock-in, automated payroll processing.
+- **Custom Forms System (In Development - Security Fixes Required)**:
+    - **Components Built**: E-signature component (checkbox + name input), document upload with validation, dynamic form renderer
+    - **Database Schema**: customForms (organization-specific templates), customFormSubmissions (with e-signatures and documents)
+    - **API Layer**: CRUD endpoints for forms and submissions with workspace isolation
+    - **Admin Interface**: Form builder UI for creating organization-specific forms
+    - **CRITICAL SECURITY ISSUES TO FIX**:
+        1. Missing platform role-based access control - Custom form CRUD endpoints only use requireAuth but should require platform admin/support roles
+        2. No Zod validation on API payloads - Endpoints accept raw req.body without validation
+        3. organizationId tampering possible - Update endpoint spreads req.body allowing workspaceId changes
+        4. Admin UI limitation - Can only manage forms for current workspace, not other organizations
+    - **Next Steps**: Add requirePlatformAdmin middleware, Zod validation schemas, whitelist mutable fields, update admin UI for multi-org support
 
 ### Monetization Strategy
 The platform offers Professional, Enterprise, and Fortune 500 tiers with increasing features and cost savings. Additional offerings include a White-Label RMS capability for custom branding and a database-backed feature flag system for granular control over feature availability based on billing tiers.
