@@ -26,8 +26,8 @@ import {
 export default function Landing() {
   return (
     <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
-      {/* CAD-Style Top Bar */}
-      <div className="h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] flex items-center justify-between px-6">
+      {/* CAD-Style Top Bar - Desktop */}
+      <div className="hidden lg:flex h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] items-center justify-between px-6">
         <WorkforceOSLogo size="sm" showText={true} />
         <div className="flex items-center gap-4">
           <Button
@@ -69,61 +69,82 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Hero - CAD System Showcase */}
+      {/* Mobile Top Bar - Touch-Optimized */}
+      <div className="flex lg:hidden h-16 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] items-center justify-between px-4">
+        <WorkforceOSLogo size="sm" showText={true} />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => window.location.href = "/api/login"}
+            className="h-12 text-sm text-[hsl(var(--cad-text-secondary))]"
+          >
+            Login
+          </Button>
+          <Button
+            onClick={() => window.location.href = "/api/login"}
+            className="h-12 text-sm bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
+            data-testid="button-get-started-mobile"
+          >
+            Start Free
+          </Button>
+        </div>
+      </div>
+
+      {/* Hero - Mobile Optimized */}
       <section className="relative">
-        <div className="container mx-auto px-6 py-16 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-24">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left: Value Prop */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
+            <div className="space-y-6 text-center lg:text-left">
+              <div className="flex items-center gap-2 justify-center lg:justify-start">
                 <div className="h-1 w-12 bg-[hsl(var(--cad-blue))]" />
                 <span className="text-xs uppercase tracking-wider text-[hsl(var(--cad-text-tertiary))] font-mono">
                   Fortune 500 Grade
                 </span>
               </div>
               
-              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]" data-testid="text-hero-title">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]" data-testid="text-hero-title">
                 Replace Your Entire
                 <br />
                 <span className="text-[hsl(var(--cad-blue))]">HR Department</span>
               </h1>
               
-              <p className="text-lg text-[hsl(var(--cad-text-secondary))] leading-relaxed" data-testid="text-hero-description">
+              <p className="text-base sm:text-lg text-[hsl(var(--cad-text-secondary))] leading-relaxed" data-testid="text-hero-description">
                 Complete workforce automation with GPS-verified clock-ins, automated payroll, 
                 smart scheduling, auto-billing, RMS reporting, and full compliance. Save $130k-$250k/year.
               </p>
 
               {/* Key Metrics */}
-              <div className="grid grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-4">
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold text-[hsl(var(--cad-cyan))] font-mono">$250k/yr</div>
-                  <div className="text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Cost Savings</div>
+                  <div className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-cyan))] font-mono">$250k/yr</div>
+                  <div className="text-[10px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Cost Savings</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold text-[hsl(var(--cad-green))] font-mono">5 Staff</div>
-                  <div className="text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Replaced</div>
+                  <div className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-green))] font-mono">5 Staff</div>
+                  <div className="text-[10px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Replaced</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold text-[hsl(var(--cad-purple))] font-mono">100%</div>
-                  <div className="text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Automated</div>
+                  <div className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-purple))] font-mono">100%</div>
+                  <div className="text-[10px] sm:text-xs text-[hsl(var(--cad-text-tertiary))] uppercase">Automated</div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 pt-2">
                 <Button
                   size="lg"
                   onClick={() => window.location.href = "/api/login"}
-                  className="bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-11"
+                  className="w-full sm:w-auto bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-12 text-base"
                   data-testid="button-launch-platform"
                 >
                   Launch Platform
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
                   onClick={() => window.location.href = "/api/demo-login"}
-                  className="h-11 border-[hsl(var(--cad-border-strong))] text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+                  className="w-full sm:w-auto h-12 text-base border-[hsl(var(--cad-border-strong))] text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
                   data-testid="button-interactive-demo"
                 >
                   Interactive Demo
@@ -131,8 +152,8 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Right: CAD System Preview */}
-            <div className="relative" data-testid="img-hero-preview">
+            {/* Right: CAD System Preview - Hidden on mobile */}
+            <div className="hidden lg:block relative" data-testid="img-hero-preview">
               <div className="bg-[hsl(var(--cad-surface))] border border-[hsl(var(--cad-border-strong))] rounded-lg overflow-hidden">
                 {/* Mock CAD Interface */}
                 <div className="h-10 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border))] flex items-center px-3 gap-2">
@@ -200,23 +221,23 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Live Feature Showcase - Advertisement Style */}
+      {/* Live Feature Showcase - Mobile Optimized */}
       <section className="border-y border-[hsl(var(--cad-border-strong))] bg-gradient-to-br from-[hsl(var(--cad-blue))]/5 via-[hsl(var(--cad-surface))] to-[hsl(var(--cad-purple))]/5">
-        <div className="container mx-auto px-6 py-20">
-          <div className="text-center mb-12">
+        <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <div className="text-center mb-8 sm:mb-12">
             <Badge className="bg-[hsl(var(--cad-blue))]/10 text-[hsl(var(--cad-blue))] border-none mb-4">
               <Sparkles className="h-3 w-3 mr-1" />
               Live Automation Showcase
             </Badge>
-            <h2 className="text-4xl font-bold mb-4" data-testid="text-automation-title">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-automation-title">
               Complete Workforce <span className="text-[hsl(var(--cad-blue))]">Automation</span>
             </h2>
-            <p className="text-lg text-[hsl(var(--cad-text-secondary))] max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-[hsl(var(--cad-text-secondary))] max-w-2xl mx-auto px-4">
               Replace 5 full-time staff positions with one intelligent platform. Every feature live and ready today.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
             {[
               {
                 icon: CreditCard,
@@ -319,19 +340,19 @@ export default function Landing() {
             ))}
           </div>
 
-          {/* ROI Calculator */}
-          <Card className="bg-gradient-to-br from-[hsl(var(--cad-blue))]/10 via-[hsl(var(--cad-surface-elevated))] to-[hsl(var(--cad-purple))]/10 border-[hsl(var(--cad-border-strong))] p-8">
+          {/* ROI Calculator - Mobile Optimized */}
+          <Card className="bg-gradient-to-br from-[hsl(var(--cad-blue))]/10 via-[hsl(var(--cad-surface-elevated))] to-[hsl(var(--cad-purple))]/10 border-[hsl(var(--cad-border-strong))] p-6 sm:p-8">
             <div className="text-center space-y-6">
               <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))]">
+                <h3 className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-text-primary))]">
                   Your Annual Savings Calculator
                 </h3>
-                <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                <p className="text-sm text-[hsl(var(--cad-text-secondary))] px-4">
                   Replace these 5 full-time positions with WorkforceOS automation
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-5 gap-4 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 max-w-4xl mx-auto">
                 {[
                   { role: "HR Manager", salary: "$65k" },
                   { role: "Scheduler", salary: "$45k" },
@@ -419,21 +440,21 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA Section - Mobile Optimized */}
       <section className="border-t border-[hsl(var(--cad-border-strong))] bg-[hsl(var(--cad-chrome))]">
-        <div className="container mx-auto px-6 py-16">
+        <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16">
           <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight px-4">
               Save $255,000/Year Starting Today
             </h2>
-            <p className="text-lg text-[hsl(var(--cad-text-secondary))]">
+            <p className="text-base sm:text-lg text-[hsl(var(--cad-text-secondary))] px-4">
               Join businesses replacing entire departments with WorkforceOS automation
             </p>
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-4">
               <Button
                 size="lg"
                 onClick={() => window.location.href = "/api/login"}
-                className="bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-12 px-8"
+                className="w-full sm:w-auto bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-12 px-8"
                 data-testid="button-start-free"
               >
                 Start Free Trial
@@ -442,7 +463,7 @@ export default function Landing() {
                 size="lg"
                 variant="outline"
                 onClick={() => window.location.href = "/api/demo-login"}
-                className="h-12 px-8 border-[hsl(var(--cad-border-strong))] text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+                className="w-full sm:w-auto h-12 px-8 border-[hsl(var(--cad-border-strong))] text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
                 data-testid="button-explore-demo"
               >
                 Explore Demo
@@ -452,15 +473,16 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer - Mobile Optimized */}
       <footer className="border-t border-[hsl(var(--cad-border))] bg-[hsl(var(--cad-background))]">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
+        <div className="container mx-auto px-4 sm:px-6 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))] text-center sm:text-left">
               <WorkforceOSLogo size="sm" showText={false} />
-              <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
+              <span className="hidden sm:inline">© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
+              <span className="sm:hidden">© 2025 WorkforceOS</span>
             </div>
-            <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
               <a href="/support" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-support">Support Center</a>
               <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-contact">Contact Us</a>
               <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">Privacy</a>
