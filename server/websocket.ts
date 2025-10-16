@@ -146,21 +146,22 @@ export function setupWebSocket(server: Server) {
               const clients = conversationClients.get(payload.conversationId);
               if (clients) {
                 const onlineUsers = [];
-                
-                // Add HelpOS bot (always online)
-                onlineUsers.push({
-                  id: 'ai-bot',
-                  name: 'HelpOS™',
-                  role: 'bot',
-                  status: 'online',
-                  userType: 'staff'
-                });
 
                 // Add simulation/test users (for testing features)
                 if (payload.conversationId === MAIN_ROOM_ID) {
+                  // HelpOS AI Bot - Always first in list
+                  onlineUsers.push({
+                    id: 'helpos-ai-bot',
+                    name: 'HelpOS',
+                    role: 'bot',
+                    status: 'online',
+                    userType: 'staff'
+                  });
+                  
+                  // Staff members
                   onlineUsers.push({
                     id: 'sim-staff-1',
-                    name: 'Alex Support',
+                    name: 'Taylor Swift',
                     role: 'deputy_admin',
                     status: 'online',
                     userType: 'staff'
@@ -172,23 +173,36 @@ export function setupWebSocket(server: Server) {
                     status: 'busy',
                     userType: 'staff'
                   });
+                  
+                  // Subscriber
                   onlineUsers.push({
                     id: 'sim-subscriber-1',
-                    name: 'Taylor Business',
+                    name: 'John Doe',
                     role: 'guest',
-                    status: 'online',
+                    status: 'away',
                     userType: 'subscriber'
                   });
+                  
+                  // Organization Users
                   onlineUsers.push({
                     id: 'sim-org-user-1',
-                    name: 'Sam Employee',
+                    name: 'Jane Smith',
+                    role: 'guest',
+                    status: 'busy',
+                    userType: 'org_user'
+                  });
+                  onlineUsers.push({
+                    id: 'sim-org-user-2',
+                    name: 'Alice Brown',
                     role: 'guest',
                     status: 'away',
                     userType: 'org_user'
                   });
+                  
+                  // Guest
                   onlineUsers.push({
                     id: 'sim-guest-1',
-                    name: 'Casey Guest',
+                    name: 'Bob Wilson',
                     role: 'guest',
                     status: 'online',
                     userType: 'guest'

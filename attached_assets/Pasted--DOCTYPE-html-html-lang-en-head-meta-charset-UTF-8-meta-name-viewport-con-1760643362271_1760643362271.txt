@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherChat 2.0 - Cute Vibe Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;700;900&display=swap" rel="stylesheet">
+    <!-- Load Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4fb; } /* Soft background */
+        /* Custom scrollbar for message area */
+        #messages-container::-webkit-scrollbar { width: 8px; }
+        #messages-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        #messages-container::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 4px; } /* Pastel scrollbar */
+        #messages-container::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
+
+        /* Updated MSN-style Header Gradient (Brighter, friendlier colors) */
+        .msn-header {
+            background: linear-gradient(90deg, #a78bfa 0%, #6366f1 50%, #f472b6 100%); /* Purple/Pink/Blue blend */
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Input area styling */
+        .chat-input-area {
+            border-top: 2px solid #e5e7eb;
+            background-color: #ffffff;
+        }
+
+        /* Message bubble styles - Softer, more expressive colors */
+        .system-msg { color: #f97316; font-style: italic; font-size: 0.9rem; font-weight: 600; }
+        .user-msg { 
+            background-color: #eef2ff; /* Soft Blue */
+            border: 1px solid #c7d2fe;
+            padding: 0.6rem 1rem; 
+            border-radius: 1.25rem 1.25rem 1.25rem 0.5rem; /* Rounded chat bubbles */
+            position: relative;
+        }
+        .self-msg { 
+            background-color: #fce7f3; /* Soft Pink */
+            border: 1px solid #fbcfe8;
+            padding: 0.6rem 1rem; 
+            border-radius: 1.25rem 1.25rem 0.5rem 1.25rem; /* Rounded chat bubbles */
+            position: relative;
+        }
+
+        /* MSN-style Button - Brighter and more "bubbly" */
+        .msn-button {
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 #a2125e; /* Deep Fuchsia Shadow */
+            transform: translateY(-2px);
+        }
+        .msn-button:hover {
+            box-shadow: 0 6px 0 #a2125e;
+            transform: translateY(-3px) scale(1.02);
+        }
+        .msn-button:active {
+            box-shadow: 0 1px 0 #a2125e;
+            transform: translateY(2px);
+        }
+
+        /* User list item style */
+        .user-list-item {
+            padding: 0.6rem;
+            border-radius: 0.75rem;
+            transition: background-color 0.1s;
+            cursor: pointer;
+        }
+        .user-list-item:hover {
+            background-color: #e5e7eb;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Header (MSN Messenger 2.0 Style - Bright Gradient) -->
+    <header class="msn-header p-3 text-white">
+        <div class="flex items-center justify-between max-w-7xl mx-auto">
+            <h1 class="text-2xl font-black tracking-wide flex items-center">
+                <i class="fas fa-sparkles text-yellow-300 mr-2"></i> AETHERCHAT <span class="text-sm font-light ml-1">2.0</span>
+            </h1>
+            <span class="text-sm font-semibold">Channel: #vibe-check</span>
+        </div>
+    </header>
+
+    <!-- Main 3-Column Layout (The Three Artifacts) -->
+    <main class="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full border-x border-gray-300">
+
+        <!-- ARTIFACT 1: Options/Controls (Left) -->
+        <section id="options-panel" class="w-full md:w-1/4 bg-white border-r border-gray-200 flex flex-col p-4 overflow-y-auto">
+            <h2 class="text-xl font-extrabold text-gray-800 mb-4 border-b pb-3 flex items-center"><i class="fas fa-magic mr-2 text-fuchsia-500"></i> My Profile</h2>
+
+            <!-- Avatar/User Info -->
+            <div class="p-4 bg-fuchsia-50 rounded-xl shadow-md border border-fuchsia-200 mb-4 text-center">
+                <div class="w-16 h-16 mx-auto mb-2 bg-white rounded-full flex items-center justify-center text-4xl border-4 border-fuchsia-400">
+                    ✨
+                </div>
+                <input type="text" id="username-input" value="StarGazer" class="text-lg font-bold text-gray-800 text-center w-full bg-transparent border-b border-fuchsia-300 focus:outline-none focus:border-fuchsia-500"/>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- User Status -->
+                <div class="p-3 bg-purple-50 rounded-xl shadow-inner border border-purple-200">
+                    <label for="status" class="block text-sm font-medium text-purple-700 mb-1">Current Mood Status</label>
+                    <select id="status" class="w-full p-2 border border-purple-300 rounded-lg text-sm bg-white focus:ring-purple-500 focus:border-purple-500">
+                        <option value="online">💖 Ready to Chat</option>
+                        <option value="away">☕ Grabbing Coffee</option>
+                        <option value="busy">🛑 DND (Coding Hard)</option>
+                        <option value="offline">👻 Stealth Mode</option>
+                    </select>
+                </div>
+
+                <!-- Channel Management -->
+                <div class="p-3 bg-gray-50 rounded-xl shadow-inner border border-gray-200">
+                    <h3 class="text-base font-bold text-gray-700 mb-2">Channel Hub</h3>
+                    <button class="w-full msn-button bg-pink-500 hover:bg-pink-600 text-white py-2 rounded-xl text-sm font-bold mb-2">
+                        <i class="fas fa-plus-circle mr-1"></i> New Chat Room
+                    </button>
+                    <ul class="text-sm space-y-1 text-gray-600">
+                        <li class="user-list-item bg-purple-100 font-bold text-purple-700"><i class="fas fa-sparkles text-purple-500 mr-2"></i> #vibe-check (Active)</li>
+                        <li class="user-list-item hover:bg-gray-100"><i class="fas fa-palette text-gray-500 mr-2"></i> #aesthetic-design</li>
+                        <li class="user-list-item hover:bg-gray-100"><i class="fas fa-cat text-gray-500 mr-2"></i> #cat-gifs</li>
+                    </ul>
+                </div>
+
+                <!-- Quick Actions: Added Nudge button -->
+                <div class="pt-4 border-t border-gray-200 space-y-2">
+                    <button class="w-full msn-button bg-yellow-400 text-gray-800 py-2 rounded-xl font-bold text-sm">
+                        <i class="fas fa-bell mr-1 animate-pulse"></i> Send a NUDGE!
+                    </button>
+                    <button class="w-full msn-button bg-red-500 text-white py-2 rounded-xl font-bold text-sm">
+                        <i class="fas fa-power-off mr-1"></i> Log Out
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARTIFACT 2: Chat Area (Center, Large) -->
+        <section id="chat-area" class="flex flex-col flex-grow bg-white">
+            
+            <!-- Message Display Container -->
+            <div id="messages-container" class="flex-grow p-4 space-y-6 overflow-y-auto">
+                <div class="text-center system-msg">
+                    ✨ You've entered the #vibe-check channel. Sending good energy your way! ✨
+                </div>
+                <div class="text-center system-msg">
+                    [14:30] <span class="font-bold text-fuchsia-600">Admin Bot</span>: Topic Update! Let's talk about the cutest new programming fonts!
+                </div>
+
+                <!-- Example Message 1 - Now includes Avatar Emoji -->
+                <div class="user-msg max-w-[80%] flex items-start space-x-2">
+                    <div class="w-8 h-8 flex-shrink-0 bg-yellow-200 rounded-full text-lg text-center leading-loose">😸</div>
+                    <div>
+                        <span class="font-bold text-blue-700 text-sm block">CyberBloom</span>
+                        <p class="text-gray-800 mt-1">OMG, I just found this aesthetic lo-fi study stream. It's giving me major chill vibes right now. Anyone else into that?</p>
+                    </div>
+                </div>
+
+                <!-- Example Message 2 (Self Message) - Now includes Avatar Emoji -->
+                <div class="flex justify-end">
+                    <div class="self-msg max-w-[80%] flex items-start space-x-2">
+                         <div class="order-2">
+                            <span class="font-bold text-green-700 text-sm block text-right">StarGazer</span>
+                            <p class="text-gray-800 mt-1">Yesss, lo-fi is my background music for everything! It’s the perfect mood setter. I am obsessed with those animated pixel art rooms!</p>
+                        </div>
+                         <div class="w-8 h-8 flex-shrink-0 bg-fuchsia-200 rounded-full text-lg text-center leading-loose order-1">✨</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Input Area -->
+            <div class="chat-input-area p-4">
+                <div class="flex items-end space-x-2">
+                    <textarea id="chat-input" class="flex-grow p-3 border border-gray-300 rounded-xl resize-none focus:ring-fuchsia-500 focus:border-fuchsia-500" rows="2" placeholder="Share your good vibes here..."></textarea>
+                    <button id="send-button" onclick="sendMessage()" class="msn-button bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-6 py-2 rounded-xl font-extrabold text-base">
+                        Send <i class="fas fa-paper-plane ml-1"></i>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="text-xs text-gray-500 flex items-center">
+                        <i class="fas fa-keyboard mr-1"></i> Tip: Use Shift+Enter for new line!
+                    </div>
+                    <div class="text-xs text-gray-500 flex items-center">
+                        <i class="fas fa-pen mr-1"></i> Typing: <span id="typing-indicator">1 user</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARTIFACT 3: User List (Right) -->
+        <section id="userlist-panel" class="w-full md:w-1/4 bg-gray-50 border-l border-gray-200 flex flex-col overflow-y-auto">
+            <div class="p-4 border-b border-gray-200 bg-white">
+                <h2 class="text-xl font-extrabold text-gray-800 flex items-center"><i class="fas fa-heart-circle-bolt mr-2 text-pink-600"></i> Vibe Check Crew (<span id="user-count">9</span>)</h2>
+            </div>
+            <ul id="user-list" class="flex-grow space-y-1 p-4">
+                <!-- Updated User List Items with Emojis -->
+                <li class="user-list-item flex items-center font-bold bg-pink-100 text-pink-700 shadow-sm border border-pink-300">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-3 border-2 border-white"></span> ✨ StarGazer
+                </li>
+                <li class="user-list-item flex items-center">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-3 border-2 border-white"></span> 💖 CodeWitch
+                </li>
+                <li class="user-list-item flex items-center">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-3 border-2 border-white"></span> 🎧 SynthwaveSam
+                </li>
+                <li class="user-list-item flex items-center">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-3 border-2 border-white"></span> 🌈 PixelPainter
+                </li>
+                <li class="user-list-item flex items-center opacity-70">
+                    <span class="w-3 h-3 bg-yellow-500 rounded-full mr-3 border-2 border-white"></span> 💤 DreamWeaver (AFK)
+                </li>
+                <li class="user-list-item flex items-center">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-3 border-2 border-white"></span> 🔮 MysticDev
+                </li>
+                <li class="user-list-item flex items-center opacity-50">
+                    <span class="w-3 h-3 bg-red-500 rounded-full mr-3 border-2 border-white"></span> 🤫 HyperFocus (Busy)
+                </li>
+                <li class="user-list-item flex items-center">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-3 border-2 border-white"></span> 👾 RetroBot
+                </li>
+                <li class="user-list-item flex items-center opacity-40">
+                    <span class="w-3 h-3 bg-gray-400 rounded-full mr-3 border-2 border-white"></span> ☁️ CloudWalker (Invisible)
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    <script>
+        const messagesContainer = document.getElementById('messages-container');
+        const chatInput = document.getElementById('chat-input');
+        const userCountSpan = document.getElementById('user-count');
+        const usernameInput = document.getElementById('username-input');
+        const initialUserCount = parseInt(userCountSpan.textContent);
+        
+        /**
+         * Simulates sending a message and renders it to the chat window.
+         */
+        function sendMessage() {
+            const messageText = chatInput.value.trim();
+            const myUsername = usernameInput.value;
+
+            if (messageText === "") {
+                return;
+            }
+
+            // 1. Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-end'; // Align to the right for "self" message
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'self-msg max-w-[80%] flex items-start space-x-2';
+            
+            // Avatar/Emoji for self
+            const selfEmojiDiv = document.createElement('div');
+            selfEmojiDiv.className = 'w-8 h-8 flex-shrink-0 bg-fuchsia-200 rounded-full text-lg text-center leading-loose order-1';
+            selfEmojiDiv.textContent = '✨';
+
+            const textContainer = document.createElement('div');
+            textContainer.className = 'order-2';
+            
+            const headerSpan = document.createElement('span');
+            headerSpan.className = 'font-bold text-green-700 text-sm block text-right';
+            headerSpan.textContent = myUsername; // Use the dynamic username
+
+            const paragraph = document.createElement('p');
+            paragraph.className = 'text-gray-800 mt-1 whitespace-pre-wrap';
+            paragraph.textContent = messageText;
+
+            textContainer.appendChild(headerSpan);
+            textContainer.appendChild(paragraph);
+            contentDiv.appendChild(selfEmojiDiv);
+            contentDiv.appendChild(textContainer);
+            messageDiv.appendChild(contentDiv);
+            
+            // 2. Append to container and clear input
+            messagesContainer.appendChild(messageDiv);
+            chatInput.value = '';
+            
+            // 3. Scroll to the bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // 4. Simulate an automated system response
+            setTimeout(simulateBotResponse, 1500);
+        }
+
+        /**
+         * Simulates a system or other user response.
+         */
+        function simulateBotResponse() {
+            const cuteBotResponses = [
+                "*** System: Ooh, a new message just dropped! Let the good times roll! ***",
+                "💖 CodeWitch: That's totally relatable! I'm sending good vibes your way! 🤗",
+                "🎧 SynthwaveSam: BRB, got to switch my playlist to something more ✨aesthetic✨.",
+                "*** DreamWeaver has sent a NUDGE! Did you feel that? ***",
+                "🌈 PixelPainter: Working on a cute pixel art commission right now! Check it out later! 🎨",
+                "🔮 MysticDev: My crystal ball says... you should try Tailwind CSS. It's magic!",
+            ];
+
+            const response = cuteBotResponses[Math.floor(Math.random() * cuteBotResponses.length)];
+            
+            const isSystem = response.startsWith('***');
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-start'; // Align left for others
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'max-w-[80%]';
+
+            if (isSystem) {
+                // System message style
+                messageDiv.className = 'text-center';
+                contentDiv.className = 'system-msg';
+                contentDiv.textContent = response;
+                messageDiv.appendChild(contentDiv);
+            } else {
+                // User message style
+                contentDiv.className = 'user-msg flex items-start space-x-2';
+                
+                const parts = response.split(':');
+                const username = parts[0].trim();
+                const text = parts.slice(1).join(':').trim();
+
+                // Get a random emoji for the simulated user
+                const userEmojis = ['😸', '🦄', '👽', '🎶', '🎀'];
+                const randomEmoji = userEmojis[Math.floor(Math.random() * userEmojis.length)];
+                
+                // Avatar/Emoji for user
+                const userEmojiDiv = document.createElement('div');
+                userEmojiDiv.className = 'w-8 h-8 flex-shrink-0 bg-purple-200 rounded-full text-lg text-center leading-loose';
+                userEmojiDiv.textContent = randomEmoji;
+                
+                const textContainer = document.createElement('div');
+
+                const headerSpan = document.createElement('span');
+                headerSpan.className = 'font-bold text-blue-700 text-sm block';
+                headerSpan.textContent = username;
+
+                const paragraph = document.createElement('p');
+                paragraph.className = 'text-gray-800 mt-1 whitespace-pre-wrap';
+                paragraph.textContent = text;
+                
+                textContainer.appendChild(headerSpan);
+                textContainer.appendChild(paragraph);
+
+                contentDiv.appendChild(userEmojiDiv);
+                contentDiv.appendChild(textContainer);
+                messageDiv.appendChild(contentDiv);
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Randomly update user count for realism
+            if (Math.random() < 0.2) {
+                const newUserCount = initialUserCount + Math.floor(Math.random() * 3) - 1;
+                userCountSpan.textContent = Math.max(2, newUserCount); // Ensure at least 2 users
+            }
+        }
+
+        // Attach event listener for Enter key - Updated to support Shift+Enter
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent new line
+                sendMessage();
+            }
+        });
+        
+        // Initial scroll to bottom (after initial messages are loaded)
+        window.onload = () => {
+             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+    </script>
+
+</body>
+</html>

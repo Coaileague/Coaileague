@@ -12,6 +12,7 @@ import {
   Settings, Power, HelpCircle, Zap, Clock, AlertCircle, CheckCircle,
   ChevronLeft, ChevronRight, Info, Coffee, Star, Building2
 } from "lucide-react";
+import { WFLogoCompact } from "@/components/wf-logo";
 import { formatDistanceToNow } from "date-fns";
 import {
   ContextMenu,
@@ -132,13 +133,14 @@ export default function HelpDeskCab() {
 
   // Get user type icon
   const getUserTypeIcon = (userType: string, role: string) => {
-    // Staff gets logo (using Crown for now - can be replaced with actual logo)
+    // Staff gets WF logo
     if (['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
-      return <Crown className="w-3.5 h-3.5 text-blue-500" />;
+      return <WFLogoCompact size={14} className="flex-shrink-0" />;
     }
     
     // Based on user type
     switch (userType) {
+      case 'staff': return <WFLogoCompact size={14} className="flex-shrink-0" />;
       case 'subscriber': return <Star className="w-3.5 h-3.5 text-amber-500" />;
       case 'org_user': return <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />;
       case 'guest': return <HelpCircle className="w-3.5 h-3.5 text-slate-400" />;
@@ -394,7 +396,8 @@ export default function HelpDeskCab() {
                   return (
                     <div key={idx} className="flex justify-end">
                       <div className="bg-emerald-50 border-r-4 border-emerald-400 p-2 rounded-lg max-w-[80%]">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {getUserTypeIcon((msg as any).userType || 'guest', role)}
                           <span className="font-bold text-emerald-700 text-sm">You</span>
                           {getRoleIcon(role)}
                         </div>
@@ -406,7 +409,8 @@ export default function HelpDeskCab() {
 
                 return (
                   <div key={idx} className="bg-blue-50 border-l-4 border-blue-400 p-2 rounded-lg max-w-[80%]">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      {getUserTypeIcon((msg as any).userType || 'guest', role)}
                       <span className={`font-bold text-sm ${getRoleColor(role)}`}>{msg.senderName || 'User'}</span>
                       {getRoleIcon(role)}
                     </div>
@@ -490,7 +494,7 @@ export default function HelpDeskCab() {
                         {/* User Name */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1">
-                            <span className={`text-xs truncate ${getRoleColor(u.role)}`}>
+                            <span className={`text-xs ${getRoleColor(u.role)}`} title={u.name}>
                               {ircPrefix}{u.name}
                             </span>
                             {getRoleIcon(u.role)}
