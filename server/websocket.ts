@@ -316,6 +316,129 @@ export function setupWebSocket(server: Server) {
                   break;
                 }
                 
+                case 'auth': {
+                  // Request user authentication
+                  const username = parsedCommand.args[0];
+                  if (!username) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /auth <username>',
+                    }));
+                    break;
+                  }
+                  
+                  const authMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: `🔐 **Authentication Request**\n\nPlease authenticate user: **${username}**\n\nThe user will receive instructions to verify their identity. This may include:\n• Confirming email address\n• Answering security questions\n• Providing account details\n\nWaiting for user verification...`,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: authMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'verify': {
+                  // Verify organization/user credentials
+                  const username = parsedCommand.args[0];
+                  if (!username) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /verify <username>',
+                    }));
+                    break;
+                  }
+                  
+                  // Check if user exists in database
+                  const user = await storage.getUserByUsername(username);
+                  let verifyMsg: string;
+                  
+                  if (user) {
+                    const workspace = await storage.getWorkspaceByOwnerId(user.id);
+                    verifyMsg = `✅ **Verification Complete**\n\n**User:** ${user.username}\n**Name:** ${user.fullName || 'Not provided'}\n**Email:** ${user.email}\n**Organization:** ${workspace?.name || 'No workspace'}\n**Status:** Active\n\nUser credentials verified successfully.`;
+                  } else {
+                    verifyMsg = `❌ **Verification Failed**\n\nUser **${username}** not found in system.\n\nPossible reasons:\n• Username misspelled\n• Account not yet created\n• Account deleted\n\nPlease ask the user to provide correct credentials or create an account.`;
+                  }
+                  
+                  const botMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: verifyMsg,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: botMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'resetpass': {
+                  // Send password reset link
+                  const email = parsedCommand.args[0];
+                  if (!email) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /resetpass <email>',
+                    }));
+                    break;
+                  }
+                  
+                  // Trigger password reset (creates reset token)
+                  try {
+                    await storage.createPasswordResetToken(email);
+                    
+                    const resetMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'ai-bot',
+                      senderName: 'HelpOS™',
+                      senderType: 'bot',
+                      message: `📧 **Password Reset Initiated**\n\nA password reset link has been sent to:\n**${email}**\n\nThe user should:\n1. Check their email inbox (and spam folder)\n2. Click the reset link within 1 hour\n3. Create a new password\n\nIf they don't receive the email within 5 minutes, they can request another reset.`,
+                      messageType: 'text',
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: resetMsg }));
+                        }
+                      });
+                    }
+                  } catch (error: any) {
+                    const errorMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'ai-bot',
+                      senderName: 'HelpOS™',
+                      senderType: 'bot',
+                      message: `❌ **Password Reset Failed**\n\nUnable to send reset link to: **${email}**\n\nError: ${error.message || 'Email not found in system'}\n\nPlease verify the email address and try again.`,
+                      messageType: 'text',
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: errorMsg }));
+                        }
+                      });
+                    }
+                  }
+                  break;
+                }
+                
                 case 'close': {
                   // Close current ticket/session
                   const reason = parsedCommand.args.join(' ') || 'Session closed by staff';
@@ -350,6 +473,177 @@ export function setupWebSocket(server: Server) {
                           type: 'request_feedback',
                           conversationId: ws.conversationId,
                         }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'status': {
+                  // Customer checks their ticket status
+                  const conversation = await storage.getChatConversation(ws.conversationId);
+                  const queueEntry = await queueManager.getPosition(ws.conversationId);
+                  
+                  let statusMsg = `📊 **Ticket Status**\n\n`;
+                  statusMsg += `**Status:** ${conversation?.status || 'Unknown'}\n`;
+                  statusMsg += `**Ticket ID:** ${ws.conversationId}\n`;
+                  
+                  if (queueEntry) {
+                    statusMsg += `\n**Queue Information:**\n`;
+                    statusMsg += `• Position: #${queueEntry.position}\n`;
+                    statusMsg += `• Priority Score: ${queueEntry.priorityScore}\n`;
+                    statusMsg += `• Wait Time: ${Math.floor(queueEntry.waitTimeMinutes)} minutes\n`;
+                  }
+                  
+                  const botMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: statusMsg,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: botMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'queue': {
+                  // Customer checks queue position
+                  const queueEntry = await queueManager.getPosition(ws.conversationId);
+                  
+                  let queueMsg: string;
+                  if (queueEntry) {
+                    queueMsg = `⏳ **Queue Position**\n\nYou are currently **#${queueEntry.position}** in line.\n\n**Estimated wait:** ${Math.ceil(queueEntry.waitTimeMinutes)} minutes\n**Priority score:** ${queueEntry.priorityScore} points\n\nWe'll notify you when a support agent is available!`;
+                  } else {
+                    queueMsg = `✅ **Not in Queue**\n\nYou are not currently in the support queue. You may already be connected with a support agent, or your ticket has been resolved.`;
+                  }
+                  
+                  const botMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: queueMsg,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: botMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'kick': {
+                  // Staff kicks a user from chat
+                  const targetUsername = parsedCommand.args[0];
+                  const reason = parsedCommand.args.slice(1).join(' ') || 'No reason provided';
+                  
+                  if (!targetUsername) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /kick <username> [reason]',
+                    }));
+                    break;
+                  }
+                  
+                  // System announcement
+                  const kickMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'System',
+                    senderType: 'system',
+                    message: `*** ${targetUsername} has been removed from the chat. Reason: ${reason}`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: kickMsg }));
+                        // Send kick event to target user
+                        if (client.userId === targetUsername) {
+                          client.send(JSON.stringify({
+                            type: 'kicked',
+                            reason: reason,
+                          }));
+                          client.close(1000, `Kicked: ${reason}`);
+                        }
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'mute': {
+                  // Staff mutes a user temporarily
+                  const targetUsername = parsedCommand.args[0];
+                  const duration = parsedCommand.args[1] || '5'; // minutes
+                  
+                  if (!targetUsername) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /mute <username> [duration_in_minutes]',
+                    }));
+                    break;
+                  }
+                  
+                  const muteMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: `🔇 **User Muted**\n\n**${targetUsername}** has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: muteMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'transfer': {
+                  // Transfer ticket to another staff member
+                  const targetStaff = parsedCommand.args[0];
+                  
+                  if (!targetStaff) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /transfer <staff_username>',
+                    }));
+                    break;
+                  }
+                  
+                  const transferMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'System',
+                    senderType: 'system',
+                    message: `*** ${displayName} is transferring this ticket to ${targetStaff}...`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: transferMsg }));
                       }
                     });
                   }
