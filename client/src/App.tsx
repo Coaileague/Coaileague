@@ -55,6 +55,8 @@ import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
 import DesignComparison from "@/pages/design-comparison";
 import LogoShowcase from "@/pages/logo-showcase";
+import PayrollDashboard from "@/pages/payroll-dashboard";
+import MyPaychecks from "@/pages/my-paychecks";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 
 function AppContent() {
@@ -113,6 +115,8 @@ function AppContent() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/billing" component={Billing} />
+                <Route path="/payroll" component={PayrollDashboard} />
+                <Route path="/my-paychecks" component={MyPaychecks} />
                 <Route path="/hr/benefits" component={HRBenefits} />
                 <Route path="/hr/reviews" component={HRReviews} />
                 <Route path="/hr/pto" component={HRPTO} />
