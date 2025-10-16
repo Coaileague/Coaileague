@@ -172,13 +172,8 @@ export default function LiveChatroomPage() {
     },
   });
 
-  // Online users
-  const [onlineUsers] = useState<OnlineUser[]>([
-    { id: 'bot-1', name: 'help_bot', role: 'bot', status: 'online' },
-    { id: userId || '1', name: userName, role: 'admin', status: 'online' },
-    { id: '2', name: 'Support Mike', role: 'support', status: 'online' },
-    { id: '3', name: 'Support Lisa', role: 'support', status: 'online' },
-  ]);
+  // Online users - removed fake users, will implement real user tracking later
+  const [onlineUsers] = useState<OnlineUser[]>([]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,15 +225,30 @@ export default function LiveChatroomPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const getRoleIcon = (senderType: string) => {
+  const getRoleIcon = (senderName: string, senderType: string) => {
+    // Special icons for specific roles
+    if (senderName.startsWith('Root ')) {
+      return <Shield className="w-3.5 h-3.5 text-red-400" />; // 🛡️ Root = Shield (red)
+    }
+    if (senderName.startsWith('Sysop ') || senderName.startsWith('Admin ') || senderName.startsWith('Deputy ')) {
+      return <Shield className="w-3.5 h-3.5 text-amber-400" />; // 🛡️ Sysop/Admin = Shield (amber)
+    }
+    if (senderName.startsWith('Subscriber ')) {
+      return <span className="text-sm">⭐</span>; // Star for subscribers
+    }
+    if (senderName.startsWith('Guest ')) {
+      return <span className="text-sm">💬</span>; // Speech bubble for guests
+    }
+    
+    // Standard type-based icons
     switch (senderType) {
       case 'support':
-        return <Headphones className="w-3 h-3 text-blue-500" />;
+        return <Headphones className="w-3.5 h-3.5 text-indigo-400" />;
       case 'bot':
       case 'system':
-        return <Bot className="w-3 h-3 text-purple-500" />;
+        return <Bot className="w-3.5 h-3.5 text-purple-400" />;
       default:
-        return <User className="w-3 h-3 text-muted-foreground" />;
+        return <User className="w-3.5 h-3.5 text-slate-400" />;
     }
   };
 
@@ -283,8 +293,8 @@ export default function LiveChatroomPage() {
               <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white flex-shrink-0" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate text-white">
-                SupportOS™ Live HelpDesk
+              <h1 className="text-sm sm:text-lg font-bold truncate text-white">
+                HelpDesk
               </h1>
               <p className="text-xs text-indigo-100 hidden sm:block flex items-center gap-2">
                 <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -349,19 +359,20 @@ export default function LiveChatroomPage() {
               </Button>
             )}
 
-            {/* Mobile users list trigger */}
-            <Sheet open={showMobileUsers} onOpenChange={setShowMobileUsers}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="md:hidden bg-white/10 border-white/30 text-white hover:bg-white/20"
-                  data-testid="button-mobile-users"
-                >
-                  <Users className="w-4 h-4" />
-                  <span className="ml-1">{onlineUsers.length}</span>
-                </Button>
-              </SheetTrigger>
+            {/* Mobile users list trigger - Hidden (no users to display) */}
+            {onlineUsers.length > 0 && (
+              <Sheet open={showMobileUsers} onOpenChange={setShowMobileUsers}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="md:hidden bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    data-testid="button-mobile-users"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="ml-1">{onlineUsers.length}</span>
+                  </Button>
+                </SheetTrigger>
               <SheetContent side="right" className="w-72 bg-slate-900 border-indigo-500/20">
                 <SheetHeader className="flex flex-row items-center justify-between">
                   <SheetTitle className="flex items-center gap-2 text-indigo-100">
@@ -428,6 +439,7 @@ export default function LiveChatroomPage() {
                 </div>
               </SheetContent>
             </Sheet>
+            )}
           </div>
         </div>
       </header>
@@ -448,9 +460,9 @@ export default function LiveChatroomPage() {
                     <div className="p-4 bg-indigo-500/10 rounded-full w-fit mx-auto mb-4">
                       <MessageSquare className="w-12 h-12 text-indigo-400" />
                     </div>
-                    <h3 className="font-semibold mb-2 text-indigo-100">Welcome to SupportOS™ HelpDesk</h3>
+                    <h3 className="font-semibold mb-2 text-indigo-100">Welcome to HelpDesk</h3>
                     <p className="text-sm text-slate-400">
-                      Your messages will appear here. Start a conversation with our Fortune 500 support team.
+                      Your messages will appear here. Start a conversation with our support team.
                     </p>
                   </CardContent>
                 </Card>
@@ -458,6 +470,23 @@ export default function LiveChatroomPage() {
                 messages.map((message, index) => {
                   const isBot = message.senderType === 'bot' || message.senderType === 'system';
                   const isSupport = message.senderType === 'support';
+                  const isSystemMsg = message.isSystemMessage || message.senderType === 'system';
+                  
+                  // System announcements (join/leave) centered
+                  if (isSystemMsg) {
+                    return (
+                      <div
+                        key={message.id || index}
+                        className="flex justify-center animate-in fade-in duration-300"
+                        data-testid={`message-${message.id || index}`}
+                      >
+                        <div className="bg-slate-800/40 border border-slate-600/30 rounded-full px-4 py-1.5 text-xs text-slate-400">
+                          <Bot className="w-3 h-3 inline mr-1.5 text-slate-500" />
+                          {message.message}
+                        </div>
+                      </div>
+                    );
+                  }
                   
                   return (
                     <div
@@ -466,9 +495,9 @@ export default function LiveChatroomPage() {
                       data-testid={`message-${message.id || index}`}
                     >
                       <div className={`max-w-[85%] sm:max-w-[70%]`}>
-                        {/* Message Header */}
+                        {/* Message Header with Role Icon */}
                         <div className={`flex items-center gap-2 mb-1.5 ${isSupport || isBot ? '' : 'justify-end'}`}>
-                          {(isSupport || isBot) && getRoleIcon(message.senderType)}
+                          {(isSupport || isBot) && getRoleIcon(message.senderName || '', message.senderType)}
                           <span className="text-xs font-semibold text-indigo-200">{message.senderName || 'User'}</span>
                           <span className="text-xs text-slate-500">
                             {formatTime(message.createdAt)}
@@ -488,7 +517,7 @@ export default function LiveChatroomPage() {
                           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                             {message.message}
                           </p>
-                          {isBot && (
+                          {isBot && !isSystemMsg && (
                             <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-purple-400/20">
                               <Sparkles className="w-3.5 h-3.5 text-purple-300" />
                               <span className="text-xs text-purple-200 font-medium">GPT-4 AI Assistant</span>
@@ -758,104 +787,105 @@ export default function LiveChatroomPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Staff Controls Dialog */}
+      {/* Staff Controls Dialog - Mobile Optimized */}
       <Dialog open={showStaffControls} onOpenChange={setShowStaffControls}>
-        <DialogContent data-testid="dialog-staff-controls">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-primary" />
-              HelpDesk Staff Controls
+        <DialogContent 
+          data-testid="dialog-staff-controls"
+          className="w-[95vw] max-w-md max-h-[85vh] p-4 sm:p-6 flex flex-col overflow-hidden"
+        >
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              Staff Controls
             </DialogTitle>
-            <DialogDescription>
-              Manage HelpDesk room status and access control. Changes apply immediately to all users.
+            <DialogDescription className="text-xs sm:text-sm">
+              Manage HelpDesk room status. Changes apply immediately.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="room-status">Room Status</Label>
+          <div className="space-y-3 overflow-y-auto flex-1 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="room-status" className="text-xs sm:text-sm">Room Status</Label>
               <Select
                 value={roomStatusControl}
                 onValueChange={(value: any) => setRoomStatusControl(value)}
               >
-                <SelectTrigger id="room-status" data-testid="select-room-status">
+                <SelectTrigger id="room-status" data-testid="select-room-status" className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="open">
                     <div className="flex items-center gap-2">
                       <Circle className="w-2 h-2 fill-green-500 text-green-500" />
-                      Open - Everyone can join
+                      <span className="text-xs sm:text-sm">Open</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="closed">
                     <div className="flex items-center gap-2">
                       <Circle className="w-2 h-2 fill-red-500 text-red-500" />
-                      Closed - No new access
+                      <span className="text-xs sm:text-sm">Closed</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="maintenance">
                     <div className="flex items-center gap-2">
                       <Circle className="w-2 h-2 fill-yellow-500 text-yellow-500" />
-                      Maintenance - Staff only
+                      <span className="text-xs sm:text-sm">Maintenance</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status-message">Status Message (Optional)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="status-message" className="text-xs sm:text-sm">Status Message (Optional)</Label>
               <Textarea
                 id="status-message"
-                placeholder="e.g., 'Closed for the weekend' or 'System maintenance in progress'"
+                placeholder="Optional message"
                 value={roomStatusMessage}
                 onChange={(e) => setRoomStatusMessage(e.target.value)}
-                rows={3}
+                rows={2}
+                className="text-xs sm:text-sm min-h-[60px]"
                 data-testid="textarea-status-message"
               />
-              <p className="text-xs text-muted-foreground">
-                This message will be shown to users trying to access the room.
-              </p>
             </div>
             <Card className="border-blue-500/30 bg-blue-500/5">
-              <CardContent className="p-3">
+              <CardContent className="p-2 sm:p-3">
                 <div className="flex items-start gap-2">
-                  <Shield className="w-4 h-4 text-blue-500 mt-0.5" />
-                  <div className="text-xs space-y-1">
+                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-[10px] sm:text-xs">
                     <p className="font-semibold">Staff Bypass</p>
-                    <p className="text-muted-foreground">
-                      Platform staff can always access the room, even when closed or under maintenance.
-                    </p>
+                    <p className="text-muted-foreground">Platform staff can always access.</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowStaffControls(false)}
-                data-testid="button-cancel-controls"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => toggleRoomStatusMutation.mutate({ 
-                  status: roomStatusControl, 
-                  message: roomStatusMessage 
-                })}
-                disabled={toggleRoomStatusMutation.isPending}
-                data-testid="button-apply-controls"
-                className="gap-2"
-              >
-                {toggleRoomStatusMutation.isPending ? (
-                  <>Applying...</>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Apply Changes
-                  </>
-                )}
-              </Button>
-            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowStaffControls(false)}
+              data-testid="button-cancel-controls"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => toggleRoomStatusMutation.mutate({ 
+                status: roomStatusControl, 
+                message: roomStatusMessage 
+              })}
+              disabled={toggleRoomStatusMutation.isPending}
+              data-testid="button-apply-controls"
+              className="gap-1.5"
+            >
+              {toggleRoomStatusMutation.isPending ? (
+                <>Applying...</>
+              ) : (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Apply
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

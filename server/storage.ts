@@ -2094,6 +2094,48 @@ export class DatabaseStorage implements IStorage {
     
     return updated;
   }
+
+  /**
+   * Get user display information for chat (includes name, role, and display formatting)
+   */
+  async getUserDisplayInfo(userId: string): Promise<{
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    platformRole: string | null;
+    workspaceRole: string | null;
+  } | null> {
+    // Get user basic info
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    
+    if (!user) return null;
+    
+    // Get platform role if exists
+    const [platformRoleData] = await db
+      .select({ role: platformRoles.role })
+      .from(platformRoles)
+      .where(eq(platformRoles.userId, userId))
+      .limit(1);
+    
+    // Get workspace role if exists (from employees table)
+    const [employeeData] = await db
+      .select({ workspaceRole: employees.workspaceRole, firstName: employees.firstName, lastName: employees.lastName })
+      .from(employees)
+      .where(eq(employees.userId, userId))
+      .limit(1);
+    
+    return {
+      firstName: employeeData?.firstName || user.firstName,
+      lastName: employeeData?.lastName || user.lastName,
+      email: user.email,
+      platformRole: platformRoleData?.role || null,
+      workspaceRole: employeeData?.workspaceRole || null,
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

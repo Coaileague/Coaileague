@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { storage } from './storage';
+import { formatUserDisplayName } from './utils/formatUserDisplayName';
 import type { ChatMessage } from '@shared/schema';
 
 interface WebSocketClient extends WebSocket {
@@ -59,6 +60,16 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
+            // Get user display info for formatted name
+            const userInfo = await storage.getUserDisplayInfo(payload.userId);
+            const displayName = userInfo ? formatUserDisplayName({
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              email: userInfo.email,
+              platformRole: userInfo.platformRole,
+              workspaceRole: userInfo.workspaceRole,
+            }) : 'User';
+
             // HELPDESK ACCESS CONTROL: For the main HelpDesk room (public IRC-style chatroom)
             const MAIN_ROOM_ID = 'main-chatroom-workforceos';
             if (payload.conversationId === MAIN_ROOM_ID) {
@@ -68,9 +79,9 @@ export function setupWebSocket(server: Server) {
                 const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
                 if (isStaff) {
-                  console.log(`Staff user ${payload.userId} joined HelpDesk (platform staff - role: ${platformRole})`);
+                  console.log(`${displayName} joined HelpDesk (platform staff - role: ${platformRole})`);
                 } else {
-                  console.log(`User ${payload.userId} joined HelpDesk (guest/customer)`);
+                  console.log(`${displayName} joined HelpDesk (guest/customer)`);
                 }
               } catch (staffCheckError) {
                 // Error checking staff status - allow access anyway (degraded mode)
@@ -79,8 +90,7 @@ export function setupWebSocket(server: Server) {
               }
             }
 
-            // Associate this client with the conversation (trust userId from payload for now)
-            // TODO: In production, extract userId from authenticated session token
+            // Associate this client with the conversation
             ws.userId = payload.userId;
             ws.workspaceId = conversation.workspaceId;
             ws.conversationId = payload.conversationId;
@@ -100,7 +110,34 @@ export function setupWebSocket(server: Server) {
             // Mark messages as read
             await storage.markMessagesAsRead(payload.conversationId, payload.userId);
 
-            console.log(`User ${payload.userId} joined conversation ${payload.conversationId}`);
+            // BROADCAST SYSTEM ANNOUNCEMENT: User joined
+            if (payload.conversationId === MAIN_ROOM_ID) {
+              const joinAnnouncement = await storage.createChatMessage({
+                conversationId: payload.conversationId,
+                senderId: payload.userId,
+                senderName: 'System',
+                senderType: 'system',
+                message: `${displayName} has joined the chatroom`,
+                messageType: 'text',
+                isSystemMessage: true,
+              });
+
+              // Broadcast join announcement to all clients
+              const clients = conversationClients.get(payload.conversationId);
+              if (clients) {
+                const announcementPayload = JSON.stringify({
+                  type: 'new_message',
+                  message: joinAnnouncement,
+                });
+                clients.forEach((client) => {
+                  if (client.readyState === WebSocket.OPEN) {
+                    client.send(announcementPayload);
+                  }
+                });
+              }
+            }
+
+            console.log(`${displayName} joined conversation ${payload.conversationId}`);
             break;
           }
 
@@ -122,11 +159,21 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
+            // Get user display info for formatted name (server-side formatting for security)
+            const userInfo = await storage.getUserDisplayInfo(ws.userId);
+            const displayName = userInfo ? formatUserDisplayName({
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              email: userInfo.email,
+              platformRole: userInfo.platformRole,
+              workspaceRole: userInfo.workspaceRole,
+            }) : payload.senderName || 'User';
+
             // Save message to database
             const savedMessage = await storage.createChatMessage({
               conversationId: ws.conversationId, // Use server-bound conversation, not client payload
               senderId: ws.userId,
-              senderName: payload.senderName,
+              senderName: displayName, // Use server-formatted display name
               senderType: payload.senderType,
               message: payload.message,
               messageType: 'text',
@@ -181,7 +228,52 @@ export function setupWebSocket(server: Server) {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', async () => {
+      // Send leave announcement for main chatroom
+      const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+      if (ws.conversationId === MAIN_ROOM_ID && ws.userId) {
+        try {
+          // Get user display info for leave announcement
+          const userInfo = await storage.getUserDisplayInfo(ws.userId);
+          const displayName = userInfo ? formatUserDisplayName({
+            firstName: userInfo.firstName,
+            lastName: userInfo.lastName,
+            email: userInfo.email,
+            platformRole: userInfo.platformRole,
+            workspaceRole: userInfo.workspaceRole,
+          }) : 'User';
+
+          // Create leave announcement
+          const leaveAnnouncement = await storage.createChatMessage({
+            conversationId: ws.conversationId,
+            senderId: ws.userId,
+            senderName: 'System',
+            senderType: 'system',
+            message: `${displayName} has left the chatroom`,
+            messageType: 'text',
+            isSystemMessage: true,
+          });
+
+          // Broadcast leave announcement to remaining clients
+          const clients = conversationClients.get(ws.conversationId);
+          if (clients) {
+            const announcementPayload = JSON.stringify({
+              type: 'new_message',
+              message: leaveAnnouncement,
+            });
+            clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(announcementPayload);
+              }
+            });
+          }
+
+          console.log(`${displayName} left conversation ${ws.conversationId}`);
+        } catch (error) {
+          console.error('Error sending leave announcement:', error);
+        }
+      }
+
       // Remove client from conversation
       if (ws.conversationId) {
         const clients = conversationClients.get(ws.conversationId);
