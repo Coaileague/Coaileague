@@ -77,7 +77,11 @@ export class PayrollAutomationEngine {
    * Calculate federal tax withholding (simplified progressive brackets)
    * Based on 2024 tax tables for single filers
    */
-  static calculateFederalTax(grossPay: number, filingStatus: string = 'single'): number {
+  static calculateFederalTax(
+    grossPay: number, 
+    payPeriodType: 'weekly' | 'bi-weekly' | 'monthly' = 'bi-weekly',
+    filingStatus: string = 'single'
+  ): number {
     // Simplified federal tax brackets (annual basis, converted to pay period)
     // Single filer 2024 brackets (simplified)
     const brackets = [
@@ -87,8 +91,16 @@ export class PayrollAutomationEngine {
       { limit: Infinity, rate: 0.24 }
     ];
     
-    // Annualize gross pay (bi-weekly * 26 periods)
-    const annualGross = grossPay * 26;
+    // Determine annualization factor based on pay period
+    const annualizationFactors: Record<'weekly' | 'bi-weekly' | 'monthly', number> = {
+      'weekly': 52,
+      'bi-weekly': 26,
+      'monthly': 12
+    };
+    const factor = annualizationFactors[payPeriodType];
+    
+    // Annualize gross pay
+    const annualGross = grossPay * factor;
     let tax = 0;
     let previousLimit = 0;
     
@@ -103,7 +115,7 @@ export class PayrollAutomationEngine {
     }
     
     // Convert back to pay period
-    return parseFloat((tax / 26).toFixed(2));
+    return parseFloat((tax / factor).toFixed(2));
   }
   
   /**
@@ -161,8 +173,12 @@ export class PayrollAutomationEngine {
     totalNetPay: number;
     calculations: PayrollCalculation[];
   }> {
-    // Auto-detect pay period (default: bi-weekly)
-    const payPeriod = this.detectPayPeriod('bi-weekly');
+    // Get workspace pay schedule
+    const workspace = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const paySchedule = workspace[0]?.payrollSchedule || 'bi-weekly';
+    
+    // Auto-detect pay period based on workspace schedule
+    const payPeriod = this.detectPayPeriod(paySchedule);
     
     // Get all active employees
     const activeEmployees = await db
@@ -222,7 +238,7 @@ export class PayrollAutomationEngine {
       const grossPay = regularPay + overtimePay;
       
       // Calculate taxes and deductions
-      const federalTax = this.calculateFederalTax(grossPay);
+      const federalTax = this.calculateFederalTax(grossPay, payPeriod.type);
       const stateTax = this.calculateStateTax(grossPay);
       const socialSecurity = this.calculateSocialSecurity(grossPay);
       const medicare = this.calculateMedicare(grossPay);
@@ -347,16 +363,15 @@ export const calculatePayroll = (params: {
   );
 };
 
-export const createAutomatedPayrollRun = (params: {
+export const createAutomatedPayrollRun = async (params: {
   workspaceId: string;
   periodStart: Date;
   periodEnd: Date;
   createdBy: string;
 }) => {
-  return PayrollAutomationEngine.createPayrollRun(
+  // The processAutomatedPayroll already handles creating the run with proper pay period detection
+  return await PayrollAutomationEngine.processAutomatedPayroll(
     params.workspaceId,
-    params.periodStart,
-    params.periodEnd,
     params.createdBy
   );
 };
