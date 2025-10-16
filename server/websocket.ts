@@ -36,6 +36,9 @@ interface TypingPayload {
 
 type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload;
 
+// In-memory MOTD storage (staff can update)
+let currentMOTD = "Welcome to WorkforceOS HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
+
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
     server,
@@ -680,6 +683,36 @@ export function setupWebSocket(server: Server) {
                     type: 'system_message',
                     message: helpText,
                   }));
+                  break;
+                }
+                
+                case 'motd': {
+                  // Update Message of the Day
+                  const newMOTD = parsedCommand.args.join(' ');
+                  currentMOTD = newMOTD;
+                  
+                  // Broadcast IRC-style MOTD update to all users in conversation
+                  const motdUpdateMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'irc.wfos.com',
+                    senderType: 'system',
+                    message: `MOTD updated by ${displayName}: ${newMOTD}`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ 
+                          type: 'motd_update',
+                          motd: newMOTD,
+                          message: motdUpdateMsg 
+                        }));
+                      }
+                    });
+                  }
                   break;
                 }
                 
