@@ -35,9 +35,10 @@ export default function Contact() {
   const [, setLocation] = useLocation();
   
   // Check if user is authenticated
-  const { data: currentUser } = useQuery<{ user: { id: string; email: string } }>({
+  const { data: currentUser, isLoading: isLoadingAuth } = useQuery<{ user: { id: string; email: string } }>({
     queryKey: ["/api/auth/me"],
     retry: false,
+    staleTime: 30000, // Cache for 30 seconds
   });
   
   const isAuthenticated = !!currentUser?.user;
@@ -52,7 +53,7 @@ export default function Contact() {
     message: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [ticketId, setTicketId] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -60,20 +61,10 @@ export default function Contact() {
     },
     onSuccess: (response: any) => {
       setIsSubmitted(true);
-      setTicketId(response.ticketId);
+      setTicketNumber(response.ticketNumber);
       toast({
-        title: "Message Sent Successfully",
-        description: `Your ticket ID is ${response.ticketId}. We'll respond within 24 hours.`,
-      });
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        company: "",
-        phone: "",
-        subject: "",
-        tier: "",
-        message: "",
+        title: "Support Ticket Created",
+        description: `Your ticket number is ${response.ticketNumber}. Save it to access Live Chat.`,
       });
     },
     onError: (error: any) => {
@@ -193,34 +184,17 @@ export default function Contact() {
                 Instant answers from our team
               </p>
               <div className="pt-2">
-                {isAuthenticated ? (
-                  <Link href="/live-chat">
-                    <Button
-                      size="sm"
-                      className="bg-[hsl(var(--cad-purple))] hover:bg-[hsl(var(--cad-purple))]/90 text-white h-9"
-                      data-testid="button-start-chat"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Start Chat
-                    </Button>
-                  </Link>
-                ) : (
+                <Link href="/live-chat">
                   <Button
                     size="sm"
                     className="bg-[hsl(var(--cad-purple))] hover:bg-[hsl(var(--cad-purple))]/90 text-white h-9"
                     data-testid="button-start-chat"
-                    onClick={() => {
-                      toast({
-                        title: "Login Required",
-                        description: "Please login to access Live Chat support",
-                      });
-                      setLocation("/login");
-                    }}
+                    disabled={isLoadingAuth}
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Start Chat
                   </Button>
-                )}
+                </Link>
                 <p className="text-xs text-[hsl(var(--cad-text-tertiary))] mt-2">
                   Available 24/7 for all tiers
                 </p>
@@ -454,30 +428,76 @@ export default function Contact() {
                 </form>
               </>
             ) : (
-              <Card className="bg-[hsl(var(--cad-green))]/10 border-[hsl(var(--cad-green))]/20 p-8 space-y-4" data-testid="card-success">
+              <Card className="bg-[hsl(var(--cad-green))]/10 border-[hsl(var(--cad-green))]/20 p-8 space-y-6" data-testid="card-success">
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 rounded-full bg-[hsl(var(--cad-green))]/20 flex items-center justify-center">
                     <CheckCircle2 className="h-8 w-8 text-[hsl(var(--cad-green))]" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))]">Message Sent!</h3>
+                    <h3 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))]">Support Ticket Created!</h3>
                     <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
-                      Your ticket ID: <span className="font-mono text-[hsl(var(--cad-green))]">{ticketId}</span>
+                      Our team will respond within 24 hours
                     </p>
                   </div>
                 </div>
-                <p className="text-[hsl(var(--cad-text-secondary))]">
-                  Thank you for contacting us! Our support team will review your message and respond within 24 hours. 
-                  Please save your ticket ID for reference.
-                </p>
-                <Button
-                  onClick={() => setIsSubmitted(false)}
-                  variant="outline"
-                  className="border-[hsl(var(--cad-green))] text-[hsl(var(--cad-green))] hover:bg-[hsl(var(--cad-green))]/10"
-                  data-testid="button-send-another"
-                >
-                  Send Another Message
-                </Button>
+                
+                <div className="space-y-3 p-4 bg-[hsl(var(--cad-background))] rounded-md border border-[hsl(var(--cad-border-strong))]">
+                  <p className="text-sm font-semibold text-[hsl(var(--cad-text-primary))]">Your Ticket Number:</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <code className="text-2xl font-bold font-mono text-[hsl(var(--cad-green))]" data-testid="text-ticket-number">
+                      {ticketNumber}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(ticketNumber);
+                        toast({
+                          title: "Copied!",
+                          description: "Ticket number copied to clipboard",
+                        });
+                      }}
+                      className="border-[hsl(var(--cad-green))] text-[hsl(var(--cad-green))] hover:bg-[hsl(var(--cad-green))]/10"
+                      data-testid="button-copy-ticket"
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                    Save this number! You'll need it to access Live Chat support.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setLocation("/live-chat")}
+                    className="flex-1 bg-[hsl(var(--cad-purple))] hover:bg-[hsl(var(--cad-purple))]/90 text-white"
+                    data-testid="button-goto-chat"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Go to Live Chat
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setTicketNumber("");
+                      setFormData({
+                        name: "",
+                        email: "",
+                        company: "",
+                        phone: "",
+                        subject: "",
+                        tier: "",
+                        message: "",
+                      });
+                    }}
+                    variant="outline"
+                    className="border-[hsl(var(--cad-border-strong))]"
+                    data-testid="button-send-another"
+                  >
+                    New Ticket
+                  </Button>
+                </div>
               </Card>
             )}
           </div>

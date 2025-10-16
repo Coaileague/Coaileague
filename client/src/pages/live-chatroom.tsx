@@ -31,6 +31,7 @@ interface OnlineUser {
 export default function LiveChatroomPage() {
   const [messageText, setMessageText] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
+  const [ticketEmail, setTicketEmail] = useState("");
   const [showTicketDialog, setShowTicketDialog] = useState(false);
   const [showStaffControls, setShowStaffControls] = useState(false);
   const [showMobileUsers, setShowMobileUsers] = useState(false);
@@ -41,19 +42,22 @@ export default function LiveChatroomPage() {
   const { toast } = useToast();
   
   // Get current user data
-  const { data: currentUser } = useQuery<{ user: { id: string; email: string; platformRole?: string } }>({
+  const { data: currentUser, isLoading: isLoadingUser } = useQuery<{ user: { id: string; email: string; platformRole?: string } }>({
     queryKey: ["/api/auth/me"],
+    retry: false,
   });
   
   const userId = currentUser?.user?.id;
-  const userName = currentUser?.user?.email || 'User';
+  const userName = currentUser?.user?.email || 'Guest';
   const isStaff = currentUser?.user?.platformRole && 
     ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(currentUser.user.platformRole);
+  const isAuthenticated = !!currentUser?.user;
   
   // Fetch HelpDesk room info
-  const { data: helpDeskRoom } = useQuery({
+  const { data: helpDeskRoom } = useQuery<{ status: string; statusMessage: string | null }>({
     queryKey: ['/api/helpdesk/room/helpdesk'],
     enabled: !!userId,
+    retry: false,
   });
   
   // Use WebSocket for real-time messaging
@@ -62,33 +66,37 @@ export default function LiveChatroomPage() {
     requiresTicket, roomStatus, statusMessage: wsStatusMessage, temporaryError, clearAccessError
   } = useChatroomWebSocket(userId, userName);
 
-  // Ticket verification mutation
-  const verifyTicketMutation = useMutation({
-    mutationFn: async (ticketNum: string) => {
-      const result = await apiRequest('/api/helpdesk/verify-ticket', {
-        method: 'POST',
-        body: JSON.stringify({
-          ticketNumber: ticketNum,
-          roomSlug: 'helpdesk',
-        }),
+  // Show ticket dialog if not authenticated
+  useEffect(() => {
+    if (!isLoadingUser && !isAuthenticated) {
+      setShowTicketDialog(true);
+    }
+  }, [isLoadingUser, isAuthenticated]);
+
+  // Ticket authentication mutation (for guests)
+  const authenticateTicketMutation = useMutation({
+    mutationFn: async ({ ticketNumber, email }: { ticketNumber: string; email: string }) => {
+      const result = await apiRequest('POST', '/api/helpdesk/authenticate-ticket', {
+        ticketNumber,
+        email,
       });
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/helpdesk/room/helpdesk'] });
-      clearAccessError();
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       setShowTicketDialog(false);
       setTicketNumber("");
+      setTicketEmail("");
       toast({
-        title: "Access Granted",
-        description: "You can now join the HelpDesk chatroom",
+        title: "Authentication Successful",
+        description: "Welcome to Live Chat! You can now message our support team.",
       });
-      reconnect();
+      window.location.reload(); // Reload to get new session
     },
     onError: (error: any) => {
       toast({
-        title: "Verification Failed",
-        description: error.message || "Invalid ticket number",
+        title: "Authentication Failed",
+        description: error.message || "Invalid ticket number or email",
         variant: "destructive",
       });
     },
@@ -97,12 +105,9 @@ export default function LiveChatroomPage() {
   // Room status toggle mutation (staff only)
   const toggleRoomStatusMutation = useMutation({
     mutationFn: async ({ status, message }: { status: string; message: string }) => {
-      const result = await apiRequest(`/api/helpdesk/room/helpdesk/status`, {
-        method: 'POST',
-        body: JSON.stringify({
-          status,
-          statusMessage: message || null,
-        }),
+      const result = await apiRequest('POST', `/api/helpdesk/room/helpdesk/status`, {
+        status,
+        statusMessage: message || null,
       });
       return result;
     },
@@ -483,16 +488,16 @@ export default function LiveChatroomPage() {
         </div>
       </div>
 
-      {/* Ticket Verification Dialog */}
+      {/* Ticket Authentication Dialog */}
       <Dialog open={showTicketDialog} onOpenChange={setShowTicketDialog}>
         <DialogContent data-testid="dialog-ticket-verification">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5 text-primary" />
-              HelpDesk Access Required
+              Live Chat Authentication
             </DialogTitle>
             <DialogDescription>
-              This HelpDesk room requires a verified support ticket. Please enter your ticket number to gain access.
+              Enter your support ticket number and email to access Live Chat. Don't have a ticket? <a href="/contact" className="underline text-primary">Create one here</a>.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -500,13 +505,27 @@ export default function LiveChatroomPage() {
               <Label htmlFor="ticket-number">Support Ticket Number</Label>
               <Input
                 id="ticket-number"
-                placeholder="e.g., TKT-123456"
+                placeholder="e.g., TKT-ABCD1234"
                 value={ticketNumber}
                 onChange={(e) => setTicketNumber(e.target.value)}
                 data-testid="input-ticket-number"
               />
               <p className="text-xs text-muted-foreground">
-                Your support ticket must be verified by staff before you can join.
+                The ticket number you received after submitting a support request
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ticket-email">Email Address</Label>
+              <Input
+                id="ticket-email"
+                type="email"
+                placeholder="your.email@company.com"
+                value={ticketEmail}
+                onChange={(e) => setTicketEmail(e.target.value)}
+                data-testid="input-ticket-email"
+              />
+              <p className="text-xs text-muted-foreground">
+                The email you used when creating the support ticket
               </p>
             </div>
             {wsStatusMessage && (
@@ -522,23 +541,23 @@ export default function LiveChatroomPage() {
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => setShowTicketDialog(false)}
-                data-testid="button-cancel-ticket"
+                onClick={() => window.location.href = "/contact"}
+                data-testid="button-create-ticket"
               >
-                Cancel
+                Create Ticket
               </Button>
               <Button
-                onClick={() => verifyTicketMutation.mutate(ticketNumber)}
-                disabled={!ticketNumber.trim() || verifyTicketMutation.isPending}
+                onClick={() => authenticateTicketMutation.mutate({ ticketNumber, email: ticketEmail })}
+                disabled={!ticketNumber.trim() || !ticketEmail.trim() || authenticateTicketMutation.isPending}
                 data-testid="button-verify-ticket"
                 className="gap-2"
               >
-                {verifyTicketMutation.isPending ? (
-                  <>Verifying...</>
+                {authenticateTicketMutation.isPending ? (
+                  <>Authenticating...</>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    Verify & Join
+                    Authenticate
                   </>
                 )}
               </Button>

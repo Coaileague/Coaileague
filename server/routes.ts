@@ -46,6 +46,7 @@ import {
   users,
   platformRoles,
   workspaces,
+  supportTickets,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq } from "drizzle-orm";
@@ -2615,29 +2616,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid email address" });
       }
 
-      // Log the contact form submission (in production, this would save to database or send email)
-      console.log("Contact form submission:", {
+      // Generate unique ticket number (TKT-XXXXXX format)
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+      const ticketNumber = `TKT-${timestamp}-${random}`;
+      
+      // Determine priority based on tier
+      let priority = 'normal';
+      if (tier === 'Elite') priority = 'urgent';
+      else if (tier === 'Enterprise') priority = 'high';
+      
+      // Use special workspace for external/unauthenticated tickets
+      // This workspace should exist in the database
+      const externalWorkspaceId = 'platform-external';
+      
+      // Create support ticket in database
+      const [ticket] = await db.insert(supportTickets).values({
+        workspaceId: externalWorkspaceId,
+        ticketNumber,
+        type: 'support',
+        priority,
+        requestedBy: `${name} <${email}>`,
+        subject,
+        description: `Contact Form Submission\n\nName: ${name}\nEmail: ${email}\n${company ? `Company: ${company}\n` : ''}${phone ? `Phone: ${phone}\n` : ''}${tier ? `Tier: ${tier}\n` : ''}\n\nMessage:\n${message}`,
+        status: 'open',
+      }).returning();
+
+      console.log("Support ticket created:", {
+        ticketNumber,
         name,
         email,
-        company,
-        phone,
         subject,
-        tier,
-        message,
         timestamp: new Date().toISOString()
       });
 
-      // In production, you would:
-      // 1. Save to a contacts/tickets database table
-      // 2. Send email to support team using Resend
-      // 3. Send confirmation email to user
-      // 4. Create ticket in support system (e.g., Zendesk, Intercom)
+      // TODO: Send email to support team using Resend
+      // TODO: Send confirmation email to customer with ticket number
       
-      // Return success
+      // Return success with ticket number
       res.json({ 
         success: true,
-        message: "Thank you for contacting us! Our team will respond within 24 hours.",
-        ticketId: crypto.randomBytes(6).toString('hex').toUpperCase()
+        message: "Support ticket created! Save your ticket number to access Live Chat support.",
+        ticketNumber,
+        ticketId: ticket.id,
       });
     } catch (error) {
       console.error("Error processing contact form:", error);
@@ -3920,6 +3941,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating HelpDesk room status:", error);
       res.status(500).json({ message: "Failed to update room status" });
+    }
+  });
+
+  // Authenticate customer with ticket number + email (no login required)
+  app.post('/api/helpdesk/authenticate-ticket', async (req, res) => {
+    try {
+      const { ticketNumber, email } = req.body;
+      
+      if (!ticketNumber || !email) {
+        return res.status(400).json({ message: "Ticket number and email are required" });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+
+      // Find ticket by ticket number
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.ticketNumber, ticketNumber));
+
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found. Please check your ticket number." });
+      }
+
+      // Verify email matches the ticket (extract email from "Name <email>" format)
+      const emailMatch = ticket.requestedBy?.match(/<(.+?)>/);
+      const ticketEmail = emailMatch ? emailMatch[1] : ticket.requestedBy;
+
+      if (!ticketEmail || ticketEmail.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ message: "Email does not match ticket. Please verify your information." });
+      }
+
+      // Check ticket status
+      if (ticket.status === 'closed' || ticket.status === 'resolved') {
+        return res.status(403).json({ message: "This ticket has been closed. Please create a new support ticket." });
+      }
+
+      // Create a temporary guest user for this ticket
+      // Using ticket number as unique identifier
+      const guestUserId = `guest-${ticket.id}`;
+      const guestUsername = `Guest-${ticketNumber}`;
+      const guestEmail = email;
+
+      // Check if guest user already exists
+      let [guestUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, guestUserId));
+
+      if (!guestUser) {
+        // Create guest user
+        [guestUser] = await db.insert(users).values({
+          id: guestUserId,
+          username: guestUsername,
+          email: guestEmail,
+          role: 'employee',
+          currentWorkspaceId: ticket.workspaceId,
+        }).returning();
+      }
+
+      // Create session for guest user
+      (req.session as any).userId = guestUser.id;
+      await new Promise((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) reject(err);
+          else resolve(undefined);
+        });
+      });
+
+      res.json({
+        success: true,
+        message: "Authentication successful! You can now access Live Chat.",
+        user: {
+          id: guestUser.id,
+          username: guestUser.username,
+          email: guestUser.email,
+        },
+        ticket: {
+          id: ticket.id,
+          ticketNumber: ticket.ticketNumber,
+          subject: ticket.subject,
+        },
+      });
+    } catch (error) {
+      console.error("Error authenticating ticket:", error);
+      res.status(500).json({ message: "Failed to authenticate ticket. Please try again." });
     }
   });
 
