@@ -1,6 +1,6 @@
 /**
  * Message Text with Icons
- * Replaces staff gavel emoji marker (🔨) with actual gavel icon in any text
+ * Replaces staff marker (🔨) with WorkforceOS logo in any text
  */
 
 import { StaffGavelIcon } from "./staff-gavel-icon";
@@ -11,14 +11,14 @@ interface MessageTextWithIconsProps {
 }
 
 export function MessageTextWithIcons({ text, className = "" }: MessageTextWithIconsProps) {
-  // Check if text has staff gavel marker
-  const hasGavelMarker = text.includes('🔨');
+  // Check if text has staff logo marker
+  const hasStaffMarker = text.includes('🔨');
   
-  if (!hasGavelMarker) {
+  if (!hasStaffMarker) {
     return <span className={className}>{text}</span>;
   }
   
-  // Split text by gavel marker and render with actual icon
+  // Split text by staff marker and render with actual logo
   const parts = text.split('🔨');
   
   return (

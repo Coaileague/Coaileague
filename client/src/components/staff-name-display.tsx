@@ -1,6 +1,6 @@
 /**
  * Staff Name Display Component
- * Replaces 🔨 gavel emoji marker with actual gavel icon image
+ * Replaces staff marker (🔨) with WorkforceOS logo
  */
 
 import { StaffGavelIcon } from "./staff-gavel-icon";
@@ -11,14 +11,14 @@ interface StaffNameDisplayProps {
 }
 
 export function StaffNameDisplay({ name, className = "" }: StaffNameDisplayProps) {
-  // Check if name has staff gavel marker
-  const hasGavelMarker = name.includes('🔨');
+  // Check if name has staff logo marker
+  const hasStaffMarker = name.includes('🔨');
   
-  if (!hasGavelMarker) {
+  if (!hasStaffMarker) {
     return <span className={className}>{name}</span>;
   }
   
-  // Replace 🔨 with actual gavel icon
+  // Replace 🔨 marker with WorkforceOS logo
   const cleanName = name.replace('🔨 ', '').trim();
   
   return (
