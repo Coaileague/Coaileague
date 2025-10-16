@@ -39,8 +39,20 @@ export default function Login() {
         description: "Successfully logged in",
       });
 
-      // Redirect to dashboard
-      setLocation("/dashboard");
+      // GATEKEEPER: Role-based routing - Root admins go to command center, users to dashboard
+      // Check if user has platform role (root, sysop, auditor)
+      const platformRole = data.user?.platformRole;
+      
+      if (platformRole === 'root' || platformRole === 'sysop') {
+        // Root/System administrators → Admin Command Center
+        setLocation("/admin-command-center");
+      } else if (platformRole === 'auditor') {
+        // Auditors → Auditor Portal
+        setLocation("/auditor-portal");
+      } else {
+        // Regular users → Employee Dashboard
+        setLocation("/dashboard");
+      }
     } catch (error) {
       toast({
         title: "Login failed",

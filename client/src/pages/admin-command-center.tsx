@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import ModernLayout from "@/components/ModernLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +44,30 @@ interface LiveActivity {
 }
 
 export default function AdminCommandCenter() {
+  const [, setLocation] = useLocation();
+  const { user, isLoading } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [liveActivities, setLiveActivities] = useState<LiveActivity[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // GATEKEEPER: Microsoft-style access control - Block unauthorized users
+  useEffect(() => {
+    if (!isLoading) {
+      const platformRole = (user as any)?.platformRole;
+      
+      // Only root and sysop can access admin command center
+      if (platformRole !== 'root' && platformRole !== 'sysop') {
+        // Unauthorized - redirect to appropriate portal
+        if (!user) {
+          // Not logged in - send to login
+          window.location.href = '/login';
+        } else {
+          // Logged in but not admin - send to their dashboard with 403 message
+          setLocation('/error-403');
+        }
+      }
+    }
+  }, [user, isLoading, setLocation]);
 
   // Real-time clock
   useEffect(() => {

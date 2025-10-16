@@ -149,6 +149,14 @@ router.post("/api/auth/login", async (req, res) => {
     // Record successful login
     await recordSuccessfulLogin(user.id);
 
+    // Check for platform role (root, sysop, auditor)
+    const platformRoles = await db.query.platformRoles.findMany({
+      where: (platformRoles, { eq, isNull }) => 
+        eq(platformRoles.userId, user.id),
+    });
+    
+    const activePlatformRole = platformRoles.find(pr => !pr.revokedAt);
+
     // Create session
     req.session.userId = user.id;
 
@@ -161,6 +169,7 @@ router.post("/api/auth/login", async (req, res) => {
         lastName: user.lastName,
         role: user.role,
         emailVerified: user.emailVerified,
+        platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role for routing
       },
     });
   } catch (error) {
@@ -193,8 +202,17 @@ router.post("/api/auth/logout", (req, res) => {
 // Get Current User
 // ============================================================================
 
-router.get("/api/auth/me", requireAuth, (req, res) => {
+router.get("/api/auth/me", requireAuth, async (req, res) => {
   const user = req.user!; // requireAuth ensures user exists
+  
+  // GATEKEEPER: Check for platform role (root, sysop, auditor)
+  const platformRoles = await db.query.platformRoles.findMany({
+    where: (platformRoles, { eq }) => 
+      eq(platformRoles.userId, user.id),
+  });
+  
+  const activePlatformRole = platformRoles.find(pr => !pr.revokedAt);
+  
   res.json({
     user: {
       id: user.id,
@@ -204,6 +222,7 @@ router.get("/api/auth/me", requireAuth, (req, res) => {
       role: user.role,
       emailVerified: user.emailVerified,
       currentWorkspaceId: user.currentWorkspaceId,
+      platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role
     },
   });
 });
