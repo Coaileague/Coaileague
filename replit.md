@@ -19,6 +19,9 @@ The platform features a CAD-style professional interface with a dark mode theme,
 - **Authentication**: Custom session-based authentication with bcrypt, account locking, and password reset.
 - **Multi-Tenancy**: Workspace-based data isolation enforced at API and database levels.
 - **Role-Based Access Control (RBAC)**: Supports Owner, Manager, and Employee roles with hierarchical management and API protection middleware. Includes platform-level roles (root, deputy_admin, deputy_assistant, sysop, bot) for system administration and support operations.
+    - **Granular Leader Capabilities**: Capability-based permissions for organization leaders (Owner/Manager) including: view_reports, manage_employees_basic (reset passwords, unlock accounts), manage_schedules (approve swaps, adjust time entries), escalate_support (create platform support tickets), view_audit_logs, and manage_security_flags.
+    - **Leader Action Tracking**: Specialized audit logging for self-service admin actions with before/after snapshots, IP tracking, and optional approval workflows.
+    - **Escalation System**: Structured ticket system (ESC-XXXXXX format) for leaders to escalate issues to platform support with category classification (billing, compliance, technical, security, etc.).
 - **Key Features**:
     - **Time Tracking**: Clock-in/out, real-time timers, automated calculations.
     - **Invoice Generation**: Automated from unbilled time, multi-client, tax/fee calculation.

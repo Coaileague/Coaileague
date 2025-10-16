@@ -232,6 +232,167 @@ export const workspaceRoleEnum = pgEnum('workspace_role', [
 ]);
 
 // ============================================================================
+// ORGANIZATION LEADER CAPABILITIES (Self-Service Admin Features)
+// ============================================================================
+
+// Granular capabilities for organization leaders (Owner/Manager)
+export const leaderCapabilityEnum = pgEnum('leader_capability', [
+  'view_reports',           // Access analytics and reports
+  'manage_employees_basic', // Reset passwords, unlock accounts, update contact info
+  'manage_schedules',       // Approve swaps, adjust time entries (within limits)
+  'escalate_support',       // Create support tickets to platform staff
+  'view_audit_logs',        // View organization audit trail
+  'manage_security_flags'   // Handle basic security issues
+]);
+
+// Role-based capability assignments (defines what each role can do)
+export const roleCapabilities = pgTable("role_capabilities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  workspaceRole: workspaceRoleEnum("workspace_role").notNull(),
+  capability: leaderCapabilityEnum("capability").notNull(),
+  
+  // Capability constraints
+  constraints: jsonb("constraints"), // e.g., { maxTimeAdjustmentHours: 2, requiresApproval: true }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("unique_workspace_role_capability").on(table.workspaceId, table.workspaceRole, table.capability),
+]);
+
+export const insertRoleCapabilitySchema = createInsertSchema(roleCapabilities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRoleCapability = z.infer<typeof insertRoleCapabilitySchema>;
+export type RoleCapability = typeof roleCapabilities.$inferSelect;
+
+// Leader action tracking (specialized audit log for self-service admin actions)
+export const leaderActionEnum = pgEnum('leader_action', [
+  'reset_password',
+  'unlock_account',
+  'update_employee_contact',
+  'approve_schedule_swap',
+  'adjust_time_entry',
+  'flag_security_issue',
+  'create_support_ticket',
+  'export_report'
+]);
+
+export const leaderActions = pgTable("leader_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Leader information
+  leaderId: varchar("leader_id").notNull().references(() => users.id),
+  leaderEmail: varchar("leader_email").notNull(),
+  leaderRole: workspaceRoleEnum("leader_role").notNull(),
+  
+  // Action details
+  action: leaderActionEnum("action").notNull(),
+  targetEntityType: varchar("target_entity_type").notNull(), // 'employee', 'shift', 'time_entry'
+  targetEntityId: varchar("target_entity_id").notNull(),
+  targetEmployeeName: varchar("target_employee_name"), // Denormalized for audit display
+  
+  // Change tracking (before/after snapshots)
+  changesBefore: jsonb("changes_before"),
+  changesAfter: jsonb("changes_after"),
+  
+  // Context
+  reason: text("reason"), // Why was this action taken?
+  metadata: jsonb("metadata"), // Additional context (IP, user agent, feature used)
+  ipAddress: varchar("ip_address"),
+  
+  // Approval workflow (if required)
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  // Immutability
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_leader_workspace_created").on(table.workspaceId, table.createdAt),
+  index("idx_leader_user_created").on(table.leaderId, table.createdAt),
+  index("idx_leader_action_type").on(table.action, table.createdAt),
+]);
+
+export const insertLeaderActionSchema = createInsertSchema(leaderActions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLeaderAction = z.infer<typeof insertLeaderActionSchema>;
+export type LeaderAction = typeof leaderActions.$inferSelect;
+
+// Escalation tickets (Leaders → Platform Support)
+export const escalationStatusEnum = pgEnum('escalation_status', [
+  'open',
+  'in_progress',
+  'resolved',
+  'closed'
+]);
+
+export const escalationCategoryEnum = pgEnum('escalation_category', [
+  'billing',
+  'compliance',
+  'technical_issue',
+  'security',
+  'feature_request',
+  'data_correction',
+  'other'
+]);
+
+export const escalationTickets = pgTable("escalation_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketNumber: varchar("ticket_number").unique().notNull(), // ESC-XXXXXX format
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Requestor (organization leader)
+  requestorId: varchar("requestor_id").notNull().references(() => users.id),
+  requestorEmail: varchar("requestor_email").notNull(),
+  requestorRole: workspaceRoleEnum("requestor_role").notNull(),
+  
+  // Ticket details
+  category: escalationCategoryEnum("category").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  priority: varchar("priority").default("normal"), // low, normal, high, urgent
+  
+  // Related entities (optional)
+  relatedEntityType: varchar("related_entity_type"), // 'employee', 'payroll_run', 'invoice'
+  relatedEntityId: varchar("related_entity_id"),
+  
+  // Context data (for support staff)
+  contextData: jsonb("context_data"), // Workspace info, affected records, error details
+  attachments: jsonb("attachments"), // File references
+  
+  // Assignment & resolution
+  assignedTo: varchar("assigned_to").references(() => users.id), // Platform support staff
+  status: escalationStatusEnum("status").default("open"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_escalation_workspace").on(table.workspaceId, table.status),
+  index("idx_escalation_assigned").on(table.assignedTo, table.status),
+]);
+
+export const insertEscalationTicketSchema = createInsertSchema(escalationTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEscalationTicket = z.infer<typeof insertEscalationTicketSchema>;
+export type EscalationTicket = typeof escalationTickets.$inferSelect;
+
+// ============================================================================
 // EMPLOYEE & CLIENT TABLES
 // ============================================================================
 
