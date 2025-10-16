@@ -179,8 +179,15 @@ export default function LiveChatroomPage() {
     },
   });
 
-  // Online users - removed fake users, will implement real user tracking later
-  const [onlineUsers] = useState<OnlineUser[]>([]);
+  // Online users - HelpOS™ bot always online
+  const [onlineUsers] = useState<OnlineUser[]>([
+    {
+      id: 'ai-bot',
+      name: 'HelpOS™',
+      role: 'bot',
+      status: 'online'
+    }
+  ]);
 
   const handleSendMessage = (e?: React.FormEvent, text?: string) => {
     if (e) e.preventDefault();
@@ -715,7 +722,7 @@ export default function LiveChatroomPage() {
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 <p className="text-xs text-slate-400">
-                  help_bot is powered by GPT-4 and can assist with common questions instantly.
+                  HelpOS™ is powered by GPT-4 and can assist with platform questions, queue management, and support commands instantly.
                 </p>
               </CardContent>
             </Card>
