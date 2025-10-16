@@ -24,7 +24,7 @@ import type { ChatMessage } from "@shared/schema";
 
 const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 
-// Desktop IRC/MSN-style 3-column chatroom with modern 2025 aesthetic
+// Desktop IRC/MSN-style 3-column chatroom with WorkforceOS blue branding
 export default function HelpDeskCab() {
   const { user, isAuthenticated } = useAuth();
   const [inputMessage, setInputMessage] = useState("");
@@ -77,18 +77,19 @@ export default function HelpDeskCab() {
     refetchInterval: 5000,
   });
 
-  // Sort users: Bots first, then staff (by role hierarchy), then subscribers, org users, guests
+  // Sort users: Root admin at top, then bot, then staff (by role hierarchy), then subscribers, org users, guests
   const sortedUsers = [...onlineUsers].sort((a, b) => {
     // Role priority (lower number = higher priority)
     const rolePriority: Record<string, number> = {
-      'bot': 0,
-      'platform_admin': 1,
-      'deputy_admin': 2,
-      'deputy_assistant': 3,
-      'sysop': 4,
-      'subscriber': 5,
-      'org_user': 6,
-      'guest': 7,
+      'root': 0,              // Root admin at absolute top (you)
+      'bot': 1,               // HelpOS AI bot
+      'platform_admin': 2,    // Platform administrators
+      'deputy_admin': 3,      // Deputy administrators
+      'deputy_assistant': 4,  // Deputy assistants
+      'sysop': 5,             // System operators
+      'subscriber': 6,        // Paid subscribers
+      'org_user': 7,          // Organization users
+      'guest': 8,             // Guest users
     };
     
     const aPriority = rolePriority[a.role] ?? 99;
@@ -156,26 +157,35 @@ export default function HelpDeskCab() {
     setTimeout(() => setShowCoffeeCup(false), 2000);
   };
 
-  // Get user type icon - PROMINENT and COLOR-CODED
+  // Get user type icon - PROMINENT with WorkforceOS blue branding
   const getUserTypeIcon = (userType: string, role: string) => {
+    // ROOT ADMIN gets golden crown - YOU
+    if (role === 'root') {
+      return (
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 shadow-lg shadow-amber-500/50">
+          <Crown className="w-4 h-4 text-white" />
+        </div>
+      );
+    }
+    
     // Bot gets special animated icon
     if (role === 'bot') {
       return (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 animate-pulse">
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 animate-pulse">
           <Bot className="w-4 h-4 text-white" />
         </div>
       );
     }
     
-    // Staff gets WF logo with gradient background
+    // Staff gets WF logo with blue gradient
     if (['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
       const bgColor = role === 'platform_admin' 
-        ? 'from-amber-400 to-yellow-500'
+        ? 'from-blue-500 to-indigo-600'
         : role === 'deputy_admin'
-        ? 'from-blue-400 to-indigo-500'
+        ? 'from-blue-600 to-slate-700'
         : role === 'deputy_assistant'
-        ? 'from-purple-400 to-pink-500'
-        : 'from-cyan-400 to-blue-500';
+        ? 'from-indigo-500 to-blue-600'
+        : 'from-cyan-500 to-blue-600';
         
       return (
         <div className={`flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br ${bgColor}`}>
@@ -184,17 +194,17 @@ export default function HelpDeskCab() {
       );
     }
     
-    // Based on user type with soft colors
+    // Based on user type with blue/neutral tones
     switch (userType) {
       case 'subscriber': 
         return (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-300 to-orange-400">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500">
             <Star className="w-4 h-4 text-white" />
           </div>
         );
       case 'org_user': 
         return (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-emerald-300 to-green-400">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-slate-400 to-gray-500">
             <Building2 className="w-4 h-4 text-white" />
           </div>
         );
@@ -225,10 +235,11 @@ export default function HelpDeskCab() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'bot': return <Sparkles className="w-3.5 h-3.5 text-purple-500 animate-pulse" />;
-      case 'platform_admin': return <Crown className="w-3.5 h-3.5 text-amber-500" />;
-      case 'deputy_admin': return <Shield className="w-3.5 h-3.5 text-blue-500" />;
-      case 'deputy_assistant': return <UserCog className="w-3.5 h-3.5 text-purple-500" />;
+      case 'root': return <Crown className="w-3.5 h-3.5 text-amber-500" />;
+      case 'bot': return <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />;
+      case 'platform_admin': return <Crown className="w-3.5 h-3.5 text-blue-500" />;
+      case 'deputy_admin': return <Shield className="w-3.5 h-3.5 text-blue-600" />;
+      case 'deputy_assistant': return <UserCog className="w-3.5 h-3.5 text-indigo-500" />;
       case 'sysop': return <Wrench className="w-3.5 h-3.5 text-cyan-500" />;
       default: return null;
     }
@@ -236,42 +247,48 @@ export default function HelpDeskCab() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'bot': return 'text-purple-600 font-bold';
-      case 'platform_admin': return 'text-amber-600 font-bold';
-      case 'deputy_admin': return 'text-blue-600 font-bold';
-      case 'deputy_assistant': return 'text-purple-600 font-bold';
+      case 'root': return 'text-amber-600 font-black';  // Root admin - bold gold
+      case 'bot': return 'text-blue-600 font-bold';
+      case 'platform_admin': return 'text-blue-600 font-bold';
+      case 'deputy_admin': return 'text-blue-700 font-bold';
+      case 'deputy_assistant': return 'text-indigo-600 font-bold';
       case 'sysop': return 'text-cyan-600 font-bold';
       default: return 'text-slate-700 font-semibold';
     }
   };
 
-  // Get message bubble color - SOFT PASTELS like reference
+  // Get message bubble color - WorkforceOS blue branding
   const getMessageBubbleColor = (senderType: string, role: string, isSelf: boolean) => {
     if (isSelf) {
-      return 'bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200';
+      return 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300';
     }
     
-    // Bot messages - purple/pink pastel
+    // Root admin messages - golden
+    if (role === 'root') {
+      return 'bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-300';
+    }
+    
+    // Bot messages - blue
     if (role === 'bot') {
-      return 'bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200';
+      return 'bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-200';
     }
     
-    // Staff messages - soft blue/cyan
+    // Staff messages - slate blue
     if (['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
-      return 'bg-gradient-to-br from-cyan-50 to-blue-50 border border-cyan-200';
+      return 'bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-300';
     }
     
-    // Customer messages - soft pink/lavender
-    return 'bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200';
+    // Customer messages - light gray
+    return 'bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-300';
   };
 
   const isStaff = user && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes((user as any).platformRole);
   const queueLength = queueData?.length || 0;
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Modern Gradient Header */}
-      <header className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-3 text-white shadow-lg">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-blue-100">
+      {/* WorkforceOS Blue Gradient Header */}
+      <header className="bg-gradient-to-r from-blue-900 via-indigo-800 to-slate-800 p-3 text-white shadow-lg">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Button
@@ -284,7 +301,7 @@ export default function HelpDeskCab() {
               {sidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
             </Button>
             <h1 className="text-2xl font-black tracking-wide flex items-center">
-              <MessageSquare className="w-6 h-6 mr-2 text-pink-200" />
+              <MessageSquare className="w-6 h-6 mr-2 text-blue-300" />
               HelpDesk
             </h1>
           </div>
@@ -305,16 +322,16 @@ export default function HelpDeskCab() {
         
         {/* LEFT COLUMN: Options/Settings (Collapsible) */}
         {!sidebarCollapsed && (
-          <section className="w-48 bg-white/80 backdrop-blur-sm border-r border-purple-200 flex flex-col p-3 overflow-y-auto transition-all">
-          <h2 className="text-sm font-bold text-purple-800 mb-3 pb-2 border-b border-purple-200 flex items-center">
-            <Settings className="w-4 h-4 mr-2 text-purple-500" />
+          <section className="w-48 bg-white/90 backdrop-blur-sm border-r border-slate-300 flex flex-col p-3 overflow-y-auto transition-all">
+          <h2 className="text-sm font-bold text-blue-900 mb-3 pb-2 border-b border-blue-200 flex items-center">
+            <Settings className="w-4 h-4 mr-2 text-blue-600" />
             Staff Controls
           </h2>
 
           <div className="space-y-3">
             {/* User Status */}
-            <div className="p-2 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-              <label className="block text-xs font-medium text-purple-700 mb-1 flex items-center gap-1">
+            <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
+              <label className="block text-xs font-medium text-blue-800 mb-1 flex items-center gap-1">
                 Your Status
                 {showCoffeeCup && (
                   <Coffee className="w-3 h-3 text-amber-600 animate-bounce" />
@@ -323,7 +340,7 @@ export default function HelpDeskCab() {
               <select 
                 value={userStatus} 
                 onChange={(e) => handleStatusChange(e.target.value as any)}
-                className="w-full p-1.5 border border-purple-300 rounded text-xs bg-white focus:ring-purple-500 focus:border-purple-500"
+                className="w-full p-1.5 border border-blue-300 rounded text-xs bg-white focus:ring-blue-500 focus:border-blue-500"
                 data-testid="select-status"
               >
                 <option value="online">● Available</option>
@@ -333,16 +350,16 @@ export default function HelpDeskCab() {
             </div>
 
             {/* Queue Info */}
-            <div className="p-2 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
-              <h3 className="text-xs font-semibold text-blue-700 mb-2">Support Queue</h3>
+            <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+              <h3 className="text-xs font-semibold text-slate-800 mb-2">Support Queue</h3>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-blue-600">In Queue:</span>
-                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">{queueLength}</Badge>
+                  <span className="text-slate-600">In Queue:</span>
+                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{queueLength}</Badge>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-blue-600">Online Staff:</span>
-                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">{uniqueUsers.filter(u => ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}</Badge>
+                  <span className="text-slate-600">Online Staff:</span>
+                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{uniqueUsers.filter(u => ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}</Badge>
                 </div>
               </div>
             </div>
@@ -350,11 +367,11 @@ export default function HelpDeskCab() {
             {/* Quick Actions for Staff */}
             {isStaff && (
               <>
-                <div className="pt-3 border-t border-purple-200 space-y-1.5">
+                <div className="pt-3 border-t border-slate-200 space-y-1.5">
                   <Button 
                     onClick={() => handleCommand('/intro')}
                     size="sm"
-                    className="w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-xs h-8 shadow-md"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs h-8 shadow-md"
                     data-testid="button-intro"
                   >
                     <Zap className="w-3 h-3 mr-1" />
@@ -363,7 +380,7 @@ export default function HelpDeskCab() {
                   <Button 
                     onClick={() => handleCommand('/help')}
                     size="sm"
-                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs h-8 shadow-md"
+                    className="w-full bg-gradient-to-r from-slate-600 to-blue-600 hover:from-slate-700 hover:to-blue-700 text-white text-xs h-8 shadow-md"
                     data-testid="button-help"
                   >
                     <HelpCircle className="w-3 h-3 mr-1" />
@@ -372,7 +389,7 @@ export default function HelpDeskCab() {
                   <Button 
                     onClick={() => handleCommand('/queue')}
                     size="sm"
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xs h-8 shadow-md"
+                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs h-8 shadow-md"
                     data-testid="button-queue"
                   >
                     <Users className="w-3 h-3 mr-1" />
@@ -381,14 +398,14 @@ export default function HelpDeskCab() {
                 </div>
 
                 {/* Quick Response Templates for Agents */}
-                <div className="pt-3 border-t border-purple-200">
-                  <h3 className="text-xs font-semibold text-purple-700 mb-2">Quick Responses</h3>
+                <div className="pt-3 border-t border-slate-200">
+                  <h3 className="text-xs font-semibold text-slate-800 mb-2">Quick Responses</h3>
                   <div className="space-y-1">
                     <Button 
                       onClick={() => setInputMessage("Thank you for contacting WorkforceOS support! How can I help you today?")}
                       size="sm"
                       variant="outline"
-                      className="w-full justify-start text-xs h-auto py-1.5 border-purple-300 hover:bg-purple-50"
+                      className="w-full justify-start text-xs h-auto py-1.5 border-blue-300 hover:bg-blue-50"
                     >
                       Welcome Message
                     </Button>
@@ -396,7 +413,7 @@ export default function HelpDeskCab() {
                       onClick={() => setInputMessage("I've resolved your issue. Is there anything else I can help you with?")}
                       size="sm"
                       variant="outline"
-                      className="w-full justify-start text-xs h-auto py-1.5 border-purple-300 hover:bg-purple-50"
+                      className="w-full justify-start text-xs h-auto py-1.5 border-blue-300 hover:bg-blue-50"
                     >
                       Issue Resolved
                     </Button>
@@ -409,9 +426,9 @@ export default function HelpDeskCab() {
         )}
 
         {/* CENTER COLUMN: Chat Area */}
-        <section className="flex-grow flex flex-col bg-white/50 backdrop-blur-sm">
+        <section className="flex-grow flex flex-col bg-white/70 backdrop-blur-sm">
           {/* Info Banner */}
-          <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 px-4 py-2 text-sm text-purple-800 border-b border-purple-200 text-center font-mono">
+          <div className="bg-gradient-to-r from-blue-100 via-slate-100 to-indigo-100 px-4 py-2 text-sm text-blue-900 border-b border-blue-200 text-center font-mono">
             <Info className="w-3 h-3 inline mr-2" />
             {infoBanners[currentBannerIndex]}
           </div>
@@ -421,12 +438,12 @@ export default function HelpDeskCab() {
             <div className="space-y-4">
               {/* IRC-style MOTD */}
               {ircMessages.map((msg, idx) => (
-                <div key={`irc-${idx}`} className="text-xs font-mono text-purple-600 italic">
+                <div key={`irc-${idx}`} className="text-xs font-mono text-blue-700 italic">
                   {msg}
                 </div>
               ))}
 
-              {/* Chat Messages - Modern Pastel Bubbles */}
+              {/* Chat Messages - Modern bubbles with WorkforceOS blue */}
               {messages.map((msg, idx) => {
                 const isSelf = msg.senderId === user?.id;
                 const role = (msg as any).role || 'guest';
@@ -435,14 +452,14 @@ export default function HelpDeskCab() {
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
                     <div key={idx} className="flex justify-center my-2">
-                      <span className="text-xs font-mono text-purple-600 italic bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                      <span className="text-xs font-mono text-blue-700 italic bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                         *** {msg.message}
                       </span>
                     </div>
                   );
                 }
 
-                // Regular messages - ALL left-aligned with modern pastel bubbles
+                // Regular messages - ALL left-aligned with modern bubbles
                 const displayName = isSelf ? 'You' : (msg.senderName || 'User');
                 const bubbleColor = getMessageBubbleColor(msg.senderType || 'customer', role, isSelf);
                 const nameColor = getRoleColor(role);
@@ -468,7 +485,7 @@ export default function HelpDeskCab() {
                         {/* Message Content */}
                         <p className="text-slate-800 text-sm leading-relaxed">{msg.message}</p>
                         
-                        {/* Reaction Bar (placeholder for now) */}
+                        {/* Reaction Bar */}
                         <div className="flex items-center gap-2 mt-3 text-xs">
                           <button className="hover:scale-110 transition-transform opacity-50 hover:opacity-100" title="Like">
                             👍
@@ -493,7 +510,7 @@ export default function HelpDeskCab() {
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="border-t-2 border-purple-200 bg-white/80 backdrop-blur-sm p-4">
+          <div className="border-t-2 border-blue-200 bg-white/90 backdrop-blur-sm p-4">
             <div className="flex items-end gap-2">
               <Input
                 value={inputMessage}
@@ -501,19 +518,19 @@ export default function HelpDeskCab() {
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message here..."
                 disabled={!isConnected}
-                className="flex-grow p-3 border-2 border-purple-300 rounded-2xl resize-none focus:ring-purple-500 focus:border-purple-500 bg-white"
+                className="flex-grow p-3 border-2 border-blue-300 rounded-2xl resize-none focus:ring-blue-500 focus:border-blue-500 bg-white"
                 data-testid="input-message"
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={!isConnected || !inputMessage.trim()}
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all h-full"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all h-full"
                 data-testid="button-send"
               >
                 Send <Send className="w-4 h-4 ml-1" />
               </Button>
             </div>
-            <div className="flex justify-between items-center mt-2 text-xs text-purple-600">
+            <div className="flex justify-between items-center mt-2 text-xs text-slate-600">
               <span><Clock className="w-3 h-3 inline mr-1" />Enter to send</span>
               <span>{isConnected ? <CheckCircle className="w-3 h-3 inline mr-1 text-emerald-500" /> : <AlertCircle className="w-3 h-3 inline mr-1 text-rose-500" />}{isConnected ? 'Connected' : 'Disconnected'}</span>
             </div>
@@ -521,14 +538,14 @@ export default function HelpDeskCab() {
         </section>
 
         {/* RIGHT COLUMN: User List with PROMINENT ICONS */}
-        <section className="w-72 bg-white/80 backdrop-blur-sm border-l border-purple-200 flex flex-col">
-          <div className="p-4 border-b border-purple-200 flex-shrink-0 bg-gradient-to-r from-purple-50 to-pink-50">
+        <section className="w-72 bg-white/90 backdrop-blur-sm border-l border-slate-300 flex flex-col">
+          <div className="p-4 border-b border-blue-200 flex-shrink-0 bg-gradient-to-r from-blue-50 to-slate-50">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-purple-600 flex-shrink-0" />
-              <h2 className="text-sm font-bold text-purple-800">
+              <Users className="w-5 h-5 text-blue-700 flex-shrink-0" />
+              <h2 className="text-sm font-bold text-blue-900">
                 Online Users
               </h2>
-              <Badge variant="secondary" className="ml-auto text-xs bg-purple-100 text-purple-700" data-testid="text-user-count">
+              <Badge variant="secondary" className="ml-auto text-xs bg-blue-100 text-blue-800" data-testid="text-user-count">
                 {uniqueUsers.length}
               </Badge>
             </div>
@@ -537,7 +554,7 @@ export default function HelpDeskCab() {
           <ScrollArea className="flex-grow p-3">
             <div className="space-y-2">
               {uniqueUsers.map((u) => {
-                const isOp = ['platform_admin', 'deputy_admin'].includes(u.role);
+                const isOp = ['root', 'platform_admin', 'deputy_admin'].includes(u.role);
                 const isVoice = ['deputy_assistant', 'sysop'].includes(u.role);
                 const ircPrefix = isOp ? '@' : isVoice ? '+' : '';
                 
@@ -548,8 +565,8 @@ export default function HelpDeskCab() {
                         className={`
                           flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all
                           ${selectedUserId === u.id 
-                            ? 'bg-gradient-to-r from-purple-100 to-pink-100 shadow-md scale-105' 
-                            : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 hover:shadow-sm'
+                            ? 'bg-gradient-to-r from-blue-100 to-indigo-100 shadow-md scale-105' 
+                            : 'hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 hover:shadow-sm'
                           }
                         `}
                         onClick={() => setSelectedUserId(u.id)}
@@ -576,7 +593,7 @@ export default function HelpDeskCab() {
                         </div>
                       </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="bg-white border-purple-300 w-56">
+                    <ContextMenuContent className="bg-white border-blue-300 w-56">
                       <ContextMenuItem onClick={() => handleMention(u.name)}>
                         @Mention {u.name}
                       </ContextMenuItem>
