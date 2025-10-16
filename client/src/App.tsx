@@ -103,12 +103,22 @@ function AppContent() {
     <ProtectedRoute>
       <SidebarProvider style={style as React.CSSProperties}>
         <CommandPalette />
-        <div className="flex flex-col h-screen w-full relative">
-          <DemoBanner />
-          
-          <div className="flex flex-1 min-h-0">
-            <AppSidebar />
-            <main className="flex-1 overflow-hidden bg-transparent">
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1 min-h-0">
+            <DemoBanner />
+            
+            {/* Global Header with Sidebar Toggle */}
+            <header className="flex items-center justify-between px-4 py-2 border-b bg-card shrink-0">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+              </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+              </div>
+            </header>
+            
+            <main className="flex-1 overflow-auto bg-transparent min-h-0">
               <Switch>
                 <Route path="/">
                   {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
