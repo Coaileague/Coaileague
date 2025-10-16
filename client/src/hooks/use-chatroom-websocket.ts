@@ -34,15 +34,19 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
   const connect = useCallback(() => {
     if (!userId) return;
     
-    // Prevent duplicate connections - check if connecting or if connection exists and is not CLOSED
+    // STRICT duplicate connection prevention
     if (isConnectingRef.current) {
-      console.log('⚠️ WebSocket already connecting, skipping duplicate connection');
+      console.log('⚠️ Already connecting, aborting duplicate');
       return;
     }
     
-    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-      console.log('⚠️ WebSocket already exists, skipping duplicate connection');
-      return;
+    if (wsRef.current) {
+      const state = wsRef.current.readyState;
+      // Block if CONNECTING (0) or OPEN (1) - only allow if CLOSING (2) or CLOSED (3)
+      if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
+        console.log(`⚠️ WebSocket exists (state: ${state}), aborting duplicate`);
+        return;
+      }
     }
     
     console.log('🔌 Creating new WebSocket connection for user:', userId);
@@ -190,15 +194,20 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
       connect();
     }
 
-    // Cleanup on unmount
+    // Cleanup on unmount - PROPERLY close connection
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      // Don't reset wsRef to allow duplicate prevention to work in React Strict Mode
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        // Only close if actually open - don't reset refs to allow duplicate detection
-        wsRef.current.close();
+      if (wsRef.current) {
+        const state = wsRef.current.readyState;
+        // Close if CONNECTING or OPEN
+        if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
+          console.log('🔌 Closing WebSocket on cleanup');
+          wsRef.current.close();
+        }
+        // Reset connection flag so next mount can connect
+        isConnectingRef.current = false;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
