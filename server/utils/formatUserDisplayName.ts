@@ -1,5 +1,5 @@
-// Utility to format user display names for chat with role-based icons
-// Shows: "⚖️ Root Brigido", "🛡️ Sysop James", "👤 Guest Mary", "⭐ Subscriber Robin", etc.
+// Utility to format user display names for chat with role suffix in parentheses
+// Shows: "Brigido (RAdmin)", "James (Sysop)", "Mary (Guest)", "Robin (Subscriber)", etc.
 
 interface UserInfo {
   firstName?: string | null;
@@ -12,42 +12,42 @@ interface UserInfo {
 }
 
 /**
- * Format user display name with role prefix and icon for chat messages
+ * Format user display name with role suffix in parentheses for chat messages
  * Examples:
- * - "⚖️ Root Brigido" (platform root - judge gavel icon like MSN chat host)
- * - "🛡️ Sysop James" (platform staff - shield icon for backbone/defense)
- * - "Manager Tom" (workspace staff - no icon)
- * - "Employee Sarah" (workspace employee - no icon)
- * - "👤 Guest Mary" (ticket guest - person icon)
- * - "⭐ Subscriber Robin" (verified customer - star icon)
+ * - "Brigido (RAdmin)" (platform root - role in parentheses)
+ * - "James (Sysop)" (platform staff - role in parentheses)
+ * - "Tom (Manager)" (workspace staff - role in parentheses)
+ * - "Sarah (Employee)" (workspace employee - role in parentheses)
+ * - "Mary (Guest)" (ticket guest - role in parentheses)
+ * - "Robin (Subscriber)" (verified customer - role in parentheses)
  */
 export function formatUserDisplayName(user: UserInfo): string {
   const firstName = user.firstName || extractFirstNameFromEmail(user.email);
   
-  // Platform roles (WorkforceOS staff) with icons
+  // Platform roles (WorkforceOS staff) - name first, then (Role)
   if (user.platformRole && user.platformRole !== 'none') {
-    const roleWithIcon = formatPlatformRole(user.platformRole);
-    return `${roleWithIcon} ${firstName}`;
+    const roleTitle = formatPlatformRole(user.platformRole);
+    return `${firstName} (${roleTitle})`;
   }
   
-  // Workspace roles (organizational roles) - no icons
+  // Workspace roles (organizational roles) - name first, then (Role)
   if (user.workspaceRole && user.workspaceRole !== 'employee') {
     const roleTitle = formatWorkspaceRole(user.workspaceRole);
-    return `${roleTitle} ${firstName}`;
+    return `${firstName} (${roleTitle})`;
   }
   
-  // Guest (ticket holder) with icon
+  // Guest (ticket holder) - name first, then (Guest)
   if (user.isGuest) {
-    return `👤 Guest ${firstName}`;
+    return `${firstName} (Guest)`;
   }
   
-  // Subscriber (verified customer account) with icon
+  // Subscriber (verified customer account) - name first, then (Subscriber)
   if (user.isSubscriber) {
-    return `⭐ Subscriber ${firstName}`;
+    return `${firstName} (Subscriber)`;
   }
   
-  // Default: Employee or regular user (no icon)
-  return `Employee ${firstName}`;
+  // Default: Employee or regular user
+  return `${firstName} (Employee)`;
 }
 
 /**
