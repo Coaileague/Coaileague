@@ -12,7 +12,7 @@ interface OnlineUser {
 }
 
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change';
+  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
@@ -28,6 +28,8 @@ interface WebSocketMessage {
   // Status updates
   status?: 'online' | 'away' | 'busy';
   userName?: string;
+  // Kick
+  reason?: string;
 }
 
 export function useChatroomWebSocket(userId: string | undefined, userName: string = 'User') {
@@ -203,6 +205,16 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
                 setMessages((prev) => [...prev, data.message as ChatMessage]);
               }
               break;
+
+            case 'kicked':
+              // User has been kicked from chat
+              setError(data.message || 'You have been removed from the chat');
+              setIsConnected(false);
+              if (wsRef.current) {
+                wsRef.current.close();
+              }
+              alert(`⚠️ Removed from chat\n\nReason: ${data.reason || 'violation of chat rules'}`);
+              break;
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -278,6 +290,19 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
     }));
   }, [userId]);
 
+  // Kick a user (staff only)
+  const kickUser = useCallback((targetUserId: string, reason?: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    wsRef.current.send(JSON.stringify({
+      type: 'kick_user',
+      targetUserId: targetUserId,
+      reason: reason || 'violation of chat rules',
+    }));
+  }, []);
+
   // Connect on mount and when userId changes
   useEffect(() => {
     if (userId) {
@@ -317,6 +342,7 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
     sendMessage,
     sendTyping,
     sendStatusChange,
+    kickUser,
     typingUsers,
     onlineUsers,
     isConnected,

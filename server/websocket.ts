@@ -42,7 +42,13 @@ interface StatusChangePayload {
   status: 'online' | 'away' | 'busy';
 }
 
-type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload;
+interface KickUserPayload {
+  type: 'kick_user';
+  targetUserId: string;
+  reason?: string;
+}
+
+type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload;
 
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to WorkforceOS HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
@@ -1107,46 +1113,138 @@ export function setupWebSocket(server: Server) {
               console.error('Failed to save status change message:', err);
             }
 
-            // Broadcast status change to all clients in conversation
+            // Broadcast status change to all clients in this conversation
             const clients = conversationClients.get(ws.conversationId);
             if (clients) {
-              const statusPayload = JSON.stringify({
-                type: 'status_change',
-                userId: ws.userId,
-                status: payload.status,
-                userName: ws.userName,
-                message: statusMessage,
-              });
-
               clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
-                  client.send(statusPayload);
-                }
-              });
-
-              // Update user list
-              const users = Array.from(clients)
-                .filter(c => c.userId && c.userName)
-                .map(c => ({
-                  id: c.userId!,
-                  name: c.userName!,
-                  role: c.workspaceId || 'guest',
-                  status: c.userStatus || 'online',
-                  userType: c.userType || 'guest',
-                }));
-
-              const userListPayload = JSON.stringify({
-                type: 'user_list_update',
-                users: users,
-                count: users.length,
-              });
-
-              clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                  client.send(userListPayload);
+                  client.send(JSON.stringify({
+                    type: 'new_message',
+                    message: statusMessage,
+                  }));
+                  client.send(JSON.stringify({
+                    type: 'status_change',
+                    userId: ws.userId,
+                    userName: ws.userName,
+                    status: payload.status,
+                  }));
                 }
               });
             }
+            break;
+          }
+
+          case 'kick_user': {
+            if (!ws.conversationId || !ws.userId) {
+              return;
+            }
+
+            // SECURITY: Only platform staff (root, admins) can kick users
+            const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+            const canKick = kickerRole && ['root', 'platform_admin', 'deputy_admin'].includes(kickerRole);
+            
+            if (!canKick) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You do not have permission to kick users',
+              }));
+              return;
+            }
+
+            // Find the target user's connection
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients) return;
+
+            let targetClient: WebSocketClient | null = null;
+            let targetUserName = 'User';
+
+            for (const client of clients) {
+              if (client.userId === payload.targetUserId) {
+                targetClient = client;
+                targetUserName = client.userName || 'User';
+                break;
+              }
+            }
+
+            if (!targetClient) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'User not found in this room',
+              }));
+              return;
+            }
+
+            // Create kick message
+            const reason = payload.reason || 'violation of chat rules';
+            const kickMessage: ChatMessage = {
+              id: Date.now(),
+              conversationId: ws.conversationId,
+              senderId: 'system',
+              message: `*** ${targetUserName} has been removed from the chat (Reason: ${reason})`,
+              senderType: 'system',
+              createdAt: new Date(),
+              isRead: false,
+              workspaceId: ws.workspaceId || null,
+            };
+
+            // Save kick message
+            try {
+              await storage.createChatMessage({
+                conversationId: ws.conversationId,
+                senderId: 'system',
+                message: kickMessage.message,
+                senderType: 'system',
+                workspaceId: ws.workspaceId || null,
+              });
+            } catch (err) {
+              console.error('Failed to save kick message:', err);
+            }
+
+            // Broadcast kick message to all clients FIRST
+            clients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'new_message',
+                  message: kickMessage,
+                }));
+              }
+            });
+
+            // DISCONNECT the target user
+            if (targetClient.readyState === WebSocket.OPEN) {
+              targetClient.send(JSON.stringify({
+                type: 'kicked',
+                reason: reason,
+                message: `You have been removed from the chat for: ${reason}`,
+              }));
+              targetClient.close(1000, `Kicked: ${reason}`);
+            }
+
+            // Remove from clients list
+            clients.delete(targetClient);
+
+            // Broadcast updated user list after removal
+            const updatedUsers = Array.from(clients)
+              .filter(c => c.userId && c.userName)
+              .map(c => ({
+                id: c.userId!,
+                name: c.userName!,
+                role: c.workspaceId || 'guest',
+                status: c.userStatus || 'online',
+                userType: c.userType || 'guest',
+              }));
+
+            clients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'user_list_update',
+                  users: updatedUsers,
+                  count: updatedUsers.length,
+                }));
+              }
+            });
+
+            console.log(`✅ User ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
             break;
           }
         }

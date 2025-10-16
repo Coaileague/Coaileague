@@ -64,7 +64,7 @@ export default function HelpDeskCab() {
     ? `${user.firstName} ${user.lastName}` 
     : user?.email?.split('@')[0] || 'User';
 
-  const { messages, isConnected, sendMessage, sendTyping, sendStatusChange, onlineUsers } = useChatroomWebSocket(user?.id, userName);
+  const { messages, isConnected, sendMessage, sendTyping, sendStatusChange, kickUser, onlineUsers } = useChatroomWebSocket(user?.id, userName);
 
   const { data: roomData } = useQuery({
     queryKey: ['/api/helpdesk/room/helpdesk'],
@@ -139,12 +139,18 @@ export default function HelpDeskCab() {
     }
   };
 
-  const handleCommand = (command: string) => {
-    setInputMessage(command);
+  const handleQuickResponse = (message: string) => {
+    setInputMessage(message);
   };
 
   const handleMention = (userName: string) => {
     setInputMessage(prev => prev + `@${userName} `);
+  };
+
+  const sendQuickMessage = (message: string) => {
+    if (message.trim() && isConnected) {
+      sendMessage(message, userName, 'support');
+    }
   };
 
   // Handle status change with coffee cup animation
@@ -367,42 +373,11 @@ export default function HelpDeskCab() {
             {/* Quick Actions for Staff */}
             {isStaff && (
               <>
-                <div className="pt-3 border-t border-slate-200 space-y-1.5">
-                  <Button 
-                    onClick={() => handleCommand('/intro')}
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs h-8 shadow-md"
-                    data-testid="button-intro"
-                  >
-                    <Zap className="w-3 h-3 mr-1" />
-                    <span className="truncate">AI Intro</span>
-                  </Button>
-                  <Button 
-                    onClick={() => handleCommand('/help')}
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-slate-600 to-blue-600 hover:from-slate-700 hover:to-blue-700 text-white text-xs h-8 shadow-md"
-                    data-testid="button-help"
-                  >
-                    <HelpCircle className="w-3 h-3 mr-1" />
-                    <span className="truncate">Commands</span>
-                  </Button>
-                  <Button 
-                    onClick={() => handleCommand('/queue')}
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs h-8 shadow-md"
-                    data-testid="button-queue"
-                  >
-                    <Users className="w-3 h-3 mr-1" />
-                    <span className="truncate">Queue</span>
-                  </Button>
-                </div>
-
-                {/* Quick Response Templates for Agents */}
                 <div className="pt-3 border-t border-slate-200">
                   <h3 className="text-xs font-semibold text-slate-800 mb-2">Quick Responses</h3>
                   <div className="space-y-1">
                     <Button 
-                      onClick={() => setInputMessage("Thank you for contacting WorkforceOS support! How can I help you today?")}
+                      onClick={() => handleQuickResponse("Thank you for contacting WorkforceOS support! How can I help you today?")}
                       size="sm"
                       variant="outline"
                       className="w-full justify-start text-xs h-auto py-1.5 border-blue-300 hover:bg-blue-50"
@@ -410,7 +385,23 @@ export default function HelpDeskCab() {
                       Welcome Message
                     </Button>
                     <Button 
-                      onClick={() => setInputMessage("I've resolved your issue. Is there anything else I can help you with?")}
+                      onClick={() => handleQuickResponse("Could you provide more details about the issue you're experiencing?")}
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start text-xs h-auto py-1.5 border-blue-300 hover:bg-blue-50"
+                    >
+                      Ask for Details
+                    </Button>
+                    <Button 
+                      onClick={() => handleQuickResponse("Can you share a screenshot of what you're seeing? That will help me assist you better.")}
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start text-xs h-auto py-1.5 border-blue-300 hover:bg-blue-50"
+                    >
+                      Request Screenshot
+                    </Button>
+                    <Button 
+                      onClick={() => handleQuickResponse("I've resolved your issue. Is there anything else I can help you with?")}
                       size="sm"
                       variant="outline"
                       className="w-full justify-start text-xs h-auto py-1.5 border-blue-300 hover:bg-blue-50"
@@ -591,23 +582,39 @@ export default function HelpDeskCab() {
                         </div>
                       </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="bg-white border-blue-300 w-56">
+                    <ContextMenuContent className="bg-white border-blue-300 w-64">
                       <ContextMenuItem onClick={() => handleMention(u.name)}>
-                        @Mention {u.name}
+                        💬 @Mention {u.name}
                       </ContextMenuItem>
-                      {isStaff && (
+                      {isStaff && u.role !== 'root' && u.role !== 'bot' && (
                         <>
-                          <ContextMenuItem onClick={() => handleCommand(`/intro`)}>
-                            /intro - AI Introduction
+                          <ContextMenuItem onClick={() => sendQuickMessage(`@${u.name} Could you provide more details about your issue?`)}>
+                            ❓ Ask for More Details
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleCommand(`/auth ${u.name}`)}>
-                            /auth - Request Auth
+                          <ContextMenuItem onClick={() => sendQuickMessage(`@${u.name} Can you share a screenshot? That will help me assist you.`)}>
+                            📷 Request Screenshot
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleCommand(`/verify ${u.name}`)}>
-                            /verify - Verify User
+                          <ContextMenuItem onClick={() => sendQuickMessage(`@${u.name} Let me check your account status...`)}>
+                            🔍 Check Account Status
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleCommand(`/kick ${u.name}`)}>
-                            /kick - Remove User
+                          <ContextMenuItem onClick={() => sendQuickMessage(`@${u.name} I'll guide you through the password reset process.`)}>
+                            🔑 Guide Password Reset
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => sendQuickMessage(`@${u.name} I'm escalating this to senior support for you.`)}>
+                            ⬆️ Escalate to Senior Staff
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => sendQuickMessage(`@${u.name} Your issue is resolved. Is there anything else I can help with?`)}>
+                            ✅ Mark Issue Resolved
+                          </ContextMenuItem>
+                          <ContextMenuItem 
+                            onClick={() => {
+                              if (confirm(`Remove ${u.name} from chat for abuse/spam?`)) {
+                                kickUser(u.id, 'violation of chat rules');
+                              }
+                            }}
+                            className="text-red-600 font-bold"
+                          >
+                            🚫 Kick User (Abuse/Spam)
                           </ContextMenuItem>
                         </>
                       )}
