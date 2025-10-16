@@ -56,6 +56,7 @@ interface CustomerSearchResult {
     companyName?: string;
     subscriptionTier?: string;
     subscriptionStatus?: string;
+    organizationId?: string;
   };
   owner: {
     id: string;

@@ -1253,9 +1253,9 @@ export default function LiveChatroomPage() {
       {/* Staff Controls Overlay Panel - Gmail-style */}
       {showStaffControls && (
         <>
-          {/* Backdrop - Click to close */}
+          {/* Backdrop - Click to close - See-through overlay */}
           <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-in fade-in duration-300"
             onClick={() => setShowStaffControls(false)}
             data-testid="overlay-backdrop"
           />
