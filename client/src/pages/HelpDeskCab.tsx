@@ -554,9 +554,7 @@ export default function HelpDeskCab() {
           <ScrollArea className="flex-grow p-3">
             <div className="space-y-2">
               {uniqueUsers.map((u) => {
-                const isOp = ['root', 'platform_admin', 'deputy_admin'].includes(u.role);
-                const isVoice = ['deputy_assistant', 'sysop'].includes(u.role);
-                const ircPrefix = isOp ? '@' : isVoice ? '+' : '';
+                // No IRC prefix - WF logo icon shows authority
                 
                 return (
                   <ContextMenu key={u.id}>
@@ -586,7 +584,7 @@ export default function HelpDeskCab() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className={`text-sm font-semibold truncate ${getRoleColor(u.role)}`} title={u.name}>
-                              {ircPrefix}{u.name}
+                              {u.name}
                             </span>
                             {getRoleIcon(u.role)}
                           </div>
