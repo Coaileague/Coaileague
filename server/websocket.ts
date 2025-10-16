@@ -316,6 +316,46 @@ export function setupWebSocket(server: Server) {
                   break;
                 }
                 
+                case 'close': {
+                  // Close current ticket/session
+                  const reason = parsedCommand.args.join(' ') || 'Session closed by staff';
+                  
+                  // System announcement: Ticket closed
+                  const systemMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'System',
+                    senderType: 'system',
+                    message: `*** ${displayName} has closed this ticket. Reason: ${reason}`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                  });
+                  
+                  // Remove from queue if present
+                  await queueManager.dequeue(ws.conversationId, 'resolved');
+                  
+                  // Close conversation
+                  await storage.closeChatConversation(ws.conversationId);
+                  
+                  // Broadcast closure
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ 
+                          type: 'new_message', 
+                          message: systemMsg 
+                        }));
+                        // Trigger feedback request on client side
+                        client.send(JSON.stringify({
+                          type: 'request_feedback',
+                          conversationId: ws.conversationId,
+                        }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
                 case 'help': {
                   const platformRole = await storage.getUserPlatformRole(ws.userId);
                   const isStaff = !!(platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));

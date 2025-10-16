@@ -295,6 +295,8 @@ export interface IStorage {
   getAllChatConversations(filters?: { status?: string }): Promise<ChatConversation[]>;
   updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined>;
   closeChatConversation(id: string): Promise<ChatConversation | undefined>;
+  getClosedConversationsForReview(): Promise<ChatConversation[]>;
+  getPositiveTestimonials(): Promise<ChatConversation[]>;
   
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
@@ -1873,6 +1875,29 @@ export class DatabaseStorage implements IStorage {
           sql`${chatMessages.senderId} != ${userId}` // Only mark messages from other users as read
         )
       );
+  }
+
+  async getClosedConversationsForReview(): Promise<ChatConversation[]> {
+    return await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.status, 'closed'))
+      .orderBy(desc(chatConversations.closedAt));
+  }
+
+  async getPositiveTestimonials(): Promise<ChatConversation[]> {
+    return await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.status, 'closed'),
+          sql`${chatConversations.rating} >= 4`, // 4-5 star reviews
+          sql`${chatConversations.feedback} IS NOT NULL`
+        )
+      )
+      .orderBy(desc(chatConversations.rating), desc(chatConversations.closedAt))
+      .limit(50); // Top 50 testimonials
   }
 
   // ============================================================================

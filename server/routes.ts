@@ -4897,6 +4897,53 @@ Return ONLY valid JSON array with this exact structure:
     }
   });
 
+  // ============================================================================
+  // HELPDESK FEEDBACK & REVIEW SYSTEM
+  // ============================================================================
+  
+  // Submit ticket feedback/rating (for training & publicity)
+  app.post("/api/helpdesk/feedback", async (req, res) => {
+    try {
+      const schema = z.object({
+        conversationId: z.string(),
+        rating: z.number().min(1).max(5),
+        feedback: z.string().optional(),
+      });
+
+      const { conversationId, rating, feedback } = schema.parse(req.body);
+
+      // Update conversation with rating/feedback
+      await storage.updateChatConversation(conversationId, {
+        rating,
+        feedback: feedback || null,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get closed tickets for review (admin/training)
+  app.get("/api/helpdesk/reviews", requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const closedTickets = await storage.getClosedConversationsForReview();
+      res.json(closedTickets);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get testimonials (5-star reviews for publicity)
+  app.get("/api/helpdesk/testimonials", async (req, res) => {
+    try {
+      const testimonials = await storage.getPositiveTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }
