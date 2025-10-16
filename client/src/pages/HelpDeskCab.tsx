@@ -77,7 +77,32 @@ export default function HelpDeskCab() {
     refetchInterval: 5000,
   });
 
-  const uniqueUsers = onlineUsers.map(u => ({
+  // Sort users: Bots first, then staff (by role hierarchy), then subscribers, org users, guests
+  const sortedUsers = [...onlineUsers].sort((a, b) => {
+    // Role priority (lower number = higher priority)
+    const rolePriority: Record<string, number> = {
+      'bot': 0,
+      'platform_admin': 1,
+      'deputy_admin': 2,
+      'deputy_assistant': 3,
+      'sysop': 4,
+      'subscriber': 5,
+      'org_user': 6,
+      'guest': 7,
+    };
+    
+    const aPriority = rolePriority[a.role] ?? 99;
+    const bPriority = rolePriority[b.role] ?? 99;
+    
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority;
+    }
+    
+    // Within same role, sort by name
+    return a.name.localeCompare(b.name);
+  });
+
+  const uniqueUsers = sortedUsers.map(u => ({
     ...u,
     avatar: null,
     isOnline: true,
@@ -392,27 +417,20 @@ export default function HelpDeskCab() {
                   );
                 }
 
-                if (isSelf) {
-                  return (
-                    <div key={idx} className="flex justify-end">
-                      <div className="bg-emerald-50 border-r-4 border-emerald-400 p-2 rounded-lg max-w-[80%]">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          {getUserTypeIcon((msg as any).userType || 'guest', role)}
-                          <span className="font-bold text-emerald-700 text-sm">You</span>
-                          {getRoleIcon(role)}
-                        </div>
-                        <p className="text-gray-800 text-sm">{msg.message}</p>
-                      </div>
-                    </div>
-                  );
-                }
+                // IRC/MSN style - ALL messages left-aligned in linear chat log
+                const displayName = isSelf ? 'You' : (msg.senderName || 'User');
+                const bubbleColor = isSelf ? 'bg-indigo-50 border-indigo-400' : 'bg-blue-50 border-blue-400';
+                const nameColor = isSelf ? 'text-indigo-700' : getRoleColor(role);
 
                 return (
-                  <div key={idx} className="bg-blue-50 border-l-4 border-blue-400 p-2 rounded-lg max-w-[80%]">
+                  <div key={idx} className={`${bubbleColor} border-l-4 p-2 rounded-lg max-w-[80%]`}>
                     <div className="flex items-center gap-1.5 mb-1">
                       {getUserTypeIcon((msg as any).userType || 'guest', role)}
-                      <span className={`font-bold text-sm ${getRoleColor(role)}`}>{msg.senderName || 'User'}</span>
+                      <span className={`font-bold text-sm ${nameColor}`}>{displayName}</span>
                       {getRoleIcon(role)}
+                      <span className="text-xs text-gray-500 ml-auto">
+                        {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
                     </div>
                     <p className="text-gray-800 text-sm">{msg.message}</p>
                   </div>
