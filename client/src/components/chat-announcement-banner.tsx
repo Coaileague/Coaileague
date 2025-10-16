@@ -254,7 +254,7 @@ export function ChatAnnouncementBanner({
 
   const BannerContent = (
     <div className={`
-      w-full border-b backdrop-blur-sm transition-all duration-500 ease-in-out relative overflow-hidden
+      w-full border-b-2 backdrop-blur-sm transition-all duration-500 ease-in-out relative overflow-hidden
       ${colorSchemes[currentMessage.type]}
       animate-in fade-in slide-in-from-top-2
     `}>
@@ -321,21 +321,21 @@ export function ChatAnnouncementBanner({
           ))}
         </div>
       )}
-      <div className="max-w-full px-4 py-2.5 flex items-center justify-center gap-2.5 relative z-10">
+      <div className="max-w-full px-6 py-4 flex items-center justify-center gap-3 relative z-10">
         {/* Icon */}
         {IconComponent && (
-          <IconComponent className="w-4 h-4 flex-shrink-0 animate-pulse" />
+          <IconComponent className="w-5 h-5 flex-shrink-0 animate-pulse" />
         )}
         
         {/* Emoticon */}
         {emoticon && (
-          <span className="text-lg leading-none animate-bounce" style={{ animationDuration: '2s' }}>
+          <span className="text-2xl leading-none animate-bounce" style={{ animationDuration: '2s' }}>
             {emoticon}
           </span>
         )}
         
         {/* Message Text */}
-        <span className="text-sm font-medium text-center">
+        <span className="text-base font-bold text-center tracking-wide">
           {currentMessage.text}
         </span>
 
