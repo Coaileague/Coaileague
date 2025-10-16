@@ -80,7 +80,7 @@ export function setupWebSocket(server: Server) {
               // This is the main HelpDesk public chatroom - all authenticated users allowed
               try {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
                 if (isStaff) {
                   userRoleInfo = `platform staff - ${platformRole}`;
@@ -118,7 +118,7 @@ export function setupWebSocket(server: Server) {
             if (payload.conversationId === MAIN_ROOM_ID) {
               try {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
                 // 1. SYSTEM announcement (IRC-style): User joined
                 const systemJoinMessage = await storage.createChatMessage({
@@ -284,7 +284,7 @@ export function setupWebSocket(server: Server) {
               const commandDef = COMMAND_REGISTRY[parsedCommand.command];
               if (commandDef.requiresStaff) {
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 if (!isStaff) {
                   ws.send(JSON.stringify({
                     type: 'error',
@@ -656,7 +656,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'help': {
                   const platformRole = await storage.getUserPlatformRole(ws.userId);
-                  const isStaff = !!(platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
+                  const isStaff = !!(platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
                   const helpText = getHelpText(isStaff);
                   
                   ws.send(JSON.stringify({
@@ -707,7 +707,7 @@ export function setupWebSocket(server: Server) {
               try {
                 // Determine if user is subscriber or free guest
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isSubscriber = !!(platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
+                const isSubscriber = !!(platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
                 
                 // Get conversation history (last 5 messages for context)
                 const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);

@@ -4,7 +4,7 @@ import { employees, workspaces, platformRoles } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
 export type WorkspaceRole = 'owner' | 'manager' | 'employee';
-export type PlatformRole = 'platform_admin' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'none';
+export type PlatformRole = 'root' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'none';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -249,12 +249,12 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
   };
 }
 
-// Require platform admin role (highest level)
-export const requirePlatformAdmin = requirePlatformRole(['platform_admin']);
+// Require platform admin role (highest level - root only)
+export const requirePlatformAdmin = requirePlatformRole(['root']);
 
-// Require any platform staff role (admin, deputy admin, deputy assistant, or sysop)
+// Require any platform staff role (root, deputy admin, deputy assistant, or sysop)
 export const requirePlatformStaff = requirePlatformRole([
-  'platform_admin',
+  'root',
   'deputy_admin',
   'deputy_assistant',
   'sysop'

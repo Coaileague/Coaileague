@@ -3545,7 +3545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user is platform admin/staff
       const platformRole = await storage.getUserPlatformRole(userId);
       
-      if (platformRole && ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+      if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         // Platform staff can see ALL conversations across all workspaces
         const status = req.query.status as string | undefined;
         const allConversations = await storage.getAllChatConversations({ status });
@@ -3600,7 +3600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user is platform admin/staff
       const platformRole = await storage.getUserPlatformRole(userId);
       
-      if (platformRole && ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+      if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         // Platform staff can view ANY conversation's messages (full security/monitoring access)
         const messages = await storage.getChatMessagesByConversation(id);
         return res.json(messages);
@@ -3928,7 +3928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // SECURITY: Only platform staff can toggle room status
       const platformRole = await storage.getUserPlatformRole(userId);
-      if (!platformRole || !['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
       }
       
@@ -4076,7 +4076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(platformRoles)
         .where(eq(platformRoles.userId, staffUser.id));
 
-      const hasStaffRole = roleRecord && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(roleRecord.role);
+      const hasStaffRole = roleRecord && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(roleRecord.role);
 
       if (!hasStaffRole) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
@@ -4182,7 +4182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is staff (always has access)
       const platformRole = await storage.getUserPlatformRole(userId);
-      const isStaff = platformRole && ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+      const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
       
       if (isStaff) {
         return res.json({ 
@@ -4222,7 +4222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // SECURITY: Only platform staff can revoke access
       const platformRole = await storage.getUserPlatformRole(userId);
-      if (!platformRole || !['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
       }
       

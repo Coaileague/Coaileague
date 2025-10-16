@@ -54,14 +54,19 @@ export function formatUserDisplayName(user: UserInfo): string {
  * Format platform role with special marker
  * Staff roles get 🔨 gavel marker (authority indicator)
  * Note: Client-side will render actual gavel icon image
+ * 
+ * Hierarchy:
+ * 1. root → Root Admin (highest authority)
+ * 2. deputy_admin → Deputy Admin (deputy to root)
+ * 3. deputy_assistant → Assistant (deputy's assistant)
+ * 4. sysop → System Operator (backbone support)
  */
 function formatPlatformRole(role: string): string {
   const roleMap: Record<string, string> = {
-    'root': '🔨 RAdmin',             // Root Admin (highest authority)
-    'platform_admin': '🔨 Admin',    // Platform admin
-    'deputy_admin': '🔨 DAdmin',     // Deputy Admin
-    'deputy_assistant': '🔨 HDM',    // HelpDesk Manager
-    'sysop': '🔨 Sysop',            // System operator
+    'root': '🔨 RAdmin',             // Root Admin (you - highest authority)
+    'deputy_admin': '🔨 DAdmin',     // Deputy Admin (your deputy)
+    'deputy_assistant': '🔨 Assistant', // Assistant (deputy's assistant)
+    'sysop': '🔨 Sysop',            // System Operator (backbone support)
   };
   
   return roleMap[role] || '🔨 Staff';
