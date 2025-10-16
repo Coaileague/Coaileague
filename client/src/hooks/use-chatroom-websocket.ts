@@ -64,9 +64,8 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
 
           switch (data.type) {
             case 'conversation_history':
-              if (data.messages) {
-                setMessages(data.messages);
-              }
+              // Clear chat on join - start fresh, don't show old messages
+              setMessages([]);
               break;
 
             case 'new_message':

@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { storage } from './storage';
 import { formatUserDisplayName } from './utils/formatUserDisplayName';
-import { generateGreeting, getAiResponse, shouldBotRespond } from './services/aiBot';
+import { generateGreeting } from './services/aiBot';
 import type { ChatMessage } from '@shared/schema';
 
 interface WebSocketClient extends WebSocket {
@@ -225,56 +225,8 @@ export function setupWebSocket(server: Server) {
               });
             }
 
-            // AI BOT: Respond to user messages if triggered
-            const MAIN_ROOM_ID = 'main-chatroom-workforceos';
-            if (ws.conversationId === MAIN_ROOM_ID && shouldBotRespond(payload.message)) {
-              try {
-                // Determine if user is subscriber (platform staff or paid customer)
-                const isSubscriber = !!(userInfo?.platformRole && userInfo.platformRole !== 'none');
-                
-                // Get recent conversation history for context
-                const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
-                const conversationHistory = recentMessages
-                  .filter(m => !m.isSystemMessage && m.senderType !== 'system')
-                  .slice(-10) // Last 10 messages for context
-                  .map(m => ({
-                    role: m.senderType === 'bot' ? 'assistant' as const : 'user' as const,
-                    content: m.message
-                  }));
-
-                // Get AI response
-                const aiResponse = await getAiResponse(
-                  ws.userId,
-                  payload.message,
-                  conversationHistory,
-                  isSubscriber
-                );
-
-                // Save and broadcast AI response
-                const aiMessage = await storage.createChatMessage({
-                  conversationId: ws.conversationId,
-                  senderId: 'ai-bot',
-                  senderName: 'AI Assistant',
-                  senderType: 'bot',
-                  message: aiResponse.message,
-                  messageType: 'text',
-                });
-
-                if (clients) {
-                  const aiPayload = JSON.stringify({
-                    type: 'new_message',
-                    message: aiMessage,
-                  });
-                  clients.forEach((client) => {
-                    if (client.readyState === WebSocket.OPEN) {
-                      client.send(aiPayload);
-                    }
-                  });
-                }
-              } catch (aiError) {
-                console.error('AI Bot response error:', aiError);
-              }
-            }
+            // AI BOT Q&A: DISABLED FOR NOW (just greeting on join)
+            // User requested to only show greeting, no question answering yet
             break;
           }
 
