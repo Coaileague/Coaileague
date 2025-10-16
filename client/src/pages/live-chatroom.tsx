@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { 
   MessageSquare, Send, Users, Circle, Shield, 
-  Headphones, User, Bot, Sparkles
+  Headphones, User, Bot, Sparkles, Wifi, WifiOff
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
 
@@ -26,57 +27,56 @@ export default function LiveChatroomPage() {
   const { toast } = useToast();
   
   // Get current user data
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<{ user: { id: string; email: string } }>({
     queryKey: ["/api/auth/me"],
   });
   
-  // Get or create the MAIN chatroom conversation (always ID: 'main-chatroom')
-  const { data: mainRoom } = useQuery({
-    queryKey: ["/api/chat/main-room"],
-    retry: false,
-  });
-
-  // Poll for ALL messages in the main room every 1 second for live updates
-  const { data: messages = [] } = useQuery<ChatMessage[]>({
-    queryKey: ["/api/chat/main-room/messages"],
-    refetchInterval: 1000, // 1 second for live feel
-  });
+  const userId = currentUser?.user?.id;
+  const userName = currentUser?.user?.email || 'User';
+  
+  // Use WebSocket for real-time messaging
+  const { messages, sendMessage, isConnected, error, reconnect } = useChatroomWebSocket(
+    userId,
+    userName
+  );
 
   // Static online users (would be WebSocket-based in production)
   const [onlineUsers] = useState<OnlineUser[]>([
     { id: 'bot-1', name: 'help_bot', role: 'bot', status: 'online' },
-    { id: currentUser?.user?.id || '1', name: currentUser?.user?.email || 'You', role: 'admin', status: 'online' },
+    { id: userId || '1', name: userName, role: 'admin', status: 'online' },
     { id: '2', name: 'Support Mike', role: 'support', status: 'online' },
     { id: '3', name: 'Support Lisa', role: 'support', status: 'online' },
   ]);
 
-  const sendMessage = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("/api/chat/main-room/messages", "POST", { 
-        message: content,
-        messageType: "text",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/chat/main-room/messages"] });
-      setMessageText("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send message",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim()) return;
+    if (!isConnected) {
+      toast({
+        title: "Connection Error",
+        description: "Not connected to chat server. Reconnecting...",
+        variant: "destructive",
+      });
+      reconnect();
+      return;
+    }
 
-    sendMessage.mutate(messageText.trim());
+    sendMessage(messageText.trim(), userName, 'support');
+    setMessageText("");
   };
 
+  // Show error toast when connection issues occur
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Connection Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -96,7 +96,8 @@ export default function LiveChatroomPage() {
     }
   };
 
-  const formatTime = (date: Date | string) => {
+  const formatTime = (date: Date | string | null) => {
+    if (!date) return '';
     const d = new Date(date);
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
@@ -117,9 +118,28 @@ export default function LiveChatroomPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Circle className="w-2 h-2 fill-green-500 text-green-500" />
-              <span className="text-sm font-medium">{onlineUsers.length} Online</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Circle className="w-2 h-2 fill-green-500 text-green-500" />
+                <span className="text-sm font-medium">{onlineUsers.length} Online</span>
+              </div>
+              <Badge 
+                variant={isConnected ? "default" : "destructive"} 
+                className="gap-1"
+                data-testid="badge-connection-status"
+              >
+                {isConnected ? (
+                  <>
+                    <Wifi className="w-3 h-3" />
+                    Connected
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-3 h-3" />
+                    Disconnected
+                  </>
+                )}
+              </Badge>
             </div>
           </div>
         </div>
@@ -131,13 +151,17 @@ export default function LiveChatroomPage() {
               <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
                 <MessageSquare className="w-16 h-16 text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Welcome to the chatroom!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Start the conversation - messages appear here in real-time
+                <p className="text-sm text-muted-foreground mb-2">
+                  Start the conversation - messages appear <strong>instantly</strong> for all users
                 </p>
+                <Badge variant="outline" className="gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Real-time WebSocket messaging
+                </Badge>
               </div>
             ) : (
               messages.map((msg) => {
-                const isOwnMessage = msg.senderId === currentUser?.user?.id;
+                const isOwnMessage = msg.senderId === userId;
                 const isSystemMessage = msg.senderType === 'system';
                 
                 if (isSystemMessage) {
@@ -154,6 +178,7 @@ export default function LiveChatroomPage() {
                   <div 
                     key={msg.id} 
                     className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+                    data-testid={`message-${msg.id}`}
                   >
                     <div className="flex flex-col items-center gap-1 min-w-[60px]">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -194,14 +219,15 @@ export default function LiveChatroomPage() {
             <Input
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              placeholder="Type your message..."
+              placeholder={isConnected ? "Type your message..." : "Connecting..."}
               className="flex-1"
               data-testid="input-chat-message"
               autoFocus
+              disabled={!isConnected}
             />
             <Button 
               type="submit" 
-              disabled={!messageText.trim() || sendMessage.isPending}
+              disabled={!messageText.trim() || !isConnected}
               data-testid="button-send-message"
               className="gap-2"
             >
@@ -210,7 +236,7 @@ export default function LiveChatroomPage() {
             </Button>
           </form>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Messages appear instantly for all online users
+            <strong>Instant delivery</strong> via WebSocket • IRC/MSN-style live messaging
           </p>
         </div>
       </div>
@@ -228,6 +254,7 @@ export default function LiveChatroomPage() {
                 <div 
                   key={user.id}
                   className="flex items-center gap-2 p-2 rounded-lg hover-elevate"
+                  data-testid={`user-${user.id}`}
                 >
                   <Circle className="w-2 h-2 fill-green-500 text-green-500 flex-shrink-0" />
                   <div className="flex items-center gap-2 min-w-0 flex-1">
