@@ -891,15 +891,8 @@ export default function RootAdminPortal() {
                   <Button 
                     size="lg" 
                     onClick={() => {
-                      // Create or join conversation for this support staff member
-                      createConversation.mutate({
-                        workspaceId: "platform-support",
-                        userName: `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "Support Staff",
-                        userEmail: user?.email || "",
-                        subject: "Support Staff - Live Chat",
-                        priority: "normal",
-                        isSilenced: false, // Support staff not silenced
-                      });
+                      // Platform admin - go directly to chat room to see ALL conversations
+                      window.location.href = "/support/chat";
                     }}
                     data-testid="button-enter-chat-room"
                     className="gap-2"
