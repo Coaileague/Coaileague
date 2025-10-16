@@ -29,9 +29,8 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
   // Start trial mutation
   const startTrialMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/scheduleos/start-trial', {
-        method: 'POST',
-      });
+      const res = await apiRequest('POST', '/api/scheduleos/start-trial');
+      return res.json();
     },
     onSuccess: (data) => {
       toast({
@@ -52,15 +51,10 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
   // Activate with payment mutation
   const activateMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/scheduleos/activate', {
-        method: 'POST',
-        body: JSON.stringify({
-          paymentMethod: 'stripe_subscription', // TODO: Real Stripe flow when test keys added
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const res = await apiRequest('POST', '/api/scheduleos/activate', {
+        paymentMethod: 'stripe_subscription', // TODO: Real Stripe flow when test keys added
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -81,17 +75,12 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
   // Generate AI schedule mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/scheduleos/generate', {
-        method: 'POST',
-        body: JSON.stringify({
-          weekStartDate: weekStartDate.toISOString(),
-          shiftRequirements: [],
-          clientIds: [],
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const res = await apiRequest('POST', '/api/scheduleos/generate', {
+        weekStartDate: weekStartDate.toISOString(),
+        shiftRequirements: [],
+        clientIds: [],
       });
+      return res.json();
     },
     onSuccess: (data) => {
       toast({
