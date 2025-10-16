@@ -177,6 +177,9 @@ export const requireOwner = requireWorkspaceRole(['owner']);
 export const requireManager = requireWorkspaceRole(['owner', 'manager']);
 export const requireEmployee = requireWorkspaceRole(['owner', 'manager', 'employee']);
 
+// Leaders Hub - Organization Leaders (Owner/Manager only) for self-service admin
+export const requireLeader = requireWorkspaceRole(['owner', 'manager']);
+
 export async function validateManagerAssignment(
   managerId: string,
   employeeId: string,

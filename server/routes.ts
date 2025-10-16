@@ -953,6 +953,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // LEADERS HUB - Organization Leaders Management (Owner/Manager Self-Service)
+  // ============================================================================
+  
+  // Import requireLeader for role-based access
+  const { requireLeader } = await import("./rbac");
+  
+  // Get leader dashboard stats
+  app.get('/api/leaders/stats', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      
+      // Get all employees for the workspace
+      const allEmployees = await storage.getEmployeesByWorkspace(workspaceId);
+      
+      // Calculate stats
+      const stats = {
+        headcount: {
+          total: allEmployees.length,
+          active: allEmployees.filter(e => e.employmentStatus === 'active').length,
+          onLeave: allEmployees.filter(e => e.employmentStatus === 'leave').length,
+          pendingOnboarding: allEmployees.filter(e => e.onboardingStatus === 'pending').length,
+        },
+        compliance: {
+          compliant: allEmployees.length, // TODO: Implement compliance checks
+          expiringSoon: 0,
+          overdue: 0,
+        },
+        pendingApprovals: {
+          scheduleSwaps: 0, // TODO: Implement schedule swap approvals
+          timeAdjustments: 0, // TODO: Implement time entry approvals
+          ptoRequests: 0, // TODO: Get pending PTO requests
+        },
+        recentActivity: {
+          actionCount: 0, // TODO: Get count from leader_actions table
+          escalationCount: 0, // TODO: Get count from escalation_tickets table
+        },
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching leader stats:", error);
+      res.status(500).json({ message: "Failed to fetch leader stats" });
+    }
+  });
+  
+  // Get pending tasks for leader
+  app.get('/api/leaders/pending-tasks', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      // TODO: Implement pending tasks query
+      // For now, return empty array
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching pending tasks:", error);
+      res.status(500).json({ message: "Failed to fetch pending tasks" });
+    }
+  });
+  
+  // Get recent leader actions (audit trail)
+  app.get('/api/leaders/recent-actions', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      // TODO: Implement query from leader_actions table
+      // For now, return empty array
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching recent actions:", error);
+      res.status(500).json({ message: "Failed to fetch recent actions" });
+    }
+  });
+  
+  // Reset employee password (leader self-service)
+  app.post('/api/leaders/reset-password', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const leaderId = req.user.id;
+      const { employeeId, reason } = req.body;
+      
+      // Validate employee belongs to workspace
+      const employee = await storage.getEmployee(employeeId, workspaceId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found in your workspace" });
+      }
+      
+      // Generate temporary password
+      const tempPassword = crypto.randomBytes(8).toString('hex');
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+      
+      // Update employee password (if employee has userId)
+      if (employee.userId) {
+        await db
+          .update(users)
+          .set({ 
+            password: hashedPassword,
+            forcePasswordReset: true,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, employee.userId));
+      }
+      
+      // TODO: Log action to leader_actions table
+      // TODO: Send email to employee with temporary password
+      
+      res.json({ 
+        success: true, 
+        message: "Password reset successfully",
+        tempPassword // In production, this should be emailed, not returned
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+  
+  // Unlock employee account (leader self-service)
+  app.post('/api/leaders/unlock-account', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const leaderId = req.user.id;
+      const { employeeId, reason } = req.body;
+      
+      // Validate employee belongs to workspace
+      const employee = await storage.getEmployee(employeeId, workspaceId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found in your workspace" });
+      }
+      
+      // Unlock account (if employee has userId)
+      if (employee.userId) {
+        await db
+          .update(users)
+          .set({ 
+            accountLocked: false,
+            loginAttempts: 0,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, employee.userId));
+      }
+      
+      // TODO: Log action to leader_actions table
+      
+      res.json({ 
+        success: true, 
+        message: "Account unlocked successfully"
+      });
+    } catch (error) {
+      console.error("Error unlocking account:", error);
+      res.status(500).json({ message: "Failed to unlock account" });
+    }
+  });
+  
+  // Update employee contact info (leader self-service)
+  app.patch('/api/leaders/update-contact', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const leaderId = req.user.id;
+      const { employeeId, email, phone, address, reason } = req.body;
+      
+      // Validate employee belongs to workspace
+      const employee = await storage.getEmployee(employeeId, workspaceId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found in your workspace" });
+      }
+      
+      // Capture before state for audit
+      const beforeState = {
+        email: employee.email,
+        phone: employee.phone,
+        address: employee.address,
+      };
+      
+      // Update employee contact info
+      const updateData: any = {};
+      if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
+      if (address !== undefined) updateData.address = address;
+      
+      const updated = await storage.updateEmployee(employeeId, workspaceId, updateData);
+      
+      // Capture after state for audit
+      const afterState = {
+        email: updated?.email,
+        phone: updated?.phone,
+        address: updated?.address,
+      };
+      
+      // TODO: Log action to leader_actions table with before/after snapshots
+      
+      res.json({ 
+        success: true, 
+        message: "Contact information updated successfully",
+        employee: updated
+      });
+    } catch (error) {
+      console.error("Error updating contact info:", error);
+      res.status(500).json({ message: "Failed to update contact information" });
+    }
+  });
+
+  // ============================================================================
   // CLIENT ROUTES (Multi-tenant isolated)
   // ============================================================================
   
