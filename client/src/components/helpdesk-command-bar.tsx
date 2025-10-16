@@ -13,6 +13,8 @@ import {
   UserCog,
   Star,
   Coffee,
+  CheckCircle,
+  Power,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -176,63 +178,122 @@ export function HelpDeskCommandBar({
                 </div>
               </div>
 
+              {/* Chat Commands */}
               <div className="flex items-center gap-1.5 pr-3 border-r border-slate-300">
+                <span className="text-xs text-slate-500 font-medium">Commands:</span>
+                <Button
+                  onClick={() => onQuickResponse?.('/intro')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  data-testid="button-intro-macro"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  AI Greeting
+                </Button>
+              </div>
+
+              {/* Quick Responses - Using original slash commands */}
+              <div className="flex items-center gap-1.5 pr-3 border-r border-slate-300">
+                <span className="text-xs text-slate-500 font-medium">Quick:</span>
                 <Button
                   onClick={() => onQuickResponse?.('/welcome')}
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  data-testid="button-welcome-macro"
+                  className="h-8 text-xs"
+                  data-testid="button-welcome"
                 >
-                  <Zap className="w-3.5 h-3.5" />
                   Welcome
                 </Button>
-                
                 <Button
-                  onClick={() => onQuickResponse?.('/verify')}
+                  onClick={() => onQuickResponse?.('/details')}
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  data-testid="button-verify-macro"
+                  className="h-8 text-xs"
+                  data-testid="button-request-details"
                 >
-                  <Shield className="w-3.5 h-3.5" />
-                  Verify
+                  Details
                 </Button>
-                
                 <Button
-                  onClick={() => onQuickResponse?.('/wait')}
+                  onClick={() => onQuickResponse?.('/screenshot')}
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  data-testid="button-wait-macro"
+                  className="h-8 text-xs"
+                  data-testid="button-screenshot"
                 >
-                  <Clock className="w-3.5 h-3.5" />
-                  Wait
+                  Screenshot
+                </Button>
+                <Button
+                  onClick={() => onQuickResponse?.('/checkaccount')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  data-testid="button-check-account"
+                >
+                  Check Account
+                </Button>
+                <Button
+                  onClick={() => onQuickResponse?.('/escalate')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  data-testid="button-escalate"
+                >
+                  Escalate
+                </Button>
+                <Button
+                  onClick={() => onQuickResponse?.('/resolved')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  data-testid="button-resolved"
+                >
+                  Resolved
                 </Button>
               </div>
 
+              {/* Privacy & Room Controls */}
               <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500 font-medium">Controls:</span>
+                <Button
+                  onClick={() => onQuickResponse?.('/spectate')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  data-testid="button-spectate"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Spectate
+                </Button>
+                <Button
+                  onClick={() => onQuickResponse?.('/voice')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  data-testid="button-voice"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Voice
+                </Button>
                 <Button
                   onClick={onToggleRoomStatus}
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs gap-1.5"
-                  data-testid="button-room-controls"
+                  data-testid="button-room-status"
                 >
                   <Settings className="w-3.5 h-3.5" />
                   Room
-                  <Badge 
-                    variant={roomStatus === 'open' ? 'default' : 'secondary'}
-                    className={`ml-1 h-5 px-1.5 text-xs ${
-                      roomStatus === 'open' 
-                        ? 'bg-green-100 text-green-800' 
-                        : roomStatus === 'maintenance'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {roomStatus === 'open' ? 'Open' : roomStatus === 'maintenance' ? 'Maint' : 'Closed'}
-                  </Badge>
+                </Button>
+                <Button
+                  onClick={() => onQuickResponse?.('/close')}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5 text-red-600 border-red-300"
+                  data-testid="button-close-ticket"
+                >
+                  <Power className="w-3.5 h-3.5" />
+                  Close
                 </Button>
               </div>
             </>

@@ -15,6 +15,8 @@ import {
 import { WFLogoCompact } from "@/components/wf-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
+import { HelpDeskCommandBar } from "@/components/helpdesk-command-bar";
+import { ChatAnnouncementBanner } from "@/components/chat-announcement-banner";
 import { formatDistanceToNow } from "date-fns";
 import {
   ContextMenu,
@@ -32,7 +34,6 @@ export default function HelpDeskCab() {
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatus, setUserStatus] = useState<"online" | "away" | "busy">("online");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [showCoffeeCup, setShowCoffeeCup] = useState(false);
   const [secureRequest, setSecureRequest] = useState<{
@@ -311,15 +312,6 @@ export default function HelpDeskCab() {
       <header className="bg-gradient-to-r from-blue-900 via-indigo-800 to-slate-800 p-3 text-white shadow-lg">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-white hover:bg-white/20 h-8 w-8"
-              data-testid="button-toggle-sidebar"
-            >
-              {sidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-            </Button>
             <h1 className="text-2xl font-black tracking-wide flex items-center">
               <MessageSquare className="w-6 h-6 mr-2 text-blue-300" />
               HelpDesk
@@ -337,194 +329,43 @@ export default function HelpDeskCab() {
         </div>
       </header>
 
-      {/* Main Layout with Collapsible Sidebar */}
+      {/* Horizontal Command Bar - Role-Based Actions */}
+      <div className="max-w-7xl mx-auto w-full">
+        <HelpDeskCommandBar
+          userRole={
+            isStaff ? 'staff' :
+            (user as any)?.subscriptionTier ? 'subscriber' :
+            (user as any)?.workspaceId ? 'org_user' :
+            'guest'
+          }
+          isStaff={isStaff || false}
+          userStatus={userStatus}
+          onStatusChange={(status) => {
+            setUserStatus(status);
+            handleStatusChange(status);
+          }}
+          queueLength={queueLength}
+          onlineStaffCount={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
+          showCoffeeCup={showCoffeeCup}
+          onShowHelp={() => handleQuickResponse("/help")}
+          onShowQueue={() => handleQuickResponse("/queue")}
+          onShowTutorial={() => {}}
+          onToggleRoomStatus={() => {}}
+          onQuickResponse={handleQuickResponse}
+          roomStatus="open"
+        />
+      </div>
+
+      {/* Main Layout - Full Width */}
       <main className="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full">
-        
-        {/* LEFT COLUMN: Support Staff Controls (Collapsible with Scrolling) - Compact */}
-        {!sidebarCollapsed && (
-          <section className="w-48 bg-white/90 backdrop-blur-sm border-r border-slate-300 flex flex-col transition-all flex-shrink-0">
-            <div className="p-3 border-b border-blue-200 flex-shrink-0">
-              <h2 className="text-sm font-bold text-blue-900 flex items-center">
-                <Settings className="w-4 h-4 mr-2 text-blue-600" />
-                Staff Controls
-              </h2>
-            </div>
-
-            <ScrollArea className="flex-1 p-3">
-              <div className="space-y-3">
-                {/* User Status */}
-                <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
-                  <label className="block text-xs font-medium text-blue-800 mb-1 flex items-center gap-1">
-                    Your Status
-                    {showCoffeeCup && (
-                      <Coffee className="w-3 h-3 text-amber-600 animate-bounce" />
-                    )}
-                  </label>
-                  <select 
-                    value={userStatus} 
-                    onChange={(e) => handleStatusChange(e.target.value as any)}
-                    className="w-full p-1.5 border border-blue-300 rounded text-xs bg-white focus:ring-blue-500 focus:border-blue-500"
-                    data-testid="select-status"
-                  >
-                    <option value="online">● Available</option>
-                    <option value="away">● Away</option>
-                    <option value="busy">● Busy</option>
-                  </select>
-                </div>
-
-                {/* Queue Info */}
-                <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                  <h3 className="text-xs font-semibold text-slate-800 mb-2">Support Queue</h3>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-600">In Queue:</span>
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{queueLength}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Online Staff:</span>
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}</Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Staff Command Macros */}
-                {isStaff && (
-                  <>
-                    <div className="border-t border-slate-200 pt-3">
-                      <h3 className="text-xs font-semibold text-slate-800 mb-2">Chat Commands</h3>
-                      <div className="space-y-1.5">
-                        <Button 
-                          onClick={() => handleQuickResponse("/intro")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-blue-300 hover:bg-blue-50"
-                        >
-                          <Zap className="w-3 h-3 mr-2" />
-                          AI Greeting
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("/help")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-blue-300 hover:bg-blue-50"
-                        >
-                          <HelpCircle className="w-3 h-3 mr-2" />
-                          Show Commands
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("/queue")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-blue-300 hover:bg-blue-50"
-                        >
-                          <Users className="w-3 h-3 mr-2" />
-                          View Queue
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-200 pt-3">
-                      <h3 className="text-xs font-semibold text-slate-800 mb-2">Quick Responses</h3>
-                      <div className="space-y-1.5">
-                        <Button 
-                          onClick={() => handleQuickResponse("Thank you for contacting WorkforceOS support! How can I help you today?")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-auto py-2 px-3 border-blue-300 hover:bg-blue-50 text-left"
-                        >
-                          Welcome
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("Could you provide more details about the issue you're experiencing?")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-auto py-2 px-3 border-blue-300 hover:bg-blue-50 text-left"
-                        >
-                          Request Details
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("Can you share a screenshot? That will help me assist you.")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-auto py-2 px-3 border-blue-300 hover:bg-blue-50 text-left"
-                        >
-                          Request Screenshot
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("Let me check your account details...")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-auto py-2 px-3 border-blue-300 hover:bg-blue-50 text-left"
-                        >
-                          Check Account
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("I'm escalating this to senior support...")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-auto py-2 px-3 border-blue-300 hover:bg-blue-50 text-left"
-                        >
-                          Escalate
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("Your issue has been resolved. Is there anything else I can help with?")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-auto py-2 px-3 border-blue-300 hover:bg-blue-50 text-left"
-                        >
-                          Issue Resolved
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-200 pt-3">
-                      <h3 className="text-xs font-semibold text-slate-800 mb-2">Privacy Controls</h3>
-                      <div className="space-y-1.5">
-                        <Button 
-                          onClick={() => handleQuickResponse("/spectate")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-amber-300 hover:bg-amber-50"
-                        >
-                          <AlertCircle className="w-3 h-3 mr-2" />
-                          Enable Spectator Mode
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("/voice")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-emerald-300 hover:bg-emerald-50"
-                        >
-                          <CheckCircle className="w-3 h-3 mr-2" />
-                          Give Voice (Unmute)
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-200 pt-3 pb-4">
-                      <h3 className="text-xs font-semibold text-slate-800 mb-2">Room Controls</h3>
-                      <div className="space-y-1.5">
-                        <Button 
-                          onClick={() => handleQuickResponse("/motd [message]")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-blue-300 hover:bg-blue-50"
-                        >
-                          <Info className="w-3 h-3 mr-2" />
-                          Update MOTD
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuickResponse("/close")}
-                          variant="outline"
-                          className="w-full justify-start text-xs h-8 border-red-300 hover:bg-red-50 text-red-700"
-                        >
-                          <Power className="w-3 h-3 mr-2" />
-                          Close Ticket
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </ScrollArea>
-          </section>
-        )}
-
         {/* CENTER COLUMN: Chat Area */}
         <section className="flex-grow flex flex-col bg-white/70 backdrop-blur-sm">
-          {/* Info Banner */}
-          <div className="bg-gradient-to-r from-blue-100 via-slate-100 to-indigo-100 px-4 py-2 text-sm text-blue-900 border-b border-blue-200 text-center font-mono">
-            <Info className="w-3 h-3 inline mr-2" />
-            {infoBanners[currentBannerIndex]}
-          </div>
+          {/* Animated Seasonal Banner */}
+          <ChatAnnouncementBanner
+            queuePosition={1}
+            queueWaitTime="2-3 minutes"
+            onlineStaff={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
+          />
 
           {/* Messages Area */}
           <ScrollArea className="flex-grow p-4">
