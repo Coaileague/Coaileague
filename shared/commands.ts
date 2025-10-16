@@ -11,6 +11,9 @@ export type SlashCommand =
   | 'transfer'   // Transfer to another staff member
   | 'mute'       // Mute a user
   | 'kick'       // Remove user from chat
+  | 'auth'       // Request user authentication
+  | 'verify'     // Verify user organization
+  | 'resetpass'  // Send password reset
   | 'help';      // Show available commands
 
 export interface ParsedCommand {
@@ -87,6 +90,30 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
     requiresStaff: true,
     minArgs: 1,
     maxArgs: 10,
+  },
+  auth: {
+    command: 'auth',
+    description: 'Request user authentication (triggers auth popup for user)',
+    usage: '/auth <username>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
+  },
+  verify: {
+    command: 'verify',
+    description: 'Verify user organization credentials',
+    usage: '/verify <username>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
+  },
+  resetpass: {
+    command: 'resetpass',
+    description: 'Send password reset link to user email',
+    usage: '/resetpass <email>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
   },
   help: {
     command: 'help',

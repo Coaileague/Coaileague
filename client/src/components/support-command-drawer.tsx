@@ -39,14 +39,51 @@ const STAFF_MACROS = [
     label: 'Introduce to Customer',
     command: '/intro',
     icon: UserPlus,
-    description: 'Bot announces you are ready to help',
+    description: 'Bot announces you are ready',
+    needsInput: false,
+  },
+  {
+    id: 'auth',
+    label: 'Request Auth',
+    command: '/auth',
+    icon: Shield,
+    description: 'Ask user to authenticate',
+    needsInput: true,
+    inputPrompt: 'Enter username to authenticate:',
+  },
+  {
+    id: 'verify',
+    label: 'Verify Organization',
+    command: '/verify',
+    icon: Shield,
+    description: 'Verify user credentials',
+    needsInput: true,
+    inputPrompt: 'Enter username to verify:',
+  },
+  {
+    id: 'resetpass',
+    label: 'Reset Password',
+    command: '/resetpass',
+    icon: Shield,
+    description: 'Send password reset link',
+    needsInput: true,
+    inputPrompt: 'Enter user email:',
+  },
+  {
+    id: 'close',
+    label: 'Close Ticket',
+    command: '/close',
+    icon: Shield,
+    description: 'Close current session',
+    needsInput: false,
   },
   {
     id: 'help',
     label: 'Show Commands',
     command: '/help',
     icon: HelpCircle,
-    description: 'Display all available commands',
+    description: 'Display all commands',
+    needsInput: false,
   },
 ];
 
@@ -57,6 +94,7 @@ const CUSTOMER_MACROS = [
     command: '/help',
     icon: HelpCircle,
     description: 'Display available commands',
+    needsInput: false,
   },
 ];
 
@@ -77,9 +115,17 @@ export function SupportCommandDrawer({
   const [open, setOpen] = useState(false);
   const macros = isStaff ? STAFF_MACROS : CUSTOMER_MACROS;
 
-  const handleMacroClick = (command: string) => {
-    onCommandSelect(command);
-    setOpen(false);
+  const handleMacroClick = (macro: typeof STAFF_MACROS[0]) => {
+    if (macro.needsInput && macro.inputPrompt) {
+      const input = prompt(macro.inputPrompt);
+      if (input && input.trim()) {
+        onCommandSelect(`${macro.command} ${input.trim()}`);
+        setOpen(false);
+      }
+    } else {
+      onCommandSelect(macro.command);
+      setOpen(false);
+    }
   };
 
   return (
@@ -117,7 +163,7 @@ export function SupportCommandDrawer({
                     key={macro.id}
                     variant="ghost"
                     className="w-full justify-start gap-2.5 h-auto py-2.5 px-3 hover-elevate"
-                    onClick={() => handleMacroClick(macro.command)}
+                    onClick={() => handleMacroClick(macro)}
                     data-testid={`button-macro-${macro.id}`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0 text-blue-400" />
