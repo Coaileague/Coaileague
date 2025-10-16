@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import ModernLayout from "@/components/ModernLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -190,7 +189,7 @@ export default function AuditorPortal() {
   };
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="mb-6">
@@ -550,6 +549,6 @@ export default function AuditorPortal() {
           </TabsContent>
         </Tabs>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

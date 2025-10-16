@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import ModernLayout from "@/components/ModernLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -144,7 +143,7 @@ export default function ClientPortal() {
 
   if (!currentClient) {
     return (
-      <ModernLayout>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
         <div className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Client Account Not Found</h2>
@@ -152,12 +151,12 @@ export default function ClientPortal() {
             You need to be registered as a client to access this portal.
           </p>
         </div>
-      </ModernLayout>
+      </div>
     );
   }
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="w-full overflow-x-hidden">
       <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Header */}
@@ -468,6 +467,6 @@ export default function ClientPortal() {
         </Tabs>
       </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

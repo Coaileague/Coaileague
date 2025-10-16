@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import type { Employee } from "@shared/schema";
-import ModernLayout from "@/components/ModernLayout";
 
 export default function Employees() {
   const { toast } = useToast();
@@ -248,7 +247,7 @@ export default function Employees() {
   const pendingApprovals = employees?.filter(emp => emp.onboardingStatus === 'pending_review') || [];
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -634,6 +633,6 @@ export default function Employees() {
         </Dialog>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

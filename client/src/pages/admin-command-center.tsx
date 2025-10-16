@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import ModernLayout from "@/components/ModernLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,7 +156,7 @@ export default function AdminCommandCenter() {
   };
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto w-full">
         {/* Command Center Header */}
         <div className="mb-6">
@@ -375,6 +374,6 @@ export default function AdminCommandCenter() {
           </div>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

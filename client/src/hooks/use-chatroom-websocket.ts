@@ -3,8 +3,15 @@ import type { ChatMessage } from "@shared/schema";
 
 const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 
+interface OnlineUser {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+}
+
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message';
+  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
@@ -14,6 +21,9 @@ interface WebSocketMessage {
   roomStatus?: string;
   statusMessage?: string;
   temporaryError?: boolean;
+  // User list
+  users?: OnlineUser[];
+  count?: number;
 }
 
 export function useChatroomWebSocket(userId: string | undefined, userName: string = 'User') {
@@ -21,6 +31,7 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   // HelpDesk access control state
   const [requiresTicket, setRequiresTicket] = useState(false);
   const [roomStatus, setRoomStatus] = useState<string | null>(null);
@@ -174,6 +185,14 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
                 });
               }
               break;
+
+            case 'user_list_update':
+              // Handle real-time user presence updates
+              if (data.users && Array.isArray(data.users)) {
+                console.log('👥 User list updated:', data.users.length, 'online');
+                setOnlineUsers(data.users);
+              }
+              break;
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -275,6 +294,7 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
     sendMessage,
     sendTyping,
     typingUsers,
+    onlineUsers,
     isConnected,
     error,
     reconnect: connect,

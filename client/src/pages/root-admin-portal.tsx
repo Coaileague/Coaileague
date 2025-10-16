@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import ModernLayout from "@/components/ModernLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -390,7 +389,7 @@ export default function RootAdminPortal() {
   const silencedUsers = conversations.filter(c => c.isSilenced && c.status === 'active');
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto w-full">
         {/* Command Center Header */}
         <div className="mb-6">
@@ -1256,6 +1255,6 @@ export default function RootAdminPortal() {
           </DialogContent>
         </Dialog>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

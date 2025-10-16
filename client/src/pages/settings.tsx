@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ModernLayout from "@/components/ModernLayout";
 import {
   Building2,
   CreditCard,
@@ -137,7 +136,7 @@ export default function Settings() {
   }
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
           <div>
@@ -385,6 +384,6 @@ export default function Settings() {
         </Card>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

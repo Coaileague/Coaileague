@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Clock, Users, UserCheck, TrendingUp, FileText } from "lucide-react";
-import ModernLayout from "@/components/ModernLayout";
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -53,7 +52,7 @@ export default function Analytics() {
     : 0;
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
           <div>
@@ -233,6 +232,6 @@ export default function Analytics() {
         </div>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import ModernLayout from "@/components/ModernLayout";
 import { 
   Plus, 
   Search,
@@ -238,7 +237,7 @@ export default function Invoices() {
   );
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -542,6 +541,6 @@ export default function Invoices() {
         )}
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

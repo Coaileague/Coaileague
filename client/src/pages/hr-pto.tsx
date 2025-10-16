@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CheckCircle2, XCircle, Plus, AlertCircle } from "lucide-react";
-import ModernLayout from "@/components/ModernLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -122,11 +121,11 @@ export default function HRPTO() {
 
   if (isLoading) {
     return (
-      <ModernLayout>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
         <div className="flex justify-center items-center h-full">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
-      </ModernLayout>
+      </div>
     );
   }
 
@@ -148,7 +147,7 @@ export default function HRPTO() {
   };
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -377,6 +376,6 @@ export default function HRPTO() {
           </Card>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

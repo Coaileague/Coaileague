@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import ModernLayout from "@/components/ModernLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -135,7 +134,7 @@ export default function CustomerSupport() {
   };
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
@@ -371,6 +370,6 @@ export default function CustomerSupport() {
           </CardContent>
         </Card>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

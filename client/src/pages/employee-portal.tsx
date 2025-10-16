@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import ModernLayout from "@/components/ModernLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,7 +84,7 @@ export default function EmployeePortal() {
 
   if (!currentEmployee) {
     return (
-      <ModernLayout>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
         <div className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Employee Profile Not Found</h2>
@@ -93,14 +92,14 @@ export default function EmployeePortal() {
             You need to be registered as an employee to access the portal.
           </p>
         </div>
-      </ModernLayout>
+      </div>
     );
   }
 
   const initials = `${currentEmployee.firstName?.[0] || ''}${currentEmployee.lastName?.[0] || ''}`.toUpperCase();
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="mb-6">
@@ -406,6 +405,6 @@ export default function EmployeePortal() {
           </TabsContent>
         </Tabs>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

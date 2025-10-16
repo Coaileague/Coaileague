@@ -6,7 +6,6 @@ import {
   AlertTriangle, CheckCircle, Database, Mail, CreditCard,
   Zap, RefreshCw
 } from "lucide-react";
-import ModernLayout from "@/components/ModernLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,7 +62,7 @@ export default function AdminUsage() {
   const profitMargin = ((monthlyRevenue - totalMonthlyCost) / monthlyRevenue) * 100;
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-6">
           {/* Header */}
@@ -359,6 +358,6 @@ export default function AdminUsage() {
           </Card>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

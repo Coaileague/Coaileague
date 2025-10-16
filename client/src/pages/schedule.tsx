@@ -21,7 +21,6 @@ import {
   Files,
   AlertTriangle,
 } from "lucide-react";
-import ModernLayout from "@/components/ModernLayout";
 import { ScheduleOSPanel } from "@/components/scheduleos-panel";
 import {
   Dialog,
@@ -498,7 +497,7 @@ export default function Schedule() {
   };
 
   return (
-    <ModernLayout>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
           {/* Header */}
@@ -914,6 +913,6 @@ export default function Schedule() {
           </div>
         </div>
       </div>
-    </ModernLayout>
+    </div>
   );
 }

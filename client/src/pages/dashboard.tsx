@@ -6,7 +6,6 @@ import {
   FileText, Calendar, Clock, ArrowRight 
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import ModernLayout from "@/components/ModernLayout";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -48,8 +47,7 @@ export default function Dashboard() {
   const totalRevenue = (stats as any)?.totalRevenue || 0;
 
   return (
-    <ModernLayout>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
         <div className="space-y-4 sm:space-y-6">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2" data-testid="text-welcome">
@@ -143,6 +141,5 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </ModernLayout>
-    );
-  }
+  );
+}
