@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Activity, Users, Building2, DollarSign, Server, Database, Cpu, HardDrive,
   AlertTriangle, CheckCircle, TrendingUp, Shield, RefreshCw, Settings,
@@ -118,24 +116,15 @@ export default function RootAdminDashboard() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Header with Sidebar Toggle */}
-      <header className="flex items-center justify-between p-4 border-b bg-card">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger data-testid="button-sidebar-toggle" />
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-white" />
-            </div>
-            <h1 className="text-xl font-bold">Platform Command Center</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-        </div>
-      </header>
-
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6 max-w-[1800px] mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center gap-2 mb-6">
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+            <Shield className="h-5 w-5 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold">Platform Command Center</h1>
+        </div>
         {/* Stats Header */}
         <div className="flex items-center justify-between">
           <div>

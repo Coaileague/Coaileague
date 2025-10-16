@@ -98,11 +98,13 @@ export default function PlatformAdmin() {
   
   const saveSettingsMutation = useMutation({
     mutationFn: async (settings: typeof platformSettings) => {
-      return await apiRequest("/api/platform/settings", {
+      const response = await fetch("/api/platform/settings", {
         method: "POST",
         body: JSON.stringify(settings),
         headers: { "Content-Type": "application/json" }
       });
+      if (!response.ok) throw new Error("Failed to save settings");
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -369,7 +371,7 @@ export default function PlatformAdmin() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.supportMetrics?.openTickets || 0}</div>
-                <Button variant="link" className="h-auto p-0 text-xs">View Queue →</Button>
+                <Button variant="ghost" className="h-auto p-0 text-xs">View Queue →</Button>
               </CardContent>
             </Card>
 
