@@ -26,6 +26,8 @@ import {
   reportAttachments,
   customerReportAccess,
   supportTickets,
+  supportRooms,
+  supportTicketAccess,
   auditLogs,
   featureFlags,
   platformRevenue,
@@ -82,6 +84,10 @@ import {
   type InsertCustomerReportAccess,
   type SupportTicket,
   type InsertSupportTicket,
+  type SupportRoom,
+  type InsertSupportRoom,
+  type SupportTicketAccess,
+  type InsertSupportTicketAccess,
   type AuditLog,
   type InsertAuditLog,
   type FeatureFlag,
@@ -292,6 +298,16 @@ export interface IStorage {
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
+  
+  // HelpDesk Room operations (Professional Support Chat)
+  createSupportRoom(room: InsertSupportRoom): Promise<SupportRoom>;
+  getSupportRoomBySlug(slug: string): Promise<SupportRoom | undefined>;
+  updateSupportRoomStatus(slug: string, status: string, statusMessage: string | null, changedBy: string): Promise<SupportRoom | undefined>;
+  verifyTicketForChatAccess(ticketNumber: string, userId: string): Promise<SupportTicket | undefined>;
+  grantTicketAccess(access: InsertSupportTicketAccess): Promise<SupportTicketAccess>;
+  checkTicketAccess(userId: string, roomId: string): Promise<SupportTicketAccess | undefined>;
+  revokeTicketAccess(id: string, revokedBy: string, reason: string): Promise<boolean>;
+  incrementAccessJoinCount(accessId: string): Promise<void>;
   
   // Custom Forms operations (Organization-specific forms)
   createCustomForm(form: InsertCustomForm): Promise<CustomForm>;
@@ -1856,6 +1872,130 @@ export class DatabaseStorage implements IStorage {
           sql`${chatMessages.senderId} != ${userId}` // Only mark messages from other users as read
         )
       );
+  }
+
+  // ============================================================================
+  // HELPDESK ROOM OPERATIONS (Professional Support Chat)
+  // ============================================================================
+  
+  async createSupportRoom(roomData: InsertSupportRoom): Promise<SupportRoom> {
+    const [room] = await db
+      .insert(supportRooms)
+      .values(roomData)
+      .returning();
+    
+    return room;
+  }
+  
+  async getSupportRoomBySlug(slug: string): Promise<SupportRoom | undefined> {
+    const [room] = await db
+      .select()
+      .from(supportRooms)
+      .where(eq(supportRooms.slug, slug));
+    
+    return room;
+  }
+  
+  async updateSupportRoomStatus(
+    slug: string, 
+    status: string, 
+    statusMessage: string | null, 
+    changedBy: string
+  ): Promise<SupportRoom | undefined> {
+    const [updated] = await db
+      .update(supportRooms)
+      .set({ 
+        status,
+        statusMessage,
+        lastStatusChange: new Date(),
+        statusChangedBy: changedBy,
+        updatedAt: new Date()
+      })
+      .where(eq(supportRooms.slug, slug))
+      .returning();
+    
+    return updated;
+  }
+  
+  async verifyTicketForChatAccess(ticketNumber: string, userId: string): Promise<SupportTicket | undefined> {
+    // SECURITY: Verify ticket ownership before granting access
+    // Ticket must be:
+    // 1. Match the provided ticket number
+    // 2. Be in 'open' status
+    // 3. Have been verified (verifiedAt is not null) by support staff
+    // 4. Belong to the user (via clientId, employeeId, or associated user record)
+    
+    const [ticket] = await db
+      .select()
+      .from(supportTickets)
+      .leftJoin(employees, eq(supportTickets.employeeId, employees.id))
+      .leftJoin(clients, eq(supportTickets.clientId, clients.id))
+      .where(
+        and(
+          eq(supportTickets.ticketNumber, ticketNumber),
+          eq(supportTickets.status, 'open'),
+          isNotNull(supportTickets.verifiedAt),
+          // User must own this ticket via employee or client association
+          or(
+            eq(employees.userId, userId),
+            eq(clients.userId, userId)
+          )
+        )
+      );
+    
+    return ticket ? ticket.support_tickets : undefined;
+  }
+  
+  async grantTicketAccess(accessData: InsertSupportTicketAccess): Promise<SupportTicketAccess> {
+    const [access] = await db
+      .insert(supportTicketAccess)
+      .values(accessData)
+      .returning();
+    
+    return access;
+  }
+  
+  async checkTicketAccess(userId: string, roomId: string): Promise<SupportTicketAccess | undefined> {
+    const [access] = await db
+      .select()
+      .from(supportTicketAccess)
+      .where(
+        and(
+          eq(supportTicketAccess.userId, userId),
+          eq(supportTicketAccess.roomId, roomId),
+          eq(supportTicketAccess.isRevoked, false),
+          sql`${supportTicketAccess.expiresAt} > NOW()`
+        )
+      )
+      .orderBy(desc(supportTicketAccess.createdAt))
+      .limit(1);
+    
+    return access;
+  }
+  
+  async revokeTicketAccess(id: string, revokedBy: string, reason: string): Promise<boolean> {
+    const result = await db
+      .update(supportTicketAccess)
+      .set({
+        isRevoked: true,
+        revokedAt: new Date(),
+        revokedBy,
+        revokedReason: reason
+      })
+      .where(eq(supportTicketAccess.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  async incrementAccessJoinCount(accessId: string): Promise<void> {
+    await db
+      .update(supportTicketAccess)
+      .set({
+        joinCount: sql`${supportTicketAccess.joinCount} + 1`,
+        lastJoinedAt: new Date()
+      })
+      .where(eq(supportTicketAccess.id, accessId));
   }
 
   // ============================================================================
