@@ -72,19 +72,19 @@ export default function Landing() {
       </div>
 
       {/* Mobile Top Bar - Touch-Optimized */}
-      <div className="flex lg:hidden h-16 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] items-center justify-between px-4">
-        <div className="text-sm font-bold text-[hsl(var(--cad-text-primary))]">WorkforceOS</div>
-        <div className="flex items-center gap-2">
+      <div className="flex lg:hidden h-16 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] items-center justify-between px-3">
+        <div className="text-xs sm:text-sm font-bold text-[hsl(var(--cad-text-primary))] truncate">WorkforceOS</div>
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <Button
             variant="ghost"
             onClick={() => setLocation("/login")}
-            className="h-12 text-sm text-[hsl(var(--cad-text-secondary))]"
+            className="h-9 sm:h-10 text-xs sm:text-sm text-[hsl(var(--cad-text-secondary))] px-2 sm:px-4"
           >
             Login
           </Button>
           <Button
             onClick={() => setLocation("/register")}
-            className="h-12 text-sm bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
+            className="h-9 sm:h-10 text-xs sm:text-sm bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white px-3 sm:px-4"
             data-testid="button-get-started-mobile"
           >
             Start Free
