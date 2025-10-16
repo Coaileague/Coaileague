@@ -19,6 +19,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { SupportMobileMenu } from "@/components/support-mobile-menu";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
+import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { ChatAnnouncementBanner } from "@/components/chat-announcement-banner";
 import { BannerEditorDialog } from "@/components/banner-editor-dialog";
 import { ChatTutorialSlides } from "@/components/chat-tutorial-slides";
@@ -64,6 +65,7 @@ export default function LiveChatroomPage() {
   const [customBannerMessages, setCustomBannerMessages] = useState<any[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQueueDialog, setShowQueueDialog] = useState(false);
+  const [confirmKick, setConfirmKick] = useState<{ userId: string; userName: string } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -616,7 +618,7 @@ export default function LiveChatroomPage() {
                         {user.role === 'admin' && <Shield className="w-3 h-3 text-red-400 flex-shrink-0" />}
                         {user.role === 'support' && <Headphones className="w-3 h-3 text-indigo-400 flex-shrink-0" />}
                         {user.role === 'bot' && <Bot className="w-3 h-3 text-purple-400 flex-shrink-0" />}
-                        <span className="text-sm font-medium truncate text-slate-200">{user.name}</span>
+                        <span className="text-sm font-medium break-words text-slate-200">{user.name}</span>
                       </div>
                       {isMobileDevice() && isStaff && user.role !== 'root' && user.role !== 'bot' && (
                         <MoreVertical className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -1027,8 +1029,8 @@ export default function LiveChatroomPage() {
           </div>
         </div>
 
-        {/* Desktop Online Users Sidebar - Professional Style */}
-        <div className="w-64 border-l border-indigo-500/20 bg-slate-900/60 backdrop-blur-sm p-4 hidden md:block flex-shrink-0">
+        {/* Desktop Online Users Sidebar - Professional Style - Compact width */}
+        <div className="min-w-[180px] max-w-[280px] w-auto border-l border-indigo-500/20 bg-slate-900/60 backdrop-blur-sm p-4 hidden md:block flex-shrink-0">
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2 text-indigo-100">
@@ -1047,7 +1049,7 @@ export default function LiveChatroomPage() {
                       {user.role === 'admin' && <Shield className="w-3 h-3 text-red-400 flex-shrink-0" />}
                       {user.role === 'support' && <Headphones className="w-3 h-3 text-indigo-400 flex-shrink-0" />}
                       {user.role === 'bot' && <Bot className="w-3 h-3 text-purple-400 flex-shrink-0" />}
-                      <span className="text-sm font-medium truncate text-slate-200">{user.name}</span>
+                      <span className="text-sm font-medium break-words text-slate-200">{user.name}</span>
                     </div>
                     {user.role === 'bot' && (
                       <Sparkles className="w-3 h-3 text-purple-400 flex-shrink-0" />
@@ -1447,6 +1449,23 @@ export default function LiveChatroomPage() {
           userType: entry.userType || 'guest'
         }))}
       />
+
+      {/* Branded Confirm Dialog - Mobile Support */}
+      {confirmKick && (
+        <BrandedConfirmDialog
+          open={!!confirmKick}
+          onClose={() => setConfirmKick(null)}
+          title="Remove User from Chat?"
+          description={`Are you sure you want to remove ${confirmKick.userName} from the chat for policy violation? This action will disconnect them immediately.`}
+          confirmLabel="Remove User"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={() => {
+            // Future: Add kickUser functionality here
+            setConfirmKick(null);
+          }}
+        />
+      )}
     </div>
   );
 }

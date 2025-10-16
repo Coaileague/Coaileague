@@ -67,19 +67,8 @@ export function ChatAnnouncementBanner({
     }
   }, []);
 
-  // Emoticon mapping
-  const emoticons: Record<string, string> = {
-    wave: "👋",
-    star: "⭐",
-    fire: "🔥",
-    rocket: "🚀",
-    party: "🎉",
-    heart: "❤️",
-    check: "✅",
-    clock: "⏰",
-    bell: "🔔",
-    trophy: "🏆"
-  };
+  // No emoticons - guidelines prohibit emojis
+  const emoticons: Record<string, string> = {};
 
   // Icon mapping
   const iconMap: Record<string, any> = {
@@ -95,46 +84,149 @@ export function ChatAnnouncementBanner({
     heart: Heart
   };
 
-  // Default rotating messages
-  const defaultMessages: BannerMessage[] = [
-    {
-      id: '1',
-      text: `Queue Position: You are #${queuePosition || 1} in line - Estimated wait: ${queueWaitTime}`,
-      type: 'queue',
-      icon: 'clock',
-      emoticon: 'clock'
-    },
-    {
-      id: '2',
-      text: `${onlineStaff} Support Agents Online - We're here to help!`,
-      type: 'info',
-      icon: 'users',
-      emoticon: 'wave'
-    },
-    {
-      id: '3',
-      text: 'Type /staff to see online support agents',
-      type: 'info',
-      icon: 'message',
-      emoticon: 'star'
-    },
-    {
-      id: '4',
-      text: 'New Feature: AI-Powered Quick Responses!',
-      type: 'promo',
-      link: '/features',
-      icon: 'zap',
-      emoticon: 'rocket'
-    },
-    {
-      id: '5',
-      text: '✨ WorkforceOS Elite - Upgrade for Priority Support',
-      type: 'promo',
-      link: '/pricing',
-      icon: 'award',
-      emoticon: 'trophy'
+  // Get seasonal messages based on current date
+  const getSeasonalMessages = (): BannerMessage[] => {
+    const baseMessages: BannerMessage[] = [
+      {
+        id: '1',
+        text: `Queue Position: You are #${queuePosition || 1} in line - Estimated wait: ${queueWaitTime}`,
+        type: 'queue',
+        icon: 'clock'
+      },
+      {
+        id: '2',
+        text: `${onlineStaff} Support Agents Online - We're here to help!`,
+        type: 'info',
+        icon: 'users'
+      }
+    ];
+
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+
+    // New Year (January 1-7)
+    if (month === 1 && day <= 7) {
+      return [...baseMessages,
+        {
+          id: '3',
+          text: 'Happy New Year! New features launching this month - Stay tuned!',
+          type: 'promo',
+          icon: 'zap'
+        },
+        {
+          id: '4',
+          text: 'Start 2025 Strong - Upgrade to Elite for 20% off first month!',
+          type: 'promo',
+          link: '/pricing',
+          icon: 'award'
+        }
+      ];
     }
-  ];
+    
+    // Valentine's Day (February)
+    if (month === 2) {
+      return [...baseMessages,
+        {
+          id: '3',
+          text: 'We love our customers! Special Valentine pricing on all plans',
+          type: 'promo',
+          link: '/pricing',
+          icon: 'heart'
+        },
+        {
+          id: '4',
+          text: 'Share the love - Refer a friend and both get $50 credit',
+          type: 'promo',
+          icon: 'award'
+        }
+      ];
+    }
+
+    // Independence Day (July 1-7)
+    if (month === 7 && day <= 7) {
+      return [...baseMessages,
+        {
+          id: '3',
+          text: 'Celebrate Independence - Free AI features for all Elite subscribers!',
+          type: 'promo',
+          link: '/features',
+          icon: 'zap'
+        },
+        {
+          id: '4',
+          text: 'Freedom to automate - Start your free trial today',
+          type: 'promo',
+          link: '/pricing',
+          icon: 'award'
+        }
+      ];
+    }
+
+    // Halloween (October)
+    if (month === 10) {
+      return [...baseMessages,
+        {
+          id: '3',
+          text: 'Spooky good deals! Get 31% off Elite plans this October',
+          type: 'promo',
+          link: '/pricing',
+          icon: 'award'
+        },
+        {
+          id: '4',
+          text: 'No tricks, just treats - AI-powered automation at your fingertips',
+          type: 'promo',
+          icon: 'zap'
+        }
+      ];
+    }
+
+    // Winter/Christmas (December)
+    if (month === 12) {
+      return [...baseMessages,
+        {
+          id: '3',
+          text: 'Holiday Special: Elite plan + 3 months free AI credits!',
+          type: 'promo',
+          link: '/pricing',
+          icon: 'award'
+        },
+        {
+          id: '4',
+          text: 'Give the gift of automation - Gift cards now available!',
+          type: 'promo',
+          icon: 'heart'
+        }
+      ];
+    }
+
+    // Default year-round messages
+    return [...baseMessages,
+      {
+        id: '3',
+        text: 'Type /help for available commands | /queue to check position',
+        type: 'info',
+        icon: 'message'
+      },
+      {
+        id: '4',
+        text: 'AI-Powered Support - Instant answers with GPT-4 HelpOS™',
+        type: 'promo',
+        link: '/features',
+        icon: 'zap'
+      },
+      {
+        id: '5',
+        text: 'WorkforceOS Elite - Priority support + advanced automation',
+        type: 'promo',
+        link: '/pricing',
+        icon: 'award'
+      }
+    ];
+  };
+
+  const defaultMessages = getSeasonalMessages();
 
   const messages = customMessages.length > 0 ? customMessages : defaultMessages;
 
@@ -172,17 +264,14 @@ export function ChatAnnouncementBanner({
           {[...Array(15)].map((_, i) => (
             <div
               key={i}
-              className="absolute text-white/60 animate-pulse"
+              className="absolute w-2 h-2 bg-white/60 rounded-full"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `-${Math.random() * 20}px`,
                 animation: `fall ${3 + Math.random() * 2}s linear infinite`,
-                animationDelay: `${Math.random() * 3}s`,
-                fontSize: `${8 + Math.random() * 6}px`
+                animationDelay: `${Math.random() * 3}s`
               }}
-            >
-              ❄️
-            </div>
+            />
           ))}
         </div>
       )}
@@ -191,16 +280,14 @@ export function ChatAnnouncementBanner({
           {[...Array(8)].map((_, i) => (
             <div
               key={i}
-              className="absolute animate-ping"
+              className="absolute w-3 h-3 bg-yellow-300/50 rounded-full animate-ping"
               style={{
                 left: `${10 + Math.random() * 80}%`,
                 top: `${Math.random() * 100}%`,
                 animationDuration: `${1 + Math.random()}s`,
                 animationDelay: `${Math.random() * 2}s`,
               }}
-            >
-              ✨
-            </div>
+            />
           ))}
         </div>
       )}
@@ -209,16 +296,13 @@ export function ChatAnnouncementBanner({
           {[...Array(10)].map((_, i) => (
             <div
               key={i}
-              className="absolute text-pink-300/50"
+              className="absolute w-2 h-2 bg-pink-300/50 rounded-full"
               style={{
                 left: `${Math.random() * 100}%`,
                 animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-                animationDelay: `${Math.random() * 2}s`,
-                fontSize: `${10 + Math.random() * 8}px`
+                animationDelay: `${Math.random() * 2}s`
               }}
-            >
-              💕
-            </div>
+            />
           ))}
         </div>
       )}
@@ -227,16 +311,13 @@ export function ChatAnnouncementBanner({
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="absolute text-orange-400/40 animate-bounce"
+              className="absolute w-3 h-3 bg-orange-400/40 rounded-full animate-bounce"
               style={{
                 left: `${Math.random() * 100}%`,
                 animationDuration: `${2 + Math.random()}s`,
-                animationDelay: `${Math.random() * 1.5}s`,
-                fontSize: `${12 + Math.random() * 6}px`
+                animationDelay: `${Math.random() * 1.5}s`
               }}
-            >
-              🎃
-            </div>
+            />
           ))}
         </div>
       )}

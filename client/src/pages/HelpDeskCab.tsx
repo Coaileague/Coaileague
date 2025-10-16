@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { WFLogoCompact } from "@/components/wf-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
+import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { formatDistanceToNow } from "date-fns";
 import {
   ContextMenu,
@@ -39,6 +40,7 @@ export default function HelpDeskCab() {
     requestedBy: string;
     message?: string;
   } | null>(null);
+  const [confirmKick, setConfirmKick] = useState<{ userId: string; userName: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // IRC-style MOTD and helpful info banners
@@ -338,9 +340,9 @@ export default function HelpDeskCab() {
       {/* Main Layout with Collapsible Sidebar */}
       <main className="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full">
         
-        {/* LEFT COLUMN: Support Staff Controls (Collapsible with Scrolling) */}
+        {/* LEFT COLUMN: Support Staff Controls (Collapsible with Scrolling) - Compact */}
         {!sidebarCollapsed && (
-          <section className="w-64 bg-white/90 backdrop-blur-sm border-r border-slate-300 flex flex-col transition-all">
+          <section className="w-48 bg-white/90 backdrop-blur-sm border-r border-slate-300 flex flex-col transition-all flex-shrink-0">
             <div className="p-3 border-b border-blue-200 flex-shrink-0">
               <h2 className="text-sm font-bold text-blue-900 flex items-center">
                 <Settings className="w-4 h-4 mr-2 text-blue-600" />
@@ -628,8 +630,8 @@ export default function HelpDeskCab() {
           </div>
         </section>
 
-        {/* RIGHT COLUMN: User List with PROMINENT ICONS */}
-        <section className="w-72 bg-white/90 backdrop-blur-sm border-l border-slate-300 flex flex-col">
+        {/* RIGHT COLUMN: User List with PROMINENT ICONS - Dynamic width based on content */}
+        <section className="min-w-[200px] max-w-[320px] w-auto bg-white/90 backdrop-blur-sm border-l border-slate-300 flex flex-col flex-shrink-0">
           <div className="p-4 border-b border-blue-200 flex-shrink-0 bg-gradient-to-r from-blue-50 to-slate-50">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-700 flex-shrink-0" />
@@ -673,8 +675,8 @@ export default function HelpDeskCab() {
                         
                         {/* User Name and Role */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-sm font-semibold truncate ${getRoleColor(u.role)}`} title={u.name}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-sm font-semibold break-words ${getRoleColor(u.role)}`}>
                               {u.name}
                             </span>
                             {getRoleIcon(u.role)}
@@ -773,11 +775,7 @@ export default function HelpDeskCab() {
                           </ContextMenuItem>
                           
                           <ContextMenuItem 
-                            onClick={() => {
-                              if (confirm(`Remove ${u.name} from chat for policy violation?`)) {
-                                kickUser(u.id, 'policy violation');
-                              }
-                            }}
+                            onClick={() => setConfirmKick({ userId: u.id, userName: u.name })}
                             className="text-red-600 font-bold"
                           >
                             🚫 Kick User
@@ -812,6 +810,23 @@ export default function HelpDeskCab() {
               data: data
             });
             setSecureRequest(null);
+          }}
+        />
+      )}
+
+      {/* Branded Confirm Dialog - Kick User */}
+      {confirmKick && (
+        <BrandedConfirmDialog
+          open={!!confirmKick}
+          onClose={() => setConfirmKick(null)}
+          title="Remove User from Chat?"
+          description={`Are you sure you want to remove ${confirmKick.userName} from the chat for policy violation? This action will disconnect them immediately.`}
+          confirmLabel="Remove User"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={() => {
+            kickUser(confirmKick.userId, 'policy violation');
+            setConfirmKick(null);
           }}
         />
       )}
