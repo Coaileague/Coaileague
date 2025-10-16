@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { storage } from './storage';
 import { formatUserDisplayName } from './utils/formatUserDisplayName';
-import { generateGreeting } from './services/aiBot';
+import { generateGreeting, getAiResponse, shouldBotRespond } from './services/aiBot';
 import type { ChatMessage } from '@shared/schema';
 
 interface WebSocketClient extends WebSocket {

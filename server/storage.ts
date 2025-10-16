@@ -35,6 +35,7 @@ import {
   platformRoles,
   chatConversations,
   chatMessages,
+  aiUsageLogs,
   customForms,
   customFormSubmissions,
   type User,
@@ -2138,29 +2139,52 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Get AI usage count for a user (for free tier limits)
+   * Get AI usage count for a user this month (for free tier limits)
    */
   async getAiUsageCount(userId: string): Promise<number> {
-    // Simple in-memory tracking for now - could be moved to database table later
-    // This resets on server restart, which is fine for a trial/demo feature
-    if (!this.aiUsageCache) {
-      this.aiUsageCache = new Map<string, number>();
-    }
-    return this.aiUsageCache.get(userId) || 0;
+    const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const logs = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiUsageLogs)
+      .where(
+        and(
+          eq(aiUsageLogs.userId, userId),
+          eq(aiUsageLogs.billingMonth, billingMonth)
+        )
+      );
+    return Number(logs[0]?.count || 0);
   }
 
   /**
-   * Increment AI usage count for a user
+   * Increment AI usage count for a user (deprecated - use logAiUsage instead)
    */
   async incrementAiUsage(userId: string): Promise<void> {
-    if (!this.aiUsageCache) {
-      this.aiUsageCache = new Map<string, number>();
-    }
-    const current = this.aiUsageCache.get(userId) || 0;
-    this.aiUsageCache.set(userId, current + 1);
+    // Usage is now tracked in logAiUsage - this is kept for compatibility
+    // but doesn't need to do anything since logAiUsage handles tracking
   }
 
-  private aiUsageCache?: Map<string, number>;
+  /**
+   * Log AI usage for billing purposes (subscriber pays model)
+   */
+  async logAiUsage(data: {
+    conversationId: string;
+    workspaceId: string;
+    userId: string | null;
+    messageId: string | null;
+    requestType: string;
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    promptCost: string;
+    completionCost: string;
+    totalCost: string;
+    userTier: string;
+    usageCount: number;
+    billingMonth: string;
+  }): Promise<void> {
+    await db.insert(aiUsageLogs).values(data);
+  }
 }
 
 export const storage = new DatabaseStorage();

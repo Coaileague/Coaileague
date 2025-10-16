@@ -1,13 +1,23 @@
-// AI Bot service for HelpDesk - greets and assists customers until human help arrives
-// Uses Replit AI Integrations (OpenAI-compatible) - no API key needed, charges to Replit credits
+// AI Bot service for HelpOS - greets and assists customers until human help arrives
+// Subscriber-Pays Model: WorkforceOS subscribers pay for AI usage, we track costs and bill monthly
 import OpenAI from "openai";
 import { storage } from '../storage';
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
 });
+
+// Cost-efficient model for chat support (subscribers pay for usage)
+const AI_MODEL = "gpt-4o-mini"; // Much cheaper than GPT-4/5, perfect for support chat
+
+// Pricing per 1M tokens (USD) - Subscribers pay these costs
+const PRICING = {
+  "gpt-4o-mini": {
+    input: 0.15,    // $0.15 per 1M input tokens
+    output: 0.60    // $0.60 per 1M output tokens
+  }
+};
 
 const FREE_GUEST_LIMIT = 3; // Free guests get 3 AI responses as trial
 
@@ -15,6 +25,12 @@ interface AiBotResponse {
   message: string;
   usageCount: number;
   limitReached: boolean;
+  tokenUsage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    totalCost: number; // USD
+  };
 }
 
 /**
@@ -29,10 +45,22 @@ export async function generateGreeting(userName: string, isGuest: boolean): Prom
 }
 
 /**
- * Get AI response to user question with tier-based limits
+ * Calculate cost in USD based on token usage
+ */
+function calculateCost(promptTokens: number, completionTokens: number): number {
+  const pricing = PRICING[AI_MODEL];
+  const promptCost = (promptTokens / 1_000_000) * pricing.input;
+  const completionCost = (completionTokens / 1_000_000) * pricing.output;
+  return promptCost + completionCost;
+}
+
+/**
+ * Get AI response to user question with tier-based limits and cost tracking
  */
 export async function getAiResponse(
   userId: string,
+  workspaceId: string,
+  conversationId: string,
   userMessage: string,
   conversationHistory: Array<{ role: 'user' | 'assistant', content: string }>,
   isSubscriber: boolean
@@ -50,22 +78,24 @@ export async function getAiResponse(
   }
 
   try {
-    // Generate AI response using GPT-5
+    // Generate AI response using cost-efficient GPT-4o-mini
     const completion = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",
-          content: `You are a helpful AI assistant for WorkforceOS HelpDesk. WorkforceOS is an elite workforce management platform that automates HR functions including time tracking, payroll, scheduling, hiring, and analytics.
+          content: `You are a helpful AI assistant for WorkforceOS HelpOS™. WorkforceOS is an elite workforce management platform that automates HR functions including time tracking, payroll, scheduling, hiring, and analytics.
 
 Be friendly, professional, and concise. If you don't know something specific about WorkforceOS features, be honest and suggest they speak with a team member.
 
 Key features you can mention:
-- Time Tracking & Invoicing
-- Smart Scheduling with AI auto-scheduling
-- Employee Onboarding (HireOS)
-- Payroll Management
-- Analytics Dashboard
+- Time Tracking & Invoicing (TrackOS™, BillOS™)
+- Smart Scheduling with AI auto-scheduling (ScheduleOS™)
+- Employee Onboarding (HireOS™)
+- Payroll Management (PayrollOS™)
+- Report Management (ReportOS™)
+- Analytics Dashboard (AnalyticsOS™)
+- Live Support Chat (HelpOS™)
 - Multi-tenant workspaces
 - Role-based access control
 
@@ -82,6 +112,33 @@ Keep responses under 150 words.`
     });
 
     const aiMessage = completion.choices[0]?.message?.content || "I'm having trouble responding right now. Please try again or contact our team.";
+    
+    // Extract token usage for cost calculation
+    const usage = completion.usage;
+    const promptTokens = usage?.prompt_tokens || 0;
+    const completionTokens = usage?.completion_tokens || 0;
+    const totalTokens = usage?.total_tokens || 0;
+    const totalCost = calculateCost(promptTokens, completionTokens);
+    
+    // Log AI usage for subscriber billing (they pay, we don't)
+    const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    await storage.logAiUsage({
+      conversationId,
+      workspaceId,
+      userId,
+      messageId: null, // Will be set after message is saved
+      requestType: 'question',
+      model: AI_MODEL,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      promptCost: ((promptTokens / 1_000_000) * PRICING[AI_MODEL].input).toString(),
+      completionCost: ((completionTokens / 1_000_000) * PRICING[AI_MODEL].output).toString(),
+      totalCost: totalCost.toString(),
+      userTier: isSubscriber ? 'subscriber' : 'free_guest',
+      usageCount: usageCount + 1,
+      billingMonth
+    });
     
     // Increment usage count for free guests
     if (!isSubscriber) {
@@ -100,7 +157,13 @@ Keep responses under 150 words.`
     return {
       message: responseMessage,
       usageCount: newUsageCount,
-      limitReached: false
+      limitReached: false,
+      tokenUsage: {
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        totalCost
+      }
     };
 
   } catch (error) {
