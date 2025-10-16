@@ -66,9 +66,9 @@ export function setupWebSocket(server: Server) {
             const displayName = userInfo ? formatUserDisplayName({
               firstName: userInfo.firstName,
               lastName: userInfo.lastName,
-              email: userInfo.email,
-              platformRole: userInfo.platformRole,
-              workspaceRole: userInfo.workspaceRole,
+              email: userInfo.email || undefined,
+              platformRole: userInfo.platformRole || undefined,
+              workspaceRole: userInfo.workspaceRole || undefined,
             }) : 'User';
 
             // HELPDESK ACCESS CONTROL: For the main HelpDesk room (public IRC-style chatroom)
@@ -195,9 +195,9 @@ export function setupWebSocket(server: Server) {
             const displayName = userInfo ? formatUserDisplayName({
               firstName: userInfo.firstName,
               lastName: userInfo.lastName,
-              email: userInfo.email,
-              platformRole: userInfo.platformRole,
-              workspaceRole: userInfo.workspaceRole,
+              email: userInfo.email || undefined,
+              platformRole: userInfo.platformRole || undefined,
+              workspaceRole: userInfo.workspaceRole || undefined,
             }) : payload.senderName || 'User';
 
             // Save message to database
@@ -272,9 +272,9 @@ export function setupWebSocket(server: Server) {
           const displayName = userInfo ? formatUserDisplayName({
             firstName: userInfo.firstName,
             lastName: userInfo.lastName,
-            email: userInfo.email,
-            platformRole: userInfo.platformRole,
-            workspaceRole: userInfo.workspaceRole,
+            email: userInfo.email || undefined,
+            platformRole: userInfo.platformRole || undefined,
+            workspaceRole: userInfo.workspaceRole || undefined,
           }) : 'User';
 
           // Create leave announcement
