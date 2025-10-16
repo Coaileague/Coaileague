@@ -31,7 +31,11 @@ The platform features a CAD-style professional interface with a dark mode theme,
     - **HR Management Suite**: Employee Benefits, Performance Reviews, PTO Management, Employee Terminations with comprehensive CRUD and workflow management.
     - **Custom Forms System**: Production-ready system for organization-specific forms with e-signature and document upload, including an admin form builder UI.
     - **AI Sales CRM**: AI-powered lead generation (GPT-4), 7-stage sales pipeline tracking, CRM features, email campaigns with AI personalization.
-    - **Live HelpDesk (SupportOS™)**: IRC/MSN-style instant chat with WebSocket messaging, ticket-based access control with 48-hour expiration, real-time status indicators (open/closed/maintenance), staff toggle controls for room management, platform staff bypass for admin monitoring, audit logging, and graceful degraded mode for reliability.
+    - **Live HelpDesk (SupportOS™)**: IRC/MSN-style instant chat with WebSocket messaging, ticket-based authentication for guests, real-time status indicators (open/closed/maintenance), staff toggle controls for room management, platform staff bypass for admin monitoring, audit logging, and graceful degraded mode for reliability.
+        - **Customer Access**: Submit contact form → Receive unique ticket number (TKT-XXXXXX) → Authenticate with ticket# + email → Access chat as guest
+        - **Support Staff Access**: Two methods - (1) Login normally with platform credentials (bypasses all restrictions), or (2) Authenticate as guest using work ID + email
+        - **Guest Sessions**: Temporary user accounts created on-the-fly for ticket holders, tied to platform-external workspace
+        - **Security**: Email validation against ticket owner, rate limiting, session management
 - **Admin Dashboards**: Usage, Support, and Command Center for platform monitoring and customer management.
 - **Portals**: Employee, Auditor/Bookkeeper, and Client/Subscriber portals.
 - **Billing & Monetization**: Transaction-based platform fee (3-10%) via Stripe Connect. Tier-based pricing (Professional, Enterprise, Elite) with feature flags. AI features follow a subscriber-pays-all model.

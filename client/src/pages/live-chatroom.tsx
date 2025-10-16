@@ -45,6 +45,9 @@ export default function LiveChatroomPage() {
   const { data: currentUser, isLoading: isLoadingUser } = useQuery<{ user: { id: string; email: string; platformRole?: string } }>({
     queryKey: ["/api/auth/me"],
     retry: false,
+    staleTime: 60000, // Cache for 60 seconds to prevent spam
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if data exists
   });
   
   const userId = currentUser?.user?.id;
@@ -53,23 +56,28 @@ export default function LiveChatroomPage() {
     ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(currentUser.user.platformRole);
   const isAuthenticated = !!currentUser?.user;
   
-  // Fetch HelpDesk room info
+  // Fetch HelpDesk room info (only if authenticated)
   const { data: helpDeskRoom } = useQuery<{ status: string; statusMessage: string | null }>({
     queryKey: ['/api/helpdesk/room/helpdesk'],
-    enabled: !!userId,
+    enabled: !!userId && isAuthenticated,
     retry: false,
+    staleTime: 30000,
   });
   
-  // Use WebSocket for real-time messaging
+  // Use WebSocket for real-time messaging (only if authenticated)
   const { 
     messages, sendMessage, isConnected, error, reconnect,
     requiresTicket, roomStatus, statusMessage: wsStatusMessage, temporaryError, clearAccessError
-  } = useChatroomWebSocket(userId, userName);
+  } = useChatroomWebSocket(isAuthenticated ? userId : undefined, userName);
 
-  // Show ticket dialog if not authenticated
+  // Show ticket dialog if not authenticated (after loading completes)
   useEffect(() => {
     if (!isLoadingUser && !isAuthenticated) {
-      setShowTicketDialog(true);
+      // Small delay to prevent showing dialog during navigation
+      const timer = setTimeout(() => {
+        setShowTicketDialog(true);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [isLoadingUser, isAuthenticated]);
 
@@ -489,7 +497,7 @@ export default function LiveChatroomPage() {
       </div>
 
       {/* Ticket Authentication Dialog */}
-      <Dialog open={showTicketDialog} onOpenChange={setShowTicketDialog}>
+      <Dialog open={showTicketDialog && !isLoadingUser} onOpenChange={setShowTicketDialog}>
         <DialogContent data-testid="dialog-ticket-verification">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
