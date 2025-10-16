@@ -720,7 +720,12 @@ export default function LiveChatroomPage() {
       </div>
 
       {/* Dual Authentication Dialog (Customer or Staff) - Fortune 500 Professional Style */}
-      <Dialog open={showTicketDialog && !isLoadingUser} onOpenChange={setShowTicketDialog}>
+      <Dialog open={showTicketDialog && !isLoadingUser} onOpenChange={(open) => {
+        if (!open) {
+          // If closing dialog without authentication, redirect to home
+          window.location.href = '/';
+        }
+      }}>
         <DialogContent data-testid="dialog-ticket-verification" className="w-[95vw] max-w-md max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 via-slate-900/95 to-indigo-950/40 border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
           <div className="p-4 sm:p-6 pb-0 relative">
             {/* Subtle animated gradient overlay */}
@@ -879,7 +884,7 @@ export default function LiveChatroomPage() {
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowTicketDialog(false)}
+                  onClick={() => window.location.href = '/'}
                   data-testid="button-cancel-auth"
                   size="sm"
                   className="w-full sm:w-auto text-xs sm:text-sm"
