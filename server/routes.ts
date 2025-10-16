@@ -3872,6 +3872,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // HELPDESK SYSTEM API ROUTES (Professional Support Chat Rooms)
+  // ============================================================================
+
+  // Get HelpDesk room info and status by slug
+  app.get('/api/helpdesk/room/:slug', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { slug } = req.params;
+      const room = await storage.getSupportRoomBySlug(slug);
+      
+      if (!room) {
+        return res.status(404).json({ message: "HelpDesk room not found" });
+      }
+      
+      res.json(room);
+    } catch (error) {
+      console.error("Error fetching HelpDesk room:", error);
+      res.status(500).json({ message: "Failed to fetch HelpDesk room" });
+    }
+  });
+
+  // Toggle HelpDesk room status (open/closed) - Staff only
+  app.post('/api/helpdesk/room/:slug/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { slug } = req.params;
+      const { status, statusMessage } = req.body;
+      const userId = req.user!.id;
+      
+      // SECURITY: Only platform staff can toggle room status
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Staff access required" });
+      }
+      
+      // Validate status
+      if (!['open', 'closed', 'maintenance'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be 'open', 'closed', or 'maintenance'" });
+      }
+      
+      const updated = await storage.updateSupportRoomStatus(slug, status, statusMessage || null, userId);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "HelpDesk room not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating HelpDesk room status:", error);
+      res.status(500).json({ message: "Failed to update room status" });
+    }
+  });
+
+  // Verify ticket and grant chat access (gatekeeper MOMJJ)
+  app.post('/api/helpdesk/verify-ticket', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { ticketNumber, roomSlug } = req.body;
+      const userId = req.user!.id;
+      
+      if (!ticketNumber || !roomSlug) {
+        return res.status(400).json({ message: "Ticket number and room slug are required" });
+      }
+      
+      // Get the room
+      const room = await storage.getSupportRoomBySlug(roomSlug);
+      if (!room) {
+        return res.status(404).json({ message: "HelpDesk room not found" });
+      }
+      
+      // Check if room is open
+      if (room.status !== 'open') {
+        return res.status(403).json({ 
+          message: "HelpDesk room is currently closed",
+          statusMessage: room.statusMessage 
+        });
+      }
+      
+      // SECURITY: Verify ticket ownership and validation
+      const ticket = await storage.verifyTicketForChatAccess(ticketNumber, userId);
+      
+      if (!ticket) {
+        return res.status(403).json({ 
+          message: "Invalid ticket or unauthorized access. Ticket must be verified by support staff and belong to you." 
+        });
+      }
+      
+      // Check if user already has valid access
+      let access = await storage.checkTicketAccess(userId, room.id);
+      
+      if (!access) {
+        // Grant new access (48 hours)
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 48);
+        
+        access = await storage.grantTicketAccess({
+          ticketId: ticket.id,
+          userId,
+          roomId: room.id,
+          grantedBy: userId, // Self-granted after ticket verification
+          expiresAt,
+        });
+      }
+      
+      res.json({ 
+        access,
+        room,
+        message: "Access granted to HelpDesk room" 
+      });
+    } catch (error) {
+      console.error("Error verifying ticket:", error);
+      res.status(500).json({ message: "Failed to verify ticket" });
+    }
+  });
+
+  // Check if user has access to a HelpDesk room
+  app.get('/api/helpdesk/check-access/:roomSlug', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { roomSlug } = req.params;
+      const userId = req.user!.id;
+      
+      // Get the room
+      const room = await storage.getSupportRoomBySlug(roomSlug);
+      if (!room) {
+        return res.status(404).json({ message: "HelpDesk room not found" });
+      }
+      
+      // Check if user is staff (always has access)
+      const platformRole = await storage.getUserPlatformRole(userId);
+      const isStaff = platformRole && ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+      
+      if (isStaff) {
+        return res.json({ 
+          hasAccess: true,
+          accessType: 'staff',
+          room 
+        });
+      }
+      
+      // Check ticket-based access
+      const access = await storage.checkTicketAccess(userId, room.id);
+      
+      if (access) {
+        return res.json({ 
+          hasAccess: true,
+          accessType: 'ticket',
+          access,
+          room 
+        });
+      }
+      
+      res.json({ 
+        hasAccess: false,
+        room 
+      });
+    } catch (error) {
+      console.error("Error checking access:", error);
+      res.status(500).json({ message: "Failed to check access" });
+    }
+  });
+
+  // Revoke ticket access - Staff only
+  app.post('/api/helpdesk/revoke-access', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { accessId, reason } = req.body;
+      const userId = req.user!.id;
+      
+      // SECURITY: Only platform staff can revoke access
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Staff access required" });
+      }
+      
+      if (!accessId) {
+        return res.status(400).json({ message: "Access ID is required" });
+      }
+      
+      const revoked = await storage.revokeTicketAccess(accessId, userId, reason || "Revoked by staff");
+      
+      if (!revoked) {
+        return res.status(404).json({ message: "Access record not found" });
+      }
+      
+      res.json({ message: "Access revoked successfully" });
+    } catch (error) {
+      console.error("Error revoking access:", error);
+      res.status(500).json({ message: "Failed to revoke access" });
+    }
+  });
+
+  // ============================================================================
   // SALES PORTAL API ROUTES (Platform Staff Only)
   // ============================================================================
 
