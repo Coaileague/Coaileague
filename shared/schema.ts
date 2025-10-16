@@ -1852,6 +1852,10 @@ export const supportTickets = pgTable("support_tickets", {
   resolvedAt: timestamp("resolved_at"),
   resolvedBy: varchar("resolved_by").references(() => users.id),
   
+  // Verification for chatroom access (gatekeeper MOMJJ)
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by").references(() => users.id), // Support staff who verified
+  
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2277,3 +2281,83 @@ export type InsertEmailCampaign = z.infer<typeof insertEmailCampaignSchema>;
 export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 export type InsertEmailSend = z.infer<typeof insertEmailSendSchema>;
 export type EmailSend = typeof emailSends.$inferSelect;
+
+// ============================================================================
+// HELPDESK SYSTEM - Professional Support Chat Rooms
+// ============================================================================
+
+// Support Rooms - Persistent chatrooms with status management
+export const supportRooms = pgTable("support_rooms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Room identification
+  slug: varchar("slug").notNull().unique(), // 'helpdesk', 'emergency', etc.
+  name: varchar("name").notNull(), // 'HelpDesk', 'Emergency Support'
+  description: text("description"), // 'Professional platform support'
+  
+  // Room status (controls access and visibility)
+  status: varchar("status").default("open"), // 'open' (green), 'closed' (red), 'maintenance'
+  statusMessage: text("status_message"), // Custom message when closed
+  
+  // Workspace scope (null = platform-wide room)
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Associated chat conversation
+  conversationId: varchar("conversation_id").references(() => chatConversations.id, { onDelete: 'cascade' }),
+  
+  // Access control
+  requiresTicket: boolean("requires_ticket").default(false), // Clients need verified ticket
+  allowedRoles: jsonb("allowed_roles"), // ['platform_admin', 'support_staff', 'deputy_admin']
+  
+  // Status tracking
+  lastStatusChange: timestamp("last_status_change").defaultNow(),
+  statusChangedBy: varchar("status_changed_by").references(() => users.id), // Support staff who toggled
+  
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSupportRoomSchema = createInsertSchema(supportRooms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSupportRoom = z.infer<typeof insertSupportRoomSchema>;
+export type SupportRoom = typeof supportRooms.$inferSelect;
+
+// Support Ticket Access - Tracks verified ticket holders' chatroom access
+export const supportTicketAccess = pgTable("support_ticket_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relationships
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  roomId: varchar("room_id").notNull().references(() => supportRooms.id, { onDelete: 'cascade' }),
+  
+  // Access control
+  grantedBy: varchar("granted_by").notNull().references(() => users.id), // Support staff who verified
+  expiresAt: timestamp("expires_at").notNull(), // Time-limited access (e.g., 24-48 hours)
+  
+  // Usage tracking
+  joinCount: integer("join_count").default(0),
+  lastJoinedAt: timestamp("last_joined_at"),
+  
+  // Status
+  isRevoked: boolean("is_revoked").default(false),
+  revokedAt: timestamp("revoked_at"),
+  revokedBy: varchar("revoked_by").references(() => users.id),
+  revokedReason: text("revoked_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSupportTicketAccessSchema = createInsertSchema(supportTicketAccess).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSupportTicketAccess = z.infer<typeof insertSupportTicketAccessSchema>;
+export type SupportTicketAccess = typeof supportTicketAccess.$inferSelect;
