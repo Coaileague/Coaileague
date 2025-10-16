@@ -736,13 +736,34 @@ export function setupWebSocket(server: Server) {
                     break;
                   }
                   
-                  // System announcement
+                  // Check if target user is actually connected
+                  let userFound = false;
+                  let wasConnected = false;
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.userId === targetUsername && client.readyState === WebSocket.OPEN) {
+                        userFound = true;
+                        wasConnected = true;
+                        // Send kick event to target user
+                        client.send(JSON.stringify({
+                          type: 'kicked',
+                          reason: reason,
+                        }));
+                        client.close(1000, `Kicked: ${reason}`);
+                      }
+                    });
+                  }
+                  
+                  // System announcement with appropriate feedback
                   const kickMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: null,
                     senderName: 'Server',
                     senderType: 'system',
-                    message: `${displayName} removed ${targetUsername} from chat. Reason: ${reason}`,
+                    message: wasConnected 
+                      ? `✅ ${displayName} removed ${targetUsername} from chat. Reason: ${reason}`
+                      : `⚠️ Command executed: ${displayName} attempted to kick ${targetUsername} (user not currently connected or is simulated/test user). Reason: ${reason}`,
                     messageType: 'text',
                     isSystemMessage: true,
                   });
@@ -751,14 +772,6 @@ export function setupWebSocket(server: Server) {
                     clients.forEach((client) => {
                       if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({ type: 'new_message', message: kickMsg }));
-                        // Send kick event to target user
-                        if (client.userId === targetUsername) {
-                          client.send(JSON.stringify({
-                            type: 'kicked',
-                            reason: reason,
-                          }));
-                          client.close(1000, `Kicked: ${reason}`);
-                        }
                       }
                     });
                   }
@@ -778,12 +791,29 @@ export function setupWebSocket(server: Server) {
                     break;
                   }
                   
+                  // Check if target user is actually connected
+                  let userConnected = false;
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.userId === targetUsername && client.readyState === WebSocket.OPEN) {
+                        userConnected = true;
+                        // Send mute notification to target user
+                        client.send(JSON.stringify({
+                          type: 'muted',
+                          duration: duration,
+                        }));
+                      }
+                    });
+                  }
+                  
                   const muteMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
                     senderName: 'HelpOS™',
                     senderType: 'bot',
-                    message: `🔇 **User Muted**\n\n**${targetUsername}** has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`,
+                    message: userConnected
+                      ? `🔇 **User Muted**\n\n**${targetUsername}** has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`
+                      : `⚠️ **Mute Command Executed**\n\nAttempted to mute **${targetUsername}** for ${duration} minutes.\n\n⚠️ *Note: User not currently connected or is a simulated/test user. Command worked but had no active target.*`,
                     messageType: 'text',
                   });
                   
@@ -809,12 +839,29 @@ export function setupWebSocket(server: Server) {
                     break;
                   }
                   
+                  // Check if target staff is actually connected
+                  let staffConnected = false;
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.userId === targetStaff && client.readyState === WebSocket.OPEN) {
+                        staffConnected = true;
+                        // Notify target staff of transfer
+                        client.send(JSON.stringify({
+                          type: 'transfer_assigned',
+                          from: displayName,
+                        }));
+                      }
+                    });
+                  }
+                  
                   const transferMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: null,
                     senderName: 'Server',
                     senderType: 'system',
-                    message: `${displayName} transferred ticket to ${targetStaff}`,
+                    message: staffConnected
+                      ? `✅ ${displayName} transferred ticket to ${targetStaff}`
+                      : `⚠️ ${displayName} attempted transfer to ${targetStaff} (staff member not currently online or is simulated/test user)`,
                     messageType: 'text',
                     isSystemMessage: true,
                   });

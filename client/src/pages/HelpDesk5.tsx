@@ -798,9 +798,10 @@ export default function LiveChatroomPage() {
       {/* Secure Request Dialog - Appears when customer receives request */}
       {secureRequest && (
         <SecureRequestDialog
-          type={secureRequest.type}
+          open={true}
+          requestType={secureRequest.type}
           requestedBy={secureRequest.requestedBy}
-          message={secureRequest.message}
+          requestMessage={secureRequest.message}
           onSubmit={(data) => {
             sendRawMessage({
               type: 'secure_submission',
@@ -1249,108 +1250,135 @@ export default function LiveChatroomPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Staff Controls Dialog - Mobile Optimized */}
-      <Dialog open={showStaffControls} onOpenChange={setShowStaffControls}>
-        <DialogContent 
-          data-testid="dialog-staff-controls"
-          className="w-[95vw] max-w-md max-h-[85vh] p-4 sm:p-6 flex flex-col overflow-hidden"
-        >
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Staff Controls
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Manage HelpDesk room status. Changes apply immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 overflow-y-auto flex-1 py-1">
-            <div className="space-y-1.5">
-              <Label htmlFor="room-status" className="text-xs sm:text-sm">Room Status</Label>
-              <Select
-                value={roomStatusControl}
-                onValueChange={(value: any) => setRoomStatusControl(value)}
+      {/* Staff Controls Overlay Panel - Gmail-style */}
+      {showStaffControls && (
+        <>
+          {/* Backdrop - Click to close */}
+          <div 
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+            onClick={() => setShowStaffControls(false)}
+            data-testid="overlay-backdrop"
+          />
+          
+          {/* Side Panel */}
+          <div 
+            className="fixed left-0 top-0 bottom-0 w-full sm:w-96 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-2xl z-50 animate-in slide-in-from-left duration-300"
+            data-testid="panel-staff-controls"
+          >
+            {/* Header with Close Button */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Staff Controls</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowStaffControls(false)}
+                className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800"
+                data-testid="button-close-staff-controls"
               >
-                <SelectTrigger id="room-status" data-testid="select-room-status" className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">
-                    <div className="flex items-center gap-2">
-                      <Circle className="w-2 h-2 fill-green-500 text-green-500" />
-                      <span className="text-xs sm:text-sm">Open</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="closed">
-                    <div className="flex items-center gap-2">
-                      <Circle className="w-2 h-2 fill-red-500 text-red-500" />
-                      <span className="text-xs sm:text-sm">Closed</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="maintenance">
-                    <div className="flex items-center gap-2">
-                      <Circle className="w-2 h-2 fill-yellow-500 text-yellow-500" />
-                      <span className="text-xs sm:text-sm">Maintenance</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="status-message" className="text-xs sm:text-sm">Status Message (Optional)</Label>
-              <Textarea
-                id="status-message"
-                placeholder="Optional message"
-                value={roomStatusMessage}
-                onChange={(e) => setRoomStatusMessage(e.target.value)}
-                rows={2}
-                className="text-xs sm:text-sm min-h-[60px]"
-                data-testid="textarea-status-message"
-              />
-            </div>
-            <Card className="border-blue-500/30 bg-blue-500/5">
-              <CardContent className="p-2 sm:p-3">
-                <div className="flex items-start gap-2">
-                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <div className="text-[10px] sm:text-xs">
-                    <p className="font-semibold">Staff Bypass</p>
-                    <p className="text-muted-foreground">Platform staff can always access.</p>
+
+            {/* Content */}
+            <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-140px)]">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Manage HelpDesk room status. Changes apply immediately.
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="room-status" className="text-sm font-medium">Room Status</Label>
+                <Select
+                  value={roomStatusControl}
+                  onValueChange={(value: any) => setRoomStatusControl(value)}
+                >
+                  <SelectTrigger id="room-status" data-testid="select-room-status" className="h-10 bg-white dark:bg-slate-800">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">
+                      <div className="flex items-center gap-2">
+                        <Circle className="w-2 h-2 fill-green-500 text-green-500" />
+                        <span>Open</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="closed">
+                      <div className="flex items-center gap-2">
+                        <Circle className="w-2 h-2 fill-red-500 text-red-500" />
+                        <span>Closed</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="maintenance">
+                      <div className="flex items-center gap-2">
+                        <Circle className="w-2 h-2 fill-yellow-500 text-yellow-500" />
+                        <span>Maintenance</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status-message" className="text-sm font-medium">Status Message (Optional)</Label>
+                <Textarea
+                  id="status-message"
+                  placeholder="Optional message to display to users..."
+                  value={roomStatusMessage}
+                  onChange={(e) => setRoomStatusMessage(e.target.value)}
+                  rows={3}
+                  className="text-sm resize-none bg-white dark:bg-slate-800"
+                  data-testid="textarea-status-message"
+                />
+              </div>
+
+              <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-2">
+                    <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs">
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">Staff Bypass</p>
+                      <p className="text-slate-600 dark:text-slate-400">Platform staff can always access the HelpDesk.</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowStaffControls(false)}
+                  data-testid="button-cancel-controls"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => toggleRoomStatusMutation.mutate({ 
+                    status: roomStatusControl, 
+                    message: roomStatusMessage 
+                  })}
+                  disabled={toggleRoomStatusMutation.isPending}
+                  data-testid="button-apply-controls"
+                  className="gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"
+                >
+                  {toggleRoomStatusMutation.isPending ? (
+                    <>Applying...</>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Apply Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-3 border-t flex-shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStaffControls(false)}
-              data-testid="button-cancel-controls"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => toggleRoomStatusMutation.mutate({ 
-                status: roomStatusControl, 
-                message: roomStatusMessage 
-              })}
-              disabled={toggleRoomStatusMutation.isPending}
-              data-testid="button-apply-controls"
-              className="gap-1.5"
-            >
-              {toggleRoomStatusMutation.isPending ? (
-                <>Applying...</>
-              ) : (
-                <>
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Apply
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
     </div>
   );
 }
