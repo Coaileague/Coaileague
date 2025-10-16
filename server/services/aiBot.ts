@@ -45,6 +45,15 @@ export async function generateGreeting(userName: string, isGuest: boolean): Prom
 }
 
 /**
+ * Generate staff introduction announcement (MACRO)
+ * When support staff initiates help with a user, bot announces their arrival
+ * This gives staff time to prepare while bot handles the initial greeting
+ */
+export async function generateStaffIntroduction(staffName: string, customerName: string): Promise<string> {
+  return `📢 Support staff ${staffName} is now ready to help you${customerName ? `, ${customerName}` : ''}! Please provide your full name and organization ID so we can assist you better. 🙌`;
+}
+
+/**
  * Calculate cost in USD based on token usage
  */
 function calculateCost(promptTokens: number, completionTokens: number): number {

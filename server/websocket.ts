@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { storage } from './storage';
 import { formatUserDisplayName } from './utils/formatUserDisplayName';
-import { generateGreeting, getAiResponse, shouldBotRespond } from './services/aiBot';
+import { generateGreeting, generateStaffIntroduction, getAiResponse, shouldBotRespond } from './services/aiBot';
 import type { ChatMessage } from '@shared/schema';
 
 interface WebSocketClient extends WebSocket {
@@ -111,33 +111,8 @@ export function setupWebSocket(server: Server) {
             // Mark messages as read
             await storage.markMessagesAsRead(payload.conversationId, payload.userId);
 
-            // BROADCAST SYSTEM ANNOUNCEMENT: User joined
+            // AI BOT: Send single combined greeting (no separate join announcement to avoid double message)
             if (payload.conversationId === MAIN_ROOM_ID) {
-              const joinAnnouncement = await storage.createChatMessage({
-                conversationId: payload.conversationId,
-                senderId: payload.userId,
-                senderName: 'System',
-                senderType: 'system',
-                message: `${displayName} has joined the chatroom`,
-                messageType: 'text',
-                isSystemMessage: true,
-              });
-
-              // Broadcast join announcement to all clients
-              const clients = conversationClients.get(payload.conversationId);
-              if (clients) {
-                const announcementPayload = JSON.stringify({
-                  type: 'new_message',
-                  message: joinAnnouncement,
-                });
-                clients.forEach((client) => {
-                  if (client.readyState === WebSocket.OPEN) {
-                    client.send(announcementPayload);
-                  }
-                });
-              }
-
-              // AI BOT: Send greeting message to new user
               try {
                 const isGuest = !userInfo?.platformRole && !userInfo?.workspaceRole;
                 const greeting = await generateGreeting(displayName, isGuest);
@@ -145,13 +120,14 @@ export function setupWebSocket(server: Server) {
                 const greetingMessage = await storage.createChatMessage({
                   conversationId: payload.conversationId,
                   senderId: 'ai-bot',
-                  senderName: 'AI Assistant',
+                  senderName: 'HelpOS™',
                   senderType: 'bot',
                   message: greeting,
                   messageType: 'text',
                 });
 
                 // Send greeting to all clients
+                const clients = conversationClients.get(payload.conversationId);
                 if (clients) {
                   const greetingPayload = JSON.stringify({
                     type: 'new_message',
@@ -231,7 +207,7 @@ export function setupWebSocket(server: Server) {
               try {
                 // Determine if user is subscriber or free guest
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isSubscriber = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isSubscriber = !!(platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
                 
                 // Get conversation history (last 5 messages for context)
                 const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
