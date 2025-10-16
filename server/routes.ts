@@ -41,6 +41,8 @@ import {
   employees,
   reportTemplates,
   reportAttachments,
+  shifts,
+  smartScheduleUsage,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq } from "drizzle-orm";
@@ -1163,6 +1165,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating bulk shifts:", error);
       res.status(400).json({ message: error.message || "Failed to create bulk shifts" });
+    }
+  });
+
+  // ============================================================================
+  // SCHEDULEOS™ AI - Intelligent Auto-Scheduling (Enterprise+ Feature)
+  // ============================================================================
+  
+  app.post('/api/scheduleos/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Feature flag check - ScheduleOS™ requires Enterprise+ tier
+      const tier = workspace.subscriptionTier?.toLowerCase() || 'free';
+      if (!['enterprise', 'elite'].includes(tier)) {
+        return res.status(403).json({
+          message: "ScheduleOS™ requires Enterprise or Elite tier",
+          upgrade: "Upgrade to Enterprise ($7,999/mo) or Elite ($19,999/mo) to unlock AI-powered scheduling",
+          feature: "scheduleOS"
+        });
+      }
+
+      // Import ScheduleOS AI
+      const { scheduleOSAI } = await import('./ai/scheduleos');
+
+      const { weekStartDate, shiftRequirements, clientIds } = req.body;
+
+      if (!weekStartDate || !shiftRequirements) {
+        return res.status(400).json({
+          message: "Missing required fields: weekStartDate and shiftRequirements"
+        });
+      }
+
+      // Generate AI schedule
+      const result = await scheduleOSAI.generateSchedule({
+        workspaceId: workspace.id,
+        weekStartDate: new Date(weekStartDate),
+        clientIds: clientIds || [],
+        shiftRequirements,
+      });
+
+      // Track usage for billing
+      await db.insert(smartScheduleUsage).values({
+        workspaceId: workspace.id,
+        scheduleDate: new Date(weekStartDate),
+        employeesScheduled: result.employeesScheduled,
+        shiftsGenerated: result.shiftsGenerated,
+        billingModel: tier === 'elite' ? 'tier_included' : 'tier_included',
+        chargeAmount: '0', // Included in tier
+        aiModel: 'gpt-4',
+        processingTimeMs: result.processingTimeMs,
+      });
+
+      res.json({
+        ...result,
+        message: `ScheduleOS™ generated ${result.shiftsGenerated} shifts for ${result.employeesScheduled} employees in ${result.processingTimeMs}ms`
+      });
+    } catch (error: any) {
+      console.error("ScheduleOS™ error:", error);
+      res.status(500).json({
+        message: error.message || "ScheduleOS™ failed to generate schedule",
+        error: "SCHEDULEOS_ERROR"
+      });
+    }
+  });
+
+  // Acknowledge AI-generated shift (employee confirmation)
+  app.post('/api/scheduleos/acknowledge/:shiftId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { shiftId } = req.params;
+
+      // Find shift and verify employee access
+      const shift = await db.query.shifts.findFirst({
+        where: eq(shifts.id, shiftId),
+      });
+
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      if (!shift.aiGenerated) {
+        return res.status(400).json({ message: "This shift was not AI-generated" });
+      }
+
+      // Update acknowledgment
+      await db.update(shifts)
+        .set({
+          acknowledgedAt: new Date(),
+        })
+        .where(eq(shifts.id, shiftId));
+
+      res.json({
+        success: true,
+        message: "Shift acknowledged successfully",
+        shiftId,
+        acknowledgedAt: new Date(),
+      });
+    } catch (error: any) {
+      console.error("Error acknowledging shift:", error);
+      res.status(500).json({ message: "Failed to acknowledge shift" });
     }
   });
 
