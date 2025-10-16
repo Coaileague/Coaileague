@@ -7,11 +7,12 @@ interface OnlineUser {
   id: string;
   name: string;
   role: string;
-  status: string;
+  status: 'online' | 'away' | 'busy';
+  userType: 'staff' | 'subscriber' | 'org_user' | 'guest';
 }
 
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update';
+  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
@@ -24,6 +25,9 @@ interface WebSocketMessage {
   // User list
   users?: OnlineUser[];
   count?: number;
+  // Status updates
+  status?: 'online' | 'away' | 'busy';
+  userName?: string;
 }
 
 export function useChatroomWebSocket(userId: string | undefined, userName: string = 'User') {
@@ -193,6 +197,12 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
                 setOnlineUsers(data.users);
               }
               break;
+
+            case 'status_change':
+              if (data.message && typeof data.message !== 'string') {
+                setMessages((prev) => [...prev, data.message as ChatMessage]);
+              }
+              break;
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -255,6 +265,19 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
     }));
   }, [userId]);
 
+  // Send status change
+  const sendStatusChange = useCallback((status: 'online' | 'away' | 'busy') => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !userId) {
+      return;
+    }
+
+    wsRef.current.send(JSON.stringify({
+      type: 'status_change',
+      userId: userId,
+      status: status,
+    }));
+  }, [userId]);
+
   // Connect on mount and when userId changes
   useEffect(() => {
     if (userId) {
@@ -293,6 +316,7 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
     messages,
     sendMessage,
     sendTyping,
+    sendStatusChange,
     typingUsers,
     onlineUsers,
     isConnected,

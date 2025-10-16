@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Send, Users, MessageSquare, Shield, Crown, UserCog, Wrench,
   Settings, Power, HelpCircle, Zap, Clock, AlertCircle, CheckCircle,
-  ChevronLeft, ChevronRight, Info
+  ChevronLeft, ChevronRight, Info, Coffee, Star, Building2
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -31,6 +31,7 @@ export default function HelpDeskCab() {
   const [userStatus, setUserStatus] = useState<"online" | "away" | "busy">("online");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [showCoffeeCup, setShowCoffeeCup] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // IRC-style MOTD and helpful info banners
@@ -62,7 +63,7 @@ export default function HelpDeskCab() {
     ? `${user.firstName} ${user.lastName}` 
     : user?.email?.split('@')[0] || 'User';
 
-  const { messages, isConnected, sendMessage, sendTyping, onlineUsers } = useChatroomWebSocket(user?.id, userName);
+  const { messages, isConnected, sendMessage, sendTyping, sendStatusChange, onlineUsers } = useChatroomWebSocket(user?.id, userName);
 
   const { data: roomData } = useQuery({
     queryKey: ['/api/helpdesk/room/helpdesk'],
@@ -117,6 +118,42 @@ export default function HelpDeskCab() {
 
   const handleMention = (userName: string) => {
     setInputMessage(prev => prev + `@${userName} `);
+  };
+
+  // Handle status change with coffee cup animation
+  const handleStatusChange = (newStatus: "online" | "away" | "busy") => {
+    setUserStatus(newStatus);
+    setShowCoffeeCup(true);
+    sendStatusChange(newStatus);
+    
+    // Hide coffee cup after animation
+    setTimeout(() => setShowCoffeeCup(false), 2000);
+  };
+
+  // Get user type icon
+  const getUserTypeIcon = (userType: string, role: string) => {
+    // Staff gets logo (using Crown for now - can be replaced with actual logo)
+    if (['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
+      return <Crown className="w-3.5 h-3.5 text-blue-500" />;
+    }
+    
+    // Based on user type
+    switch (userType) {
+      case 'subscriber': return <Star className="w-3.5 h-3.5 text-amber-500" />;
+      case 'org_user': return <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />;
+      case 'guest': return <HelpCircle className="w-3.5 h-3.5 text-slate-400" />;
+      default: return <HelpCircle className="w-3.5 h-3.5 text-slate-400" />;
+    }
+  };
+
+  // Get status indicator
+  const getStatusIndicator = (status: string) => {
+    switch (status) {
+      case 'online': return <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />;
+      case 'away': return <div className="w-2 h-2 bg-yellow-500 rounded-full" />;
+      case 'busy': return <div className="w-2 h-2 bg-red-500 rounded-full" />;
+      default: return <div className="w-2 h-2 bg-gray-400 rounded-full" />;
+    }
   };
 
   const getRoleIcon = (role: string) => {
@@ -181,7 +218,7 @@ export default function HelpDeskCab() {
         
         {/* LEFT COLUMN: Options/Settings (Collapsible) */}
         {!sidebarCollapsed && (
-          <section className="w-64 bg-white border-r border-gray-200 flex flex-col p-3 overflow-y-auto transition-all">
+          <section className="w-48 bg-white border-r border-gray-200 flex flex-col p-3 overflow-y-auto transition-all">
           <h2 className="text-sm font-bold text-gray-800 mb-3 pb-2 border-b flex items-center">
             <Settings className="w-4 h-4 mr-2 text-indigo-500" />
             Staff Controls
@@ -190,14 +227,19 @@ export default function HelpDeskCab() {
           <div className="space-y-3">
             {/* User Status */}
             <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-              <label className="block text-xs font-medium text-indigo-700 mb-1">Your Status</label>
+              <label className="block text-xs font-medium text-indigo-700 mb-1 flex items-center gap-1">
+                Your Status
+                {showCoffeeCup && (
+                  <Coffee className="w-3 h-3 text-amber-600 animate-bounce" />
+                )}
+              </label>
               <select 
                 value={userStatus} 
-                onChange={(e) => setUserStatus(e.target.value as any)}
+                onChange={(e) => handleStatusChange(e.target.value as any)}
                 className="w-full p-1.5 border border-indigo-300 rounded text-xs bg-white focus:ring-indigo-500 focus:border-indigo-500"
                 data-testid="select-status"
               >
-                <option value="online">● Online</option>
+                <option value="online">● Available</option>
                 <option value="away">● Away</option>
                 <option value="busy">● Busy</option>
               </select>
@@ -439,12 +481,13 @@ export default function HelpDeskCab() {
                         onClick={() => setSelectedUserId(u.id)}
                         data-testid={`user-${u.id}`}
                       >
-                        <Avatar className="w-5 h-5">
-                          <AvatarFallback className="bg-slate-800 text-blue-400 text-xs">
-                            {u.name?.substring(0, 2).toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        {/* Status Indicator */}
+                        {getStatusIndicator(u.status || 'online')}
+                        
+                        {/* User Type Icon */}
+                        {getUserTypeIcon(u.userType || 'guest', u.role)}
+                        
+                        {/* User Name */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1">
                             <span className={`text-xs truncate ${getRoleColor(u.role)}`}>
