@@ -2,8 +2,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { storage } from './storage';
 import { formatUserDisplayName } from './utils/formatUserDisplayName';
-import { generateGreeting, generateStaffIntroduction, getAiResponse, shouldBotRespond } from './services/aiBot';
+import { generateGreeting, generateStaffIntroduction, getAiResponse, shouldBotRespond, generateQueueWelcome, generateStaffQueueAlert } from './services/aiBot';
 import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } from '@shared/commands';
+import { queueManager } from './services/helpOsQueue';
 import type { ChatMessage } from '@shared/schema';
 
 interface WebSocketClient extends WebSocket {
@@ -112,36 +113,118 @@ export function setupWebSocket(server: Server) {
             // Mark messages as read
             await storage.markMessagesAsRead(payload.conversationId, payload.userId);
 
-            // AI BOT: Send single combined greeting (no separate join announcement to avoid double message)
+            // HELPDESK ANNOUNCEMENTS: System + HelpOS™
             if (payload.conversationId === MAIN_ROOM_ID) {
               try {
-                const isGuest = !userInfo?.platformRole && !userInfo?.workspaceRole;
-                const greeting = await generateGreeting(displayName, isGuest);
+                const platformRole = await storage.getUserPlatformRole(payload.userId);
+                const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
-                const greetingMessage = await storage.createChatMessage({
+                // 1. SYSTEM announcement (IRC-style): User joined
+                const systemJoinMessage = await storage.createChatMessage({
                   conversationId: payload.conversationId,
-                  senderId: 'ai-bot',
-                  senderName: 'HelpOS™',
-                  senderType: 'bot',
-                  message: greeting,
+                  senderId: null,
+                  senderName: 'System',
+                  senderType: 'system',
+                  message: `*** ${displayName} has joined the HelpDesk`,
                   messageType: 'text',
+                  isSystemMessage: true,
                 });
 
-                // Send greeting to all clients
+                // Broadcast system message
                 const clients = conversationClients.get(payload.conversationId);
                 if (clients) {
-                  const greetingPayload = JSON.stringify({
+                  const systemPayload = JSON.stringify({
                     type: 'new_message',
-                    message: greetingMessage,
+                    message: systemJoinMessage,
                   });
                   clients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {
-                      client.send(greetingPayload);
+                      client.send(systemPayload);
                     }
                   });
                 }
-              } catch (greetingError) {
-                console.error('Failed to send AI greeting:', greetingError);
+
+                // 2. HELPOS™ announcement (AI Bot): Different for staff vs customers
+                if (isStaff) {
+                  // Staff: Show queue status alert
+                  const queueStatus = await queueManager.getQueueStatus();
+                  const staffAlert = await generateStaffQueueAlert(
+                    queueStatus.waitingCount,
+                    queueStatus.beingHelpedCount,
+                    queueStatus.averageWaitMinutes
+                  );
+                  
+                  const botMessage = await storage.createChatMessage({
+                    conversationId: payload.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: staffAlert,
+                    messageType: 'text',
+                  });
+
+                  // Broadcast HelpOS message
+                  if (clients) {
+                    const botPayload = JSON.stringify({
+                      type: 'new_message',
+                      message: botMessage,
+                    });
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(botPayload);
+                      }
+                    });
+                  }
+                } else {
+                  // Customer: Add to queue and send welcome with position
+                  const queueEntry = await queueManager.enqueue({
+                    conversationId: payload.conversationId,
+                    userId: payload.userId,
+                    ticketNumber: conversation.ticketNumber || 'N/A',
+                    userName: displayName,
+                    workspaceId: ws.workspaceId,
+                  });
+
+                  await queueManager.updateQueuePositions();
+                  const updatedEntry = await queueManager.getQueueEntry(payload.conversationId);
+                  
+                  if (updatedEntry) {
+                    const queueStatus = await queueManager.getQueueStatus();
+                    const welcomeMessage = await generateQueueWelcome(
+                      displayName,
+                      queueEntry.ticketNumber,
+                      updatedEntry.queuePosition || 1,
+                      updatedEntry.estimatedWaitMinutes || 5,
+                      queueStatus.waitingCount
+                    );
+                    
+                    const botMessage = await storage.createChatMessage({
+                      conversationId: payload.conversationId,
+                      senderId: 'ai-bot',
+                      senderName: 'HelpOS™',
+                      senderType: 'bot',
+                      message: welcomeMessage,
+                      messageType: 'text',
+                    });
+
+                    await queueManager.markWelcomeSent(queueEntry.id);
+
+                    // Broadcast HelpOS welcome
+                    if (clients) {
+                      const botPayload = JSON.stringify({
+                        type: 'new_message',
+                        message: botMessage,
+                      });
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(botPayload);
+                        }
+                      });
+                    }
+                  }
+                }
+              } catch (announceError) {
+                console.error('Failed to send join announcements:', announceError);
               }
             }
 
