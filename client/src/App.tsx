@@ -53,6 +53,7 @@ import HelpdeskChat from "@/pages/helpdesk-chat";
 import LiveChatroom from "@/pages/live-chatroom";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
+import DesignComparison from "@/pages/design-comparison";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 
 function AppContent() {
@@ -82,6 +83,7 @@ function AppContent() {
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
         <Route path="/live-chat" component={LiveChatroom} />
+        <Route path="/design-comparison" component={DesignComparison} />
         <Route path="/onboarding/:token" component={OnboardingPage} />
         <Route component={Landing} />
       </Switch>
@@ -130,6 +132,7 @@ function AppContent() {
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support/chat" component={HelpdeskChat} />
                 <Route path="/live-chat" component={LiveChatroom} />
+                <Route path="/design-comparison" component={DesignComparison} />
                 <Route path="/support" component={Support} />
                 <Route component={NotFound} />
               </Switch>
