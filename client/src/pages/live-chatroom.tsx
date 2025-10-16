@@ -520,20 +520,21 @@ export default function LiveChatroomPage() {
           {/* Messages */}
           <ScrollArea className="flex-1 p-4 relative z-10">
             <div className="max-w-full md:max-w-5xl mx-auto space-y-4">
-              {/* Pinned Room Info Banner - Compact */}
+              {/* Pinned Room Info Banner - Mobile Optimized */}
               <Card className="sticky top-0 z-50 border-blue-500/30 bg-gradient-to-r from-blue-900/40 via-indigo-900/40 to-purple-900/40 backdrop-blur-md shadow-lg">
                 <CardContent className="p-2">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <MessageSquare className="w-3.5 h-3.5 text-blue-300 flex-shrink-0" />
-                    <h2 className="text-xs font-semibold text-white flex-shrink-0">HelpDesk</h2>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-300 flex-shrink-0" />
+                    <h2 className="text-[11px] sm:text-xs font-semibold text-white flex-shrink-0">HelpDesk</h2>
                     <Badge 
                       variant={helpDeskRoom?.status === 'open' ? 'default' : 'secondary'}
-                      className="gap-1 flex-shrink-0 bg-white/20 border-white/30 text-white text-[10px] px-1.5 py-0"
+                      className="gap-0.5 sm:gap-1 flex-shrink-0 bg-white/20 border-white/30 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0"
                     >
                       <Circle className="w-1 h-1 fill-green-400 text-green-400 animate-pulse" />
-                      {helpDeskRoom?.status === 'open' ? 'Open' : helpDeskRoom?.status === 'closed' ? 'Closed' : 'Maintenance'}
+                      {helpDeskRoom?.status === 'open' ? 'Open' : helpDeskRoom?.status === 'closed' ? 'Closed' : 'Maint'}
                     </Badge>
-                    <span className="text-[9px] text-blue-200 truncate flex-1 min-w-0">
+                    {/* Hide status message on mobile to prevent stretch */}
+                    <span className="hidden sm:block text-[9px] text-blue-200 truncate flex-1 min-w-0">
                       {helpDeskRoom?.statusMessage || "Live Support with HelpOS™ AI"}
                     </span>
                   </div>
