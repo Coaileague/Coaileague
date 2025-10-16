@@ -85,7 +85,7 @@ export default function LiveChatroomPage() {
   
   // Use WebSocket for real-time messaging (only if authenticated)
   const { 
-    messages, sendMessage, sendTyping, typingUsers, isConnected, error, reconnect,
+    messages, sendMessage, sendTyping, typingUsers, onlineUsers, isConnected, error, reconnect,
     requiresTicket, roomStatus, statusMessage: wsStatusMessage, temporaryError, clearAccessError
   } = useChatroomWebSocket(isAuthenticated ? userId : undefined, userName);
   
@@ -202,15 +202,7 @@ export default function LiveChatroomPage() {
     },
   });
 
-  // Online users - HelpOS™ bot always online
-  const [onlineUsers] = useState<OnlineUser[]>([
-    {
-      id: 'ai-bot',
-      name: 'HelpOS™',
-      role: 'bot',
-      status: 'online'
-    }
-  ]);
+  // Online users now come from WebSocket (includes HelpOS™ bot + connected users)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

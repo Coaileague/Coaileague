@@ -32,6 +32,7 @@ export default function DesktopChatroom() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [contextMenuUser, setContextMenuUser] = useState<any>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
@@ -338,7 +339,17 @@ export default function DesktopChatroom() {
               {uniqueUsers.map((u) => (
                 <ContextMenu key={u.id}>
                   <ContextMenuTrigger>
-                    <div className="flex items-center gap-2 p-2 rounded hover:bg-slate-800/50 cursor-pointer transition-colors" data-testid={`user-${u.id}`}>
+                    <div 
+                      className={`
+                        flex items-center gap-2 p-2 rounded cursor-pointer transition-colors
+                        ${selectedUserId === u.id 
+                          ? 'bg-blue-600/30 border border-blue-500/50' 
+                          : 'hover:bg-slate-800/50 border border-transparent'
+                        }
+                      `}
+                      onClick={() => setSelectedUserId(u.id)}
+                      data-testid={`user-${u.id}`}
+                    >
                       <div className="relative">
                         <Avatar className="w-6 h-6 border border-blue-500/30">
                           <AvatarFallback className="bg-slate-800 text-blue-400 text-xs">
