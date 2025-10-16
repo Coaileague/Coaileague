@@ -4,7 +4,7 @@ import type { ChatMessage } from "@shared/schema";
 const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error';
+  type: 'conversation_history' | 'new_message' | 'user_typing' | 'error' | 'system_message';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
@@ -34,17 +34,22 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
   const connect = useCallback(() => {
     if (!userId) return;
     
-    // Prevent duplicate connections
-    if (isConnectingRef.current || (wsRef.current && wsRef.current.readyState === WebSocket.OPEN)) {
-      console.log('⚠️ WebSocket already connecting or connected, skipping duplicate connection');
+    // Prevent duplicate connections - check if connecting or if connection exists and is not CLOSED
+    if (isConnectingRef.current) {
+      console.log('⚠️ WebSocket already connecting, skipping duplicate connection');
+      return;
+    }
+    
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      console.log('⚠️ WebSocket already exists, skipping duplicate connection');
       return;
     }
     
     console.log('🔌 Creating new WebSocket connection for user:', userId);
     isConnectingRef.current = true;
 
-    // Clean up existing connection
-    if (wsRef.current) {
+    // Clean up existing connection if any
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
       wsRef.current.close();
     }
 
@@ -107,17 +112,21 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
 
             case 'system_message':
               // Handle system messages (e.g., help command response)
-              if (data.message) {
-                const systemMsg = {
+              if (data.message && typeof data.message === 'string') {
+                const systemMsg: ChatMessage = {
                   id: `system-${Date.now()}`,
+                  createdAt: new Date(),
                   conversationId: 'main-chatroom-workforceos',
                   senderId: null,
                   senderName: 'System',
-                  senderType: 'system' as const,
+                  senderType: 'system',
                   message: data.message,
-                  messageType: 'text' as const,
+                  messageType: 'text',
                   isSystemMessage: true,
-                  timestamp: new Date().toISOString(),
+                  attachmentUrl: null,
+                  attachmentName: null,
+                  isRead: null,
+                  readAt: null,
                 };
                 setMessages((prev) => [...prev, systemMsg]);
               }
@@ -186,11 +195,13 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      if (wsRef.current) {
+      // Don't reset wsRef to allow duplicate prevention to work in React Strict Mode
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        // Only close if actually open - don't reset refs to allow duplicate detection
         wsRef.current.close();
       }
     };
-  }, [userId]); // Only reconnect when userId changes, not when connect changes
+  }, [userId, connect]); // Include connect to satisfy exhaustive-deps
 
   // Clear access error state (call after successful ticket verification)
   const clearAccessError = useCallback(() => {
