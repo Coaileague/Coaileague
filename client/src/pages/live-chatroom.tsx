@@ -534,26 +534,29 @@ export default function LiveChatroomPage() {
 
       {/* Dual Authentication Dialog (Customer or Staff) */}
       <Dialog open={showTicketDialog && !isLoadingUser} onOpenChange={setShowTicketDialog}>
-        <DialogContent data-testid="dialog-ticket-verification" className="w-[95vw] max-w-md p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-              <span className="line-clamp-1">Live Chat Authentication</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Choose your authentication method below
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent data-testid="dialog-ticket-verification" className="w-[95vw] max-w-md max-h-[90vh] p-0 flex flex-col">
+          <div className="p-4 sm:p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                <span className="line-clamp-1">Live Chat Authentication</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
+                Choose your authentication method below
+              </DialogDescription>
+            </DialogHeader>
+          </div>
           
-          <Tabs value={authMode} onValueChange={(v: any) => setAuthMode(v)} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-auto">
-              <TabsTrigger value="customer" data-testid="tab-customer" className="text-xs sm:text-sm py-2 sm:py-2.5">
-                Customer
-              </TabsTrigger>
-              <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm py-2 sm:py-2.5">
-                Staff
-              </TabsTrigger>
-            </TabsList>
+          <div className="overflow-y-auto flex-1 px-4 sm:px-6">
+            <Tabs value={authMode} onValueChange={(v: any) => setAuthMode(v)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-auto sticky top-0 z-10 bg-background">
+                <TabsTrigger value="customer" data-testid="tab-customer" className="text-xs sm:text-sm py-2 sm:py-2.5">
+                  Customer
+                </TabsTrigger>
+                <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm py-2 sm:py-2.5">
+                  Staff
+                </TabsTrigger>
+              </TabsList>
             
             {/* Customer Ticket Authentication */}
             <TabsContent value="customer" className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
@@ -687,18 +690,19 @@ export default function LiveChatroomPage() {
                 </Button>
               </div>
             </TabsContent>
+            
+            {wsStatusMessage && (
+              <Card className="border-destructive/50 bg-destructive/10 mt-3 sm:mt-4 mb-4">
+                <CardContent className="p-2 sm:p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <p className="text-xs sm:text-sm text-destructive leading-tight">{wsStatusMessage}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </Tabs>
-          
-          {wsStatusMessage && (
-            <Card className="border-destructive/50 bg-destructive/10 mt-3 sm:mt-4">
-              <CardContent className="p-2 sm:p-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5 flex-shrink-0" />
-                  <p className="text-xs sm:text-sm text-destructive leading-tight">{wsStatusMessage}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        </div>
         </DialogContent>
       </Dialog>
 

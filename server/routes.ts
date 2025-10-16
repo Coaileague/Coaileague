@@ -3923,7 +3923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // SECURITY: Only platform staff can toggle room status
       const platformRole = await storage.getUserPlatformRole(userId);
-      if (!platformRole || !['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+      if (!platformRole || !['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
       }
       
@@ -4071,7 +4071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(platformRoles)
         .where(eq(platformRoles.userId, staffUser.id));
 
-      const hasStaffRole = roleRecord && ['platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(roleRecord.role);
+      const hasStaffRole = roleRecord && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(roleRecord.role);
 
       if (!hasStaffRole) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
