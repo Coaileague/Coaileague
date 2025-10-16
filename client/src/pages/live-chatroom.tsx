@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import DesktopChatroom from "./desktop-chatroom";
-import MobileChatroom from "./mobile-chatroom";
+import HelpDeskCab from "./HelpDeskCab";
+import HelpDesk5 from "./HelpDesk5";
 
 // Device detection wrapper that loads correct chat interface
 export default function LiveChatroom() {
@@ -36,5 +36,5 @@ export default function LiveChatroom() {
     );
   }
 
-  return isMobile ? <MobileChatroom /> : <DesktopChatroom />;
+  return isMobile ? <HelpDesk5 /> : <HelpDeskCab />;
 }

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherChat 2.0 - IRC/MSN Hybrid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Load Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #e5e7eb; }
+        /* Custom scrollbar for message area */
+        #messages-container::-webkit-scrollbar { width: 8px; }
+        #messages-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        #messages-container::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+        #messages-container::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* MSN-style Header Gradient */
+        .msn-header {
+            background: linear-gradient(90deg, #4f46e5 0%, #3b82f6 50%, #1d4ed8 100%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Input area styling */
+        .chat-input-area {
+            border-top: 2px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+
+        /* Message bubble styles */
+        .system-msg { color: #f97316; font-style: italic; font-size: 0.85rem; }
+        .user-msg { background-color: #eff6ff; border-left: 3px solid #60a5fa; padding: 0.5rem; border-radius: 0.5rem; }
+        .self-msg { background-color: #d1fae5; border-right: 3px solid #34d399; padding: 0.5rem; border-radius: 0.5rem; }
+
+        /* MSN-style Button */
+        .msn-button {
+            transition: all 0.1s ease;
+            box-shadow: 0 2px 0 #1e3a8a;
+            transform: translateY(-1px);
+        }
+        .msn-button:hover {
+            box-shadow: 0 4px 0 #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .msn-button:active {
+            box-shadow: none;
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Header (MSN Messenger 2.0 Style) -->
+    <header class="msn-header p-3 text-white">
+        <div class="flex items-center justify-between max-w-7xl mx-auto">
+            <h1 class="text-2xl font-black tracking-wide flex items-center">
+                <i class="fas fa-meteor text-amber-300 mr-2"></i> AETHERCHAT <span class="text-sm font-light ml-1">2.0</span>
+            </h1>
+            <span class="text-sm font-semibold">Channel: #general-lounge</span>
+        </div>
+    </header>
+
+    <!-- Main 3-Column Layout (The Three Artifacts) -->
+    <main class="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full border-x border-gray-300">
+
+        <!-- ARTIFACT 1: Options/Controls (Left) -->
+        <section id="options-panel" class="w-full md:w-1/4 bg-white border-r border-gray-200 flex flex-col p-4 overflow-y-auto">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center"><i class="fas fa-sliders-h mr-2 text-indigo-500"></i> Settings & Options</h2>
+
+            <div class="space-y-4">
+                <!-- User Status -->
+                <div class="p-3 bg-indigo-50 rounded-xl shadow-inner border border-indigo-200">
+                    <label for="status" class="block text-sm font-medium text-indigo-700 mb-1">Your Status</label>
+                    <select id="status" class="w-full p-2 border border-indigo-300 rounded-lg text-sm bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="online">🟢 Online</option>
+                        <option value="away">🟡 Away</option>
+                        <option value="busy">🔴 Busy</option>
+                        <option value="offline">⚪ Invisible</option>
+                    </select>
+                </div>
+
+                <!-- Channel Management -->
+                <div class="p-3 bg-gray-50 rounded-xl shadow-inner border border-gray-200">
+                    <h3 class="text-base font-semibold text-gray-700 mb-2">Channels</h3>
+                    <button class="w-full msn-button bg-blue-600 text-white py-2 rounded-lg text-sm font-bold mb-2">
+                        <i class="fas fa-plus-circle mr-1"></i> Join Channel
+                    </button>
+                    <ul class="text-sm space-y-1 text-gray-600">
+                        <li class="p-1 bg-blue-100 font-semibold rounded-md"><i class="fas fa-comments text-blue-500 mr-2"></i> #general-lounge (Active)</li>
+                        <li class="p-1 hover:bg-gray-100 rounded-md"><i class="fas fa-code text-gray-500 mr-2"></i> #dev-talk</li>
+                        <li class="p-1 hover:bg-gray-100 rounded-md"><i class="fas fa-gamepad text-gray-500 mr-2"></i> #retro-gaming</li>
+                    </ul>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="pt-4 border-t border-gray-200 space-y-2">
+                    <button class="w-full msn-button bg-green-500 text-white py-2 rounded-lg font-bold text-sm">
+                        <i class="fas fa-user-plus mr-1"></i> Add Contact
+                    </button>
+                    <button class="w-full msn-button bg-red-500 text-white py-2 rounded-lg font-bold text-sm">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Log Out
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARTIFACT 2: Chat Area (Center, Large) -->
+        <section id="chat-area" class="flex flex-col flex-grow bg-white">
+            
+            <!-- Message Display Container -->
+            <div id="messages-container" class="flex-grow p-4 space-y-4 overflow-y-auto">
+                <div class="text-center system-msg">
+                    *** Welcome to #general-lounge. Current users: 11. ***
+                </div>
+                <div class="text-center system-msg">
+                    [13:45] <span class="font-bold text-blue-600">System</span>: The server has started a new topic: "Discussing the return of T9 input and dial-up modems."
+                </div>
+
+                <!-- Example Message 1 -->
+                <div class="user-msg max-w-[80%]">
+                    <span class="font-bold text-blue-700 text-sm">ArcadeMaster</span>
+                    <p class="text-gray-800">Anyone else remember when the best sound in the world was the MSN 'nudge' sound effect? Absolute chaos.</p>
+                </div>
+
+                <!-- Example Message 2 (Self Message) -->
+                <div class="flex justify-end">
+                    <div class="self-msg max-w-[80%]">
+                        <span class="font-bold text-green-700 text-sm">You</span>
+                        <p class="text-gray-800">Yes! And waiting 3 minutes for a photo to transfer. The struggle was real. We are definitely the 2.0 version of those days!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Input Area -->
+            <div class="chat-input-area p-4">
+                <div class="flex items-end space-x-2">
+                    <textarea id="chat-input" class="flex-grow p-3 border border-gray-300 rounded-lg resize-none focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="Type your message here..."></textarea>
+                    <button id="send-button" onclick="sendMessage()" class="msn-button bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold text-lg h-full self-stretch">
+                        Send <i class="fas fa-paper-plane ml-1"></i>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="text-xs text-gray-500">
+                        <i class="fas fa-keyboard mr-1"></i> Enter to send
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        <i class="fas fa-users mr-1"></i> Typing: 2 users
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARTIFACT 3: User List (Right) -->
+        <section id="userlist-panel" class="w-full md:w-1/4 bg-gray-50 border-l border-gray-200 flex flex-col overflow-y-auto">
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center"><i class="fas fa-user-friends mr-2 text-purple-600"></i> User List (<span id="user-count">11</span>)</h2>
+            </div>
+            <ul id="user-list" class="flex-grow space-y-1 p-4">
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200 font-bold bg-indigo-100 text-indigo-700 shadow-md">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> You
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> ArcadeMaster
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> PixelPioneer
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> CodeWrangler
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200 opacity-70">
+                    <span class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span> ZippyZapper (Away)
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> TheArchitect
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200 opacity-70">
+                    <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span> DataDrifter (Busy)
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> QuantumQuill
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> CyberScribe
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> NeoNerdette
+                </li>
+                <li class="flex items-center p-2 rounded-lg hover:bg-gray-200 opacity-50">
+                    <span class="w-3 h-3 bg-gray-400 rounded-full mr-2"></span> GhostUser (Invisible)
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    <script>
+        const messagesContainer = document.getElementById('messages-container');
+        const chatInput = document.getElementById('chat-input');
+        const userCountSpan = document.getElementById('user-count');
+        const initialUserCount = parseInt(userCountSpan.textContent);
+        
+        /**
+         * Simulates sending a message and renders it to the chat window.
+         */
+        function sendMessage() {
+            const messageText = chatInput.value.trim();
+
+            if (messageText === "") {
+                return;
+            }
+
+            // 1. Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-end'; // Align to the right for "self" message
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'self-msg max-w-[80%]';
+            
+            const headerSpan = document.createElement('span');
+            headerSpan.className = 'font-bold text-green-700 text-sm';
+            headerSpan.textContent = 'You';
+
+            const paragraph = document.createElement('p');
+            paragraph.className = 'text-gray-800 whitespace-pre-wrap';
+            paragraph.textContent = messageText;
+
+            contentDiv.appendChild(headerSpan);
+            contentDiv.appendChild(paragraph);
+            messageDiv.appendChild(contentDiv);
+            
+            // 2. Append to container and clear input
+            messagesContainer.appendChild(messageDiv);
+            chatInput.value = '';
+            
+            // 3. Scroll to the bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // 4. Simulate an automated system response (like a bot/IRC server)
+            setTimeout(simulateBotResponse, 1500);
+        }
+
+        /**
+         * Simulates a system or other user response.
+         */
+        function simulateBotResponse() {
+            const botResponses = [
+                "*** Server: Message sent successfully. ***",
+                "*** Server: A wild 'PixelPioneer' has joined the channel. ***",
+                "*** ArcadeMaster has sent you a NUDGE! ***",
+                "ArcadeMaster: LOL! I totally forgot about that! Those were the days.",
+                "System: Please refrain from excessive use of emoticons. IRC rules still apply.",
+                "CodeWrangler: Speaking of 2.0, my connection speed is currently 56k. BRB.",
+            ];
+
+            const response = botResponses[Math.floor(Math.random() * botResponses.length)];
+            
+            const isSystem = response.startsWith('***');
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-start'; // Align left for others
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'max-w-[80%]';
+
+            if (isSystem) {
+                // System message style
+                messageDiv.className = 'text-center';
+                contentDiv.className = 'system-msg';
+                contentDiv.textContent = response;
+                messageDiv.appendChild(contentDiv);
+            } else {
+                // User message style
+                contentDiv.className = 'user-msg';
+                
+                const parts = response.split(':');
+                const username = parts[0].trim();
+                const text = parts.slice(1).join(':').trim();
+
+                const headerSpan = document.createElement('span');
+                headerSpan.className = 'font-bold text-blue-700 text-sm';
+                headerSpan.textContent = username;
+
+                const paragraph = document.createElement('p');
+                paragraph.className = 'text-gray-800 whitespace-pre-wrap';
+                paragraph.textContent = text;
+                
+                contentDiv.appendChild(headerSpan);
+                contentDiv.appendChild(paragraph);
+                messageDiv.appendChild(contentDiv);
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Randomly update user count for realism
+            if (Math.random() < 0.2) {
+                userCountSpan.textContent = initialUserCount + Math.floor(Math.random() * 3) - 1;
+            }
+        }
+
+        // Attach event listener for Enter key
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent new line
+                sendMessage();
+            }
+        });
+        
+        // Initial scroll to bottom (after initial messages are loaded)
+        window.onload = () => {
+             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+    </script>
+
+</body>
+</html>
