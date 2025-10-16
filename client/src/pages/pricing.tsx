@@ -84,7 +84,7 @@ export default function Pricing() {
       ],
     },
     {
-      name: "Fortune 500",
+      name: "Elite",
       price: "$19,999",
       savings: "$80k/month",
       roi: "4x ROI",
@@ -268,7 +268,7 @@ export default function Pricing() {
                   netSavings: "$288k/yr"
                 },
                 {
-                  plan: "Fortune 500",
+                  plan: "Elite",
                   price: "$19,999/mo",
                   replaces: ["Full HR Dept ($380k/yr)", "Compliance ($180k/yr)", "Benefits ($220k/yr)", "Payroll ($180k/yr)"],
                   totalSaved: "$960k/yr",
@@ -336,15 +336,15 @@ export default function Pricing() {
               },
               {
                 q: "What payment methods do you accept?",
-                a: "All major credit cards, ACH transfers, and wire transfers. Fortune 500 plans include net-30 payment terms and can be invoiced quarterly or annually.",
+                a: "All major credit cards, ACH transfers, and wire transfers. Elite plans include net-30 payment terms and can be invoiced quarterly or annually.",
               },
               {
                 q: "Is implementation included?",
-                a: "Professional includes self-service setup with video tutorials. Enterprise includes guided onboarding. Fortune 500 includes white-glove implementation with a dedicated account manager.",
+                a: "Professional includes self-service setup with video tutorials. Enterprise includes guided onboarding. Elite includes white-glove implementation with a dedicated account manager.",
               },
               {
                 q: "What if I need custom features?",
-                a: "Fortune 500 plans include custom feature development. We'll work with your team to build integrations, custom reports, or workflow automations specific to your business.",
+                a: "Elite plans include custom feature development. We'll work with your team to build integrations, custom reports, or workflow automations specific to your business.",
               },
             ].map((faq) => (
               <div
@@ -369,7 +369,7 @@ export default function Pricing() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <WorkforceOSLogo size="sm" showText={false} />
-              <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
+              <span>© 2025 WorkForceOS by Drill Consulting 360. Enterprise-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-slate-400">
               <a href="/support" className="hover:text-white transition-colors" data-testid="link-support">

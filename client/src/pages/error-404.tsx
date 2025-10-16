@@ -64,7 +64,7 @@ export default function Error404() {
             Need help? <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setLocation("/support")} data-testid="link-contact-support">Contact Support</Button>
           </p>
           <p className="text-xs text-muted-foreground">
-            WorkforceOS - Fortune 500 Workforce Management
+            WorkforceOS - Elite Workforce Management
           </p>
         </CardFooter>
       </Card>

@@ -92,8 +92,8 @@ export default function Billing() {
       savings: "$20k-$25k/month",
     },
     {
-      id: "fortune500",
-      name: "Fortune 500",
+      id: "elite",
+      name: "Elite",
       price: "$7,999",
       pricePerMonth: 7999,
       platformFee: "2%",
@@ -226,7 +226,7 @@ export default function Billing() {
       </div>
 
       {/* White-Label Call-to-Action */}
-      {currentTier !== "fortune500" && (
+      {currentTier !== "elite" && (
         <Card className="border-2 border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
@@ -234,7 +234,7 @@ export default function Billing() {
               Unlock White-Label Capabilities
             </CardTitle>
             <CardDescription className="text-base">
-              Build your own branded workforce management platform with our Fortune 500 tier
+              Build your own branded workforce management platform with our Elite tier
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -279,7 +279,7 @@ export default function Billing() {
             <Button
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
               size="lg"
-              onClick={() => upgradeMutation.mutate("fortune500")}
+              onClick={() => upgradeMutation.mutate("elite")}
               disabled={upgradeMutation.isPending}
               data-testid="button-upgrade-whitelabel"
             >

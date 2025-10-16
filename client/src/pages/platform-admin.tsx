@@ -91,7 +91,7 @@ export default function PlatformAdmin() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Platform Command Center</h1>
           <p className="text-muted-foreground">
-            Manage your entire Fortune 500 SaaS platform from one dashboard
+            Manage your entire Elite SaaS platform from one dashboard
           </p>
         </div>
         <div className="flex gap-2">

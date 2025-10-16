@@ -923,7 +923,7 @@ export const invoiceLineItemsRelations = relations(invoiceLineItems, ({ one }) =
 }));
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Job Posting & Hiring
+// ENTERPRISE FEATURES - Job Posting & Hiring
 // ============================================================================
 
 export const jobPostingStatusEnum = pgEnum('job_posting_status', ['draft', 'active', 'closed', 'filled']);
@@ -989,7 +989,7 @@ export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Employee File Management
+// ENTERPRISE FEATURES - Employee File Management
 // ============================================================================
 
 export const documentTypeEnum = pgEnum('document_type', ['certification', 'license', 'contract', 'policy', 'id', 'other']);
@@ -1026,7 +1026,7 @@ export type InsertEmployeeFile = z.infer<typeof insertEmployeeFileSchema>;
 export type EmployeeFile = typeof employeeFiles.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Employee Onboarding System
+// ENTERPRISE FEATURES - Employee Onboarding System
 // ============================================================================
 
 export const onboardingStatusEnum = pgEnum('onboarding_status', ['invited', 'in_progress', 'pending_review', 'completed', 'rejected']);
@@ -1224,7 +1224,7 @@ export type InsertEmployeeCertification = z.infer<typeof insertEmployeeCertifica
 export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Audit Trail System
+// ENTERPRISE FEATURES - Audit Trail System
 // ============================================================================
 
 export const auditActionEnum = pgEnum('audit_action', [
@@ -1280,7 +1280,7 @@ export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - API Access
+// ENTERPRISE FEATURES - API Access
 // ============================================================================
 
 export const apiKeys = pgTable("api_keys", {
@@ -1313,7 +1313,7 @@ export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - GPS Clock-in Verification
+// ENTERPRISE FEATURES - GPS Clock-in Verification
 // ============================================================================
 
 export const gpsLocations = pgTable("gps_locations", {
@@ -1335,7 +1335,7 @@ export const gpsLocations = pgTable("gps_locations", {
 export type GpsLocation = typeof gpsLocations.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Payroll Automation
+// ENTERPRISE FEATURES - Payroll Automation
 // ============================================================================
 
 export const payrollStatusEnum = pgEnum('payroll_status', ['draft', 'pending', 'approved', 'processed', 'paid']);
@@ -1399,7 +1399,7 @@ export type InsertPayrollEntry = z.infer<typeof insertPayrollEntrySchema>;
 export type PayrollEntry = typeof payrollEntries.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Platform-Level Roles (Root, Sysop, Auditor)
+// ENTERPRISE FEATURES - Platform-Level Roles (Root, Sysop, Auditor)
 // ============================================================================
 
 // Platform roles that exist outside workspace tenancy
@@ -1455,7 +1455,7 @@ export const systemAuditLogs = pgTable("system_audit_logs", {
 export type SystemAuditLog = typeof systemAuditLogs.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Resignation & Notice System
+// ENTERPRISE FEATURES - Resignation & Notice System
 // ============================================================================
 
 export const noticeTypeEnum = pgEnum('notice_type', ['resignation', 'role_change', 'termination']);
@@ -1506,7 +1506,7 @@ export type InsertEmployeeNotice = z.infer<typeof insertEmployeeNoticeSchema>;
 export type EmployeeNotice = typeof employeeNotices.$inferSelect;
 
 // ============================================================================
-// FORTUNE 500 FEATURES - Subscription & Billing Management
+// ENTERPRISE FEATURES - Subscription & Billing Management
 // ============================================================================
 
 export const subscriptionPlanEnum = pgEnum('subscription_plan', ['free', 'starter', 'professional', 'enterprise']);

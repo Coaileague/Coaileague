@@ -119,7 +119,7 @@ export default function Contact() {
             Contact Our Team
           </h1>
           <p className="text-lg text-[hsl(var(--cad-text-secondary))] max-w-2xl mx-auto">
-            Fortune 500-grade support for your workforce operations. Our experts are available 24/7 to ensure your success.
+            Elite-grade support for your workforce operations. Our experts are available 24/7 to ensure your success.
           </p>
         </div>
 
@@ -528,7 +528,7 @@ export default function Contact() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
               <WorkforceOSLogo size="sm" showText={false} />
-              <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
+              <span>© 2025 WorkforceOS. Elite-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
               <a href="/support" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-support">

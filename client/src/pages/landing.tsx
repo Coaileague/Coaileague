@@ -491,7 +491,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))] text-center sm:text-left">
               <WorkforceOSLogo size="sm" showText={false} />
-              <span className="hidden sm:inline">© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
+              <span className="hidden sm:inline">© 2025 WorkforceOS. Elite-grade workforce automation.</span>
               <span className="sm:hidden">© 2025 WorkforceOS</span>
             </div>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">

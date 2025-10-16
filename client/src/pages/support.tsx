@@ -445,7 +445,7 @@ export default function Support() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
               <WorkforceOSLogo size="sm" showText={false} />
-              <span>© 2025 WorkforceOS. Fortune 500-grade workforce automation.</span>
+              <span>© 2025 WorkforceOS. Elite-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
               <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-contact">

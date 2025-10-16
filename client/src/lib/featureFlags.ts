@@ -3,7 +3,7 @@
  * Determines which features are available based on workspace subscription tier
  */
 
-export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'enterprise' | 'fortune500';
+export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'enterprise' | 'elite';
 
 export interface FeatureFlags {
   // Portal Access
@@ -194,7 +194,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     maxReportsPerMonth: 1000,
   },
   
-  fortune500: {
+  elite: {
     // Portal Access - All enabled
     employeePortal: true,
     clientPortal: true,
@@ -211,7 +211,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     automatedPayroll: true,
     rmsReports: true,
     shiftOrders: true,
-    smartSchedule: true, // Included in Fortune 500 tier
+    smartSchedule: true, // Included in Elite tier
     
     // Export & Integration - All enabled
     csvExports: true,
@@ -258,7 +258,7 @@ export function getUpgradeMessage(currentTier: string | null | undefined, featur
     free: 'Upgrade to Starter ($1,499/mo) to unlock this feature',
     starter: 'Upgrade to Professional ($2,999/mo) to unlock this feature',
     professional: 'Upgrade to Enterprise ($7,999/mo) to unlock this feature',
-    enterprise: 'Upgrade to Fortune 500 ($19,999/mo) for unlimited access',
+    enterprise: 'Upgrade to Elite ($19,999/mo) for unlimited access',
   };
   
   return upgradeMap[tier] || 'Upgrade your plan to unlock this feature';
@@ -273,7 +273,7 @@ export function getTierDisplayName(tier: string | null | undefined): string {
     starter: 'Starter Plan',
     professional: 'Professional Plan',
     enterprise: 'Enterprise Plan',
-    fortune500: 'Fortune 500 Plan',
+    elite: 'Elite Plan',
   };
   
   return tierNames[tier?.toLowerCase() || 'free'] || 'Free Plan';
