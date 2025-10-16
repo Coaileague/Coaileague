@@ -177,10 +177,13 @@ export function setupWebSocket(server: Server) {
                   }
                 } else {
                   // Customer: Add to queue and send welcome with position
+                  // Generate ticket number if needed
+                  const ticketNumber = `TKT-${Date.now().toString().slice(-6)}`;
+                  
                   const queueEntry = await queueManager.enqueue({
                     conversationId: payload.conversationId,
                     userId: payload.userId,
-                    ticketNumber: conversation.ticketNumber || 'N/A',
+                    ticketNumber,
                     userName: displayName,
                     workspaceId: ws.workspaceId,
                   });
@@ -315,7 +318,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'help': {
                   const platformRole = await storage.getUserPlatformRole(ws.userId);
-                  const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                  const isStaff = !!(platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
                   const helpText = getHelpText(isStaff);
                   
                   ws.send(JSON.stringify({
