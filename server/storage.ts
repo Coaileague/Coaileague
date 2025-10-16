@@ -2136,6 +2136,31 @@ export class DatabaseStorage implements IStorage {
       workspaceRole: employeeData?.workspaceRole || null,
     };
   }
+
+  /**
+   * Get AI usage count for a user (for free tier limits)
+   */
+  async getAiUsageCount(userId: string): Promise<number> {
+    // Simple in-memory tracking for now - could be moved to database table later
+    // This resets on server restart, which is fine for a trial/demo feature
+    if (!this.aiUsageCache) {
+      this.aiUsageCache = new Map<string, number>();
+    }
+    return this.aiUsageCache.get(userId) || 0;
+  }
+
+  /**
+   * Increment AI usage count for a user
+   */
+  async incrementAiUsage(userId: string): Promise<void> {
+    if (!this.aiUsageCache) {
+      this.aiUsageCache = new Map<string, number>();
+    }
+    const current = this.aiUsageCache.get(userId) || 0;
+    this.aiUsageCache.set(userId, current + 1);
+  }
+
+  private aiUsageCache?: Map<string, number>;
 }
 
 export const storage = new DatabaseStorage();
