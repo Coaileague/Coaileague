@@ -53,6 +53,7 @@ import HRReviews from "@/pages/hr-reviews";
 import HRPTO from "@/pages/hr-pto";
 import HRTerminations from "@/pages/hr-terminations";
 import HelpdeskChat from "@/pages/helpdesk-chat";
+import LiveChatroom from "@/pages/live-chatroom";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
 
@@ -134,6 +135,7 @@ function AppContent() {
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support/chat" component={HelpdeskChat} />
+                <Route path="/live-chat" component={LiveChatroom} />
                 <Route path="/support" component={Support} />
                 <Route component={NotFound} />
               </Switch>

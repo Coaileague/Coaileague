@@ -3665,6 +3665,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // LIVE CHATROOM (IRC/MSN Style - Single Room Always Open)
+  // ============================================================================
+  
+  const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+  
+  // Get or create main chatroom
+  app.get('/api/chat/main-room', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+      
+      // Create main room if it doesn't exist
+      if (!mainRoom) {
+        mainRoom = await storage.createChatConversation({
+          id: MAIN_ROOM_ID,
+          workspaceId: 'platform-chatroom', // Special platform workspace
+          customerName: 'Main Chatroom',
+          customerEmail: 'chatroom@workforceos.com',
+          subject: 'WorkforceOS Live Support Chat',
+          status: 'active',
+          priority: 'normal',
+          isSilenced: false,
+          lastMessageAt: new Date(),
+        });
+      }
+      
+      res.json(mainRoom);
+    } catch (error) {
+      console.error("Error getting main room:", error);
+      res.status(500).json({ message: "Failed to get main room" });
+    }
+  });
+  
+  // Get all messages from main room (live feed)
+  app.get('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Ensure room exists first
+      let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+      if (!mainRoom) {
+        mainRoom = await storage.createChatConversation({
+          id: MAIN_ROOM_ID,
+          workspaceId: 'platform-chatroom',
+          customerName: 'Main Chatroom',
+          customerEmail: 'chatroom@workforceos.com',
+          subject: 'WorkforceOS Live Support Chat',
+          status: 'active',
+          priority: 'normal',
+          isSilenced: false,
+          lastMessageAt: new Date(),
+        });
+      }
+      
+      const messages = await storage.getChatMessagesByConversation(MAIN_ROOM_ID);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching main room messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+  
+  // Send message to main room
+  app.post('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = req.user!;
+      
+      // Ensure room exists
+      let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+      if (!mainRoom) {
+        mainRoom = await storage.createChatConversation({
+          id: MAIN_ROOM_ID,
+          workspaceId: 'platform-chatroom',
+          customerName: 'Main Chatroom',
+          customerEmail: 'chatroom@workforceos.com',
+          subject: 'WorkforceOS Live Support Chat',
+          status: 'active',
+          priority: 'normal',
+          isSilenced: false,
+          lastMessageAt: new Date(),
+        });
+      }
+      
+      const { message, messageType = "text" } = req.body;
+      
+      if (!message || !message.trim()) {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      
+      // Determine sender name and type
+      const platformRole = await storage.getUserPlatformRole(userId);
+      const senderType = platformRole ? 'support' : 'customer';
+      const senderName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "User";
+      
+      const newMessage = await storage.createChatMessage({
+        conversationId: MAIN_ROOM_ID,
+        senderId: userId,
+        senderName,
+        senderType,
+        message: message.trim(),
+        messageType,
+        isRead: false,
+      });
+      
+      // Update last message timestamp
+      await storage.updateChatConversation(MAIN_ROOM_ID, {
+        lastMessageAt: new Date(),
+      });
+      
+      res.status(201).json(newMessage);
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      res.status(400).json({ message: error.message || "Failed to send message" });
+    }
+  });
+
   // Grant voice to user (remove silence) - Managers and Owners only
   app.post('/api/chat/conversations/:id/grant-voice', isAuthenticated, requireManager, async (req: any, res) => {
     try {

@@ -891,14 +891,14 @@ export default function RootAdminPortal() {
                   <Button 
                     size="lg" 
                     onClick={() => {
-                      // Platform admin - go directly to chat room to see ALL conversations
-                      window.location.href = "/support/chat";
+                      // Platform admin - go directly to LIVE chat room (IRC/MSN style)
+                      window.location.href = "/live-chat";
                     }}
                     data-testid="button-enter-chat-room"
                     className="gap-2"
                   >
                     <Sparkles className="h-4 w-4" />
-                    Enter Chat Room
+                    Enter Live Chat Room
                   </Button>
                 </div>
               </CardHeader>
