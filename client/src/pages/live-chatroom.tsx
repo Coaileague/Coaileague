@@ -517,6 +517,46 @@ export default function LiveChatroomPage() {
           {/* Messages */}
           <ScrollArea className="flex-1 p-4 relative z-10">
             <div className="max-w-4xl mx-auto space-y-4">
+              {/* Pinned Room Info Banner - Always Visible */}
+              <Card className="sticky top-0 z-50 border-blue-500/30 bg-gradient-to-r from-blue-900/40 via-indigo-900/40 to-purple-900/40 backdrop-blur-md shadow-lg">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg flex-shrink-0">
+                      <MessageSquare className="w-5 h-5 text-blue-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-base sm:text-lg font-bold text-white">HelpDesk</h2>
+                        <Badge 
+                          variant={helpDeskRoom?.status === 'open' ? 'default' : 'secondary'}
+                          className="gap-1 flex-shrink-0 bg-white/20 border-white/30 text-white text-xs"
+                        >
+                          {helpDeskRoom?.status === 'open' ? (
+                            <>
+                              <Circle className="w-1.5 h-1.5 fill-green-400 text-green-400 animate-pulse" />
+                              Open
+                            </>
+                          ) : helpDeskRoom?.status === 'closed' ? (
+                            <>
+                              <Circle className="w-1.5 h-1.5 fill-red-400 text-red-400" />
+                              Closed
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="w-1.5 h-1.5 fill-amber-400 text-amber-400 animate-pulse" />
+                              Maintenance
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                        {helpDeskRoom?.statusMessage || "Live Support · Ask questions, get help from our team, or chat with HelpOS™ AI assistant"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
               {messages.length === 0 ? (
                 <Card className="border-dashed border-slate-600/30 bg-slate-800/40 backdrop-blur-sm">
                   <CardContent className="p-8 text-center">

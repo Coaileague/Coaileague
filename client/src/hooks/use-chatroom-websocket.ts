@@ -36,10 +36,11 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
     
     // Prevent duplicate connections
     if (isConnectingRef.current || (wsRef.current && wsRef.current.readyState === WebSocket.OPEN)) {
-      console.log('WebSocket already connecting or connected, skipping duplicate connection');
+      console.log('⚠️ WebSocket already connecting or connected, skipping duplicate connection');
       return;
     }
     
+    console.log('🔌 Creating new WebSocket connection for user:', userId);
     isConnectingRef.current = true;
 
     // Clean up existing connection
@@ -101,6 +102,24 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
               }
               if (data.temporaryError) {
                 setTemporaryError(true);
+              }
+              break;
+
+            case 'system_message':
+              // Handle system messages (e.g., help command response)
+              if (data.message) {
+                const systemMsg = {
+                  id: `system-${Date.now()}`,
+                  conversationId: 'main-chatroom-workforceos',
+                  senderId: null,
+                  senderName: 'System',
+                  senderType: 'system' as const,
+                  message: data.message,
+                  messageType: 'text' as const,
+                  isSystemMessage: true,
+                  timestamp: new Date().toISOString(),
+                };
+                setMessages((prev) => [...prev, systemMsg]);
               }
               break;
 
@@ -171,7 +190,7 @@ export function useChatroomWebSocket(userId: string | undefined, userName: strin
         wsRef.current.close();
       }
     };
-  }, [connect, userId]);
+  }, [userId]); // Only reconnect when userId changes, not when connect changes
 
   // Clear access error state (call after successful ticket verification)
   const clearAccessError = useCallback(() => {
