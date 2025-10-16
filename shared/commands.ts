@@ -14,6 +14,8 @@ export type SlashCommand =
   | 'auth'       // Request user authentication
   | 'verify'     // Verify user organization
   | 'resetpass'  // Send password reset
+  | 'status'     // Check ticket status (customer)
+  | 'queue'      // Check queue position (customer)
   | 'help';      // Show available commands
 
 export interface ParsedCommand {
@@ -114,6 +116,22 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
     requiresStaff: true,
     minArgs: 1,
     maxArgs: 1,
+  },
+  status: {
+    command: 'status',
+    description: 'Check your ticket status and information',
+    usage: '/status',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  queue: {
+    command: 'queue',
+    description: 'Check your position in the support queue',
+    usage: '/queue',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
   },
   help: {
     command: 'help',

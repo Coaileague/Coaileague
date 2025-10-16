@@ -226,6 +226,31 @@ export class HelpOsQueueManager {
   }
 
   /**
+   * Get queue position for conversation (formatted for customer display)
+   */
+  async getPosition(conversationId: string): Promise<{
+    position: number;
+    priorityScore: number;
+    waitTimeMinutes: number;
+  } | null> {
+    const entry = await this.getQueueEntry(conversationId);
+    
+    if (!entry || entry.status !== "waiting") {
+      return null;
+    }
+
+    const waitTimeMinutes = Math.floor(
+      (Date.now() - new Date(entry.joinedAt).getTime()) / 60000
+    );
+
+    return {
+      position: entry.queuePosition || 0,
+      priorityScore: entry.priorityScore || 0,
+      waitTimeMinutes,
+    };
+  }
+
+  /**
    * Get users needing reminder announcement (5+ min since last)
    */
   async getUsersNeedingReminder(): Promise<HelpOsQueueEntry[]> {
