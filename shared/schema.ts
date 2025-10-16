@@ -2117,6 +2117,59 @@ export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 
+// HelpOS Queue Management - AI-powered support queue
+export const helpOsQueue = pgTable("help_os_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // User identification
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  ticketNumber: varchar("ticket_number").notNull(), // TKT-XXXXXX
+  userName: varchar("user_name").notNull(),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Queue position & timing
+  queuePosition: integer("queue_position"), // Calculated position in line
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  estimatedWaitMinutes: integer("estimated_wait_minutes"),
+  
+  // Priority scoring (0-100)
+  priorityScore: integer("priority_score").default(0).notNull(),
+  waitTimeScore: integer("wait_time_score").default(0), // Based on how long waiting
+  tierScore: integer("tier_score").default(0), // Subscriber tier bonus
+  specialNeedsScore: integer("special_needs_score").default(0), // ADA/accessibility
+  ownershipScore: integer("ownership_score").default(0), // Organization owner/POC
+  
+  // User metadata for prioritization
+  subscriptionTier: varchar("subscription_tier").default("free"), // from workspace
+  hasSpecialNeeds: boolean("has_special_needs").default(false), // ADA claim
+  isOwner: boolean("is_owner").default(false), // Workspace owner
+  isPOC: boolean("is_poc").default(false), // Point of contact
+  
+  // Announcement tracking
+  lastAnnouncementAt: timestamp("last_announcement_at"),
+  announcementCount: integer("announcement_count").default(0),
+  hasReceivedWelcome: boolean("has_received_welcome").default(false),
+  
+  // Status
+  status: varchar("status").default("waiting"), // 'waiting', 'being_helped', 'resolved', 'abandoned'
+  assignedStaffId: varchar("assigned_staff_id").references(() => users.id, { onDelete: 'set null' }),
+  assignedAt: timestamp("assigned_at"),
+  resolvedAt: timestamp("resolved_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertHelpOsQueueSchema = createInsertSchema(helpOsQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHelpOsQueue = z.infer<typeof insertHelpOsQueueSchema>;
+export type HelpOsQueueEntry = typeof helpOsQueue.$inferSelect;
+
 // ============================================================================
 // SALES & MARKETING AUTOMATION SYSTEM
 // ============================================================================

@@ -7,9 +7,9 @@ interface WorkforceOSLogoProps {
 }
 
 /**
- * WorkforceOS FWF Wordmark Logo - Fortune 500 Grade
- * Gold F + White W + Gold F with electric blue OS
- * Power statement branding - Force Workforce Force
+ * WorkforceOS Wordmark Logo - Fortune 500 Grade
+ * Big "WF" letterform with electric blue "OS" superscript
+ * WorkForce + OS = WorkforceOS
  */
 export function WorkforceOSLogo({ 
   size = "md", 
@@ -48,7 +48,7 @@ export function WorkforceOSLogo({
 
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
-      {/* FWF Logo - Gold Force + White Workforce + Gold Force */}
+      {/* WF Logo with OS superscript */}
       <div 
         className={cn(
           "relative flex items-center justify-center",
@@ -57,7 +57,7 @@ export function WorkforceOSLogo({
         data-testid="logo-icon"
       >
         <svg
-          viewBox="0 0 180 120"
+          viewBox="0 0 160 120"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full"
@@ -68,13 +68,6 @@ export function WorkforceOSLogo({
               <stop offset="0%" stopColor="#1e3a8a" />
               <stop offset="50%" stopColor="#1e293b" />
               <stop offset="100%" stopColor="#0f172a" />
-            </linearGradient>
-            
-            {/* Gold Gradient for F's - Premium Statement */}
-            <linearGradient id={`gold-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fbbf24" />
-              <stop offset="50%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#d97706" />
             </linearGradient>
             
             {/* Bright Electric Blue for "OS" - Neon Effect */}
@@ -93,17 +86,6 @@ export function WorkforceOSLogo({
                 <feMergeNode in="blur1"/>
                 <feMergeNode in="blur2"/>
                 <feMergeNode in="blur3"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-            
-            {/* Gold glow effect */}
-            <filter id={`gold-glow-${uniqueId}`}>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur1"/>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur2"/>
-              <feMerge>
-                <feMergeNode in="blur1"/>
-                <feMergeNode in="blur2"/>
                 <feMergeNode in="SourceGraphic"/>
               </feMerge>
             </filter>
@@ -132,13 +114,13 @@ export function WorkforceOSLogo({
             </filter>
           </defs>
 
-          {/* FWF Badge - REALISTIC Lit Advertisement */}
+          {/* WF + OS Badge - REALISTIC Lit Advertisement */}
           <g>
             {/* Deep shadow layer for depth */}
             <rect
               x="8"
               y="16"
-              width="164"
+              width="144"
               height="96"
               rx="20"
               fill="black"
@@ -149,7 +131,7 @@ export function WorkforceOSLogo({
             <rect
               x="8"
               y="12"
-              width="164"
+              width="144"
               height="96"
               rx="20"
               fill={`url(#corp-blue-${uniqueId})`}
@@ -160,7 +142,7 @@ export function WorkforceOSLogo({
             <rect
               x="10"
               y="14"
-              width="160"
+              width="140"
               height="92"
               rx="18"
               fill="none"
@@ -168,39 +150,9 @@ export function WorkforceOSLogo({
               strokeWidth="1"
             />
             
-            {/* LEFT F - Shadow */}
+            {/* W - Shadow */}
             <text
-              x="35"
-              y="84"
-              textAnchor="middle"
-              fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="58"
-              fontWeight="900"
-              fill="black"
-              opacity="0.4"
-              letterSpacing="-2"
-            >
-              F
-            </text>
-            
-            {/* LEFT F - Gold with glow */}
-            <text
-              x="35"
-              y="82"
-              textAnchor="middle"
-              fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="58"
-              fontWeight="900"
-              fill={`url(#gold-${uniqueId})`}
-              letterSpacing="-2"
-              filter={`url(#gold-glow-${uniqueId})`}
-            >
-              F
-            </text>
-            
-            {/* CENTER W - Shadow */}
-            <text
-              x="90"
+              x="45"
               y="84"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
@@ -213,9 +165,9 @@ export function WorkforceOSLogo({
               W
             </text>
             
-            {/* CENTER W - White with realistic neon glow */}
+            {/* W - White with realistic neon glow */}
             <text
-              x="90"
+              x="45"
               y="82"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
@@ -228,9 +180,9 @@ export function WorkforceOSLogo({
               W
             </text>
             
-            {/* RIGHT F - Shadow */}
+            {/* F - Shadow */}
             <text
-              x="145"
+              x="105"
               y="84"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
@@ -243,24 +195,24 @@ export function WorkforceOSLogo({
               F
             </text>
             
-            {/* RIGHT F - Gold with glow */}
+            {/* F - White with realistic neon glow */}
             <text
-              x="145"
+              x="105"
               y="82"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
               fontSize="58"
               fontWeight="900"
-              fill={`url(#gold-${uniqueId})`}
+              fill="white"
               letterSpacing="-2"
-              filter={`url(#gold-glow-${uniqueId})`}
+              filter={`url(#white-glow-${uniqueId})`}
             >
               F
             </text>
             
             {/* OS Superscript - Shadow */}
             <text
-              x="118"
+              x="128"
               y="43"
               textAnchor="start"
               fontFamily="system-ui, -apple-system, sans-serif"
@@ -275,7 +227,7 @@ export function WorkforceOSLogo({
             
             {/* OS Superscript - Electric blue neon */}
             <text
-              x="118"
+              x="128"
               y="42"
               textAnchor="start"
               fontFamily="system-ui, -apple-system, sans-serif"
@@ -290,7 +242,7 @@ export function WorkforceOSLogo({
             
             {/* Bright core of OS for ultra-bright center */}
             <text
-              x="118"
+              x="128"
               y="42"
               textAnchor="start"
               fontFamily="system-ui, -apple-system, sans-serif"
