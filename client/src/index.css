@@ -254,6 +254,54 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* CRITICAL: Prevent ALL images from overflowing on mobile */
+  img,
+  svg,
+  video,
+  canvas,
+  audio,
+  iframe,
+  embed,
+  object,
+  picture {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Ensure images in containers respect container bounds */
+  img {
+    object-fit: contain;
+  }
+
+  /* Override for avatar/icon images that need to be circular */
+  [role="img"],
+  .avatar img,
+  .icon img {
+    object-fit: cover;
+  }
+
+  /* Prevent horizontal overflow on all levels */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Ensure all containers respect viewport width */
+  * {
+    box-sizing: border-box;
+  }
+  
+  *:not(svg *) {
+    max-width: 100%;
+  }
+
+  /* Allow specific elements to exceed if explicitly set */
+  .allow-overflow {
+    max-width: none !important;
+  }
 }
 
 /**

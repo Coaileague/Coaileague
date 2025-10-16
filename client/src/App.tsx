@@ -56,6 +56,7 @@ import HelpdeskChat from "@/pages/helpdesk-chat";
 import LiveChatroom from "@/pages/live-chatroom";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
+import { FloatingChatButton } from "@/components/floating-chat-button";
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -158,6 +159,7 @@ export default function App() {
           <WorkspaceThemeProvider>
             <TooltipProvider>
               <AppContent />
+              <FloatingChatButton />
               <Toaster />
             </TooltipProvider>
           </WorkspaceThemeProvider>
