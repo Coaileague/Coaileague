@@ -506,6 +506,11 @@ export const shifts = pgTable("shifts", {
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   
+  // Smart Schedule™ tracking
+  aiGenerated: boolean("ai_generated").default(false),
+  requiresAcknowledgment: boolean("requires_acknowledgment").default(false),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  
   // Status and tracking
   status: shiftStatusEnum("status").default('scheduled'),
   
@@ -552,6 +557,35 @@ export const insertShiftTemplateSchema = createInsertSchema(shiftTemplates).omit
 
 export type InsertShiftTemplate = z.infer<typeof insertShiftTemplateSchema>;
 export type ShiftTemplate = typeof shiftTemplates.$inferSelect;
+
+// Smart Schedule™ Usage Tracking (for billing)
+export const smartScheduleUsage = pgTable("smart_schedule_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Usage details
+  scheduleDate: timestamp("schedule_date").notNull(), // Week start date
+  employeesScheduled: integer("employees_scheduled").notNull(),
+  shiftsGenerated: integer("shifts_generated").notNull(),
+  
+  // Billing
+  billingModel: varchar("billing_model").notNull(), // 'per_cycle', 'per_employee', 'tier_included'
+  chargeAmount: decimal("charge_amount", { precision: 10, scale: 2 }), // Amount charged
+  
+  // AI metadata
+  aiModel: varchar("ai_model").default('gpt-4'),
+  processingTimeMs: integer("processing_time_ms"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSmartScheduleUsageSchema = createInsertSchema(smartScheduleUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSmartScheduleUsage = z.infer<typeof insertSmartScheduleUsageSchema>;
+export type SmartScheduleUsage = typeof smartScheduleUsage.$inferSelect;
 
 // Time Entries (Actual clock-in/clock-out for billing)
 export const timeEntries = pgTable("time_entries", {

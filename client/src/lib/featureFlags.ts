@@ -22,6 +22,7 @@ export interface FeatureFlags {
   automatedPayroll: boolean;
   rmsReports: boolean;
   shiftOrders: boolean;
+  smartSchedule: boolean; // Smart Schedule™ AI - Auto-scheduling with learning
   
   // Export & Integration
   csvExports: boolean;
@@ -62,6 +63,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     automatedPayroll: false,
     rmsReports: false,
     shiftOrders: false,
+    smartSchedule: false, // Requires Enterprise+ or pay-per-use
     
     // Export & Integration
     csvExports: false,
@@ -98,6 +100,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     automatedPayroll: false,
     rmsReports: true,
     shiftOrders: false,
+    smartSchedule: false, // Requires Professional+ or pay-per-use
     
     // Export & Integration
     csvExports: true,
@@ -134,6 +137,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     automatedPayroll: true,
     rmsReports: true,
     shiftOrders: true,
+    smartSchedule: false, // Available as add-on or in Enterprise+
     
     // Export & Integration
     csvExports: true,
@@ -170,6 +174,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     automatedPayroll: true,
     rmsReports: true,
     shiftOrders: true,
+    smartSchedule: true, // Included in Enterprise tier
     
     // Export & Integration
     csvExports: true,
@@ -206,6 +211,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     automatedPayroll: true,
     rmsReports: true,
     shiftOrders: true,
+    smartSchedule: true, // Included in Fortune 500 tier
     
     // Export & Integration - All enabled
     csvExports: true,
