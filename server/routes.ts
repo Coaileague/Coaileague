@@ -1202,6 +1202,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create escalation ticket to platform support
+  app.post('/api/leaders/escalate', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const requestorId = req.user.id;
+      const { category, title, description, priority, relatedEntityType, relatedEntityId, contextData } = req.body;
+      
+      // Generate unique ticket number with retry on constraint violation
+      let ticket;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (!ticket && attempts < maxAttempts) {
+        try {
+          const ticketNumber = `ESC-${Math.floor(100000 + Math.random() * 900000)}`;
+          
+          ticket = await storage.createEscalationTicket({
+            ticketNumber,
+            workspaceId,
+            requestorId,
+            requestorEmail: req.user.email || '',
+            requestorRole: req.workspaceRole,
+            category: category || 'other',
+            title,
+            description,
+            priority: priority || 'normal',
+            relatedEntityType,
+            relatedEntityId,
+            contextData,
+            attachments: null,
+            assignedTo: null,
+            status: 'open',
+            resolution: null,
+          });
+        } catch (error: any) {
+          // Retry on unique constraint violation (duplicate ticket number)
+          if (error.code === '23505' && error.constraint === 'escalation_tickets_ticket_number_unique') {
+            attempts++;
+            if (attempts >= maxAttempts) {
+              return res.status(500).json({ message: "Failed to generate unique ticket number after retries" });
+            }
+            continue;
+          }
+          throw error; // Re-throw other errors
+        }
+      }
+      
+      if (!ticket) {
+        return res.status(500).json({ message: "Failed to create escalation ticket" });
+      }
+      
+      // Log escalation action
+      await storage.createLeaderAction({
+        workspaceId,
+        leaderId: requestorId,
+        leaderEmail: req.user.email || '',
+        leaderRole: req.workspaceRole,
+        action: 'escalate_to_support',
+        targetEntityType: 'escalation_ticket',
+        targetEntityId: ticket.id,
+        targetEmployeeName: null,
+        changesBefore: null,
+        changesAfter: { ticketNumber: ticket.ticketNumber, category, priority },
+        reason: description,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || '',
+        requiresApproval: false,
+      });
+      
+      res.status(201).json({ 
+        success: true, 
+        message: "Escalation ticket created successfully",
+        ticket
+      });
+    } catch (error) {
+      console.error("Error creating escalation ticket:", error);
+      res.status(500).json({ message: "Failed to create escalation ticket" });
+    }
+  });
+
+  // Get escalation tickets for workspace
+  app.get('/api/leaders/escalations', isAuthenticated, requireLeader, async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      
+      const tickets = await storage.getEscalationTicketsByWorkspace(workspaceId);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching escalation tickets:", error);
+      res.status(500).json({ message: "Failed to fetch escalation tickets" });
+    }
+  });
+
+  // Update escalation ticket status (platform staff only)
+  app.patch('/api/leaders/escalations/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, resolution } = req.body;
+      const staffId = req.user.id;
+      
+      // Check if user has platform staff role
+      const [staffRole] = await db
+        .select()
+        .from(platformRoles)
+        .where(
+          and(
+            eq(platformRoles.userId, staffId),
+            isNull(platformRoles.revokedAt)
+          )
+        )
+        .limit(1);
+      
+      const isPlatformStaff = staffRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(staffRole.role);
+      
+      if (!isPlatformStaff) {
+        return res.status(403).json({ message: "Only platform staff can update escalation tickets" });
+      }
+      
+      // Get existing ticket for audit trail and state validation
+      const [existingTicket] = await db
+        .select()
+        .from(escalationTickets)
+        .where(eq(escalationTickets.id, id))
+        .limit(1);
+      
+      if (!existingTicket) {
+        return res.status(404).json({ message: "Escalation ticket not found" });
+      }
+      
+      // Validate status transition based on current state
+      const currentStatus = existingTicket.status;
+      const allowedTransitions: Record<string, string[]> = {
+        'open': ['in_progress', 'resolved'],
+        'in_progress': ['resolved', 'open'], // Can reopen if needed
+        'resolved': [], // Cannot change from resolved
+      };
+      
+      const validStatuses = ['open', 'in_progress', 'resolved'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      const allowedNextStates = allowedTransitions[currentStatus || 'open'] || [];
+      if (!allowedNextStates.includes(status)) {
+        return res.status(400).json({ 
+          message: `Cannot transition from ${currentStatus} to ${status}. Allowed transitions: ${allowedNextStates.join(', ') || 'none'}` 
+        });
+      }
+      
+      // Require resolution when closing ticket
+      if (status === 'resolved' && !resolution) {
+        return res.status(400).json({ message: "Resolution is required when closing an escalation ticket" });
+      }
+      
+      // Capture before state for audit
+      const beforeState = {
+        status: existingTicket.status,
+        resolution: existingTicket.resolution,
+      };
+      
+      // Update ticket status
+      const updated = await storage.updateEscalationTicketStatus(id, status, staffId);
+      
+      if (resolution && updated) {
+        await storage.addEscalationTicketResponse(id, resolution);
+      }
+      
+      // Capture after state for audit
+      const afterState = {
+        status: updated?.status,
+        resolution: updated?.resolution || resolution,
+      };
+      
+      // Log platform staff action to audit trail
+      await storage.createLeaderAction({
+        workspaceId: existingTicket.workspaceId,
+        leaderId: staffId,
+        leaderEmail: req.user.email || '',
+        leaderRole: staffRole.role as any, // Platform role, not workspace role
+        action: 'platform_update_escalation',
+        targetEntityType: 'escalation_ticket',
+        targetEntityId: id,
+        targetEmployeeName: existingTicket.ticketNumber,
+        changesBefore: beforeState,
+        changesAfter: afterState,
+        reason: resolution || `Status changed to ${status}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || '',
+        requiresApproval: false,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Escalation ticket updated successfully",
+        ticket: updated
+      });
+    } catch (error) {
+      console.error("Error updating escalation ticket:", error);
+      res.status(500).json({ message: "Failed to update escalation ticket" });
+    }
+  });
+
   // ============================================================================
   // CLIENT ROUTES (Multi-tenant isolated)
   // ============================================================================
