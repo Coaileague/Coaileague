@@ -41,6 +41,8 @@ import {
   payrollRuns,
   payrollEntries,
   abuseViolations,
+  leaderActions,
+  escalationTickets,
   type User,
   type UpsertUser,
   type AbuseViolation,
@@ -112,6 +114,10 @@ import {
   type InsertCustomFormSubmission,
   type PayrollRun,
   type PayrollEntry,
+  type LeaderAction,
+  type InsertLeaderAction,
+  type EscalationTicket,
+  type InsertEscalationTicket,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, isNull, or, like, sql } from "drizzle-orm";
@@ -2360,6 +2366,104 @@ export class DatabaseStorage implements IStorage {
       bannedUntil: ban.bannedUntil,
       reason: ban.banReason,
     };
+  }
+
+  // ============================================================================
+  // LEADER ACTIONS OPERATIONS (Audit Logging)
+  // ============================================================================
+
+  async createLeaderAction(action: InsertLeaderAction): Promise<LeaderAction> {
+    const [created] = await db
+      .insert(leaderActions)
+      .values(action)
+      .returning();
+    return created;
+  }
+
+  async getLeaderActionsByWorkspace(workspaceId: string, limit: number = 50): Promise<LeaderAction[]> {
+    return await db
+      .select()
+      .from(leaderActions)
+      .where(eq(leaderActions.workspaceId, workspaceId))
+      .orderBy(desc(leaderActions.createdAt))
+      .limit(limit);
+  }
+
+  async getLeaderActionsByEmployee(employeeId: string, workspaceId: string): Promise<LeaderAction[]> {
+    return await db
+      .select()
+      .from(leaderActions)
+      .where(
+        and(
+          eq(leaderActions.targetEntityId, employeeId),
+          eq(leaderActions.workspaceId, workspaceId)
+        )
+      )
+      .orderBy(desc(leaderActions.createdAt));
+  }
+
+  // ============================================================================
+  // ESCALATION TICKETS OPERATIONS (Leader→Support Handoff)
+  // ============================================================================
+
+  async createEscalationTicket(ticket: InsertEscalationTicket): Promise<EscalationTicket> {
+    const [created] = await db
+      .insert(escalationTickets)
+      .values(ticket)
+      .returning();
+    return created;
+  }
+
+  async getEscalationTicketsByWorkspace(workspaceId: string): Promise<EscalationTicket[]> {
+    return await db
+      .select()
+      .from(escalationTickets)
+      .where(eq(escalationTickets.workspaceId, workspaceId))
+      .orderBy(desc(escalationTickets.createdAt));
+  }
+
+  async getEscalationTicket(id: string, workspaceId: string): Promise<EscalationTicket | undefined> {
+    const [ticket] = await db
+      .select()
+      .from(escalationTickets)
+      .where(
+        and(
+          eq(escalationTickets.id, id),
+          eq(escalationTickets.workspaceId, workspaceId)
+        )
+      );
+    return ticket;
+  }
+
+  async updateEscalationTicketStatus(id: string, status: string, resolvedBy?: string): Promise<EscalationTicket | undefined> {
+    const updateData: any = {
+      status: status as any,
+      updatedAt: new Date()
+    };
+
+    if (status === 'resolved' && resolvedBy) {
+      updateData.resolvedAt = new Date();
+      updateData.resolvedBy = resolvedBy;
+    }
+
+    const [updated] = await db
+      .update(escalationTickets)
+      .set(updateData)
+      .where(eq(escalationTickets.id, id))
+      .returning();
+    return updated;
+  }
+
+  async addEscalationTicketResponse(id: string, response: string): Promise<EscalationTicket | undefined> {
+    const [updated] = await db
+      .update(escalationTickets)
+      .set({
+        resolution: response,
+        updatedAt: new Date()
+      })
+      .where(eq(escalationTickets.id, id))
+      .returning();
+    return updated;
   }
 }
 
