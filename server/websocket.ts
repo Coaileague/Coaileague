@@ -75,6 +75,7 @@ export function setupWebSocket(server: Server) {
 
             // HELPDESK ACCESS CONTROL: For the main HelpDesk room (public IRC-style chatroom)
             const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+            let userRoleInfo = '';
             if (payload.conversationId === MAIN_ROOM_ID) {
               // This is the main HelpDesk public chatroom - all authenticated users allowed
               try {
@@ -82,14 +83,14 @@ export function setupWebSocket(server: Server) {
                 const isStaff = platformRole && ['root', 'platform_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
                 if (isStaff) {
-                  console.log(`${displayName} joined HelpOS (platform staff - role: ${platformRole})`);
+                  userRoleInfo = `platform staff - ${platformRole}`;
                 } else {
-                  console.log(`${displayName} joined HelpOS (guest/customer)`);
+                  userRoleInfo = 'guest/customer';
                 }
               } catch (staffCheckError) {
                 // Error checking staff status - allow access anyway (degraded mode)
                 console.error('Failed to verify staff status:', staffCheckError);
-                console.log(`User ${payload.userId} joined HelpOS (degraded mode)`);
+                userRoleInfo = 'degraded mode';
               }
             }
 
@@ -228,10 +229,43 @@ export function setupWebSocket(server: Server) {
                 }
               } catch (announceError) {
                 console.error('Failed to send join announcements:', announceError);
+                
+                // FALLBACK: Send basic welcome if queue system fails
+                try {
+                  const clients = conversationClients.get(payload.conversationId);
+                  const fallbackMessage = await storage.createChatMessage({
+                    conversationId: payload.conversationId,
+                    senderId: null,
+                    senderName: 'System',
+                    senderType: 'system',
+                    message: `Welcome to HelpDesk! Support staff will assist you shortly.`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                  });
+
+                  if (clients) {
+                    const fallbackPayload = JSON.stringify({
+                      type: 'new_message',
+                      message: fallbackMessage,
+                    });
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(fallbackPayload);
+                      }
+                    });
+                  }
+                } catch (fallbackError) {
+                  console.error('Fallback welcome also failed:', fallbackError);
+                }
               }
             }
 
-            console.log(`${displayName} joined conversation ${payload.conversationId}`);
+            // Single consolidated log message
+            if (payload.conversationId === MAIN_ROOM_ID) {
+              console.log(`✅ ${displayName} joined HelpDesk (${userRoleInfo})`);
+            } else {
+              console.log(`${displayName} joined conversation ${payload.conversationId}`);
+            }
             break;
           }
 

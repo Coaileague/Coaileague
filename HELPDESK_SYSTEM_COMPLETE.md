@@ -37,15 +37,26 @@ A professional IRC/MSN-style support chat system with dual-platform optimization
 
 ---
 
-### 3. ✅ Mobile Chat (Simplified Hamburger Menu)
-**File:** `client/src/components/mobile-chat-layout.tsx`
+### 3. ✅ Mobile Chat (Touch-Optimized with Tap-on-Username)
+**Files:** 
+- `client/src/components/mobile-chat-layout.tsx`
+- `client/src/components/mobile-user-action-sheet.tsx`
 
 **Features:**
+- **TAP USERNAME → Command Wheel:** Touch any username to open action sheet (no typing!)
 - **Hamburger Menu Integration:** All commands accessible via SupportCommandDrawer
+- **Visual Hint:** Tappable usernames show "(tap for actions)" hint
+- **Auto-Fill Username:** Commands pre-filled with selected user
+- **Smart Filtering:** Only show actions for real users (not system/bot/self)
 - **Compact Header:** Gradient blue background, centered logo
-- **Simplified Messages:** Cleaner, touch-optimized layout
 - **Touch-Optimized Input:** Larger touch targets, simplified controls
 - **100% Feature Parity:** All commands available, just different UX pattern
+
+**Why This Matters:**
+- ✅ No typing usernames on mobile keyboard
+- ✅ No remembering organization IDs or spelling
+- ✅ Staff can work from phone without PC
+- ✅ Faster command execution (2 taps vs typing)
 
 ---
 

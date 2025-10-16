@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { SupportCommandDrawer } from "./support-command-drawer";
+import { MobileUserActionSheet } from "./mobile-user-action-sheet";
 import { WorkforceOSLogo } from "./workforceos-logo";
 import type { ChatMessage } from "@shared/schema";
 
@@ -35,6 +36,7 @@ export function MobileChatLayout({
   onCommandExecute,
 }: MobileChatLayoutProps) {
   const [inputMessage, setInputMessage] = useState("");
+  const [selectedUser, setSelectedUser] = useState<{ username: string; userId: string; role: 'staff' | 'customer' | 'guest' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -53,9 +55,30 @@ export function MobileChatLayout({
     setInputMessage("");
   };
 
+  const handleUsernameClick = (msg: ChatMessage) => {
+    // Only staff can tap usernames to open action sheet
+    if (!currentUser.isStaff || !msg.senderId) return;
+    
+    // Can't act on system or bot messages
+    if (msg.senderType === 'system' || msg.senderType === 'bot') return;
+    
+    // Can't act on yourself
+    if (msg.senderId === currentUser.id) return;
+
+    const user = users.find(u => u.id === msg.senderId);
+    if (user && msg.senderId) {
+      setSelectedUser({
+        username: msg.senderName,
+        userId: msg.senderId,
+        role: user.role,
+      });
+    }
+  };
+
   const renderMessage = (msg: ChatMessage) => {
     const isSystem = msg.senderType === 'system';
     const isBot = msg.senderType === 'bot';
+    const isClickable = currentUser.isStaff && !isSystem && !isBot && msg.senderId !== currentUser.id;
 
     if (isSystem) {
       return (
@@ -81,8 +104,13 @@ export function MobileChatLayout({
 
     return (
       <div key={msg.id} className="py-2 px-3">
-        <div className="text-xs font-semibold mb-0.5" data-testid={`message-sender-${msg.id}`}>
+        <div 
+          className={`text-xs font-semibold mb-0.5 ${isClickable ? 'text-blue-500 active:text-blue-600 cursor-pointer' : ''}`}
+          data-testid={`message-sender-${msg.id}`}
+          onClick={() => isClickable && handleUsernameClick(msg)}
+        >
           {msg.senderName}
+          {isClickable && <span className="ml-1 text-[10px] text-muted-foreground">(tap for actions)</span>}
         </div>
         <div className="text-sm whitespace-pre-wrap">{msg.message}</div>
       </div>
@@ -91,6 +119,17 @@ export function MobileChatLayout({
 
   return (
     <div className="flex flex-col h-full bg-background">
+      {/* Mobile User Action Sheet */}
+      <MobileUserActionSheet
+        open={selectedUser !== null}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+        username={selectedUser?.username || ''}
+        userId={selectedUser?.userId || ''}
+        userRole={selectedUser?.role || 'guest'}
+        isStaff={currentUser.isStaff}
+        onCommandExecute={onCommandExecute}
+      />
+
       {/* Mobile Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b bg-gradient-to-r from-blue-900 to-slate-900 text-white">
         <SupportCommandDrawer
