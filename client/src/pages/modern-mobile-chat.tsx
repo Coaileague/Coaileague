@@ -1034,6 +1034,62 @@ export default function ModernMobileChat() {
         }
       `}</style>
 
+      {/* Floating Command Button (Bottom Left) - Staff Only */}
+      {isStaff && (
+        <Sheet open={showCommandMenu} onOpenChange={setShowCommandMenu}>
+          <SheetTrigger asChild>
+            <button
+              className="fixed bottom-20 left-4 z-50 p-4 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full text-white shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all active:scale-95"
+              data-testid="button-commands-floating"
+            >
+              <ClipboardList size={24} />
+              {selectedUser && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                  <CheckCircle size={16} />
+                </div>
+              )}
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-white/10 max-h-[80vh]">
+            <SheetHeader>
+              <SheetTitle className="text-white flex items-center gap-2 flex-wrap">
+                <Shield className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+                <span className="whitespace-nowrap">Support Commands</span>
+                {!selectedUser && <span className="text-xs text-orange-400 whitespace-nowrap">(Select a user first)</span>}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
+              {getAllCommands().map((cmd, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    if (selectedUser) {
+                      cmd.action();
+                      setShowCommandMenu(false);
+                    }
+                  }}
+                  disabled={!selectedUser}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${
+                    selectedUser 
+                      ? 'bg-white/5 hover:bg-white/10 border-white/10 active:scale-95' 
+                      : 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed'
+                  }`}
+                  data-testid={`command-${cmd.label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <cmd.icon size={20} className={`flex-shrink-0 ${selectedUser ? cmd.color : 'text-slate-600'}`} />
+                  <div className="flex-1 text-left min-w-0">
+                    <div className={`text-sm font-medium break-words ${selectedUser ? 'text-white' : 'text-slate-600'}`}>
+                      {cmd.label}
+                    </div>
+                    <div className="text-xs text-slate-500 break-words">{cmd.description}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
       {/* Floating User List Button (Bottom Right) - Staff Only */}
       {isStaff && (
         <Sheet open={showUserList} onOpenChange={setShowUserList}>
