@@ -26,6 +26,7 @@ import { PriorityManagerPanel } from "@/components/priority-manager-panel";
 import { AccountSupportPanel } from "@/components/account-support-panel";
 import { MotdDialog } from "@/components/motd-dialog";
 import { AnimatedStatusBar } from "@/components/animated-status-bar";
+import { TermsDialog } from "@/components/terms-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -63,6 +64,8 @@ export default function HelpDeskCab() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [showMotd, setShowMotd] = useState(false);
   const [motdData, setMotdData] = useState<any>(null);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // IRC-style MOTD and helpful info banners
@@ -124,13 +127,24 @@ export default function HelpDeskCab() {
     enabled: isAuthenticated,
   });
 
-  // Show MOTD dialog if there's an active MOTD that hasn't been acknowledged
+  // Check if user has accepted terms on component mount
   useEffect(() => {
-    if (motdResponse && motdResponse.motd && !motdResponse.acknowledged) {
+    const accepted = localStorage.getItem('helpdesk_terms_accepted');
+    if (accepted === 'true') {
+      setTermsAccepted(true);
+    } else {
+      // Show terms dialog on first visit
+      setShowTermsDialog(true);
+    }
+  }, []);
+
+  // Show MOTD dialog if there's an active MOTD that hasn't been acknowledged (only after terms accepted)
+  useEffect(() => {
+    if (termsAccepted && motdResponse && motdResponse.motd && !motdResponse.acknowledged) {
       setMotdData(motdResponse.motd);
       setShowMotd(true);
     }
-  }, [motdResponse]);
+  }, [motdResponse, termsAccepted]);
 
   // MOTD acknowledgment mutation
   const acknowledgeMOTD = useMutation({
@@ -269,6 +283,27 @@ export default function HelpDeskCab() {
     
     // Hide coffee cup after animation
     setTimeout(() => setShowCoffeeCup(false), 2000);
+  };
+
+  // Handle terms acceptance
+  const handleAcceptTerms = () => {
+    localStorage.setItem('helpdesk_terms_accepted', 'true');
+    setTermsAccepted(true);
+    setShowTermsDialog(false);
+    toast({
+      title: "Terms Accepted",
+      description: "Welcome to WorkforceOS HelpDesk Support",
+    });
+  };
+
+  const handleDeclineTerms = () => {
+    toast({
+      title: "Terms Declined",
+      description: "You must accept the terms to access support chat",
+      variant: "destructive",
+    });
+    // Optionally redirect or keep showing dialog
+    // For now, keep dialog open so they can reconsider
   };
 
   // Get user type icon - PROMINENT with WorkforceOS blue branding
@@ -923,6 +958,13 @@ export default function HelpDeskCab() {
             setShowMotd(false);
           }
         }}
+      />
+
+      {/* Terms & Conditions Dialog - Must accept before accessing chat */}
+      <TermsDialog
+        open={showTermsDialog}
+        onAccept={handleAcceptTerms}
+        onDecline={handleDeclineTerms}
       />
     </div>
   );
