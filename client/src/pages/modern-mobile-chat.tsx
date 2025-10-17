@@ -6,11 +6,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useToast } from "@/hooks/use-toast";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
+import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { 
   Send, Menu, X, Settings, Users, Circle, Shield, 
   Headphones, Bot, MessageSquare, Lock, HelpCircle,
   XCircle, CheckCircle, Clock, AlertCircle, ChevronDown,
-  UserCheck, FileText, Camera, PenTool, Info, ArrowRight
+  UserCheck, FileText, Camera, PenTool, Info, ArrowRight, Sparkles
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
 
@@ -41,9 +42,26 @@ export default function ModernMobileChat() {
 
   const userId = currentUser?.user?.id;
   const userName = currentUser?.user?.email || 'Guest';
-  const isStaff = currentUser?.user?.platformRole && 
-    ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(currentUser.user.platformRole);
+  const userPlatformRole = currentUser?.user?.platformRole;
+  const isStaff = userPlatformRole && 
+    ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(userPlatformRole);
   const isAuthenticated = !!currentUser?.user;
+  
+  // Get role display text
+  const getRoleDisplay = (role?: string) => {
+    if (!role) return null;
+    switch(role) {
+      case 'root': return 'ADMIN';
+      case 'deputy_admin': return 'DEPUTY';
+      case 'deputy_assistant': return 'ASSISTANT';
+      case 'sysop': return 'SYSOP';
+      case 'bot': return 'BOT AI';
+      default: return null;
+    }
+  };
+  
+  // Check if message is from current user for animated badge
+  const isOwnMessage = (senderId: string) => senderId === userId;
 
   // Fetch HelpDesk room info
   const { data: helpDeskRoom } = useQuery<{ status: string; statusMessage: string | null }>({
@@ -354,32 +372,52 @@ export default function ModernMobileChat() {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
-        {messages.map((msg) => (
+        {messages.map((msg) => {
+          const msgRole = (msg as any).platformRole || msg.senderType;
+          const roleDisplay = msgRole === 'bot' ? 'BOT AI' : getRoleDisplay(msgRole);
+          const isCurrentUser = msg.senderId && isOwnMessage(msg.senderId);
+          
+          return (
           <div key={msg.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-bottom-2">
-            <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold ${
-              msg.senderType === 'bot' ? 'from-purple-500 to-pink-500' :
-              msg.senderType === 'support' ? 'from-indigo-500 to-blue-500' :
-              'from-slate-600 to-slate-700'
+            {/* WorkforceOS Logo Avatar */}
+            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${
+              msg.senderType === 'bot' ? 'bg-gradient-to-br from-amber-500 to-yellow-600' :
+              msg.senderType === 'support' ? 'bg-gradient-to-br from-indigo-600 to-blue-600' :
+              'bg-gradient-to-br from-slate-600 to-slate-700'
             }`}>
-              {msg.senderType === 'bot' ? <Bot size={16} /> : msg.senderName?.[0] || 'U'}
+              {msg.senderType === 'bot' ? (
+                <Sparkles size={16} className="text-white" />
+              ) : (
+                <WorkforceOSLogo className="h-5 w-5" showText={false} />
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className={`font-semibold text-sm ${
-                  msg.senderType === 'bot' ? 'text-purple-400' :
+                  msg.senderType === 'bot' ? 'text-amber-400' :
                   msg.senderType === 'support' ? 'text-indigo-400' :
                   'text-white'
                 }`}>
-                  {msg.senderName}
+                  {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
                 </span>
-                {msg.senderType === 'support' && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/20 text-indigo-400 border-indigo-500/30">
-                    STAFF
-                  </Badge>
-                )}
-                {msg.senderType === 'bot' && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-purple-500/30">
-                    AI
+                {roleDisplay && (
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-[10px] px-1.5 py-0 border ${
+                      msg.senderType === 'bot' 
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
+                        : isCurrentUser
+                          ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-transparent bg-clip-text animate-pulse border-indigo-500/50'
+                          : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                    }`}
+                    style={isCurrentUser ? {
+                      animation: 'glow 2s ease-in-out infinite',
+                      textShadow: '0 0 10px rgba(99, 102, 241, 0.8)'
+                    } : {}}
+                  >
+                    <span className={isCurrentUser ? 'text-indigo-400 font-bold animate-pulse' : ''}>
+                      {roleDisplay}
+                    </span>
                   </Badge>
                 )}
                 <span className="text-[10px] text-slate-500">
@@ -389,9 +427,21 @@ export default function ModernMobileChat() {
               <p className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
             </div>
           </div>
-        ))}
+        )})}
         <div ref={messagesEndRef} />
       </div>
+      
+      {/* Add glow animation for Admin badge */}
+      <style>{`
+        @keyframes glow {
+          0%, 100% {
+            filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.8)) drop-shadow(0 0 12px rgba(139, 92, 246, 0.6));
+          }
+          50% {
+            filter: drop-shadow(0 0 12px rgba(99, 102, 241, 1)) drop-shadow(0 0 20px rgba(139, 92, 246, 0.8));
+          }
+        }
+      `}</style>
 
       {/* Floating User List Button (Bottom Right) - Staff Only */}
       {isStaff && (
@@ -415,7 +465,11 @@ export default function ModernMobileChat() {
               </SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
-              {onlineUsers.map((user) => (
+              {onlineUsers.map((user) => {
+                const userRole = (user as any).platformRole || user.role;
+                const userRoleDisplay = getRoleDisplay(userRole) || user.role.toUpperCase();
+                
+                return (
                 <button
                   key={user.id}
                   onClick={() => handleUserSelect(user)}
@@ -426,29 +480,36 @@ export default function ModernMobileChat() {
                   }`}
                   data-testid={`user-${user.id}`}
                 >
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-bold ${
-                    user.role === 'bot' ? 'from-purple-500 to-pink-500' :
-                    user.role === 'support' || user.role === 'admin' ? 'from-indigo-500 to-blue-500' :
-                    'from-slate-600 to-slate-700'
+                  {/* WorkforceOS Logo */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ${
+                    user.role === 'bot' ? 'bg-gradient-to-br from-amber-500 to-yellow-600' :
+                    user.role === 'support' || user.role === 'admin' ? 'bg-gradient-to-br from-indigo-600 to-blue-600' :
+                    'bg-gradient-to-br from-slate-600 to-slate-700'
                   }`}>
-                    {user.role === 'bot' ? <Bot size={20} /> : user.name[0]}
+                    {user.role === 'bot' ? (
+                      <Sparkles size={20} className="text-white" />
+                    ) : (
+                      <WorkforceOSLogo className="h-6 w-6" showText={false} />
+                    )}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="text-white font-medium text-sm">{user.name}</div>
+                    <div className="text-white font-medium text-sm">
+                      {user.role === 'bot' ? 'HelpOS' : user.name.split('(')[0].trim()}
+                    </div>
                     <div className="text-slate-400 text-xs">ID: {user.id}</div>
                   </div>
                   <Badge className={`text-xs ${
-                    user.role === 'bot' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                    user.role === 'bot' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
                     user.role === 'support' || user.role === 'admin' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' :
                     'bg-slate-500/20 text-slate-400 border-slate-500/30'
                   }`}>
-                    {user.role === 'admin' ? 'ADMIN' : user.role.toUpperCase()}
+                    {userRoleDisplay}
                   </Badge>
                   {selectedUser?.id === user.id && (
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
                   )}
                 </button>
-              ))}
+              )})}
             </div>
           </SheetContent>
         </Sheet>
