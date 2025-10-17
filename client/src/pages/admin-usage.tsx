@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 export default function AdminUsage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -66,14 +67,19 @@ export default function AdminUsage() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-usage-title">
-                Platform Usage & Credits
-              </h2>
-              <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]">
-                Monitor operational costs and credit balance
-              </p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
+                <WFLogoCompact size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-usage-title">
+                  Platform Usage & Credits
+                </h2>
+                <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]">
+                  Monitor operational costs and credit balance
+                </p>
+              </div>
             </div>
             <Button
               variant="outline"

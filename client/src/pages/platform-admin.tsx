@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 interface PlatformStats {
   totalWorkspaces: number;
@@ -144,12 +145,17 @@ export default function PlatformAdmin() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Platform Command Center</h1>
-          <p className="text-muted-foreground">
-            Manage your entire Elite SaaS platform from one dashboard
-          </p>
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
+            <WFLogoCompact size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Platform Admin</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Manage your entire Elite SaaS platform from one dashboard
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowSettings(true)} data-testid="button-platform-settings">

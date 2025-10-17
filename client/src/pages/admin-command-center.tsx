@@ -32,6 +32,7 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 interface LiveActivity {
   id: string;
@@ -160,15 +161,15 @@ export default function AdminCommandCenter() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto w-full">
         {/* Command Center Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <Shield className="h-6 w-6 text-white" />
+              <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
+                <WFLogoCompact size={28} />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">Admin Command Center</h1>
-                <p className="text-sm text-muted-foreground">
-                  Real-time platform monitoring · System diagnostics · User management
+                <h1 className="text-2xl sm:text-3xl font-bold">Platform Command Center</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Real-time monitoring · System administration · Platform control
                 </p>
               </div>
             </div>

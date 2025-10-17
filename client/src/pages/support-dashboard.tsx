@@ -13,6 +13,7 @@ import {
   Activity, Headphones
 } from "lucide-react";
 import type { ChatConversation } from "@shared/schema";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 export default function SupportDashboard() {
   const { toast } = useToast();
@@ -96,19 +97,21 @@ export default function SupportDashboard() {
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto pb-8">
         {/* Header */}
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-2 rounded-lg">
-              <Headphones className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
+              <WFLogoCompact size={28} />
             </div>
-            Support Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Manage support conversations and help users in real-time
-          </p>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">Support Dashboard</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Manage support conversations and help users in real-time
+              </p>
+            </div>
+          </div>
         </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Conversations</CardTitle>

@@ -48,6 +48,7 @@ import {
   RefreshCw,
   Power,
 } from "lucide-react";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 interface CustomerSearchResult {
   workspace: {
@@ -318,12 +319,17 @@ export default function AdminSupportPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Support Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Help customers with account, billing, and access issues
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
+            <WFLogoCompact size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Admin Support Dashboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Help customers with account, billing, and access issues
+            </p>
+          </div>
         </div>
       </div>
 
