@@ -110,30 +110,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     return newId;
   });
 
-  // IRC-style MOTD and helpful info banners
-  const infoBanners = [
-    "irc.wfos.com - WorkforceOS Support Network - 24/7 Support Available",
-    "Queue Position: You are #1 in line - Estimated wait: 2-3 minutes",
-    "Tools: Use command buttons above for Help, Queue, Tutorial, and Priority support",
-    "Tip: Describe your issue clearly and staff will assist you shortly",
-    "FAQ: Use Account button for password reset | Right-click users for quick actions",
-    "HelpOS™ AI is monitoring - Urgent issues are auto-prioritized"
-  ];
-
-  // IRC-style system messages
-  const [ircMessages, setIrcMessages] = useState<string[]>([
-    "Connecting to irc.wfos.com (WorkforceOS Support Network)",
-    "Connected to server irc.wfos.com",
-    `Message of the Day - irc.wfos.com`,
-    "=====================================================",
-    "Welcome to WorkforceOS HelpDesk Support Network",
-    "Your satisfaction is our priority - 24/7/365",
-    "Use command buttons: Help, Queue, Tutorial, Priority, Account",
-    "Right-click any user for quick support actions (staff only)",
-    "Click your username to view your queue position and info",
-    "=====================================================",
-    `End of MOTD - You are now in #HelpDesk`,
-  ]);
+  // No IRC-style messages - users see terms/agreement first, then optional MOTD dialog if set by admins
 
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
@@ -744,7 +721,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold font-mono">irc.wfos.com #HelpDesk</span>
+            <span className="text-sm font-semibold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">WorkforceOS Support</span>
             {isStaff && (
               <Button
                 onClick={() => setShowBannerManager(true)}
@@ -803,12 +780,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           {/* Messages Area */}
           <ScrollArea className="flex-grow p-4">
             <div className="space-y-4">
-              {/* IRC-style MOTD */}
-              {ircMessages.map((msg, idx) => (
-                <div key={`irc-${idx}`} className="text-xs font-mono text-blue-700 italic">
-                  {msg}
-                </div>
-              ))}
 
               {/* Chat Messages - Modern bubbles with WorkforceOS blue */}
               {messages.map((msg, idx) => {
