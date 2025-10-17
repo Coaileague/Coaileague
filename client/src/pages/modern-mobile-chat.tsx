@@ -35,6 +35,7 @@ export default function ModernMobileChat() {
   const [showSettings, setShowSettings] = useState(false);
   const [showUserList, setShowUserList] = useState(false);
   const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
+  const [userContext, setUserContext] = useState<any>(null);
   const [showAgreement, setShowAgreement] = useState(false);
   const [hasAcceptedAgreement, setHasAcceptedAgreement] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -452,8 +453,24 @@ export default function ModernMobileChat() {
     }
   };
 
+  // Fetch user context when user is selected (staff only)
+  const { data: fetchedUserContext } = useQuery<any>({
+    queryKey: ['/api/helpdesk/user-context', selectedUser?.id],
+    enabled: !!selectedUser && isStaff,
+    retry: false,
+    staleTime: 30000,
+  });
+
+  // Update context when fetched
+  useEffect(() => {
+    if (fetchedUserContext) {
+      setUserContext(fetchedUserContext);
+    }
+  }, [fetchedUserContext]);
+
   const handleUserSelect = (user: OnlineUser) => {
     setSelectedUser(user);
+    setUserContext(null); // Clear old context
     setShowUserList(false);
     toast({ 
       title: "User Selected", 
@@ -1034,7 +1051,7 @@ export default function ModernMobileChat() {
         }
       `}</style>
 
-      {/* Floating Command Button (Bottom Left) - Staff Only */}
+      {/* Floating Command Button (Bottom Left) - Role-Based */}
       {isStaff && (
         <Sheet open={showCommandMenu} onOpenChange={setShowCommandMenu}>
           <SheetTrigger asChild>
@@ -1054,12 +1071,22 @@ export default function ModernMobileChat() {
             <SheetHeader>
               <SheetTitle className="text-white flex items-center gap-2 flex-wrap">
                 <Shield className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-                <span className="whitespace-nowrap">Support Commands</span>
+                <span className="whitespace-nowrap">Support Tools</span>
                 {!selectedUser && <span className="text-xs text-orange-400 whitespace-nowrap">(Select a user first)</span>}
               </SheetTitle>
+              <div className="text-xs text-slate-400 mt-1">
+                {userPlatformRole === 'root' ? 'Full Access - All Commands' :
+                 userPlatformRole === 'deputy_admin' ? 'Deputy Admin Tools' :
+                 userPlatformRole === 'deputy_assistant' ? 'Assistant Tools' :
+                 userPlatformRole === 'sysop' ? 'System Operator Tools' :
+                 'Basic Support Tools'}
+              </div>
             </SheetHeader>
             <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
-              {getAllCommands().map((cmd, index) => (
+              {/* Filter commands based on user's role */}
+              {getAllCommands()
+                .filter(cmd => cmd.roles.includes(userPlatformRole))
+                .map((cmd, index) => (
                 <button
                   key={index}
                   onClick={() => {
@@ -1083,8 +1110,16 @@ export default function ModernMobileChat() {
                     </div>
                     <div className="text-xs text-slate-500 break-words">{cmd.description}</div>
                   </div>
+                  <div className="text-[10px] text-slate-600 font-mono">{cmd.tier}</div>
                 </button>
               ))}
+              {/* Show message if no commands available for role */}
+              {getAllCommands().filter(cmd => cmd.roles.includes(userPlatformRole)).length === 0 && (
+                <div className="text-center text-slate-400 py-8">
+                  <Shield className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No support tools available for your role</p>
+                </div>
+              )}
             </div>
           </SheetContent>
         </Sheet>
@@ -1111,6 +1146,43 @@ export default function ModernMobileChat() {
                 Online Users ({onlineUsers.length})
               </SheetTitle>
             </SheetHeader>
+            
+            {/* User Context Card - Shows when user selected */}
+            {selectedUser && userContext && (
+              <div className="mt-3 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 text-indigo-400" />
+                  <span className="text-sm font-semibold text-white">{userContext.user?.firstName} {userContext.user?.lastName}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">Active Tickets:</span>
+                    <span className="text-white ml-1 font-mono">{userContext.metrics?.activeTickets || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Resolved:</span>
+                    <span className="text-emerald-400 ml-1 font-mono">{userContext.metrics?.resolvedTickets || 0}</span>
+                  </div>
+                  {userContext.workspace && (
+                    <>
+                      <div className="col-span-2">
+                        <span className="text-slate-400">Org:</span>
+                        <span className="text-white ml-1">{userContext.workspace.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Serial:</span>
+                        <span className="text-cyan-400 ml-1 font-mono text-[10px]">{userContext.workspace.serialNumber}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Tier:</span>
+                        <span className="text-purple-400 ml-1 capitalize">{userContext.workspace.subscriptionTier}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
               {/* Sort users: Root admin at absolute top, staff next, then others */}
               {(() => {

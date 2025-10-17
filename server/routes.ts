@@ -52,9 +52,10 @@ import {
   motdAcknowledgments,
   termsAcknowledgments,
   chatAgreementAcceptances,
+  chatMessages,
 } from "@shared/schema";
 import crypto from "crypto";
-import { sql, eq, and, or, isNull, lte, gte, desc } from "drizzle-orm";
+import { sql, eq, and, or, isNull, lte, gte, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { setupWebSocket } from "./websocket";
 import { 
@@ -5754,6 +5755,140 @@ Return ONLY valid JSON array with this exact structure:
       });
     } catch (error: any) {
       console.error("Error checking agreement acceptance:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get complete customer context for support staff (profile, tickets, workspace, chat history)
+  app.get("/api/helpdesk/user-context/:userId", requirePlatformStaff, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+
+      // Get user profile
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get workspace info (if user owns/belongs to one)
+      let workspace = null;
+      let workspaceRole = null;
+      try {
+        workspace = await storage.getWorkspaceByOwnerId(userId);
+        if (!workspace) {
+          // Check if user is an employee in a workspace
+          const employeeRecords = await db
+            .select()
+            .from(employees)
+            .where(eq(employees.userId, userId))
+            .limit(1);
+          if (employeeRecords.length > 0) {
+            const employee = employeeRecords[0];
+            workspace = await db.query.workspaces.findFirst({
+              where: eq(workspaces.id, employee.workspaceId)
+            });
+            workspaceRole = employee.workspaceRole;
+          }
+        } else {
+          workspaceRole = 'owner';
+        }
+      } catch (err) {
+        console.error("Error fetching workspace:", err);
+      }
+
+      // Get active escalation tickets
+      const activeTickets = await db
+        .select()
+        .from(escalationTickets)
+        .where(
+          and(
+            eq(escalationTickets.createdBy, userId),
+            eq(escalationTickets.status, 'open')
+          )
+        )
+        .orderBy(desc(escalationTickets.createdAt))
+        .limit(10);
+
+      // Get ticket history (resolved tickets)
+      const ticketHistory = await db
+        .select()
+        .from(escalationTickets)
+        .where(
+          and(
+            eq(escalationTickets.createdBy, userId),
+            inArray(escalationTickets.status, ['resolved', 'closed'])
+          )
+        )
+        .orderBy(desc(escalationTickets.updatedAt))
+        .limit(20);
+
+      // Get recent chat messages from user
+      const recentMessages = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.senderId, userId))
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(50);
+
+      // Get platform role
+      const platformRole = await storage.getUserPlatformRole(userId);
+
+      // Calculate support metrics
+      const totalTickets = activeTickets.length + ticketHistory.length;
+      const resolvedTickets = ticketHistory.filter(t => t.status === 'resolved').length;
+      const resolutionRate = totalTickets > 0 ? (resolvedTickets / totalTickets) * 100 : 0;
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          platformRole: platformRole || 'guest',
+          createdAt: user.createdAt,
+        },
+        workspace: workspace ? {
+          id: workspace.id,
+          name: workspace.name,
+          serialNumber: workspace.serialNumber,
+          subscriptionTier: workspace.subscriptionTier,
+          role: workspaceRole,
+        } : null,
+        tickets: {
+          active: activeTickets.map(t => ({
+            id: t.id,
+            category: t.category,
+            priority: t.priority,
+            title: t.title,
+            description: t.description,
+            status: t.status,
+            createdAt: t.createdAt,
+          })),
+          history: ticketHistory.map(t => ({
+            id: t.id,
+            category: t.category,
+            priority: t.priority,
+            title: t.title,
+            status: t.status,
+            createdAt: t.createdAt,
+            resolvedAt: t.resolvedAt,
+          })),
+        },
+        chatHistory: recentMessages.map(m => ({
+          message: m.message,
+          createdAt: m.createdAt,
+          senderType: m.senderType,
+        })),
+        metrics: {
+          totalTickets,
+          activeTickets: activeTickets.length,
+          resolvedTickets,
+          resolutionRate: Math.round(resolutionRate),
+          messagesSent: recentMessages.length,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching user context:", error);
       res.status(500).json({ error: error.message });
     }
   });
