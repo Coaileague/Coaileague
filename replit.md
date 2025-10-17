@@ -10,10 +10,10 @@ Do not make changes to the file `Y`.
 
 ## Chat System Routes
 ### Desktop vs Mobile Chat Separation  
-- **Desktop Chat (DC360)**: `/helpdesk-cab` or `/live-chat` - Full IRC/MSN-style interface with 3-column layout, right-click context menus, and rich command toolbar. Branded as **DC360**.
-- **Mobile Chat (DC360.5)**: `/mobilechat` or `/mobile-chat` - Dedicated mobile-optimized route with touch-first UX, hamburger menu, and simplified controls. Branded as **DC360.5**.
-- **Version Naming**: DC360 (desktop) and DC360.5 (mobile) clearly distinguish the platform versions, loading automatically based on how users access the site.
-- **Route Distinction**: Both routes are clearly separated for analytics and version-specific features. DC360 is the primary desktop interface, DC360.5 is the mobile-optimized version.
+- **Desktop Chat (DC360)**: `/live-chat` - Full IRC/MSN-style interface with 3-column layout, right-click context menus, and rich command toolbar. Branded as **DC360**. Auto-detects mobile devices and redirects to DC360.5 with animated transition screen.
+- **Mobile Chat (DC360.5)**: `/mobile-chat` - Dedicated mobile-optimized route with touch-first UX, hamburger menu, and simplified controls. Branded as **DC360.5**.
+- **Version Naming**: DC360 (desktop) and DC360.5 (mobile) clearly distinguish the platform versions.
+- **Route Organization**: Only two main routes for clean codebase - `/live-chat` (desktop) and `/mobile-chat` (mobile). All duplicate routes removed for better organization and reduced code waste.
 
 ## System Architecture
 ### UI/UX Decisions

@@ -69,7 +69,7 @@ function AppContent() {
   
   // Check if on mobile chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
-  const isMobileChat = window.location.pathname === '/mobile-chat' || window.location.pathname === '/mobilechat';
+  const isMobileChat = window.location.pathname === '/mobile-chat';
   
   // Custom sidebar width for better workspace layout
   const style = {
@@ -95,7 +95,6 @@ function AppContent() {
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
         <Route path="/live-chat" component={LiveChatroom} />
-        <Route path="/mobilechat" component={MobileChatPage} />
         <Route path="/mobile-chat" component={MobileChatPage} />
         <Route path="/design-comparison" component={DesignComparison} />
         <Route path="/logo-showcase" component={LogoShowcase} />
@@ -172,7 +171,6 @@ function AppContent() {
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support/chat" component={HelpdeskChat} />
                 <Route path="/live-chat" component={LiveChatroom} />
-                <Route path="/mobilechat" component={MobileChatPage} />
                 <Route path="/mobile-chat" component={MobileChatPage} />
                 <Route path="/design-comparison" component={DesignComparison} />
                 <Route path="/logo-showcase" component={LogoShowcase} />
