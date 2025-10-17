@@ -316,13 +316,20 @@ export default function HelpDeskCab() {
   };
 
   const handleDeclineTerms = () => {
+    // Clear any stored acceptance and redirect away from chat
+    localStorage.removeItem('helpdesk_terms_accepted');
+    setShowTermsDialog(false);
+    
     toast({
       title: "Terms Declined",
-      description: "You must accept the terms to access support chat",
+      description: "You must accept the terms to access support chat. Redirecting...",
       variant: "destructive",
     });
-    // Optionally redirect or keep showing dialog
-    // For now, keep dialog open so they can reconsider
+    
+    // Redirect to home page after a brief delay
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1500);
   };
 
   // Get user type icon - PROMINENT with WorkforceOS blue branding
