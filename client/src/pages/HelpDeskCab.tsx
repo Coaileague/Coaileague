@@ -401,17 +401,17 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       );
     }
     
-    // Staff gets WF logo with blue gradient
+    // Staff gets WF logo with blue gradient AND glow effect (like HelpOS)
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
       const bgColor = role === 'deputy_admin'
-        ? 'from-blue-600 to-slate-700'
+        ? 'from-blue-600 to-indigo-700 shadow-lg shadow-blue-500/50'
         : role === 'deputy_assistant'
-        ? 'from-indigo-500 to-blue-600'
-        : 'from-cyan-500 to-blue-600';
+        ? 'from-indigo-600 to-purple-700 shadow-lg shadow-indigo-500/50'
+        : 'from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/50';
         
       return (
         <div className={`flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br ${bgColor}`}>
-          <WFLogoCompact size={12} className="text-white" />
+          <WFLogoCompact size={14} className="text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]" />
         </div>
       );
     }
@@ -689,7 +689,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message here..."
                 disabled={!isConnected}
-                className="flex-grow p-3 border-2 border-blue-300 rounded-2xl resize-none focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="flex-grow p-3 border-2 border-blue-300 rounded-2xl resize-none focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 placeholder:text-slate-400"
                 data-testid="input-message"
               />
               <Button

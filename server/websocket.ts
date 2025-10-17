@@ -1332,9 +1332,13 @@ export function setupWebSocket(server: Server) {
                 'sim-user-5': 'Lisa Anderson',
                 'sim-user-6': 'Michael Brown',
                 'sim-user-7': 'Sarah Thompson',
-                'sim-user-8': 'David Martinez',
-                'sim-user-9': 'Ashley Taylor',
-                'sim-user-10': 'Christopher Lee',
+                'sim-user-8': 'Christopher Lee',
+                'sim-user-9': 'Amanda White',
+                'sim-user-10': 'Daniel Martinez',
+                'sim-bot-helpos': 'HelpOS™ AI',
+                'sim-staff-1': 'Sarah Martinez',
+                'sim-staff-2': 'Mike Chen',
+                'sim-staff-3': 'Emily Taylor',
               };
               targetUserName = simUserNames[payload.targetUserId] || 'Simulated User';
             }
@@ -1380,9 +1384,9 @@ export function setupWebSocket(server: Server) {
               // Add to removed list so they don't appear in future broadcasts
               removedSimulatedUsers.add(payload.targetUserId);
               console.log(`✅ Simulated user ${targetUserName} (${payload.targetUserId}) removed by ${ws.userName}`);
-            } else if (targetClient) {
+            } else {
               // DISCONNECT the real user
-              if (targetClient.readyState === WebSocket.OPEN) {
+              if (targetClient && targetClient.readyState === WebSocket.OPEN) {
                 targetClient.send(JSON.stringify({
                   type: 'kicked',
                   reason: reason,
@@ -1392,7 +1396,9 @@ export function setupWebSocket(server: Server) {
               }
 
               // Remove from clients list
-              clients.delete(targetClient);
+              if (targetClient) {
+                clients.delete(targetClient);
+              }
               console.log(`✅ Real user ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
             }
 
@@ -1434,9 +1440,9 @@ export function setupWebSocket(server: Server) {
                 { id: 'sim-user-5', name: 'Lisa Anderson', role: 'guest', userType: 'subscriber' },
                 { id: 'sim-user-6', name: 'Michael Brown', role: 'guest', userType: 'org_user' },
                 { id: 'sim-user-7', name: 'Sarah Thompson', role: 'guest', userType: 'subscriber' },
-                { id: 'sim-user-8', name: 'David Martinez', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-9', name: 'Ashley Taylor', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-10', name: 'Christopher Lee', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-8', name: 'Christopher Lee', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-9', name: 'Amanda White', role: 'guest', userType: 'guest' },
+                { id: 'sim-user-10', name: 'Daniel Martinez', role: 'guest', userType: 'org_user' },
               ];
               
               simUsers.forEach(user => {
