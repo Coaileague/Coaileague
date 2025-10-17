@@ -1361,6 +1361,7 @@ export function setupWebSocket(server: Server) {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
                 senderId: 'system',
+                senderName: 'System',
                 message: kickMessage.message,
                 senderType: 'system',
                 workspaceId: ws.workspaceId || null,
