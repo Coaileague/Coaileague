@@ -46,11 +46,34 @@ interface StatusChangePayload {
 
 interface KickUserPayload {
   type: 'kick_user';
+  conversationId?: string;
   targetUserId: string;
   reason?: string;
 }
 
-type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload;
+interface RequestSecurePayload {
+  type: 'request_secure';
+  targetUserId: string;
+  requestType: string;
+  message?: string;
+}
+
+interface SecureResponsePayload {
+  type: 'secure_response';
+  data: any;
+}
+
+interface ReleaseSpectatorPayload {
+  type: 'release_spectator';
+  targetUserId: string;
+}
+
+interface TransferUserPayload {
+  type: 'transfer_user';
+  targetUserId: string;
+}
+
+type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload;
 
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to WorkforceOS HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
@@ -1236,14 +1259,19 @@ export function setupWebSocket(server: Server) {
 
             // Create system message for status change
             const statusMessage: ChatMessage = {
-              id: Date.now(),
+              id: Date.now().toString(),
               conversationId: ws.conversationId,
               senderId: 'system',
+              senderName: 'System',
               message: `${ws.userName} is now ${payload.status === 'online' ? 'Available' : payload.status === 'away' ? 'Away' : 'Busy'}`,
               senderType: 'system',
+              messageType: 'text',
+              isSystemMessage: true,
+              attachmentUrl: null,
+              attachmentName: null,
               createdAt: new Date(),
               isRead: false,
-              workspaceId: ws.workspaceId || null,
+              readAt: null,
             };
 
             // Save status change message
@@ -1251,9 +1279,9 @@ export function setupWebSocket(server: Server) {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
                 senderId: 'system',
+                senderName: 'System',
                 message: statusMessage.message,
                 senderType: 'system',
-                workspaceId: ws.workspaceId || null,
               });
             } catch (err) {
               console.error('Failed to save status change message:', err);
@@ -1297,6 +1325,16 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
+            // ROOT PROTECTION: Only root can kick root
+            const targetRole = await storage.getUserPlatformRole(payload.targetUserId).catch(() => null);
+            if (targetRole === 'root' && kickerRole !== 'root') {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Only root administrators can remove other root administrators',
+              }));
+              return;
+            }
+
             // Find the target user's connection
             const clients = conversationClients.get(ws.conversationId);
             if (!clients) return;
@@ -1305,7 +1343,7 @@ export function setupWebSocket(server: Server) {
             let targetUserName = 'User';
             let isSimulatedUser = payload.targetUserId.startsWith('sim-user-');
 
-            for (const client of clients) {
+            for (const client of Array.from(clients)) {
               if (client.userId === payload.targetUserId) {
                 targetClient = client;
                 targetUserName = client.userName || 'User';
@@ -1346,14 +1384,19 @@ export function setupWebSocket(server: Server) {
             // Create kick message
             const reason = payload.reason || 'violation of chat rules';
             const kickMessage: ChatMessage = {
-              id: Date.now(),
+              id: Date.now().toString(),
               conversationId: ws.conversationId,
               senderId: 'system',
+              senderName: 'System',
               message: `${targetUserName} has been removed from the chat (Reason: ${reason})`,
               senderType: 'system',
+              messageType: 'text',
+              isSystemMessage: true,
+              attachmentUrl: null,
+              attachmentName: null,
               createdAt: new Date(),
               isRead: false,
-              workspaceId: ws.workspaceId || null,
+              readAt: null,
             };
 
             // Save kick message
@@ -1364,7 +1407,6 @@ export function setupWebSocket(server: Server) {
                 senderName: 'System',
                 message: kickMessage.message,
                 senderType: 'system',
-                workspaceId: ws.workspaceId || null,
               });
             } catch (err) {
               console.error('Failed to save kick message:', err);
@@ -1479,7 +1521,7 @@ export function setupWebSocket(server: Server) {
             if (!clients) return;
 
             let targetClient: WebSocketClient | null = null;
-            for (const client of clients) {
+            for (const client of Array.from(clients)) {
               if (client.userId === payload.targetUserId) {
                 targetClient = client;
                 break;
@@ -1543,7 +1585,7 @@ export function setupWebSocket(server: Server) {
             if (!clients) return;
 
             let targetClient: WebSocketClient | null = null;
-            for (const client of clients) {
+            for (const client of Array.from(clients)) {
               if (client.userId === payload.targetUserId) {
                 targetClient = client;
                 break;
@@ -1581,14 +1623,19 @@ export function setupWebSocket(server: Server) {
 
             // Create transfer announcement
             const transferMessage: ChatMessage = {
-              id: Date.now(),
+              id: Date.now().toString(),
               conversationId: ws.conversationId,
               senderId: 'system',
+              senderName: 'System',
               message: `${ws.userName} has transferred the customer to the next available agent`,
               senderType: 'system',
+              messageType: 'text',
+              isSystemMessage: true,
+              attachmentUrl: null,
+              attachmentName: null,
               createdAt: new Date(),
               isRead: false,
-              workspaceId: ws.workspaceId || null,
+              readAt: null,
             };
 
             // Save and broadcast
@@ -1596,9 +1643,9 @@ export function setupWebSocket(server: Server) {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
                 senderId: 'system',
+                senderName: 'System',
                 message: transferMessage.message,
                 senderType: 'system',
-                workspaceId: ws.workspaceId || null,
               });
 
               const clients = conversationClients.get(ws.conversationId);

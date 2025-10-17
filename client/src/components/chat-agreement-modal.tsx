@@ -29,7 +29,7 @@ WORKFORCE OS SUPPORT CHAT - TERMS & CONDITIONS
 
 LAST UPDATED: October 17, 2025
 VERSION: 1.0
-OPERATOR: Drill Consulting 360 (DC360)
+OPERATOR: WorkforceOS Support
 
 BY ACCESSING THIS SUPPORT CHAT, YOU AGREE TO THE FOLLOWING TERMS:
 
@@ -37,7 +37,7 @@ BY ACCESSING THIS SUPPORT CHAT, YOU AGREE TO THE FOLLOWING TERMS:
 By clicking "I Agree" and entering this support chat, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not agree, you must exit immediately.
 
 2. SERVICE DESCRIPTION & LIMITATIONS
-This WorkforceOS Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by Drill Consulting 360.
+This WorkforceOS Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by WorkforceOS.
 
 IMPORTANT: We do NOT guarantee that every issue will be resolved immediately or at all. Some issues may require:
 • Platform upgrades or updates
@@ -60,7 +60,7 @@ You agree to:
 • Accept that staff behavior is professional and any perceived rudeness may be due to communication style differences or urgent priorities
 
 4. COMPLETE DISCLAIMER OF WARRANTIES
-THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. WORKFORCEOS, DRILL CONSULTING 360, AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
+THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. WORKFORCEOS AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
 • Chat availability, uptime, or accessibility
 • Response times, resolution times, or issue resolution
 • Accuracy, completeness, or reliability of information provided
@@ -69,7 +69,7 @@ THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLI
 • Compatibility with external services or hosting providers
 
 5. COMPREHENSIVE LIMITATION OF LIABILITY
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT WORKFORCEOS, DRILL CONSULTING 360, AND ALL OF OUR:
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT WORKFORCEOS AND ALL OF OUR:
 • Staff members and support representatives
 • Ownership, officers, directors, and managers  
 • Agents, contractors, and representatives

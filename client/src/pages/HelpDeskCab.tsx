@@ -436,62 +436,68 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     }, 1500);
   };
 
-  // Get user type icon - PROMINENT with WorkforceOS blue branding
+  // Get user type icon - CLEAR & VISIBLE with transparent rings and glows
   const getUserTypeIcon = (userType: string, role: string) => {
-    // ROOT ADMIN gets golden crown with W logo
+    // ROOT ADMIN - Golden ring with WF logo (NO background)
     if (role === 'root') {
       return (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 shadow-lg shadow-amber-500/50">
-          <WFLogoCompact size={12} className="text-white" />
+        <div className="relative flex items-center justify-center w-7 h-7">
+          <div className="absolute inset-0 rounded-full border-2 border-amber-500 shadow-lg shadow-amber-500/50"></div>
+          <WFLogoCompact size={16} />
         </div>
       );
     }
     
-    // Bot gets special animated icon
+    // Bot gets special animated icon with transparent ring
     if (role === 'bot') {
       return (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 animate-pulse">
-          <Bot className="w-4 h-4 text-white" />
+        <div className="relative flex items-center justify-center w-7 h-7">
+          <div className="absolute inset-0 rounded-full border-2 border-blue-500 shadow-lg shadow-blue-500/50 animate-pulse"></div>
+          <Bot className="w-4 h-4 text-blue-600" />
         </div>
       );
     }
     
-    // Staff gets WF logo with blue gradient AND glow effect (like HelpOS)
+    // Staff gets WF logo with colored ring (NO background blocking)
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
-      const bgColor = role === 'deputy_admin'
-        ? 'from-blue-600 to-indigo-700 shadow-lg shadow-blue-500/50'
+      const ringColor = role === 'deputy_admin'
+        ? 'border-blue-600 shadow-blue-500/50'
         : role === 'deputy_assistant'
-        ? 'from-indigo-600 to-purple-700 shadow-lg shadow-indigo-500/50'
-        : 'from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/50';
+        ? 'border-indigo-600 shadow-indigo-500/50'
+        : 'border-cyan-600 shadow-cyan-500/50';
         
       return (
-        <div className={`flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br ${bgColor}`}>
-          <WFLogoCompact size={14} className="text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]" />
+        <div className="relative flex items-center justify-center w-7 h-7">
+          <div className={`absolute inset-0 rounded-full border-2 ${ringColor} shadow-lg`}></div>
+          <WFLogoCompact size={16} />
         </div>
       );
     }
     
-    // Authenticated users (subscribers & org users) get W logo with tier-based colors
+    // Authenticated users - transparent rings with WF logo clearly visible
     if (userType === 'subscriber') {
       return (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-md">
-          <WFLogoCompact size={12} className="text-white" />
+        <div className="relative flex items-center justify-center w-7 h-7">
+          <div className="absolute inset-0 rounded-full border-2 border-amber-500 shadow-md shadow-amber-500/30"></div>
+          <WFLogoCompact size={14} />
         </div>
       );
     }
     
     if (userType === 'org_user') {
       return (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md">
-          <WFLogoCompact size={12} className="text-white" />
+        <div className="relative flex items-center justify-center w-7 h-7">
+          <div className="absolute inset-0 rounded-full border-2 border-blue-500 shadow-md shadow-blue-500/30"></div>
+          <WFLogoCompact size={14} />
         </div>
       );
     }
     
-    // Guests get question mark
+    // Guests get question mark with gray ring
     return (
-      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-gray-400">
-        <HelpCircle className="w-4 h-4 text-white" />
+      <div className="relative flex items-center justify-center w-7 h-7">
+        <div className="absolute inset-0 rounded-full border-2 border-slate-400 shadow-sm"></div>
+        <HelpCircle className="w-4 h-4 text-slate-500" />
       </div>
     );
   };
@@ -731,10 +737,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       <header className="bg-gradient-to-r from-blue-900 via-indigo-800 to-slate-800 p-3 text-white shadow-lg">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black tracking-wide flex items-center">
-              <MessageSquare className="w-6 h-6 mr-2 text-blue-300" />
-              DC360
-            </h1>
+            <MessageSquare className="w-6 h-6 text-blue-300" />
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
+              <WorkforceOSLogo size="sm" showText={false} />
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold font-mono">irc.wfos.com #HelpDesk</span>
@@ -812,7 +818,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
                     <div key={idx} className="flex justify-center my-2">
-                      <span className="text-xs font-mono text-blue-700 italic bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                      <span className="text-xs font-mono text-blue-700 italic bg-blue-50 px-3 py-1 rounded-full border border-blue-200 flex items-center gap-2">
+                        <WFLogoCompact size={14} />
                         {msg.message}
                       </span>
                     </div>
@@ -831,6 +838,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                       <div className="flex-shrink-0">
                         {getUserTypeIcon((msg as any).userType || 'guest', role)}
                       </div>
+                      
+                      {/* WF Logo for STAFF ONLY */}
+                      {['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(role) && (
+                        <div className="flex-shrink-0">
+                          <WFLogoCompact size={16} />
+                        </div>
+                      )}
                       
                       <div className="flex-1 min-w-0">
                         {/* Header: Name, Role Badge, Timestamp */}
@@ -956,7 +970,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                       </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="bg-white border-blue-300 w-72 max-h-[600px] overflow-y-auto">
-                      {isStaff && u.role !== 'root' && u.role !== 'bot' ? (
+                      {isStaff && u.role !== 'bot' && (userPlatformRole === 'root' || u.role !== 'root') ? (
                         <>
                           <div className="px-2 py-1.5 text-xs font-bold text-blue-700 border-b border-blue-200">
                             Support Actions → {u.name}

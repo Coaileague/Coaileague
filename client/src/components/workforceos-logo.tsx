@@ -7,9 +7,9 @@ interface WorkforceOSLogoProps {
 }
 
 /**
- * WorkforceOS Wordmark Logo - Fortune 500 Grade
- * Big "WF" letterform with electric blue "OS" superscript
- * WorkForce + OS = WorkforceOS
+ * WorkforceOS Animated Logo - Elite Grade
+ * Transparent background, animated glow, gradient WF letters, electric blue OS
+ * Blends seamlessly with any background
  */
 export function WorkforceOSLogo({ 
   size = "md", 
@@ -48,7 +48,7 @@ export function WorkforceOSLogo({
 
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
-      {/* WF Logo with OS superscript */}
+      {/* Animated WF Logo with OS superscript */}
       <div 
         className={cn(
           "relative flex items-center justify-center",
@@ -63,25 +63,25 @@ export function WorkforceOSLogo({
           className="w-full h-full"
         >
           <defs>
-            {/* Light/White Background - Visible on any color */}
-            <linearGradient id={`corp-blue-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f8fafc" />
-              <stop offset="50%" stopColor="#e2e8f0" />
-              <stop offset="100%" stopColor="#cbd5e1" />
+            {/* WF Letters Gradient - Navy to Indigo */}
+            <linearGradient id={`wf-gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e3a8a" />
+              <stop offset="50%" stopColor="#3730a3" />
+              <stop offset="100%" stopColor="#4f46e5" />
             </linearGradient>
             
-            {/* Bright Electric Blue for "OS" - Neon Effect */}
-            <linearGradient id={`electric-blue-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            {/* Electric Blue for OS - Bright Neon */}
+            <linearGradient id={`os-gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#60a5fa" />
               <stop offset="50%" stopColor="#3b82f6" />
               <stop offset="100%" stopColor="#2563eb" />
             </linearGradient>
             
-            {/* Realistic white glow - like real neon tube */}
-            <filter id={`white-glow-${uniqueId}`}>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur1"/>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur2"/>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur3"/>
+            {/* Animated Glow Filter - Pulses */}
+            <filter id={`animated-glow-${uniqueId}`}>
+              <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur1"/>
+              <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur2"/>
+              <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur3"/>
               <feMerge>
                 <feMergeNode in="blur1"/>
                 <feMergeNode in="blur2"/>
@@ -90,16 +90,16 @@ export function WorkforceOSLogo({
               </feMerge>
             </filter>
             
-            {/* Ultra realistic blue neon glow - multiple layers */}
-            <filter id={`neon-glow-${uniqueId}`}>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur1"/>
-              <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur2"/>
+            {/* Ultra Bright Neon Glow for OS */}
+            <filter id={`neon-os-${uniqueId}`}>
+              <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur1"/>
+              <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur2"/>
               <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur3"/>
               <feColorMatrix in="blur1" type="matrix" values="
                 0 0 0 0 0.2
                 0 0 0 0 0.5
                 0 0 0 0 1
-                0 0 0 0.8 0"/>
+                0 0 0 1 0"/>
               <feMerge>
                 <feMergeNode/>
                 <feMergeNode in="blur2"/>
@@ -108,84 +108,54 @@ export function WorkforceOSLogo({
               </feMerge>
             </filter>
             
-            {/* Drop shadow for depth */}
-            <filter id={`shadow-${uniqueId}`}>
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.5"/>
+            {/* Soft Shadow for Depth */}
+            <filter id={`soft-shadow-${uniqueId}`}>
+              <feDropShadow dx="0" dy="6" stdDeviation="12" floodOpacity="0.3"/>
             </filter>
           </defs>
 
-          {/* WF + OS Badge - REALISTIC Lit Advertisement */}
+          {/* NO BACKGROUND - Transparent, blends with any color */}
+          
           <g>
-            {/* Deep shadow layer for depth */}
-            <rect
-              x="8"
-              y="16"
-              width="144"
-              height="96"
-              rx="20"
-              fill="black"
-              opacity="0.3"
-            />
-            
-            {/* Rounded rectangle badge - deep corporate blue with shadow */}
-            <rect
-              x="8"
-              y="12"
-              width="144"
-              height="96"
-              rx="20"
-              fill={`url(#corp-blue-${uniqueId})`}
-              filter={`url(#shadow-${uniqueId})`}
-            />
-            
-            {/* Inner highlight for 3D effect */}
-            <rect
-              x="10"
-              y="14"
-              width="140"
-              height="92"
-              rx="18"
-              fill="none"
-              stroke="rgba(255,255,255,0.1)"
-              strokeWidth="1"
-            />
-            
-            {/* W - Shadow */}
-            <text
-              x="50"
-              y="84"
-              textAnchor="middle"
-              fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="58"
-              fontWeight="900"
-              fill="black"
-              opacity="0.4"
-              letterSpacing="-6"
-            >
-              W
-            </text>
-            
-            {/* W - Dark navy blue for visibility */}
+            {/* W - Shadow Layer */}
             <text
               x="50"
               y="82"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="58"
+              fontSize="64"
               fontWeight="900"
-              fill="#1e293b"
+              fill="black"
+              opacity="0.2"
               letterSpacing="-6"
             >
               W
             </text>
             
-            {/* F - Shadow (closer to W) */}
+            {/* W - Gradient Fill with Animated Glow */}
             <text
-              x="95"
-              y="84"
+              x="50"
+              y="80"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="58"
+              fontSize="64"
+              fontWeight="900"
+              fill={`url(#wf-gradient-${uniqueId})`}
+              letterSpacing="-6"
+              filter={`url(#animated-glow-${uniqueId})`}
+              className="animate-pulse"
+              style={{ animationDuration: '3s' }}
+            >
+              W
+            </text>
+            
+            {/* F - Shadow Layer */}
+            <text
+              x="100"
+              y="82"
+              textAnchor="middle"
+              fontFamily="system-ui, -apple-system, sans-serif"
+              fontSize="64"
               fontWeight="900"
               fill="black"
               opacity="0.2"
@@ -194,61 +164,68 @@ export function WorkforceOSLogo({
               F
             </text>
             
-            {/* F - Dark navy blue for visibility (closer to W) */}
+            {/* F - Gradient Fill with Animated Glow */}
             <text
-              x="95"
-              y="82"
+              x="100"
+              y="80"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="58"
+              fontSize="64"
               fontWeight="900"
-              fill="#1e293b"
+              fill={`url(#wf-gradient-${uniqueId})`}
               letterSpacing="-6"
+              filter={`url(#animated-glow-${uniqueId})`}
+              className="animate-pulse"
+              style={{ animationDuration: '3s', animationDelay: '0.5s' }}
             >
               F
             </text>
             
             {/* OS Superscript - Shadow */}
             <text
-              x="113"
+              x="120"
               y="43"
               textAnchor="start"
               fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="22"
+              fontSize="26"
               fontWeight="900"
               fill="black"
-              opacity="0.3"
+              opacity="0.2"
               letterSpacing="0"
             >
               OS
             </text>
             
-            {/* OS Superscript - Electric blue neon */}
+            {/* OS Superscript - Electric Blue Neon with Mega Glow */}
             <text
-              x="113"
+              x="120"
               y="42"
               textAnchor="start"
               fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="22"
+              fontSize="26"
               fontWeight="900"
-              fill={`url(#electric-blue-${uniqueId})`}
+              fill={`url(#os-gradient-${uniqueId})`}
               letterSpacing="0"
-              filter={`url(#neon-glow-${uniqueId})`}
+              filter={`url(#neon-os-${uniqueId})`}
+              className="animate-pulse"
+              style={{ animationDuration: '2s' }}
             >
               OS
             </text>
             
-            {/* Bright core of OS for ultra-bright center */}
+            {/* OS Bright Core - Ultra Bright Center */}
             <text
-              x="113"
+              x="120"
               y="42"
               textAnchor="start"
               fontFamily="system-ui, -apple-system, sans-serif"
-              fontSize="22"
+              fontSize="26"
               fontWeight="900"
               fill="#ffffff"
-              opacity="0.6"
+              opacity="0.8"
               letterSpacing="0"
+              className="animate-pulse"
+              style={{ animationDuration: '2s' }}
             >
               OS
             </text>
@@ -256,22 +233,27 @@ export function WorkforceOSLogo({
         </svg>
       </div>
 
-      {/* Company Name */}
+      {/* Company Name with Gradient Animation */}
       {showText && (
         <div className="flex flex-col items-center gap-1">
           <div 
             className={cn(
               "font-black tracking-tight text-center leading-none whitespace-nowrap",
-              "bg-gradient-to-br from-blue-600 to-blue-800",
+              "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800",
               "bg-clip-text text-transparent",
+              "animate-pulse",
               sizes[size].text
             )}
+            style={{ animationDuration: '4s' }}
             data-testid="logo-text"
           >
             WorkForceOS™
           </div>
           {size === "hero" && (
-            <div className={cn("font-medium text-slate-400 tracking-wide text-center", sizes[size].tagline)}>
+            <div className={cn(
+              "font-medium text-slate-400 tracking-wide text-center",
+              sizes[size].tagline
+            )}>
               Elite Workforce Management
             </div>
           )}

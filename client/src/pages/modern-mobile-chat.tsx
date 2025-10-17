@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { WFLogoCompact } from "@/components/wf-logo";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
 import { useTransition } from "@/contexts/transition-context";
 import { apiRequest } from "@/lib/queryClient";
@@ -127,12 +128,12 @@ export default function ModernMobileChat() {
     },
   });
 
-  // Show loading transition on initial load (DC360.5 branded)
+  // Show loading transition on initial load
   useEffect(() => {
     showTransition({
       status: "loading",
-      message: "Initializing DC360.5 Mobile HelpDesk...",
-      submessage: "Connecting to WorkforceOS Support",
+      message: "Initializing WorkforceOS Support...",
+      submessage: "Connecting to Live Support Chat",
       duration: 2000,
       onComplete: () => {
         hideTransition();
@@ -847,8 +848,8 @@ export default function ModernMobileChat() {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 p-[2px]">
-                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm">
-                  HD
+                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center">
+                  <WFLogoCompact size={20} />
                 </div>
               </div>
               <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${
@@ -856,7 +857,7 @@ export default function ModernMobileChat() {
               }`}></div>
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-white font-bold text-sm">Help Desk</h2>
+              <h2 className="text-white font-bold text-sm">WorkforceOS Support</h2>
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Users size={12} />
                 <span>{onlineUsers.length} online</span>
@@ -960,6 +961,12 @@ export default function ModernMobileChat() {
                 <WorkforceOSLogo className="h-7 w-7 font-bold" showText={false} />
               )}
             </div>
+            {/* WF Logo for STAFF ONLY */}
+            {['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(msgRole) && (
+              <div className="flex-shrink-0">
+                <WFLogoCompact size={16} />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className={`font-bold text-sm ${
@@ -993,7 +1000,15 @@ export default function ModernMobileChat() {
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
               </div>
-              <p className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
+              {/* Message text with WFLogoCompact for system messages */}
+              {msg.senderId === 'system' ? (
+                <span className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap flex items-center gap-2">
+                  <WFLogoCompact size={14} />
+                  {msg.message}
+                </span>
+              ) : (
+                <p className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
+              )}
             </div>
           </div>
         )})}
@@ -1034,9 +1049,33 @@ export default function ModernMobileChat() {
               </SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
-              {onlineUsers.map((user) => {
-                const userRole = (user as any).platformRole || user.role;
-                const userRoleDisplay = getRoleDisplay(userRole) || user.role.toUpperCase();
+              {/* Sort users: Root admin at absolute top, staff next, then others */}
+              {(() => {
+                const sortedUsers = [...onlineUsers].sort((a, b) => {
+                  const rolePriority: Record<string, number> = {
+                    'root': 0,              // Root admin at absolute top
+                    'bot': 1,               // HelpOS AI bot
+                    'deputy_admin': 2,      // Deputy administrators  
+                    'deputy_assistant': 3,  // Deputy assistants
+                    'sysop': 4,             // System operators
+                    'subscriber': 5,        // Paid subscribers
+                    'org_user': 6,          // Organization users
+                    'guest': 7,             // Guest users
+                  };
+                  
+                  const aPriority = rolePriority[a.role] ?? 99;
+                  const bPriority = rolePriority[b.role] ?? 99;
+                  
+                  if (aPriority !== bPriority) {
+                    return aPriority - bPriority;
+                  }
+                  
+                  return a.name.localeCompare(b.name);
+                });
+                
+                return sortedUsers.map((user) => {
+                  const userRole = (user as any).platformRole || user.role;
+                  const userRoleDisplay = getRoleDisplay(userRole) || user.role.toUpperCase();
                 
                 return (
                 <button
@@ -1078,7 +1117,9 @@ export default function ModernMobileChat() {
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
                   )}
                 </button>
-              )})}
+                );
+                });
+              })()}
             </div>
           </SheetContent>
         </Sheet>
@@ -1112,7 +1153,7 @@ export default function ModernMobileChat() {
       {/* Agreement Modal - Mobile Optimized */}
       {showAgreement && (
         <ChatAgreementModal
-          roomName="Mobile Support Chat (DC360.5)"
+          roomName="WorkforceOS Support Chat"
           onAccept={(fullName) => acceptAgreementMutation.mutate(fullName)}
           isSubmitting={acceptAgreementMutation.isPending}
         />

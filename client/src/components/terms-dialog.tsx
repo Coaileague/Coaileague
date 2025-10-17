@@ -69,7 +69,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
             <section className="bg-gradient-to-r from-blue-600 to-slate-700 border-l-4 border-white p-4 rounded shadow-md">
               <p className="font-semibold text-white">
                 WORKFORCE OS SUPPORT CHAT - TERMS & CONDITIONS<br/>
-                OPERATOR: Drill Consulting 360 (DC360)<br/><br/>
+                OPERATOR: WorkforceOS Support<br/><br/>
                 BY ACCEPTING, YOU AGREE TO THE FOLLOWING LEGALLY BINDING TERMS
               </p>
             </section>
@@ -78,7 +78,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
               <h3 className="font-bold text-base text-white mb-2">1. SERVICE DESCRIPTION & LIMITATIONS</h3>
               <p className="mb-2">
                 This WorkforceOS Support Chat provides real-time customer support, technical assistance, and general inquiries. 
-                This is a professional business communication channel operated by Drill Consulting 360.
+                This is a professional business communication channel operated by WorkforceOS.
               </p>
               <p className="font-semibold text-amber-400 mb-2">IMPORTANT:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
@@ -105,7 +105,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
             <section>
               <h3 className="font-bold text-base text-white mb-2">3. COMPLETE DISCLAIMER OF WARRANTIES</h3>
               <p className="mb-2">
-                THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES. WORKFORCEOS, DRILL CONSULTING 360, AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
+                THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES. WORKFORCEOS AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>Chat availability, uptime, or accessibility</li>
