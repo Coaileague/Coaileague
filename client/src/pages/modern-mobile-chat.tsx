@@ -14,7 +14,10 @@ import {
   Send, Menu, X, Settings, Users, Circle, Shield, 
   Headphones, Bot, MessageSquare, Lock, HelpCircle,
   XCircle, CheckCircle, Clock, AlertCircle, ChevronDown,
-  UserCheck, FileText, Camera, PenTool, Info, ArrowRight, Sparkles
+  UserCheck, FileText, Camera, PenTool, Info, ArrowRight, Sparkles,
+  Ban, AlertTriangle, Timer, UserX, TrendingUp, Key, Mail, ListChecks,
+  Tag, ClipboardList, History, Zap, MessageCircle, ArrowUpCircle, Star,
+  Eye, UserCog, RefreshCw, PackageCheck, FileSearch
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
 
@@ -148,65 +151,286 @@ export default function ModernMobileChat() {
     }
   }, [agreementStatus, hasAcceptedAgreement, isAuthenticated]);
 
-  // Support commands that work on selected user
-  const supportCommands = [
-    { 
-      icon: UserCheck, 
-      label: 'Release Hold & Welcome', 
-      action: () => handleReleaseHold(),
-      color: 'text-emerald-400',
-      description: 'Remove spectator mode + send greeting'
-    },
-    { 
-      icon: Lock, 
-      label: 'Request Authentication', 
-      action: () => handleRequestAuth(),
-      color: 'text-indigo-400',
-      description: 'Ask user to verify their identity'
-    },
-    { 
-      icon: FileText, 
-      label: 'Request Document', 
-      action: () => handleRequestDocument(),
-      color: 'text-blue-400',
-      description: 'Request file upload from user'
-    },
-    { 
-      icon: Camera, 
-      label: 'Request Photo', 
-      action: () => handleRequestPhoto(),
-      color: 'text-cyan-400',
-      description: 'Request photo/screenshot'
-    },
-    { 
-      icon: PenTool, 
-      label: 'Request Signature', 
-      action: () => handleRequestSignature(),
-      color: 'text-purple-400',
-      description: 'Request e-signature'
-    },
-    { 
-      icon: Info, 
-      label: 'Request Info', 
-      action: () => handleRequestInfo(),
-      color: 'text-orange-400',
-      description: 'Ask for specific information'
-    },
-    { 
-      icon: ArrowRight, 
-      label: 'Transfer User', 
-      action: () => handleTransfer(),
-      color: 'text-pink-400',
-      description: 'Transfer to another agent'
-    },
-    { 
-      icon: CheckCircle, 
-      label: 'Mark Resolved', 
-      action: () => handleResolve(),
-      color: 'text-green-400',
-      description: 'Close ticket as resolved'
-    },
-  ];
+  // Role-based permission system
+  const hasPermission = (requiredRoles: string[]) => {
+    if (!userPlatformRole) return false;
+    return requiredRoles.includes(userPlatformRole);
+  };
+
+  // All staff roles
+  const ALL_STAFF = ['root', 'deputy_admin', 'deputy_assistant', 'sysop'];
+  const DEPUTY_ASSISTANT_PLUS = ['root', 'deputy_admin', 'deputy_assistant'];
+  const DEPUTY_ADMIN_PLUS = ['root', 'deputy_admin'];
+  const ADMIN_ONLY = ['root', 'deputy_admin'];
+  const SYSTEM_ONLY = ['root', 'sysop'];
+
+  // Comprehensive command system with role-based filtering
+  const getAllCommands = () => {
+    const allCommands = [
+      // TIER 1 - Basic Support (All Staff)
+      { 
+        icon: UserCheck, 
+        label: 'Release Hold & Welcome', 
+        action: () => handleReleaseHold(),
+        color: 'text-emerald-400',
+        description: 'Remove spectator mode + send greeting',
+        roles: ALL_STAFF,
+        tier: 'Basic Support'
+      },
+      { 
+        icon: MessageCircle, 
+        label: 'Quick Reply', 
+        action: () => handleQuickReply(),
+        color: 'text-cyan-400',
+        description: 'Send pre-configured quick response',
+        roles: ALL_STAFF,
+        tier: 'Basic Support'
+      },
+      { 
+        icon: Info, 
+        label: 'Request Info', 
+        action: () => handleRequestInfo(),
+        color: 'text-orange-400',
+        description: 'Ask for specific information',
+        roles: ALL_STAFF,
+        tier: 'Basic Support'
+      },
+      { 
+        icon: ClipboardList, 
+        label: 'Internal Note', 
+        action: () => handleInternalNote(),
+        color: 'text-slate-400',
+        description: 'Add internal staff-only note',
+        roles: ALL_STAFF,
+        tier: 'Basic Support'
+      },
+
+      // TIER 2 - Authentication
+      { 
+        icon: Lock, 
+        label: 'Request Authentication', 
+        action: () => handleRequestAuth(),
+        color: 'text-indigo-400',
+        description: 'Ask user to verify their identity',
+        roles: DEPUTY_ASSISTANT_PLUS,
+        tier: 'Authentication'
+      },
+      { 
+        icon: Key, 
+        label: 'Reset Password', 
+        action: () => handleResetPassword(),
+        color: 'text-red-400',
+        description: 'Initiate password reset for user',
+        roles: DEPUTY_ADMIN_PLUS,
+        tier: 'Authentication'
+      },
+      { 
+        icon: UserCog, 
+        label: 'Unlock Account', 
+        action: () => handleUnlockAccount(),
+        color: 'text-green-400',
+        description: 'Unlock locked user account',
+        roles: DEPUTY_ADMIN_PLUS,
+        tier: 'Authentication'
+      },
+
+      // TIER 3 - Documents
+      { 
+        icon: FileText, 
+        label: 'Request Document', 
+        action: () => handleRequestDocument(),
+        color: 'text-blue-400',
+        description: 'Request file upload from user',
+        roles: ALL_STAFF,
+        tier: 'Documents'
+      },
+      { 
+        icon: Camera, 
+        label: 'Request Photo', 
+        action: () => handleRequestPhoto(),
+        color: 'text-cyan-400',
+        description: 'Request photo/screenshot',
+        roles: ALL_STAFF,
+        tier: 'Documents'
+      },
+      { 
+        icon: PenTool, 
+        label: 'Request Signature', 
+        action: () => handleRequestSignature(),
+        color: 'text-purple-400',
+        description: 'Request e-signature',
+        roles: DEPUTY_ASSISTANT_PLUS,
+        tier: 'Documents'
+      },
+      { 
+        icon: Eye, 
+        label: 'View Documents', 
+        action: () => handleViewDocuments(),
+        color: 'text-sky-400',
+        description: 'View user submitted documents',
+        roles: DEPUTY_ASSISTANT_PLUS,
+        tier: 'Documents'
+      },
+
+      // TIER 4 - Ticket Management
+      { 
+        icon: CheckCircle, 
+        label: 'Mark Resolved', 
+        action: () => handleResolve(),
+        color: 'text-green-400',
+        description: 'Close ticket as resolved',
+        roles: ALL_STAFF,
+        tier: 'Ticket Management'
+      },
+      { 
+        icon: ArrowRight, 
+        label: 'Transfer User', 
+        action: () => handleTransfer(),
+        color: 'text-pink-400',
+        description: 'Transfer to another agent',
+        roles: DEPUTY_ASSISTANT_PLUS,
+        tier: 'Ticket Management'
+      },
+      { 
+        icon: ArrowUpCircle, 
+        label: 'Escalate', 
+        action: () => handleEscalate(),
+        color: 'text-yellow-400',
+        description: 'Escalate to higher support tier',
+        roles: ALL_STAFF,
+        tier: 'Ticket Management'
+      },
+      { 
+        icon: Tag, 
+        label: 'Priority Tag', 
+        action: () => handlePriorityTag(),
+        color: 'text-rose-400',
+        description: 'Mark ticket as high priority',
+        roles: DEPUTY_ADMIN_PLUS,
+        tier: 'Ticket Management'
+      },
+      { 
+        icon: Clock, 
+        label: 'Schedule Follow-up', 
+        action: () => handleFollowUp(),
+        color: 'text-amber-400',
+        description: 'Schedule follow-up reminder',
+        roles: DEPUTY_ASSISTANT_PLUS,
+        tier: 'Ticket Management'
+      },
+
+      // TIER 5 - Advanced (Deputy Admin+)
+      { 
+        icon: Mail, 
+        label: 'Email Summary', 
+        action: () => handleEmailSummary(),
+        color: 'text-blue-400',
+        description: 'Send conversation summary via email',
+        roles: DEPUTY_ADMIN_PLUS,
+        tier: 'Advanced'
+      },
+      { 
+        icon: Star, 
+        label: 'Mark VIP', 
+        action: () => handleMarkVIP(),
+        color: 'text-yellow-400',
+        description: 'Flag user as VIP customer',
+        roles: DEPUTY_ADMIN_PLUS,
+        tier: 'Advanced'
+      },
+      { 
+        icon: History, 
+        label: 'User History', 
+        action: () => handleUserHistory(),
+        color: 'text-violet-400',
+        description: 'View complete user interaction history',
+        roles: DEPUTY_ADMIN_PLUS,
+        tier: 'Advanced'
+      },
+
+      // TIER 6 - Moderation (Admin Only)
+      { 
+        icon: AlertTriangle, 
+        label: 'Issue Warning', 
+        action: () => handleIssueWarning(),
+        color: 'text-orange-500',
+        description: 'Send formal warning to user',
+        roles: ADMIN_ONLY,
+        tier: 'Moderation'
+      },
+      { 
+        icon: Timer, 
+        label: 'Temp Mute 5min', 
+        action: () => handleTempMute(),
+        color: 'text-yellow-500',
+        description: 'Temporarily mute user for 5 minutes',
+        roles: ADMIN_ONLY,
+        tier: 'Moderation'
+      },
+      { 
+        icon: UserX, 
+        label: 'Kick from Room', 
+        action: () => handleKick(),
+        color: 'text-red-500',
+        description: 'Remove user from chat room',
+        roles: ADMIN_ONLY,
+        tier: 'Moderation'
+      },
+      { 
+        icon: Ban, 
+        label: 'Ban User', 
+        action: () => handleBan(),
+        color: 'text-red-600',
+        description: 'Permanently ban user from platform',
+        roles: ADMIN_ONLY,
+        tier: 'Moderation'
+      },
+
+      // TIER 7 - System (Root + SysOp)
+      { 
+        icon: TrendingUp, 
+        label: 'Analytics', 
+        action: () => handleAnalytics(),
+        color: 'text-emerald-400',
+        description: 'View system analytics dashboard',
+        roles: SYSTEM_ONLY,
+        tier: 'System'
+      },
+      { 
+        icon: RefreshCw, 
+        label: 'Force Reconnect', 
+        action: () => handleForceReconnect(),
+        color: 'text-indigo-400',
+        description: 'Force user WebSocket reconnection',
+        roles: SYSTEM_ONLY,
+        tier: 'System'
+      },
+      { 
+        icon: Zap, 
+        label: 'Test Message', 
+        action: () => handleTestMessage(),
+        color: 'text-purple-400',
+        description: 'Send system test message',
+        roles: SYSTEM_ONLY,
+        tier: 'System'
+      },
+      { 
+        icon: PackageCheck, 
+        label: 'Clear Cache', 
+        action: () => handleClearCache(),
+        color: 'text-cyan-400',
+        description: 'Clear user session cache',
+        roles: SYSTEM_ONLY,
+        tier: 'System'
+      },
+    ];
+
+    // Filter commands based on user's role permissions
+    return allCommands.filter(cmd => hasPermission(cmd.roles));
+  };
+
+  // Get filtered commands based on current user's role
+  const supportCommands = getAllCommands();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -345,6 +569,268 @@ export default function ModernMobileChat() {
     toast({ title: "Ticket resolved", description: `${selectedUser.name}'s ticket marked as resolved` });
     setShowCommandMenu(false);
     setSelectedUser(null);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 1 (Basic Support)
+  const handleQuickReply = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const quickReplies = [
+      "Thank you for contacting support. I'll be happy to assist you!",
+      "I'm looking into this for you right now.",
+      "Can you provide more details about the issue you're experiencing?",
+      "I understand your concern. Let me help you with that.",
+    ];
+    const reply = quickReplies[0]; // Use first reply for now
+    
+    sendMessage(`@${selectedUser.name} ${reply}`, userName, 'support');
+    toast({ title: "Quick reply sent" });
+    setShowCommandMenu(false);
+  };
+
+  const handleInternalNote = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `INTERNAL_NOTE:${selectedUser.id}:${selectedUser.name}:Staff note added to ticket`;
+    sendRawMessage(message);
+    
+    toast({ title: "Internal note added", description: "Note visible to staff only" });
+    setShowCommandMenu(false);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 2 (Authentication)
+  const handleResetPassword = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `RESET_PASSWORD:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    sendMessage(`@${selectedUser.name} I'm initiating a password reset for your account. You'll receive an email shortly.`, userName, 'support');
+    
+    toast({ title: "Password reset initiated", description: `Email sent to ${selectedUser.name}` });
+    setShowCommandMenu(false);
+  };
+
+  const handleUnlockAccount = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `UNLOCK_ACCOUNT:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    sendMessage(`@${selectedUser.name} Your account has been unlocked. You can now log in.`, userName, 'support');
+    
+    toast({ title: "Account unlocked", description: `${selectedUser.name} can now access their account` });
+    setShowCommandMenu(false);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 3 (Documents)
+  const handleViewDocuments = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `VIEW_DOCUMENTS:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "Document viewer opened", description: `Viewing ${selectedUser.name}'s submitted documents` });
+    setShowCommandMenu(false);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 4 (Ticket Management)
+  const handleEscalate = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `ESCALATE:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    sendMessage(`@${selectedUser.name} I'm escalating your issue to our senior support team for specialized assistance.`, userName, 'support');
+    
+    toast({ title: "Ticket escalated", description: "Transferred to Tier 2 support" });
+    setShowCommandMenu(false);
+  };
+
+  const handlePriorityTag = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `PRIORITY_TAG:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "Priority flag added", description: `${selectedUser.name}'s ticket marked as high priority`, variant: "default" });
+    setShowCommandMenu(false);
+  };
+
+  const handleFollowUp = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `FOLLOW_UP:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "Follow-up scheduled", description: "Reminder set for 24 hours" });
+    setShowCommandMenu(false);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 5 (Advanced)
+  const handleEmailSummary = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `EMAIL_SUMMARY:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    sendMessage(`@${selectedUser.name} I'm sending a summary of our conversation to your email.`, userName, 'support');
+    
+    toast({ title: "Email summary sent", description: `Conversation summary sent to ${selectedUser.name}` });
+    setShowCommandMenu(false);
+  };
+
+  const handleMarkVIP = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `MARK_VIP:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "VIP status granted", description: `${selectedUser.name} flagged as VIP customer` });
+    setShowCommandMenu(false);
+  };
+
+  const handleUserHistory = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `USER_HISTORY:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "History loaded", description: `Viewing ${selectedUser.name}'s complete interaction history` });
+    setShowCommandMenu(false);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 6 (Moderation)
+  const handleIssueWarning = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `ISSUE_WARNING:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    sendMessage(`@${selectedUser.name} This is a formal warning. Please follow our community guidelines.`, userName, 'support');
+    
+    toast({ title: "Warning issued", description: `Formal warning sent to ${selectedUser.name}`, variant: "destructive" });
+    setShowCommandMenu(false);
+  };
+
+  const handleTempMute = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `TEMP_MUTE:${selectedUser.id}:${selectedUser.name}:300`;
+    sendRawMessage(message);
+    
+    toast({ title: "User muted", description: `${selectedUser.name} muted for 5 minutes`, variant: "destructive" });
+    setShowCommandMenu(false);
+  };
+
+  const handleKick = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `KICK_USER:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "User kicked", description: `${selectedUser.name} removed from chat room`, variant: "destructive" });
+    setShowCommandMenu(false);
+    setSelectedUser(null);
+  };
+
+  const handleBan = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `BAN_USER:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ 
+      title: "User banned", 
+      description: `${selectedUser.name} permanently banned from platform`, 
+      variant: "destructive" 
+    });
+    setShowCommandMenu(false);
+    setSelectedUser(null);
+  };
+
+  // NEW COMMAND HANDLERS - TIER 7 (System)
+  const handleAnalytics = () => {
+    const message = `ANALYTICS:system`;
+    sendRawMessage(message);
+    
+    toast({ title: "Analytics dashboard", description: "Opening system analytics..." });
+    setShowCommandMenu(false);
+  };
+
+  const handleForceReconnect = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `FORCE_RECONNECT:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "Reconnection forced", description: `${selectedUser.name}'s connection reset` });
+    setShowCommandMenu(false);
+  };
+
+  const handleTestMessage = () => {
+    const message = `TEST_MESSAGE:system:${Date.now()}`;
+    sendRawMessage(message);
+    sendMessage(`🔧 SYSTEM TEST - Message sent at ${new Date().toLocaleTimeString()}`, userName, 'support');
+    
+    toast({ title: "Test message sent", description: "System diagnostic message transmitted" });
+    setShowCommandMenu(false);
+  };
+
+  const handleClearCache = () => {
+    if (!selectedUser) {
+      toast({ title: "No user selected", variant: "destructive" });
+      return;
+    }
+    
+    const message = `CLEAR_CACHE:${selectedUser.id}:${selectedUser.name}`;
+    sendRawMessage(message);
+    
+    toast({ title: "Cache cleared", description: `${selectedUser.name}'s session cache cleared` });
+    setShowCommandMenu(false);
   };
 
   return (
