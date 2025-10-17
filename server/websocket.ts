@@ -441,9 +441,9 @@ export function setupWebSocket(server: Server) {
                 // Determine greeting based on user type
                 let greeting = '';
                 if (isStaff) {
-                  greeting = `👋 Welcome back, **${displayName}**! Support chat is active. Type /help for commands.`;
+                  greeting = `👋 Welcome back, **${displayName}**! Support chat is active. Right-click users for quick actions.`;
                 } else {
-                  greeting = `👋 Hello **${displayName}**! Welcome to WorkforceOS Support. A staff member will be with you shortly.`;
+                  greeting = `👋 Hello **${displayName}**! Welcome to WorkforceOS Support. A staff member will be with you shortly. Use the command buttons above for quick access to tools.`;
                 }
 
                 // Create HelpOS public announcement message

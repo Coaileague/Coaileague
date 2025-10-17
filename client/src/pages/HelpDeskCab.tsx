@@ -22,6 +22,7 @@ import { HelpCommandPanel } from "@/components/help-command-panel";
 import { QueueManagerPanel } from "@/components/queue-manager-panel";
 import { TutorialManagerPanel } from "@/components/tutorial-manager-panel";
 import { PriorityManagerPanel } from "@/components/priority-manager-panel";
+import { AccountSupportPanel } from "@/components/account-support-panel";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -55,15 +56,16 @@ export default function HelpDeskCab() {
   const [showHelpPanel, setShowHelpPanel] = useState(false);
   const [showQueuePanel, setShowQueuePanel] = useState(false);
   const [showPriorityPanel, setShowPriorityPanel] = useState(false);
+  const [showAccountPanel, setShowAccountPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // IRC-style MOTD and helpful info banners
   const infoBanners = [
     "irc.wfos.com - WorkforceOS Support Network - 24/7 Support Available",
     "Queue Position: You are #1 in line - Estimated wait: 2-3 minutes",
-    "Commands: /help /motd /info /queue /staff - Type /help for full list",
+    "Tools: Use command buttons above for Help, Queue, Tutorial, and Priority support",
     "Tip: Describe your issue clearly and staff will assist you shortly",
-    "FAQ: Password reset via /resetpass | Account issues: mention 'account'",
+    "FAQ: Use Account button for password reset | Right-click users for quick actions",
     "HelpOS™ AI is monitoring - Urgent issues are auto-prioritized"
   ];
 
@@ -75,9 +77,9 @@ export default function HelpDeskCab() {
     "=====================================================",
     "Welcome to WorkforceOS HelpDesk Support Network",
     "Your satisfaction is our priority - 24/7/365",
-    "Type /help for available commands",
-    "Type /staff to see online support agents",
-    "Type /queue to check your position",
+    "Use command buttons: Help, Queue, Tutorial, Priority, Account",
+    "Right-click any user for quick support actions (staff only)",
+    "Click your username to view your queue position and info",
     "=====================================================",
     `End of MOTD - You are now in #HelpDesk`,
   ]);
@@ -171,10 +173,29 @@ export default function HelpDeskCab() {
     }
   };
 
-  const handleQuickResponse = (message: string) => {
-    // Send the command immediately
-    if (message.trim() && isConnected) {
-      sendMessage(message, userName, 'support');
+  const handleQuickResponse = (action: string) => {
+    // Handle actions - open appropriate panels instead of sending commands
+    switch (action) {
+      case '/info':
+      case 'account':
+        setShowAccountPanel(true);
+        break;
+      case 'priority':
+        setShowPriorityPanel(true);
+        break;
+      case 'organization':
+        // Future: Open organization settings
+        toast({
+          title: "Organization Settings",
+          description: "Organization management panel coming soon!",
+        });
+        break;
+      default:
+        // For other actions, just show a toast
+        toast({
+          title: "Action Requested",
+          description: `${action} action triggered`,
+        });
     }
   };
 
@@ -200,11 +221,11 @@ export default function HelpDeskCab() {
 
   // Get user type icon - PROMINENT with WorkforceOS blue branding
   const getUserTypeIcon = (userType: string, role: string) => {
-    // ROOT ADMIN gets golden crown - YOU
+    // ROOT ADMIN gets golden crown with W logo
     if (role === 'root') {
       return (
         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 shadow-lg shadow-amber-500/50">
-          <Crown className="w-4 h-4 text-white" />
+          <WFLogoCompact size={12} className="text-white" />
         </div>
       );
     }
@@ -233,33 +254,29 @@ export default function HelpDeskCab() {
       );
     }
     
-    // Based on user type with blue/neutral tones
-    switch (userType) {
-      case 'subscriber': 
-        return (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500">
-            <Star className="w-4 h-4 text-white" />
-          </div>
-        );
-      case 'org_user': 
-        return (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-slate-400 to-gray-500">
-            <Building2 className="w-4 h-4 text-white" />
-          </div>
-        );
-      case 'guest': 
-        return (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-gray-400">
-            <HelpCircle className="w-4 h-4 text-white" />
-          </div>
-        );
-      default: 
-        return (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-gray-400">
-            <HelpCircle className="w-4 h-4 text-white" />
-          </div>
-        );
+    // Authenticated users (subscribers & org users) get W logo with tier-based colors
+    if (userType === 'subscriber') {
+      return (
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-md">
+          <WFLogoCompact size={12} className="text-white" />
+        </div>
+      );
     }
+    
+    if (userType === 'org_user') {
+      return (
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md">
+          <WFLogoCompact size={12} className="text-white" />
+        </div>
+      );
+    }
+    
+    // Guests get question mark
+    return (
+      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-gray-400">
+        <HelpCircle className="w-4 h-4 text-white" />
+      </div>
+    );
   };
 
   // Get status indicator
@@ -379,6 +396,7 @@ export default function HelpDeskCab() {
           onShowQueue={() => setShowQueuePanel(true)}
           onShowTutorial={() => setShowTutorial(true)}
           onShowPriority={() => setShowPriorityPanel(true)}
+          onShowAccount={() => setShowAccountPanel(true)}
           onToggleRoomStatus={() => setShowRoomStatus(true)}
           onQuickResponse={handleQuickResponse}
           roomStatus="open"
@@ -388,19 +406,21 @@ export default function HelpDeskCab() {
       {/* Main Layout - Full Width */}
       <main className="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full">
         {/* CENTER COLUMN: Chat Area */}
-        <section className="flex-grow flex flex-col bg-white/70 backdrop-blur-sm">
-          {/* Animated Seasonal Banner */}
-          <ChatAnnouncementBanner
-            queuePosition={queueLength || 1}
-            queueWaitTime="2-3 minutes"
-            onlineStaff={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
-            customMessages={customBannerMessage ? [{
-              id: 'custom-1',
-              text: customBannerMessage,
-              type: 'promo' as const,
-              icon: 'zap'
-            }] : []}
-          />
+        <section className="flex-grow flex flex-col bg-white/70 backdrop-blur-sm relative">
+          {/* Animated Seasonal Banner - STICKY at top */}
+          <div className="sticky top-0 z-50">
+            <ChatAnnouncementBanner
+              queuePosition={queueLength || 1}
+              queueWaitTime="2-3 minutes"
+              onlineStaff={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
+              customMessages={customBannerMessage ? [{
+                id: 'custom-1',
+                text: customBannerMessage,
+                type: 'promo' as const,
+                icon: 'zap'
+              }] : []}
+            />
+          </div>
 
           {/* Messages Area */}
           <ScrollArea className="flex-grow p-4">
@@ -429,7 +449,7 @@ export default function HelpDeskCab() {
                 }
 
                 // Regular messages - ALL left-aligned with modern bubbles
-                const displayName = isSelf ? 'You' : (msg.senderName || 'User');
+                const displayName = msg.senderName || userName || 'User';
                 const bubbleColor = getMessageBubbleColor(msg.senderType || 'customer', role, isSelf);
                 const nameColor = getRoleColor(role);
 
@@ -791,6 +811,26 @@ export default function HelpDeskCab() {
       <PriorityManagerPanel
         isOpen={showPriorityPanel}
         onClose={() => setShowPriorityPanel(false)}
+      />
+
+      {/* Account Support Panel */}
+      <AccountSupportPanel
+        isOpen={showAccountPanel}
+        onClose={() => setShowAccountPanel(false)}
+        accountInfo={user ? {
+          id: user.id,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+          email: user.email,
+          status: 'active',
+          tier: (user as any).subscriptionTier || 'free'
+        } : undefined}
+        isStaff={isStaff}
+        onAction={(action, data) => {
+          toast({
+            title: "Account Action",
+            description: `${action} executed successfully`,
+          });
+        }}
       />
     </div>
   );

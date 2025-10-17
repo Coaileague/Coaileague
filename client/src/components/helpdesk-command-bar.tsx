@@ -35,6 +35,7 @@ interface HelpDeskCommandBarProps {
   onShowQueue?: () => void;
   onShowTutorial?: () => void;
   onShowPriority?: () => void;
+  onShowAccount?: () => void;
   onToggleRoomStatus?: () => void;
   onQuickResponse?: (command: string) => void;
   
@@ -54,6 +55,7 @@ export function HelpDeskCommandBar({
   onShowQueue,
   onShowTutorial,
   onShowPriority,
+  onShowAccount,
   onToggleRoomStatus,
   onQuickResponse,
   roomStatus = 'open',
@@ -112,7 +114,7 @@ export function HelpDeskCommandBar({
           {canAccessSubscriberFeatures && (
             <div className="flex items-center gap-2 pr-4 border-r-2 border-slate-300">
               <Button
-                onClick={() => onQuickResponse?.('/info')}
+                onClick={onShowAccount}
                 variant="outline"
                 size="sm"
                 className="h-9 text-xs gap-2 bg-white border-slate-400 text-slate-900 font-semibold hover:bg-slate-50"
