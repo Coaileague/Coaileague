@@ -880,22 +880,7 @@ export default function LiveChatroomPage() {
           {/* Subtle animated mesh background */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-950/10 via-slate-900/60 to-slate-800/40 pointer-events-none" />
           
-          {/* Scroll to Bottom Button - Mobile Optimized Position */}
-          {showScrollButton && (
-            <Button
-              onClick={scrollToBottom}
-              size="icon"
-              className="absolute bottom-28 right-4 z-50 rounded-full shadow-lg bg-blue-600 hover:bg-blue-500 text-white"
-              data-testid="button-scroll-bottom"
-            >
-              <ArrowDown className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </Button>
-          )}
+          {/* Mobile users can just swipe to scroll - button removed to avoid blocking input */}
           
           {/* Messages */}
           <ScrollArea className="flex-1 p-4 relative z-10" onScroll={handleScroll as any}>
