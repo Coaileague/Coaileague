@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -13,24 +12,19 @@ import {
   Users,
   Building2,
   DollarSign,
-  TrendingUp,
-  TrendingDown,
   Server,
   Database,
-  Zap,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Globe,
   Cpu,
   HardDrive,
   Wifi,
   RefreshCw,
-  Settings,
-  Shield,
-  BarChart3,
   UserCheck,
-  UserX,
+  BarChart3,
+  Zap,
+  Shield,
 } from "lucide-react";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 
@@ -69,7 +63,7 @@ export default function AdminCommandCenter() {
     }
   }, [user, isLoading, setLocation]);
 
-  // Real-time clock
+  // Real-time clock with animation
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
@@ -157,216 +151,254 @@ export default function AdminCommandCenter() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto w-full">
-        {/* Command Center Header */}
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
-            <div className="flex items-center gap-3">
-              {/* WorkForceOS™ Logo */}
-              <WorkforceOSLogo size="sm" showText={false} />
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Platform Command Center</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Real-time monitoring · System administration · Platform control
-                </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 relative overflow-hidden">
+      {/* Animated background gradient orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Branded Header with Large Logo */}
+        <div className="mb-8">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+            <div className="flex flex-col items-center text-center mb-6">
+              {/* Large Prominent Logo */}
+              <div className="mb-4 transform hover:scale-105 transition-transform duration-300">
+                <WorkforceOSLogo size="xl" showText={false} />
               </div>
+              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-3">
+                Platform Command Center
+              </h1>
+              <p className="text-slate-300 text-sm sm:text-base">
+                Real-time monitoring · System administration · Platform control
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-2xl font-bold font-mono">
-                  {currentTime.toLocaleTimeString()}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {currentTime.toLocaleDateString()}
+            
+            <div className="flex items-center justify-between">
+              {/* Live Clock */}
+              <div className="flex items-center gap-3">
+                <div className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
+                <div>
+                  <div className="text-3xl sm:text-4xl font-bold font-mono text-white tracking-tight">
+                    {currentTime.toLocaleTimeString()}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
                 </div>
               </div>
+              
               <Button
                 variant="outline"
-                size="icon"
+                size="lg"
                 onClick={() => setRefreshKey(prev => prev + 1)}
+                className="bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20 text-white"
                 data-testid="button-refresh-command"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-5 w-5 mr-2" />
+                Refresh
               </Button>
             </div>
           </div>
         </div>
 
-        {/* System Health Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="border-l-4 border-l-emerald-500">
-            <CardHeader className="pb-3">
-              <CardDescription className="flex items-center gap-2">
-                <Cpu className="h-4 w-4" />
-                CPU Usage
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">{systemHealth.cpu}%</div>
-              <Progress value={systemHealth.cpu} className="h-2" />
-            </CardContent>
-          </Card>
+        {/* System Health Overview - Animated Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* CPU Card */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-emerald-500/20 rounded-xl">
+                <Cpu className="h-6 w-6 text-emerald-400" />
+              </div>
+              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                Healthy
+              </Badge>
+            </div>
+            <div className="text-sm text-slate-300 mb-2">CPU Usage</div>
+            <div className="text-3xl font-bold text-white mb-3">{systemHealth.cpu}%</div>
+            <Progress value={systemHealth.cpu} className="h-2 bg-emerald-900/30" />
+          </div>
 
-          <Card className="border-l-4 border-l-amber-500">
-            <CardHeader className="pb-3">
-              <CardDescription className="flex items-center gap-2">
-                <HardDrive className="h-4 w-4" />
-                Memory
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">{systemHealth.memory}%</div>
-              <Progress value={systemHealth.memory} className="h-2" />
-            </CardContent>
-          </Card>
+          {/* Memory Card */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-2xl p-6 hover:border-amber-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-amber-500/20 rounded-xl">
+                <HardDrive className="h-6 w-6 text-amber-400" />
+              </div>
+              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">
+                Warning
+              </Badge>
+            </div>
+            <div className="text-sm text-slate-300 mb-2">Memory</div>
+            <div className="text-3xl font-bold text-white mb-3">{systemHealth.memory}%</div>
+            <Progress value={systemHealth.memory} className="h-2 bg-amber-900/30" />
+          </div>
 
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-3">
-              <CardDescription className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                Database
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">{systemHealth.database}%</div>
-              <Progress value={systemHealth.database} className="h-2" />
-            </CardContent>
-          </Card>
+          {/* Database Card */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-500/20 rounded-xl">
+                <Database className="h-6 w-6 text-blue-400" />
+              </div>
+              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                Active
+              </Badge>
+            </div>
+            <div className="text-sm text-slate-300 mb-2">Database Load</div>
+            <div className="text-3xl font-bold text-white mb-3">{systemHealth.database}%</div>
+            <Progress value={systemHealth.database} className="h-2 bg-blue-900/30" />
+          </div>
 
-          <Card className="border-l-4 border-l-violet-500">
-            <CardHeader className="pb-3">
-              <CardDescription className="flex items-center gap-2">
-                <Wifi className="h-4 w-4" />
-                Active Users
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{systemHealth.activeUsers}</div>
-              <p className="text-xs text-muted-foreground mt-1">Online now</p>
-            </CardContent>
-          </Card>
+          {/* Active Users Card */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 border border-violet-500/20 rounded-2xl p-6 hover:border-violet-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/20">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-violet-500/20 rounded-xl">
+                <Wifi className="h-6 w-6 text-violet-400 animate-pulse" />
+              </div>
+              <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30">
+                <div className="h-2 w-2 bg-violet-400 rounded-full animate-pulse mr-2"></div>
+                Live
+              </Badge>
+            </div>
+            <div className="text-sm text-slate-300 mb-2">Active Users</div>
+            <div className="text-3xl font-bold text-white mb-3">{systemHealth.activeUsers}</div>
+            <p className="text-xs text-slate-400">Online right now</p>
+          </div>
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Live Activity Feed */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
+          <div className="lg:col-span-2 backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-indigo-500 animate-pulse" />
+                  <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                    <Activity className="h-6 w-6 text-indigo-400 animate-pulse" />
                     Live Activity Feed
-                  </CardTitle>
-                  <CardDescription>Real-time platform events</CardDescription>
+                  </h3>
+                  <p className="text-sm text-slate-400 mt-1">Real-time platform events</p>
                 </div>
-                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
-                  <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse mr-2" />
+                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-3 py-1">
+                  <div className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse mr-2"></div>
                   Live
                 </Badge>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-3">
-                  {liveActivities.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors border border-border/50"
-                    >
-                      <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{activity.action}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {activity.workspace}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{activity.user}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatTimeAgo(activity.timestamp)}
-                      </span>
+            </div>
+            <ScrollArea className="h-[400px] p-6">
+              <div className="space-y-3">
+                {liveActivities.map((activity, index) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-indigo-500/30 transition-all duration-300 animate-in fade-in slide-in-from-top-2"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="mt-1 p-2 bg-indigo-500/20 rounded-lg">
+                      {getActivityIcon(activity.type)}
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{activity.action}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-300">
+                          {activity.workspace}
+                        </Badge>
+                        <span className="text-xs text-slate-400">{activity.user}</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      {formatTimeAgo(activity.timestamp)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
 
-          {/* Quick Stats */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Platform Metrics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">Workspaces</span>
+          {/* Quick Stats & System Status */}
+          <div className="space-y-6">
+            {/* Platform Metrics */}
+            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-indigo-400" />
+                Platform Metrics
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm text-slate-300">Workspaces</span>
                   </div>
-                  <div className="font-bold">{(stats as any)?.totalEmployees || 0}</div>
+                  <div className="text-xl font-bold text-white">{(stats as any)?.totalEmployees || 0}</div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-emerald-500" />
-                    <span className="text-sm">Monthly Revenue</span>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="h-5 w-5 text-emerald-400" />
+                    <span className="text-sm text-slate-300">Monthly Revenue</span>
                   </div>
-                  <div className="font-bold">${(stats as any)?.totalRevenue || "0"}</div>
+                  <div className="text-xl font-bold text-white">${(stats as any)?.totalRevenue || "0"}</div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-violet-500" />
-                    <span className="text-sm">API Requests</span>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-5 w-5 text-violet-400" />
+                    <span className="text-sm text-slate-300">API Requests</span>
                   </div>
-                  <div className="font-bold">{systemHealth.requests}</div>
+                  <div className="text-xl font-bold text-white">{systemHealth.requests}</div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm">Errors (24h)</span>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-400" />
+                    <span className="text-sm text-slate-300">Errors (24h)</span>
                   </div>
-                  <div className="font-bold text-amber-600">{systemHealth.errors}</div>
+                  <div className="text-xl font-bold text-amber-400">{systemHealth.errors}</div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">System Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Uptime</span>
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+            {/* System Status */}
+            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-indigo-400" />
+                System Status
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                  <span className="text-sm text-slate-300">Uptime</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
                     {systemHealth.uptime}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Database</span>
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                  <span className="text-sm text-slate-300">Database</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Healthy
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">API Status</span>
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                  <span className="text-sm text-slate-300">API Status</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Online
                   </Badge>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
+            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="w-full" onClick={() => window.location.href = '/admin/support'}>
+              <Button 
+                className="w-full bg-indigo-500/20 border-indigo-500/30 hover:bg-indigo-500/30 text-white" 
+                onClick={() => window.location.href = '/admin/support'}
+              >
                 <Users className="mr-2 h-4 w-4" />
                 Support
               </Button>
-              <Button variant="outline" className="w-full" onClick={() => window.location.href = '/admin/usage'}>
+              <Button 
+                className="w-full bg-blue-500/20 border-blue-500/30 hover:bg-blue-500/30 text-white" 
+                onClick={() => window.location.href = '/admin/usage'}
+              >
                 <Server className="mr-2 h-4 w-4" />
                 Usage
               </Button>
