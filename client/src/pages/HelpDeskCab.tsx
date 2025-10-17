@@ -925,17 +925,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         />
       )}
 
-      {/* Room Status Dialog */}
-      {showRoomStatus && isStaff && (
-        <BrandedConfirmDialog
-          open={showRoomStatus}
-          onClose={() => setShowRoomStatus(false)}
-          title="Change Room Status"
-          description={`Current status: ${(roomData as any)?.status || 'Open'}. Use /room open, /room closed, or /room maintenance to change the status.`}
-          confirmLabel="OK"
-          onConfirm={() => setShowRoomStatus(false)}
-        />
-      )}
 
       {/* Banner Manager - Staff Only */}
       {isStaff && (
@@ -998,6 +987,73 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         isOpen={showPriorityPanel}
         onClose={() => setShowPriorityPanel(false)}
       />
+
+      {/* Room Status Dialog - Functional with Select + Textarea + Save */}
+      <Dialog open={showRoomStatus && isStaff} onOpenChange={(open) => !open && setShowRoomStatus(false)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <WFLogoCompact className="h-8 w-auto" />
+              <div>
+                <DialogTitle>Change Room Status</DialogTitle>
+                <DialogDescription>
+                  Update HelpDesk availability and notify users
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="status-select">Room Status</Label>
+              <Select 
+                value={roomStatusControl} 
+                onValueChange={(value: "open" | "closed" | "maintenance") => setRoomStatusControl(value)}
+              >
+                <SelectTrigger id="status-select" data-testid="select-room-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">🟢 Open - Accepting Support Requests</SelectItem>
+                  <SelectItem value="closed">🔴 Closed - No Support Available</SelectItem>
+                  <SelectItem value="maintenance">🟡 Maintenance - System Updates</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status-message">Status Message (Optional)</Label>
+              <Textarea
+                id="status-message"
+                data-testid="textarea-status-message"
+                placeholder="e.g., 'Back at 9 AM EST' or 'System upgrade in progress'"
+                value={roomStatusMessage}
+                onChange={(e) => setRoomStatusMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRoomStatus(false)}
+              data-testid="button-cancel-status"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                toggleRoomStatusMutation.mutate({
+                  status: roomStatusControl,
+                  statusMessage: roomStatusMessage || undefined,
+                });
+              }}
+              disabled={toggleRoomStatusMutation.isPending}
+              data-testid="button-save-status"
+            >
+              {toggleRoomStatusMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Account Support Panel */}
       <AccountSupportPanel

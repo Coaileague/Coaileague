@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { WFLogoCompact } from "@/components/wf-logo";
 import {
   Users, MessageSquare, Ticket, Clock, AlertCircle, 
   CheckCircle, UserX, Volume2, VolumeX, Star,
@@ -140,13 +141,18 @@ export function QueueManagerPanel({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              Support Queue Manager
-            </DialogTitle>
-            <DialogDescription>
-              View all users waiting for help - chat and ticket system
-            </DialogDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <WFLogoCompact className="h-8 w-auto" />
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Support Queue Manager
+                </DialogTitle>
+                <DialogDescription>
+                  View all users waiting for help - chat and ticket system
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="grid grid-cols-12 gap-4 h-[600px]">
