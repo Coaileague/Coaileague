@@ -1190,6 +1190,14 @@ export default function ModernMobileChat() {
 
       {/* Input Area */}
       <div className="relative z-10 backdrop-blur-xl bg-black/40 border-t border-white/10 px-4 py-3">
+        {/* Connection Status Indicator */}
+        {!isConnected && (
+          <div className="mb-2 flex items-center gap-2 text-xs text-amber-400">
+            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            Connecting to chat...
+          </div>
+        )}
+        
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
             <input
@@ -1205,7 +1213,12 @@ export default function ModernMobileChat() {
 
           <button
             onClick={handleSend}
-            className="p-3 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full text-white hover:shadow-lg hover:shadow-indigo-500/50 transition-all active:scale-95"
+            disabled={!isConnected || !messageText.trim()}
+            className={`p-3 rounded-full text-white transition-all ${
+              isConnected && messageText.trim()
+                ? 'bg-gradient-to-r from-indigo-500 to-blue-500 hover:shadow-lg hover:shadow-indigo-500/50 active:scale-95'
+                : 'bg-slate-600 cursor-not-allowed opacity-50'
+            }`}
             data-testid="button-send"
           >
             <Send size={20} />
