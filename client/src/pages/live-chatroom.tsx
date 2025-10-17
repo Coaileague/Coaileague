@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import HelpDeskCab from "./HelpDeskCab";
 import HelpDesk5 from "./HelpDesk5";
+import { WorkforceOSLogo } from "@/components/workforceos-logo";
 
 // Device detection wrapper that loads correct chat interface
 export default function LiveChatroom() {
