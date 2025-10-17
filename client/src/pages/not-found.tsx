@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Home, ArrowLeft, Search } from "lucide-react";
+import { AlertCircle, Home, ArrowLeft, Search, MessageSquare } from "lucide-react";
+import { WFLogo } from "@/components/wf-logo";
 
 export default function NotFound() {
   const [, setLocation] = useLocation();
@@ -12,8 +13,9 @@ export default function NotFound() {
     }}>
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center pb-4">
-          <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-            <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" data-testid="icon-error-404" />
+          {/* WorkforceOS Logo */}
+          <div className="mx-auto mb-4 h-24 w-24 rounded-full bg-slate-900/80 flex items-center justify-center border-2 border-blue-500/50 shadow-xl shadow-blue-500/20">
+            <WFLogo size={48} />
           </div>
           <h1 className="text-4xl font-bold" data-testid="text-error-title">404 - Page Not Found</h1>
           <p className="text-lg text-muted-foreground mt-2" data-testid="text-error-description">
@@ -59,12 +61,22 @@ export default function NotFound() {
           </div>
         </CardContent>
 
-        <CardFooter className="flex-col text-center space-y-2 pt-6 border-t">
+        <CardFooter className="flex-col text-center space-y-3 pt-6 border-t">
+          {/* Live Support Button - Prominent */}
+          <Button 
+            onClick={() => setLocation("/live-chat")} 
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg"
+            data-testid="button-live-support"
+          >
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Live Support - We're Here to Help
+          </Button>
+          
           <p className="text-xs text-muted-foreground">
-            Need help? <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setLocation("/support")} data-testid="link-contact-support">Contact Support</Button>
+            Need help? <button onClick={() => setLocation("/support")} className="text-blue-500 hover:text-blue-600 underline text-xs" data-testid="link-contact-support">Contact Support</button>
           </p>
           <p className="text-xs text-muted-foreground">
-            WorkforceOS - Elite Workforce Management
+            WorkforceOS™ - Elite Workforce Management
           </p>
         </CardFooter>
       </Card>
