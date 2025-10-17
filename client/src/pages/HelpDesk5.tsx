@@ -558,7 +558,7 @@ export default function LiveChatroomPage() {
             </Badge>
 
             {/* Universal Support Menu - Staff Queue & Commands (Mobile Only) */}
-            {isStaff && <SupportMobileMenu onExecuteCommand={sendMessage} />}
+            {isStaff && <SupportMobileMenu onExecuteCommand={(cmd) => sendMessage(cmd, userName, 'support')} />}
 
             {isStaff && (
               <Button
