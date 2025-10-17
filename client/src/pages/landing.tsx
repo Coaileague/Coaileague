@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,21 @@ import {
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  
+  // Auto-redirect mobile users to mobile chat
+  useEffect(() => {
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isSmallScreen = window.innerWidth < 768;
+    
+    if (isMobileDevice || isSmallScreen) {
+      // Redirect to mobile chat after a short delay
+      const timer = setTimeout(() => {
+        setLocation("/mobile-chat");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [setLocation]);
+  
   return (
     <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
       {/* CAD-Style Top Bar - Desktop */}
@@ -49,6 +65,15 @@ export default function Landing() {
             data-testid="button-view-demo"
           >
             View Demo
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/mobile-chat")}
+            className="text-xs h-8 text-emerald-500 hover:text-emerald-400 hover:bg-[hsl(var(--cad-chrome-hover))] font-semibold"
+            data-testid="button-mobile-chat"
+          >
+            📱 Mobile Chat
           </Button>
           <div className="h-6 w-px bg-[hsl(var(--cad-border))]" />
           <Button
@@ -75,6 +100,14 @@ export default function Landing() {
       <div className="flex lg:hidden h-16 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] items-center justify-between px-3">
         <div className="text-xs sm:text-sm font-bold text-[hsl(var(--cad-text-primary))] truncate">WorkforceOS</div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/mobile-chat")}
+            className="h-9 sm:h-10 text-xs sm:text-sm text-emerald-500 hover:text-emerald-400 px-2 sm:px-3 font-semibold"
+            data-testid="button-mobile-chat-mobile"
+          >
+            📱 Chat
+          </Button>
           <Button
             variant="ghost"
             onClick={() => setLocation("/login")}
