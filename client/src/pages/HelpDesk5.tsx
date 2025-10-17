@@ -672,6 +672,16 @@ export default function LiveChatroomPage() {
             )}
           </div>
         </div>
+        
+        {/* Announcement Banner Row - Moved to header to avoid blocking messages */}
+        <div className="border-t border-slate-700/30 -mx-2 sm:-mx-4">
+          <ChatAnnouncementBanner 
+            queuePosition={queuePosition ?? undefined}
+            queueWaitTime="2-3 minutes"
+            onlineStaff={onlineUsers.filter(u => u.role === 'support' || u.role === 'admin').length}
+            customMessages={customBannerMessages.length > 0 ? customBannerMessages : undefined}
+          />
+        </div>
       </header>
 
       {/* Mobile User Actions Sheet - Smart Context Menu */}
@@ -885,15 +895,7 @@ export default function LiveChatroomPage() {
           {/* Messages */}
           <ScrollArea className="flex-1 p-4 relative z-10" onScroll={handleScroll as any}>
             <div className="max-w-full md:max-w-5xl mx-auto space-y-4 pb-32">
-              {/* Interactive Announcement Banner - Full Width */}
-              <div className="sticky top-0 z-50 -mx-4">
-                <ChatAnnouncementBanner 
-                  queuePosition={queuePosition ?? undefined}
-                  queueWaitTime="2-3 minutes"
-                  onlineStaff={onlineUsers.filter(u => u.role === 'support' || u.role === 'admin').length}
-                  customMessages={customBannerMessages.length > 0 ? customBannerMessages : undefined}
-                />
-              </div>
+              {/* Banner moved to header - no longer blocking messages! */}
               
               {messages.length === 0 ? (
                 <Card className="border-dashed border-slate-600/30 bg-slate-800/40 backdrop-blur-sm">
