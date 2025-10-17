@@ -56,13 +56,20 @@ interface SupportCommand {
   icon: React.ReactNode;
 }
 
-const chatCommands: SupportCommand[] = [
-  { command: "/intro", description: "Send welcome message", usage: "/intro", icon: <MessageSquare className="h-4 w-4" /> },
-  { command: "/auth", description: "Request authentication", usage: "/auth", icon: <Lock className="h-4 w-4" /> },
-  { command: "/verify", description: "Verify user identity", usage: "/verify <ticket#>", icon: <CheckCircle className="h-4 w-4" /> },
-  { command: "/resetpass", description: "Send password reset", usage: "/resetpass <email>", icon: <Unlock className="h-4 w-4" /> },
-  { command: "/close", description: "Close ticket & request feedback", usage: "/close", icon: <XCircle className="h-4 w-4" /> },
-  { command: "/help", description: "Show available commands", usage: "/help", icon: <HelpCircle className="h-4 w-4" /> },
+interface ChatAction {
+  id: string;
+  label: string;
+  description: string;
+  command: string;
+  icon: React.ReactNode;
+  variant?: 'default' | 'outline' | 'secondary';
+}
+
+const chatActions: ChatAction[] = [
+  { id: 'intro', label: "Send Welcome", description: "Introduce yourself to customer", command: "/intro", icon: <MessageSquare className="h-4 w-4" />, variant: 'default' },
+  { id: 'auth', label: "Request Auth", description: "Ask for authentication", command: "/auth", icon: <Lock className="h-4 w-4" />, variant: 'outline' },
+  { id: 'help', label: "Show Help", description: "Display command reference", command: "/help", icon: <HelpCircle className="h-4 w-4" />, variant: 'outline' },
+  { id: 'close', label: "Close & Feedback", description: "End chat with review request", command: "/close", icon: <XCircle className="h-4 w-4" />, variant: 'secondary' },
 ];
 
 const systemCommands: SupportCommand[] = [
@@ -79,8 +86,13 @@ const supportActions: SupportCommand[] = [
   { command: "Macro Response", description: "Quick reply templates", usage: "Use support drawer", icon: <Zap className="h-4 w-4" /> },
 ];
 
-export function SupportMobileMenu() {
+interface SupportMobileMenuProps {
+  onExecuteCommand?: (command: string) => void;
+}
+
+export function SupportMobileMenu({ onExecuteCommand }: SupportMobileMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [copiedTicket, setCopiedTicket] = useState<string | null>(null);
 
   // Fetch queue data
   const { data: queue = [] } = useQuery<QueuedUser[]>({
@@ -91,6 +103,23 @@ export function SupportMobileMenu() {
 
   const pendingCount = queue.length;
   const highPriorityCount = queue.filter(u => u.priority >= 80).length;
+
+  const handleCopyTicket = async (ticketNumber: string) => {
+    try {
+      await navigator.clipboard.writeText(ticketNumber);
+      setCopiedTicket(ticketNumber);
+      setTimeout(() => setCopiedTicket(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleAction = (action: ChatAction) => {
+    if (onExecuteCommand) {
+      onExecuteCommand(action.command);
+      setIsOpen(false); // Close menu after action
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -125,7 +154,7 @@ export function SupportMobileMenu() {
               </SheetDescription>
             </SheetHeader>
 
-            <Accordion type="multiple" defaultValue={["queue", "chat", "system"]} className="space-y-2">
+            <Accordion type="multiple" defaultValue={["queue", "actions", "system"]} className="space-y-2">
               
               {/* Category 1: Support Queue & Actions */}
               <AccordionItem value="queue" className="border rounded-md">
@@ -161,6 +190,7 @@ export function SupportMobileMenu() {
                           variant="outline"
                           className="w-full justify-start text-left"
                           size="sm"
+                          onClick={() => handleCopyTicket(user.ticketNumber)}
                           data-testid={`button-user-${user.ticketNumber}`}
                         >
                           <div className="flex-1 min-w-0">
@@ -169,7 +199,7 @@ export function SupportMobileMenu() {
                                 #{user.position}
                               </Badge>
                               <span className="text-sm font-medium truncate">
-                                {user.ticketNumber}
+                                {copiedTicket === user.ticketNumber ? '✓ Copied!' : user.ticketNumber}
                               </span>
                               {user.specialNeeds && (
                                 <AlertCircle className="h-3 w-3 text-destructive" />
@@ -209,28 +239,31 @@ export function SupportMobileMenu() {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Category 2: Chat Commands */}
-              <AccordionItem value="chat" className="border rounded-md">
-                <AccordionTrigger className="px-4 hover:no-underline" data-testid="accordion-chat">
+              {/* Category 2: Quick Actions (Tap to Execute) */}
+              <AccordionItem value="actions" className="border rounded-md">
+                <AccordionTrigger className="px-4 hover:no-underline" data-testid="accordion-actions">
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Chat Commands</span>
+                    <Zap className="h-4 w-4" />
+                    <span>Quick Actions</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4 space-y-2">
-                  {chatCommands.map((cmd) => (
-                    <div key={cmd.command} className="flex items-start gap-2 p-2 rounded-md hover-elevate active-elevate-2">
-                      <div className="mt-0.5">{cmd.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-mono font-medium">{cmd.command}</code>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{cmd.description}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Usage: <code className="text-xs">{cmd.usage}</code>
-                        </p>
+                  <p className="text-xs text-muted-foreground mb-3">Tap any action to execute instantly:</p>
+                  {chatActions.map((action) => (
+                    <Button
+                      key={action.id}
+                      variant={action.variant || 'outline'}
+                      size="sm"
+                      onClick={() => handleAction(action)}
+                      className="w-full justify-start gap-2"
+                      data-testid={`action-${action.id}`}
+                    >
+                      {action.icon}
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium">{action.label}</p>
+                        <p className="text-xs text-muted-foreground">{action.description}</p>
                       </div>
-                    </div>
+                    </Button>
                   ))}
                 </AccordionContent>
               </AccordionItem>
