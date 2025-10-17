@@ -105,14 +105,14 @@ export default function LiveChatroom() {
           </div>
         </div>
 
-        {/* Redirect Message Card with Animations */}
-        <div className="max-w-sm w-full bg-slate-900/60 backdrop-blur-xl border border-blue-500/30 rounded-lg p-6 space-y-6 relative z-10 transition-all duration-500">
-          {/* Title with Gradient */}
-          <div className="text-center space-y-3">
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-pulse">
+        {/* Redirect Message Card with Animations - Mobile Optimized */}
+        <div className="max-w-sm w-full bg-slate-900/60 backdrop-blur-xl border border-blue-500/30 rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6 relative z-10 transition-all duration-500">
+          {/* Title with Gradient - Smaller for Mobile */}
+          <div className="text-center space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-pulse">
               Mobile Device Detected
             </h2>
-            <p className={`text-sm text-slate-300 leading-relaxed transition-opacity duration-500 ${stage >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+            <p className={`text-xs sm:text-sm text-slate-300 leading-relaxed transition-opacity duration-500 ${stage >= 1 ? 'opacity-100' : 'opacity-0'}`}>
               Initializing DC360.5 Mobile Chat - your touch-optimized command center
             </p>
           </div>
