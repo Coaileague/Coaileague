@@ -786,19 +786,17 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative">
       {/* Seasonal Animated Background */}
       <SeasonalBackground enabled={seasonalAnimationsEnabled} />
-      {/* WorkforceOS Blue Gradient Header - More Professional */}
+      {/* WorkforceOS Header - Clean & Professional */}
       <header className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white shadow-lg relative z-10">
-        <div className="flex items-center justify-between max-w-7xl mx-auto p-3">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="w-6 h-6 text-slate-300" />
-            <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2">
+        <div className="flex items-center justify-between max-w-7xl mx-auto p-3 relative">
+          {/* Left: Logo and Controls */}
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-slate-300" />
+            <div className="bg-white/5 backdrop-blur-sm rounded-lg p-1.5">
               <WorkforceOSLogo size="sm" showText={false} />
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-slate-100">WorkforceOS Support</span>
             {isStaff && (
-              <>
+              <div className="flex items-center gap-1.5 ml-2">
                 <Button
                   onClick={() => {
                     setSeasonalAnimationsEnabled(prev => {
@@ -813,26 +811,35 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                   }}
                   size="sm"
                   variant="outline"
-                  className="h-8 text-xs gap-2 bg-blue-500/10 border-blue-300/30 hover:bg-blue-500/20 text-white"
+                  className="h-6 text-[10px] px-2 gap-1 bg-slate-600/30 border-slate-500/30 hover:bg-slate-600/50 text-white"
                   data-testid="button-toggle-seasonal"
                 >
-                  {seasonalAnimationsEnabled ? '❄️ Seasonal: ON' : '🚫 Seasonal: OFF'}
+                  ❄️ {seasonalAnimationsEnabled ? 'ON' : 'OFF'}
                 </Button>
                 <Button
                   onClick={() => setShowBannerManager(true)}
                   size="sm"
                   variant="outline"
-                  className="h-8 text-xs gap-2 bg-purple-500/10 border-purple-300/30 hover:bg-purple-500/20 text-white"
+                  className="h-6 text-[10px] px-2 gap-1 bg-slate-600/30 border-slate-500/30 hover:bg-slate-600/50 text-white"
                   data-testid="button-open-banner-manager"
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-2.5 h-2.5" />
                   Banner
                 </Button>
-              </>
+              </div>
             )}
+          </div>
+          
+          {/* Center: Title (allows animations to flow through) */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <span className="text-sm font-semibold text-white/90 backdrop-blur-[2px]">WorkforceOS Support</span>
+          </div>
+          
+          {/* Right: Connection Status */}
+          <div className="flex items-center gap-2">
             {isConnected && (
-              <div className="flex items-center gap-1 text-xs bg-emerald-500/20 px-3 py-1 rounded-full backdrop-blur-sm border border-emerald-400/30">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <div className="flex items-center gap-1 text-[10px] bg-emerald-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-emerald-400/30">
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                 Connected
               </div>
             )}
@@ -854,20 +861,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           />
         </div>
       </header>
-
-      {/* Hamburger Menu Button - More Professional */}
-      <div className="max-w-7xl mx-auto w-full px-4 py-2 border-b border-slate-200 bg-white/80 backdrop-blur-sm relative z-10">
-        <Button
-          onClick={() => setShowControlsMenu(true)}
-          variant="outline"
-          size="sm"
-          className="gap-2 bg-slate-700 text-white border-slate-600 hover:bg-slate-600"
-          data-testid="button-open-controls"
-        >
-          <Menu className="w-4 h-4" />
-          Controls & Actions
-        </Button>
-      </div>
 
       {/* Main Layout - Full Width */}
       <main className="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full relative z-10">
