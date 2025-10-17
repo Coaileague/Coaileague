@@ -28,17 +28,15 @@ import {
 export default function Landing() {
   const [, setLocation] = useLocation();
   
-  // Auto-redirect mobile users to mobile chat
+  // Auto-redirect mobile users to mobile chat (INSTANT)
   useEffect(() => {
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isSmallScreen = window.innerWidth < 768;
     
     if (isMobileDevice || isSmallScreen) {
-      // Redirect to mobile chat after a short delay
-      const timer = setTimeout(() => {
-        setLocation("/mobile-chat");
-      }, 500);
-      return () => clearTimeout(timer);
+      // Instant redirect to mobile chat - no delay
+      console.log("📱 Mobile device detected - redirecting to DC360.5");
+      setLocation("/mobile-chat");
     }
   }, [setLocation]);
   
