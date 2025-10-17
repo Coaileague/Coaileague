@@ -5615,6 +5615,105 @@ Return ONLY valid JSON array with this exact structure:
   });
 
   // ============================================================================
+  // CHAT AGREEMENT ACCEPTANCE - Terms & Conditions Tracking
+  // ============================================================================
+
+  // Accept chat agreement and store for compliance vault
+  app.post("/api/helpdesk/agreement/accept", async (req: any, res) => {
+    try {
+      const schema = z.object({
+        fullName: z.string().optional(),
+        agreementVersion: z.string().default("1.0"),
+        roomSlug: z.string(),
+        ticketId: z.string().optional(),
+        sessionId: z.string().optional(),
+      });
+
+      const validationResult = schema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          error: "Invalid request",
+          details: validationResult.error.errors
+        });
+      }
+
+      const { fullName, agreementVersion, roomSlug, ticketId, sessionId } = validationResult.data;
+
+      // Get IP address and user agent for compliance tracking
+      const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+
+      // Get userId if authenticated
+      const userId = req.user?.id || null;
+      const platformRole = req.user?.platformRole || null;
+
+      // Store agreement acceptance
+      const [acceptance] = await db
+        .insert(chatAgreementAcceptances)
+        .values({
+          userId,
+          ticketId: ticketId || null,
+          sessionId: sessionId || null,
+          agreementVersion,
+          fullName: fullName || null,
+          agreedToTerms: true,
+          ipAddress: ipAddress?.toString() || null,
+          userAgent: userAgent || null,
+          roomSlug,
+          platformRole,
+        })
+        .returning();
+
+      res.json({ 
+        success: true, 
+        acceptanceId: acceptance.id,
+        message: "Agreement accepted and recorded for compliance" 
+      });
+    } catch (error: any) {
+      console.error("Error recording agreement acceptance:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Check if user has accepted agreement for a room
+  app.get("/api/helpdesk/agreement/check/:roomSlug", async (req: any, res) => {
+    try {
+      const { roomSlug } = req.params;
+      const userId = req.user?.id;
+      const sessionId = req.query.sessionId;
+
+      if (!userId && !sessionId) {
+        return res.json({ hasAccepted: false });
+      }
+
+      // Check for existing acceptance
+      const conditions = [];
+      if (userId) {
+        conditions.push(eq(chatAgreementAcceptances.userId, userId));
+      }
+      if (sessionId) {
+        conditions.push(eq(chatAgreementAcceptances.sessionId, sessionId as string));
+      }
+      conditions.push(eq(chatAgreementAcceptances.roomSlug, roomSlug));
+
+      const [acceptance] = await db
+        .select()
+        .from(chatAgreementAcceptances)
+        .where(and(...conditions))
+        .orderBy(desc(chatAgreementAcceptances.acceptedAt))
+        .limit(1);
+
+      res.json({ 
+        hasAccepted: !!acceptance,
+        acceptedAt: acceptance?.acceptedAt || null
+      });
+    } catch (error: any) {
+      console.error("Error checking agreement acceptance:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================================
   // PAYROLLOS™ ROUTES - Automated Payroll Processing (99% automation + 1% QC)
   // ============================================================================
 

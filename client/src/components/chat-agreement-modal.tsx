@@ -29,38 +29,65 @@ WORKFORCE OS SUPPORT CHAT - TERMS & CONDITIONS
 
 LAST UPDATED: October 17, 2025
 VERSION: 1.0
+OPERATOR: Drill Consulting 360 (DC360)
 
 BY ACCESSING THIS SUPPORT CHAT, YOU AGREE TO THE FOLLOWING TERMS:
 
 1. ACCEPTANCE OF TERMS
 By clicking "I Agree" and entering this support chat, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not agree, you must exit immediately.
 
-2. SERVICE DESCRIPTION
-This WorkforceOS Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries related to WorkforceOS platform services. This is a professional business communication channel.
+2. SERVICE DESCRIPTION & LIMITATIONS
+This WorkforceOS Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by Drill Consulting 360.
 
-3. USER RESPONSIBILITIES
+IMPORTANT: We do NOT guarantee that every issue will be resolved immediately or at all. Some issues may require:
+• Platform upgrades or updates
+• Extended development time
+• Third-party service changes
+• System downtime for maintenance
+• Technical resources beyond current capabilities
+
+Resolution timeframes and outcomes are NOT guaranteed and are subject to technical feasibility, resource availability, and business priorities.
+
+3. USER RESPONSIBILITIES & CONDUCT
 You agree to:
 • Provide accurate and truthful information
-• Communicate professionally and respectfully
+• Communicate professionally and respectfully at all times
+• Not make false claims of discrimination, harassment, or misconduct
 • Not share sensitive passwords or payment card details in chat
 • Not use the chat for illegal, fraudulent, or abusive purposes
-• Respect support staff and other users
+• Respect support staff, visitors, volunteers, and other users
 • Follow all instructions provided by support staff
+• Accept that staff behavior is professional and any perceived rudeness may be due to communication style differences or urgent priorities
 
-4. DISCLAIMER OF WARRANTIES
-THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. WORKFORCEOS MAKES NO GUARANTEES REGARDING:
-• Chat availability or uptime
-• Response times or issue resolution
-• Accuracy of information provided
-• Data transmission security over the internet
+4. COMPLETE DISCLAIMER OF WARRANTIES
+THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. WORKFORCEOS, DRILL CONSULTING 360, AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
+• Chat availability, uptime, or accessibility
+• Response times, resolution times, or issue resolution
+• Accuracy, completeness, or reliability of information provided
+• Data transmission security over WebSocket connections
+• Platform stability during updates or maintenance
+• Compatibility with external services or hosting providers
 
-5. LIMITATION OF LIABILITY
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, WORKFORCEOS SHALL NOT BE LIABLE FOR:
+5. COMPREHENSIVE LIMITATION OF LIABILITY
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT WORKFORCEOS, DRILL CONSULTING 360, AND ALL OF OUR:
+• Staff members and support representatives
+• Ownership, officers, directors, and managers  
+• Agents, contractors, and representatives
+• Volunteers, visitors, and affiliates
+• Third-party service providers
+
+SHALL NOT BE LIABLE FOR ANY CLAIMS, DAMAGES, OR LOSSES INCLUDING:
 • Any direct, indirect, incidental, or consequential damages
-• Loss of data, profits, or business opportunities
-• Unauthorized access to your chat sessions
-• Service interruptions or technical failures
-• Decisions made based on chat guidance
+• Claims of discrimination, rudeness, or unprofessional conduct
+• Loss of data, profits, revenue, or business opportunities
+• Unauthorized access to your chat sessions or data
+• Service interruptions, downtime, or technical failures
+• Decisions made based on chat guidance or recommendations
+• Issues arising from platform updates, upgrades, or maintenance
+• WebSocket connection failures or hosting provider issues
+• Any damages exceeding $100 USD in total
+
+YOU EXPRESSLY WAIVE ALL RIGHTS TO SUE OR BRING LEGAL ACTION against any of the above parties for matters related to this Service.
 
 YOUR SOLE REMEDY IS TO DISCONTINUE USE OF THIS SERVICE.
 
