@@ -102,17 +102,17 @@ export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
           </feMerge>
         </filter>
         
-        {/* Gradient for professional look - Vibrant Corporate Blue */}
+        {/* Gradient for professional look - Slate tones */}
         <linearGradient id={`compact-gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="50%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#0ea5e9" />
+          <stop offset="0%" stopColor="#475569" />
+          <stop offset="50%" stopColor="#64748b" />
+          <stop offset="100%" stopColor="#334155" />
         </linearGradient>
         
         {/* White core gradient for brightness */}
         <linearGradient id={`bright-core-${uniqueId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#e0f2fe" />
+          <stop offset="0%" stopColor="#cbd5e1" />
+          <stop offset="100%" stopColor="#94a3b8" />
         </linearGradient>
       </defs>
       
@@ -121,8 +121,8 @@ export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
         cx="20"
         cy="16"
         r="15"
-        fill="rgba(59, 130, 246, 0.1)"
-        stroke="rgba(96, 165, 250, 0.3)"
+        fill="rgba(71, 85, 105, 0.05)"
+        stroke="rgba(100, 116, 139, 0.2)"
         strokeWidth="0.5"
       />
       
@@ -165,7 +165,7 @@ export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
       <text
         x="25"
         y="14"
-        fill="#ffffff"
+        fill="#94a3b8"
         fontSize="11"
         fontWeight="900"
         fontFamily="system-ui, -apple-system, sans-serif"

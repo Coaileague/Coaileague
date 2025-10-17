@@ -432,68 +432,62 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     }, 1500);
   };
 
-  // Get user type icon - CLEAR & VISIBLE with transparent rings and glows
+  // Get user type icon - Compact with WorkforceOS logo
   const getUserTypeIcon = (userType: string, role: string) => {
-    // ROOT ADMIN - Golden ring with WF logo (NO background)
+    // ROOT ADMIN - Slate ring with WF logo
     if (role === 'root') {
       return (
-        <div className="relative flex items-center justify-center w-7 h-7">
-          <div className="absolute inset-0 rounded-full border-2 border-amber-500 shadow-lg shadow-amber-500/50"></div>
-          <WFLogoCompact size={16} />
+        <div className="relative flex items-center justify-center w-6 h-6">
+          <div className="absolute inset-0 rounded-full border border-slate-400"></div>
+          <WFLogoCompact size={12} />
         </div>
       );
     }
     
-    // Bot gets special animated icon with transparent ring
+    // Bot gets special animated icon
     if (role === 'bot') {
       return (
-        <div className="relative flex items-center justify-center w-7 h-7">
-          <div className="absolute inset-0 rounded-full border-2 border-blue-500 shadow-lg shadow-blue-500/50 animate-pulse"></div>
-          <Bot className="w-4 h-4 text-blue-600" />
+        <div className="relative flex items-center justify-center w-6 h-6">
+          <div className="absolute inset-0 rounded-full border border-slate-400 animate-pulse"></div>
+          <Bot className="w-3 h-3 text-slate-600" />
         </div>
       );
     }
     
-    // Staff gets WF logo with colored ring (NO background blocking)
+    // Staff gets WF logo with subtle ring
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
-      const ringColor = role === 'deputy_admin'
-        ? 'border-blue-600 shadow-blue-500/50'
-        : role === 'deputy_assistant'
-        ? 'border-indigo-600 shadow-indigo-500/50'
-        : 'border-cyan-600 shadow-cyan-500/50';
-        
       return (
-        <div className="relative flex items-center justify-center w-7 h-7">
-          <div className={`absolute inset-0 rounded-full border-2 ${ringColor} shadow-lg`}></div>
-          <WFLogoCompact size={16} />
+        <div className="relative flex items-center justify-center w-6 h-6">
+          <div className="absolute inset-0 rounded-full border border-slate-400"></div>
+          <WFLogoCompact size={12} />
         </div>
       );
     }
     
-    // Authenticated users - transparent rings with WF logo clearly visible
+    // Authenticated users - WF logo with subtle ring
     if (userType === 'subscriber') {
       return (
-        <div className="relative flex items-center justify-center w-7 h-7">
-          <div className="absolute inset-0 rounded-full border-2 border-amber-500 shadow-md shadow-amber-500/30"></div>
-          <WFLogoCompact size={14} />
+        <div className="relative flex items-center justify-center w-6 h-6">
+          <div className="absolute inset-0 rounded-full border border-slate-300"></div>
+          <WFLogoCompact size={11} />
         </div>
       );
     }
     
     if (userType === 'org_user') {
       return (
-        <div className="relative flex items-center justify-center w-7 h-7">
-          <div className="absolute inset-0 rounded-full border-2 border-blue-500 shadow-md shadow-blue-500/30"></div>
-          <WFLogoCompact size={14} />
+        <div className="relative flex items-center justify-center w-6 h-6">
+          <div className="absolute inset-0 rounded-full border border-slate-300"></div>
+          <WFLogoCompact size={11} />
         </div>
       );
     }
     
     // Guests get question mark with gray ring
     return (
-      <div className="relative flex items-center justify-center w-7 h-7">
-        <div className="absolute inset-0 rounded-full border-2 border-slate-400 shadow-sm"></div>
-        <HelpCircle className="w-4 h-4 text-slate-500" />
+      <div className="relative flex items-center justify-center w-6 h-6">
+        <div className="absolute inset-0 rounded-full border border-slate-300"></div>
+        <HelpCircle className="w-3 h-3 text-slate-500" />
       </div>
     );
   };
@@ -880,8 +874,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         {/* CENTER COLUMN: Chat Area */}
         <section className="flex-grow flex flex-col bg-white/50 backdrop-blur-md relative">
           {/* Messages Area */}
-          <ScrollArea className="flex-grow p-4">
-            <div className="space-y-4">
+          <ScrollArea className="flex-grow p-3">
+            <div className="space-y-2">
 
               {/* Chat Messages - Modern bubbles with WorkforceOS blue */}
               {messages.map((msg, idx) => {
@@ -891,9 +885,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 // System messages
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
-                    <div key={idx} className="flex justify-center my-2">
-                      <span className="text-xs font-mono text-blue-700 italic bg-blue-50 px-3 py-1 rounded-full border border-blue-200 flex items-center gap-2">
-                        <WFLogoCompact size={14} />
+                    <div key={idx} className="flex justify-center my-1">
+                      <span className="text-[10px] font-mono text-slate-600 italic bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 flex items-center gap-1.5">
+                        <WFLogoCompact size={10} />
                         {msg.message}
                       </span>
                     </div>
@@ -906,48 +900,25 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 const nameColor = getRoleColor(role);
 
                 return (
-                  <div key={idx} className={`${bubbleColor} shadow-md p-4 rounded-3xl max-w-[85%] hover:shadow-lg transition-all`}>
-                    <div className="flex items-start gap-3">
-                      {/* Avatar Icon - PROMINENT */}
-                      <div className="flex-shrink-0">
+                  <div key={idx} className={`${bubbleColor} shadow-sm p-2 rounded-lg max-w-[90%] hover:shadow-md transition-all`}>
+                    <div className="flex items-start gap-2">
+                      {/* Avatar Icon - Compact */}
+                      <div className="flex-shrink-0 mt-0.5">
                         {getUserTypeIcon((msg as any).userType || 'guest', role)}
                       </div>
                       
-                      {/* WF Logo for STAFF ONLY */}
-                      {['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(role) && (
-                        <div className="flex-shrink-0">
-                          <WFLogoCompact size={16} />
-                        </div>
-                      )}
-                      
                       <div className="flex-1 min-w-0">
                         {/* Header: Name, Role Badge, Timestamp */}
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <span className={`text-sm ${nameColor}`}>{displayName}</span>
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          <span className={`text-xs ${nameColor}`}>{displayName}</span>
                           {getRoleIcon(role)}
-                          <span className="text-xs text-slate-500 ml-auto">
+                          <span className="text-[10px] text-slate-500 ml-auto">
                             {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                         
-                        {/* Message Content */}
-                        <p className="text-slate-800 text-sm leading-relaxed">{msg.message}</p>
-                        
-                        {/* Reaction Bar */}
-                        <div className="flex items-center gap-2 mt-3 text-xs">
-                          <button className="hover:scale-110 transition-transform opacity-50 hover:opacity-100" title="Like">
-                            👍
-                          </button>
-                          <button className="hover:scale-110 transition-transform opacity-50 hover:opacity-100" title="Love">
-                            ❤️
-                          </button>
-                          <button className="hover:scale-110 transition-transform opacity-50 hover:opacity-100" title="Verified">
-                            ✅
-                          </button>
-                          <button className="hover:scale-110 transition-transform opacity-50 hover:opacity-100" title="Star">
-                            ⭐
-                          </button>
-                        </div>
+                        {/* Message Content - Smaller text */}
+                        <p className="text-slate-800 text-xs leading-snug">{msg.message}</p>
                       </div>
                     </div>
                   </div>
