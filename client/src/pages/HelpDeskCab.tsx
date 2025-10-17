@@ -25,6 +25,7 @@ import { TutorialManagerPanel } from "@/components/tutorial-manager-panel";
 import { PriorityManagerPanel } from "@/components/priority-manager-panel";
 import { AccountSupportPanel } from "@/components/account-support-panel";
 import { MotdDialog } from "@/components/motd-dialog";
+import { AnimatedStatusBar } from "@/components/animated-status-bar";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -93,7 +94,7 @@ export default function HelpDeskCab() {
     ? `${user.firstName} ${user.lastName}` 
     : user?.email?.split('@')[0] || 'User';
 
-  const { messages, isConnected, sendMessage, sendTyping, sendStatusChange, kickUser, sendRawMessage, onlineUsers, customBannerMessage } = useChatroomWebSocket(
+  const { messages, isConnected, sendMessage, sendTyping, sendStatusChange, kickUser, sendRawMessage, onlineUsers, customBannerMessage, typingUserInfo, isSilenced, justGotVoice } = useChatroomWebSocket(
     user?.id, 
     userName,
     (request) => {
@@ -577,9 +578,13 @@ export default function HelpDeskCab() {
                 Send <Send className="w-4 h-4 ml-1" />
               </Button>
             </div>
-            <div className="flex justify-between items-center mt-2 text-xs text-slate-600">
-              <span><Clock className="w-3 h-3 inline mr-1" />Enter to send</span>
-              <span>{isConnected ? <CheckCircle className="w-3 h-3 inline mr-1 text-emerald-500" /> : <AlertCircle className="w-3 h-3 inline mr-1 text-rose-500" />}{isConnected ? 'Connected' : 'Disconnected'}</span>
+            <div className="mt-2 px-1" data-testid="chat-status-bar">
+              <AnimatedStatusBar
+                isSilenced={isSilenced}
+                isConnected={isConnected}
+                typingUser={typingUserInfo}
+                justGotVoice={justGotVoice}
+              />
             </div>
           </div>
         </section>

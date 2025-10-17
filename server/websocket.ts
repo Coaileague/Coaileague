@@ -33,6 +33,8 @@ interface JoinConversationPayload {
 interface TypingPayload {
   type: 'typing';
   userId: string;
+  userName: string;
+  isStaff: boolean;
   isTyping: boolean;
 }
 
@@ -856,6 +858,10 @@ export function setupWebSocket(server: Server) {
                           type: 'muted',
                           duration: duration,
                         }));
+                        // Send voice_removed event for animated status bar
+                        client.send(JSON.stringify({
+                          type: 'voice_removed',
+                        }));
                       }
                     });
                   }
@@ -1193,17 +1199,20 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // Broadcast typing status to other clients in same conversation
+            // Broadcast typing status to ALL clients in same conversation (including sender for debug)
             const clients = conversationClients.get(ws.conversationId);
             if (clients) {
               const typingPayload = JSON.stringify({
                 type: 'user_typing',
                 userId: ws.userId,
+                typingUserName: payload.userName || ws.userName || 'User',
+                typingUserIsStaff: payload.isStaff || ws.userType === 'staff',
                 isTyping: payload.isTyping,
               });
 
+              // Broadcast to all clients (they'll filter out their own typing indicator)
               clients.forEach((client) => {
-                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                if (client.readyState === WebSocket.OPEN) {
                   client.send(typingPayload);
                 }
               });
@@ -1469,10 +1478,15 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // Notify target they're released from hold
+            // Notify target they're released from hold (legacy)
             targetClient.send(JSON.stringify({
               type: 'spectator_released',
               releasedBy: ws.userName || 'Support Staff',
+            }));
+
+            // Send voice_granted event for new animated status
+            targetClient.send(JSON.stringify({
+              type: 'voice_granted',
             }));
 
             console.log(`🎤 ${ws.userName} released ${payload.targetUserId} from hold`);

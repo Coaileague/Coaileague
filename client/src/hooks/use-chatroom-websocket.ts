@@ -12,11 +12,13 @@ interface OnlineUser {
 }
 
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update';
+  type: 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_removed';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
   isTyping?: boolean;
+  typingUserName?: string;
+  typingUserIsStaff?: boolean;
   // HelpDesk error fields
   requiresTicket?: boolean;
   roomStatus?: string;
@@ -57,8 +59,11 @@ export function useChatroomWebSocket(
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [typingUserInfo, setTypingUserInfo] = useState<{ name: string; isStaff: boolean } | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [customBannerMessage, setCustomBannerMessage] = useState<string | null>(null);
+  const [justGotVoice, setJustGotVoice] = useState(false);
+  const [isSilenced, setIsSilenced] = useState(false);
   // HelpDesk access control state
   const [requiresTicket, setRequiresTicket] = useState(false);
   const [roomStatus, setRoomStatus] = useState<string | null>(null);
@@ -184,40 +189,58 @@ export function useChatroomWebSocket(
               break;
 
             case 'user_typing':
-              // Handle typing indicators
-              if (data.userId && data.isTyping !== undefined) {
+              // Handle typing indicators - show who is typing (not yourself)
+              if (data.userId && data.userId !== userId && data.isTyping !== undefined) {
+                if (data.isTyping && data.typingUserName) {
+                  // Set typing user info for display
+                  setTypingUserInfo({
+                    name: data.typingUserName,
+                    isStaff: data.typingUserIsStaff || false
+                  });
+                  
+                  // Auto-clear after 3 seconds
+                  const timeout = setTimeout(() => {
+                    setTypingUserInfo(null);
+                  }, 3000);
+                  
+                  // Clear any existing timeout
+                  const existing = typingTimeoutRef.current.get(data.userId);
+                  if (existing) clearTimeout(existing);
+                  typingTimeoutRef.current.set(data.userId, timeout);
+                } else {
+                  // Clear typing indicator
+                  setTypingUserInfo(null);
+                  const existing = typingTimeoutRef.current.get(data.userId);
+                  if (existing) {
+                    clearTimeout(existing);
+                    typingTimeoutRef.current.delete(data.userId);
+                  }
+                }
+                
+                // Still track in set for compatibility
                 setTypingUsers((prev) => {
                   const next = new Set(prev);
-                  
                   if (data.isTyping) {
                     next.add(data.userId!);
-                    
-                    // Auto-remove after 3 seconds
-                    const existing = typingTimeoutRef.current.get(data.userId!);
-                    if (existing) clearTimeout(existing);
-                    
-                    const timeout = setTimeout(() => {
-                      setTypingUsers((p) => {
-                        const n = new Set(p);
-                        n.delete(data.userId!);
-                        return n;
-                      });
-                      typingTimeoutRef.current.delete(data.userId!);
-                    }, 3000);
-                    
-                    typingTimeoutRef.current.set(data.userId!, timeout);
                   } else {
                     next.delete(data.userId!);
-                    const existing = typingTimeoutRef.current.get(data.userId!);
-                    if (existing) {
-                      clearTimeout(existing);
-                      typingTimeoutRef.current.delete(data.userId!);
-                    }
                   }
-                  
                   return next;
                 });
               }
+              break;
+
+            case 'voice_granted':
+              // User was granted voice permission
+              setIsSilenced(false);
+              setJustGotVoice(true);
+              setTimeout(() => setJustGotVoice(false), 5000);
+              break;
+
+            case 'voice_removed':
+              // User was silenced/put in spectator mode
+              setIsSilenced(true);
+              setJustGotVoice(false);
               break;
 
             case 'user_list_update':
@@ -375,12 +398,18 @@ export function useChatroomWebSocket(
       return;
     }
 
+    // Determine if current user is staff
+    const currentUser = onlineUsers.find(u => u.id === userId);
+    const isStaff = currentUser?.userType === 'staff' || false;
+
     wsRef.current.send(JSON.stringify({
       type: 'typing',
       userId: userId,
+      userName: userName,
+      isStaff: isStaff,
       isTyping: isTyping,
     }));
-  }, [userId]);
+  }, [userId, userName, onlineUsers]);
 
   // Send status change
   const sendStatusChange = useCallback((status: 'online' | 'away' | 'busy') => {
@@ -459,8 +488,11 @@ export function useChatroomWebSocket(
     kickUser,
     sendRawMessage,
     typingUsers,
+    typingUserInfo,
     onlineUsers,
     isConnected,
+    isSilenced,
+    justGotVoice,
     error,
     reconnect: connect,
     // HelpDesk access control
