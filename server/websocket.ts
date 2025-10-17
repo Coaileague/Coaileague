@@ -433,6 +433,46 @@ export function setupWebSocket(server: Server) {
               }
             }
 
+            // IRC-STYLE PUBLIC ANNOUNCEMENT: HelpOS greets everyone who joins
+            if (payload.conversationId === MAIN_ROOM_ID) {
+              try {
+                const clients = conversationClients.get(payload.conversationId);
+                
+                // Determine greeting based on user type
+                let greeting = '';
+                if (isStaff) {
+                  greeting = `👋 Welcome back, **${displayName}**! Support chat is active. Type /help for commands.`;
+                } else {
+                  greeting = `👋 Hello **${displayName}**! Welcome to WorkforceOS Support. A staff member will be with you shortly.`;
+                }
+
+                // Create HelpOS public announcement message
+                const helpOsMessage = await storage.createChatMessage({
+                  conversationId: payload.conversationId,
+                  senderId: 'helpos-ai-bot',
+                  senderName: 'HelpOS™',
+                  senderType: 'bot',
+                  message: greeting,
+                  messageType: 'text',
+                });
+
+                // Broadcast to ALL users in the chat (IRC-style)
+                if (clients) {
+                  const publicPayload = JSON.stringify({
+                    type: 'new_message',
+                    message: helpOsMessage,
+                  });
+                  clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                      client.send(publicPayload);
+                    }
+                  });
+                }
+              } catch (greetError) {
+                console.error('HelpOS greeting failed:', greetError);
+              }
+            }
+
             // Single consolidated log message
             if (payload.conversationId === MAIN_ROOM_ID) {
               console.log(`✅ ${displayName} joined HelpDesk (${userRoleInfo})`);
