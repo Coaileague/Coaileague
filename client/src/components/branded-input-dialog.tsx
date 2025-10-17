@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Building2 } from "lucide-react";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 interface BrandedInputDialogProps {
   open: boolean;
@@ -147,19 +148,19 @@ export function BrandedConfirmDialog({
       <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-blue-200">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
               variant === "danger" 
                 ? "bg-gradient-to-br from-red-600 to-rose-600" 
                 : "bg-gradient-to-br from-blue-600 to-indigo-600"
             }`}>
-              <Building2 className="w-6 h-6 text-white" />
+              <WFLogoCompact size={24} />
             </div>
             <div className="flex-1">
               <DialogTitle className={variant === "danger" ? "text-red-900" : "text-blue-900"}>
                 {title}
               </DialogTitle>
               {description && (
-                <DialogDescription className="text-slate-600 mt-1">
+                <DialogDescription className="text-slate-700 mt-1 font-medium">
                   {description}
                 </DialogDescription>
               )}
@@ -171,7 +172,7 @@ export function BrandedConfirmDialog({
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-slate-300"
+            className="border-slate-400 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-semibold"
             data-testid="button-cancel-confirm"
           >
             {cancelLabel}

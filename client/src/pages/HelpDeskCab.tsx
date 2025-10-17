@@ -74,7 +74,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatus, setUserStatus] = useState<"online" | "away" | "busy">("online");
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [showCoffeeCup, setShowCoffeeCup] = useState(false);
   const [secureRequest, setSecureRequest] = useState<{
     type: 'authenticate' | 'document' | 'photo' | 'signature' | 'info';
@@ -286,13 +285,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Rotate info banners every 8 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % infoBanners.length);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [infoBanners.length]);
+  // No rotating banners - removed IRC-style system
 
   const handleSendMessage = () => {
     if (inputMessage.trim() && isConnected) {
