@@ -1,15 +1,15 @@
 /**
- * MOBILE CHAT PAGE (Help360.5) - /mobilechat or /mobile-chat
- * Dedicated mobile-optimized chat experience with touch-first UX
- * Separate from desktop /live-chat route
+ * MOBILE CHAT PAGE (DC360.5) - /mobile-chat
+ * Modern glassmorphic mobile chat with tap-to-execute commands
+ * Livestream-style UI adapted for WorkforceOS support
  * 
- * Version: Help360.5 (Mobile Edition)
- * Desktop version: Help360 at /helpdesk-cab or /live-chat
+ * Version: DC360.5 (Mobile Edition)
+ * Desktop version: DC360 at /live-chat
  */
 
-import HelpDesk5 from "./HelpDesk5";
+import ModernMobileChat from "./modern-mobile-chat";
 
 export default function MobileChatPage() {
-  console.log("✅ MobileChatPage component is rendering");
-  return <HelpDesk5 />;
+  console.log("✅ Modern Mobile Chat (DC360.5) is rendering");
+  return <ModernMobileChat />;
 }
