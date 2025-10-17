@@ -17,7 +17,9 @@ import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { HelpDeskCommandBar } from "@/components/helpdesk-command-bar";
 import { ChatAnnouncementBanner } from "@/components/chat-announcement-banner";
+import { BannerManager } from "@/components/banner-manager";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -31,6 +33,7 @@ const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 // Desktop IRC/MSN-style 3-column chatroom with WorkforceOS blue branding
 export default function HelpDeskCab() {
   const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatus, setUserStatus] = useState<"online" | "away" | "busy">("online");
@@ -42,6 +45,9 @@ export default function HelpDeskCab() {
     message?: string;
   } | null>(null);
   const [confirmKick, setConfirmKick] = useState<{ userId: string; userName: string } | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showRoomStatus, setShowRoomStatus] = useState(false);
+  const [showBannerManager, setShowBannerManager] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // IRC-style MOTD and helpful info banners
@@ -159,7 +165,10 @@ export default function HelpDeskCab() {
   };
 
   const handleQuickResponse = (message: string) => {
-    setInputMessage(message);
+    // Send the command immediately
+    if (message.trim() && isConnected) {
+      sendMessage(message, userName, 'support');
+    }
   };
 
   const handleMention = (userName: string) => {
@@ -319,6 +328,18 @@ export default function HelpDeskCab() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold font-mono">irc.wfos.com #HelpDesk</span>
+            {isStaff && (
+              <Button
+                onClick={() => setShowBannerManager(true)}
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-2 bg-purple-500/20 border-purple-300/50 hover:bg-purple-500/30 text-white"
+                data-testid="button-open-banner-manager"
+              >
+                <Sparkles className="w-3 h-3" />
+                Banner Manager
+              </Button>
+            )}
             {isConnected && (
               <div className="flex items-center gap-1 text-xs bg-emerald-500/30 px-3 py-1 rounded-full backdrop-blur-sm">
                 <div className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse" />
@@ -349,8 +370,8 @@ export default function HelpDeskCab() {
           showCoffeeCup={showCoffeeCup}
           onShowHelp={() => handleQuickResponse("/help")}
           onShowQueue={() => handleQuickResponse("/queue")}
-          onShowTutorial={() => {}}
-          onToggleRoomStatus={() => {}}
+          onShowTutorial={() => setShowTutorial(true)}
+          onToggleRoomStatus={() => setShowRoomStatus(true)}
           onQuickResponse={handleQuickResponse}
           roomStatus="open"
         />
@@ -674,6 +695,48 @@ export default function HelpDeskCab() {
           onConfirm={() => {
             kickUser(confirmKick.userId, 'policy violation');
             setConfirmKick(null);
+          }}
+        />
+      )}
+
+      {/* Tutorial Dialog */}
+      {showTutorial && (
+        <BrandedConfirmDialog
+          open={showTutorial}
+          onClose={() => setShowTutorial(false)}
+          title="HelpDesk Tutorial"
+          description="Welcome to WorkforceOS HelpDesk! Here's how to use the system: 1) Use the command buttons to quickly access features. 2) Type /help to see all available commands. 3) Staff will assist you shortly. 4) Use the chat to describe your issue clearly."
+          confirmLabel="Got it!"
+          onConfirm={() => setShowTutorial(false)}
+        />
+      )}
+
+      {/* Room Status Dialog */}
+      {showRoomStatus && isStaff && (
+        <BrandedConfirmDialog
+          open={showRoomStatus}
+          onClose={() => setShowRoomStatus(false)}
+          title="Change Room Status"
+          description={`Current status: ${(roomData as any)?.status || 'Open'}. Use /room open, /room closed, or /room maintenance to change the status.`}
+          confirmLabel="OK"
+          onConfirm={() => setShowRoomStatus(false)}
+        />
+      )}
+
+      {/* Banner Manager - Staff Only */}
+      {isStaff && (
+        <BannerManager
+          open={showBannerManager}
+          onClose={() => setShowBannerManager(false)}
+          currentBanners={[]}
+          onSendCommand={(command) => {
+            if (isConnected) {
+              sendMessage(command, userName, 'support');
+              toast({
+                title: "Banner Command Sent",
+                description: "Your banner has been created and will appear for all users.",
+              });
+            }
           }}
         />
       )}
