@@ -63,6 +63,9 @@ export function setupWebSocket(server: Server) {
 
   // Track active connections by conversation ID
   const conversationClients = new Map<string, Set<WebSocketClient>>();
+  
+  // Track removed simulated users (so they don't re-appear on reconnect)
+  const removedSimulatedUsers = new Set<string>();
 
   wss.on('connection', (ws: WebSocketClient) => {
     console.log('New WebSocket connection established');
@@ -305,11 +308,14 @@ export function setupWebSocket(server: Server) {
                     });
                   }
                 }
+                
+                // Filter out removed simulated users before broadcasting
+                const filteredUsers = onlineUsers.filter(user => !removedSimulatedUsers.has(user.id));
 
                 const userListPayload = JSON.stringify({
                   type: 'user_list_update',
-                  users: onlineUsers,
-                  count: onlineUsers.length
+                  users: filteredUsers,
+                  count: filteredUsers.length
                 });
 
                 clients.forEach((client) => {
@@ -1297,6 +1303,7 @@ export function setupWebSocket(server: Server) {
 
             let targetClient: WebSocketClient | null = null;
             let targetUserName = 'User';
+            let isSimulatedUser = payload.targetUserId.startsWith('sim-user-');
 
             for (const client of clients) {
               if (client.userId === payload.targetUserId) {
@@ -1306,12 +1313,30 @@ export function setupWebSocket(server: Server) {
               }
             }
 
-            if (!targetClient) {
+            // If not found as a connected client but is a simulated user, handle removal
+            if (!targetClient && !isSimulatedUser) {
               ws.send(JSON.stringify({
                 type: 'error',
                 message: 'User not found in this room',
               }));
               return;
+            }
+
+            // For simulated users, find their name from the hardcoded list
+            if (isSimulatedUser && !targetClient) {
+              const simUserNames: Record<string, string> = {
+                'sim-user-1': 'Jennifer Lopez',
+                'sim-user-2': 'Robert Johnson',
+                'sim-user-3': 'Maria Garcia',
+                'sim-user-4': 'James Wilson',
+                'sim-user-5': 'Lisa Anderson',
+                'sim-user-6': 'Michael Brown',
+                'sim-user-7': 'Sarah Thompson',
+                'sim-user-8': 'David Martinez',
+                'sim-user-9': 'Ashley Taylor',
+                'sim-user-10': 'Christopher Lee',
+              };
+              targetUserName = simUserNames[payload.targetUserId] || 'Simulated User';
             }
 
             // Create kick message
@@ -1350,21 +1375,29 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            // DISCONNECT the target user
-            if (targetClient.readyState === WebSocket.OPEN) {
-              targetClient.send(JSON.stringify({
-                type: 'kicked',
-                reason: reason,
-                message: `You have been removed from the chat for: ${reason}`,
-              }));
-              targetClient.close(1000, `Kicked: ${reason}`);
+            // Handle simulated user removal
+            if (isSimulatedUser) {
+              // Add to removed list so they don't appear in future broadcasts
+              removedSimulatedUsers.add(payload.targetUserId);
+              console.log(`✅ Simulated user ${targetUserName} (${payload.targetUserId}) removed by ${ws.userName}`);
+            } else if (targetClient) {
+              // DISCONNECT the real user
+              if (targetClient.readyState === WebSocket.OPEN) {
+                targetClient.send(JSON.stringify({
+                  type: 'kicked',
+                  reason: reason,
+                  message: `You have been removed from the chat for: ${reason}`,
+                }));
+                targetClient.close(1000, `Kicked: ${reason}`);
+              }
+
+              // Remove from clients list
+              clients.delete(targetClient);
+              console.log(`✅ Real user ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
             }
 
-            // Remove from clients list
-            clients.delete(targetClient);
-
-            // Broadcast updated user list after removal
-            const updatedUsers = Array.from(clients)
+            // Broadcast updated user list after removal (includes real users + filtered simulated users)
+            const realUsers = Array.from(clients)
               .filter(c => c.userId && c.userName)
               .map(c => ({
                 id: c.userId!,
@@ -1374,17 +1407,57 @@ export function setupWebSocket(server: Server) {
                 userType: c.userType || 'guest',
               }));
 
+            // Recreate simulated users list and filter out removed ones
+            const simulatedUsers: any[] = [];
+            
+            if (payload.conversationId === 'main-chatroom-workforceos' || ws.conversationId === 'main-chatroom-workforceos') {
+              // HelpOS AI Bot
+              if (!removedSimulatedUsers.has('sim-bot-helpos')) {
+                simulatedUsers.push({
+                  id: 'sim-bot-helpos',
+                  name: 'HelpOS™ AI',
+                  role: 'bot',
+                  status: 'online',
+                  userType: 'staff'
+                });
+              }
+              
+              // Add other simulated users if not removed
+              const simUsers = [
+                { id: 'sim-staff-1', name: 'Sarah Martinez', role: 'deputy_admin', userType: 'staff' },
+                { id: 'sim-staff-2', name: 'Mike Chen', role: 'sysop', userType: 'staff' },
+                { id: 'sim-staff-3', name: 'Emily Taylor', role: 'deputy_assistant', userType: 'staff' },
+                { id: 'sim-user-1', name: 'Jennifer Lopez', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-2', name: 'Robert Johnson', role: 'guest', userType: 'subscriber' },
+                { id: 'sim-user-3', name: 'Maria Garcia', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-4', name: 'James Wilson', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-5', name: 'Lisa Anderson', role: 'guest', userType: 'subscriber' },
+                { id: 'sim-user-6', name: 'Michael Brown', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-7', name: 'Sarah Thompson', role: 'guest', userType: 'subscriber' },
+                { id: 'sim-user-8', name: 'David Martinez', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-9', name: 'Ashley Taylor', role: 'guest', userType: 'org_user' },
+                { id: 'sim-user-10', name: 'Christopher Lee', role: 'guest', userType: 'org_user' },
+              ];
+              
+              simUsers.forEach(user => {
+                if (!removedSimulatedUsers.has(user.id)) {
+                  simulatedUsers.push({ ...user, status: 'online' });
+                }
+              });
+            }
+
+            const allUsers = [...realUsers, ...simulatedUsers];
+
             clients.forEach((client) => {
               if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
                   type: 'user_list_update',
-                  users: updatedUsers,
-                  count: updatedUsers.length,
+                  users: allUsers,
+                  count: allUsers.length,
                 }));
               }
             });
 
-            console.log(`✅ User ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
             break;
           }
 

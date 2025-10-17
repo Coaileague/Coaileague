@@ -989,7 +989,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       />
 
       {/* Room Status Dialog - Functional with Select + Textarea + Save */}
-      <Dialog open={showRoomStatus && isStaff} onOpenChange={(open) => !open && setShowRoomStatus(false)}>
+      <Dialog open={showRoomStatus && isStaff} onOpenChange={(open) => { if (!open) setShowRoomStatus(false); }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
