@@ -164,9 +164,9 @@ export default function AdminCommandCenter() {
         <div className="mb-8">
           <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
             <div className="flex flex-col items-center text-center mb-6">
-              {/* Large Prominent Logo */}
-              <div className="mb-4 transform hover:scale-105 transition-transform duration-300">
-                <WorkforceOSLogo size="xl" showText={false} />
+              {/* Large Prominent Logo with Text Branding */}
+              <div className="mb-6 transform hover:scale-105 transition-transform duration-300 drop-shadow-2xl">
+                <WorkforceOSLogo size="hero" showText={true} />
               </div>
               <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-3">
                 Platform Command Center

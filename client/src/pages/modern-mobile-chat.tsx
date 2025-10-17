@@ -104,7 +104,7 @@ export default function ModernMobileChat() {
   // Agreement acceptance mutation
   const acceptAgreementMutation = useMutation({
     mutationFn: async (fullName: string) => {
-      return apiRequest('/api/helpdesk/agreement/accept', 'POST', {
+      return apiRequest('POST', '/api/helpdesk/agreement/accept', {
         fullName,
         roomSlug: 'helpdesk',
         sessionId,
