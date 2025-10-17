@@ -34,6 +34,7 @@ interface HelpDeskCommandBarProps {
   onShowHelp?: () => void;
   onShowQueue?: () => void;
   onShowTutorial?: () => void;
+  onShowPriority?: () => void;
   onToggleRoomStatus?: () => void;
   onQuickResponse?: (command: string) => void;
   
@@ -52,6 +53,7 @@ export function HelpDeskCommandBar({
   onShowHelp,
   onShowQueue,
   onShowTutorial,
+  onShowPriority,
   onToggleRoomStatus,
   onQuickResponse,
   roomStatus = 'open',
@@ -121,6 +123,7 @@ export function HelpDeskCommandBar({
               </Button>
               
               <Button
+                onClick={onShowPriority}
                 variant="outline"
                 size="sm"
                 className="h-9 text-xs gap-2 bg-amber-50 border-amber-500 text-amber-900 font-semibold hover:bg-amber-100"

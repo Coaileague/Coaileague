@@ -18,6 +18,10 @@ import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { HelpDeskCommandBar } from "@/components/helpdesk-command-bar";
 import { ChatAnnouncementBanner } from "@/components/chat-announcement-banner";
 import { BannerManager } from "@/components/banner-manager";
+import { HelpCommandPanel } from "@/components/help-command-panel";
+import { QueueManagerPanel } from "@/components/queue-manager-panel";
+import { TutorialManagerPanel } from "@/components/tutorial-manager-panel";
+import { PriorityManagerPanel } from "@/components/priority-manager-panel";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -48,6 +52,9 @@ export default function HelpDeskCab() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showRoomStatus, setShowRoomStatus] = useState(false);
   const [showBannerManager, setShowBannerManager] = useState(false);
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
+  const [showQueuePanel, setShowQueuePanel] = useState(false);
+  const [showPriorityPanel, setShowPriorityPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // IRC-style MOTD and helpful info banners
@@ -368,9 +375,10 @@ export default function HelpDeskCab() {
           queueLength={queueLength}
           onlineStaffCount={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
           showCoffeeCup={showCoffeeCup}
-          onShowHelp={() => handleQuickResponse("/help")}
-          onShowQueue={() => handleQuickResponse("/queue")}
+          onShowHelp={() => setShowHelpPanel(true)}
+          onShowQueue={() => setShowQueuePanel(true)}
           onShowTutorial={() => setShowTutorial(true)}
+          onShowPriority={() => setShowPriorityPanel(true)}
           onToggleRoomStatus={() => setShowRoomStatus(true)}
           onQuickResponse={handleQuickResponse}
           roomStatus="open"
@@ -740,6 +748,50 @@ export default function HelpDeskCab() {
           }}
         />
       )}
+
+      {/* Help Command Panel */}
+      <HelpCommandPanel
+        isOpen={showHelpPanel}
+        onClose={() => setShowHelpPanel(false)}
+        onCommandExecute={(command) => {
+          if (isConnected) {
+            sendMessage(command, userName, 'support');
+          }
+        }}
+      />
+
+      {/* Queue Manager Panel */}
+      <QueueManagerPanel
+        isOpen={showQueuePanel}
+        onClose={() => setShowQueuePanel(false)}
+        queueUsers={queueData?.map((q: any) => ({
+          id: q.userId,
+          name: q.userName,
+          type: q.ticketNumber ? 'ticket' : 'chat',
+          ticketNumber: q.ticketNumber,
+          waitTime: Math.floor((Date.now() - new Date(q.joinedAt).getTime()) / 60000),
+          status: q.status === 'silenced' ? 'silenced' : 'waiting',
+          position: q.queuePosition,
+        }))}
+        onUserAction={(userId, action) => {
+          toast({
+            title: "Action Executed",
+            description: `${action} performed on user ${userId}`,
+          });
+        }}
+      />
+
+      {/* Tutorial Manager Panel */}
+      <TutorialManagerPanel
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
+
+      {/* Priority Manager Panel */}
+      <PriorityManagerPanel
+        isOpen={showPriorityPanel}
+        onClose={() => setShowPriorityPanel(false)}
+      />
     </div>
   );
 }
