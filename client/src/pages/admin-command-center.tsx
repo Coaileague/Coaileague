@@ -204,67 +204,67 @@ export default function AdminCommandCenter() {
           </div>
         </div>
 
-        {/* System Health Overview - Animated Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {/* CPU Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-500/20 rounded-xl">
-                <Cpu className="h-6 w-6 text-emerald-400" />
+        {/* System Health Overview - Compact Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {/* CPU Card - THINNER */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-xl p-3 hover:border-emerald-500/40 transition-all duration-300">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-emerald-500/20 rounded-lg">
+                <Cpu className="h-4 w-4 text-emerald-400" />
               </div>
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
                 Healthy
               </Badge>
             </div>
-            <div className="text-sm text-slate-300 mb-2">CPU Usage</div>
-            <div className="text-3xl font-bold text-white mb-3">{systemHealth.cpu}%</div>
-            <Progress value={systemHealth.cpu} className="h-2 bg-emerald-900/30" />
+            <div className="text-xs text-slate-300 mb-1">CPU Usage</div>
+            <div className="text-2xl font-bold text-white mb-2">{systemHealth.cpu}%</div>
+            <Progress value={systemHealth.cpu} className="h-1.5 bg-emerald-900/30" />
           </div>
 
-          {/* Memory Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-2xl p-6 hover:border-amber-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-amber-500/20 rounded-xl">
-                <HardDrive className="h-6 w-6 text-amber-400" />
+          {/* Memory Card - THINNER */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-xl p-3 hover:border-amber-500/40 transition-all duration-300">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-amber-500/20 rounded-lg">
+                <HardDrive className="h-4 w-4 text-amber-400" />
               </div>
-              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">
+              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs py-0">
                 Warning
               </Badge>
             </div>
-            <div className="text-sm text-slate-300 mb-2">Memory</div>
-            <div className="text-3xl font-bold text-white mb-3">{systemHealth.memory}%</div>
-            <Progress value={systemHealth.memory} className="h-2 bg-amber-900/30" />
+            <div className="text-xs text-slate-300 mb-1">Memory</div>
+            <div className="text-2xl font-bold text-white mb-2">{systemHealth.memory}%</div>
+            <Progress value={systemHealth.memory} className="h-1.5 bg-amber-900/30" />
           </div>
 
-          {/* Database Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <Database className="h-6 w-6 text-blue-400" />
+          {/* Database Card - THINNER */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-xl p-3 hover:border-blue-500/40 transition-all duration-300">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Database className="h-4 w-4 text-blue-400" />
               </div>
-              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs py-0">
                 Active
               </Badge>
             </div>
-            <div className="text-sm text-slate-300 mb-2">Database Load</div>
-            <div className="text-3xl font-bold text-white mb-3">{systemHealth.database}%</div>
-            <Progress value={systemHealth.database} className="h-2 bg-blue-900/30" />
+            <div className="text-xs text-slate-300 mb-1">Database Load</div>
+            <div className="text-2xl font-bold text-white mb-2">{systemHealth.database}%</div>
+            <Progress value={systemHealth.database} className="h-1.5 bg-blue-900/30" />
           </div>
 
-          {/* Active Users Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 border border-violet-500/20 rounded-2xl p-6 hover:border-violet-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-violet-500/20 rounded-xl">
-                <Wifi className="h-6 w-6 text-violet-400 animate-pulse" />
+          {/* Active Users Card - THINNER */}
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 border border-violet-500/20 rounded-xl p-3 hover:border-violet-500/40 transition-all duration-300">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 bg-violet-500/20 rounded-lg">
+                <Wifi className="h-4 w-4 text-violet-400 animate-pulse" />
               </div>
-              <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30">
-                <div className="h-2 w-2 bg-violet-400 rounded-full animate-pulse mr-2"></div>
+              <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 text-xs py-0">
+                <div className="h-1.5 w-1.5 bg-violet-400 rounded-full animate-pulse mr-1.5"></div>
                 Live
               </Badge>
             </div>
-            <div className="text-sm text-slate-300 mb-2">Active Users</div>
-            <div className="text-3xl font-bold text-white mb-3">{systemHealth.activeUsers}</div>
-            <p className="text-xs text-slate-400">Online right now</p>
+            <div className="text-xs text-slate-300 mb-1">Active Users</div>
+            <div className="text-2xl font-bold text-white">{systemHealth.activeUsers}</div>
+            <p className="text-[10px] text-slate-400 mt-1">Online right now</p>
           </div>
         </div>
 
@@ -324,34 +324,34 @@ export default function AdminCommandCenter() {
                 <BarChart3 className="h-5 w-5 text-indigo-400" />
                 Platform Metrics
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <div className="flex items-center gap-3">
-                    <Building2 className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm text-slate-300">Workspaces</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-blue-400" />
+                    <span className="text-xs text-slate-300">Workspaces</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{(stats as any)?.totalEmployees || 0}</div>
+                  <div className="text-lg font-bold text-white">{(stats as any)?.totalEmployees || 0}</div>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="h-5 w-5 text-emerald-400" />
-                    <span className="text-sm text-slate-300">Monthly Revenue</span>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-emerald-400" />
+                    <span className="text-xs text-slate-300">Monthly Revenue</span>
                   </div>
-                  <div className="text-xl font-bold text-white">${(stats as any)?.totalRevenue || "0"}</div>
+                  <div className="text-lg font-bold text-white">${(stats as any)?.totalRevenue || "0"}</div>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
-                  <div className="flex items-center gap-3">
-                    <Zap className="h-5 w-5 text-violet-400" />
-                    <span className="text-sm text-slate-300">API Requests</span>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-violet-400" />
+                    <span className="text-xs text-slate-300">API Requests</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{systemHealth.requests}</div>
+                  <div className="text-lg font-bold text-white">{systemHealth.requests}</div>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-400" />
-                    <span className="text-sm text-slate-300">Errors (24h)</span>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-400" />
+                    <span className="text-xs text-slate-300">Errors (24h)</span>
                   </div>
-                  <div className="text-xl font-bold text-amber-400">{systemHealth.errors}</div>
+                  <div className="text-lg font-bold text-amber-400">{systemHealth.errors}</div>
                 </div>
               </div>
             </div>
@@ -362,23 +362,23 @@ export default function AdminCommandCenter() {
                 <Shield className="h-5 w-5 text-indigo-400" />
                 System Status
               </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-slate-300">Uptime</span>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                  <span className="text-xs text-slate-300">Uptime</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
                     {systemHealth.uptime}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-slate-300">Database</span>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                  <span className="text-xs text-slate-300">Database</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Healthy
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-slate-300">API Status</span>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                  <span className="text-xs text-slate-300">API Status</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Online
                   </Badge>
