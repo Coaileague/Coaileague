@@ -8,6 +8,23 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Send, Users, MessageSquare, Shield, Crown, UserCog, Wrench,
   Settings, Power, HelpCircle, Zap, Clock, AlertCircle, CheckCircle,
@@ -61,6 +78,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const [confirmKick, setConfirmKick] = useState<{ userId: string; userName: string } | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showRoomStatus, setShowRoomStatus] = useState(false);
+  const [roomStatusControl, setRoomStatusControl] = useState<"open" | "closed" | "maintenance">("open");
+  const [roomStatusMessage, setRoomStatusMessage] = useState("");
   const [showBannerManager, setShowBannerManager] = useState(false);
   const [showHelpPanel, setShowHelpPanel] = useState(false);
   const [showQueuePanel, setShowQueuePanel] = useState(false);
@@ -166,6 +185,31 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       toast({
         title: "Welcome to HelpDesk!",
         description: "You can now access the support chat",
+      });
+    },
+  });
+
+  // Room status update mutation
+  const toggleRoomStatusMutation = useMutation({
+    mutationFn: async ({ status, statusMessage }: { status: string; statusMessage?: string }) => {
+      return await apiRequest('POST', '/api/helpdesk/room/helpdesk/status', {
+        status,
+        statusMessage,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/helpdesk/room/helpdesk'] });
+      setShowRoomStatus(false);
+      toast({
+        title: "Room Status Updated",
+        description: `HelpDesk is now ${roomStatusControl}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update room status",
+        variant: "destructive",
       });
     },
   });
