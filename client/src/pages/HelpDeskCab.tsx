@@ -213,28 +213,41 @@ export default function HelpDeskCab() {
   };
 
   const handleQuickResponse = (action: string) => {
-    // Handle actions - open appropriate panels instead of sending commands
-    switch (action) {
-      case '/info':
-      case 'account':
-        setShowAccountPanel(true);
-        break;
-      case 'priority':
-        setShowPriorityPanel(true);
-        break;
-      case 'organization':
-        // Future: Open organization settings
+    // Handle panel-based actions
+    if (action === '/info' || action === 'account') {
+      setShowAccountPanel(true);
+      return;
+    }
+    if (action === 'priority') {
+      setShowPriorityPanel(true);
+      return;
+    }
+    if (action === 'organization') {
+      toast({
+        title: "Organization Settings",
+        description: "Organization management panel coming soon!",
+      });
+      return;
+    }
+    
+    // All slash commands should be sent via WebSocket
+    if (action.startsWith('/')) {
+      if (!isConnected) {
         toast({
-          title: "Organization Settings",
-          description: "Organization management panel coming soon!",
+          title: "Not Connected",
+          description: "Cannot send commands while disconnected",
+          variant: "destructive",
         });
-        break;
-      default:
-        // For other actions, just show a toast
-        toast({
-          title: "Action Requested",
-          description: `${action} action triggered`,
-        });
+        return;
+      }
+      
+      // Send the slash command as a message - server will process it
+      sendMessage(action, userName, 'support');
+      
+      toast({
+        title: "Command Sent",
+        description: `${action} command executed`,
+      });
     }
   };
 
