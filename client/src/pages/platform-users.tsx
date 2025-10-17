@@ -50,10 +50,7 @@ export default function PlatformUsers() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return await apiRequest("/api/platform/users", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("/api/platform/users", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/platform/users"] });

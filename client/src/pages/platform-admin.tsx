@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
-import { WFLogoCompact } from "@/components/wf-logo";
+import { WorkforceOSLogo } from "@/components/workforceos-logo";
 
 interface PlatformStats {
   totalWorkspaces: number;
@@ -147,9 +147,8 @@ export default function PlatformAdmin() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
-            <WFLogoCompact size={28} />
-          </div>
+          {/* WorkForceOS™ Logo */}
+          <WorkforceOSLogo size="sm" showText={false} />
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Platform Admin</h1>
             <p className="text-sm sm:text-base text-muted-foreground">

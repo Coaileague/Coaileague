@@ -32,7 +32,7 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
-import { WFLogoCompact } from "@/components/wf-logo";
+import { WorkforceOSLogo } from "@/components/workforceos-logo";
 
 interface LiveActivity {
   id: string;
@@ -163,9 +163,8 @@ export default function AdminCommandCenter() {
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
             <div className="flex items-center gap-3">
-              <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
-                <WFLogoCompact size={28} />
-              </div>
+              {/* WorkForceOS™ Logo */}
+              <WorkforceOSLogo size="sm" showText={false} />
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold">Platform Command Center</h1>
                 <p className="text-xs sm:text-sm text-muted-foreground">
