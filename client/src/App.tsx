@@ -10,6 +10,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
+import { TransitionProvider } from "@/contexts/transition-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
@@ -191,11 +192,13 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="dark">
           <WorkspaceThemeProvider>
-            <TooltipProvider>
-              <AppContent />
-              <FloatingChatButton />
-              <Toaster />
-            </TooltipProvider>
+            <TransitionProvider>
+              <TooltipProvider>
+                <AppContent />
+                <FloatingChatButton />
+                <Toaster />
+              </TooltipProvider>
+            </TransitionProvider>
           </WorkspaceThemeProvider>
         </ThemeProvider>
       </QueryClientProvider>

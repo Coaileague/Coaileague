@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useTransition } from "@/contexts/transition-context";
+import { showLoginTransition, showErrorTransition, showSuccessTransition } from "@/lib/transition-utils";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
@@ -21,6 +23,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function CustomLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const transition = useTransition();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -34,6 +37,14 @@ export default function CustomLogin() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
+    
+    // Show transition overlay
+    transition.showTransition({
+      status: "loading",
+      message: "Logging you in...",
+      submessage: "Please wait..."
+    });
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -47,14 +58,21 @@ export default function CustomLogin() {
         throw new Error(result.message || "Login failed");
       }
 
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-
-      // Redirect to dashboard
-      setLocation("/dashboard");
+      // Show success transition with redirect
+      showSuccessTransition(
+        transition,
+        "Login Successful!",
+        "/dashboard",
+        `Welcome back, ${data.email.split('@')[0]}!`
+      );
     } catch (error: any) {
+      // Show error transition
+      showErrorTransition(
+        transition,
+        "Login Failed",
+        error.message || "Invalid email or password"
+      );
+      
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
