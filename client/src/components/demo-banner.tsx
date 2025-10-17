@@ -11,7 +11,7 @@ export function DemoBanner() {
   }
 
   return (
-    <div className="bg-primary/10 border-b border-primary/20 px-6 py-3 shrink-0" data-testid="banner-demo-mode">
+    <div className="bg-primary/10 border-b border-primary/20 px-6 py-4 shrink-0" data-testid="banner-demo-mode">
       <div className="container mx-auto flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />

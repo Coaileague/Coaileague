@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { 
   AlertCircle, Clock, Users, Zap, TrendingUp, 
-  Award, Bell, MessageCircle, Star, Heart 
+  Award, Bell, MessageCircle, Star, Heart, Ghost 
 } from "lucide-react";
 
 interface BannerMessage {
@@ -230,11 +230,11 @@ export function ChatAnnouncementBanner({
 
   const messages = customMessages.length > 0 ? customMessages : defaultMessages;
 
-  // Auto-rotate messages every 4 seconds
+  // Auto-rotate messages every 7 seconds (slowed down for better readability)
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % messages.length);
-    }, 4000);
+    }, 7000);
 
     return () => clearInterval(interval);
   }, [messages.length]);
@@ -258,67 +258,93 @@ export function ChatAnnouncementBanner({
       ${colorSchemes[currentMessage.type]}
       animate-in fade-in slide-in-from-top-2
     `}>
-      {/* Seasonal Effects Overlay */}
+      {/* Enhanced Seasonal Effects Overlay with Better Graphics */}
       {seasonalEffect === 'snow' && (
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(15)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-white/60 rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `-${Math.random() * 20}px`,
-                animation: `fall ${3 + Math.random() * 2}s linear infinite`,
-                animationDelay: `${Math.random() * 3}s`
-              }}
-            />
-          ))}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(20)].map((_, i) => {
+            const size = 2 + Math.random() * 4;
+            return (
+              <div
+                key={i}
+                className="absolute bg-white/80 rounded-full shadow-lg"
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  left: `${Math.random() * 100}%`,
+                  top: `-${Math.random() * 20}px`,
+                  animation: `snowfall ${4 + Math.random() * 3}s linear infinite`,
+                  animationDelay: `${Math.random() * 4}s`,
+                  filter: 'blur(1px)'
+                }}
+              />
+            );
+          })}
         </div>
       )}
       {seasonalEffect === 'fireworks' && (
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-3 h-3 bg-yellow-300/50 rounded-full animate-ping"
-              style={{
-                left: `${10 + Math.random() * 80}%`,
-                top: `${Math.random() * 100}%`,
-                animationDuration: `${1 + Math.random()}s`,
-                animationDelay: `${Math.random() * 2}s`,
-              }}
-            />
-          ))}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(12)].map((_, i) => {
+            const colors = ['bg-yellow-400', 'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-purple-400'];
+            const color = colors[i % colors.length];
+            return (
+              <div
+                key={i}
+                className={`absolute w-4 h-4 ${color} rounded-full shadow-2xl`}
+                style={{
+                  left: `${10 + Math.random() * 80}%`,
+                  top: `${20 + Math.random() * 60}%`,
+                  animation: `firework ${0.8 + Math.random() * 0.5}s ease-out infinite`,
+                  animationDelay: `${Math.random() * 2.5}s`,
+                  filter: 'blur(0.5px)',
+                  opacity: 0.9
+                }}
+              />
+            );
+          })}
         </div>
       )}
       {seasonalEffect === 'hearts' && (
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(10)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-pink-300/50 rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-                animationDelay: `${Math.random() * 2}s`
-              }}
-            />
-          ))}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(15)].map((_, i) => {
+            const size = 8 + Math.random() * 6;
+            return (
+              <div
+                key={i}
+                className="absolute"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${100 + Math.random() * 20}%`,
+                  animation: `heartFloat ${4 + Math.random() * 3}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 3}s`
+                }}
+              >
+                <Heart className="w-3 h-3 text-pink-400 fill-pink-400" style={{ filter: 'drop-shadow(0 0 3px rgba(244, 114, 182, 0.5))' }} />
+              </div>
+            );
+          })}
         </div>
       )}
       {seasonalEffect === 'halloween' && (
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-3 h-3 bg-orange-400/40 rounded-full animate-bounce"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDuration: `${2 + Math.random()}s`,
-                animationDelay: `${Math.random() * 1.5}s`
-              }}
-            />
-          ))}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(10)].map((_, i) => {
+            const icons = [Ghost, Ghost, Ghost, Ghost]; // Using Ghost icon for spooky effect
+            const Icon = icons[i % icons.length];
+            return (
+              <div
+                key={i}
+                className="absolute"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${-20 + Math.random() * 10}%`,
+                  animation: `spookyFloat ${3 + Math.random() * 2}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`
+                }}
+              >
+                <Icon className="w-4 h-4 text-orange-400" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 146, 60, 0.6))' }} />
+              </div>
+            );
+          })}
         </div>
       )}
       <div className="max-w-full px-6 py-4 flex items-center justify-center gap-3 relative z-10">
