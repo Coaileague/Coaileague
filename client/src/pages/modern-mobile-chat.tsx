@@ -357,9 +357,9 @@ export default function ModernMobileChat() {
 
       {/* Header */}
       <div className="relative z-10 backdrop-blur-xl bg-black/30 border-b border-white/10 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="relative flex-shrink-0">
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm">
                   HD
@@ -369,7 +369,7 @@ export default function ModernMobileChat() {
                 helpDeskRoom?.status === 'open' ? 'bg-emerald-500' : 'bg-red-500'
               }`}></div>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h2 className="text-white font-bold text-sm">Help Desk</h2>
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Users size={12} />
@@ -378,35 +378,46 @@ export default function ModernMobileChat() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isStaff && selectedUser && (
-              <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-xs">
-                Selected: {selectedUser.name}
-              </Badge>
-            )}
-            {isStaff && (
-              <button 
-                onClick={() => setShowCommandMenu(!showCommandMenu)}
-                className={`p-2 rounded-full transition-all ${
-                  showCommandMenu ? 'bg-indigo-500 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-                data-testid="button-command-menu"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-          </div>
+          {isStaff && (
+            <button 
+              onClick={() => setShowCommandMenu(!showCommandMenu)}
+              className={`flex-shrink-0 p-3 rounded-xl transition-all shadow-lg ${
+                showCommandMenu 
+                  ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-indigo-500/50' 
+                  : 'bg-white/10 text-white hover:bg-white/20 shadow-black/20'
+              }`}
+              data-testid="button-command-menu"
+              aria-label="Command Menu"
+            >
+              <Menu size={20} />
+            </button>
+          )}
         </div>
+        {/* Selected user badge - Full row below header when user selected */}
+        {isStaff && selectedUser && (
+          <div className="mt-2 pt-2 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              <UserCheck size={14} className="text-indigo-400 flex-shrink-0" />
+              <span className="text-xs text-indigo-400 font-medium">Selected:</span>
+              <span className="text-sm text-white font-semibold truncate flex-1">{selectedUser.name}</span>
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs flex-shrink-0 animate-pulse">
+                ACTIVE
+              </Badge>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Command Menu - Hidden by default, shows when hamburger clicked */}
       {showCommandMenu && isStaff && (
-        <div className="absolute top-16 left-0 right-0 z-50 backdrop-blur-xl bg-black/90 border-b border-white/10 p-4 shadow-2xl animate-in slide-in-from-top-2 fade-in max-h-[70vh] overflow-y-auto">
+        <div className={`absolute left-0 right-0 z-50 backdrop-blur-xl bg-black/90 border-b border-white/10 p-4 shadow-2xl animate-in slide-in-from-top-2 fade-in max-h-[70vh] overflow-y-auto ${
+          selectedUser ? 'top-[120px]' : 'top-16'
+        }`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              <Shield className="w-4 h-4 text-indigo-400" />
-              Support Commands
-              {!selectedUser && <span className="text-xs text-orange-400">(Select a user first)</span>}
+            <h3 className="text-white font-semibold flex items-center gap-2 flex-wrap">
+              <Shield className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+              <span className="whitespace-nowrap">Support Commands</span>
+              {!selectedUser && <span className="text-xs text-orange-400 whitespace-nowrap">(Select a user first)</span>}
             </h3>
             <button 
               onClick={() => setShowCommandMenu(false)} 
@@ -429,12 +440,12 @@ export default function ModernMobileChat() {
                 }`}
                 data-testid={`command-${cmd.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <cmd.icon size={20} className={selectedUser ? cmd.color : 'text-slate-600'} />
-                <div className="flex-1 text-left">
-                  <div className={`text-sm font-medium ${selectedUser ? 'text-white' : 'text-slate-600'}`}>
+                <cmd.icon size={20} className={`flex-shrink-0 ${selectedUser ? cmd.color : 'text-slate-600'}`} />
+                <div className="flex-1 text-left min-w-0">
+                  <div className={`text-sm font-medium break-words ${selectedUser ? 'text-white' : 'text-slate-600'}`}>
                     {cmd.label}
                   </div>
-                  <div className="text-xs text-slate-500">{cmd.description}</div>
+                  <div className="text-xs text-slate-500 break-words">{cmd.description}</div>
                 </div>
               </button>
             ))}
