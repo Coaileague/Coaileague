@@ -148,13 +148,18 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     }
   );
 
-  const { data: roomData } = useQuery({
+  // Enhanced connection state tracking
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | 'denied'>('disconnected');
+  const [apiErrors, setApiErrors] = useState<string[]>([]);
+
+  const { data: roomData, error: roomError } = useQuery({
     queryKey: ['/api/helpdesk/room/helpdesk'],
     enabled: isAuthenticated,
+    retry: 1,
   });
 
   // Check if user has accepted agreement - FIXED: Custom queryFn to pass sessionId properly
-  const { data: agreementStatus } = useQuery<{ hasAccepted: boolean; acceptedAt: string | null }>({
+  const { data: agreementStatus, error: agreementError } = useQuery<{ hasAccepted: boolean; acceptedAt: string | null }>({
     queryKey: ['/api/helpdesk/agreement/check/helpdesk', sessionId],
     queryFn: async () => {
       const res = await fetch(`/api/helpdesk/agreement/check/helpdesk?sessionId=${sessionId}`, {
@@ -200,16 +205,18 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     }
   }, [agreementStatus, hasAcceptedAgreement, isAuthenticated]);
 
-  const { data: queueData } = useQuery<any[]>({
+  const { data: queueData, error: queueError } = useQuery<any[]>({
     queryKey: ['/api/helpdesk/queue'],
     enabled: isAuthenticated,
     refetchInterval: 5000,
+    retry: 1,
   });
 
   // Fetch MOTD
-  const { data: motdResponse } = useQuery<{ motd: any, acknowledged: boolean }>({
+  const { data: motdResponse, error: motdError } = useQuery<{ motd: any, acknowledged: boolean }>({
     queryKey: ['/api/helpdesk/motd'],
     enabled: isAuthenticated,
+    retry: 1,
   });
 
   // Check if user has accepted terms on component mount
@@ -230,6 +237,36 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       setShowMotd(true);
     }
   }, [motdResponse, termsAccepted]);
+
+  // Monitor connection and API health - Make server more self-aware
+  useEffect(() => {
+    const errors: string[] = [];
+    
+    // Check for API errors
+    if (roomError) errors.push('Room unavailable');
+    if (agreementError) errors.push('Agreement check failed');
+    if (queueError) errors.push('Queue unavailable');
+    if (motdError) errors.push('MOTD fetch failed');
+    
+    // Determine overall connection status
+    if (!isConnected) {
+      setConnectionStatus('disconnected');
+    } else if (errors.length > 0) {
+      // Connected to WebSocket but API is failing
+      setConnectionStatus('error');
+      setApiErrors(errors);
+    } else if (onlineUsers.length === 0 && isConnected) {
+      // Connected but no users (possible server issue)
+      setConnectionStatus('error');
+      setApiErrors(['No users detected']);
+    } else if (roomData && roomData.status === 'closed') {
+      setConnectionStatus('denied');
+      setApiErrors(['Chat room is closed']);
+    } else {
+      setConnectionStatus('connected');
+      setApiErrors([]);
+    }
+  }, [isConnected, roomError, agreementError, queueError, motdError, onlineUsers.length, roomData]);
 
   // MOTD acknowledgment mutation
   const acknowledgeMOTD = useMutation({
@@ -436,11 +473,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
 
   // Get user type icon - COMPACT with detailed WorkforceOS logo
   const getUserTypeIcon = (userType: string, role: string) => {
-    // ROOT ADMIN - Detailed WorkforceOS logo
+    // ROOT ADMIN - Detailed WorkforceOS logo (SMALL SIZE)
     if (role === 'root') {
       return (
-        <div className="flex items-center justify-center">
-          <WorkforceOSLogo size="xs" showText={false} />
+        <div className="flex items-center justify-center scale-75">
+          <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
     }
@@ -455,28 +492,28 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       );
     }
     
-    // Staff gets detailed WorkforceOS logo
+    // Staff gets detailed WorkforceOS logo (SMALL SIZE)
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
       return (
-        <div className="flex items-center justify-center">
-          <WorkforceOSLogo size="xs" showText={false} />
+        <div className="flex items-center justify-center scale-75">
+          <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
     }
     
-    // Authenticated users - detailed WorkforceOS logo
+    // Authenticated users - detailed WorkforceOS logo (SMALL SIZE)
     if (userType === 'subscriber') {
       return (
-        <div className="flex items-center justify-center">
-          <WorkforceOSLogo size="xs" showText={false} />
+        <div className="flex items-center justify-center scale-75">
+          <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
     }
     
     if (userType === 'org_user') {
       return (
-        <div className="flex items-center justify-center">
-          <WorkforceOSLogo size="xs" showText={false} />
+        <div className="flex items-center justify-center scale-75">
+          <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
     }
@@ -785,7 +822,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-slate-300" />
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 shadow-lg">
-              <WorkforceOSLogo size="xs" showText={false} />
+              <WorkforceOSLogo size="sm" showText={false} />
             </div>
             {isStaff && (
               <div className="flex items-center gap-1.5 ml-2">
@@ -822,12 +859,43 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             )}
           </div>
           
-          {/* Right: Connection Status */}
+          {/* Right: Connection Status - Smart & Aware */}
           <div className="flex items-center gap-2">
-            {isConnected && (
-              <div className="flex items-center gap-1 text-[9px] bg-emerald-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-emerald-400/40 shadow-lg">
+            {connectionStatus === 'connected' && (
+              <div 
+                className="flex items-center gap-1 text-[9px] bg-emerald-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-emerald-400/40 shadow-lg"
+                data-testid="status-connected"
+              >
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                 Connected
+              </div>
+            )}
+            {connectionStatus === 'disconnected' && (
+              <div 
+                className="flex items-center gap-1 text-[9px] bg-slate-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-slate-400/40 shadow-lg"
+                data-testid="status-disconnected"
+              >
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                Disconnected
+              </div>
+            )}
+            {connectionStatus === 'error' && (
+              <div 
+                className="flex items-center gap-1 text-[9px] bg-red-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-red-400/40 shadow-lg cursor-pointer"
+                data-testid="status-error"
+                title={apiErrors.join(', ')}
+              >
+                <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
+                Error
+              </div>
+            )}
+            {connectionStatus === 'denied' && (
+              <div 
+                className="flex items-center gap-1 text-[9px] bg-amber-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-amber-400/40 shadow-lg"
+                data-testid="status-denied"
+              >
+                <Ban className="w-2.5 h-2.5 text-amber-400" />
+                Denied
               </div>
             )}
           </div>
