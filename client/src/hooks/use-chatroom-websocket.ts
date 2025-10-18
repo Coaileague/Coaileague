@@ -464,6 +464,36 @@ export function useChatroomWebSocket(
     }));
   }, [userId]);
 
+  // Silence a user (staff only) - IRC-style with command ID for acknowledgment
+  const silenceUser = useCallback((targetUserId: string, duration?: number, reason?: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const commandId = generateCommandId();
+    wsRef.current.send(JSON.stringify({
+      type: 'silence_user',
+      targetUserId: targetUserId,
+      duration: duration || 5,
+      reason: reason || 'Chat violation',
+      commandId: commandId, // IRC-style command tracking
+    }));
+  }, []);
+
+  // Give voice to a user (staff only) - IRC-style with command ID for acknowledgment
+  const giveVoice = useCallback((targetUserId: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const commandId = generateCommandId();
+    wsRef.current.send(JSON.stringify({
+      type: 'give_voice',
+      targetUserId: targetUserId,
+      commandId: commandId, // IRC-style command tracking
+    }));
+  }, []);
+
   // Kick a user (staff only) - IRC-style with command ID for acknowledgment
   const kickUser = useCallback((targetUserId: string, reason?: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -527,7 +557,10 @@ export function useChatroomWebSocket(
     sendMessage,
     sendTyping,
     sendStatusChange,
+    // IRC-style moderation commands with command acknowledgments
     kickUser,
+    silenceUser,
+    giveVoice,
     sendRawMessage,
     typingUsers,
     typingUserInfo,

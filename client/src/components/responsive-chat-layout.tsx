@@ -22,6 +22,10 @@ interface ResponsiveChatLayoutProps {
   currentUser: { id: string; name: string; isStaff: boolean };
   onSendMessage: (message: string) => void;
   onCommandExecute: (command: string) => void;
+  // WebSocket command functions for IRC-style acknowledgments
+  onKickUser?: (userId: string, reason?: string) => void;
+  onSilenceUser?: (userId: string, duration?: number, reason?: string) => void;
+  onGiveVoice?: (userId: string) => void;
 }
 
 export function ResponsiveChatLayout(props: ResponsiveChatLayoutProps) {
@@ -33,5 +37,6 @@ export function ResponsiveChatLayout(props: ResponsiveChatLayoutProps) {
     return <DesktopChatLayout {...props} />;
   }
   
+  // Pass all WebSocket command functions to mobile
   return <MobileChatLayout {...props} />;
 }

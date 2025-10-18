@@ -28,6 +28,10 @@ interface MobileChatLayoutProps {
   currentUser: { id: string; name: string; isStaff: boolean };
   onSendMessage: (message: string) => void;
   onCommandExecute: (command: string) => void;
+  // WebSocket command functions for IRC-style acknowledgments
+  onKickUser?: (userId: string, reason?: string) => void;
+  onSilenceUser?: (userId: string, duration?: number, reason?: string) => void;
+  onGiveVoice?: (userId: string) => void;
 }
 
 export function MobileChatLayout({
@@ -36,6 +40,9 @@ export function MobileChatLayout({
   currentUser,
   onSendMessage,
   onCommandExecute,
+  onKickUser,
+  onSilenceUser,
+  onGiveVoice,
 }: MobileChatLayoutProps) {
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUser, setSelectedUser] = useState<{ username: string; userId: string; role: 'staff' | 'customer' | 'guest' } | null>(null);
@@ -130,6 +137,9 @@ export function MobileChatLayout({
         userRole={selectedUser?.role || 'guest'}
         isStaff={currentUser.isStaff}
         onCommandExecute={onCommandExecute}
+        onKickUser={onKickUser}
+        onSilenceUser={onSilenceUser}
+        onGiveVoice={onGiveVoice}
       />
 
       {/* Mobile Header */}

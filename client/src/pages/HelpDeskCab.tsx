@@ -138,7 +138,22 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     ? `${user.firstName} ${user.lastName}` 
     : user?.email?.split('@')[0] || 'User';
 
-  const { messages, isConnected, sendMessage, sendTyping, sendStatusChange, kickUser, sendRawMessage, onlineUsers, customBannerMessage, typingUserInfo, isSilenced, justGotVoice } = useChatroomWebSocket(
+  const { 
+    messages, 
+    isConnected, 
+    sendMessage, 
+    sendTyping, 
+    sendStatusChange, 
+    kickUser, 
+    silenceUser, 
+    giveVoice, 
+    sendRawMessage, 
+    onlineUsers, 
+    customBannerMessage, 
+    typingUserInfo, 
+    isSilenced, 
+    justGotVoice 
+  } = useChatroomWebSocket(
     user?.id, 
     userName,
     (request) => {

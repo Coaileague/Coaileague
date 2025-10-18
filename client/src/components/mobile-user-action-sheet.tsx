@@ -1,9 +1,9 @@
 /**
  * Mobile User Action Sheet
- * TAP USERNAME → Command Wheel (Touch-Optimized)
+ * TAP USERNAME → Quick Actions (Touch-Optimized)
  * 
- * Solves: No need to type/remember usernames, org IDs, or spelling
- * Mobile support staff can work without PC easily
+ * Uses WebSocket commands with IRC-style acknowledgments
+ * Works exactly like desktop - reliable command execution
  */
 
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,7 @@ import {
   KeyRound,
   UserX,
   VolumeX,
-  ArrowRightLeft,
-  XCircle,
+  Volume2,
 } from "lucide-react";
 
 interface MobileUserActionSheetProps {
@@ -31,59 +30,64 @@ interface MobileUserActionSheetProps {
   userId: string;
   userRole: 'staff' | 'customer' | 'guest';
   isStaff: boolean;
-  onCommandExecute: (command: string) => void;
+  onKickUser?: (userId: string, reason?: string) => void;
+  onSilenceUser?: (userId: string, duration?: number, reason?: string) => void;
+  onGiveVoice?: (userId: string) => void;
+  onCommandExecute?: (command: string) => void;
 }
 
+// REORGANIZED: Condensed to most-used actions
 const STAFF_USER_ACTIONS = [
   {
     id: 'auth',
-    label: 'Request Authentication',
+    label: 'Request Auth',
+    type: 'slash_command',
     command: '/auth',
     icon: Shield,
-    description: 'Ask user to verify identity',
+    description: 'Verify identity',
     color: 'text-blue-500',
   },
   {
     id: 'verify',
-    label: 'Verify Credentials',
+    label: 'Verify Org',
+    type: 'slash_command',
     command: '/verify',
     icon: UserCheck,
-    description: 'Check organization database',
+    description: 'Check database',
+    color: 'text-green-500',
+  },
+  {
+    id: 'silence',
+    label: 'Silence',
+    type: 'websocket',
+    icon: VolumeX,
+    description: 'Mute temporarily',
+    color: 'text-orange-500',
+  },
+  {
+    id: 'give_voice',
+    label: 'Unmute',
+    type: 'websocket',
+    icon: Volume2,
+    description: 'Restore voice',
     color: 'text-green-500',
   },
   {
     id: 'resetpass',
-    label: 'Reset Password',
+    label: 'Reset Pass',
+    type: 'slash_command',
     command: '/resetpass',
     icon: KeyRound,
-    description: 'Send reset link (needs email)',
+    description: 'Send reset link',
     color: 'text-yellow-500',
     needsEmail: true,
   },
   {
-    id: 'mute',
-    label: 'Mute User',
-    command: '/mute',
-    icon: VolumeX,
-    description: 'Temporarily silence user',
-    color: 'text-orange-500',
-    needsDuration: true,
-  },
-  {
-    id: 'transfer',
-    label: 'Transfer Ticket',
-    command: '/transfer',
-    icon: ArrowRightLeft,
-    description: 'Hand off to another agent',
-    color: 'text-purple-500',
-    needsStaffName: true,
-  },
-  {
     id: 'kick',
     label: 'Kick User',
-    command: '/kick',
+    type: 'websocket',
     icon: UserX,
-    description: 'Remove from chatroom',
+    description: 'Remove from chat',
     color: 'text-red-500',
     destructive: true,
   },
@@ -96,6 +100,9 @@ export function MobileUserActionSheet({
   userId,
   userRole,
   isStaff,
+  onKickUser,
+  onSilenceUser,
+  onGiveVoice,
   onCommandExecute,
 }: MobileUserActionSheetProps) {
   
@@ -104,86 +111,92 @@ export function MobileUserActionSheet({
     return null;
   }
 
-  // Can't use actions on yourself
-  const isSelf = userId === 'current-user'; // You'd get this from context
-
   const handleActionClick = (action: typeof STAFF_USER_ACTIONS[0]) => {
-    let finalCommand = action.command;
-
-    // Handle actions that need additional input
-    if (action.needsEmail) {
-      const email = prompt(`Enter email for ${username}:`);
-      if (!email || !email.trim()) return;
-      finalCommand = `${action.command} ${email.trim()}`;
-    } else if (action.needsDuration) {
-      const duration = prompt(`Mute ${username} for how long? (e.g., "5m", "1h"):`);
-      if (!duration || !duration.trim()) return;
-      finalCommand = `${action.command} ${username} ${duration.trim()}`;
-    } else if (action.needsStaffName) {
-      const staffName = prompt('Transfer ticket to which staff member?');
-      if (!staffName || !staffName.trim()) return;
-      finalCommand = `${action.command} ${staffName.trim()}`;
-    } else {
-      finalCommand = `${action.command} ${username}`;
+    // WebSocket commands - use proper command functions with IRC-style acknowledgments
+    if (action.type === 'websocket') {
+      switch (action.id) {
+        case 'kick':
+          const kickReason = prompt(`Reason for kicking ${username}?`) || 'violation of chat rules';
+          if (onKickUser) {
+            onKickUser(userId, kickReason);
+          }
+          break;
+          
+        case 'silence':
+          const durationInput = prompt(`Silence ${username} for how many minutes?`, '5');
+          const duration = durationInput ? parseInt(durationInput) : 5;
+          const silenceReason = prompt('Reason?') || 'Chat violation';
+          if (onSilenceUser) {
+            onSilenceUser(userId, duration, silenceReason);
+          }
+          break;
+          
+        case 'give_voice':
+          if (onGiveVoice) {
+            onGiveVoice(userId);
+          }
+          break;
+      }
+      onOpenChange(false);
+      return;
     }
 
-    // Confirmation for destructive actions
-    if (action.destructive) {
-      const confirmed = confirm(`Are you sure you want to kick ${username}?`);
-      if (!confirmed) return;
-    }
+    // Slash commands - fallback for commands not yet migrated to WebSocket
+    if (action.type === 'slash_command' && onCommandExecute) {
+      let finalCommand = action.command!;
 
-    onCommandExecute(finalCommand);
-    onOpenChange(false);
+      if (action.needsEmail) {
+        const email = prompt(`Enter email for ${username}:`);
+        if (!email || !email.trim()) return;
+        finalCommand = `${action.command} ${email.trim()}`;
+      } else {
+        finalCommand = `${action.command} ${username}`;
+      }
+
+      onCommandExecute(finalCommand);
+      onOpenChange(false);
+    }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className="h-auto max-h-[80vh]"
+        className="h-auto max-h-[70vh]"
         data-testid="mobile-user-action-sheet"
       >
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-lg">
+          <SheetTitle className="text-base">
             Actions for {username}
           </SheetTitle>
-          <SheetDescription>
-            Select an action to perform (auto-fills username)
+          <SheetDescription className="text-xs">
+            Tap an action (auto-filled)
           </SheetDescription>
         </SheetHeader>
 
-        {isSelf && (
-          <div className="text-center text-muted-foreground text-sm py-8">
-            You cannot perform actions on yourself
-          </div>
-        )}
-
-        {!isSelf && (
-          <div className="grid grid-cols-2 gap-3 pb-4">
-            {STAFF_USER_ACTIONS.map((action) => (
-              <Button
-                key={action.id}
-                variant="outline"
-                className="h-auto flex flex-col items-center justify-center p-4 gap-2"
-                onClick={() => handleActionClick(action)}
-                data-testid={`action-${action.id}`}
-              >
-                <action.icon className={`w-6 h-6 ${action.color}`} />
-                <div className="text-center">
-                  <div className="font-semibold text-sm">{action.label}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {action.description}
-                  </div>
+        <div className="grid grid-cols-3 gap-2 pb-4">
+          {STAFF_USER_ACTIONS.map((action) => (
+            <Button
+              key={action.id}
+              variant="outline"
+              className="h-auto flex flex-col items-center justify-center p-3 gap-1.5"
+              onClick={() => handleActionClick(action)}
+              data-testid={`action-${action.id}`}
+            >
+              <action.icon className={`w-5 h-5 ${action.color}`} />
+              <div className="text-center">
+                <div className="font-semibold text-xs">{action.label}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  {action.description}
                 </div>
-              </Button>
-            ))}
-          </div>
-        )}
+              </div>
+            </Button>
+          ))}
+        </div>
 
         <Button
           variant="ghost"
-          className="w-full"
+          className="w-full text-xs"
           onClick={() => onOpenChange(false)}
           data-testid="button-cancel"
         >

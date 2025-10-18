@@ -72,6 +72,7 @@ interface ReleaseSpectatorPayload {
 interface TransferUserPayload {
   type: 'transfer_user';
   targetUserId: string;
+  commandId?: string; // IRC-style command tracking
 }
 
 interface SilenceUserPayload {
@@ -79,11 +80,13 @@ interface SilenceUserPayload {
   targetUserId: string;
   duration?: number;
   reason?: string;
+  commandId?: string; // IRC-style command tracking
 }
 
 interface GiveVoicePayload {
   type: 'give_voice';
   targetUserId: string;
+  commandId?: string; // IRC-style command tracking
 }
 
 type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload;
