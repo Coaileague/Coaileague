@@ -938,7 +938,7 @@ export default function ModernMobileChat() {
               }`}></div>
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-white font-bold text-sm">WorkforceOS Support</h2>
+              <h2 className="text-white font-bold text-xs sm:text-sm break-words">WorkforceOS Support</h2>
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Users size={12} />
                 <span>{onlineUsers.length} online</span>

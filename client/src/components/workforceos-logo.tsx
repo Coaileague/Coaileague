@@ -21,27 +21,27 @@ export function WorkforceOSLogo({
   const sizes = {
     sm: {
       container: "w-12 h-10",
-      text: "text-sm",
+      text: "text-xs sm:text-sm",
       tagline: "text-[8px]"
     },
     md: {
       container: "w-20 h-16",
-      text: "text-lg",
+      text: "text-sm sm:text-lg",
       tagline: "text-[10px]"
     },
     lg: {
       container: "w-28 h-24",
-      text: "text-2xl",
+      text: "text-base sm:text-2xl",
       tagline: "text-xs"
     },
     xl: {
       container: "w-36 h-32",
-      text: "text-3xl",
+      text: "text-lg sm:text-3xl",
       tagline: "text-sm"
     },
     hero: {
       container: "w-56 h-48",
-      text: "text-5xl",
+      text: "text-2xl sm:text-5xl",
       tagline: "text-base"
     }
   };
@@ -235,13 +235,14 @@ export function WorkforceOSLogo({
 
       {/* Company Name with Gradient Animation */}
       {showText && (
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1 max-w-full px-2">
           <div 
             className={cn(
-              "font-black tracking-tight text-center leading-none whitespace-nowrap",
+              "font-black tracking-tight text-center leading-none",
               "bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700",
               "bg-clip-text text-transparent",
               "animate-pulse",
+              "break-words sm:whitespace-nowrap",
               sizes[size].text
             )}
             style={{ animationDuration: '4s' }}

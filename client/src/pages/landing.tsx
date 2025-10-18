@@ -474,7 +474,7 @@ export default function Landing() {
       <section className="border-y border-[hsl(var(--cad-border-strong))] bg-[hsl(var(--cad-surface))]">
         <div className="container mx-auto px-6 py-16">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2">Why Businesses Choose WorkforceOS</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-2 break-words">Why Businesses Choose WorkforceOS</h2>
             <p className="text-sm text-[hsl(var(--cad-text-tertiary))]">
               Enterprise-grade capabilities • Zero manual work • Complete transparency
             </p>
