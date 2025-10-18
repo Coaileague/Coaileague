@@ -473,10 +473,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
 
   // Get user type icon - WorkforceOS logo ONLY for staff, avatars for users
   const getUserTypeIcon = (userType: string, role: string, userName: string = 'User') => {
-    // ROOT ADMIN - Detailed WorkforceOS logo (SMALL SIZE, clearer/bigger)
+    // ROOT ADMIN - Detailed WorkforceOS logo (SMALLER SIZE)
     if (role === 'root') {
       return (
-        <div className="flex items-center justify-center scale-90">
+        <div className="flex items-center justify-center scale-75">
           <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
@@ -485,17 +485,17 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     // Bot gets special animated icon
     if (role === 'bot') {
       return (
-        <div className="relative flex items-center justify-center w-6 h-6">
+        <div className="relative flex items-center justify-center w-5 h-5">
           <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-pulse"></div>
-          <Bot className="w-4 h-4 text-blue-600" />
+          <Bot className="w-3.5 h-3.5 text-blue-600" />
         </div>
       );
     }
     
-    // Staff gets detailed WorkforceOS logo (SMALL SIZE, clearer/bigger)
+    // ALL STAFF (deputy_admin, deputy_assistant, sysop) - WorkforceOS logo (SMALLER SIZE)
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
       return (
-        <div className="flex items-center justify-center scale-90">
+        <div className="flex items-center justify-center scale-75">
           <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
@@ -546,12 +546,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   };
 
   const getRoleIcon = (role: string) => {
+    // Platform role titles in manuscript style (smaller superscript-like text)
     switch (role) {
-      case 'root': return <Crown className="w-3.5 h-3.5 text-slate-600" />;
-      case 'bot': return <Sparkles className="w-3.5 h-3.5 text-slate-500" />;
-      case 'deputy_admin': return <Shield className="w-3.5 h-3.5 text-slate-600" />;
-      case 'deputy_assistant': return <UserCog className="w-3.5 h-3.5 text-slate-500" />;
-      case 'sysop': return <Wrench className="w-3.5 h-3.5 text-slate-500" />;
+      case 'root': return <span className="text-[9px] text-slate-500 font-normal align-super">(RAdmin)</span>;
+      case 'bot': return null; // HelpOS bot doesn't need role tag
+      case 'deputy_admin': return <span className="text-[9px] text-slate-500 font-normal align-super">(DAdmin)</span>;
+      case 'deputy_assistant': return <span className="text-[9px] text-slate-500 font-normal align-super">(DAssist)</span>;
+      case 'sysop': return <span className="text-[9px] text-slate-500 font-normal align-super">(Sysop)</span>;
       default: return null;
     }
   };
@@ -840,7 +841,43 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           />
           
           {/* Floating Controls - Overlaid on banner */}
-          <div className="absolute top-2 right-2 flex items-center gap-2">
+          <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            {/* QUICK ACTIONS - Front and Center (Staff Only) */}
+            {isStaff && (
+              <>
+                <Button
+                  onClick={() => setShowControlsMenu(true)}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] px-3 gap-1.5 bg-emerald-600/95 border-emerald-500/80 hover:bg-emerald-700 text-white shadow-lg backdrop-blur-md font-semibold"
+                  data-testid="button-quick-actions"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Quick Actions
+                </Button>
+                <Button
+                  onClick={() => setShowAccountPanel(true)}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] px-2.5 gap-1 bg-blue-600/95 border-blue-500/80 hover:bg-blue-700 text-white shadow-lg backdrop-blur-md"
+                  data-testid="button-customer-support"
+                >
+                  <UserCog className="w-3 h-3" />
+                  Support
+                </Button>
+                <Button
+                  onClick={() => setShowQueuePanel(true)}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] px-2.5 gap-1 bg-violet-600/95 border-violet-500/80 hover:bg-violet-700 text-white shadow-lg backdrop-blur-md"
+                  data-testid="button-queue-manager"
+                >
+                  <Users className="w-3 h-3" />
+                  Queue
+                </Button>
+              </>
+            )}
+            
             {/* Connection Status */}
             {connectionStatus === 'connected' && (
               <div 
