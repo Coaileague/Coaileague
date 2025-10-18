@@ -18,6 +18,13 @@ Do not make changes to the file `Y`.
 ### UI/UX Decisions
 The platform features a CAD-style professional interface with a dark mode theme, emphasizing precision. It includes an application frame with a menu, toolbar, and status bar. The design is modern, professional, mobile-first, and utilizes corporate blue gradient accents. The official logo is a realistic neon-style "W" with glowing "OS" superscript. A universal transition system provides smooth visual feedback. Key UI components include tab-based navigation, collapsible sections, and mobile-optimized design elements like touch-optimized buttons and fluid layouts.
 
+**Role Badge Display** (Desktop Chat Only):
+- HARDCODED superscript role badges displayed inline like mathematical notation (text-[9px] with ml-1 spacing)
+- Staff roles show bright indigo-500 superscript badges: (Admin), (Deputy), (Assistant), (Sysop)
+- HelpOS bot shows bright amber-500 superscript badge: (Bot)
+- Backend returns clean names only - frontend exclusively handles role badge rendering
+- All system messages and bot messages parse role badges through `parseSystemMessage()` for consistent superscript display
+
 ### Technical Implementations
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for request body validation.
