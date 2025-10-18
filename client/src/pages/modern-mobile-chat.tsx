@@ -39,7 +39,10 @@ export default function ModernMobileChat() {
   const [userContext, setUserContext] = useState<any>(null);
   const [showAgreement, setShowAgreement] = useState(false);
   const [hasAcceptedAgreement, setHasAcceptedAgreement] = useState(false);
+  const [showFABs, setShowFABs] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { playSound } = useChatSounds();
   const { showTransition, hideTransition } = useTransition();
@@ -498,6 +501,35 @@ export default function ModernMobileChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Handle FAB visibility on scroll
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      const currentScrollY = container.scrollTop;
+      
+      // Hide FABs when scrolling
+      setShowFABs(false);
+      
+      // Show FABs again after scrolling stops
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        setShowFABs(true);
+      }, 1000);
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
 
   const handleSend = () => {
     const trimmedMessage = messageText.trim();
@@ -969,7 +1001,7 @@ export default function ModernMobileChat() {
       </div>
 
       {/* Messages Container (always visible) */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
         {messages.map((msg) => {
           const msgRole = (msg as any).platformRole || msg.senderType;
           const roleDisplay = msgRole === 'bot' ? 'BOT AI' : getRoleDisplay(msgRole);
@@ -1066,7 +1098,7 @@ export default function ModernMobileChat() {
           </button>
           
           {showQuickResponses && (
-            <div className="px-3 pb-3 space-y-2 animate-in slide-in-from-top-2 fade-in">
+            <div className="px-3 pb-3 space-y-2 animate-in slide-in-from-top-2 fade-in max-h-[40vh] overflow-y-auto">
               {quickResponses.map((response, idx) => (
                 <button
                   key={idx}
@@ -1093,7 +1125,9 @@ export default function ModernMobileChat() {
 
       {/* Floating Action Buttons - Mobile Only (Bottom Right) */}
       {isStaff && (
-        <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-50">
+        <div className={`fixed bottom-24 right-4 flex flex-col gap-3 z-50 transition-all duration-300 ${
+          showFABs ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-20 pointer-events-none'
+        }`}>
           {/* User List Button */}
           <Sheet open={showUserList} onOpenChange={setShowUserList}>
             <SheetTrigger asChild>
@@ -1104,14 +1138,14 @@ export default function ModernMobileChat() {
                 <Users size={24} />
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh] overflow-y-auto">
+            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh]">
               <SheetHeader>
                 <SheetTitle className="text-white flex items-center gap-2">
                   <Users className="w-5 h-5 text-indigo-400" />
                   Online Users ({onlineUsers.length})
                 </SheetTitle>
               </SheetHeader>
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2 max-h-[65vh] overflow-y-auto pr-2">
                 {onlineUsers.map((user) => {
                   const isBot = user.role === 'bot' || user.id?.includes('helpos') || user.id?.includes('-ai-');
                   return (
@@ -1165,14 +1199,14 @@ export default function ModernMobileChat() {
                 <Eye size={24} />
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh] overflow-y-auto">
+            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh]">
               <SheetHeader>
                 <SheetTitle className="text-white flex items-center gap-2">
                   <Eye className="w-5 h-5 text-cyan-400" />
                   Diagnostics
                 </SheetTitle>
               </SheetHeader>
-              <div className="mt-4">
+              <div className="mt-4 max-h-[65vh] overflow-y-auto pr-2">
                 {selectedUser && userContext ? (
                   <div className="space-y-3">
                     {/* Platform Bot Badge */}
@@ -1284,14 +1318,14 @@ export default function ModernMobileChat() {
                 <Settings size={24} />
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh] overflow-y-auto">
+            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh]">
               <SheetHeader>
                 <SheetTitle className="text-white flex items-center gap-2">
                   <Settings className="w-5 h-5 text-purple-400" />
                   Support Tools
                 </SheetTitle>
               </SheetHeader>
-              <div className="mt-4">
+              <div className="mt-4 max-h-[65vh] overflow-y-auto pr-2">
                 {selectedUser ? (
                   <div className="space-y-2">
                     {supportCommands.map((cmd, idx) => (
