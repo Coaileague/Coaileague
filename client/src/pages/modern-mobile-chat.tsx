@@ -31,7 +31,8 @@ interface OnlineUser {
 
 export default function ModernMobileChat() {
   const [messageText, setMessageText] = useState("");
-  const [showCommandMenu, setShowCommandMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'diagnostics' | 'tools'>('chat');
+  const [showQuickResponses, setShowQuickResponses] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserList, setShowUserList] = useState(false);
   const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
@@ -494,7 +495,7 @@ export default function ModernMobileChat() {
     }, 500);
     
     toast({ title: "Released from hold", description: `${selectedUser.name} can now chat freely` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleRequestAuth = () => {
@@ -508,7 +509,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please verify your identity. I'll send you a secure authentication request.`, userName, 'support');
     
     toast({ title: "Auth request sent", description: `Waiting for ${selectedUser.name} to authenticate` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleRequestDocument = () => {
@@ -522,7 +523,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please upload the required document using the secure upload dialog.`, userName, 'support');
     
     toast({ title: "Document request sent", description: `${selectedUser.name} will receive upload prompt` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleRequestPhoto = () => {
@@ -536,7 +537,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please upload a photo/screenshot to help us assist you.`, userName, 'support');
     
     toast({ title: "Photo request sent" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleRequestSignature = () => {
@@ -550,7 +551,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please provide your e-signature to proceed.`, userName, 'support');
     
     toast({ title: "Signature request sent" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleRequestInfo = () => {
@@ -564,7 +565,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please provide additional information about your request.`, userName, 'support');
     
     toast({ title: "Info request sent" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleTransfer = () => {
@@ -578,7 +579,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm transferring you to another specialist who can better assist you.`, userName, 'support');
     
     toast({ title: "Transfer initiated", description: `${selectedUser.name} will be transferred` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleResolve = () => {
@@ -592,7 +593,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Your issue has been resolved. Is there anything else I can help you with?`, userName, 'support');
     
     toast({ title: "Ticket resolved", description: `${selectedUser.name}'s ticket marked as resolved` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
     setSelectedUser(null);
   };
 
@@ -613,7 +614,7 @@ export default function ModernMobileChat() {
     
     sendMessage(`@${selectedUser.name} ${reply}`, userName, 'support');
     toast({ title: "Quick reply sent" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleInternalNote = () => {
@@ -626,7 +627,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Internal note added", description: "Note visible to staff only" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 2 (Authentication)
@@ -641,7 +642,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm initiating a password reset for your account. You'll receive an email shortly.`, userName, 'support');
     
     toast({ title: "Password reset initiated", description: `Email sent to ${selectedUser.name}` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleUnlockAccount = () => {
@@ -655,7 +656,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Your account has been unlocked. You can now log in.`, userName, 'support');
     
     toast({ title: "Account unlocked", description: `${selectedUser.name} can now access their account` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 3 (Documents)
@@ -669,7 +670,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Document viewer opened", description: `Viewing ${selectedUser.name}'s submitted documents` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 4 (Ticket Management)
@@ -684,7 +685,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm escalating your issue to our senior support team for specialized assistance.`, userName, 'support');
     
     toast({ title: "Ticket escalated", description: "Transferred to Tier 2 support" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handlePriorityTag = () => {
@@ -697,7 +698,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Priority flag added", description: `${selectedUser.name}'s ticket marked as high priority`, variant: "default" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleFollowUp = () => {
@@ -710,7 +711,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Follow-up scheduled", description: "Reminder set for 24 hours" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 5 (Advanced)
@@ -725,7 +726,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm sending a summary of our conversation to your email.`, userName, 'support');
     
     toast({ title: "Email summary sent", description: `Conversation summary sent to ${selectedUser.name}` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleMarkVIP = () => {
@@ -738,7 +739,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "VIP status granted", description: `${selectedUser.name} flagged as VIP customer` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleUserHistory = () => {
@@ -751,7 +752,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "History loaded", description: `Viewing ${selectedUser.name}'s complete interaction history` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 6 (Moderation)
@@ -766,7 +767,7 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} This is a formal warning. Please follow our community guidelines.`, userName, 'support');
     
     toast({ title: "Warning issued", description: `Formal warning sent to ${selectedUser.name}`, variant: "destructive" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleTempMute = () => {
@@ -779,7 +780,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "User muted", description: `${selectedUser.name} muted for 5 minutes`, variant: "destructive" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleKick = () => {
@@ -792,7 +793,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "User kicked", description: `${selectedUser.name} removed from chat room`, variant: "destructive" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
     setSelectedUser(null);
   };
 
@@ -810,7 +811,7 @@ export default function ModernMobileChat() {
       description: `${selectedUser.name} permanently banned from platform`, 
       variant: "destructive" 
     });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
     setSelectedUser(null);
   };
 
@@ -820,7 +821,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Analytics dashboard", description: "Opening system analytics..." });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleForceReconnect = () => {
@@ -833,7 +834,7 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Reconnection forced", description: `${selectedUser.name}'s connection reset` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleTestMessage = () => {
@@ -842,7 +843,7 @@ export default function ModernMobileChat() {
     sendMessage(`🔧 SYSTEM TEST - Message sent at ${new Date().toLocaleTimeString()}`, userName, 'support');
     
     toast({ title: "Test message sent", description: "System diagnostic message transmitted" });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
 
   const handleClearCache = () => {
@@ -855,8 +856,17 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Cache cleared", description: `${selectedUser.name}'s session cache cleared` });
-    setShowCommandMenu(false);
+    setActiveTab("chat");
   };
+
+  // Quick Responses for support
+  const quickResponses = [
+    "Hi! Thanks for reaching out. How can I help you today?",
+    "I understand. Let me look into that for you.",
+    "Can you provide more details about the issue?",
+    "I've checked your account and everything looks good.",
+    "Please try refreshing the page and let me know if that helps.",
+  ];
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col max-w-md mx-auto relative overflow-hidden">
@@ -866,10 +876,40 @@ export default function ModernMobileChat() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      {/* Header */}
+      {/* Header with User Profile Card */}
       <div className="relative z-10 backdrop-blur-xl bg-black/30 border-b border-white/10 px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+        {selectedUser && isStaff ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-xl">{selectedUser.name.charAt(0)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-white font-bold text-lg truncate">{selectedUser.name}</h2>
+                <p className="text-slate-400 text-xs truncate">{userContext?.workspace?.name || 'WorkforceOS User'}</p>
+                <p className="text-slate-500 text-xs truncate">{userContext?.workspace?.serialNumber || 'No device info'}</p>
+              </div>
+              {selectedUser && (
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs flex-shrink-0 px-2 py-1 font-bold">
+                  URGENT
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <div className="flex items-center gap-1">
+                <Clock size={12} />
+                <span>Session: {Math.floor((Date.now() - new Date().getTime()) / 60000) || 5}:23</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Circle className={`w-2 h-2 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <span className={isConnected ? 'text-emerald-400' : 'text-red-400'}>
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center">
@@ -889,25 +929,58 @@ export default function ModernMobileChat() {
               </div>
             </div>
           </div>
-        </div>
-        {/* Selected user badge - Full row below header when user selected */}
-        {isStaff && selectedUser && (
-          <div className="mt-2 pt-2 border-t border-white/10">
-            <div className="flex items-center gap-2">
-              <UserCheck size={14} className="text-indigo-400 flex-shrink-0" />
-              <span className="text-xs text-indigo-400 font-medium">Selected:</span>
-              <span className="text-sm text-white font-semibold truncate flex-1">{selectedUser.name}</span>
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs flex-shrink-0 animate-pulse">
-                ACTIVE
-              </Badge>
-            </div>
-          </div>
         )}
       </div>
 
+      {/* Tab Navigation */}
+      <div className="relative z-10 backdrop-blur-xl bg-black/20 border-b border-white/10">
+        <div className="flex items-center">
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`flex-1 py-3 text-sm font-semibold transition-all ${
+              activeTab === 'chat'
+                ? 'text-white border-b-2 border-indigo-500'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            data-testid="tab-chat"
+          >
+            Chat
+          </button>
+          {isStaff && (
+            <>
+              <button
+                onClick={() => setActiveTab('diagnostics')}
+                className={`flex-1 py-3 text-sm font-semibold transition-all ${
+                  activeTab === 'diagnostics'
+                    ? 'text-white border-b-2 border-indigo-500'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                data-testid="tab-diagnostics"
+              >
+                Diagnostics
+              </button>
+              <button
+                onClick={() => setActiveTab('tools')}
+                className={`flex-1 py-3 text-sm font-semibold transition-all ${
+                  activeTab === 'tools'
+                    ? 'text-white border-b-2 border-indigo-500'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                data-testid="tab-tools"
+              >
+                Tools
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
+
+      {/* Tab Content */}
+      {activeTab === 'chat' && (
+        <>
+          {/* Messages Container */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
         {messages.map((msg) => {
           const msgRole = (msg as any).platformRole || msg.senderType;
           const roleDisplay = msgRole === 'bot' ? 'BOT AI' : getRoleDisplay(msgRole);
@@ -993,60 +1066,6 @@ export default function ModernMobileChat() {
         }
       `}</style>
 
-      {/* Floating Tool/Command Button (Bottom Left) - Staff and Users */}
-      <Sheet open={showCommandMenu} onOpenChange={setShowCommandMenu}>
-        <SheetTrigger asChild>
-          <button
-            className="fixed bottom-20 left-4 z-50 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all active:scale-95"
-            data-testid="button-tools-menu"
-          >
-            <Settings size={24} />
-            {supportCommands.length > 0 && (
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-xs font-bold">
-                {supportCommands.length}
-              </div>
-            )}
-          </button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-white/10 max-h-[80vh]">
-          <SheetHeader>
-            <SheetTitle className="text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-purple-400" />
-              {isStaff ? 'Support Commands' : 'Tools & Help'}
-              {isStaff && !selectedUser && (
-                <span className="text-xs text-orange-400 ml-2">(Select a user first)</span>
-              )}
-            </SheetTitle>
-          </SheetHeader>
-          
-          <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
-            {supportCommands.map((cmd, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  cmd.action();
-                  setShowCommandMenu(false);
-                }}
-                disabled={!selectedUser && isStaff}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${
-                  (!isStaff || selectedUser)
-                    ? 'bg-white/5 hover:bg-white/10 border-white/10 active:scale-98' 
-                    : 'bg-white/5 opacity-50 cursor-not-allowed border-white/5'
-                }`}
-                data-testid={`command-${cmd.label.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <cmd.icon size={20} className={`flex-shrink-0 ${(!isStaff || selectedUser) ? cmd.color : 'text-slate-600'}`} />
-                <div className="flex-1 text-left min-w-0">
-                  <div className={`text-sm font-medium break-words ${(!isStaff || selectedUser) ? 'text-white' : 'text-slate-600'}`}>
-                    {cmd.label}
-                  </div>
-                  <div className="text-xs text-slate-400 break-words">{cmd.description}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {/* Floating User List Button (Bottom Right) - Staff Only */}
       {isStaff && (
@@ -1181,6 +1200,8 @@ export default function ModernMobileChat() {
             </div>
           </SheetContent>
         </Sheet>
+      )}
+        </>
       )}
 
       {/* Input Area */}
