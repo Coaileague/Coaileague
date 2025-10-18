@@ -1074,7 +1074,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         </div>
                         
                         {/* Message Content - Smaller text with proper wrapping */}
-                        <p className="text-slate-800 text-xs leading-snug break-words whitespace-pre-wrap">{msg.message}</p>
+                        <p className="text-slate-800 text-xs leading-snug break-words whitespace-pre-wrap">
+                          {role === 'bot' ? parseSystemMessage(msg.message) : msg.message}
+                        </p>
                       </div>
                     </div>
                   </div>

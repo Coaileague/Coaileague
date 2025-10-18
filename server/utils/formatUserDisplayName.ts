@@ -1,5 +1,5 @@
-// Utility to format user display names for chat with role suffix in parentheses
-// Shows: "Brigido (RAdmin)", "James (Sysop)", "Mary (Guest)", "Robin (Subscriber)", etc.
+// Utility to format user display names for chat
+// Returns clean name without role suffixes - frontend handles role badges via superscript
 
 interface UserInfo {
   firstName?: string | null;
@@ -12,82 +12,17 @@ interface UserInfo {
 }
 
 /**
- * Format user display name with role suffix in parentheses for chat messages
- * Examples:
- * - "Brigido (RAdmin)" (platform root - role in parentheses)
- * - "James (Sysop)" (platform staff - role in parentheses)
- * - "Tom (Manager)" (workspace staff - role in parentheses)
- * - "Sarah (Employee)" (workspace employee - role in parentheses)
- * - "Mary (Guest)" (ticket guest - role in parentheses)
- * - "Robin (Subscriber)" (verified customer - role in parentheses)
+ * Format user display name - returns clean name only
+ * Frontend handles role display with superscript badges
+ * Examples: "Brigido Root", "Sarah Martinez", "John Doe"
  */
 export function formatUserDisplayName(user: UserInfo): string {
   const firstName = user.firstName || extractFirstNameFromEmail(user.email);
   const lastName = user.lastName || '';
   const fullName = lastName ? `${firstName} ${lastName}` : firstName;
   
-  // Platform roles (WorkforceOS staff) - name first, then (Role)
-  if (user.platformRole && user.platformRole !== 'none') {
-    const roleTitle = formatPlatformRole(user.platformRole);
-    return `${fullName} (${roleTitle})`;
-  }
-  
-  // Workspace roles (organizational roles) - name first, then (Role)
-  if (user.workspaceRole && user.workspaceRole !== 'employee') {
-    const roleTitle = formatWorkspaceRole(user.workspaceRole);
-    return `${fullName} (${roleTitle})`;
-  }
-  
-  // Guest (ticket holder) - name first, then (Guest)
-  if (user.isGuest) {
-    return `${fullName} (Guest)`;
-  }
-  
-  // Subscriber (verified customer account) - name first, then (Subscriber)
-  if (user.isSubscriber) {
-    return `${fullName} (Subscriber)`;
-  }
-  
-  // Default: Employee or regular user
-  return `${fullName} (Employee)`;
-}
-
-/**
- * Format platform role
- * Note: Client-side will render WorkforceOS logo icon for staff
- * 
- * Hierarchy:
- * 1. root → Root Admin (highest authority)
- * 2. deputy_admin → Deputy Admin (deputy to root)
- * 3. deputy_assistant → Assistant (deputy's assistant)
- * 4. sysop → System Operator (backbone support)
- */
-function formatPlatformRole(role: string): string {
-  const roleMap: Record<string, string> = {
-    'root': 'Admin',             // Root Admin (highest authority)
-    'deputy_admin': 'Deputy',     // Deputy Admin
-    'deputy_assistant': 'Assistant', // Assistant
-    'sysop': 'Sysop',            // System Operator (backbone support)
-  };
-  
-  return roleMap[role] || 'Staff';
-}
-
-/**
- * Format workspace role to titlecase
- */
-function formatWorkspaceRole(role: string): string {
-  const roleMap: Record<string, string> = {
-    'owner': 'Owner',
-    'manager': 'Manager',
-    'supervisor': 'Supervisor',
-    'employee': 'Employee',
-    'auditor': 'Auditor',
-    'billing': 'Billing',
-    'apar': 'ApAr',
-  };
-  
-  return roleMap[role] || role.charAt(0).toUpperCase() + role.slice(1);
+  // Return just the name - frontend handles role display with superscript badges
+  return fullName;
 }
 
 /**
