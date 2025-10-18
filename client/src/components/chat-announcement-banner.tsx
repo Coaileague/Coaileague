@@ -264,8 +264,8 @@ export function ChatAnnouncementBanner({
   const BannerContent = (
     <div className={`
       w-full min-h-[72px] transition-all duration-500 ease-in-out relative overflow-hidden
-      bg-gradient-to-r from-blue-600/85 via-indigo-600/85 to-blue-600/85
-      border-b-4 border-blue-400/50 shadow-xl backdrop-blur-sm
+      bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500
+      border-b-4 border-blue-300 shadow-xl backdrop-blur-sm
       animate-in fade-in slide-in-from-top-2
     `}>
       {/* ADVANCED PARTICLE EFFECTS - Physics-based with emojis */}
