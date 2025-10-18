@@ -16,6 +16,7 @@ export type SlashCommand =
   | 'resetpass'  // Send password reset
   | 'status'     // Check ticket status (customer)
   | 'queue'      // Check queue position (customer)
+  | 'ask'        // Ask AI knowledge base (everyone)
   | 'suspend'    // Suspend staff member (deputy_admin+)
   | 'reactivate' // Reactivate suspended staff (deputy_admin+)
   | 'broadcast'  // Send announcement to all (root/deputy_admin)
@@ -140,6 +141,14 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
     requiresStaff: false,
     minArgs: 0,
     maxArgs: 0,
+  },
+  ask: {
+    command: 'ask',
+    description: 'Ask AI assistant about policies, procedures, and FAQs',
+    usage: '/ask <your question>',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
   },
   help: {
     command: 'help',

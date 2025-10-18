@@ -1049,6 +1049,156 @@ export function setupWebSocket(server: Server) {
                   break;
                 }
                 
+                case 'ask': {
+                  // AI Knowledge Retrieval - Ask questions about policies, procedures, FAQs
+                  const query = parsedCommand.args.join(' ');
+                  
+                  if (!query || query.trim().length === 0) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /ask <your question>\n\nExample: /ask What is the vacation policy?',
+                    }));
+                    break;
+                  }
+                  
+                  // Send "thinking" indicator
+                  const thinkingMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'KnowledgeOS™',
+                    senderType: 'bot',
+                    message: `🔍 Searching knowledge base for: "${query}"...`,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: thinkingMsg }));
+                      }
+                    });
+                  }
+                  
+                  try {
+                    // Import required modules
+                    const { db } = await import('./db');
+                    const { knowledgeArticles, knowledgeQueries } = await import('@shared/schema');
+                    const { eq, or } = await import('drizzle-orm');
+                    
+                    // Get workspace ID
+                    const workspaceId = ws.workspaceId || null;
+                    const startTime = Date.now();
+                    
+                    // Search relevant knowledge articles (public articles available to all)
+                    const relevantArticles = await db
+                      .select()
+                      .from(knowledgeArticles)
+                      .where(eq(knowledgeArticles.isPublic, true))
+                      .limit(5);
+                    
+                    // Build context from articles
+                    const context = relevantArticles
+                      .map((article: any, idx: number) => `[Article ${idx + 1}: ${article.title}]\n${article.content}`)
+                      .join('\n\n');
+                    
+                    let aiResponse = '';
+                    
+                    // Try AI if available
+                    if (process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+                      try {
+                        const { default: OpenAI } = await import('openai');
+                        const openai = new OpenAI({ 
+                          apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+                          baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+                        });
+                        
+                        const completion = await openai.chat.completions.create({
+                          model: 'gpt-4',
+                          messages: [
+                            {
+                              role: 'system',
+                              content: `You are a helpful HR assistant for WorkforceOS. Answer employee questions about company policies, procedures, and benefits using the provided knowledge base. Be concise, friendly, and accurate. If you don't know the answer, say so and suggest contacting HR.`
+                            },
+                            {
+                              role: 'user',
+                              content: `Context from knowledge base:\n${context}\n\nEmployee question: ${query}`
+                            }
+                          ],
+                          temperature: 0.3,
+                          max_tokens: 500,
+                        });
+                        
+                        aiResponse = completion.choices[0]?.message?.content || '';
+                      } catch (aiError) {
+                        console.error('AI generation error:', aiError);
+                      }
+                    }
+                    
+                    // Fallback if AI unavailable
+                    if (!aiResponse) {
+                      aiResponse = relevantArticles.length > 0
+                        ? `I found ${relevantArticles.length} related articles:\n\n${relevantArticles.map((a: any) => `• ${a.title}\n  ${a.summary || a.content.substring(0, 200)}...`).join('\n\n')}`
+                        : "I couldn't find any relevant information in the knowledge base. Please contact HR or your manager for assistance.";
+                    }
+                    
+                    // Log the query
+                    await db.insert(knowledgeQueries).values({
+                      workspaceId,
+                      userId: ws.userId,
+                      query,
+                      response: aiResponse,
+                      responseTime: Date.now() - startTime,
+                      articlesRetrieved: relevantArticles.map((a: any) => a.id),
+                    });
+                    
+                    // Format response with article references
+                    let formattedResponse = `🤖 **Answer**\n\n${aiResponse}`;
+                    
+                    if (relevantArticles.length > 0) {
+                      formattedResponse += `\n\n📚 **Sources:**\n${relevantArticles.slice(0, 3).map((a: any, idx: number) => 
+                        `${idx + 1}. ${a.title}`
+                      ).join('\n')}`;
+                    }
+                    
+                    const knowledgeMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'ai-bot',
+                      senderName: 'KnowledgeOS™',
+                      senderType: 'bot',
+                      message: formattedResponse,
+                      messageType: 'text',
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: knowledgeMsg }));
+                        }
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error in /ask command:', error);
+                    
+                    const errorMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'ai-bot',
+                      senderName: 'KnowledgeOS™',
+                      senderType: 'bot',
+                      message: `⚠️ I'm sorry, I encountered an error while searching for an answer. Please try again or contact support.`,
+                      messageType: 'text',
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: errorMsg }));
+                        }
+                      });
+                    }
+                  }
+                  break;
+                }
+                
                 default:
                   ws.send(JSON.stringify({
                     type: 'error',
