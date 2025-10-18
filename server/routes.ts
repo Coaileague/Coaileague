@@ -7675,10 +7675,46 @@ Return ONLY valid JSON array with this exact structure:
     try {
       const { userId } = req.params;
 
+      // Handle simulated/demo users (like sim-staff-1, sim-customer-2, etc.)
+      if (userId.startsWith('sim-') || userId.startsWith('demo-')) {
+        // Extract info from userId
+        const parts = userId.split('-');
+        const role = parts[1] || 'customer';
+        const number = parts[2] || '1';
+        const name = `Demo ${role.charAt(0).toUpperCase() + role.slice(1)} ${number}`;
+        
+        return res.json({
+          user: {
+            id: userId,
+            email: `${userId}@demo.workforceos.com`,
+            firstName: name.split(' ')[0] + ' ' + name.split(' ')[1],
+            lastName: name.split(' ')[2] || '',
+            platformRole: role === 'staff' ? 'sysop' : 'guest',
+            createdAt: new Date(),
+            isSimulated: true,
+          },
+          workspace: null,
+          tickets: { active: [], history: [] },
+          chatHistory: [],
+          metrics: {
+            totalTickets: 0,
+            resolvedTickets: 0,
+            resolutionRate: 0,
+            avgResponseTime: '0 mins',
+          },
+          note: 'This is a simulated/demo user account for testing purposes'
+        });
+      }
+
       // Get user profile
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        // User not found - return empty/not found response
+        return res.status(404).json({ 
+          error: "User not found",
+          suggestion: "This user may not exist in the database or may be a guest user with no account",
+          userId
+        });
       }
 
       // Get workspace info (if user owns/belongs to one)

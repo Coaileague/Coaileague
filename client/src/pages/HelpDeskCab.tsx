@@ -223,13 +223,16 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   });
 
   // Fetch selected user context for profile/diagnostics
-  const { data: userContext } = useQuery<any>({
+  const { data: userContext, error: userContextError, isError: userContextIsError } = useQuery<any>({
     queryKey: ['/api/helpdesk/user-context', selectedUserId],
     queryFn: async () => {
       const res = await fetch(`/api/helpdesk/user-context/${selectedUserId}`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Failed to fetch user context');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to fetch user context' }));
+        throw errorData;
+      }
       return res.json();
     },
     enabled: !!selectedUserId && isAuthenticated,
@@ -1719,8 +1722,55 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           <div className="max-h-[70vh] overflow-y-auto pr-2">
             {selectedUserId && userContext ? (
               <div className="space-y-4">
-                {/* Detect system-generated users (bots) - Check if ID starts with 'helpbot' or 'system' */}
-                {(selectedUserId.startsWith('helpbot') || selectedUserId.startsWith('system_')) ? (
+                {/* Detect simulated/demo users */}
+                {(selectedUserId.startsWith('sim-') || selectedUserId.startsWith('demo-')) && userContext.user?.isSimulated ? (
+                  /* Simulated/Demo user information */
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ring-2 ring-blue-500/50">
+                          <User size={24} className="text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-bold text-lg">
+                            {userContext.user.firstName} {userContext.user.lastName}
+                          </h3>
+                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 mt-1">
+                            Simulated Demo User
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-blue-200 text-sm mb-3">
+                        This is a simulated user account for testing and demonstration purposes.
+                      </p>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-300">Email:</span>
+                          <span className="text-white">{userContext.user.email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-300">Role:</span>
+                          <span className="text-white">{userContext.user.platformRole}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-300">User ID:</span>
+                          <span className="text-white font-mono text-xs">{userContext.user.id}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {userContext.note && (
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-blue-300 text-xs">
+                            {userContext.note}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (selectedUserId.startsWith('helpbot') || selectedUserId.startsWith('system_')) ? (
                   /* Bot/System user information */
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-lg p-4">
@@ -1912,12 +1962,29 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                       </div>
                     )}
                   </div>
-                ) : (
-                  /* Error state - user not found */
+                ) : userContextIsError ? (
+                  /* Error state - user not found or error loading */
                   <div className="text-center py-8">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-                    <p className="text-red-400 text-sm">User information not available</p>
-                    <p className="text-slate-400 text-xs mt-2">This user may not exist in the database</p>
+                    <p className="text-red-400 text-sm font-semibold">
+                      {(userContextError as any)?.error || 'User information not available'}
+                    </p>
+                    {(userContextError as any)?.suggestion && (
+                      <p className="text-slate-400 text-xs mt-2">{(userContextError as any).suggestion}</p>
+                    )}
+                    {(userContextError as any)?.userId && (
+                      <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                        <p className="text-red-300 text-xs">
+                          <strong>User ID:</strong> {(userContextError as any).userId}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Fallback - No data */
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+                    <p className="text-slate-400 text-sm">No user information available</p>
                   </div>
                 )}
               </div>
