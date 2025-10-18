@@ -179,6 +179,41 @@ export default function SmartScheduleOS() {
     },
   });
 
+  // Helper functions - hoisted above useMemo to avoid temporal dead zone
+  const getEmployeeName = (employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown";
+  };
+
+  const getEmployeeRole = (employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    return employee?.role || "Employee";
+  };
+
+  const getClientName = (clientId: string | null) => {
+    if (!clientId) return null;
+    const client = clients.find(c => c.id === clientId);
+    return client ? `${client.firstName} ${client.lastName}` : null;
+  };
+
+  const getClientAddress = (clientId: string | null) => {
+    if (!clientId) return null;
+    const client = clients.find(c => c.id === clientId);
+    return client?.address || null;
+  };
+
+  const getRoleColor = (employeeId: string) => {
+    const role = getEmployeeRole(employeeId);
+    const roleColors: Record<string, string> = {
+      'Rigger': 'bg-blue-600',
+      'SysOp': 'bg-emerald-600',
+      'Manager': 'bg-purple-600',
+      'Technician': 'bg-amber-600',
+      'Operator': 'bg-cyan-600',
+    };
+    return roleColors[role] || 'bg-slate-600';
+  };
+
   // Conflict detection (overlapping shifts + short turnaround)
   const detectConflict = useCallback((shift: Shift, allShifts: Shift[]) => {
     const shiftStart = new Date(shift.startTime);
@@ -225,42 +260,6 @@ export default function SmartScheduleOS() {
       hasConflict: detectConflict(shift, shifts),
     }));
   }, [shifts, employees, detectConflict]);
-
-  // Helper functions
-  const getEmployeeName = (employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown";
-  };
-
-  const getEmployeeRole = (employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    return employee?.role || "Employee";
-  };
-
-  const getClientName = (clientId: string | null) => {
-    if (!clientId) return null;
-    const client = clients.find(c => c.id === clientId);
-    return client ? `${client.firstName} ${client.lastName}` : null;
-  };
-
-  const getClientAddress = (clientId: string | null) => {
-    if (!clientId) return null;
-    const client = clients.find(c => c.id === clientId);
-    return client?.address || null;
-  };
-
-  // Color coding by role
-  const getRoleColor = (employeeId: string) => {
-    const role = getEmployeeRole(employeeId);
-    const roleColors: Record<string, string> = {
-      'Rigger': 'bg-blue-600',
-      'SysOp': 'bg-emerald-600',
-      'Manager': 'bg-purple-600',
-      'Technician': 'bg-amber-600',
-      'Operator': 'bg-cyan-600',
-    };
-    return roleColors[role] || 'bg-slate-600';
-  };
 
   // Custom event style getter
   const eventStyleGetter = (event: any) => {
