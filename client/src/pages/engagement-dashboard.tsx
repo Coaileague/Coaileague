@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, TrendingUp, TrendingDown, Users, Heart, MessageSquare, Award } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { AlertCircle, TrendingUp, TrendingDown, Users, Heart, MessageSquare, Award, AlertTriangle, Star } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface EmployeeHealthScore {
   id: string;
@@ -49,8 +60,39 @@ interface EmployeeRecognition {
   createdAt: string;
 }
 
+interface EmployerRating {
+  id: string;
+  ratingType: string;
+  targetId: string | null;
+  managementQuality: number;
+  workEnvironment: number;
+  compensationFairness: number;
+  growthOpportunities: number;
+  workLifeBalance: number;
+  equipmentResources: number;
+  communicationClarity: number;
+  recognitionAppreciation: number;
+  overallScore: number;
+  positiveComments: string | null;
+  improvementSuggestions: string | null;
+  isAnonymous: boolean;
+  submittedAt: string;
+}
+
+const disputeSchema = z.object({
+  title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
+  reason: z.string().min(20, "Reason must be at least 20 characters").max(5000, "Reason too long"),
+  requestedOutcome: z.string().max(1000, "Requested outcome too long").optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']),
+});
+
+type DisputeFormData = z.infer<typeof disputeSchema>;
+
 export default function EngagementDashboard() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
+  const [selectedRating, setSelectedRating] = useState<EmployerRating | null>(null);
 
   // Fetch health scores
   const { data: healthScores, isLoading: loadingHealthScores } = useQuery<EmployeeHealthScore[]>({
