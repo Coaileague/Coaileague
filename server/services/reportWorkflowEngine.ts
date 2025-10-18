@@ -117,6 +117,9 @@ export async function processApproval(
       status: 'rejected',
     });
 
+    // CRITICAL: Notify submitter of rejection
+    await notifySubmitter(submissionId, 'rejected');
+
     return {
       success: true,
       completed: true,
