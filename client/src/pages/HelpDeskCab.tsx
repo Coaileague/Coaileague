@@ -814,108 +814,82 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative">
       {/* Seasonal Animated Background */}
       <SeasonalBackground enabled={seasonalAnimationsEnabled} />
-      {/* UNIFIED ADVERTISEMENT BLOCK - Transparent overlay for animations */}
-      <header className="bg-gradient-to-r from-slate-800/40 via-slate-700/40 to-slate-800/40 text-white shadow-lg relative z-10 border-b-2 border-blue-600/30 backdrop-blur-sm">
-        {/* Top Controls Bar - Embedded in ad space */}
-        <div className="flex items-center justify-between max-w-7xl mx-auto px-3 py-2 relative">
-          {/* Left: Logo and Staff Controls */}
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-slate-300" />
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 shadow-lg">
-              <WorkforceOSLogo size="sm" showText={false} />
-            </div>
-            {isStaff && (
-              <div className="flex items-center gap-1.5 ml-2">
-                <Button
-                  onClick={() => {
-                    setSeasonalAnimationsEnabled(prev => {
-                      const newValue = !prev;
-                      localStorage.setItem('seasonal-animations-enabled', String(newValue));
-                      return newValue;
-                    });
-                    toast({ 
-                      title: seasonalAnimationsEnabled ? "Seasonal animations disabled" : "Seasonal animations enabled",
-                      description: seasonalAnimationsEnabled ? "Background effects turned off" : "Background effects turned on"
-                    });
-                  }}
-                  size="sm"
-                  variant="outline"
-                  className="h-5 text-[9px] px-1.5 gap-1 bg-slate-600/40 border-slate-500/40 hover:bg-slate-600/60 text-white shadow-md"
-                  data-testid="button-toggle-seasonal"
-                >
-                  ❄️ {seasonalAnimationsEnabled ? 'ON' : 'OFF'}
-                </Button>
-                <Button
-                  onClick={() => setShowBannerManager(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-5 text-[9px] px-1.5 gap-1 bg-slate-600/40 border-slate-500/40 hover:bg-slate-600/60 text-white shadow-md"
-                  data-testid="button-open-banner-manager"
-                >
-                  <Sparkles className="w-2.5 h-2.5" />
-                  Banner
-                </Button>
-              </div>
-            )}
+      {/* Minimal floating controls - NO blocking header */}
+      <div className="absolute top-2 right-2 z-50 flex items-center gap-2">
+        {/* Connection Status */}
+        {connectionStatus === 'connected' && (
+          <div 
+            className="flex items-center gap-1 text-[9px] bg-emerald-500/80 px-2 py-0.5 rounded-full backdrop-blur-md border border-emerald-400/60 shadow-lg"
+            data-testid="status-connected"
+          >
+            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+            Connected
           </div>
-          
-          {/* Right: Connection Status - Smart & Aware */}
-          <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' && (
-              <div 
-                className="flex items-center gap-1 text-[9px] bg-emerald-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-emerald-400/40 shadow-lg"
-                data-testid="status-connected"
-              >
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                Connected
-              </div>
-            )}
-            {connectionStatus === 'disconnected' && (
-              <div 
-                className="flex items-center gap-1 text-[9px] bg-slate-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-slate-400/40 shadow-lg"
-                data-testid="status-disconnected"
-              >
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                Disconnected
-              </div>
-            )}
-            {connectionStatus === 'error' && (
-              <div 
-                className="flex items-center gap-1 text-[9px] bg-red-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-red-400/40 shadow-lg cursor-pointer"
-                data-testid="status-error"
-                title={apiErrors.join(', ')}
-              >
-                <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
-                Error
-              </div>
-            )}
-            {connectionStatus === 'denied' && (
-              <div 
-                className="flex items-center gap-1 text-[9px] bg-amber-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm border border-amber-400/40 shadow-lg"
-                data-testid="status-denied"
-              >
-                <Ban className="w-2.5 h-2.5 text-amber-400" />
-                Denied
-              </div>
-            )}
+        )}
+        {connectionStatus === 'disconnected' && (
+          <div 
+            className="flex items-center gap-1 text-[9px] bg-slate-500/80 px-2 py-0.5 rounded-full backdrop-blur-md border border-slate-400/60 shadow-lg text-white"
+            data-testid="status-disconnected"
+          >
+            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+            Disconnected
           </div>
-        </div>
+        )}
+        {connectionStatus === 'error' && (
+          <div 
+            className="flex items-center gap-1 text-[9px] bg-red-500/80 px-2 py-0.5 rounded-full backdrop-blur-md border border-red-400/60 shadow-lg cursor-pointer text-white"
+            data-testid="status-error"
+            title={apiErrors.join(', ')}
+          >
+            <AlertTriangle className="w-2.5 h-2.5" />
+            Error
+          </div>
+        )}
+        {connectionStatus === 'denied' && (
+          <div 
+            className="flex items-center gap-1 text-[9px] bg-amber-500/80 px-2 py-0.5 rounded-full backdrop-blur-md border border-amber-400/60 shadow-lg text-white"
+            data-testid="status-denied"
+          >
+            <Ban className="w-2.5 h-2.5" />
+            Denied
+          </div>
+        )}
         
-        {/* Announcement Banner - Embedded in same dark block - NO separation */}
-        <div>
-          <ChatAnnouncementBanner
-            queuePosition={queueLength || 1}
-            queueWaitTime="2-3 minutes"
-            onlineStaff={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
-            customMessages={customBannerMessage ? [{
-              id: 'custom-1',
-              text: customBannerMessage,
-              type: 'promo' as const,
-              icon: 'zap'
-            }] : []}
-          />
-        </div>
-      </header>
+        {/* Staff Controls */}
+        {isStaff && (
+          <>
+            <Button
+              onClick={() => {
+                setSeasonalAnimationsEnabled(prev => {
+                  const newValue = !prev;
+                  localStorage.setItem('seasonal-animations-enabled', String(newValue));
+                  return newValue;
+                });
+                toast({ 
+                  title: seasonalAnimationsEnabled ? "Seasonal animations disabled" : "Seasonal animations enabled",
+                  description: seasonalAnimationsEnabled ? "Background effects turned off" : "Background effects turned on"
+                });
+              }}
+              size="sm"
+              variant="outline"
+              className="h-6 text-[9px] px-2 gap-1 bg-slate-700/80 border-slate-600/60 hover:bg-slate-700 text-white shadow-lg backdrop-blur-md"
+              data-testid="button-toggle-seasonal"
+            >
+              ❄️ {seasonalAnimationsEnabled ? 'ON' : 'OFF'}
+            </Button>
+            <Button
+              onClick={() => setShowBannerManager(true)}
+              size="sm"
+              variant="outline"
+              className="h-6 text-[9px] px-2 gap-1 bg-slate-700/80 border-slate-600/60 hover:bg-slate-700 text-white shadow-lg backdrop-blur-md"
+              data-testid="button-open-banner-manager"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              Banner
+            </Button>
+          </>
+        )}
+      </div>
 
       {/* Main Layout - Full Width with MSN-style separation */}
       <main className="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full relative z-10 border-l-4 border-r-4 border-slate-300/50">
