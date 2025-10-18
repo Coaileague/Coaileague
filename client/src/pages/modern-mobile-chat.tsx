@@ -174,6 +174,58 @@ export default function ModernMobileChat() {
   const ADMIN_ONLY = ['root', 'deputy_admin'];
   const SYSTEM_ONLY = ['root', 'sysop'];
 
+  // Quick Responses for staff
+  const quickResponses = [
+    {
+      icon: CheckCircle,
+      label: 'Welcome & Introduction',
+      text: 'Welcome to WorkforceOS Support! I\'m here to assist you. How can I help you today?',
+      color: 'text-emerald-400'
+    },
+    {
+      icon: Clock,
+      label: 'Please Wait',
+      text: 'Thank you for your patience. I\'m looking into this for you right now and will have an answer shortly.',
+      color: 'text-blue-400'
+    },
+    {
+      icon: HelpCircle,
+      label: 'Need More Info',
+      text: 'To better assist you, could you provide more details about the issue you\'re experiencing?',
+      color: 'text-orange-400'
+    },
+    {
+      icon: FileSearch,
+      label: 'Investigating Issue',
+      text: 'I\'m investigating this issue now. I\'ll check our system logs and get back to you with a solution.',
+      color: 'text-purple-400'
+    },
+    {
+      icon: PackageCheck,
+      label: 'Issue Resolved',
+      text: 'Great! I\'ve resolved the issue. Please let me know if you need any further assistance.',
+      color: 'text-emerald-400'
+    },
+    {
+      icon: RefreshCw,
+      label: 'Try Refreshing',
+      text: 'Please try refreshing your browser or logging out and back in. This should resolve the issue.',
+      color: 'text-cyan-400'
+    },
+    {
+      icon: Mail,
+      label: 'Follow Up',
+      text: 'I\'ll follow up with our technical team and send you an email update within 24 hours.',
+      color: 'text-indigo-400'
+    },
+    {
+      icon: Star,
+      label: 'Closing Remarks',
+      text: 'Thank you for contacting WorkforceOS Support! Feel free to reach out anytime you need assistance.',
+      color: 'text-amber-400'
+    }
+  ];
+
   // Comprehensive command system with role-based filtering
   const getAllCommands = () => {
     const allCommands = [
@@ -859,15 +911,6 @@ export default function ModernMobileChat() {
     setActiveTab("chat");
   };
 
-  // Quick Responses for support
-  const quickResponses = [
-    "Hi! Thanks for reaching out. How can I help you today?",
-    "I understand. Let me look into that for you.",
-    "Can you provide more details about the issue?",
-    "I've checked your account and everything looks good.",
-    "Please try refreshing the page and let me know if that helps.",
-  ];
-
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col max-w-md mx-auto relative overflow-hidden">
       {/* Animated background effect */}
@@ -1200,6 +1243,50 @@ export default function ModernMobileChat() {
             </div>
           </SheetContent>
         </Sheet>
+      )}
+      
+      {/* Quick Responses Section - Staff Only */}
+      {isStaff && selectedUser && (
+        <div className="relative z-10 border-t border-white/10 bg-gradient-to-b from-indigo-900/30 to-purple-900/30 backdrop-blur-sm">
+          <button
+            onClick={() => setShowQuickResponses(!showQuickResponses)}
+            className="w-full flex items-center justify-between px-4 py-2 text-white hover-elevate transition-all"
+            data-testid="button-toggle-quick-responses"
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-semibold">Quick Responses</span>
+              <Badge variant="secondary" className="text-xs bg-amber-500/20 text-amber-400 border-amber-500/30">
+                {quickResponses.length}
+              </Badge>
+            </div>
+            <ChevronDown className={`w-5 h-5 transition-transform ${showQuickResponses ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {showQuickResponses && (
+            <div className="px-3 pb-3 space-y-2 animate-in slide-in-from-top-2 fade-in">
+              {quickResponses.map((response, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setMessageText(response.text);
+                    setShowQuickResponses(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-lg bg-white/5 hover-elevate active-elevate-2 border border-white/10 transition-all"
+                  data-testid={`quick-response-${idx}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <response.icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${response.color}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-white mb-0.5">{response.label}</div>
+                      <div className="text-xs text-slate-400 line-clamp-2">{response.text}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
         </>
       )}
