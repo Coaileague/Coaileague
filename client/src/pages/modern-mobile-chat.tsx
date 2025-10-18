@@ -977,11 +977,16 @@ export default function ModernMobileChat() {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-end gap-2 mb-1 flex-wrap">
-                <div className="flex flex-col items-start">
-                  {/* Role badge ABOVE username */}
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className={`font-bold text-sm ${
+                  msg.senderType === 'bot' ? 'text-amber-400' :
+                  msg.senderType === 'support' ? 'text-indigo-400' :
+                  'text-white'
+                }`}>
+                  {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
+                  {/* Role badge as superscript - attached inline like 10² */}
                   {(roleDisplay || (msg.senderId === userId && userPlatformRole)) && (
-                    <span className={`text-[8px] leading-none mb-0.5 font-normal ${
+                    <sup className={`text-[8px] font-normal ${
                       msg.senderType === 'bot' 
                         ? 'text-amber-400/70' 
                         : isCurrentUser
@@ -989,16 +994,9 @@ export default function ModernMobileChat() {
                           : 'text-indigo-400/70'
                     }`}>
                       ({roleDisplay || (msg.senderId === userId ? getRoleDisplay(userPlatformRole) : null)})
-                    </span>
+                    </sup>
                   )}
-                  <span className={`font-bold text-sm leading-none ${
-                    msg.senderType === 'bot' ? 'text-amber-400' :
-                    msg.senderType === 'support' ? 'text-indigo-400' :
-                    'text-white'
-                  }`}>
-                    {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
-                  </span>
-                </div>
+                </span>
                 <span className="text-[10px] text-slate-500">
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
