@@ -1,0 +1,32 @@
+Replit Agent Prompt: ScheduleOS™ (Sling-Style Interface)
+​Objective: Upgrade the existing ScheduleOS™ module to feature a modern, highly visual, drag-and-drop calendar interface that simplifies shift management, reduces scheduling errors, and is fully functional on both desktop and mobile.
+​1. Technical Framework & Dependencies
+​The schedule must be a dynamic, interactive component.
+​Technology: Utilize React for the frontend component. For the calendar component, use a robust library like react-big-calendar or a similar solution optimized for drag-and-drop scheduling.
+​Data Source: The component must connect to the existing Express.js backend via:
+​GET /api/schedule/shifts?start_date=...&end_date=...: Fetch all scheduled shifts.
+​PUT /api/schedule/shift/update/{id}: Endpoint to handle drag-and-drop updates (needs to accept shift_id, new_start_time, new_end_time, and new_employee_id).
+​Real-Time Updates: Implement WebSocket integration (via the existing SupportOS™ connection) to ensure that when one manager modifies a shift, all other managers see the change instantly without refreshing.
+​2. UI/UX and Presentation Specs (The "Sling Look")
+​Focus on making it alive, simple, and clean.
+​Main View: The default display must be a "Week View" calendar, structured vertically by Employee Name and horizontally by Time (in 30-minute blocks).
+​Shift Visualization ("Injects"): Each shift must be a colored rectangular block that is:
+​Drag-and-Droppable: Can be moved to a different time or a different employee's row.
+​Resizable: The ends of the block can be dragged to change the clock-in/clock-out times.
+​Color-Coded: Use different background colors based on the Role (Rigger = Blue, SysOp = Green, etc.) for instant visual scanning.
+​Shift Popover (On Click): Clicking a shift block must show a clean, small popover with all tracked injects:
+​Employee Name (with avatar).
+​Customer Name.
+​Location/Address.
+​Notes (editable).
+​Direct links to the TimeOS™ Clock-In/Out functions for that shift.
+​Conflict Alerting: Use the new logic engine. If a shift is dragged to create a conflict (e.g., employee scheduled for two shifts at once, or a short turnaround), the block must instantly turn Red and display a small warning icon.
+​3. Interactive Tools & Ease of Use (The "Alive" Component)
+​These actions must be readily available to the user, not buried at the bottom.
+​Shift Creation: A clear "+ New Shift" button must be visible. Allow managers to create a new shift simply by clicking and dragging an empty time slot on the calendar (draw-to-create).
+​Quick Actions Bar: Place the following essential buttons in a prominent bar above the main calendar view:
+​Copy Week: (Duplicates the current week's schedule to the next week).
+​Templates: (Opens a modal to load a saved schedule template).
+​Find Coverage: (Utilizes ScheduleOS™ to suggest available/qualified employees for an empty slot).
+​Employee Availability: The Employee Rows should visually integrate their saved availability. Unavailable time blocks should be lightly shaded gray to discourage scheduling errors before the drag-and-drop validation fires.
+​FINAL ACTION: Apply these front-end changes to the existing ScheduleOS™ routes and ensure the data exchange conforms to the specified API endpoints to enable this highly interactive, Sling-like user experience.
