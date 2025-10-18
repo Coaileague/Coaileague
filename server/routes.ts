@@ -72,6 +72,21 @@ import {
   employeeTaxForms,
   employeeBankAccounts,
   offCyclePayrollRuns,
+  // EngagementOS™ Tables
+  pulseSurveyTemplates,
+  pulseSurveyResponses,
+  employerRatings,
+  anonymousSuggestions,
+  employeeRecognition,
+  employeeHealthScores,
+  employerBenchmarkScores,
+  insertPulseSurveyTemplateSchema,
+  insertPulseSurveyResponseSchema,
+  insertEmployerRatingSchema,
+  insertAnonymousSuggestionSchema,
+  insertEmployeeRecognitionSchema,
+  insertEmployeeHealthScoreSchema,
+  insertEmployerBenchmarkScoreSchema,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, lte, gte, desc, inArray, ne } from "drizzle-orm";
@@ -8238,6 +8253,594 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error resolving discrepancy:", error);
       res.status(500).json({ message: "Failed to resolve discrepancy" });
+    }
+  });
+
+  // ============================================================================
+  // ENGAGEMENTOS™ - Bidirectional Employee-Employer Intelligence (Monopolistic Feature #4)
+  // ============================================================================
+  
+  // [1] PULSE SURVEY TEMPLATES (Manager/Owner Only)
+  
+  // Create pulse survey template
+  app.post('/api/engagement/pulse-surveys/templates', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+      
+      const validatedData = insertPulseSurveyTemplateSchema.parse({
+        ...req.body,
+        workspaceId,
+        createdBy: userId
+      });
+      
+      const [template] = await db
+        .insert(pulseSurveyTemplates)
+        .values(validatedData)
+        .returning();
+      
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error creating pulse survey template:", error);
+      res.status(500).json({ message: "Failed to create pulse survey template" });
+    }
+  });
+  
+  // List pulse survey templates
+  app.get('/api/engagement/pulse-surveys/templates', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { isActive } = req.query;
+      
+      let query = db
+        .select()
+        .from(pulseSurveyTemplates)
+        .where(eq(pulseSurveyTemplates.workspaceId, workspaceId))
+        .orderBy(desc(pulseSurveyTemplates.createdAt));
+      
+      if (isActive !== undefined) {
+        query = query.where(and(
+          eq(pulseSurveyTemplates.workspaceId, workspaceId),
+          eq(pulseSurveyTemplates.isActive, isActive === 'true')
+        ));
+      }
+      
+      const templates = await query;
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching pulse survey templates:", error);
+      res.status(500).json({ message: "Failed to fetch pulse survey templates" });
+    }
+  });
+  
+  // Get single pulse survey template
+  app.get('/api/engagement/pulse-surveys/templates/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { id } = req.params;
+      
+      const template = await db
+        .select()
+        .from(pulseSurveyTemplates)
+        .where(and(
+          eq(pulseSurveyTemplates.id, id),
+          eq(pulseSurveyTemplates.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!template[0]) {
+        return res.status(404).json({ message: "Pulse survey template not found" });
+      }
+      
+      res.json(template[0]);
+    } catch (error: any) {
+      console.error("Error fetching pulse survey template:", error);
+      res.status(500).json({ message: "Failed to fetch pulse survey template" });
+    }
+  });
+  
+  // Update pulse survey template
+  app.patch('/api/engagement/pulse-surveys/templates/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { id } = req.params;
+      
+      const existing = await db
+        .select()
+        .from(pulseSurveyTemplates)
+        .where(and(
+          eq(pulseSurveyTemplates.id, id),
+          eq(pulseSurveyTemplates.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!existing[0]) {
+        return res.status(404).json({ message: "Pulse survey template not found" });
+      }
+      
+      const [updated] = await db
+        .update(pulseSurveyTemplates)
+        .set({
+          ...req.body,
+          updatedAt: new Date()
+        })
+        .where(eq(pulseSurveyTemplates.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating pulse survey template:", error);
+      res.status(500).json({ message: "Failed to update pulse survey template" });
+    }
+  });
+  
+  // [2] PULSE SURVEY RESPONSES (All Employees)
+  
+  // Submit pulse survey response
+  app.post('/api/engagement/pulse-surveys/responses', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+      
+      // Get employee record
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!employee[0]) {
+        return res.status(403).json({ message: "Employee not found" });
+      }
+      
+      const validatedData = insertPulseSurveyResponseSchema.parse({
+        ...req.body,
+        workspaceId,
+        employeeId: employee[0].id,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      const [response] = await db
+        .insert(pulseSurveyResponses)
+        .values(validatedData)
+        .returning();
+      
+      // TODO: Trigger AI sentiment analysis via PredictionOS™
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error("Error submitting pulse survey response:", error);
+      res.status(500).json({ message: "Failed to submit pulse survey response" });
+    }
+  });
+  
+  // Get pulse survey responses (Manager only)
+  app.get('/api/engagement/pulse-surveys/responses', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { surveyTemplateId, sentimentLabel } = req.query;
+      
+      let query = db
+        .select()
+        .from(pulseSurveyResponses)
+        .where(eq(pulseSurveyResponses.workspaceId, workspaceId))
+        .orderBy(desc(pulseSurveyResponses.submittedAt));
+      
+      if (surveyTemplateId) {
+        query = query.where(and(
+          eq(pulseSurveyResponses.workspaceId, workspaceId),
+          eq(pulseSurveyResponses.surveyTemplateId, surveyTemplateId as string)
+        ));
+      }
+      
+      if (sentimentLabel) {
+        query = query.where(and(
+          eq(pulseSurveyResponses.workspaceId, workspaceId),
+          eq(pulseSurveyResponses.sentimentLabel, sentimentLabel as string)
+        ));
+      }
+      
+      const responses = await query;
+      res.json(responses);
+    } catch (error: any) {
+      console.error("Error fetching pulse survey responses:", error);
+      res.status(500).json({ message: "Failed to fetch pulse survey responses" });
+    }
+  });
+  
+  // [3] EMPLOYER RATINGS (All Employees)
+  
+  // Submit employer rating
+  app.post('/api/engagement/employer-ratings', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+      
+      // Get employee record
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!employee[0]) {
+        return res.status(403).json({ message: "Employee not found" });
+      }
+      
+      const validatedData = insertEmployerRatingSchema.parse({
+        ...req.body,
+        workspaceId,
+        employeeId: req.body.isAnonymous ? null : employee[0].id,
+        ipAddress: req.ip
+      });
+      
+      const [rating] = await db
+        .insert(employerRatings)
+        .values(validatedData)
+        .returning();
+      
+      // TODO: Trigger AI sentiment analysis and risk flagging
+      
+      res.json(rating);
+    } catch (error: any) {
+      console.error("Error submitting employer rating:", error);
+      res.status(500).json({ message: "Failed to submit employer rating" });
+    }
+  });
+  
+  // Get employer ratings (Manager only)
+  app.get('/api/engagement/employer-ratings', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { ratingType, targetId } = req.query;
+      
+      let query = db
+        .select()
+        .from(employerRatings)
+        .where(eq(employerRatings.workspaceId, workspaceId))
+        .orderBy(desc(employerRatings.submittedAt));
+      
+      if (ratingType) {
+        query = query.where(and(
+          eq(employerRatings.workspaceId, workspaceId),
+          eq(employerRatings.ratingType, ratingType as string)
+        ));
+      }
+      
+      if (targetId) {
+        query = query.where(and(
+          eq(employerRatings.workspaceId, workspaceId),
+          eq(employerRatings.targetId, targetId as string)
+        ));
+      }
+      
+      const ratings = await query;
+      res.json(ratings);
+    } catch (error: any) {
+      console.error("Error fetching employer ratings:", error);
+      res.status(500).json({ message: "Failed to fetch employer ratings" });
+    }
+  });
+  
+  // [4] ANONYMOUS SUGGESTIONS (All Employees)
+  
+  // Submit anonymous suggestion
+  app.post('/api/engagement/suggestions', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+      
+      // Get employee record
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!employee[0]) {
+        return res.status(403).json({ message: "Employee not found" });
+      }
+      
+      const validatedData = insertAnonymousSuggestionSchema.parse({
+        ...req.body,
+        workspaceId,
+        employeeId: req.body.isAnonymous ? null : employee[0].id
+      });
+      
+      const [suggestion] = await db
+        .insert(anonymousSuggestions)
+        .values(validatedData)
+        .returning();
+      
+      // TODO: Trigger AI sentiment analysis and urgency detection
+      
+      res.json(suggestion);
+    } catch (error: any) {
+      console.error("Error submitting anonymous suggestion:", error);
+      res.status(500).json({ message: "Failed to submit anonymous suggestion" });
+    }
+  });
+  
+  // List anonymous suggestions (Manager only)
+  app.get('/api/engagement/suggestions', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { status, category, urgencyLevel } = req.query;
+      
+      let query = db
+        .select()
+        .from(anonymousSuggestions)
+        .where(eq(anonymousSuggestions.workspaceId, workspaceId))
+        .orderBy(desc(anonymousSuggestions.submittedAt));
+      
+      if (status) {
+        query = query.where(and(
+          eq(anonymousSuggestions.workspaceId, workspaceId),
+          eq(anonymousSuggestions.status, status as string)
+        ));
+      }
+      
+      if (category) {
+        query = query.where(and(
+          eq(anonymousSuggestions.workspaceId, workspaceId),
+          eq(anonymousSuggestions.category, category as string)
+        ));
+      }
+      
+      if (urgencyLevel) {
+        query = query.where(and(
+          eq(anonymousSuggestions.workspaceId, workspaceId),
+          eq(anonymousSuggestions.urgencyLevel, urgencyLevel as string)
+        ));
+      }
+      
+      const suggestions = await query;
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("Error fetching anonymous suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch anonymous suggestions" });
+    }
+  });
+  
+  // Update suggestion status (Manager only)
+  app.patch('/api/engagement/suggestions/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { id } = req.params;
+      
+      const existing = await db
+        .select()
+        .from(anonymousSuggestions)
+        .where(and(
+          eq(anonymousSuggestions.id, id),
+          eq(anonymousSuggestions.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!existing[0]) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      const [updated] = await db
+        .update(anonymousSuggestions)
+        .set({
+          ...req.body,
+          statusUpdatedAt: req.body.status !== existing[0].status ? new Date() : existing[0].statusUpdatedAt,
+          updatedAt: new Date()
+        })
+        .where(eq(anonymousSuggestions.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating suggestion:", error);
+      res.status(500).json({ message: "Failed to update suggestion" });
+    }
+  });
+  
+  // [5] EMPLOYEE RECOGNITION (All Employees + Managers)
+  
+  // Create employee recognition (peer or manager)
+  app.post('/api/engagement/recognition', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+      
+      // Get employee record
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!employee[0]) {
+        return res.status(403).json({ message: "Employee not found" });
+      }
+      
+      // Check if user is manager
+      const isManager = req.workspace!.role === 'owner' || req.workspace!.role === 'manager';
+      
+      const validatedData = insertEmployeeRecognitionSchema.parse({
+        ...req.body,
+        workspaceId,
+        recognizedByEmployeeId: !isManager ? employee[0].id : null,
+        recognizedByManagerId: isManager ? employee[0].id : null
+      });
+      
+      const [recognition] = await db
+        .insert(employeeRecognition)
+        .values(validatedData)
+        .returning();
+      
+      // TODO: If has_monetary_reward = true, trigger BillOS™ integration for instant taxable bonus
+      
+      res.json(recognition);
+    } catch (error: any) {
+      console.error("Error creating employee recognition:", error);
+      res.status(500).json({ message: "Failed to create employee recognition" });
+    }
+  });
+  
+  // Get employee recognition feed
+  app.get('/api/engagement/recognition', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { employeeId, isPublic } = req.query;
+      
+      let query = db
+        .select()
+        .from(employeeRecognition)
+        .where(eq(employeeRecognition.workspaceId, workspaceId))
+        .orderBy(desc(employeeRecognition.createdAt));
+      
+      if (employeeId) {
+        query = query.where(and(
+          eq(employeeRecognition.workspaceId, workspaceId),
+          eq(employeeRecognition.recognizedEmployeeId, employeeId as string)
+        ));
+      }
+      
+      if (isPublic !== undefined) {
+        query = query.where(and(
+          eq(employeeRecognition.workspaceId, workspaceId),
+          eq(employeeRecognition.isPublic, isPublic === 'true')
+        ));
+      }
+      
+      const recognitions = await query;
+      res.json(recognitions);
+    } catch (error: any) {
+      console.error("Error fetching employee recognitions:", error);
+      res.status(500).json({ message: "Failed to fetch employee recognitions" });
+    }
+  });
+  
+  // [6] EMPLOYEE HEALTH SCORES (Manager/Owner Only)
+  
+  // Get employee health scores
+  app.get('/api/engagement/health-scores', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { employeeId, riskLevel, requiresManagerAction } = req.query;
+      
+      let query = db
+        .select()
+        .from(employeeHealthScores)
+        .where(eq(employeeHealthScores.workspaceId, workspaceId))
+        .orderBy(desc(employeeHealthScores.periodEnd));
+      
+      if (employeeId) {
+        query = query.where(and(
+          eq(employeeHealthScores.workspaceId, workspaceId),
+          eq(employeeHealthScores.employeeId, employeeId as string)
+        ));
+      }
+      
+      if (riskLevel) {
+        query = query.where(and(
+          eq(employeeHealthScores.workspaceId, workspaceId),
+          eq(employeeHealthScores.riskLevel, riskLevel as string)
+        ));
+      }
+      
+      if (requiresManagerAction !== undefined) {
+        query = query.where(and(
+          eq(employeeHealthScores.workspaceId, workspaceId),
+          eq(employeeHealthScores.requiresManagerAction, requiresManagerAction === 'true')
+        ));
+      }
+      
+      const healthScores = await query;
+      res.json(healthScores);
+    } catch (error: any) {
+      console.error("Error fetching employee health scores:", error);
+      res.status(500).json({ message: "Failed to fetch employee health scores" });
+    }
+  });
+  
+  // Take action on employee health score
+  app.patch('/api/engagement/health-scores/:id/action', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { id } = req.params;
+      const { actionNotes } = req.body;
+      
+      const existing = await db
+        .select()
+        .from(employeeHealthScores)
+        .where(and(
+          eq(employeeHealthScores.id, id),
+          eq(employeeHealthScores.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      if (!existing[0]) {
+        return res.status(404).json({ message: "Health score not found" });
+      }
+      
+      const [updated] = await db
+        .update(employeeHealthScores)
+        .set({
+          actionTaken: true,
+          actionTakenAt: new Date(),
+          actionNotes
+        })
+        .where(eq(employeeHealthScores.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating health score action:", error);
+      res.status(500).json({ message: "Failed to update health score action" });
+    }
+  });
+  
+  // [7] EMPLOYER BENCHMARK SCORES (Manager/Owner Only)
+  
+  // Get employer benchmark scores
+  app.get('/api/engagement/benchmarks', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { benchmarkType, targetId } = req.query;
+      
+      let query = db
+        .select()
+        .from(employerBenchmarkScores)
+        .where(eq(employerBenchmarkScores.workspaceId, workspaceId))
+        .orderBy(desc(employerBenchmarkScores.periodEnd));
+      
+      if (benchmarkType) {
+        query = query.where(and(
+          eq(employerBenchmarkScores.workspaceId, workspaceId),
+          eq(employerBenchmarkScores.benchmarkType, benchmarkType as string)
+        ));
+      }
+      
+      if (targetId) {
+        query = query.where(and(
+          eq(employerBenchmarkScores.workspaceId, workspaceId),
+          eq(employerBenchmarkScores.targetId, targetId as string)
+        ));
+      }
+      
+      const benchmarks = await query;
+      res.json(benchmarks);
+    } catch (error: any) {
+      console.error("Error fetching employer benchmarks:", error);
+      res.status(500).json({ message: "Failed to fetch employer benchmarks" });
     }
   });
 
