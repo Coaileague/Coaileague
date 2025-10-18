@@ -74,7 +74,7 @@ import {
   offCyclePayrollRuns,
 } from "@shared/schema";
 import crypto from "crypto";
-import { sql, eq, and, or, isNull, lte, gte, desc, inArray } from "drizzle-orm";
+import { sql, eq, and, or, isNull, lte, gte, desc, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { setupWebSocket } from "./websocket";
 import { 
@@ -1025,16 +1025,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get pending tasks for leader
-  app.get('/api/leaders/pending-tasks', isAuthenticated, requireLeader, async (req: any, res) => {
-    try {
-      // TODO: Implement pending tasks query
-      // For now, return empty array
-      res.json([]);
-    } catch (error) {
-      console.error("Error fetching pending tasks:", error);
-      res.status(500).json({ message: "Failed to fetch pending tasks" });
-    }
-  });
   
   // Get recent leader actions (audit trail)
   app.get('/api/leaders/recent-actions', isAuthenticated, requireLeader, async (req: any, res) => {
@@ -1751,6 +1741,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'cancelled',
       });
 
+      // IDEMPOTENCY CHECK: Prevent duplicate replacements on retry
+      const existingReplacement = await db
+        .select()
+        .from(shifts)
+        .where(
+          and(
+            eq(shifts.replacementForShiftId, shift.id),
+            eq(shifts.workspaceId, workspace.id),
+            ne(shifts.status, 'cancelled')
+          )
+        )
+        .limit(1);
+
+      if (existingReplacement.length > 0) {
+        console.log(`[ScheduleOS™] Replacement already exists for shift ${shift.id}, skipping duplicate creation`);
+        return res.json({
+          success: true,
+          deniedShift: shift,
+          replacementShift: existingReplacement[0],
+          message: "Shift already denied with existing replacement",
+          duplicate: true,
+        });
+      }
+
       // AUTO-REPLACEMENT: Find backup employee
       const { scheduleOSAI } = await import('./ai/scheduleos');
       
@@ -1795,6 +1809,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: 'scheduled',
             });
 
+            // BILLOS™ SYNC: Update invoice for replacement shift
+            let billingUpdate = null;
+            if (shift.clientId) {
+              try {
+                // Search for invoice line item by metadata.shiftId for reliability
+                const allInvoices = await storage.getInvoicesByClient(shift.clientId, workspace.id);
+                let deniedShiftLineItem: any = null;
+                let targetInvoice: any = null;
+
+                for (const invoice of allInvoices) {
+                  if (invoice.status === 'draft') {
+                    const lineItems = await storage.getInvoiceLineItems(invoice.id);
+                    deniedShiftLineItem = lineItems.find((item: any) => {
+                      // Primary search: metadata.shiftId (most reliable)
+                      if (item.metadata && typeof item.metadata === 'object') {
+                        return item.metadata.shiftId === shift.id;
+                      }
+                      // Fallback: description contains shift ID
+                      return item.description?.includes(shift.id);
+                    });
+
+                    if (deniedShiftLineItem) {
+                      targetInvoice = invoice;
+                      break;
+                    }
+                  }
+                }
+
+                if (deniedShiftLineItem && targetInvoice) {
+                  // Remove denied shift line item
+                  await storage.deleteInvoiceLineItem(deniedShiftLineItem.id);
+                  console.log(`[BillOS™] Removed invoice line item for denied shift ${shift.id}`);
+
+                  // Add replacement shift line item
+                  const hours = replacement.billableHours;
+                  const rate = replacement.estimatedCost / hours;
+                  const amount = hours * rate;
+
+                  const newLineItem = await storage.createInvoiceLineItem({
+                    invoiceId: targetInvoice.id,
+                    description: `${replacement.title} - ${replacement.employeeName} (${new Date(replacement.startTime).toLocaleDateString()}) [Replacement]`,
+                    quantity: hours.toString(),
+                    unitPrice: rate.toFixed(2),
+                    amount: amount.toFixed(2),
+                    metadata: {
+                      shiftId: newShift.id,
+                      aiGenerated: true,
+                      scheduleOSGenerated: true,
+                      replacementFor: shift.id,
+                      billableHours: hours,
+                    },
+                  });
+
+                  // Recalculate invoice totals
+                  const updatedLineItems = await storage.getInvoiceLineItems(targetInvoice.id);
+                  const newSubtotal = updatedLineItems.reduce((sum: number, item: any) => sum + parseFloat(item.amount || '0'), 0);
+                  const taxRate = parseFloat(targetInvoice.taxRate || '0');
+                  const newTaxAmount = newSubtotal * (taxRate / 100);
+                  const newTotal = newSubtotal + newTaxAmount;
+
+                  await storage.updateInvoice(targetInvoice.id, workspace.id, {
+                    subtotal: newSubtotal.toFixed(2),
+                    taxAmount: newTaxAmount.toFixed(2),
+                    total: newTotal.toFixed(2),
+                  });
+
+                  billingUpdate = {
+                    invoiceId: targetInvoice.id,
+                    invoiceNumber: targetInvoice.invoiceNumber,
+                    removedLineItem: deniedShiftLineItem.id,
+                    addedLineItem: newLineItem.id,
+                    message: `Updated invoice ${targetInvoice.invoiceNumber} - replaced denied shift with ${replacement.employeeName}`,
+                  };
+
+                  console.log(`[BillOS™] Updated invoice ${targetInvoice.invoiceNumber} for auto-replacement`);
+                } else {
+                  // Invoice line not found - shift may not be invoiced yet, will be picked up in next invoice generation
+                  console.log(`[BillOS™] No invoice line item found for shift ${shift.id} - replacement will be billed in next invoice generation`);
+                  billingUpdate = {
+                    message: 'Shift not yet invoiced - replacement will be included in next invoice generation',
+                    deferred: true,
+                  };
+                }
+              } catch (billingError: any) {
+                console.error('[BillOS™] Failed to update invoice for replacement:', billingError);
+                // Non-fatal: replacement shift created successfully, billing can be corrected manually if needed
+                billingUpdate = {
+                  error: billingError.message,
+                  message: 'Billing sync failed - replacement shift created but invoice may need manual correction',
+                };
+              }
+            }
+
             return res.json({
               success: true,
               deniedShift: shift,
@@ -1802,6 +1909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               replacementEmployee: replacement.employeeName,
               message: `Shift denied. Auto-replacement assigned to ${replacement.employeeName}`,
               warnings: replacementResult.warnings,
+              billingUpdate,
             });
           }
         }
