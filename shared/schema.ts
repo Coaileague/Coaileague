@@ -5334,3 +5334,566 @@ export const insertAutoReportSchema = createInsertSchema(autoReports).omit({
 
 export type InsertAutoReport = z.infer<typeof insertAutoReportSchema>;
 export type AutoReport = typeof autoReports.$inferSelect;
+
+// ============================================================================
+// ONBOARDOS™ - EMPLOYEE ONBOARDING WORKFLOWS
+// ============================================================================
+
+// Onboarding workflow templates
+export const onboardingTemplates = pgTable("onboarding_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Template details
+  name: varchar("name").notNull(),
+  description: text("description"),
+  departmentId: varchar("department_id").references(() => departments.id),
+  roleTemplateId: varchar("role_template_id").references(() => roleTemplates.id),
+  
+  // Timeline
+  durationDays: integer("duration_days").default(30), // Typical onboarding length
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Onboarding tasks (checklist items for each template)
+export const onboardingTasks = pgTable("onboarding_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => onboardingTemplates.id, { onDelete: 'cascade' }),
+  
+  // Task details
+  title: varchar("title").notNull(),
+  description: text("description"),
+  taskType: varchar("task_type").notNull(), // 'document', 'training', 'meeting', 'equipment', 'access', 'orientation'
+  
+  // Assignment
+  assignedTo: varchar("assigned_to"), // 'new_hire', 'manager', 'hr', 'it', specific_user_id
+  dayOffset: integer("day_offset").default(0), // Day # in onboarding (0 = first day)
+  
+  // Requirements
+  isRequired: boolean("is_required").default(true),
+  requiresDocument: boolean("requires_document").default(false),
+  requiresSignature: boolean("requires_signature").default(false),
+  
+  // Ordering
+  sortOrder: integer("sort_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Active onboarding sessions for new hires
+export const onboardingSessions = pgTable("onboarding_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Employee being onboarded
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  templateId: varchar("template_id").notNull().references(() => onboardingTemplates.id),
+  
+  // Timeline
+  startDate: timestamp("start_date").notNull(),
+  expectedEndDate: timestamp("expected_end_date"),
+  actualEndDate: timestamp("actual_end_date"),
+  
+  // Progress tracking
+  status: varchar("status").default('in_progress'), // 'in_progress', 'completed', 'overdue'
+  completionPercentage: integer("completion_percentage").default(0),
+  
+  // Assignment
+  managerId: varchar("manager_id").references(() => users.id),
+  hrContactId: varchar("hr_contact_id").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Task completion tracking for each session
+export const onboardingTaskCompletions = pgTable("onboarding_task_completions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => onboardingSessions.id, { onDelete: 'cascade' }),
+  taskId: varchar("task_id").notNull().references(() => onboardingTasks.id, { onDelete: 'cascade' }),
+  
+  // Completion details
+  status: varchar("status").default('pending'), // 'pending', 'in_progress', 'completed', 'skipped'
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  
+  // Documents/signatures
+  documentUrl: varchar("document_url"),
+  signatureUrl: varchar("signature_url"),
+  notes: text("notes"),
+  
+  // Due date tracking
+  dueDate: timestamp("due_date"),
+  isOverdue: boolean("is_overdue").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOnboardingSessionSchema = createInsertSchema(onboardingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOnboardingTaskCompletionSchema = createInsertSchema(onboardingTaskCompletions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOnboardingTemplate = z.infer<typeof insertOnboardingTemplateSchema>;
+export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
+export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
+export type OnboardingTask = typeof onboardingTasks.$inferSelect;
+export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
+export type OnboardingSession = typeof onboardingSessions.$inferSelect;
+export type InsertOnboardingTaskCompletion = z.infer<typeof insertOnboardingTaskCompletionSchema>;
+export type OnboardingTaskCompletion = typeof onboardingTaskCompletions.$inferSelect;
+
+// ============================================================================
+// OFFBOARDOS™ - EXIT INTERVIEWS & OFFBOARDING WORKFLOWS
+// ============================================================================
+
+// Offboarding sessions
+export const offboardingSessions = pgTable("offboarding_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Employee leaving
+  employeeId: varchar("employee_id").notNull().references(() => employees.id),
+  lastWorkDay: timestamp("last_work_day").notNull(),
+  
+  // Reason for leaving
+  exitReason: varchar("exit_reason"), // 'resignation', 'termination', 'retirement', 'end_of_contract', 'other'
+  exitReasonDetails: text("exit_reason_details"),
+  isVoluntary: boolean("is_voluntary").default(true),
+  
+  // Exit interview
+  exitInterviewScheduled: timestamp("exit_interview_scheduled"),
+  exitInterviewCompleted: timestamp("exit_interview_completed"),
+  exitInterviewConductedBy: varchar("exit_interview_conducted_by").references(() => users.id),
+  exitInterviewNotes: text("exit_interview_notes"),
+  
+  // Asset returns
+  assetsReturned: boolean("assets_returned").default(false),
+  assetReturnNotes: text("asset_return_notes"),
+  
+  // Access revocation
+  accessRevoked: boolean("access_revoked").default(false),
+  accessRevokedAt: timestamp("access_revoked_at"),
+  accessRevokedBy: varchar("access_revoked_by").references(() => users.id),
+  
+  // Final paycheck
+  finalPayCalculated: boolean("final_pay_calculated").default(false),
+  finalPayAmount: decimal("final_pay_amount", { precision: 10, scale: 2 }),
+  finalPayDate: timestamp("final_pay_date"),
+  
+  // Clearance
+  clearanceStatus: varchar("clearance_status").default('pending'), // 'pending', 'cleared', 'issues'
+  clearanceNotes: text("clearance_notes"),
+  
+  // Rehire eligibility
+  eligibleForRehire: boolean("eligible_for_rehire"),
+  rehireNotes: text("rehire_notes"),
+  
+  // Status
+  status: varchar("status").default('in_progress'), // 'in_progress', 'completed'
+  completedAt: timestamp("completed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Exit interview questions & responses
+export const exitInterviewResponses = pgTable("exit_interview_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => offboardingSessions.id, { onDelete: 'cascade' }),
+  
+  // Question & answer
+  question: text("question").notNull(),
+  answer: text("answer"),
+  rating: integer("rating"), // 1-5 scale for satisfaction questions
+  
+  // Categorization
+  category: varchar("category"), // 'satisfaction', 'management', 'culture', 'compensation', 'growth', 'other'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOffboardingSessionSchema = createInsertSchema(offboardingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExitInterviewResponseSchema = createInsertSchema(exitInterviewResponses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOffboardingSession = z.infer<typeof insertOffboardingSessionSchema>;
+export type OffboardingSession = typeof offboardingSessions.$inferSelect;
+export type InsertExitInterviewResponse = z.infer<typeof insertExitInterviewResponseSchema>;
+export type ExitInterviewResponse = typeof exitInterviewResponses.$inferSelect;
+
+// ============================================================================
+// EXPENSEOS™ - EXPENSE TRACKING & REIMBURSEMENTS
+// ============================================================================
+
+export const expenseCategories = pgTable("expense_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Category details
+  name: varchar("name").notNull(),
+  description: text("description"),
+  code: varchar("code"), // Accounting code
+  
+  // Budget tracking
+  budgetId: varchar("budget_id"), // Will reference budgets table
+  
+  // Limits
+  requiresApproval: boolean("requires_approval").default(true),
+  approvalThreshold: decimal("approval_threshold", { precision: 10, scale: 2 }), // Auto-approve under this amount
+  maxPerTransaction: decimal("max_per_transaction", { precision: 10, scale: 2 }),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const expenses = pgTable("expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Expense details
+  employeeId: varchar("employee_id").notNull().references(() => employees.id),
+  categoryId: varchar("category_id").notNull().references(() => expenseCategories.id),
+  
+  // Transaction details
+  expenseDate: timestamp("expense_date").notNull(),
+  merchant: varchar("merchant"),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default('USD'),
+  
+  // Receipt
+  receiptUrl: varchar("receipt_url"),
+  receiptImageUrl: varchar("receipt_image_url"),
+  
+  // Client/project association
+  clientId: varchar("client_id").references(() => clients.id),
+  projectCode: varchar("project_code"),
+  isBillable: boolean("is_billable").default(false),
+  
+  // Approval workflow
+  status: varchar("status").default('submitted'), // 'draft', 'submitted', 'approved', 'rejected', 'reimbursed'
+  submittedAt: timestamp("submitted_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Reimbursement
+  reimbursedAt: timestamp("reimbursed_at"),
+  reimbursementMethod: varchar("reimbursement_method"), // 'direct_deposit', 'check', 'payroll'
+  reimbursementReference: varchar("reimbursement_reference"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  employeeIdx: index("expenses_employee_idx").on(table.employeeId),
+  statusIdx: index("expenses_status_idx").on(table.status),
+  dateIdx: index("expenses_date_idx").on(table.expenseDate),
+}));
+
+export const insertExpenseCategorySchema = createInsertSchema(expenseCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExpenseCategory = z.infer<typeof insertExpenseCategorySchema>;
+export type ExpenseCategory = typeof expenseCategories.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type Expense = typeof expenses.$inferSelect;
+
+// ============================================================================
+// BUDGETOS™ - BUDGET PLANNING & FORECASTING
+// ============================================================================
+
+export const budgets = pgTable("budgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Budget details
+  name: varchar("name").notNull(),
+  description: text("description"),
+  budgetType: varchar("budget_type").notNull(), // 'department', 'project', 'category', 'annual', 'quarterly'
+  
+  // Period
+  fiscalYear: integer("fiscal_year").notNull(),
+  fiscalQuarter: integer("fiscal_quarter"), // 1-4, null for annual
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  
+  // Amounts
+  plannedAmount: decimal("planned_amount", { precision: 12, scale: 2 }).notNull(),
+  adjustedAmount: decimal("adjusted_amount", { precision: 12, scale: 2 }), // After revisions
+  actualSpent: decimal("actual_spent", { precision: 12, scale: 2 }).default('0.00'),
+  committed: decimal("committed", { precision: 12, scale: 2 }).default('0.00'), // Encumbered funds
+  
+  // Department/category
+  departmentId: varchar("department_id").references(() => departments.id),
+  categoryCode: varchar("category_code"),
+  
+  // Ownership
+  ownerId: varchar("owner_id").references(() => users.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  // Status
+  status: varchar("status").default('draft'), // 'draft', 'submitted', 'approved', 'active', 'closed'
+  
+  // Alerts
+  alertThreshold: integer("alert_threshold").default(80), // Alert when X% spent
+  isOverBudget: boolean("is_over_budget").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  fiscalYearIdx: index("budgets_fiscal_year_idx").on(table.fiscalYear),
+  statusIdx: index("budgets_status_idx").on(table.status),
+  departmentIdx: index("budgets_department_idx").on(table.departmentId),
+}));
+
+// Budget line items (detailed breakdown)
+export const budgetLineItems = pgTable("budget_line_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  budgetId: varchar("budget_id").notNull().references(() => budgets.id, { onDelete: 'cascade' }),
+  
+  // Line item details
+  name: varchar("name").notNull(),
+  description: text("description"),
+  categoryCode: varchar("category_code"),
+  
+  // Amounts
+  plannedAmount: decimal("planned_amount", { precision: 12, scale: 2 }).notNull(),
+  actualSpent: decimal("actual_spent", { precision: 12, scale: 2 }).default('0.00'),
+  
+  // Ordering
+  sortOrder: integer("sort_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Budget variance analysis (monthly snapshots)
+export const budgetVariances = pgTable("budget_variances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  budgetId: varchar("budget_id").notNull().references(() => budgets.id, { onDelete: 'cascade' }),
+  
+  // Period
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  
+  // Variance data
+  plannedAmount: decimal("planned_amount", { precision: 12, scale: 2 }).notNull(),
+  actualSpent: decimal("actual_spent", { precision: 12, scale: 2 }).notNull(),
+  variance: decimal("variance", { precision: 12, scale: 2 }).notNull(), // actual - planned
+  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }), // (variance / planned) * 100
+  
+  // Analysis
+  analysisNotes: text("analysis_notes"),
+  actionItems: text("action_items").array(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  budgetMonthIdx: index("budget_variances_month_idx").on(table.budgetId, table.year, table.month),
+}));
+
+export const insertBudgetSchema = createInsertSchema(budgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBudgetLineItemSchema = createInsertSchema(budgetLineItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBudgetVarianceSchema = createInsertSchema(budgetVariances).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudgetLineItem = z.infer<typeof insertBudgetLineItemSchema>;
+export type BudgetLineItem = typeof budgetLineItems.$inferSelect;
+export type InsertBudgetVariance = z.infer<typeof insertBudgetVarianceSchema>;
+export type BudgetVariance = typeof budgetVariances.$inferSelect;
+
+// ============================================================================
+// TRAININGOS™ - LEARNING MANAGEMENT SYSTEM
+// ============================================================================
+
+// Training courses/programs
+export const trainingCourses = pgTable("training_courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Course details
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: varchar("category"), // 'compliance', 'technical', 'leadership', 'soft_skills', 'safety'
+  
+  // Content
+  courseType: varchar("course_type").notNull(), // 'online', 'in_person', 'hybrid', 'self_paced'
+  duration: integer("duration"), // Minutes
+  contentUrl: varchar("content_url"), // Link to course materials
+  videoUrl: varchar("video_url"),
+  
+  // Requirements
+  isRequired: boolean("is_required").default(false),
+  expiresAfterDays: integer("expires_after_days"), // Requires renewal (e.g., 365 for annual training)
+  passingScore: integer("passing_score"), // Minimum % to pass
+  
+  // Access
+  requiresApproval: boolean("requires_approval").default(false),
+  maxEnrollments: integer("max_enrollments"),
+  
+  // Instructor
+  instructorId: varchar("instructor_id").references(() => users.id),
+  instructorName: varchar("instructor_name"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  publishedAt: timestamp("published_at"),
+  
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Course enrollments
+export const trainingEnrollments = pgTable("training_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => trainingCourses.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Enrollment details
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  enrolledBy: varchar("enrolled_by").references(() => users.id), // Manager or self
+  
+  // Progress
+  status: varchar("status").default('enrolled'), // 'enrolled', 'in_progress', 'completed', 'failed', 'expired'
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at"),
+  
+  // Assessment
+  assessmentScore: integer("assessment_score"), // Percentage
+  attempts: integer("attempts").default(0),
+  maxAttempts: integer("max_attempts").default(3),
+  
+  // Certification
+  certificateUrl: varchar("certificate_url"),
+  certificateIssuedAt: timestamp("certificate_issued_at"),
+  
+  // Feedback
+  rating: integer("rating"), // 1-5 stars
+  feedback: text("feedback"),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  employeeIdx: index("training_enrollments_employee_idx").on(table.employeeId),
+  statusIdx: index("training_enrollments_status_idx").on(table.status),
+  expiresIdx: index("training_enrollments_expires_idx").on(table.expiresAt),
+}));
+
+// Training certifications/credentials
+export const trainingCertifications = pgTable("training_certifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Certification details
+  name: varchar("name").notNull(),
+  issuingOrganization: varchar("issuing_organization"),
+  certificationNumber: varchar("certification_number"),
+  
+  // Dates
+  issuedDate: timestamp("issued_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  
+  // Documentation
+  certificateUrl: varchar("certificate_url"),
+  verificationUrl: varchar("verification_url"),
+  
+  // Status
+  status: varchar("status").default('active'), // 'active', 'expired', 'revoked'
+  
+  // Linked to course (if applicable)
+  courseId: varchar("course_id").references(() => trainingCourses.id),
+  enrollmentId: varchar("enrollment_id").references(() => trainingEnrollments.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  employeeIdx: index("training_certifications_employee_idx").on(table.employeeId),
+  expiryIdx: index("training_certifications_expiry_idx").on(table.expiryDate),
+  statusIdx: index("training_certifications_status_idx").on(table.status),
+}));
+
+export const insertTrainingCourseSchema = createInsertSchema(trainingCourses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingEnrollmentSchema = createInsertSchema(trainingEnrollments).omit({
+  id: true,
+  enrolledAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingCertificationSchema = createInsertSchema(trainingCertifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrainingCourse = z.infer<typeof insertTrainingCourseSchema>;
+export type TrainingCourse = typeof trainingCourses.$inferSelect;
+export type InsertTrainingEnrollment = z.infer<typeof insertTrainingEnrollmentSchema>;
+export type TrainingEnrollment = typeof trainingEnrollments.$inferSelect;
+export type InsertTrainingCertification = z.infer<typeof insertTrainingCertificationSchema>;
+export type TrainingCertification = typeof trainingCertifications.$inferSelect;
