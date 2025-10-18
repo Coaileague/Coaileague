@@ -541,10 +541,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
 
   // Get user type icon - WorkforceOS logo ONLY for staff, avatars for users
   const getUserTypeIcon = (userType: string, role: string, userName: string = 'User') => {
-    // ROOT ADMIN - Detailed WorkforceOS logo (SMALLER SIZE)
+    // ROOT ADMIN - Detailed WorkforceOS logo (COMPACT SIZE)
     if (role === 'root') {
       return (
-        <div className="flex items-center justify-center scale-75">
+        <div className="flex items-center justify-center scale-[0.55]">
           <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
@@ -553,16 +553,16 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     // Bot gets special amber Sparkles icon (matching mobile chat)
     if (role === 'bot') {
       return (
-        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-600 ring-2 ring-amber-500/50">
-          <Sparkles size={18} className="text-white" />
+        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-600 ring-2 ring-amber-500/50">
+          <Sparkles size={14} className="text-white" />
         </div>
       );
     }
     
-    // ALL STAFF (deputy_admin, deputy_assistant, sysop) - WorkforceOS logo (SMALLER SIZE)
+    // ALL STAFF (deputy_admin, deputy_assistant, sysop) - WorkforceOS logo (COMPACT SIZE)
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
       return (
-        <div className="flex items-center justify-center scale-75">
+        <div className="flex items-center justify-center scale-[0.55]">
           <WorkforceOSLogo size="sm" showText={false} />
         </div>
       );
@@ -572,8 +572,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (userType === 'subscriber') {
       const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
       return (
-        <Avatar className="w-6 h-6 border-2 border-blue-400">
-          <AvatarFallback className="bg-blue-100 text-blue-700 text-[10px] font-bold">
+        <Avatar className="w-5 h-5 border border-blue-400">
+          <AvatarFallback className="bg-blue-100 text-blue-700 text-[9px] font-bold">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -584,8 +584,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (userType === 'org_user') {
       const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
       return (
-        <Avatar className="w-6 h-6 border-2 border-slate-400">
-          <AvatarFallback className="bg-slate-100 text-slate-700 text-[10px] font-bold">
+        <Avatar className="w-5 h-5 border border-slate-400">
+          <AvatarFallback className="bg-slate-100 text-slate-700 text-[9px] font-bold">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -594,21 +594,21 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     
     // Guests - Simple avatar with question mark
     return (
-      <Avatar className="w-6 h-6 border-2 border-slate-300">
-        <AvatarFallback className="bg-slate-50 text-slate-500 text-[10px]">
-          <HelpCircle className="w-3.5 h-3.5" />
+      <Avatar className="w-5 h-5 border border-slate-300">
+        <AvatarFallback className="bg-slate-50 text-slate-500 text-[9px]">
+          <HelpCircle className="w-3 h-3" />
         </AvatarFallback>
       </Avatar>
     );
   };
 
-  // Get status indicator - Compact
+  // Get status indicator - Extra Compact
   const getStatusIndicator = (status: string) => {
     switch (status) {
-      case 'online': return <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-sm" />;
-      case 'away': return <div className="w-2 h-2 bg-amber-500 rounded-full shadow-sm" />;
-      case 'busy': return <div className="w-2 h-2 bg-rose-500 rounded-full shadow-sm" />;
-      default: return <div className="w-2 h-2 bg-slate-400 rounded-full" />;
+      case 'online': return <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-sm" />;
+      case 'away': return <div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-sm" />;
+      case 'busy': return <div className="w-1.5 h-1.5 bg-rose-500 rounded-full shadow-sm" />;
+      default: return <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />;
     }
   };
 
@@ -627,6 +627,12 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   };
 
   const getRoleIcon = (role: string) => {
+    /**
+     * HARDCODED SUPERSCRIPT ROLE DISPLAY - DESKTOP CHAT ONLY
+     * DO NOT MODIFY WITHOUT EXPLICIT USER PERMISSION
+     * Makes role display like ™ in HelpOS™ - superscript but large enough to read
+     * for older users or those with vision difficulties
+     */
     // Inline superscript role badge - ONLY for staff and bot roles
     // Regular users and subscribers should NOT show role badges
     const staffRoles = ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'auditor', 'bot'];
@@ -639,8 +645,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (!roleText) return null;
     
     const isBot = role === 'bot';
+    // Larger text (text-[11px]) and higher opacity for better visibility
     return (
-      <sup className={`text-[9px] font-normal ${isBot ? 'text-amber-400/70' : 'text-indigo-400/70'}`}>
+      <sup className={`text-[11px] font-semibold ml-0.5 ${isBot ? 'text-amber-500' : 'text-blue-500'}`}>
         ({roleText})
       </sup>
     );
@@ -668,11 +675,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       // Determine if it's a bot for styling
       const isBot = roleText === 'BOT AI';
       
-      // Add the username with superscript role
+      // Add the username with superscript role - HARDCODED larger for readability
       parts.push(
         <span key={key++} className="font-semibold">
           {userName}
-          <sup className={`text-[8px] font-normal ${isBot ? 'text-amber-500' : 'text-indigo-500'}`}>
+          <sup className={`text-[11px] font-semibold ml-0.5 ${isBot ? 'text-amber-500' : 'text-blue-500'}`}>
             ({roleText})
           </sup>
         </span>
@@ -1126,7 +1133,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           </div>
           
           <ScrollArea className="flex-grow p-2">
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {uniqueUsers.map((u) => {
                 // No IRC prefix - WF logo icon shows authority
                 
@@ -1135,7 +1142,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                     <ContextMenuTrigger>
                       <div 
                         className={`
-                          flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-all border
+                          flex items-center gap-1.5 p-1 rounded-lg cursor-pointer transition-all border
                           ${selectedUserId === u.id 
                             ? 'bg-blue-100/90 shadow-sm border-blue-400/70' 
                             : 'bg-amber-50/90 hover:bg-amber-100/95 border-slate-200/50 hover:border-blue-300/50'
@@ -1144,7 +1151,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         onClick={() => setSelectedUserId(u.id)}
                         data-testid={`user-${u.id}`}
                       >
-                        {/* Status Indicator - Compact */}
+                        {/* Status Indicator - Extra Compact */}
                         <div className="flex-shrink-0">
                           {getStatusIndicator(u.status || 'online')}
                         </div>
@@ -1156,8 +1163,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         
                         {/* User Name with inline superscript role badge - matching mobile chat */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <span className={`text-xs font-semibold break-words ${getRoleColor(u.role)}`}>
+                          <div className="flex items-center gap-0.5 flex-wrap">
+                            <span className={`text-[11px] font-semibold break-words ${getRoleColor(u.role)}`}>
                               {u.role === 'bot' ? 'HelpOS' : u.name}
                               {/* Inline superscript role badge */}
                               {getRoleIcon(u.role)}

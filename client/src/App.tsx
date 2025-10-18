@@ -73,10 +73,10 @@ import { FloatingChatButton } from "@/components/floating-chat-button";
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   
-  // Check if on mobile chat - use window.location instead of useLocation() hook
+  // Check if on mobile chat OR desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
-  const isHelpDesk = window.location.pathname === '/live-chat';
+  const isHelpDesk = window.location.pathname === '/live-chat' || window.location.pathname.startsWith('/live-chat');
   
   // Custom sidebar width for better workspace layout
   const style = {
