@@ -61,6 +61,17 @@ import {
   timeEntryDiscrepancies,
   insertCustomRuleSchema,
   timeEntries as timeEntriesTable,
+  // BillOS™ Tables
+  clientRates,
+  insertClientRateSchema,
+  paymentRecords,
+  invoiceReminders,
+  clientPortalAccess,
+  expenseReports,
+  insertExpenseReportSchema,
+  employeeTaxForms,
+  employeeBankAccounts,
+  offCyclePayrollRuns,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, lte, gte, desc, inArray } from "drizzle-orm";
@@ -2287,6 +2298,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating invoice from time entries:", error);
       res.status(400).json({ message: error.message || "Failed to generate invoice" });
+    }
+  });
+
+  // ============================================================================
+  // BILLOS™ - EXTENDED INVOICE & BILLING FEATURES
+  // ============================================================================
+  
+  // Client Billing Rates Management
+  app.post('/api/client-rates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const validated = insertClientRateSchema.parse({
+        ...req.body,
+        workspaceId: workspace.id,
+      });
+
+      const [clientRate] = await db.insert(clientRates).values(validated).returning();
+      res.json(clientRate);
+    } catch (error: any) {
+      console.error("Error creating client rate:", error);
+      res.status(400).json({ message: error.message || "Failed to create client rate" });
+    }
+  });
+
+  app.get('/api/client-rates/:clientId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const rates = await db
+        .select()
+        .from(clientRates)
+        .where(
+          and(
+            eq(clientRates.workspaceId, workspace.id),
+            eq(clientRates.clientId, req.params.clientId)
+          )
+        );
+      
+      res.json(rates);
+    } catch (error: any) {
+      console.error("Error fetching client rates:", error);
+      res.status(500).json({ message: "Failed to fetch client rates" });
+    }
+  });
+
+  // Process delinquent invoices and send reminders
+  app.post('/api/invoices/process-reminders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { processDelinquentInvoices } = await import('./services/billos');
+      await processDelinquentInvoices(workspace.id);
+      
+      res.json({ message: "Delinquency reminders processed successfully" });
+    } catch (error: any) {
+      console.error("Error processing reminders:", error);
+      res.status(500).json({ message: error.message || "Failed to process reminders" });
+    }
+  });
+
+  // ============================================================================
+  // EXPENSEOS™ - EMPLOYEE EXPENSE MANAGEMENT
+  // ============================================================================
+  
+  // Submit expense report
+  app.post('/api/expenses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Find employee record for user
+      const employee = await storage.getEmployeeByUserId(userId, workspace.id);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee record not found" });
+      }
+
+      const validated = insertExpenseReportSchema.parse({
+        ...req.body,
+        workspaceId: workspace.id,
+        employeeId: employee.id,
+      });
+
+      const [expense] = await db.insert(expenseReports).values(validated).returning();
+      res.json(expense);
+    } catch (error: any) {
+      console.error("Error creating expense report:", error);
+      res.status(400).json({ message: error.message || "Failed to create expense report" });
+    }
+  });
+
+  // Get expense reports
+  app.get('/api/expenses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const expenses = await db
+        .select()
+        .from(expenseReports)
+        .where(eq(expenseReports.workspaceId, workspace.id));
+      
+      res.json(expenses);
+    } catch (error: any) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
+  // Approve/reject expense
+  app.patch('/api/expenses/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { status, rejectionReason } = req.body;
+      
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const updateData = {
+        status: status as any,
+        approvedBy: userId,
+        approvedAt: new Date(),
+        ...(status === 'rejected' && { rejectionReason }),
+      };
+
+      const [expense] = await db
+        .update(expenseReports)
+        .set(updateData)
+        .where(
+          and(
+            eq(expenseReports.id, req.params.id),
+            eq(expenseReports.workspaceId, workspace.id)
+          )
+        )
+        .returning();
+      
+      res.json(expense);
+    } catch (error: any) {
+      console.error("Error approving expense:", error);
+      res.status(500).json({ message: error.message || "Failed to approve expense" });
     }
   });
 

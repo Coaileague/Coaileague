@@ -801,6 +801,11 @@ export const timeEntries = pgTable("time_entries", {
   jobSiteLongitude: decimal("job_site_longitude", { precision: 10, scale: 7 }),
   jobSiteAddress: text("job_site_address"),
   
+  // BillOS™ Integration
+  status: varchar("status").default('pending'), // 'pending', 'approved', 'rejected', 'billed'
+  invoiceId: varchar("invoice_id").references(() => invoices.id, { onDelete: 'set null' }),
+  billableToClient: boolean("billable_to_client").default(true),
+  
   notes: text("notes"),
   
   createdAt: timestamp("created_at").defaultNow(),
