@@ -889,20 +889,6 @@ export default function ModernMobileChat() {
               </div>
             </div>
           </div>
-          {isStaff && (
-            <button 
-              onClick={() => setShowCommandMenu(!showCommandMenu)}
-              className={`flex-shrink-0 p-3 rounded-xl transition-all shadow-lg ${
-                showCommandMenu 
-                  ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-indigo-500/50' 
-                  : 'bg-white/10 text-white hover:bg-white/20 shadow-black/20'
-              }`}
-              data-testid="button-command-menu"
-              aria-label="Command Menu"
-            >
-              <Menu size={20} />
-            </button>
-          )}
         </div>
         {/* Selected user badge - Full row below header when user selected */}
         {isStaff && selectedUser && (
@@ -919,50 +905,6 @@ export default function ModernMobileChat() {
         )}
       </div>
 
-      {/* Command Menu - Hidden by default, shows when hamburger clicked */}
-      {showCommandMenu && isStaff && (
-        <div className={`absolute left-0 right-0 z-50 backdrop-blur-xl bg-black/90 border-b border-white/10 p-4 shadow-2xl animate-in slide-in-from-top-2 fade-in max-h-[70vh] overflow-y-auto ${
-          selectedUser ? 'top-[120px]' : 'top-16'
-        }`}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-semibold flex items-center gap-2 flex-wrap">
-              <Shield className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-              <span className="whitespace-nowrap">Support Commands</span>
-              {!selectedUser && <span className="text-xs text-orange-400 whitespace-nowrap">(Select a user first)</span>}
-            </h3>
-            <button 
-              onClick={() => setShowCommandMenu(false)} 
-              className="text-slate-400 hover:text-white"
-              data-testid="button-close-commands"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {supportCommands.map((cmd, idx) => (
-              <button
-                key={idx}
-                onClick={cmd.action}
-                disabled={!selectedUser}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${
-                  selectedUser 
-                    ? 'bg-white/5 hover:bg-white/10 border-white/10 active:scale-98' 
-                    : 'bg-white/5 opacity-50 cursor-not-allowed border-white/5'
-                }`}
-                data-testid={`command-${cmd.label.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <cmd.icon size={20} className={`flex-shrink-0 ${selectedUser ? cmd.color : 'text-slate-600'}`} />
-                <div className="flex-1 text-left min-w-0">
-                  <div className={`text-sm font-medium break-words ${selectedUser ? 'text-white' : 'text-slate-600'}`}>
-                    {cmd.label}
-                  </div>
-                  <div className="text-xs text-slate-500 break-words">{cmd.description}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
@@ -1050,6 +992,61 @@ export default function ModernMobileChat() {
           }
         }
       `}</style>
+
+      {/* Floating Tool/Command Button (Bottom Left) - Staff and Users */}
+      <Sheet open={showCommandMenu} onOpenChange={setShowCommandMenu}>
+        <SheetTrigger asChild>
+          <button
+            className="fixed bottom-20 left-4 z-50 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all active:scale-95"
+            data-testid="button-tools-menu"
+          >
+            <Settings size={24} />
+            {supportCommands.length > 0 && (
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-xs font-bold">
+                {supportCommands.length}
+              </div>
+            )}
+          </button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-white/10 max-h-[80vh]">
+          <SheetHeader>
+            <SheetTitle className="text-white flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-400" />
+              {isStaff ? 'Support Commands' : 'Tools & Help'}
+              {isStaff && !selectedUser && (
+                <span className="text-xs text-orange-400 ml-2">(Select a user first)</span>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
+            {supportCommands.map((cmd, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  cmd.action();
+                  setShowCommandMenu(false);
+                }}
+                disabled={!selectedUser && isStaff}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${
+                  (!isStaff || selectedUser)
+                    ? 'bg-white/5 hover:bg-white/10 border-white/10 active:scale-98' 
+                    : 'bg-white/5 opacity-50 cursor-not-allowed border-white/5'
+                }`}
+                data-testid={`command-${cmd.label.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <cmd.icon size={20} className={`flex-shrink-0 ${(!isStaff || selectedUser) ? cmd.color : 'text-slate-600'}`} />
+                <div className="flex-1 text-left min-w-0">
+                  <div className={`text-sm font-medium break-words ${(!isStaff || selectedUser) ? 'text-white' : 'text-slate-600'}`}>
+                    {cmd.label}
+                  </div>
+                  <div className="text-xs text-slate-400 break-words">{cmd.description}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Floating User List Button (Bottom Right) - Staff Only */}
       {isStaff && (
