@@ -2186,7 +2186,7 @@ export const reportTemplates = pgTable("report_templates", {
   // Template details
   name: varchar("name").notNull(), // "Daily Activity Report", "Incident Write-up", etc.
   description: text("description"),
-  category: varchar("category"), // 'security', 'healthcare', 'retail', 'construction', etc.
+  category: varchar("category"), // 'security', 'healthcare', 'retail', 'construction', 'compliance', 'executive', etc.
   
   // Field configuration (JSON array of field definitions)
   // Example: [{ name: "location", label: "Location", type: "text", required: true }, ...]
@@ -2197,6 +2197,17 @@ export const reportTemplates = pgTable("report_templates", {
   minPhotos: integer("min_photos").default(0), // Minimum photos required (e.g., 1 for incidents)
   maxPhotos: integer("max_photos").default(10), // Maximum allowed photos
   photoInstructions: text("photo_instructions"), // e.g., "Photos must be clear, well-lighted, showing full scene"
+  
+  // MONOPOLISTIC FEATURES: Compliance & Intelligence
+  isComplianceReport: boolean("is_compliance_report").default(false), // Non-editable audit-ready reports
+  complianceType: varchar("compliance_type"), // 'labor_law', 'tax_remittance', 'audit_log', 'benchmark'
+  autoGeneratePdf: boolean("auto_generate_pdf").default(false), // Auto-generate PDF for compliance
+  allowAiSummary: boolean("allow_ai_summary").default(false), // Enable GPT-4 executive summaries
+  
+  // Dynamic Report Builder
+  isDynamicReport: boolean("is_dynamic_report").default(false), // User-created drag-and-drop reports
+  dataSourceConfig: jsonb("data_source_config"), // { tables: ['timeEntries', 'invoices'], joins: [...] }
+  chartType: varchar("chart_type"), // 'table', 'bar', 'line', 'pie', 'summary'
   
   // Activation status
   isActive: boolean("is_active").default(false), // Whether activated for this workspace
@@ -2317,6 +2328,130 @@ export const insertCustomerReportAccessSchema = createInsertSchema(customerRepor
 
 export type InsertCustomerReportAccess = z.infer<typeof insertCustomerReportAccessSchema>;
 export type CustomerReportAccess = typeof customerReportAccess.$inferSelect;
+
+// ============================================================================
+// MONOPOLISTIC REPORTOS™ FEATURES
+// ============================================================================
+
+// Real-Time KPI Alerts - Configurable notifications tied to PredictionOS™ and Custom Logic
+export const kpiAlerts = pgTable("kpi_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Alert configuration
+  alertName: varchar("alert_name").notNull(), // "Unapproved Overtime Alert", "Turnover Risk Alert"
+  description: text("description"),
+  alertType: varchar("alert_type").notNull(), // 'overtime', 'turnover_risk', 'cost_variance', 'compliance', 'custom'
+  
+  // Threshold & Trigger
+  metricSource: varchar("metric_source").notNull(), // 'time_entries', 'predictions', 'custom_rules', 'invoices'
+  thresholdValue: decimal("threshold_value", { precision: 10, scale: 2 }).notNull(), // e.g., 2.0 for "2 hours"
+  thresholdUnit: varchar("threshold_unit"), // 'hours', 'percent', 'score', 'dollars'
+  comparisonOperator: varchar("comparison_operator").notNull(), // '>', '<', '>=', '<=', '=='
+  
+  // Notification settings
+  notifyRoles: jsonb("notify_roles").notNull(), // ['owner', 'manager', 'employee'] - who gets notified
+  notifyUsers: jsonb("notify_users"), // [userId1, userId2] - specific users
+  notificationMethod: varchar("notification_method").default('in_app'), // 'in_app', 'email', 'sms', 'all'
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  // Tracking
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  triggerCount: integer("trigger_count").default(0),
+  
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertKpiAlertSchema = createInsertSchema(kpiAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertKpiAlert = z.infer<typeof insertKpiAlertSchema>;
+export type KpiAlert = typeof kpiAlerts.$inferSelect;
+
+// Alert Trigger History - Log every time an alert fires
+export const kpiAlertTriggers = pgTable("kpi_alert_triggers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertId: varchar("alert_id").notNull().references(() => kpiAlerts.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Trigger details
+  metricValue: decimal("metric_value", { precision: 10, scale: 2 }).notNull(), // Actual value that triggered alert
+  thresholdValue: decimal("threshold_value", { precision: 10, scale: 2 }).notNull(), // Threshold at time of trigger
+  
+  // Context
+  entityType: varchar("entity_type"), // 'shift', 'employee', 'invoice', 'prediction'
+  entityId: varchar("entity_id"), // ID of entity that triggered alert
+  entityData: jsonb("entity_data"), // Snapshot of relevant data
+  
+  // Notification tracking
+  notifiedUsers: jsonb("notified_users"), // [userId1, userId2] who was actually notified
+  acknowledged: boolean("acknowledged").default(false),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertKpiAlertTriggerSchema = createInsertSchema(kpiAlertTriggers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertKpiAlertTrigger = z.infer<typeof insertKpiAlertTriggerSchema>;
+export type KpiAlertTrigger = typeof kpiAlertTriggers.$inferSelect;
+
+// Benchmark Metrics - Anonymous aggregation for peer comparison (Future Moat)
+export const benchmarkMetrics = pgTable("benchmark_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Metrics period
+  periodType: varchar("period_type").notNull(), // 'weekly', 'monthly', 'quarterly'
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Efficiency metrics
+  avgTimeToInvoicePayment: decimal("avg_time_to_invoice_payment", { precision: 8, scale: 2 }), // Days
+  shiftAdherenceRate: decimal("shift_adherence_rate", { precision: 5, scale: 2 }), // Percentage
+  employeeTurnoverRate: decimal("employee_turnover_rate", { precision: 5, scale: 2 }), // Percentage
+  avgOvertimePercentage: decimal("avg_overtime_percentage", { precision: 5, scale: 2 }), // Percentage
+  
+  // Financial metrics
+  avgRevenuePerEmployee: decimal("avg_revenue_per_employee", { precision: 12, scale: 2 }),
+  avgCostVariancePercentage: decimal("avg_cost_variance_percentage", { precision: 5, scale: 2 }),
+  platformFeeCollected: decimal("platform_fee_collected", { precision: 12, scale: 2 }),
+  
+  // Operational metrics
+  totalActiveEmployees: integer("total_active_employees"),
+  totalActiveClients: integer("total_active_clients"),
+  totalShiftsScheduled: integer("total_shifts_scheduled"),
+  totalHoursWorked: decimal("total_hours_worked", { precision: 12, scale: 2 }),
+  
+  // Industry classification (for peer grouping - added later)
+  industryCategory: varchar("industry_category"), // 'security', 'healthcare', 'construction', etc.
+  companySize: varchar("company_size"), // 'small', 'medium', 'large', 'enterprise'
+  
+  // Privacy & Anonymization
+  isAnonymized: boolean("is_anonymized").default(true), // Always true for peer comparison
+  shareWithPeerBenchmarks: boolean("share_with_peer_benchmarks").default(false), // Opt-in for industry averages
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBenchmarkMetricSchema = createInsertSchema(benchmarkMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBenchmarkMetric = z.infer<typeof insertBenchmarkMetricSchema>;
+export type BenchmarkMetric = typeof benchmarkMetrics.$inferSelect;
 
 // Support Tickets - Help desk for report requests and template requests
 export const supportTickets = pgTable("support_tickets", {
