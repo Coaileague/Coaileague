@@ -3594,6 +3594,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // MONOPOLISTIC REPORTOS™ FEATURES
+  // ============================================================================
+  
+  // COMPLIANCE & LEGAL REPORTS - Audit-Ready Reporting Suite
+  app.get('/api/compliance-reports/labor-violations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates required" });
+      }
+
+      const { generateLaborLawViolationReport } = await import('./services/complianceReports');
+      const report = await generateLaborLawViolationReport(
+        user.currentWorkspaceId,
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating labor violations report:", error);
+      res.status(500).json({ message: "Failed to generate labor violations report" });
+    }
+  });
+
+  app.get('/api/compliance-reports/tax-remittance', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates required" });
+      }
+
+      const { generateTaxRemittanceProofReport } = await import('./services/complianceReports');
+      const report = await generateTaxRemittanceProofReport(
+        user.currentWorkspaceId,
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating tax remittance report:", error);
+      res.status(500).json({ message: "Failed to generate tax remittance report" });
+    }
+  });
+
+  app.get('/api/compliance-reports/audit-log', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { startDate, endDate, filterUserId } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start and end dates required" });
+      }
+
+      const { generateTimeEntryAuditLog } = await import('./services/complianceReports');
+      const report = await generateTimeEntryAuditLog(
+        user.currentWorkspaceId,
+        new Date(startDate as string),
+        new Date(endDate as string),
+        filterUserId as string | undefined
+      );
+
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating audit log report:", error);
+      res.status(500).json({ message: "Failed to generate audit log report" });
+    }
+  });
+
+  // KPI ALERTS - Real-Time Risk Notifications
+  app.get('/api/kpi-alerts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const alerts = await storage.getKpiAlerts(user.currentWorkspaceId);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching KPI alerts:", error);
+      res.status(500).json({ message: "Failed to fetch KPI alerts" });
+    }
+  });
+
+  app.post('/api/kpi-alerts', isAuthenticated, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const alert = await storage.createKpiAlert({
+        ...req.body,
+        workspaceId: user.currentWorkspaceId,
+        createdBy: userId,
+      });
+
+      res.json(alert);
+    } catch (error) {
+      console.error("Error creating KPI alert:", error);
+      res.status(500).json({ message: "Failed to create KPI alert" });
+    }
+  });
+
+  app.patch('/api/kpi-alerts/:id', isAuthenticated, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const alert = await storage.updateKpiAlert(id, user.currentWorkspaceId, req.body);
+      res.json(alert);
+    } catch (error) {
+      console.error("Error updating KPI alert:", error);
+      res.status(500).json({ message: "Failed to update KPI alert" });
+    }
+  });
+
+  app.delete('/api/kpi-alerts/:id', isAuthenticated, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const deleted = await storage.deleteKpiAlert(id, user.currentWorkspaceId);
+      if (!deleted) {
+        return res.status(404).json({ message: "KPI alert not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting KPI alert:", error);
+      res.status(500).json({ message: "Failed to delete KPI alert" });
+    }
+  });
+
+  app.get('/api/kpi-alert-triggers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { alertId } = req.query;
+      const triggers = await storage.getKpiAlertTriggers(user.currentWorkspaceId, alertId as string | undefined);
+      res.json(triggers);
+    } catch (error) {
+      console.error("Error fetching KPI alert triggers:", error);
+      res.status(500).json({ message: "Failed to fetch KPI alert triggers" });
+    }
+  });
+
+  app.post('/api/kpi-alert-triggers/:id/acknowledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+
+      const trigger = await storage.acknowledgeAlert(id, userId);
+      res.json(trigger);
+    } catch (error) {
+      console.error("Error acknowledging alert:", error);
+      res.status(500).json({ message: "Failed to acknowledge alert" });
+    }
+  });
+
+  // AI EXECUTIVE SUMMARIES - GPT-4 Narrative Generation
+  app.post('/api/reports/:id/generate-summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const { reportData, reportType } = req.body;
+
+      // Check if OpenAI is configured
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (!openaiKey) {
+        return res.status(503).json({ message: "AI summary service not configured" });
+      }
+
+      const { OpenAI } = await import('openai');
+      const openai = new OpenAI({ apiKey: openaiKey });
+
+      const prompt = `You are an executive summary generator for workforce management reports.
+
+Report Type: ${reportType}
+Report Data: ${JSON.stringify(reportData, null, 2)}
+
+Generate a concise 3-paragraph executive summary in plain language:
+1. Key Finding - What is the most important insight?
+2. Primary Cause - What is driving this result?
+3. Recommended Action - What should management do?
+
+Keep it professional, actionable, and under 250 words.`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+
+      const summary = completion.choices[0]?.message?.content || 'Unable to generate summary';
+
+      res.json({ summary });
+    } catch (error) {
+      console.error("Error generating AI summary:", error);
+      res.status(500).json({ message: "Failed to generate AI summary" });
+    }
+  });
+
+  // BENCHMARK METRICS - Peer Comparison Data
+  app.get('/api/benchmark-metrics', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { periodType } = req.query;
+      const metrics = await storage.getBenchmarkMetrics(user.currentWorkspaceId, periodType as string | undefined);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching benchmark metrics:", error);
+      res.status(500).json({ message: "Failed to fetch benchmark metrics" });
+    }
+  });
+
+  app.post('/api/benchmark-metrics', isAuthenticated, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const metric = await storage.createBenchmarkMetric({
+        ...req.body,
+        workspaceId: user.currentWorkspaceId,
+      });
+
+      res.json(metric);
+    } catch (error) {
+      console.error("Error creating benchmark metric:", error);
+      res.status(500).json({ message: "Failed to create benchmark metric" });
+    }
+  });
+
   // Support Tickets - Create ticket (requires authentication to get workspaceId)
   app.post('/api/support/tickets', isAuthenticated, async (req: any, res) => {
     try {
