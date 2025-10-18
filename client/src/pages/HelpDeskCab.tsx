@@ -1442,10 +1442,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         onConfirm={(reason) => {
           if (kickDialogUser) {
             kickUser(kickDialogUser.userId, reason);
-            toast({ 
-              title: "✓ User Removed", 
-              description: `${kickDialogUser.userName} • ${reason}`,
-            });
+            // Don't show success toast immediately - wait for server confirmation
+            // Server will broadcast a system message when user is actually removed
             setKickDialogUser(null);
           }
         }}
