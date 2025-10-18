@@ -243,18 +243,18 @@ export function ChatAnnouncementBanner({
   const IconComponent = currentMessage.icon ? iconMap[currentMessage.icon] : null;
   const emoticon = currentMessage.emoticon ? emoticons[currentMessage.emoticon] : null;
 
-  // Color schemes - match header gradient exactly
+  // Color schemes - TRANSPARENT to blend with header (animations show through)
   const colorSchemes = {
-    info: 'bg-slate-800 text-white',
-    warning: 'bg-slate-800 text-amber-200',
-    success: 'bg-slate-800 text-emerald-200',
-    promo: 'bg-slate-800 text-white',
-    queue: 'bg-slate-800 text-cyan-200'
+    info: 'bg-transparent text-white',
+    warning: 'bg-transparent text-amber-200',
+    success: 'bg-transparent text-emerald-200',
+    promo: 'bg-transparent text-white',
+    queue: 'bg-transparent text-cyan-200'
   };
 
   const BannerContent = (
     <div className={`
-      w-full min-h-[32px] transition-all duration-500 ease-in-out relative overflow-hidden
+      w-full min-h-[48px] transition-all duration-500 ease-in-out relative overflow-hidden
       ${colorSchemes[currentMessage.type]}
       animate-in fade-in slide-in-from-top-2
     `}>
