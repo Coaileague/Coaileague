@@ -482,12 +482,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       );
     }
     
-    // Bot gets special animated icon
+    // Bot gets special amber Sparkles icon (matching mobile chat)
     if (role === 'bot') {
       return (
-        <div className="relative flex items-center justify-center w-5 h-5">
-          <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-pulse"></div>
-          <Bot className="w-3.5 h-3.5 text-blue-600" />
+        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-600 ring-2 ring-amber-500/50">
+          <Sparkles size={18} className="text-white" />
         </div>
       );
     }
@@ -545,52 +544,62 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     }
   };
 
-  const getRoleIcon = (role: string) => {
-    // Platform role titles in manuscript style (smaller superscript-like text)
-    switch (role) {
-      case 'root': return <span className="text-[9px] text-slate-500 font-normal align-super">(RAdmin)</span>;
-      case 'bot': return null; // HelpOS bot doesn't need role tag
-      case 'deputy_admin': return <span className="text-[9px] text-slate-500 font-normal align-super">(DAdmin)</span>;
-      case 'deputy_assistant': return <span className="text-[9px] text-slate-500 font-normal align-super">(DAssist)</span>;
-      case 'sysop': return <span className="text-[9px] text-slate-500 font-normal align-super">(Sysop)</span>;
+  // Get role display text - matching mobile chat format
+  const getRoleDisplay = (role?: string) => {
+    if (!role) return null;
+    switch(role) {
+      case 'root': return 'Admin';
+      case 'deputy_admin': return 'Deputy';
+      case 'deputy_assistant': return 'Assistant';
+      case 'sysop': return 'Sysop';
+      case 'auditor': return 'Auditor';
+      case 'bot': return 'BOT AI';
       default: return null;
     }
   };
 
+  const getRoleIcon = (role: string) => {
+    // Inline superscript role badge (like Brigido^(Admin)) - matching mobile chat
+    const roleText = getRoleDisplay(role);
+    if (!roleText) return null;
+    
+    const isBot = role === 'bot';
+    return (
+      <sup className={`text-[9px] font-normal ${isBot ? 'text-amber-400/70' : 'text-indigo-400/70'}`}>
+        ({roleText})
+      </sup>
+    );
+  };
+
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'root': return 'text-slate-700 font-black';  // Root admin
-      case 'bot': return 'text-slate-600 font-bold';
-      case 'deputy_admin': return 'text-slate-700 font-bold';
-      case 'deputy_assistant': return 'text-slate-600 font-bold';
-      case 'sysop': return 'text-slate-600 font-bold';
-      default: return 'text-slate-700 font-semibold';
+      case 'root': return 'text-indigo-400 font-bold';  // Root admin - matching mobile chat
+      case 'bot': return 'text-amber-400 font-bold';  // Bot - amber color matching mobile chat
+      case 'deputy_admin': return 'text-indigo-400 font-bold';
+      case 'deputy_assistant': return 'text-indigo-400 font-bold';
+      case 'sysop': return 'text-indigo-400 font-bold';
+      default: return 'text-white font-semibold';
     }
   };
 
-  // Get message bubble color - Professional styling
+  // Get message bubble color - Professional styling matching mobile chat
   const getMessageBubbleColor = (senderType: string, role: string, isSelf: boolean) => {
     if (isSelf) {
-      return 'bg-slate-100 border border-slate-300';
+      return 'bg-slate-700/90 border border-slate-600';
     }
     
-    // Root admin messages
-    if (role === 'root') {
-      return 'bg-slate-200 border border-slate-300';
+    // Bot messages - amber background matching mobile chat
+    if (role === 'bot' || senderType === 'bot') {
+      return 'bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/30';
     }
     
-    // Bot messages
-    if (role === 'bot') {
-      return 'bg-white border border-slate-200';
+    // Staff messages - indigo/blue background matching mobile chat
+    if (role === 'root' || role === 'deputy_admin' || role === 'deputy_assistant' || role === 'sysop') {
+      return 'bg-gradient-to-br from-indigo-600/20 to-blue-600/20 border border-indigo-500/30';
     }
     
-    // Staff messages
-    if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
-      return 'bg-slate-50 border border-slate-200';
-    }
-    
-    // Customer messages
-    return 'bg-white border border-slate-200';
+    // Customer/regular messages
+    return 'bg-slate-100/80 border border-slate-200';
   };
 
   const isStaff = user && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes((user as any).platformRole);
@@ -994,17 +1003,20 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        {/* Header: Name, Role Badge, Timestamp */}
+                        {/* Header: Name with inline superscript role badge + Timestamp */}
                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          <span className={`text-xs ${nameColor}`}>{displayName}</span>
-                          {getRoleIcon(role)}
+                          <span className={`text-xs font-bold ${nameColor}`}>
+                            {role === 'bot' ? 'HelpOS' : displayName.split('(')[0].trim()}
+                            {/* Role badge as inline superscript like mathematical notation */}
+                            {getRoleIcon(role)}
+                          </span>
                           <span className="text-[10px] text-slate-500 ml-auto">
                             {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                         
-                        {/* Message Content - Smaller text */}
-                        <p className="text-slate-800 text-xs leading-snug">{msg.message}</p>
+                        {/* Message Content - Smaller text with proper wrapping */}
+                        <p className="text-slate-800 text-xs leading-snug break-words whitespace-pre-wrap">{msg.message}</p>
                       </div>
                     </div>
                   </div>
@@ -1089,13 +1101,14 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                           {getUserTypeIcon(u.userType || 'guest', u.role, u.name)}
                         </div>
                         
-                        {/* User Name and Role - Smaller text */}
+                        {/* User Name with inline superscript role badge - matching mobile chat */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1 flex-wrap">
                             <span className={`text-xs font-semibold break-words ${getRoleColor(u.role)}`}>
-                              {u.name}
+                              {u.role === 'bot' ? 'HelpOS' : u.name}
+                              {/* Inline superscript role badge */}
+                              {getRoleIcon(u.role)}
                             </span>
-                            {getRoleIcon(u.role)}
                           </div>
                         </div>
                       </div>
