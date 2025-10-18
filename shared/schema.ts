@@ -5974,11 +5974,46 @@ export const disputes = pgTable("disputes", {
 // SCHEMA EXPORTS - Disputes Only (Write-Ups handled via RMS)
 // ============================================================================
 
+// Enhanced insert schema with validation
 export const insertDisputeSchema = createInsertSchema(disputes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  disputeType: z.enum(['performance_review', 'employer_rating', 'report_submission', 'composite_score']),
+  targetType: z.enum(['performance_reviews', 'employer_ratings', 'report_submissions', 'composite_scores']),
+  title: z.string().min(5).max(200),
+  reason: z.string().min(20).max(5000),
+  evidence: z.array(z.string().url()).optional(),
+  requestedOutcome: z.string().max(1000).optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  status: z.enum(['pending', 'under_review', 'resolved', 'rejected', 'appealed']).default('pending'),
+});
+
+// Schema for creating a new dispute (client-facing)
+export const createDisputeSchema = insertDisputeSchema.omit({
+  workspaceId: true,
+  filedBy: true,
+  filedByRole: true,
+  filedAt: true,
+  assignedTo: true,
+  assignedAt: true,
+  reviewDeadline: true,
+  reviewStartedAt: true,
+  reviewerNotes: true,
+  reviewerRecommendation: true,
+  resolvedAt: true,
+  resolvedBy: true,
+  resolution: true,
+  resolutionAction: true,
+  changesApplied: true,
+  changesAppliedAt: true,
+  canBeAppealed: true,
+  appealDeadline: true,
+  appealedToUpperManagement: true,
+  statusHistory: true,
 });
 
 export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+export type CreateDispute = z.infer<typeof createDisputeSchema>;
 export type Dispute = typeof disputes.$inferSelect;

@@ -10028,6 +10028,306 @@ Return ONLY valid JSON array with this exact structure:
     }
   });
 
+  // ============================================================================
+  // DISPUTES - Fair Employee/Employer Transparency System
+  // ============================================================================
+  
+  // Create a new dispute
+  app.post('/api/disputes', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      // Validate using Zod schema
+      const { createDisputeSchema } = await import('@shared/schema');
+      const validationResult = createDisputeSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const data = validationResult.data;
+
+      // Get employee to determine role
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) {
+        return res.status(403).json({ message: "Employee not found" });
+      }
+
+      // Validate target entity exists and belongs to workspace
+      let targetExists = false;
+      
+      if (data.targetType === 'performance_reviews') {
+        const review = await storage.getPerformanceReview(data.targetId, user.currentWorkspaceId);
+        targetExists = !!review;
+      } else if (data.targetType === 'report_submissions') {
+        const submission = await storage.getReportSubmissionById(data.targetId);
+        // Verify it belongs to the workspace
+        if (submission) {
+          const reportSubmissions = await storage.getReportSubmissions(user.currentWorkspaceId, {});
+          targetExists = reportSubmissions.some(s => s.id === data.targetId);
+        }
+      } else if (data.targetType === 'employer_ratings') {
+        // Employer ratings feature not yet implemented
+        // For now, allow dispute creation (will be validated when feature is added)
+        targetExists = true;
+      } else if (data.targetType === 'composite_scores') {
+        // Composite scores feature not yet implemented
+        // For now, allow dispute creation (will be validated when feature is added)
+        targetExists = true;
+      }
+
+      if (!targetExists) {
+        return res.status(404).json({ message: "Target entity not found in workspace" });
+      }
+
+      // Calculate review deadline (7 days from now)
+      const reviewDeadline = new Date();
+      reviewDeadline.setDate(reviewDeadline.getDate() + 7);
+
+      // Calculate appeal deadline (14 days from now)
+      const appealDeadline = new Date();
+      appealDeadline.setDate(appealDeadline.getDate() + 14);
+
+      const dispute = await storage.createDispute({
+        ...data,
+        workspaceId: user.currentWorkspaceId,
+        filedBy: userId,
+        filedByRole: employee.role || 'employee',
+        filedAt: new Date(),
+        reviewDeadline,
+        appealDeadline,
+        canBeAppealed: true,
+        appealedToUpperManagement: false,
+        changesApplied: false,
+      });
+
+      res.json(dispute);
+    } catch (error) {
+      console.error("Error creating dispute:", error);
+      res.status(500).json({ message: "Failed to create dispute" });
+    }
+  });
+
+  // Get all disputes for current workspace (with filters) - HR/Manager only
+  app.get('/api/disputes', isAuthenticated, requireHRManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { status, disputeType, assignedTo } = req.query;
+      
+      const disputes = await storage.getDisputesByWorkspace(
+        user.currentWorkspaceId,
+        { 
+          status: status as string, 
+          disputeType: disputeType as string,
+          assignedTo: assignedTo as string 
+        }
+      );
+
+      res.json(disputes);
+    } catch (error) {
+      console.error("Error fetching disputes:", error);
+      res.status(500).json({ message: "Failed to fetch disputes" });
+    }
+  });
+
+  // Get disputes filed by current user
+  app.get('/api/disputes/my-disputes', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const disputes = await storage.getDisputesByFiledBy(userId, user.currentWorkspaceId);
+      res.json(disputes);
+    } catch (error) {
+      console.error("Error fetching my disputes:", error);
+      res.status(500).json({ message: "Failed to fetch disputes" });
+    }
+  });
+
+  // Get disputes for a specific target (e.g., all disputes for a performance review)
+  app.get('/api/disputes/target/:targetType/:targetId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { targetType, targetId } = req.params;
+      const disputes = await storage.getDisputesByTarget(targetType, targetId, user.currentWorkspaceId);
+      res.json(disputes);
+    } catch (error) {
+      console.error("Error fetching target disputes:", error);
+      res.status(500).json({ message: "Failed to fetch disputes" });
+    }
+  });
+
+  // Get a single dispute by ID
+  app.get('/api/disputes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const dispute = await storage.getDispute(id, user.currentWorkspaceId);
+      
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      // Check authorization: employees can only see their own disputes
+      const employee = await storage.getEmployeeByUserId(userId);
+      const isHROrManager = employee && ['owner', 'manager', 'hr_manager'].includes(employee.role || '');
+      
+      if (!isHROrManager && dispute.filedBy !== userId) {
+        return res.status(403).json({ message: "You can only view your own disputes" });
+      }
+
+      res.json(dispute);
+    } catch (error) {
+      console.error("Error fetching dispute:", error);
+      res.status(500).json({ message: "Failed to fetch dispute" });
+    }
+  });
+
+  // Assign a dispute to an HR/Manager
+  app.patch('/api/disputes/:id/assign', isAuthenticated, requireHRManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const { assignedTo } = req.body;
+
+      if (!assignedTo) {
+        return res.status(400).json({ message: "assignedTo is required" });
+      }
+
+      const dispute = await storage.assignDispute(id, user.currentWorkspaceId, assignedTo);
+      
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      res.json(dispute);
+    } catch (error) {
+      console.error("Error assigning dispute:", error);
+      res.status(500).json({ message: "Failed to assign dispute" });
+    }
+  });
+
+  // Update a dispute (for adding notes, evidence, etc.)
+  app.patch('/api/disputes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const dispute = await storage.updateDispute(id, user.currentWorkspaceId, req.body);
+      
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      res.json(dispute);
+    } catch (error) {
+      console.error("Error updating dispute:", error);
+      res.status(500).json({ message: "Failed to update dispute" });
+    }
+  });
+
+  // Resolve a dispute
+  app.post('/api/disputes/:id/resolve', isAuthenticated, requireHRManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      const { resolution, resolutionAction } = req.body;
+
+      if (!resolution || !resolutionAction) {
+        return res.status(400).json({ message: "resolution and resolutionAction are required" });
+      }
+
+      const dispute = await storage.resolveDispute(
+        id,
+        user.currentWorkspaceId,
+        userId,
+        resolution,
+        resolutionAction
+      );
+      
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      res.json(dispute);
+    } catch (error) {
+      console.error("Error resolving dispute:", error);
+      res.status(500).json({ message: "Failed to resolve dispute" });
+    }
+  });
+
+  // Apply changes from a resolved dispute (update the original record)
+  app.post('/api/disputes/:id/apply-changes', isAuthenticated, requireHRManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { id } = req.params;
+      
+      // Get the dispute first
+      const dispute = await storage.getDispute(id, user.currentWorkspaceId);
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      if (dispute.status !== 'resolved') {
+        return res.status(400).json({ message: "Dispute must be resolved before applying changes" });
+      }
+
+      // TODO: Implement logic to apply changes to the target entity
+      // This will depend on the dispute type and resolution action
+      // For now, just mark it as applied
+      
+      const updated = await storage.applyDisputeChanges(id, user.currentWorkspaceId);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error applying dispute changes:", error);
+      res.status(500).json({ message: "Failed to apply dispute changes" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }
