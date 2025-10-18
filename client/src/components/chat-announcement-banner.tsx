@@ -34,13 +34,15 @@ interface ChatAnnouncementBannerProps {
   queueWaitTime?: string;
   onlineStaff?: number;
   customMessages?: BannerMessage[];
+  seasonalAnimationsEnabled?: boolean;
 }
 
 export function ChatAnnouncementBanner({ 
   queuePosition, 
   queueWaitTime = "2-3 minutes",
   onlineStaff = 0,
-  customMessages = []
+  customMessages = [],
+  seasonalAnimationsEnabled = true
 }: ChatAnnouncementBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [seasonalEffect, setSeasonalEffect] = useState<'snow' | 'fireworks' | 'hearts' | 'halloween' | 'none'>('none');
@@ -265,30 +267,30 @@ export function ChatAnnouncementBanner({
     <div className={`
       w-full min-h-[72px] transition-all duration-500 ease-in-out relative overflow-hidden
       bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500
-      border-b-4 border-blue-300 shadow-xl backdrop-blur-sm
+      shadow-xl backdrop-blur-sm
       animate-in fade-in slide-in-from-top-2
     `}>
-      {/* ADVANCED PARTICLE EFFECTS - Physics-based with emojis */}
-      {seasonalEffect === 'snow' && (
+      {/* ADVANCED PARTICLE EFFECTS - Physics-based with emojis - Controlled by seasonalAnimationsEnabled */}
+      {seasonalAnimationsEnabled && seasonalEffect === 'snow' && (
         <>
           <ParticleSystem type="snow" count={40} duration={300000} enabled={true} />
           <FloatingEmojis emojis={['❄️', '⛄', '🌨️']} count={5} />
         </>
       )}
-      {seasonalEffect === 'fireworks' && (
+      {seasonalAnimationsEnabled && seasonalEffect === 'fireworks' && (
         <>
           <ParticleSystem type="fireworks" count={60} duration={300000} enabled={true} />
           <ParticleSystem type="stars" count={30} duration={300000} enabled={true} />
           <FloatingEmojis emojis={['🎆', '🎇', '✨', '💫', '🌟']} count={8} />
         </>
       )}
-      {seasonalEffect === 'hearts' && (
+      {seasonalAnimationsEnabled && seasonalEffect === 'hearts' && (
         <>
           <ParticleSystem type="hearts" count={35} duration={300000} enabled={true} />
           <FloatingEmojis emojis={['❤️', '💕', '💖', '💗', '💘', '💝']} count={8} />
         </>
       )}
-      {seasonalEffect === 'halloween' && (
+      {seasonalAnimationsEnabled && seasonalEffect === 'halloween' && (
         <>
           <ParticleSystem type="celebration" count={40} duration={300000} enabled={true} />
           <FloatingEmojis emojis={['👻', '🎃', '🦇', '🕷️', '🕸️', '💀']} count={10} />
@@ -296,7 +298,7 @@ export function ChatAnnouncementBanner({
       )}
       
       {/* CONFETTI for celebrations */}
-      {currentMessage.type === 'promo' && (
+      {seasonalAnimationsEnabled && currentMessage.type === 'promo' && (
         <ParticleSystem type="confetti" count={30} duration={300000} enabled={true} />
       )}
       <div className="max-w-full px-4 sm:px-6 py-3 flex items-center justify-center gap-2 sm:gap-3 relative z-10 min-h-[48px]">

@@ -902,6 +902,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             queuePosition={queueLength || 1}
             queueWaitTime="2-3 minutes"
             onlineStaff={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
+            seasonalAnimationsEnabled={seasonalAnimationsEnabled}
             customMessages={customBannerMessage ? [{
               id: 'custom-1',
               text: customBannerMessage,
@@ -912,13 +913,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           
           {/* Floating Controls - Overlaid on banner - Far Right Only */}
           <div className="absolute top-1 right-2 flex items-center gap-1.5">
-            {/* Hamburger Menu and Theme Toggle - Transparent until needed */}
-            <div className="flex items-center gap-1">
-              <SidebarTrigger data-testid="button-sidebar-toggle" className="bg-white/30 hover:bg-white/50 border-white/50 backdrop-blur-md h-6 w-6 p-1" />
-              <ThemeToggle className="bg-white/30 hover:bg-white/50 border-white/50 backdrop-blur-md h-6 w-6" />
-            </div>
-            
-            {/* Connection Status */}
+            {/* Connection Status - Always visible */}
             {connectionStatus === 'connected' && (
               <div 
                 className="flex items-center gap-1 text-[9px] bg-emerald-500/90 px-2 py-0.5 rounded-full backdrop-blur-md border border-emerald-400/80 shadow-lg text-white"
@@ -957,24 +952,28 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
               </div>
             )}
             
-            {/* Staff Controls */}
+            {/* Hamburger Menu and Theme Toggle - Transparent and only visible on hover (desktop) */}
+            <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
+              <SidebarTrigger data-testid="button-sidebar-toggle" className="bg-white/20 hover:bg-white/40 border-white/30 backdrop-blur-md h-6 w-6 p-1" />
+              <ThemeToggle className="bg-white/20 hover:bg-white/40 border-white/30 backdrop-blur-md h-6 w-6" />
+            </div>
+            
+            {/* Staff Controls - Transparent and only visible on hover (desktop) */}
             {isStaff && (
-              <>
+              <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
                 <Button
                   onClick={() => {
-                    setSeasonalAnimationsEnabled(prev => {
-                      const newValue = !prev;
-                      localStorage.setItem('seasonal-animations-enabled', String(newValue));
-                      return newValue;
-                    });
+                    const newValue = !seasonalAnimationsEnabled;
+                    setSeasonalAnimationsEnabled(newValue);
+                    localStorage.setItem('seasonal-animations-enabled', String(newValue));
                     toast({ 
-                      title: seasonalAnimationsEnabled ? "Seasonal animations disabled" : "Seasonal animations enabled",
-                      description: seasonalAnimationsEnabled ? "Background effects turned off" : "Background effects turned on"
+                      title: newValue ? "Seasonal animations enabled" : "Seasonal animations disabled",
+                      description: newValue ? "Background effects turned on" : "Background effects turned off"
                     });
                   }}
                   size="sm"
                   variant="outline"
-                  className="h-6 text-[9px] px-2 gap-1 bg-slate-800/90 border-slate-700/80 hover:bg-slate-800 text-white shadow-lg backdrop-blur-md"
+                  className="h-6 text-[9px] px-2 gap-1 bg-white/20 hover:bg-white/40 border-white/30 backdrop-blur-md text-white shadow-sm"
                   data-testid="button-toggle-seasonal"
                 >
                   ❄️ {seasonalAnimationsEnabled ? 'ON' : 'OFF'}
@@ -983,13 +982,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                   onClick={() => setShowBannerManager(true)}
                   size="sm"
                   variant="outline"
-                  className="h-6 text-[9px] px-2 gap-1 bg-slate-800/90 border-slate-700/80 hover:bg-slate-800 text-white shadow-lg backdrop-blur-md"
+                  className="h-6 text-[9px] px-2 gap-1 bg-white/20 hover:bg-white/40 border-white/30 backdrop-blur-md text-white shadow-sm"
                   data-testid="button-open-banner-manager"
                 >
                   <Sparkles className="w-2.5 h-2.5" />
                   Banner
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1118,7 +1117,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                           flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-all border
                           ${selectedUserId === u.id 
                             ? 'bg-blue-100/90 shadow-sm border-blue-400/70' 
-                            : 'bg-white/80 hover:bg-white/95 border-slate-200/50 hover:border-blue-300/50'
+                            : 'bg-amber-50/90 hover:bg-amber-100/95 border-slate-200/50 hover:border-blue-300/50'
                           }
                         `}
                         onClick={() => setSelectedUserId(u.id)}
