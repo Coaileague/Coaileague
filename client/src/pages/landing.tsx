@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { PromoBanner } from "@/components/promo-banner";
 import { useLocation } from "wouter";
 import {
   Settings,
@@ -35,13 +36,19 @@ export default function Landing() {
     
     if (isMobileDevice || isSmallScreen) {
       // Instant redirect to mobile chat - no delay
-      console.log("📱 Mobile device detected - redirecting to DC360.5");
+      console.log("Mobile device detected - redirecting to DC360.5");
       setLocation("/mobile-chat");
     }
   }, [setLocation]);
   
   return (
     <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
+      {/* Promotional Banner - Mobile Optimized, Appears at Top */}
+      <PromoBanner
+        message="New Year Special! Get 50% OFF your first 3 months + FREE onboarding worth $2,500!"
+        ctaText="Claim Offer"
+        ctaLink="/register"
+      />
       {/* CAD-Style Top Bar - Desktop */}
       <div className="hidden lg:flex h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] items-center justify-between px-6">
         <div className="text-sm font-bold text-[hsl(var(--cad-text-primary))]">WorkforceOS</div>
@@ -71,7 +78,7 @@ export default function Landing() {
             className="text-xs h-8 text-emerald-500 hover:text-emerald-400 hover:bg-[hsl(var(--cad-chrome-hover))] font-semibold"
             data-testid="button-mobile-chat"
           >
-            📱 Mobile Chat
+            Mobile Chat
           </Button>
           <div className="h-6 w-px bg-[hsl(var(--cad-border))]" />
           <Button
@@ -104,7 +111,7 @@ export default function Landing() {
             className="h-9 sm:h-10 text-xs sm:text-sm text-emerald-500 hover:text-emerald-400 px-2 sm:px-3 font-semibold"
             data-testid="button-mobile-chat-mobile"
           >
-            📱 Chat
+            Chat
           </Button>
           <Button
             variant="ghost"
