@@ -977,16 +977,11 @@ export default function ModernMobileChat() {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className={`font-bold text-sm ${
-                  msg.senderType === 'bot' ? 'text-amber-400' :
-                  msg.senderType === 'support' ? 'text-indigo-400' :
-                  'text-white'
-                }`}>
-                  {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
-                  {/* Role badge as superscript */}
+              <div className="flex items-end gap-2 mb-1 flex-wrap">
+                <div className="flex flex-col items-start">
+                  {/* Role badge ABOVE username */}
                   {(roleDisplay || (msg.senderId === userId && userPlatformRole)) && (
-                    <sup className={`ml-0.5 text-[8px] font-normal ${
+                    <span className={`text-[8px] leading-none mb-0.5 font-normal ${
                       msg.senderType === 'bot' 
                         ? 'text-amber-400/70' 
                         : isCurrentUser
@@ -994,9 +989,16 @@ export default function ModernMobileChat() {
                           : 'text-indigo-400/70'
                     }`}>
                       ({roleDisplay || (msg.senderId === userId ? getRoleDisplay(userPlatformRole) : null)})
-                    </sup>
+                    </span>
                   )}
-                </span>
+                  <span className={`font-bold text-sm leading-none ${
+                    msg.senderType === 'bot' ? 'text-amber-400' :
+                    msg.senderType === 'support' ? 'text-indigo-400' :
+                    'text-white'
+                  }`}>
+                    {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
+                  </span>
+                </div>
                 <span className="text-[10px] text-slate-500">
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
@@ -1027,142 +1029,6 @@ export default function ModernMobileChat() {
           }
         }
       `}</style>
-
-
-      {/* Floating User List Button (Bottom Right) - Staff Only */}
-      {isStaff && (
-        <Sheet open={showUserList} onOpenChange={setShowUserList}>
-          <SheetTrigger asChild>
-            <button
-              className="fixed bottom-20 right-4 z-50 p-4 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full text-white shadow-2xl shadow-indigo-500/50 hover:shadow-indigo-500/70 transition-all active:scale-95"
-              data-testid="button-user-list"
-            >
-              <Users size={24} />
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold">
-                {onlineUsers.length}
-              </div>
-            </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-white/10 max-h-[80vh]">
-            <SheetHeader>
-              <SheetTitle className="text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-400" />
-                Online Users ({onlineUsers.length})
-              </SheetTitle>
-            </SheetHeader>
-            
-            {/* User Context Card - Shows when user selected */}
-            {selectedUser && userContext && (
-              <div className="mt-3 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4 text-indigo-400" />
-                  <span className="text-sm font-semibold text-white">{userContext.user?.firstName} {userContext.user?.lastName}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-400">Active Tickets:</span>
-                    <span className="text-white ml-1 font-mono">{userContext.metrics?.activeTickets || 0}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Resolved:</span>
-                    <span className="text-emerald-400 ml-1 font-mono">{userContext.metrics?.resolvedTickets || 0}</span>
-                  </div>
-                  {userContext.workspace && (
-                    <>
-                      <div className="col-span-2">
-                        <span className="text-slate-400">Org:</span>
-                        <span className="text-white ml-1">{userContext.workspace.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Serial:</span>
-                        <span className="text-cyan-400 ml-1 font-mono text-[10px]">{userContext.workspace.serialNumber}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Tier:</span>
-                        <span className="text-purple-400 ml-1 capitalize">{userContext.workspace.subscriptionTier}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 space-y-2 overflow-y-auto max-h-[60vh]">
-              {/* Sort users: Root admin at absolute top, staff next, then others */}
-              {(() => {
-                const sortedUsers = [...onlineUsers].sort((a, b) => {
-                  const rolePriority: Record<string, number> = {
-                    'root': 0,              // Root admin at absolute top
-                    'bot': 1,               // HelpOS AI bot
-                    'deputy_admin': 2,      // Deputy administrators  
-                    'deputy_assistant': 3,  // Deputy assistants
-                    'sysop': 4,             // System operators
-                    'subscriber': 5,        // Paid subscribers
-                    'org_user': 6,          // Organization users
-                    'guest': 7,             // Guest users
-                  };
-                  
-                  const aPriority = rolePriority[a.role] ?? 99;
-                  const bPriority = rolePriority[b.role] ?? 99;
-                  
-                  if (aPriority !== bPriority) {
-                    return aPriority - bPriority;
-                  }
-                  
-                  return a.name.localeCompare(b.name);
-                });
-                
-                return sortedUsers.map((user) => {
-                  const userRole = (user as any).platformRole || user.role;
-                  const userRoleDisplay = getRoleDisplay(userRole) || user.role.toUpperCase();
-                
-                return (
-                <button
-                  key={user.id}
-                  onClick={() => handleUserSelect(user as OnlineUser)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${
-                    selectedUser?.id === user.id
-                      ? 'bg-indigo-500/20 border-indigo-500/50'
-                      : 'bg-white/5 hover:bg-white/10 border-white/10'
-                  }`}
-                  data-testid={`user-${user.id}`}
-                >
-                  {/* WorkforceOS Logo */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ${
-                    user.role === 'bot' ? 'bg-gradient-to-br from-amber-500 to-yellow-600' :
-                    user.role === 'support' || user.role === 'admin' ? 'bg-gradient-to-br from-indigo-600 to-blue-600' :
-                    'bg-gradient-to-br from-slate-600 to-slate-700'
-                  }`}>
-                    {user.role === 'bot' ? (
-                      <Sparkles size={20} className="text-white" />
-                    ) : (
-                      <WorkforceOSLogo className="h-6 w-6" showText={false} />
-                    )}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="text-white font-medium text-sm">
-                      {user.role === 'bot' ? 'HelpOS' : user.name.split('(')[0].trim()}
-                    </div>
-                    <div className="text-slate-400 text-xs">ID: {user.id}</div>
-                  </div>
-                  <Badge className={`text-xs ${
-                    user.role === 'bot' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                    user.role === 'support' || user.role === 'admin' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' :
-                    'bg-slate-500/20 text-slate-400 border-slate-500/30'
-                  }`}>
-                    {userRoleDisplay}
-                  </Badge>
-                  {selectedUser?.id === user.id && (
-                    <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  )}
-                </button>
-                );
-                });
-              })()}
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
       
       {/* Quick Responses Section - Staff Only */}
       {isStaff && selectedUser && (
