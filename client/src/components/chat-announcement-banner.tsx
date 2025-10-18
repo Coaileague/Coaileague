@@ -302,67 +302,99 @@ export function ChatAnnouncementBanner({
         <ParticleSystem type="confetti" count={30} duration={300000} enabled={true} />
       )}
       <div className="max-w-full px-4 sm:px-6 py-3 flex items-center justify-center gap-2 sm:gap-3 relative z-10 min-h-[48px]">
-        {/* Animated Icon Carousel - Multiple icons rotating */}
+        {/* Icon - Animated if enabled, static if disabled */}
         {IconComponent && (
-          <PulseGlow color={currentMessage.type === 'promo' ? '#00ffff' : '#ffff00'} intensity={15}>
-            <div className="scale-110">
-              <AnimatedIconCarousel 
-                icons={['sparkles', 'star', 'zap', 'trophy', 'crown']}
-                size={28}
-                colors={['text-yellow-400', 'text-cyan-400', 'text-purple-400', 'text-pink-400', 'text-orange-400']}
-                interval={1500}
-              />
-            </div>
-          </PulseGlow>
-        )}
-        
-        {/* Emoticon with enhanced animation */}
-        {emoticon && (
-          <PulseGlow color="#ff00ff" intensity={20}>
-            <span className="text-2xl sm:text-3xl leading-none animate-bounce" style={{ animationDuration: '1.5s' }}>
-              {emoticon}
-            </span>
-          </PulseGlow>
-        )}
-        
-        {/* ENHANCED MESSAGE TEXT - Multi-color gradient with animations */}
-        <div className="flex-1 text-center">
-          {currentMessage.type === 'promo' ? (
-            // PROMO: Gradient animated text with wave effect
-            <div className="text-base sm:text-xl font-extrabold">
-              <AnimatedGradientText 
-                colors={['#ff0080', '#ff8c00', '#40e0d0', '#9370db', '#ff0080']}
-                speed={4}
-              >
-                {currentMessage.text}
-              </AnimatedGradientText>
-            </div>
-          ) : currentMessage.type === 'warning' ? (
-            // WARNING: Typing effect with pulse
-            <PulseGlow color="#ff6600" intensity={15}>
-              <div className="text-base sm:text-lg font-bold text-amber-300">
-                <TypingText text={currentMessage.text} speed={80} />
+          seasonalAnimationsEnabled ? (
+            <PulseGlow color={currentMessage.type === 'promo' ? '#00ffff' : '#ffff00'} intensity={15}>
+              <div className="scale-110">
+                <AnimatedIconCarousel 
+                  icons={['sparkles', 'star', 'zap', 'trophy', 'crown']}
+                  size={28}
+                  colors={['text-yellow-400', 'text-cyan-400', 'text-purple-400', 'text-pink-400', 'text-orange-400']}
+                  interval={1500}
+                />
               </div>
             </PulseGlow>
-          ) : currentMessage.type === 'success' ? (
-            // SUCCESS: Wave text animation
-            <div className="text-base sm:text-lg font-bold text-emerald-300">
-              <WaveText text={currentMessage.text} delay={80} />
-            </div>
           ) : (
-            // INFO/QUEUE: Gradient text
-            <div className="text-sm sm:text-base font-semibold">
-              <AnimatedGradientText 
-                colors={['#60a5fa', '#a78bfa', '#60a5fa']}
-                speed={3}
-              >
-                {currentMessage.text}
-              </AnimatedGradientText>
-            </div>
+            <IconComponent className="w-7 h-7 text-yellow-400" />
+          )
+        )}
+        
+        {/* Emoticon - Animated if enabled, static if disabled */}
+        {emoticon && (
+          seasonalAnimationsEnabled ? (
+            <PulseGlow color="#ff00ff" intensity={20}>
+              <span className="text-2xl sm:text-3xl leading-none animate-bounce" style={{ animationDuration: '1.5s' }}>
+                {emoticon}
+              </span>
+            </PulseGlow>
+          ) : (
+            <span className="text-2xl sm:text-3xl leading-none">
+              {emoticon}
+            </span>
+          )
+        )}
+        
+        {/* MESSAGE TEXT - Animated if enabled, static if disabled */}
+        <div className="flex-1 text-center">
+          {seasonalAnimationsEnabled ? (
+            // ANIMATIONS ENABLED - Use fancy text effects
+            <>
+              {currentMessage.type === 'promo' ? (
+                <div className="text-base sm:text-xl font-extrabold">
+                  <AnimatedGradientText 
+                    colors={['#ff0080', '#ff8c00', '#40e0d0', '#9370db', '#ff0080']}
+                    speed={4}
+                  >
+                    {currentMessage.text}
+                  </AnimatedGradientText>
+                </div>
+              ) : currentMessage.type === 'warning' ? (
+                <PulseGlow color="#ff6600" intensity={15}>
+                  <div className="text-base sm:text-lg font-bold text-amber-300">
+                    <TypingText text={currentMessage.text} speed={80} />
+                  </div>
+                </PulseGlow>
+              ) : currentMessage.type === 'success' ? (
+                <div className="text-base sm:text-lg font-bold text-emerald-300">
+                  <WaveText text={currentMessage.text} delay={80} />
+                </div>
+              ) : (
+                <div className="text-sm sm:text-base font-semibold">
+                  <AnimatedGradientText 
+                    colors={['#60a5fa', '#a78bfa', '#60a5fa']}
+                    speed={3}
+                  >
+                    {currentMessage.text}
+                  </AnimatedGradientText>
+                </div>
+              )}
+            </>
+          ) : (
+            // ANIMATIONS DISABLED - Use plain text with appropriate colors
+            <>
+              {currentMessage.type === 'promo' ? (
+                <div className="text-base sm:text-xl font-extrabold text-white">
+                  {currentMessage.text}
+                </div>
+              ) : currentMessage.type === 'warning' ? (
+                <div className="text-base sm:text-lg font-bold text-amber-300">
+                  {currentMessage.text}
+                </div>
+              ) : currentMessage.type === 'success' ? (
+                <div className="text-base sm:text-lg font-bold text-emerald-300">
+                  {currentMessage.text}
+                </div>
+              ) : (
+                <div className="text-sm sm:text-base font-semibold text-blue-200">
+                  {currentMessage.text}
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Animated Bouncing Dots with glow - Makes it feel ALIVE */}
+        {/* Navigation Dots - Animated if enabled, static if disabled */}
         <div className="hidden sm:flex items-center gap-1.5 ml-auto">
           {messages.map((_, index) => (
             <button
@@ -370,13 +402,19 @@ export function ChatAnnouncementBanner({
               onClick={() => setCurrentIndex(index)}
               className={`
                 w-2.5 h-2.5 rounded-full transition-all duration-300 relative
-                ${index === currentIndex ? 'w-6 h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 animate-bounce' : 'bg-white/40'}
+                ${index === currentIndex 
+                  ? seasonalAnimationsEnabled 
+                    ? 'w-6 h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 animate-bounce' 
+                    : 'w-6 h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500'
+                  : 'bg-white/40'}
               `}
-              style={{
+              style={seasonalAnimationsEnabled && index === currentIndex ? {
                 animationDelay: `${index * 0.1}s`,
                 animationDuration: '1s',
-                boxShadow: index === currentIndex ? '0 0 12px rgba(96, 165, 250, 0.8)' : 'none'
-              }}
+                boxShadow: '0 0 12px rgba(96, 165, 250, 0.8)'
+              } : index === currentIndex ? {
+                boxShadow: '0 0 8px rgba(96, 165, 250, 0.6)'
+              } : {}}
               data-testid={`banner-dot-${index}`}
             />
           ))}
