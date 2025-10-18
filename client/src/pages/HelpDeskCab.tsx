@@ -226,7 +226,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const { data: userContext } = useQuery<any>({
     queryKey: ['/api/helpdesk/user-context', selectedUserId],
     queryFn: async () => {
-      const res = await fetch(`/api/helpdesk/user-context?userId=${selectedUserId}`, {
+      const res = await fetch(`/api/helpdesk/user-context/${selectedUserId}`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch user context');
@@ -1743,8 +1743,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           <div className="max-h-[70vh] overflow-y-auto pr-2">
             {selectedUserId && userContext ? (
               <div className="space-y-4">
-                {userContext.isBotUser ? (
-                  /* Bot user information */
+                {/* Detect system-generated users (bots) - Check if ID starts with 'helpbot' or 'system' */}
+                {(selectedUserId.startsWith('helpbot') || selectedUserId.startsWith('system_')) ? (
+                  /* Bot/System user information */
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-lg p-4">
                       <div className="flex items-center gap-3 mb-3">
@@ -1752,13 +1753,17 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                           <Sparkles size={24} className="text-white" />
                         </div>
                         <div>
-                          <h3 className="text-white font-bold text-lg">HelpOS</h3>
+                          <h3 className="text-white font-bold text-lg">
+                            {selectedUserId.startsWith('helpbot') ? 'HelpOS™' : 'System Bot'}
+                          </h3>
                           <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-amber-500/30 mt-1">
-                            Platform-Generated Assistant
+                            System-Generated AI Assistant
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-amber-200 text-sm">{userContext.description}</p>
+                      <p className="text-amber-200 text-sm">
+                        AI-powered customer support assistant designed to provide instant responses and assistance.
+                      </p>
                     </div>
 
                     <div className="bg-white/5 border border-white/10 rounded-lg p-4">
@@ -1767,23 +1772,35 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         Capabilities
                       </h4>
                       <ul className="space-y-2">
-                        {userContext.capabilities?.map((cap: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                            <span className="text-slate-300 text-xs">{cap}</span>
-                          </li>
-                        ))}
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-300 text-xs">24/7 instant customer support</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-300 text-xs">Automated ticket creation and routing</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-300 text-xs">Context-aware responses</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-300 text-xs">Human escalation when needed</span>
+                        </li>
                       </ul>
                     </div>
 
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-amber-300 text-xs">{userContext.restrictions}</span>
+                        <span className="text-amber-300 text-xs">
+                          This is an automated system. For sensitive issues, request human support agent.
+                        </span>
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : userContext.user ? (
                   /* Real user information */
                   <div className="space-y-3">
                     {isStaff ? (
@@ -1797,49 +1814,91 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                           <div className="space-y-3">
                             <div>
                               <span className="text-slate-400 text-xs block mb-1">Full Name</span>
-                              <span className="text-white text-sm font-medium">{userContext.name}</span>
+                              <span className="text-white text-sm font-medium">
+                                {userContext.user.firstName} {userContext.user.lastName}
+                              </span>
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block mb-1">User ID</span>
-                              <span className="text-white font-mono text-xs">{selectedUserId}</span>
+                              <span className="text-white font-mono text-xs">{userContext.user.id}</span>
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block mb-1">Email</span>
-                              <span className="text-white text-sm">{userContext.email || 'Not Available'}</span>
+                              <span className="text-white text-sm">{userContext.user.email || 'Not Available'}</span>
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block mb-1">Platform Role</span>
                               <Badge variant="secondary" className="text-xs">
-                                {userContext.platformRole || 'User'}
+                                {userContext.user.platformRole || 'guest'}
                               </Badge>
                             </div>
                             <div>
-                              <span className="text-slate-400 text-xs block mb-1">Status</span>
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-emerald-400 text-sm">Active</span>
+                              <span className="text-slate-400 text-xs block mb-1">Account Created</span>
+                              <span className="text-slate-300 text-xs">
+                                {userContext.user.createdAt ? new Date(userContext.user.createdAt).toLocaleDateString() : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {userContext.workspace && (
+                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <h4 className="text-white font-semibold text-sm mb-3">Workspace Info</h4>
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Workspace</span>
+                                <span className="text-white text-sm">{userContext.workspace.name}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Serial Number</span>
+                                <span className="text-white font-mono text-xs">{userContext.workspace.serialNumber}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Subscription</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {userContext.workspace.subscriptionTier || 'Free'}
+                                </Badge>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Role</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {userContext.workspace.role || 'member'}
+                                </Badge>
                               </div>
                             </div>
                           </div>
-                        </div>
+                        )}
 
-                        <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                          <h4 className="text-white font-semibold text-sm mb-3">Workspace Info</h4>
-                          <div className="space-y-3">
-                            <div>
-                              <span className="text-slate-400 text-xs block mb-1">Workspace</span>
-                              <span className="text-white text-sm">{userContext.workspace?.name || 'Not Available'}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 text-xs block mb-1">Serial Number</span>
-                              <span className="text-white font-mono text-xs">{userContext.workspace?.serialNumber || 'N/A'}</span>
+                        {userContext.metrics && (
+                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <h4 className="text-white font-semibold text-sm mb-3">Support Metrics</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Total Tickets</span>
+                                <span className="text-white text-lg font-bold">{userContext.metrics.totalTickets || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Active</span>
+                                <span className="text-amber-400 text-lg font-bold">{userContext.metrics.activeTickets || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Resolved</span>
+                                <span className="text-emerald-400 text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Resolution Rate</span>
+                                <span className="text-cyan-400 text-lg font-bold">{userContext.metrics.resolutionRate || 0}%</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
 
                         <Button
                           onClick={() => {
-                            toast({ title: "Success", description: `Viewing history for ${userContext.name}` });
+                            toast({ 
+                              title: "Success", 
+                              description: `Viewing full history for ${userContext.user.firstName} ${userContext.user.lastName}` 
+                            });
                             setShowUserProfile(false);
                           }}
                           className="w-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-white"
@@ -1856,7 +1915,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         <div className="space-y-3">
                           <div>
                             <span className="text-slate-400 text-xs block mb-1">Name</span>
-                            <span className="text-white text-sm">{userContext.name}</span>
+                            <span className="text-white text-sm">
+                              {userContext.user.firstName} {userContext.user.lastName}
+                            </span>
                           </div>
                           <div>
                             <span className="text-slate-400 text-xs block mb-1">Status</span>
@@ -1874,6 +1935,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         </div>
                       </div>
                     )}
+                  </div>
+                ) : (
+                  /* Error state - user not found */
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+                    <p className="text-red-400 text-sm">User information not available</p>
+                    <p className="text-slate-400 text-xs mt-2">This user may not exist in the database</p>
                   </div>
                 )}
               </div>
