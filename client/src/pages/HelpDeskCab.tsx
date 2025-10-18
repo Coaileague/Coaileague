@@ -907,44 +907,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             }] : []}
           />
           
-          {/* Floating Controls - Overlaid on banner */}
-          <div className="absolute top-2 right-2 flex items-center gap-1.5">
-            {/* QUICK ACTIONS - Front and Center (Staff Only) */}
-            {isStaff && (
-              <>
-                <Button
-                  onClick={() => setShowControlsMenu(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-[10px] px-3 gap-1.5 bg-emerald-600/95 border-emerald-500/80 hover:bg-emerald-700 text-white shadow-lg backdrop-blur-md font-semibold"
-                  data-testid="button-quick-actions"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  Quick Actions
-                </Button>
-                <Button
-                  onClick={() => setShowAccountPanel(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-[10px] px-2.5 gap-1 bg-blue-600/95 border-blue-500/80 hover:bg-blue-700 text-white shadow-lg backdrop-blur-md"
-                  data-testid="button-customer-support"
-                >
-                  <UserCog className="w-3 h-3" />
-                  Support
-                </Button>
-                <Button
-                  onClick={() => setShowQueuePanel(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-[10px] px-2.5 gap-1 bg-violet-600/95 border-violet-500/80 hover:bg-violet-700 text-white shadow-lg backdrop-blur-md"
-                  data-testid="button-queue-manager"
-                >
-                  <Users className="w-3 h-3" />
-                  Queue
-                </Button>
-              </>
-            )}
-            
+          {/* Floating Controls - Overlaid on banner - Far Right Only */}
+          <div className="absolute top-1 right-2 flex items-center gap-1.5">
             {/* Connection Status */}
             {connectionStatus === 'connected' && (
               <div 
