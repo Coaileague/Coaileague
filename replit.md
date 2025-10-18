@@ -32,6 +32,8 @@ The platform features a CAD-style professional interface with a dark mode theme,
 - **Authentication**: Custom session-based authentication with bcrypt, account locking, and password reset.
 - **Multi-Tenancy**: Workspace-based data isolation.
 - **Role-Based Access Control (RBAC)**: Supports Owner, Manager, Employee, Supervisor, HR Manager, and platform-level roles with hierarchical management and API protection.
+- **IRC-Style Command/Response Architecture**: WebSocket commands use unique command IDs for request/response matching. Server validates all commands, checks permissions, executes actions, broadcasts to all clients, then sends acknowledgment to originating client with success/failure status.
+- **AuditOS™**: Comprehensive audit logging system that tracks ALL actions (moderation, account management, data operations) with actor information, target tracking, command payloads, IP addresses, success/failure status, and immutable audit trails for compliance, transparency, and abuse detection.
 - **Key Feature Areas**:
     - **Financial & Time Management**: Time Tracking, Automated Invoice Generation (BillOS™), PayrollOS™, and Analytics Dashboard.
     - **Workforce Planning**: Advanced Scheduling System (SmartScheduleOS™), Employee Onboarding (HireOS™), and TalentOS™.

@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ChatMessage } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+
+// IRC-style command ID generator
+function generateCommandId(): string {
+  return `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 interface OnlineUser {
   id: string;
@@ -12,7 +18,7 @@ interface OnlineUser {
 }
 
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_removed';
+  type: 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_removed' | 'command_ack';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
@@ -44,6 +50,13 @@ interface WebSocketMessage {
   // Banner update fields
   bannerMessage?: string;
   staffName?: string;
+  // IRC-style command acknowledgment fields
+  commandId?: string;
+  action?: string;
+  success?: boolean;
+  error?: string;
+  targetUserId?: string;
+  targetName?: string;
 }
 
 interface SecureRequestCallback {
@@ -55,6 +68,7 @@ export function useChatroomWebSocket(
   userName: string = 'User',
   onSecureRequest?: SecureRequestCallback
 ) {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -241,6 +255,26 @@ export function useChatroomWebSocket(
               // User was silenced/put in spectator mode
               setIsSilenced(true);
               setJustGotVoice(false);
+              break;
+
+            case 'command_ack':
+              // IRC-style command acknowledgment from server
+              if (data.success) {
+                // Command succeeded - show success toast
+                const successMessage = typeof data.message === 'string' ? data.message : `${data.targetName || 'User'} • Action completed successfully`;
+                toast({
+                  title: `✓ ${data.action === 'kick_user' ? 'User Removed' : 'Action Complete'}`,
+                  description: successMessage,
+                });
+              } else {
+                // Command failed - show error toast
+                const errorMessage = typeof data.message === 'string' ? data.message : `Could not complete ${data.action}`;
+                toast({
+                  title: `❌ Action Failed`,
+                  description: errorMessage,
+                  variant: "destructive",
+                });
+              }
               break;
 
             case 'user_list_update':
@@ -430,16 +464,18 @@ export function useChatroomWebSocket(
     }));
   }, [userId]);
 
-  // Kick a user (staff only)
+  // Kick a user (staff only) - IRC-style with command ID for acknowledgment
   const kickUser = useCallback((targetUserId: string, reason?: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return;
     }
 
+    const commandId = generateCommandId();
     wsRef.current.send(JSON.stringify({
       type: 'kick_user',
       targetUserId: targetUserId,
       reason: reason || 'violation of chat rules',
+      commandId: commandId, // IRC-style command tracking
     }));
   }, []);
 
