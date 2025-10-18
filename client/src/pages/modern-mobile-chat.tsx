@@ -168,8 +168,8 @@ export default function ModernMobileChat() {
     return requiredRoles.includes(userPlatformRole);
   };
 
-  // All staff roles
-  const ALL_STAFF = ['root', 'deputy_admin', 'deputy_assistant', 'sysop'];
+  // All staff roles - INCLUDES 'support' for frontline agents
+  const ALL_STAFF = ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'];
   const DEPUTY_ASSISTANT_PLUS = ['root', 'deputy_admin', 'deputy_assistant'];
   const DEPUTY_ADMIN_PLUS = ['root', 'deputy_admin'];
   const ADMIN_ONLY = ['root', 'deputy_admin'];
