@@ -540,6 +540,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current employee profile (Employee Self-Service)
+  app.get('/api/employees/me', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Find employee by userId
+      const employee = await storage.getEmployeeByUserId(userId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee profile not found" });
+      }
+      
+      res.json(employee);
+    } catch (error: any) {
+      console.error("Error fetching employee profile:", error);
+      res.status(500).json({ message: "Failed to fetch employee profile" });
+    }
+  });
+
+  // Update employee contact information (Employee Self-Service)
+  app.patch('/api/employees/me/contact-info', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Find employee by userId
+      const employee = await storage.getEmployeeByUserId(userId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee profile not found" });
+      }
+      
+      // Only allow updating contact info fields (not employment details)
+      const allowedFields = ['phone', 'email', 'address', 'city', 'state', 'zipCode', 
+                             'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelation'];
+      const filteredData: any = {};
+      for (const key of allowedFields) {
+        if (req.body[key] !== undefined) {
+          filteredData[key] = req.body[key];
+        }
+      }
+
+      if (Object.keys(filteredData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      const validated = insertEmployeeSchema.partial().parse(filteredData);
+      const updated = await storage.updateEmployee(employee.id, employee.workspaceId, validated);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Failed to update employee" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating contact info:", error);
+      res.status(400).json({ message: error.message || "Failed to update contact information" });
+    }
+  });
+
+  // Get employee's own documents (Employee Self-Service)
+  app.get('/api/hireos/documents/me', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Find employee by userId
+      const employee = await storage.getEmployeeByUserId(userId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee profile not found" });
+      }
+      
+      // Fetch employee's documents
+      const documents = await storage.getEmployeeDocuments(employee.workspaceId, employee.id, {});
+      
+      res.json(documents || []);
+    } catch (error: any) {
+      console.error("Error fetching employee documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
   // Approve employee and set pay rate (post-onboarding) - MANAGER/OWNER ONLY
   app.post('/api/employees/approve', requireManager, async (req: any, res) => {
     try {

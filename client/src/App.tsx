@@ -38,6 +38,7 @@ import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
 import HireOSWorkflowBuilder from "@/pages/hireos-workflow-builder";
 import EmployeeFileCabinet from "@/pages/employee-file-cabinet";
+import EmployeeProfile from "@/pages/employee-profile";
 import AdminUsage from "@/pages/admin-usage";
 import AdminSupport from "@/pages/admin-support";
 import AdminCommandCenter from "@/pages/admin-command-center";
@@ -172,6 +173,7 @@ function AppContent() {
                 <Route path="/auditor/portal" component={AuditorPortal} />
                 <Route path="/client/portal" component={ClientPortal} />
                 <Route path="/settings" component={Settings} />
+                <Route path="/employee/profile" component={EmployeeProfile} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support/chat" component={HelpdeskChat} />

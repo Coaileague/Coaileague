@@ -186,6 +186,8 @@ export interface IStorage {
   // Employee operations
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   getEmployee(id: string, workspaceId: string): Promise<Employee | undefined>;
+  getEmployeeByUserId(userId: string): Promise<Employee | undefined>;
+  getEmployeeById(employeeId: string): Promise<Employee | undefined>;
   getEmployeesByWorkspace(workspaceId: string): Promise<Employee[]>;
   updateEmployee(id: string, workspaceId: string, data: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: string, workspaceId: string): Promise<boolean>;
@@ -628,6 +630,22 @@ export class DatabaseStorage implements IStorage {
         eq(employees.workspaceId, workspaceId)
       ));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getEmployeeByUserId(userId: string): Promise<Employee | undefined> {
+    const [employee] = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.userId, userId));
+    return employee;
+  }
+
+  async getEmployeeById(employeeId: string): Promise<Employee | undefined> {
+    const [employee] = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.id, employeeId));
+    return employee;
   }
 
   // ============================================================================

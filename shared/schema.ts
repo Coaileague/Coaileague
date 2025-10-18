@@ -413,6 +413,17 @@ export const employees = pgTable("employees", {
   email: varchar("email"),
   phone: varchar("phone"),
   
+  // Contact information (editable by employee)
+  address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  
+  // Emergency contact (editable by employee)
+  emergencyContactName: varchar("emergency_contact_name"),
+  emergencyContactPhone: varchar("emergency_contact_phone"),
+  emergencyContactRelation: varchar("emergency_contact_relation"),
+  
   // Employment details
   role: varchar("role"), // e.g., "Technician", "Consultant", "Driver" - job title
   workspaceRole: workspaceRoleEnum("workspace_role").default("employee"), // Permission level
