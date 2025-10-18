@@ -984,27 +984,19 @@ export default function ModernMobileChat() {
                   'text-white'
                 }`}>
                   {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
-                </span>
-                {/* Always show role badge for staff/bot */}
-                {(roleDisplay || (msg.senderId === userId && userPlatformRole)) && (
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-[10px] px-1.5 py-0 border font-semibold ${
+                  {/* Role badge inline with name in smaller text */}
+                  {(roleDisplay || (msg.senderId === userId && userPlatformRole)) && (
+                    <span className={`ml-1 text-[10px] font-normal ${
                       msg.senderType === 'bot' 
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
+                        ? 'text-amber-400/80' 
                         : isCurrentUser
-                          ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-indigo-500/50'
-                          : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                    }`}
-                    style={isCurrentUser ? {
-                      animation: 'glow 2s ease-in-out infinite',
-                    } : {}}
-                  >
-                    <span className={isCurrentUser ? 'text-indigo-400 font-bold animate-pulse' : ''}>
-                      {roleDisplay || (msg.senderId === userId ? getRoleDisplay(userPlatformRole) : null)}
+                          ? 'text-indigo-400'
+                          : 'text-indigo-400/80'
+                    }`}>
+                      ({roleDisplay || (msg.senderId === userId ? getRoleDisplay(userPlatformRole) : null)})
                     </span>
-                  </Badge>
-                )}
+                  )}
+                </span>
                 <span className="text-[10px] text-slate-500">
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
@@ -1254,8 +1246,17 @@ export default function ModernMobileChat() {
                   >
                     <div className={`w-3 h-3 rounded-full ${user.status === 'online' ? 'bg-emerald-500' : 'bg-slate-500'}`} />
                     <div className="flex-1 text-left">
-                      <div className="text-white font-medium text-sm">{user.name}</div>
-                      <div className="text-slate-400 text-xs capitalize">{user.role}</div>
+                      <div className="text-white font-medium text-sm">
+                        {user.name.split('(')[0].trim()}
+                        {user.role && user.role !== 'customer' && (
+                          <span className="ml-1 text-[10px] font-normal text-indigo-400/80">
+                            ({getRoleDisplay(user.role)})
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-400 text-xs">
+                        {user.status === 'online' ? 'Active now' : 'Away'}
+                      </div>
                     </div>
                   </button>
                 ))}
