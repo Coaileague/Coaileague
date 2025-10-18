@@ -10,6 +10,15 @@ import {
   AlertCircle, Clock, Users, Zap, TrendingUp, 
   Award, Bell, MessageCircle, Star, Heart, Ghost 
 } from "lucide-react";
+import { 
+  ParticleSystem, 
+  AnimatedGradientText, 
+  TypingText, 
+  FloatingEmojis,
+  PulseGlow,
+  AnimatedIconCarousel,
+  WaveText
+} from "./advanced-banner-effects";
 
 interface BannerMessage {
   id: string;
@@ -254,130 +263,117 @@ export function ChatAnnouncementBanner({
 
   const BannerContent = (
     <div className={`
-      w-full min-h-[48px] transition-all duration-500 ease-in-out relative overflow-hidden
-      ${colorSchemes[currentMessage.type]}
+      w-full min-h-[72px] transition-all duration-500 ease-in-out relative overflow-hidden
+      bg-gradient-to-r from-slate-800/95 via-blue-900/95 to-slate-800/95
+      border-b-4 border-blue-500/40 shadow-xl backdrop-blur-sm
       animate-in fade-in slide-in-from-top-2
     `}>
-      {/* Enhanced Seasonal Effects Overlay with Better Graphics */}
+      {/* ADVANCED PARTICLE EFFECTS - Physics-based with emojis */}
       {seasonalEffect === 'snow' && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {[...Array(20)].map((_, i) => {
-            const size = 2 + Math.random() * 4;
-            return (
-              <div
-                key={i}
-                className="absolute bg-white/80 rounded-full shadow-lg"
-                style={{
-                  width: `${size}px`,
-                  height: `${size}px`,
-                  left: `${Math.random() * 100}%`,
-                  top: `-${Math.random() * 20}px`,
-                  animation: `snowfall ${4 + Math.random() * 3}s linear infinite`,
-                  animationDelay: `${Math.random() * 4}s`,
-                  filter: 'blur(1px)'
-                }}
-              />
-            );
-          })}
-        </div>
+        <>
+          <ParticleSystem type="snow" count={40} duration={300000} enabled={true} />
+          <FloatingEmojis emojis={['❄️', '⛄', '🌨️']} count={5} />
+        </>
       )}
       {seasonalEffect === 'fireworks' && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {[...Array(12)].map((_, i) => {
-            const colors = ['bg-yellow-400', 'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-purple-400'];
-            const color = colors[i % colors.length];
-            return (
-              <div
-                key={i}
-                className={`absolute w-4 h-4 ${color} rounded-full shadow-2xl`}
-                style={{
-                  left: `${10 + Math.random() * 80}%`,
-                  top: `${20 + Math.random() * 60}%`,
-                  animation: `firework ${0.8 + Math.random() * 0.5}s ease-out infinite`,
-                  animationDelay: `${Math.random() * 2.5}s`,
-                  filter: 'blur(0.5px)',
-                  opacity: 0.9
-                }}
-              />
-            );
-          })}
-        </div>
+        <>
+          <ParticleSystem type="fireworks" count={60} duration={300000} enabled={true} />
+          <ParticleSystem type="stars" count={30} duration={300000} enabled={true} />
+          <FloatingEmojis emojis={['🎆', '🎇', '✨', '💫', '🌟']} count={8} />
+        </>
       )}
       {seasonalEffect === 'hearts' && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {[...Array(15)].map((_, i) => {
-            const size = 8 + Math.random() * 6;
-            return (
-              <div
-                key={i}
-                className="absolute"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${100 + Math.random() * 20}%`,
-                  animation: `heartFloat ${4 + Math.random() * 3}s ease-in-out infinite`,
-                  animationDelay: `${Math.random() * 3}s`
-                }}
-              >
-                <Heart className="w-3 h-3 text-pink-400 fill-pink-400" style={{ filter: 'drop-shadow(0 0 3px rgba(244, 114, 182, 0.5))' }} />
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <ParticleSystem type="hearts" count={35} duration={300000} enabled={true} />
+          <FloatingEmojis emojis={['❤️', '💕', '💖', '💗', '💘', '💝']} count={8} />
+        </>
       )}
       {seasonalEffect === 'halloween' && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {[...Array(10)].map((_, i) => {
-            const icons = [Ghost, Ghost, Ghost, Ghost]; // Using Ghost icon for spooky effect
-            const Icon = icons[i % icons.length];
-            return (
-              <div
-                key={i}
-                className="absolute"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${-20 + Math.random() * 10}%`,
-                  animation: `spookyFloat ${3 + Math.random() * 2}s ease-in-out infinite`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`
-                }}
-              >
-                <Icon className="w-4 h-4 text-orange-400" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 146, 60, 0.6))' }} />
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <ParticleSystem type="celebration" count={40} duration={300000} enabled={true} />
+          <FloatingEmojis emojis={['👻', '🎃', '🦇', '🕷️', '🕸️', '💀']} count={10} />
+        </>
       )}
-      <div className="max-w-full px-2 sm:px-4 py-1.5 flex items-center justify-center gap-1.5 sm:gap-2 relative z-10 min-h-[32px]">
-        {/* Icon */}
+      
+      {/* CONFETTI for celebrations */}
+      {currentMessage.type === 'promo' && (
+        <ParticleSystem type="confetti" count={30} duration={300000} enabled={true} />
+      )}
+      <div className="max-w-full px-4 sm:px-6 py-3 flex items-center justify-center gap-2 sm:gap-3 relative z-10 min-h-[48px]">
+        {/* Animated Icon Carousel - Multiple icons rotating */}
         {IconComponent && (
-          <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 animate-pulse" />
+          <PulseGlow color={currentMessage.type === 'promo' ? '#00ffff' : '#ffff00'} intensity={15}>
+            <div className="scale-110">
+              <AnimatedIconCarousel 
+                icons={['sparkles', 'star', 'zap', 'trophy', 'crown']}
+                size={28}
+                colors={['text-yellow-400', 'text-cyan-400', 'text-purple-400', 'text-pink-400', 'text-orange-400']}
+                interval={1500}
+              />
+            </div>
+          </PulseGlow>
         )}
         
-        {/* Emoticon */}
+        {/* Emoticon with enhanced animation */}
         {emoticon && (
-          <span className="text-lg sm:text-xl leading-none animate-bounce" style={{ animationDuration: '2s' }}>
-            {emoticon}
-          </span>
+          <PulseGlow color="#ff00ff" intensity={20}>
+            <span className="text-2xl sm:text-3xl leading-none animate-bounce" style={{ animationDuration: '1.5s' }}>
+              {emoticon}
+            </span>
+          </PulseGlow>
         )}
         
-        {/* Message Text */}
-        <span className="text-xs sm:text-sm font-medium text-center tracking-normal leading-snug">
-          {currentMessage.text}
-        </span>
+        {/* ENHANCED MESSAGE TEXT - Multi-color gradient with animations */}
+        <div className="flex-1 text-center">
+          {currentMessage.type === 'promo' ? (
+            // PROMO: Gradient animated text with wave effect
+            <div className="text-base sm:text-xl font-extrabold">
+              <AnimatedGradientText 
+                colors={['#ff0080', '#ff8c00', '#40e0d0', '#9370db', '#ff0080']}
+                speed={4}
+              >
+                {currentMessage.text}
+              </AnimatedGradientText>
+            </div>
+          ) : currentMessage.type === 'warning' ? (
+            // WARNING: Typing effect with pulse
+            <PulseGlow color="#ff6600" intensity={15}>
+              <div className="text-base sm:text-lg font-bold text-amber-300">
+                <TypingText text={currentMessage.text} speed={80} />
+              </div>
+            </PulseGlow>
+          ) : currentMessage.type === 'success' ? (
+            // SUCCESS: Wave text animation
+            <div className="text-base sm:text-lg font-bold text-emerald-300">
+              <WaveText text={currentMessage.text} delay={80} />
+            </div>
+          ) : (
+            // INFO/QUEUE: Gradient text
+            <div className="text-sm sm:text-base font-semibold">
+              <AnimatedGradientText 
+                colors={['#60a5fa', '#a78bfa', '#60a5fa']}
+                speed={3}
+              >
+                {currentMessage.text}
+              </AnimatedGradientText>
+            </div>
+          )}
+        </div>
 
-        {/* Animated Bouncing Dots - Makes it feel ALIVE */}
-        <div className="hidden sm:flex items-center gap-1 ml-auto">
+        {/* Animated Bouncing Dots with glow - Makes it feel ALIVE */}
+        <div className="hidden sm:flex items-center gap-1.5 ml-auto">
           {messages.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
               className={`
-                w-2 h-2 rounded-full transition-all duration-300
-                ${index === currentIndex ? 'bg-current w-5 animate-bounce' : 'bg-current/40'}
+                w-2.5 h-2.5 rounded-full transition-all duration-300 relative
+                ${index === currentIndex ? 'w-6 h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 animate-bounce' : 'bg-white/40'}
               `}
               style={{
                 animationDelay: `${index * 0.1}s`,
-                animationDuration: '1s'
+                animationDuration: '1s',
+                boxShadow: index === currentIndex ? '0 0 12px rgba(96, 165, 250, 0.8)' : 'none'
               }}
               data-testid={`banner-dot-${index}`}
             />
