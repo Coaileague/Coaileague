@@ -7895,8 +7895,24 @@ Return ONLY valid JSON array with this exact structure:
     }
   });
 
-  // Get all promotional banners (staff only)
-  app.get('/api/promotional-banners', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+  // Get all promotional banners (public - everyone can view active banners)
+  app.get('/api/promotional-banners', async (req, res) => {
+    try {
+      const banners = await db
+        .select()
+        .from(promotionalBanners)
+        .where(eq(promotionalBanners.isActive, true))
+        .orderBy(desc(promotionalBanners.createdAt));
+
+      res.json(banners);
+    } catch (error: any) {
+      console.error("Error fetching banners:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get ALL promotional banners including inactive (staff only - for banner manager)
+  app.get('/api/promotional-banners/admin/all', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const banners = await db
         .select()
@@ -7905,7 +7921,7 @@ Return ONLY valid JSON array with this exact structure:
 
       res.json(banners);
     } catch (error: any) {
-      console.error("Error fetching banners:", error);
+      console.error("Error fetching all banners:", error);
       res.status(500).json({ error: error.message });
     }
   });

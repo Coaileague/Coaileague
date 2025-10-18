@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,18 +29,31 @@ import {
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   
-  // Fetch active promotional banner from database
-  const { data: activeBanner } = useQuery<{
+  // Fetch ALL active promotional banners from database
+  const { data: activeBanners = [] } = useQuery<Array<{
     id: string;
     message: string;
     ctaText: string | null;
     ctaLink: string | null;
     isActive: boolean;
-  } | null>({
-    queryKey: ['/api/promotional-banners/active'],
+  }>>({
+    queryKey: ['/api/promotional-banners'],
     staleTime: 60000, // Cache for 1 minute
   });
+
+  // Rotate through banners every 5 seconds
+  useEffect(() => {
+    if (activeBanners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex((prev) => (prev + 1) % activeBanners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeBanners.length]);
+
+  const activeBanner = activeBanners[currentBannerIndex];
   
   // Auto-redirect mobile users to mobile chat (INSTANT)
   useEffect(() => {

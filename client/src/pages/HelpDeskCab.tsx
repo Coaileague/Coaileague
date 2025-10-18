@@ -1492,7 +1492,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           onSendCommand={(command) => {
             // Parse banner commands and call API
             const parts = command.split(' ');
-            const action = parts[1]; // 'add', 'remove', 'toggle'
+            const action = parts[1]; // 'add', 'edit', 'remove', 'toggle'
             
             if (action === 'add') {
               // Extract message from quotes
@@ -1503,6 +1503,19 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 createBannerMutation.mutate({
                   message,
                   isActive: true, // Make new banners active by default
+                });
+                setShowBannerManager(false);
+              }
+            } else if (action === 'edit') {
+              // /banner edit <id> "<message>" <type> <icon> [<link>]
+              const bannerId = parts[2];
+              const messageMatch = command.match(/"([^"]+)"/);
+              const message = messageMatch ? messageMatch[1] : '';
+              
+              if (bannerId && message) {
+                updateBannerMutation.mutate({
+                  id: bannerId,
+                  data: { message },
                 });
                 setShowBannerManager(false);
               }

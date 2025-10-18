@@ -24,7 +24,7 @@ import {
   AlertCircle, Clock, Users, Zap, TrendingUp, Award, Bell, 
   MessageCircle, Star, Heart, Gift, Sparkles, PartyPopper,
   Snowflake, Ghost, TreePine, Cake, Flag, Sparkle,
-  Calendar, Plus, Trash2, Copy, Eye
+  Calendar, Plus, Trash2, Copy, Eye, Edit
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -221,6 +221,11 @@ export function BannerManager({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [previewBanner, setPreviewBanner] = useState<HolidayTemplate | null>(null);
   const [livePreview, setLivePreview] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<BannerMessage | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editType, setEditType] = useState<'info' | 'warning' | 'success' | 'promo'>('info');
+  const [editIcon, setEditIcon] = useState('star');
+  const [editLink, setEditLink] = useState('');
 
   const handleUseTemplate = (template: HolidayTemplate) => {
     const command = `/banner add "${template.defaultText}" ${template.type} ${template.bannerIcon}`;
@@ -250,6 +255,24 @@ export function BannerManager({
     const command = `/banner toggle ${bannerId} ${enabled ? 'on' : 'off'}`;
     if (onSendCommand) {
       onSendCommand(command);
+    }
+  };
+
+  const handleEditBanner = (banner: BannerMessage) => {
+    setEditingBanner(banner);
+    setEditText(banner.text);
+    setEditType(banner.type === 'queue' ? 'info' : banner.type);
+    setEditIcon(banner.icon || 'star');
+    setEditLink(banner.link || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingBanner) return;
+    const link = editLink ? `https://${editLink.replace(/^https?:\/\//, '')}` : '';
+    const command = `/banner edit ${editingBanner.id} "${editText}" ${editType} ${editIcon}${link ? ` ${link}` : ''}`;
+    if (onSendCommand) {
+      onSendCommand(command);
+      setEditingBanner(null);
     }
   };
 
@@ -466,6 +489,14 @@ export function BannerManager({
                             <Button
                               size="sm"
                               variant="outline"
+                              onClick={() => handleEditBanner(banner)}
+                              data-testid={`button-edit-${banner.id}`}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => {
                                 setCustomText(banner.text);
                                 // Filter out 'queue' type since it's not available in custom
@@ -535,6 +566,98 @@ export function BannerManager({
                 }}>
                   Use This Template
                 </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Edit Dialog */}
+        {editingBanner && (
+          <Dialog open={!!editingBanner} onOpenChange={() => setEditingBanner(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Edit className="w-5 h-5 text-blue-600" />
+                  Edit Banner
+                </DialogTitle>
+                <DialogDescription>
+                  Update banner message and settings
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-text">Banner Message</Label>
+                  <Textarea
+                    id="edit-text"
+                    placeholder="Enter your promotional message..."
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    rows={3}
+                    data-testid="input-edit-text"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-type">Type</Label>
+                    <Select value={editType} onValueChange={(v) => setEditType(v as any)}>
+                      <SelectTrigger id="edit-type" data-testid="select-edit-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="info">Info</SelectItem>
+                        <SelectItem value="warning">Warning</SelectItem>
+                        <SelectItem value="success">Success</SelectItem>
+                        <SelectItem value="promo">Promo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-icon">Icon</Label>
+                    <Select value={editIcon} onValueChange={setEditIcon}>
+                      <SelectTrigger id="edit-icon" data-testid="select-edit-icon">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ICON_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-link">Link (Optional)</Label>
+                  <Input
+                    id="edit-link"
+                    placeholder="example.com/promo"
+                    value={editLink}
+                    onChange={(e) => setEditLink(e.target.value)}
+                    data-testid="input-edit-link"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditingBanner(null)}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={!editText.trim()}
+                    data-testid="button-save-edit"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>

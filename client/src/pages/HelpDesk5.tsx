@@ -416,18 +416,43 @@ export default function LiveChatroomPage() {
     previousMessageCountRef.current = messages.length;
   }, [messages, userName, playSound]);
 
+  /**
+   * HARDCODED SUPERSCRIPT ROLE DISPLAY
+   * DO NOT MODIFY WITHOUT EXPLICIT USER PERMISSION
+   * Extracts role from name like "Brigido Root (Admin)" and displays it as superscript
+   */
+  const formatNameWithSuperscriptRole = (fullName: string) => {
+    const roleMatch = fullName.match(/^(.+?)\s*\(([^)]+)\)$/);
+    
+    if (roleMatch) {
+      const name = roleMatch[1].trim();
+      const role = roleMatch[2].trim();
+      
+      return (
+        <>
+          {name}
+          <sup className="text-[10px] ml-0.5 font-semibold text-blue-400 opacity-90">
+            ({role})
+          </sup>
+        </>
+      );
+    }
+    
+    return fullName;
+  };
+
   const getRoleIcon = (senderName: string, senderType: string) => {
     // Special icons for specific roles
-    if (senderName.startsWith('Root ')) {
-      return <Shield className="w-3.5 h-3.5 text-red-400" />; // 🛡️ Root = Shield (red)
+    if (senderName.includes('(Admin)') || senderName.includes('Root')) {
+      return <Shield className="w-3.5 h-3.5 text-red-400" />; // 🛡️ Root/Admin = Shield (red)
     }
-    if (senderName.startsWith('Sysop ') || senderName.startsWith('Admin ') || senderName.startsWith('Deputy ')) {
-      return <Shield className="w-3.5 h-3.5 text-amber-400" />; // 🛡️ Sysop/Admin = Shield (amber)
+    if (senderName.includes('(Sysop)') || senderName.includes('(Deputy)')) {
+      return <Shield className="w-3.5 h-3.5 text-amber-400" />; // 🛡️ Sysop/Deputy = Shield (amber)
     }
-    if (senderName.startsWith('Subscriber ')) {
+    if (senderName.includes('(Subscriber)')) {
       return <span className="text-sm">⭐</span>; // Star for subscribers
     }
-    if (senderName.startsWith('Guest ')) {
+    if (senderName.includes('(Guest)')) {
       return <span className="text-sm">💬</span>; // Speech bubble for guests
     }
     
@@ -944,7 +969,9 @@ export default function LiveChatroomPage() {
                             <WorkforceOSLogo size="sm" showText={false} className="flex-shrink-0" />
                           )}
                           {isBot && getRoleIcon(message.senderName || '', message.senderType)}
-                          <span className="text-xs font-semibold text-slate-300">{message.senderName || 'User'}</span>
+                          <span className="text-xs font-semibold text-slate-300">
+                            {formatNameWithSuperscriptRole(message.senderName || 'User')}
+                          </span>
                           <span className="text-xs text-slate-500">
                             {formatTime(message.createdAt)}
                           </span>

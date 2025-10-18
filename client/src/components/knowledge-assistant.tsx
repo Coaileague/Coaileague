@@ -46,11 +46,8 @@ export function KnowledgeAssistant() {
   // Ask mutation
   const askMutation = useMutation({
     mutationFn: async (query: string) => {
-      const response = await apiRequest("/api/knowledge/ask", {
-        method: "POST",
-        body: JSON.stringify({ query }),
-      });
-      return response.json();
+      const response = await apiRequest("/api/knowledge/ask", "POST", { query });
+      return await response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledge/queries/recent"] });
