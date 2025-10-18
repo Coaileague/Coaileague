@@ -227,10 +227,11 @@ export const platformRoleEnum = pgEnum('platform_role', [
 ]);
 
 // Subscriber/Workspace Roles (Customer Organizations - Subscriber Level)
-// Owner (Client) → Manager → Supervisor → Employee
+// Owner (Client) → Manager → HR Manager → Supervisor → Employee
 export const workspaceRoleEnum = pgEnum('workspace_role', [
   'owner',              // Client/Subscriber - Organization owner
   'manager',            // Manager - Mid-level authority
+  'hr_manager',         // HR Manager - Designated HR staff with document access control
   'supervisor',         // Supervisor - Oversees employees
   'employee'            // Employee - Frontline worker
 ]);

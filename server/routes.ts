@@ -17,7 +17,7 @@ import {
   sendOnboardingInviteEmail,
   sendReportDeliveryEmail
 } from "./email";
-import { requireOwner, requireManager, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
+import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
   insertEmployeeSchema,
@@ -3448,8 +3448,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get employee documents (with filters)
-  app.get('/api/hireos/documents/:employeeId', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  // Get employee documents (with filters) - HR managers can view all documents
+  app.get('/api/hireos/documents/:employeeId', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { employeeId } = req.params;
       const { documentType, status } = req.query;
@@ -3483,8 +3483,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Approve document (manager/owner only)
-  app.post('/api/hireos/documents/:documentId/approve', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+  // Approve document (manager/owner/hr_manager only)
+  app.post('/api/hireos/documents/:documentId/approve', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { documentId } = req.params;
       const { approvalNotes } = req.body;
@@ -3512,8 +3512,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reject document (manager/owner only)
-  app.post('/api/hireos/documents/:documentId/reject', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+  // Reject document (manager/owner/hr_manager only)
+  app.post('/api/hireos/documents/:documentId/reject', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { documentId } = req.params;
       const { rejectionReason } = req.body;
@@ -3593,7 +3593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get document access logs (for compliance audit)
-  app.get('/api/hireos/documents/:documentId/access-logs', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/hireos/documents/:documentId/access-logs', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { documentId } = req.params;
       const userId = req.user.claims.sub;
@@ -3792,8 +3792,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate complete onboarding packet as PDF (all documents + audit trail)
-  app.get('/api/hireos/documents/:employeeId/packet', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+  // Generate complete onboarding packet as PDF (all documents + audit trail) - HR managers can generate packets
+  app.get('/api/hireos/documents/:employeeId/packet', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
     try {
       const PDFDocument = require('pdfkit');
       const { PDFDocument: PDFLib, degrees } = require('pdf-lib');

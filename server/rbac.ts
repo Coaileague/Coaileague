@@ -3,7 +3,7 @@ import { db } from './db';
 import { employees, workspaces, platformRoles } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
-export type WorkspaceRole = 'owner' | 'manager' | 'employee';
+export type WorkspaceRole = 'owner' | 'manager' | 'hr_manager' | 'supervisor' | 'employee';
 export type PlatformRole = 'root' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'none';
 
 export interface AuthenticatedRequest extends Request {
@@ -175,7 +175,9 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
 
 export const requireOwner = requireWorkspaceRole(['owner']);
 export const requireManager = requireWorkspaceRole(['owner', 'manager']);
-export const requireEmployee = requireWorkspaceRole(['owner', 'manager', 'employee']);
+export const requireHRManager = requireWorkspaceRole(['owner', 'manager', 'hr_manager']);
+export const requireSupervisor = requireWorkspaceRole(['owner', 'manager', 'supervisor']);
+export const requireEmployee = requireWorkspaceRole(['owner', 'manager', 'hr_manager', 'supervisor', 'employee']);
 
 // Leaders Hub - Organization Leaders (Owner/Manager only) for self-service admin
 export const requireLeader = requireWorkspaceRole(['owner', 'manager']);
@@ -206,8 +208,8 @@ export async function validateManagerAssignment(
     return { valid: false, error: 'Manager and employee must belong to the same workspace' };
   }
 
-  if (manager.workspaceRole !== 'manager' && manager.workspaceRole !== 'owner') {
-    return { valid: false, error: 'Manager must have manager or owner role' };
+  if (manager.workspaceRole !== 'manager' && manager.workspaceRole !== 'owner' && manager.workspaceRole !== 'supervisor') {
+    return { valid: false, error: 'Manager must have manager, owner, or supervisor role' };
   }
 
   if (manager.id === employee.id) {
