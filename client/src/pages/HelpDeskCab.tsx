@@ -257,11 +257,12 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   useEffect(() => {
     const errors: string[] = [];
     
-    // Check for API errors
+    // Only check for CRITICAL API errors (non-critical errors like missing MOTD table are suppressed)
     if (roomError) errors.push('Room unavailable');
-    if (agreementError) errors.push('Agreement check failed');
-    if (queueError) errors.push('Queue unavailable');
-    if (motdError) errors.push('MOTD fetch failed');
+    // Suppress non-critical database schema errors from UI:
+    // - agreementError (optional feature)
+    // - queueError (informational only)
+    // - motdError (optional feature)
     
     // Determine overall connection status
     if (!isConnected) {
