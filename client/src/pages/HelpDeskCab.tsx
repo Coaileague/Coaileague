@@ -719,7 +719,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       targetUserId: targetUser.id 
     });
     sendQuickMessage(`@${targetUser.name} I'm initiating a password reset for your account. You'll receive an email shortly.`);
-    toast({ title: "Password reset initiated", description: `Email sent to ${targetUser.name}` });
+    toast({ title: "✓ Password Reset Sent" });
   };
 
   const handleUnlockAccount = (targetUser: any) => {
@@ -728,7 +728,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       targetUserId: targetUser.id 
     });
     sendQuickMessage(`@${targetUser.name} Your account has been unlocked. You can now log in.`);
-    toast({ title: "Account unlocked", description: `${targetUser.name} can now access their account` });
+    toast({ title: "✓ Account Unlocked" });
   };
 
   const handleViewDocuments = (targetUser: any) => {
@@ -770,7 +770,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       targetUserId: targetUser.id 
     });
     sendQuickMessage(`@${targetUser.name} I'm sending a summary of our conversation to your email.`);
-    toast({ title: "Email summary sent", description: `Conversation summary sent to ${targetUser.name}` });
+    toast({ title: "✓ Email Summary Sent" });
   };
 
   const handleMarkVIP = (targetUser: any) => {
@@ -778,7 +778,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       type: 'mark_vip', 
       targetUserId: targetUser.id 
     });
-    toast({ title: "VIP status granted", description: `${targetUser.name} flagged as VIP customer` });
+    toast({ title: "✓ VIP Status Granted" });
   };
 
   const handleUserHistory = (targetUser: any) => {
@@ -786,7 +786,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       type: 'user_history', 
       targetUserId: targetUser.id 
     });
-    toast({ title: "History loaded", description: `Viewing ${targetUser.name}'s complete interaction history` });
+    toast({ title: "📜 History Loaded" });
   };
 
   const handleIssueWarning = (targetUser: any) => {
@@ -795,7 +795,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       targetUserId: targetUser.id 
     });
     sendQuickMessage(`@${targetUser.name} This is a formal warning. Please follow our community guidelines.`);
-    toast({ title: "Warning issued", description: `Formal warning sent to ${targetUser.name}`, variant: "destructive" });
+    toast({ title: "⚠️ Warning Issued", description: `${targetUser.name}` });
   };
 
   const handleTempMute = (targetUser: any) => {
@@ -804,7 +804,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       targetUserId: targetUser.id,
       duration: 300 
     });
-    toast({ title: "User muted", description: `${targetUser.name} muted for 5 minutes`, variant: "destructive" });
+    toast({ title: "🔇 User Muted", description: `${targetUser.name} • 5min` });
   };
 
   const handleBan = (targetUser: any) => {
@@ -813,15 +813,14 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       targetUserId: targetUser.id 
     });
     toast({ 
-      title: "User banned", 
-      description: `${targetUser.name} permanently banned from platform`, 
-      variant: "destructive" 
+      title: "🚫 User Banned", 
+      description: `${targetUser.name}`, 
     });
   };
 
   const handleAnalytics = () => {
     sendRawMessage({ type: 'analytics' });
-    toast({ title: "Analytics dashboard", description: "Opening system analytics..." });
+    toast({ title: "📊 Analytics Opened" });
   };
 
   const handleForceReconnect = (targetUser: any) => {
@@ -829,13 +828,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       type: 'force_reconnect', 
       targetUserId: targetUser.id 
     });
-    toast({ title: "Reconnection forced", description: `${targetUser.name}'s connection reset` });
+    toast({ title: "🔄 Connection Reset" });
   };
 
   const handleTestMessage = () => {
     sendRawMessage({ type: 'test_message', timestamp: Date.now() });
     sendQuickMessage(`🔧 SYSTEM TEST - Message sent at ${new Date().toLocaleTimeString()}`);
-    toast({ title: "Test message sent", description: "System diagnostic message transmitted" });
+    toast({ title: "🔧 Test Message Sent" });
   };
 
   const handleClearCache = (targetUser: any) => {
@@ -843,7 +842,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       type: 'clear_cache', 
       targetUserId: targetUser.id 
     });
-    toast({ title: "Cache cleared", description: `${targetUser.name}'s session cache cleared` });
+    toast({ title: "✓ Cache Cleared" });
   };
 
   // Stateful menu helpers - for context menu toggles
@@ -857,7 +856,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         next.delete(targetUser.id);
         return next;
       });
-      toast({ title: "User unmuted", description: `${targetUser.name} can now speak` });
+      toast({ title: "🔊 User Unmuted" });
     } else {
       // Open silence dialog for branded reason selection
       setSilenceDialogUser({ userId: targetUser.id, userName: targetUser.name });
@@ -874,7 +873,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         next.delete(targetUser.id);
         return next;
       });
-      toast({ title: "User unbanned", description: `${targetUser.name} has been unbanned` });
+      toast({ title: "✓ User Unbanned" });
     } else {
       // Ban
       sendRawMessage({ type: 'ban_user', targetUserId: targetUser.id });
@@ -883,7 +882,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         next.add(targetUser.id);
         return next;
       });
-      toast({ title: "User banned", description: `${targetUser.name} permanently banned`, variant: "destructive" });
+      toast({ title: "🚫 User Banned", description: `${targetUser.name}` });
     }
   };
 
@@ -943,8 +942,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                     setSeasonalAnimationsEnabled(newValue);
                     localStorage.setItem('seasonal-animations-enabled', String(newValue));
                     toast({ 
-                      title: newValue ? "Seasonal animations enabled" : "Seasonal animations disabled",
-                      description: newValue ? "Background effects turned on" : "Background effects turned off"
+                      title: newValue ? "✓ Animations On" : "Animations Off",
                     });
                   }}
                   size="sm"
@@ -1389,9 +1387,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           if (kickDialogUser) {
             kickUser(kickDialogUser.userId, reason);
             toast({ 
-              title: "User Removed", 
-              description: `${kickDialogUser.userName} has been kicked from chat. Reason: ${reason}`,
-              variant: "destructive" 
+              title: "✓ User Removed", 
+              description: `${kickDialogUser.userName} • ${reason}`,
             });
             setKickDialogUser(null);
           }
@@ -1417,9 +1414,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
               return next;
             });
             toast({ 
-              title: "User Silenced", 
-              description: `${silenceDialogUser.userName} muted for ${duration} minutes. Reason: ${reason}`,
-              variant: "destructive" 
+              title: "✓ User Silenced", 
+              description: `${silenceDialogUser.userName} • ${duration}min • ${reason}`,
             });
             setSilenceDialogUser(null);
           }

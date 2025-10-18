@@ -1345,13 +1345,107 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // ROOT PROTECTION: Only root can kick root
+            // PROTECTION: Check if target user can be kicked
             const targetRole = await storage.getUserPlatformRole(payload.targetUserId).catch(() => null);
+            const rawTargetInfo = await storage.getUserDisplayInfo(payload.targetUserId).catch(() => null);
+            const targetUserInfo = rawTargetInfo ? {
+              ...rawTargetInfo,
+              email: rawTargetInfo.email ?? undefined,
+            } : null;
+            const targetDisplayName = targetUserInfo ? formatUserDisplayName(targetUserInfo) : 'User';
+            
+            // Only root can kick root
             if (targetRole === 'root' && kickerRole !== 'root') {
-              ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Only root administrators can remove other root administrators',
-              }));
+              // Send public error message visible to all in chat
+              const errorMessage: ChatMessage = {
+                id: Date.now().toString(),
+                conversationId: ws.conversationId,
+                senderId: 'system',
+                senderName: 'System',
+                message: `❌ DENIED: Cannot remove ${targetDisplayName}. Root administrators cannot be removed by non-root users.`,
+                senderType: 'system',
+                messageType: 'text',
+                isSystemMessage: true,
+                attachmentUrl: null,
+                attachmentName: null,
+                createdAt: new Date(),
+                isRead: false,
+                readAt: null,
+              };
+              
+              // Broadcast error to all clients
+              const clients = conversationClients.get(ws.conversationId);
+              if (clients) {
+                clients.forEach((client) => {
+                  if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                      type: 'new_message',
+                      message: errorMessage,
+                    }));
+                  }
+                });
+              }
+              
+              // Also save to database
+              try {
+                await storage.createChatMessage({
+                  conversationId: ws.conversationId,
+                  senderId: 'system',
+                  senderName: 'System',
+                  message: errorMessage.message,
+                  senderType: 'system',
+                  isSystemMessage: true,
+                });
+              } catch (err) {
+                console.error('Failed to save error message:', err);
+              }
+              return;
+            }
+            
+            // Deputy admins can only kick non-staff users
+            if (targetRole && ['deputy_admin', 'deputy_assistant', 'sysop'].includes(targetRole) && kickerRole === 'deputy_admin') {
+              const errorMessage: ChatMessage = {
+                id: Date.now().toString(),
+                conversationId: ws.conversationId,
+                senderId: 'system',
+                senderName: 'System',
+                message: `❌ DENIED: Cannot remove ${targetDisplayName}. Staff members cannot remove other staff members.`,
+                senderType: 'system',
+                messageType: 'text',
+                isSystemMessage: true,
+                attachmentUrl: null,
+                attachmentName: null,
+                createdAt: new Date(),
+                isRead: false,
+                readAt: null,
+              };
+              
+              // Broadcast error to all clients
+              const clients = conversationClients.get(ws.conversationId);
+              if (clients) {
+                clients.forEach((client) => {
+                  if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                      type: 'new_message',
+                      message: errorMessage,
+                    }));
+                  }
+                });
+              }
+              
+              // Also save to database
+              try {
+                await storage.createChatMessage({
+                  conversationId: ws.conversationId,
+                  senderId: 'system',
+                  senderName: 'System',
+                  message: errorMessage.message,
+                  senderType: 'system',
+                  isSystemMessage: true,
+                });
+              } catch (err) {
+                console.error('Failed to save error message:', err);
+              }
               return;
             }
 

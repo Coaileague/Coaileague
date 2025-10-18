@@ -629,7 +629,7 @@ export default function ModernMobileChat() {
   // Support command handlers with user ID tracking
   const handleReleaseHold = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", description: "Please select a user first", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected", description: "Select a user first" });
       return;
     }
     
@@ -646,7 +646,7 @@ export default function ModernMobileChat() {
 
   const handleRequestAuth = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -659,7 +659,7 @@ export default function ModernMobileChat() {
 
   const handleRequestDocument = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -672,7 +672,7 @@ export default function ModernMobileChat() {
 
   const handleRequestPhoto = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -685,7 +685,7 @@ export default function ModernMobileChat() {
 
   const handleRequestSignature = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -698,7 +698,7 @@ export default function ModernMobileChat() {
 
   const handleRequestInfo = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -711,7 +711,7 @@ export default function ModernMobileChat() {
 
   const handleTransfer = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -724,7 +724,7 @@ export default function ModernMobileChat() {
 
   const handleResolve = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -739,7 +739,7 @@ export default function ModernMobileChat() {
   // NEW COMMAND HANDLERS - TIER 1 (Basic Support)
   const handleQuickReply = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -757,7 +757,7 @@ export default function ModernMobileChat() {
 
   const handleInternalNote = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -770,7 +770,7 @@ export default function ModernMobileChat() {
   // NEW COMMAND HANDLERS - TIER 2 (Authentication)
   const handleResetPassword = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -783,7 +783,7 @@ export default function ModernMobileChat() {
 
   const handleUnlockAccount = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -797,7 +797,7 @@ export default function ModernMobileChat() {
   // NEW COMMAND HANDLERS - TIER 3 (Documents)
   const handleViewDocuments = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -810,7 +810,7 @@ export default function ModernMobileChat() {
   // NEW COMMAND HANDLERS - TIER 4 (Ticket Management)
   const handleEscalate = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -823,7 +823,7 @@ export default function ModernMobileChat() {
 
   const handlePriorityTag = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -835,7 +835,7 @@ export default function ModernMobileChat() {
 
   const handleFollowUp = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -848,7 +848,7 @@ export default function ModernMobileChat() {
   // NEW COMMAND HANDLERS - TIER 5 (Advanced)
   const handleEmailSummary = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -861,7 +861,7 @@ export default function ModernMobileChat() {
 
   const handleMarkVIP = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -873,7 +873,7 @@ export default function ModernMobileChat() {
 
   const handleUserHistory = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -886,7 +886,7 @@ export default function ModernMobileChat() {
   // NEW COMMAND HANDLERS - TIER 6 (Moderation)
   const handleIssueWarning = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -894,37 +894,37 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     sendMessage(`@${selectedUser.name} This is a formal warning. Please follow our community guidelines.`, userName, 'support');
     
-    toast({ title: "Warning issued", description: `Formal warning sent to ${selectedUser.name}`, variant: "destructive" });
+    toast({ title: "⚠️ Warning Issued", description: `${selectedUser.name}` });
   };
 
   const handleTempMute = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
     const message = `TEMP_MUTE:${selectedUser.id}:${selectedUser.name}:300`;
     sendRawMessage(message);
     
-    toast({ title: "User muted", description: `${selectedUser.name} muted for 5 minutes`, variant: "destructive" });
+    toast({ title: "🔇 User Muted", description: `${selectedUser.name} • 5min` });
   };
 
   const handleKick = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
     const message = `KICK_USER:${selectedUser.id}:${selectedUser.name}`;
     sendRawMessage(message);
     
-    toast({ title: "User kicked", description: `${selectedUser.name} removed from chat room`, variant: "destructive" });
+    toast({ title: "✓ User Removed", description: `${selectedUser.name}` });
     setSelectedUser(null);
   };
 
   const handleBan = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -932,9 +932,8 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ 
-      title: "User banned", 
-      description: `${selectedUser.name} permanently banned from platform`, 
-      variant: "destructive" 
+      title: "🚫 User Banned", 
+      description: `${selectedUser.name}`, 
     });
     setSelectedUser(null);
   };
@@ -949,7 +948,7 @@ export default function ModernMobileChat() {
 
   const handleForceReconnect = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
@@ -969,7 +968,7 @@ export default function ModernMobileChat() {
 
   const handleClearCache = () => {
     if (!selectedUser) {
-      toast({ title: "No user selected", variant: "destructive" });
+      toast({ title: "⚠️ No User Selected" });
       return;
     }
     
