@@ -510,7 +510,7 @@ export default function ModernMobileChat() {
   // Fetch user context when user is selected (staff only)
   const { data: fetchedUserContext } = useQuery<any>({
     queryKey: ['/api/helpdesk/user-context', selectedUser?.id],
-    enabled: !!selectedUser && isStaff,
+    enabled: Boolean(selectedUser && isStaff),
     retry: false,
     staleTime: 30000,
   });
@@ -548,7 +548,6 @@ export default function ModernMobileChat() {
     }, 500);
     
     toast({ title: "Released from hold", description: `${selectedUser.name} can now chat freely` });
-    setActiveTab("chat");
   };
 
   const handleRequestAuth = () => {
@@ -562,7 +561,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please verify your identity. I'll send you a secure authentication request.`, userName, 'support');
     
     toast({ title: "Auth request sent", description: `Waiting for ${selectedUser.name} to authenticate` });
-    setActiveTab("chat");
   };
 
   const handleRequestDocument = () => {
@@ -576,7 +574,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please upload the required document using the secure upload dialog.`, userName, 'support');
     
     toast({ title: "Document request sent", description: `${selectedUser.name} will receive upload prompt` });
-    setActiveTab("chat");
   };
 
   const handleRequestPhoto = () => {
@@ -590,7 +587,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please upload a photo/screenshot to help us assist you.`, userName, 'support');
     
     toast({ title: "Photo request sent" });
-    setActiveTab("chat");
   };
 
   const handleRequestSignature = () => {
@@ -604,7 +600,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please provide your e-signature to proceed.`, userName, 'support');
     
     toast({ title: "Signature request sent" });
-    setActiveTab("chat");
   };
 
   const handleRequestInfo = () => {
@@ -618,7 +613,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Please provide additional information about your request.`, userName, 'support');
     
     toast({ title: "Info request sent" });
-    setActiveTab("chat");
   };
 
   const handleTransfer = () => {
@@ -632,7 +626,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm transferring you to another specialist who can better assist you.`, userName, 'support');
     
     toast({ title: "Transfer initiated", description: `${selectedUser.name} will be transferred` });
-    setActiveTab("chat");
   };
 
   const handleResolve = () => {
@@ -646,7 +639,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Your issue has been resolved. Is there anything else I can help you with?`, userName, 'support');
     
     toast({ title: "Ticket resolved", description: `${selectedUser.name}'s ticket marked as resolved` });
-    setActiveTab("chat");
     setSelectedUser(null);
   };
 
@@ -667,7 +659,6 @@ export default function ModernMobileChat() {
     
     sendMessage(`@${selectedUser.name} ${reply}`, userName, 'support');
     toast({ title: "Quick reply sent" });
-    setActiveTab("chat");
   };
 
   const handleInternalNote = () => {
@@ -680,7 +671,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Internal note added", description: "Note visible to staff only" });
-    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 2 (Authentication)
@@ -695,7 +685,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm initiating a password reset for your account. You'll receive an email shortly.`, userName, 'support');
     
     toast({ title: "Password reset initiated", description: `Email sent to ${selectedUser.name}` });
-    setActiveTab("chat");
   };
 
   const handleUnlockAccount = () => {
@@ -709,7 +698,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} Your account has been unlocked. You can now log in.`, userName, 'support');
     
     toast({ title: "Account unlocked", description: `${selectedUser.name} can now access their account` });
-    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 3 (Documents)
@@ -723,7 +711,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Document viewer opened", description: `Viewing ${selectedUser.name}'s submitted documents` });
-    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 4 (Ticket Management)
@@ -738,7 +725,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm escalating your issue to our senior support team for specialized assistance.`, userName, 'support');
     
     toast({ title: "Ticket escalated", description: "Transferred to Tier 2 support" });
-    setActiveTab("chat");
   };
 
   const handlePriorityTag = () => {
@@ -751,7 +737,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Priority flag added", description: `${selectedUser.name}'s ticket marked as high priority`, variant: "default" });
-    setActiveTab("chat");
   };
 
   const handleFollowUp = () => {
@@ -764,7 +749,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Follow-up scheduled", description: "Reminder set for 24 hours" });
-    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 5 (Advanced)
@@ -779,7 +763,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} I'm sending a summary of our conversation to your email.`, userName, 'support');
     
     toast({ title: "Email summary sent", description: `Conversation summary sent to ${selectedUser.name}` });
-    setActiveTab("chat");
   };
 
   const handleMarkVIP = () => {
@@ -792,7 +775,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "VIP status granted", description: `${selectedUser.name} flagged as VIP customer` });
-    setActiveTab("chat");
   };
 
   const handleUserHistory = () => {
@@ -805,7 +787,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "History loaded", description: `Viewing ${selectedUser.name}'s complete interaction history` });
-    setActiveTab("chat");
   };
 
   // NEW COMMAND HANDLERS - TIER 6 (Moderation)
@@ -820,7 +801,6 @@ export default function ModernMobileChat() {
     sendMessage(`@${selectedUser.name} This is a formal warning. Please follow our community guidelines.`, userName, 'support');
     
     toast({ title: "Warning issued", description: `Formal warning sent to ${selectedUser.name}`, variant: "destructive" });
-    setActiveTab("chat");
   };
 
   const handleTempMute = () => {
@@ -833,7 +813,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "User muted", description: `${selectedUser.name} muted for 5 minutes`, variant: "destructive" });
-    setActiveTab("chat");
   };
 
   const handleKick = () => {
@@ -846,7 +825,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "User kicked", description: `${selectedUser.name} removed from chat room`, variant: "destructive" });
-    setActiveTab("chat");
     setSelectedUser(null);
   };
 
@@ -864,7 +842,6 @@ export default function ModernMobileChat() {
       description: `${selectedUser.name} permanently banned from platform`, 
       variant: "destructive" 
     });
-    setActiveTab("chat");
     setSelectedUser(null);
   };
 
@@ -874,7 +851,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Analytics dashboard", description: "Opening system analytics..." });
-    setActiveTab("chat");
   };
 
   const handleForceReconnect = () => {
@@ -887,7 +863,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Reconnection forced", description: `${selectedUser.name}'s connection reset` });
-    setActiveTab("chat");
   };
 
   const handleTestMessage = () => {
@@ -896,7 +871,6 @@ export default function ModernMobileChat() {
     sendMessage(`🔧 SYSTEM TEST - Message sent at ${new Date().toLocaleTimeString()}`, userName, 'support');
     
     toast({ title: "Test message sent", description: "System diagnostic message transmitted" });
-    setActiveTab("chat");
   };
 
   const handleClearCache = () => {
@@ -909,7 +883,6 @@ export default function ModernMobileChat() {
     sendRawMessage(message);
     
     toast({ title: "Cache cleared", description: `${selectedUser.name}'s session cache cleared` });
-    setActiveTab("chat");
   };
 
   return (
@@ -1268,7 +1241,7 @@ export default function ModernMobileChat() {
                   <button
                     key={user.id}
                     onClick={() => {
-                      setSelectedUser(user);
+                      setSelectedUser(user as OnlineUser);
                       setShowUserList(false);
                       toast({ title: "User selected", description: `Viewing ${user.name}` });
                     }}
