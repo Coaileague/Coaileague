@@ -23,31 +23,33 @@ interface UserInfo {
  */
 export function formatUserDisplayName(user: UserInfo): string {
   const firstName = user.firstName || extractFirstNameFromEmail(user.email);
+  const lastName = user.lastName || '';
+  const fullName = lastName ? `${firstName} ${lastName}` : firstName;
   
   // Platform roles (WorkforceOS staff) - name first, then (Role)
   if (user.platformRole && user.platformRole !== 'none') {
     const roleTitle = formatPlatformRole(user.platformRole);
-    return `${firstName} (${roleTitle})`;
+    return `${fullName} (${roleTitle})`;
   }
   
   // Workspace roles (organizational roles) - name first, then (Role)
   if (user.workspaceRole && user.workspaceRole !== 'employee') {
     const roleTitle = formatWorkspaceRole(user.workspaceRole);
-    return `${firstName} (${roleTitle})`;
+    return `${fullName} (${roleTitle})`;
   }
   
   // Guest (ticket holder) - name first, then (Guest)
   if (user.isGuest) {
-    return `${firstName} (Guest)`;
+    return `${fullName} (Guest)`;
   }
   
   // Subscriber (verified customer account) - name first, then (Subscriber)
   if (user.isSubscriber) {
-    return `${firstName} (Subscriber)`;
+    return `${fullName} (Subscriber)`;
   }
   
   // Default: Employee or regular user
-  return `${firstName} (Employee)`;
+  return `${fullName} (Employee)`;
 }
 
 /**
