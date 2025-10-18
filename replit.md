@@ -50,6 +50,18 @@ The platform features a CAD-style professional interface with a dark mode theme,
         - **PredictionOS™ (AI Workforce Analytics)**: GPT-4 powered turnover risk prediction and cost variance analysis.
         - **Custom Logic Workflow Builder**: Visual drag-and-drop rule engine for automating workflows.
         - **Real-Time Geo-Compliance & Audit Trail**: GPS/IP tracking for time entries with mandatory 7-year retention.
+        - **TalentOS™ (Internal Talent Marketplace & Performance-to-Pay)**:
+            - **Internal Talent Marketplace**: Employees bid on internal role openings with intelligent matching based on skills, certifications, and performance scores. High-risk employees (PredictionOS™ turnover score >70%) trigger automatic manager alerts for retention interventions.
+            - **Performance-to-Pay Loop**: Auto-calculates performance metrics from Unified Data Nexus (attendance rate, shift completion, report quality, compliance violations, overtime hours) and generates data-justified pay increase recommendations with transparent formulas. Managers can override with justification. Replaces subjective annual reviews with objective, continuous performance measurement.
+            - **Career Pathing System**: Role templates define progression paths with required skills, certifications, and minimum performance thresholds. Skill gap analysis identifies training needs and generates personalized development plans linked to LearnOS™.
+            - **Unified Data Nexus Integration**: Performance reviews pull metrics from ClockOS™ (time tracking), ScheduleOS™ (shifts), ReportOS™ (submission quality), and compliance systems to create composite performance scores (0-100%) with performance tiers (exceptional/exceeds/meets/needs improvement/unsatisfactory).
+        - **AssetOS™ (Physical Resource Allocation & Billing)**:
+            - **Dual-Layer Resource Scheduling**: Extends ScheduleOS™ to schedule both employees AND physical assets (vehicles, equipment, machinery) on the same timeline. Real-time conflict detection prevents double-booking expensive equipment.
+            - **Operator Certification Verification**: Automatically validates employees have required certifications before allowing asset assignment (e.g., forklift license for heavy machinery).
+            - **Asset-Time Reporting**: Tracks usage periods, odometer readings, fuel consumption, and billable hours for each asset deployment. Pre/post-inspection checklists with damage reporting automatically flag assets for maintenance.
+            - **BillOS™ Auto-Billing Integration**: Asset usage charges automatically appear on client invoices. Zero-touch revenue generation from equipment rentals with cost center tracking for client accounting departments.
+            - **Maintenance Scheduling**: Tracks maintenance intervals, schedules preventive maintenance, and blocks asset availability during service periods. Automated alerts for overdue maintenance.
+            - **Utilization Analytics**: Calculates asset utilization rates, revenue per asset, and identifies underperforming equipment for ROI optimization.
 
 ## External Dependencies
 - **Database**: Neon (PostgreSQL)
