@@ -9,6 +9,7 @@ import { useChatSounds } from "@/hooks/use-chat-sounds";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
+import { MiniAdBanner } from "@/components/mini-ad-banner";
 import { useTransition } from "@/contexts/transition-context";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -1022,6 +1023,11 @@ export default function ModernMobileChat() {
       {/* Tab Content */}
       {activeTab === 'chat' && (
         <>
+          {/* Mini Advertisement Banner */}
+          <div className="relative z-10">
+            <MiniAdBanner />
+          </div>
+
           {/* Messages Container */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 relative z-10">
         {messages.map((msg) => {
