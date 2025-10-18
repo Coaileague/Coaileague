@@ -73,7 +73,19 @@ interface TransferUserPayload {
   targetUserId: string;
 }
 
-type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload;
+interface SilenceUserPayload {
+  type: 'silence_user';
+  targetUserId: string;
+  duration?: number;
+  reason?: string;
+}
+
+interface GiveVoicePayload {
+  type: 'give_voice';
+  targetUserId: string;
+}
+
+type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload;
 
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to WorkforceOS HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
@@ -1506,6 +1518,156 @@ export function setupWebSocket(server: Server) {
                 }));
               }
             });
+
+            break;
+          }
+
+          case 'silence_user': {
+            // Mute/silence a user temporarily
+            if (!ws.conversationId || !ws.userId) {
+              return;
+            }
+
+            // SECURITY: Only platform staff can silence users
+            const staffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+            const canSilence = staffRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(staffRole);
+            
+            if (!canSilence) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You do not have permission to silence users',
+              }));
+              return;
+            }
+
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients) return;
+
+            // Find target user
+            let targetUserName = 'User';
+            for (const client of Array.from(clients)) {
+              if (client.userId === payload.targetUserId) {
+                targetUserName = client.userName || 'User';
+                break;
+              }
+            }
+
+            // Create system announcement message
+            const duration = payload.duration || 5;
+            const reason = payload.reason || 'Chat violation';
+            const silenceMessage: ChatMessage = {
+              id: Date.now().toString(),
+              conversationId: ws.conversationId,
+              senderId: 'system',
+              senderName: 'System',
+              message: `🔇 **${targetUserName}** has been silenced for ${duration} minutes by ${ws.userName}. Reason: ${reason}`,
+              senderType: 'system',
+              messageType: 'text',
+              isSystemMessage: true,
+              attachmentUrl: null,
+              attachmentName: null,
+              createdAt: new Date(),
+              isRead: false,
+              readAt: null,
+            };
+
+            // Save and broadcast the silence message
+            try {
+              await storage.createChatMessage({
+                conversationId: ws.conversationId,
+                senderId: 'system',
+                senderName: 'System',
+                message: silenceMessage.message,
+                senderType: 'system',
+              });
+
+              clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'new_message',
+                    message: silenceMessage,
+                  }));
+                }
+              });
+
+              console.log(`🔇 ${targetUserName} silenced by ${ws.userName} for ${duration} minutes - Reason: ${reason}`);
+            } catch (err) {
+              console.error('Failed to save silence message:', err);
+            }
+
+            break;
+          }
+
+          case 'give_voice': {
+            // Unmute a user (give them voice back)
+            if (!ws.conversationId || !ws.userId) {
+              return;
+            }
+
+            // SECURITY: Only platform staff can give voice
+            const staffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+            const canGiveVoice = staffRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(staffRole);
+            
+            if (!canGiveVoice) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You do not have permission to unmute users',
+              }));
+              return;
+            }
+
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients) return;
+
+            // Find target user
+            let targetUserName = 'User';
+            for (const client of Array.from(clients)) {
+              if (client.userId === payload.targetUserId) {
+                targetUserName = client.userName || 'User';
+                break;
+              }
+            }
+
+            // Create system announcement message
+            const unmuteMessage: ChatMessage = {
+              id: Date.now().toString(),
+              conversationId: ws.conversationId,
+              senderId: 'system',
+              senderName: 'System',
+              message: `🔊 **${targetUserName}** has been unmuted by ${ws.userName} and can now speak.`,
+              senderType: 'system',
+              messageType: 'text',
+              isSystemMessage: true,
+              attachmentUrl: null,
+              attachmentName: null,
+              createdAt: new Date(),
+              isRead: false,
+              readAt: null,
+            };
+
+            // Save and broadcast the unmute message
+            try {
+              await storage.createChatMessage({
+                conversationId: ws.conversationId,
+                senderId: 'system',
+                senderName: 'System',
+                message: unmuteMessage.message,
+                senderType: 'system',
+              });
+
+              clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'new_message',
+                    message: unmuteMessage,
+                  }));
+                }
+              });
+
+              console.log(`🔊 ${targetUserName} unmuted by ${ws.userName}`);
+            } catch (err) {
+              console.error('Failed to save unmute message:', err);
+            }
 
             break;
           }

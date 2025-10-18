@@ -37,6 +37,7 @@ import { WFLogoCompact } from "@/components/wf-logo";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
+import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
 import { HelpDeskCommandBar } from "@/components/helpdesk-command-bar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ChatAnnouncementBanner } from "@/components/chat-announcement-banner";
@@ -86,7 +87,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     requestedBy: string;
     message?: string;
   } | null>(null);
-  const [confirmKick, setConfirmKick] = useState<{ userId: string; userName: string } | null>(null);
+  const [kickDialogUser, setKickDialogUser] = useState<{ userId: string; userName: string } | null>(null);
+  const [silenceDialogUser, setSilenceDialogUser] = useState<{ userId: string; userName: string } | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showRoomStatus, setShowRoomStatus] = useState(false);
   const [roomStatusControl, setRoomStatusControl] = useState<"open" | "closed" | "maintenance">("open");
@@ -734,14 +736,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       });
       toast({ title: "User unmuted", description: `${targetUser.name} can now speak` });
     } else {
-      // Mute/Silence
-      sendRawMessage({ type: 'silence_user', targetUserId: targetUser.id });
-      setSilencedUsers(prev => {
-        const next = new Set(prev);
-        next.add(targetUser.id);
-        return next;
-      });
-      toast({ title: "User silenced", description: `${targetUser.name} has been muted`, variant: "destructive" });
+      // Open silence dialog for branded reason selection
+      setSilenceDialogUser({ userId: targetUser.id, userName: targetUser.name });
     }
   };
 
@@ -1183,7 +1179,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                                 <ContextMenuItem onClick={() => handleTempMute(u)}>
                                   ⏱️ Mute 5min
                                 </ContextMenuItem>
-                                <ContextMenuItem onClick={() => setConfirmKick({ userId: u.id, userName: u.name })} className="text-red-600">
+                                <ContextMenuItem onClick={() => setKickDialogUser({ userId: u.id, userName: u.name })} className="text-red-600">
                                   🚫 Kick
                                 </ContextMenuItem>
                                 <ContextMenuItem onClick={() => toggleBan(u)} className="text-red-700 font-bold">
@@ -1249,22 +1245,51 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         />
       )}
 
-      {/* Branded Confirm Dialog - Kick User */}
-      {confirmKick && (
-        <BrandedConfirmDialog
-          open={!!confirmKick}
-          onClose={() => setConfirmKick(null)}
-          title="Remove User from Chat?"
-          description={`Are you sure you want to remove ${confirmKick.userName} from the chat for policy violation? This action will disconnect them immediately.`}
-          confirmLabel="Remove User"
-          cancelLabel="Cancel"
-          variant="danger"
-          onConfirm={() => {
-            kickUser(confirmKick.userId, 'policy violation');
-            setConfirmKick(null);
-          }}
-        />
-      )}
+      {/* Branded Kick Dialog - Two-step with templated reasons */}
+      <KickDialog
+        open={!!kickDialogUser}
+        userName={kickDialogUser?.userName || ''}
+        onConfirm={(reason) => {
+          if (kickDialogUser) {
+            kickUser(kickDialogUser.userId, reason);
+            toast({ 
+              title: "User Removed", 
+              description: `${kickDialogUser.userName} has been kicked from chat. Reason: ${reason}`,
+              variant: "destructive" 
+            });
+            setKickDialogUser(null);
+          }
+        }}
+        onCancel={() => setKickDialogUser(null)}
+      />
+
+      {/* Branded Silence Dialog - Two-step with templated reasons */}
+      <SilenceDialog
+        open={!!silenceDialogUser}
+        userName={silenceDialogUser?.userName || ''}
+        onConfirm={(duration, reason) => {
+          if (silenceDialogUser) {
+            sendRawMessage({ 
+              type: 'silence_user', 
+              targetUserId: silenceDialogUser.userId,
+              duration: parseInt(duration),
+              reason: reason
+            });
+            setSilencedUsers(prev => {
+              const next = new Set(prev);
+              next.add(silenceDialogUser.userId);
+              return next;
+            });
+            toast({ 
+              title: "User Silenced", 
+              description: `${silenceDialogUser.userName} muted for ${duration} minutes. Reason: ${reason}`,
+              variant: "destructive" 
+            });
+            setSilenceDialogUser(null);
+          }
+        }}
+        onCancel={() => setSilenceDialogUser(null)}
+      />
 
       {/* Tutorial Dialog */}
       {showTutorial && (

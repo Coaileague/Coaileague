@@ -20,6 +20,8 @@ interface UserContextMenuProps {
   username: string;
   isStaff: boolean;
   onCommandExecute: (command: string) => void;
+  onKickUser?: (username: string) => void;
+  onSilenceUser?: (username: string) => void;
   children: React.ReactNode;
 }
 
@@ -27,6 +29,8 @@ export function UserContextMenu({
   username, 
   isStaff, 
   onCommandExecute,
+  onKickUser,
+  onSilenceUser,
   children 
 }: UserContextMenuProps) {
   // Only show context menu for staff users
@@ -90,14 +94,18 @@ export function UserContextMenu({
         
         <ContextMenuItem
           onClick={() => {
-            const duration = prompt('Mute duration (minutes):', '5');
-            if (duration) handleCommand(`/mute ${username} ${duration}`);
+            if (onSilenceUser) {
+              onSilenceUser(username);
+            } else {
+              const duration = prompt('Mute duration (minutes):', '5');
+              if (duration) handleCommand(`/mute ${username} ${duration}`);
+            }
           }}
           className="cursor-pointer"
           data-testid="context-mute"
         >
           <VolumeX className="w-4 h-4 mr-2" />
-          Mute User
+          Silence User
         </ContextMenuItem>
         
         <ContextMenuItem
@@ -116,8 +124,12 @@ export function UserContextMenu({
         
         <ContextMenuItem
           onClick={() => {
-            const reason = prompt(`Reason for kicking ${username}:`, 'Violation of terms');
-            if (reason) handleCommand(`/kick ${username} ${reason}`, true);
+            if (onKickUser) {
+              onKickUser(username);
+            } else {
+              const reason = prompt(`Reason for kicking ${username}:`, 'Violation of terms');
+              if (reason) handleCommand(`/kick ${username} ${reason}`, true);
+            }
           }}
           className="cursor-pointer text-red-600 dark:text-red-400"
           data-testid="context-kick"
