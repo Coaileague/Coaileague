@@ -365,6 +365,119 @@ export const emailTemplates = {
         </div>
       </div>
     `
+  }),
+
+  // Dispute Resolution Notifications
+  reviewDeleted: (data: {
+    recipientName: string;
+    reviewType: string;
+    deletedBy: string;
+    explanation: string;
+  }) => ({
+    subject: `Performance Review Removed - Action Taken`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Performance Review Removed</h2>
+        <p>Hello ${data.recipientName},</p>
+        <p>A performance review has been removed from your record by platform support.</p>
+        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <p style="margin: 5px 0;"><strong>Review Type:</strong> ${data.reviewType}</p>
+          <p style="margin: 5px 0;"><strong>Removed By:</strong> ${data.deletedBy}</p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 5px 0; font-weight: 600;">Explanation:</p>
+          <p style="margin: 10px 0; line-height: 1.6;">${data.explanation}</p>
+        </div>
+        <p>If you have questions about this action, please contact platform support.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS Support.
+        </p>
+      </div>
+    `
+  }),
+
+  reviewEdited: (data: {
+    recipientName: string;
+    reviewType: string;
+    editedBy: string;
+    changesDescription: string;
+    explanation: string;
+  }) => ({
+    subject: `Performance Review Updated - Action Taken`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #ea580c;">Performance Review Updated</h2>
+        <p>Hello ${data.recipientName},</p>
+        <p>A performance review in your record has been updated by platform support.</p>
+        <div style="background-color: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ea580c;">
+          <p style="margin: 5px 0;"><strong>Review Type:</strong> ${data.reviewType}</p>
+          <p style="margin: 5px 0;"><strong>Updated By:</strong> ${data.editedBy}</p>
+          <p style="margin: 5px 0;"><strong>Changes:</strong> ${data.changesDescription}</p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 5px 0; font-weight: 600;">Explanation:</p>
+          <p style="margin: 10px 0; line-height: 1.6;">${data.explanation}</p>
+        </div>
+        <p>If you have questions about this action, please contact platform support.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS Support.
+        </p>
+      </div>
+    `
+  }),
+
+  ratingDeleted: (data: {
+    workspaceName: string;
+    deletedBy: string;
+    explanation: string;
+  }) => ({
+    subject: `Employer Rating Removed - Action Taken`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Employer Rating Removed</h2>
+        <p>Hello ${data.workspaceName} Team,</p>
+        <p>An employer rating for your organization has been removed by platform support.</p>
+        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <p style="margin: 5px 0;"><strong>Removed By:</strong> ${data.deletedBy}</p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 5px 0; font-weight: 600;">Explanation:</p>
+          <p style="margin: 10px 0; line-height: 1.6;">${data.explanation}</p>
+        </div>
+        <p>This action was taken to ensure rating integrity and prevent spam or abuse.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS Support.
+        </p>
+      </div>
+    `
+  }),
+
+  writeUpDeleted: (data: {
+    recipientName: string;
+    reportType: string;
+    deletedBy: string;
+    explanation: string;
+  }) => ({
+    subject: `Disciplinary Report Removed - Action Taken`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">Disciplinary Report Removed</h2>
+        <p>Hello ${data.recipientName},</p>
+        <p>A disciplinary report has been removed from your record by platform support.</p>
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 5px 0;"><strong>Report Type:</strong> ${data.reportType}</p>
+          <p style="margin: 5px 0;"><strong>Removed By:</strong> ${data.deletedBy}</p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 5px 0; font-weight: 600;">Explanation:</p>
+          <p style="margin: 10px 0; line-height: 1.6;">${data.explanation}</p>
+        </div>
+        <p>Your record has been updated to reflect this change.</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          This is an automated message from WorkforceOS Support.
+        </p>
+      </div>
+    `
   })
 };
 
@@ -607,6 +720,95 @@ export async function sendReportDeliveryEmail(
     return { success: true, data: result };
   } catch (error) {
     console.error('Error sending report delivery email:', error);
+    return { success: false, error };
+  }
+}
+
+// Dispute Resolution Email Functions
+export async function sendReviewDeletedEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.reviewDeleted>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.reviewDeleted(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending review deleted email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendReviewEditedEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.reviewEdited>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.reviewEdited(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending review edited email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendRatingDeletedEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.ratingDeleted>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.ratingDeleted(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending rating deleted email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendWriteUpDeletedEmail(
+  to: string,
+  data: Parameters<typeof emailTemplates.writeUpDeleted>[0]
+) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.writeUpDeleted(data);
+    
+    const result = await client.emails.send({
+      from: fromEmail,
+      to: [to],
+      subject: template.subject,
+      html: template.html,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending write-up deleted email:', error);
     return { success: false, error };
   }
 }

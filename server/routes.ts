@@ -15,7 +15,11 @@ import {
   sendInvoiceGeneratedEmail, 
   sendEmployeeOnboardingEmail,
   sendOnboardingInviteEmail,
-  sendReportDeliveryEmail
+  sendReportDeliveryEmail,
+  sendReviewDeletedEmail,
+  sendReviewEditedEmail,
+  sendRatingDeletedEmail,
+  sendWriteUpDeletedEmail
 } from "./email";
 import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
 import { 
@@ -10636,10 +10640,22 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       // Delete the review
       await db.delete(performanceReviews).where(eq(performanceReviews.id, id));
 
-      // Send notification with explanation (if notifyUserId provided)
+      // Send email notification (if notifyUserId provided)
       if (notifyUserId) {
-        // TODO: Integrate with notification system
-        console.log(`Notification sent to ${notifyUserId}: Review deleted - ${explanation}`);
+        const notifyUser = await storage.getUser(notifyUserId);
+        const employee = await db.query.employees.findFirst({
+          where: (employees, { eq }) => eq(employees.id, review.employeeId),
+        });
+        const staffUser = await storage.getUser(req.user.claims.sub);
+
+        if (notifyUser?.email && employee) {
+          await sendReviewDeletedEmail(notifyUser.email, {
+            recipientName: `${employee.firstName} ${employee.lastName}`,
+            reviewType: 'Performance Review',
+            deletedBy: staffUser?.email || 'Platform Support',
+            explanation
+          }).catch(err => console.error('Failed to send review deleted email:', err));
+        }
       }
 
       res.json({ 
@@ -10677,9 +10693,26 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         return res.status(404).json({ message: "Performance review not found" });
       }
 
-      // Send notification with explanation (if notifyUserId provided)
+      // Send email notification (if notifyUserId provided)
       if (notifyUserId) {
-        console.log(`Notification sent to ${notifyUserId}: Review updated - ${explanation}`);
+        const notifyUser = await storage.getUser(notifyUserId);
+        const employee = await db.query.employees.findFirst({
+          where: (employees, { eq }) => eq(employees.id, updatedReview[0].employeeId),
+        });
+        const staffUser = await storage.getUser(req.user.claims.sub);
+
+        // Generate description of changes
+        const changesDescription = Object.keys(updates).join(', ');
+
+        if (notifyUser?.email && employee) {
+          await sendReviewEditedEmail(notifyUser.email, {
+            recipientName: `${employee.firstName} ${employee.lastName}`,
+            reviewType: 'Performance Review',
+            editedBy: staffUser?.email || 'Platform Support',
+            changesDescription,
+            explanation
+          }).catch(err => console.error('Failed to send review edited email:', err));
+        }
       }
 
       res.json({
@@ -10716,9 +10749,28 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       // Delete the rating
       await db.delete(employerRatings).where(eq(employerRatings.id, id));
 
-      // Send notification with explanation (if notifyWorkspaceId provided)
+      // Send email notification to workspace (if notifyWorkspaceId provided)
       if (notifyWorkspaceId) {
-        console.log(`Notification sent to workspace ${notifyWorkspaceId}: Rating deleted - ${explanation}`);
+        const workspace = await db.query.workspaces.findFirst({
+          where: (workspaces, { eq }) => eq(workspaces.id, notifyWorkspaceId),
+        });
+        const staffUser = await storage.getUser(req.user.claims.sub);
+
+        // Find workspace owner email
+        const ownerEmployee = await db.query.employees.findFirst({
+          where: (employees, { and, eq }) => and(
+            eq(employees.workspaceId, notifyWorkspaceId),
+            eq(employees.role, 'owner')
+          ),
+        });
+
+        if (ownerEmployee?.email && workspace) {
+          await sendRatingDeletedEmail(ownerEmployee.email, {
+            workspaceName: workspace.name,
+            deletedBy: staffUser?.email || 'Platform Support',
+            explanation
+          }).catch(err => console.error('Failed to send rating deleted email:', err));
+        }
       }
 
       res.json({
@@ -10756,9 +10808,31 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         return res.status(404).json({ message: "Employer rating not found" });
       }
 
-      // Send notification with explanation (if notifyWorkspaceId provided)
+      // Send email notification to workspace (if notifyWorkspaceId provided)
       if (notifyWorkspaceId) {
-        console.log(`Notification sent to workspace ${notifyWorkspaceId}: Rating updated - ${explanation}`);
+        const workspace = await db.query.workspaces.findFirst({
+          where: (workspaces, { eq }) => eq(workspaces.id, notifyWorkspaceId),
+        });
+        const staffUser = await storage.getUser(req.user.claims.sub);
+
+        // Find workspace owner email
+        const ownerEmployee = await db.query.employees.findFirst({
+          where: (employees, { and, eq }) => and(
+            eq(employees.workspaceId, notifyWorkspaceId),
+            eq(employees.role, 'owner')
+          ),
+        });
+
+        // Generate description of changes
+        const changesDescription = Object.keys(updates).join(', ');
+
+        if (ownerEmployee?.email && workspace) {
+          await sendRatingDeletedEmail(ownerEmployee.email, {
+            workspaceName: `${workspace.name} - Rating Updated`,
+            deletedBy: staffUser?.email || 'Platform Support',
+            explanation: `Changes made: ${changesDescription}. ${explanation}`
+          }).catch(err => console.error('Failed to send rating updated email:', err));
+        }
       }
 
       res.json({
@@ -10792,12 +10866,30 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         return res.status(404).json({ message: "Report submission not found" });
       }
 
+      // Get the template for report type name
+      const template = await db.query.reportTemplates.findFirst({
+        where: (templates, { eq }) => eq(templates.id, report.templateId),
+      });
+
       // Delete the report
       await db.delete(reportSubmissions).where(eq(reportSubmissions.id, id));
 
-      // Send notification with explanation (if notifyUserId provided)
+      // Send email notification (if notifyUserId provided)
       if (notifyUserId) {
-        console.log(`Notification sent to ${notifyUserId}: Write-up deleted - ${explanation}`);
+        const notifyUser = await storage.getUser(notifyUserId);
+        const employee = await db.query.employees.findFirst({
+          where: (employees, { eq }) => eq(employees.id, report.employeeId),
+        });
+        const staffUser = await storage.getUser(req.user.claims.sub);
+
+        if (notifyUser?.email && employee) {
+          await sendWriteUpDeletedEmail(notifyUser.email, {
+            recipientName: `${employee.firstName} ${employee.lastName}`,
+            reportType: template?.name || 'Disciplinary Report',
+            deletedBy: staffUser?.email || 'Platform Support',
+            explanation
+          }).catch(err => console.error('Failed to send write-up deleted email:', err));
+        }
       }
 
       res.json({
