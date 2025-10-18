@@ -484,9 +484,9 @@ export function setupWebSocket(server: Server) {
                 // Determine greeting based on user type
                 let greeting = '';
                 if (isStaff) {
-                  greeting = `👋 Welcome back, **${displayName}**! Support chat is active. Right-click users for quick actions.`;
+                  greeting = `👋 Welcome back, ${displayName}! Support chat is active. Right-click users for quick actions.`;
                 } else {
-                  greeting = `👋 Hello **${displayName}**! Welcome to WorkforceOS Support. A staff member will be with you shortly. Use the command buttons above for quick access to tools.`;
+                  greeting = `👋 Hello ${displayName}! Welcome to WorkforceOS Support. A staff member will be with you shortly. Use the command buttons above for quick access to tools.`;
                 }
 
                 // Create HelpOS public announcement message
@@ -602,7 +602,7 @@ export function setupWebSocket(server: Server) {
               switch (parsedCommand.command) {
                 case 'intro': {
                   // AI bot introduces staff to customer with role and identity
-                  const introMessage = `📢 **${staffDisplayName}** (${staffRoleName}) is now ready to assist you!\n\nℹ️ To help you better, please share:\n• Your full name\n• Organization/Company name\n• Brief description of how we can help\n\n💬 Our support team is here to help with any questions about WorkforceOS!`;
+                  const introMessage = `📢 ${staffDisplayName} (${staffRoleName}) is now ready to assist you!\n\nℹ️ To help you better, please share:\n• Your full name\n• Organization/Company name\n• Brief description of how we can help\n\n💬 Our support team is here to help with any questions about WorkforceOS!`;
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
@@ -639,7 +639,7 @@ export function setupWebSocket(server: Server) {
                     senderId: 'ai-bot',
                     senderName: 'HelpOS™',
                     senderType: 'bot',
-                    message: `🔐 **Authentication Request**\n\nPlease authenticate user: **${username}**\n\nThe user will receive instructions to verify their identity. This may include:\n• Confirming email address\n• Answering security questions\n• Providing account details\n\nWaiting for user verification...`,
+                    message: `🔐 Authentication Request\n\nPlease authenticate user: ${username}\n\nThe user will receive instructions to verify their identity. This may include:\n• Confirming email address\n• Answering security questions\n• Providing account details\n\nWaiting for user verification...`,
                     messageType: 'text',
                   });
                   
@@ -655,7 +655,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'verify': {
                   // TODO: Implement user verification when storage methods are available
-                  const verifyMsg = `⚠️ **Command Not Yet Implemented**\n\nThe /verify command is currently under development. Please use alternative verification methods or contact a system administrator.`;
+                  const verifyMsg = `⚠️ Command Not Yet Implemented\n\nThe /verify command is currently under development. Please use alternative verification methods or contact a system administrator.`;
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
@@ -678,7 +678,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'resetpass': {
                   // TODO: Implement password reset when storage methods are available
-                  const resetMsg = `⚠️ **Command Not Yet Implemented**\n\nThe /resetpass command is currently under development. Please use the standard password reset flow on the login page.`;
+                  const resetMsg = `⚠️ Command Not Yet Implemented\n\nThe /resetpass command is currently under development. Please use the standard password reset flow on the login page.`;
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
@@ -744,12 +744,12 @@ export function setupWebSocket(server: Server) {
                   const conversation = await storage.getChatConversation(ws.conversationId);
                   const queueEntry = await queueManager.getPosition(ws.conversationId);
                   
-                  let statusMsg = `📊 **Ticket Status**\n\n`;
-                  statusMsg += `**Status:** ${conversation?.status || 'Unknown'}\n`;
-                  statusMsg += `**Ticket ID:** ${ws.conversationId}\n`;
+                  let statusMsg = `📊 Ticket Status\n\n`;
+                  statusMsg += `Status: ${conversation?.status || 'Unknown'}\n`;
+                  statusMsg += `Ticket ID: ${ws.conversationId}\n`;
                   
                   if (queueEntry) {
-                    statusMsg += `\n**Queue Information:**\n`;
+                    statusMsg += `\nQueue Information:\n`;
                     statusMsg += `• Position: #${queueEntry.position}\n`;
                     statusMsg += `• Priority Score: ${queueEntry.priorityScore}\n`;
                     statusMsg += `• Wait Time: ${Math.floor(queueEntry.waitTimeMinutes)} minutes\n`;
@@ -780,9 +780,9 @@ export function setupWebSocket(server: Server) {
                   
                   let queueMsg: string;
                   if (queueEntry) {
-                    queueMsg = `⏳ **Queue Position**\n\nYou are currently **#${queueEntry.position}** in line.\n\n**Estimated wait:** ${Math.ceil(queueEntry.waitTimeMinutes)} minutes\n**Priority score:** ${queueEntry.priorityScore} points\n\nWe'll notify you when a support agent is available!`;
+                    queueMsg = `⏳ Queue Position\n\nYou are currently #${queueEntry.position} in line.\n\nEstimated wait: ${Math.ceil(queueEntry.waitTimeMinutes)} minutes\nPriority score: ${queueEntry.priorityScore} points\n\nWe'll notify you when a support agent is available!`;
                   } else {
-                    queueMsg = `✅ **Not in Queue**\n\nYou are not currently in the support queue. You may already be connected with a support agent, or your ticket has been resolved.`;
+                    queueMsg = `✅ Not in Queue\n\nYou are not currently in the support queue. You may already be connected with a support agent, or your ticket has been resolved.`;
                   }
                   
                   const botMsg = await storage.createChatMessage({
@@ -913,8 +913,8 @@ export function setupWebSocket(server: Server) {
                     senderName: 'HelpOS™',
                     senderType: 'bot',
                     message: userConnected
-                      ? `🔇 **User Muted**\n\n**${targetUsername}** has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`
-                      : `⚠️ **Mute Command Executed**\n\nAttempted to mute **${targetUsername}** for ${duration} minutes.\n\n⚠️ *Note: User not currently connected or is a simulated/test user. Command worked but had no active target.*`,
+                      ? `🔇 User Muted\n\n${targetUsername} has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`
+                      : `⚠️ Mute Command Executed\n\nAttempted to mute ${targetUsername} for ${duration} minutes.\n\n⚠️ *Note: User not currently connected or is a simulated/test user. Command worked but had no active target.*`,
                     messageType: 'text',
                   });
                   
@@ -1560,7 +1560,7 @@ export function setupWebSocket(server: Server) {
               conversationId: ws.conversationId,
               senderId: 'system',
               senderName: 'System',
-              message: `🔇 **${targetUserName}** has been silenced for ${duration} minutes by ${ws.userName}. Reason: ${reason}`,
+              message: `🔇 ${targetUserName} has been silenced for ${duration} minutes by ${ws.userName}. Reason: ${reason}`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
@@ -1634,7 +1634,7 @@ export function setupWebSocket(server: Server) {
               conversationId: ws.conversationId,
               senderId: 'system',
               senderName: 'System',
-              message: `🔊 **${targetUserName}** has been unmuted by ${ws.userName} and can now speak.`,
+              message: `🔊 ${targetUserName} has been unmuted by ${ws.userName} and can now speak.`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
