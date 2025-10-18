@@ -43,6 +43,14 @@ import {
   abuseViolations,
   leaderActions,
   escalationTickets,
+  internalBids,
+  bidApplications,
+  roleTemplates,
+  skillGapAnalyses,
+  assets,
+  assetSchedules,
+  assetUsageLogs,
+  timeEntryDiscrepancies,
   type User,
   type UpsertUser,
   type AbuseViolation,
@@ -392,6 +400,68 @@ export interface IStorage {
   // Benchmark Metrics
   createBenchmarkMetric(metric: any): Promise<any>;
   getBenchmarkMetrics(workspaceId: string, periodType?: string): Promise<any[]>;
+  
+  // ========================================================================
+  // TALENTOS™ - INTERNAL TALENT MARKETPLACE
+  // ========================================================================
+  createInternalBid(bid: any): Promise<any>;
+  getInternalBidById(id: string): Promise<any | undefined>;
+  getInternalBids(workspaceId: string, filters?: { status?: string }): Promise<any[]>;
+  updateInternalBid(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  createBidApplication(application: any): Promise<any>;
+  getBidApplication(id: string): Promise<any | undefined>;
+  getBidApplicationsByBid(bidId: string): Promise<any[]>;
+  getBidApplicationsByEmployee(employeeId: string, workspaceId: string): Promise<any[]>;
+  updateBidApplication(id: string, data: any): Promise<any | undefined>;
+  
+  // ========================================================================
+  // TALENTOS™ - PERFORMANCE REVIEWS & CAREER PATHING
+  // ========================================================================
+  createPerformanceReview(review: any): Promise<any>;
+  getPerformanceReview(id: string, workspaceId: string): Promise<any | undefined>;
+  getPerformanceReviewsByEmployee(employeeId: string, workspaceId: string): Promise<any[]>;
+  updatePerformanceReview(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  createRoleTemplate(template: any): Promise<any>;
+  getRoleTemplate(id: string, workspaceId: string): Promise<any | undefined>;
+  getRoleTemplates(workspaceId: string): Promise<any[]>;
+  updateRoleTemplate(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  createSkillGapAnalysis(analysis: any): Promise<any>;
+  getSkillGapAnalysis(id: string, workspaceId: string): Promise<any | undefined>;
+  getSkillGapAnalysesByEmployee(workspaceId: string, employeeId: string): Promise<any[]>;
+  updateSkillGapAnalysis(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  // ========================================================================
+  // ASSETOS™ - PHYSICAL RESOURCE ALLOCATION
+  // ========================================================================
+  createAsset(asset: any): Promise<any>;
+  getAsset(id: string, workspaceId: string): Promise<any | undefined>;
+  getAssets(workspaceId: string, filters?: { status?: string }): Promise<any[]>;
+  updateAsset(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  createAssetSchedule(schedule: any): Promise<any>;
+  getAssetSchedule(id: string, workspaceId: string): Promise<any | undefined>;
+  getAssetSchedulesByAsset(assetId: string, workspaceId: string, startTime?: Date, endTime?: Date): Promise<any[]>;
+  getAssetSchedulesByAssetAndDateRange(assetId: string, workspaceId: string, startDate: Date, endDate: Date): Promise<any[]>;
+  updateAssetSchedule(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  createAssetUsageLog(log: any): Promise<any>;
+  getAssetUsageLog(id: string, workspaceId: string): Promise<any | undefined>;
+  getAssetUsageLogsByClient(workspaceId: string, clientId: string, startDate: Date, endDate: Date, status?: string): Promise<any[]>;
+  getAssetUsageLogsByDateRange(workspaceId: string, startDate: Date, endDate: Date): Promise<any[]>;
+  updateAssetUsageLog(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  // ========================================================================
+  // HELPER METHODS FOR UNIFIED DATA NEXUS
+  // ========================================================================
+  getShiftsByEmployeeAndDateRange(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]>;
+  getTimeEntriesByEmployeeAndDateRange(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]>;
+  getReportSubmissionsByEmployee(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]>;
+  getTimeEntryDiscrepancies(workspaceId: string, filters?: { employeeId?: string; startDate?: Date; endDate?: Date }): Promise<any[]>;
+  getTurnoverPredictions(workspaceId: string, filters?: { employeeId?: string; limit?: number }): Promise<any[]>;
+  getInvoices(workspaceId: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2860,6 +2930,420 @@ export class DatabaseStorage implements IStorage {
       .where(eq(reportTemplates.id, id))
       .limit(1);
     return template;
+  }
+  
+  // ============================================================================
+  // TALENTOS™ - INTERNAL TALENT MARKETPLACE
+  // ============================================================================
+  
+  async createInternalBid(bid: any): Promise<any> {
+    const [created] = await db.insert(internalBids).values(bid).returning();
+    return created;
+  }
+  
+  async getInternalBidById(id: string): Promise<any | undefined> {
+    const [bid] = await db
+      .select()
+      .from(internalBids)
+      .where(eq(internalBids.id, id))
+      .limit(1);
+    return bid;
+  }
+  
+  async getInternalBids(workspaceId: string, filters?: { status?: string }): Promise<any[]> {
+    const conditions = [eq(internalBids.workspaceId, workspaceId)];
+    if (filters?.status) {
+      conditions.push(eq(internalBids.status, filters.status));
+    }
+    return await db
+      .select()
+      .from(internalBids)
+      .where(and(...conditions))
+      .orderBy(desc(internalBids.createdAt));
+  }
+  
+  async updateInternalBid(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(internalBids)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(internalBids.id, id), eq(internalBids.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  async createBidApplication(application: any): Promise<any> {
+    const [created] = await db.insert(bidApplications).values(application).returning();
+    return created;
+  }
+  
+  async getBidApplication(id: string): Promise<any | undefined> {
+    const [application] = await db
+      .select()
+      .from(bidApplications)
+      .where(eq(bidApplications.id, id))
+      .limit(1);
+    return application;
+  }
+  
+  async getBidApplicationsByBid(bidId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(bidApplications)
+      .where(eq(bidApplications.bidId, bidId))
+      .orderBy(desc(bidApplications.appliedAt));
+  }
+  
+  async getBidApplicationsByEmployee(employeeId: string, workspaceId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(bidApplications)
+      .where(and(
+        eq(bidApplications.employeeId, employeeId),
+        eq(bidApplications.workspaceId, workspaceId)
+      ))
+      .orderBy(desc(bidApplications.appliedAt));
+  }
+  
+  async updateBidApplication(id: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(bidApplications)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(bidApplications.id, id))
+      .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // TALENTOS™ - PERFORMANCE REVIEWS & CAREER PATHING
+  // ============================================================================
+  
+  async createPerformanceReview(review: any): Promise<any> {
+    const [created] = await db.insert(performanceReviews).values(review).returning();
+    return created;
+  }
+  
+  async getPerformanceReview(id: string, workspaceId: string): Promise<any | undefined> {
+    const [review] = await db
+      .select()
+      .from(performanceReviews)
+      .where(and(eq(performanceReviews.id, id), eq(performanceReviews.workspaceId, workspaceId)))
+      .limit(1);
+    return review;
+  }
+  
+  async getPerformanceReviewsByEmployee(employeeId: string, workspaceId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(performanceReviews)
+      .where(and(
+        eq(performanceReviews.employeeId, employeeId),
+        eq(performanceReviews.workspaceId, workspaceId)
+      ))
+      .orderBy(desc(performanceReviews.reviewPeriodEnd));
+  }
+  
+  async updatePerformanceReview(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(performanceReviews)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(performanceReviews.id, id), eq(performanceReviews.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  async createRoleTemplate(template: any): Promise<any> {
+    const [created] = await db.insert(roleTemplates).values(template).returning();
+    return created;
+  }
+  
+  async getRoleTemplate(id: string, workspaceId: string): Promise<any | undefined> {
+    const [template] = await db
+      .select()
+      .from(roleTemplates)
+      .where(and(eq(roleTemplates.id, id), eq(roleTemplates.workspaceId, workspaceId)))
+      .limit(1);
+    return template;
+  }
+  
+  async getRoleTemplates(workspaceId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(roleTemplates)
+      .where(eq(roleTemplates.workspaceId, workspaceId))
+      .orderBy(roleTemplates.roleLevel, roleTemplates.roleName);
+  }
+  
+  async updateRoleTemplate(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(roleTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(roleTemplates.id, id), eq(roleTemplates.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  async createSkillGapAnalysis(analysis: any): Promise<any> {
+    const [created] = await db.insert(skillGapAnalyses).values(analysis).returning();
+    return created;
+  }
+  
+  async getSkillGapAnalysis(id: string, workspaceId: string): Promise<any | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(skillGapAnalyses)
+      .where(and(eq(skillGapAnalyses.id, id), eq(skillGapAnalyses.workspaceId, workspaceId)))
+      .limit(1);
+    return analysis;
+  }
+  
+  async getSkillGapAnalysesByEmployee(workspaceId: string, employeeId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(skillGapAnalyses)
+      .where(and(
+        eq(skillGapAnalyses.employeeId, employeeId),
+        eq(skillGapAnalyses.workspaceId, workspaceId)
+      ))
+      .orderBy(desc(skillGapAnalyses.generatedAt));
+  }
+  
+  async updateSkillGapAnalysis(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(skillGapAnalyses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(skillGapAnalyses.id, id), eq(skillGapAnalyses.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // ASSETOS™ - PHYSICAL RESOURCE ALLOCATION
+  // ============================================================================
+  
+  async createAsset(asset: any): Promise<any> {
+    const [created] = await db.insert(assets).values(asset).returning();
+    return created;
+  }
+  
+  async getAsset(id: string, workspaceId: string): Promise<any | undefined> {
+    const [asset] = await db
+      .select()
+      .from(assets)
+      .where(and(eq(assets.id, id), eq(assets.workspaceId, workspaceId)))
+      .limit(1);
+    return asset;
+  }
+  
+  async getAssets(workspaceId: string, filters?: { status?: string }): Promise<any[]> {
+    const conditions = [eq(assets.workspaceId, workspaceId)];
+    if (filters?.status) {
+      conditions.push(eq(assets.status, filters.status));
+    }
+    return await db
+      .select()
+      .from(assets)
+      .where(and(...conditions))
+      .orderBy(assets.assetName);
+  }
+  
+  async updateAsset(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(assets)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(assets.id, id), eq(assets.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  async createAssetSchedule(schedule: any): Promise<any> {
+    const [created] = await db.insert(assetSchedules).values(schedule).returning();
+    return created;
+  }
+  
+  async getAssetSchedule(id: string, workspaceId: string): Promise<any | undefined> {
+    const [schedule] = await db
+      .select()
+      .from(assetSchedules)
+      .where(and(eq(assetSchedules.id, id), eq(assetSchedules.workspaceId, workspaceId)))
+      .limit(1);
+    return schedule;
+  }
+  
+  async getAssetSchedulesByAsset(assetId: string, workspaceId: string, startTime?: Date, endTime?: Date): Promise<any[]> {
+    const conditions = [
+      eq(assetSchedules.assetId, assetId),
+      eq(assetSchedules.workspaceId, workspaceId)
+    ];
+    
+    if (startTime && endTime) {
+      conditions.push(sql`${assetSchedules.startTime} < ${endTime}`);
+      conditions.push(sql`${assetSchedules.endTime} > ${startTime}`);
+    }
+    
+    return await db
+      .select()
+      .from(assetSchedules)
+      .where(and(...conditions))
+      .orderBy(assetSchedules.startTime);
+  }
+  
+  async getAssetSchedulesByAssetAndDateRange(assetId: string, workspaceId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return this.getAssetSchedulesByAsset(assetId, workspaceId, startDate, endDate);
+  }
+  
+  async updateAssetSchedule(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(assetSchedules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(assetSchedules.id, id), eq(assetSchedules.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  async createAssetUsageLog(log: any): Promise<any> {
+    const [created] = await db.insert(assetUsageLogs).values(log).returning();
+    return created;
+  }
+  
+  async getAssetUsageLog(id: string, workspaceId: string): Promise<any | undefined> {
+    const [log] = await db
+      .select()
+      .from(assetUsageLogs)
+      .where(and(eq(assetUsageLogs.id, id), eq(assetUsageLogs.workspaceId, workspaceId)))
+      .limit(1);
+    return log;
+  }
+  
+  async getAssetUsageLogsByClient(workspaceId: string, clientId: string, startDate: Date, endDate: Date, status?: string): Promise<any[]> {
+    const conditions = [
+      eq(assetUsageLogs.workspaceId, workspaceId),
+      eq(assetUsageLogs.clientId, clientId),
+      sql`${assetUsageLogs.usagePeriodStart} >= ${startDate}`,
+      sql`${assetUsageLogs.usagePeriodEnd} <= ${endDate}`
+    ];
+    
+    if (status) {
+      conditions.push(eq(assetUsageLogs.billingStatus, status));
+    }
+    
+    return await db
+      .select()
+      .from(assetUsageLogs)
+      .where(and(...conditions))
+      .orderBy(assetUsageLogs.usagePeriodStart);
+  }
+  
+  async getAssetUsageLogsByDateRange(workspaceId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return await db
+      .select()
+      .from(assetUsageLogs)
+      .where(and(
+        eq(assetUsageLogs.workspaceId, workspaceId),
+        sql`${assetUsageLogs.usagePeriodStart} >= ${startDate}`,
+        sql`${assetUsageLogs.usagePeriodEnd} <= ${endDate}`
+      ))
+      .orderBy(assetUsageLogs.usagePeriodStart);
+  }
+  
+  async updateAssetUsageLog(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(assetUsageLogs)
+      .set(data)
+      .where(and(eq(assetUsageLogs.id, id), eq(assetUsageLogs.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // HELPER METHODS FOR UNIFIED DATA NEXUS
+  // ============================================================================
+  
+  async getShiftsByEmployeeAndDateRange(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return await db
+      .select()
+      .from(shifts)
+      .where(and(
+        eq(shifts.workspaceId, workspaceId),
+        eq(shifts.employeeId, employeeId),
+        sql`${shifts.startTime} >= ${startDate}`,
+        sql`${shifts.startTime} <= ${endDate}`
+      ))
+      .orderBy(shifts.startTime);
+  }
+  
+  async getTimeEntriesByEmployeeAndDateRange(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return await db
+      .select()
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        eq(timeEntries.employeeId, employeeId),
+        sql`${timeEntries.clockInTime} >= ${startDate}`,
+        sql`${timeEntries.clockInTime} <= ${endDate}`
+      ))
+      .orderBy(timeEntries.clockInTime);
+  }
+  
+  async getReportSubmissionsByEmployee(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return await db
+      .select()
+      .from(reportSubmissions)
+      .where(and(
+        eq(reportSubmissions.workspaceId, workspaceId),
+        eq(reportSubmissions.employeeId, employeeId),
+        sql`${reportSubmissions.createdAt} >= ${startDate}`,
+        sql`${reportSubmissions.createdAt} <= ${endDate}`
+      ))
+      .orderBy(reportSubmissions.createdAt);
+  }
+  
+  async getTimeEntryDiscrepancies(workspaceId: string, filters?: { employeeId?: string; startDate?: Date; endDate?: Date }): Promise<any[]> {
+    const conditions = [eq(timeEntryDiscrepancies.workspaceId, workspaceId)];
+    
+    if (filters?.employeeId) {
+      conditions.push(eq(timeEntryDiscrepancies.employeeId, filters.employeeId));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${timeEntryDiscrepancies.detectedAt} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${timeEntryDiscrepancies.detectedAt} <= ${filters.endDate}`);
+    }
+    
+    return await db
+      .select()
+      .from(timeEntryDiscrepancies)
+      .where(and(...conditions))
+      .orderBy(desc(timeEntryDiscrepancies.detectedAt));
+  }
+  
+  async getTurnoverPredictions(workspaceId: string, filters?: { employeeId?: string; limit?: number }): Promise<any[]> {
+    const { turnoverPredictions } = await import("@shared/schema");
+    const conditions = [eq(turnoverPredictions.workspaceId, workspaceId)];
+    
+    if (filters?.employeeId) {
+      conditions.push(eq(turnoverPredictions.employeeId, filters.employeeId));
+    }
+    
+    let query = db
+      .select()
+      .from(turnoverPredictions)
+      .where(and(...conditions))
+      .orderBy(desc(turnoverPredictions.predictionDate));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    
+    return await query;
+  }
+  
+  async getInvoices(workspaceId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.workspaceId, workspaceId))
+      .orderBy(desc(invoices.createdAt));
   }
 }
 
