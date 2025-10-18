@@ -1207,99 +1207,190 @@ export default function ModernMobileChat() {
                 </SheetTitle>
               </SheetHeader>
               <div className="mt-4 max-h-[65vh] overflow-y-auto pr-2">
-                {selectedUser && userContext ? (
-                  <div className="space-y-3">
-                    {/* Platform Bot Badge */}
-                    {userContext.isPlatformGenerated && (
-                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-center gap-2">
-                        <Bot className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                        <div className="flex-1">
-                          <div className="text-amber-400 font-semibold text-sm">Platform-Generated Bot</div>
-                          <div className="text-amber-300/70 text-xs">Automated support assistant</div>
+                {selectedUser ? (
+                  userContext ? (
+                    <div className="space-y-4">
+                      {/* User Profile Header */}
+                      <div className="bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 border border-indigo-500/30 rounded-xl p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            {userContext.isPlatformGenerated ? (
+                              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-600 ring-2 ring-amber-500/50">
+                                <Sparkles size={24} className="text-white" />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-600 to-blue-600 ring-2 ring-indigo-500/50 text-white font-bold text-lg">
+                                {selectedUser.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-white font-bold text-base">
+                              {userContext.isPlatformGenerated ? 'HelpOS' : selectedUser.name}
+                            </h3>
+                            <p className={`text-xs ${userContext.isPlatformGenerated ? 'text-amber-300' : 'text-cyan-300'}`}>
+                              {userContext.isPlatformGenerated ? 'Platform AI Bot' : getRoleDisplay(selectedUser.role) || 'User'}
+                            </p>
+                          </div>
+                          {userContext.isPlatformGenerated && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                              BOT
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    )}
-                    
-                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Info className="w-5 h-5 text-cyan-400" />
-                        <h4 className="text-white font-semibold">
-                          {userContext.isPlatformGenerated ? 'Bot Information' : 'User Context'}
-                        </h4>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        {userContext.isPlatformGenerated ? (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Type:</span>
-                              <span className="text-amber-400 break-all text-right ml-2">{userContext.userType}</span>
+
+                      {/* Bot-specific information */}
+                      {userContext.isPlatformGenerated ? (
+                        <div className="space-y-3">
+                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                              <Info className="w-4 h-4 text-cyan-400" />
+                              Bot Information
+                            </h4>
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Type</span>
+                                <span className="text-amber-400 text-sm font-medium">{userContext.userType}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Status</span>
+                                <span className="text-emerald-400 text-sm font-medium">{userContext.status}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-xs block mb-1">Bot ID</span>
+                                <span className="text-white font-mono text-xs">{userContext.userId}</span>
+                              </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Status:</span>
-                              <span className="text-emerald-400 break-all text-right ml-2">{userContext.status}</span>
+                          </div>
+
+                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <h4 className="text-white font-semibold text-sm mb-3">Description</h4>
+                            <p className="text-slate-300 text-xs leading-relaxed">{userContext.description}</p>
+                          </div>
+
+                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <h4 className="text-white font-semibold text-sm mb-3">Capabilities</h4>
+                            <ul className="space-y-2">
+                              {userContext.capabilities?.map((cap: string, i: number) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                  <span className="text-slate-300 text-xs">{cap}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                              <span className="text-amber-300 text-xs">{userContext.restrictions}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Bot ID:</span>
-                              <span className="text-white font-mono text-xs break-all text-right ml-2">{userContext.userId}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Real user information - Support staff sees full details */
+                        <div className="space-y-3">
+                          {isStaff ? (
+                            /* Full information for support staff */
+                            <>
+                              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                                <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                                  <Info className="w-4 h-4 text-cyan-400" />
+                                  User Details
+                                </h4>
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-slate-400 text-xs block mb-1">Full Name</span>
+                                    <span className="text-white text-sm font-medium">{selectedUser.name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 text-xs block mb-1">User ID</span>
+                                    <span className="text-white font-mono text-xs">{selectedUser.id}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 text-xs block mb-1">Role</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {getRoleDisplay(selectedUser.role) || 'Customer'}
+                                    </Badge>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 text-xs block mb-1">Status</span>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                      <span className="text-emerald-400 text-sm">Active</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                                <h4 className="text-white font-semibold text-sm mb-3">Workspace Info</h4>
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-slate-400 text-xs block mb-1">Workspace</span>
+                                    <span className="text-white text-sm">{userContext.workspace?.name || 'Not Available'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 text-xs block mb-1">Serial Number</span>
+                                    <span className="text-white font-mono text-xs">{userContext.workspace?.serialNumber || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  toast({ title: "Success", description: `Viewing history for ${selectedUser.name}` });
+                                  setShowDiagnostics(false);
+                                }}
+                                className="w-full flex items-center gap-3 p-3 rounded-lg bg-indigo-500/20 hover-elevate active-elevate-2 border border-indigo-500/30"
+                                data-testid="diagnostic-user-history"
+                              >
+                                <History className="w-5 h-5 text-indigo-400" />
+                                <div className="flex-1 text-left">
+                                  <div className="text-white font-medium text-sm">View Full History</div>
+                                  <div className="text-slate-400 text-xs">Complete interaction timeline</div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-slate-500" />
+                              </button>
+                            </>
+                          ) : (
+                            /* Limited information for regular users */
+                            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                              <h4 className="text-white font-semibold text-sm mb-3">Basic Info</h4>
+                              <div className="space-y-3">
+                                <div>
+                                  <span className="text-slate-400 text-xs block mb-1">Name</span>
+                                  <span className="text-white text-sm">{selectedUser.name}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 text-xs block mb-1">Status</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-emerald-400 text-sm">Online</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                <p className="text-blue-300 text-xs">
+                                  <Info className="w-3 h-3 inline mr-1" />
+                                  Full user details are only visible to support staff
+                                </p>
+                              </div>
                             </div>
-                            <div className="border-t border-white/10 pt-2 mt-2">
-                              <span className="text-slate-400 text-xs">Description:</span>
-                              <p className="text-slate-300 text-xs mt-1">{userContext.description}</p>
-                            </div>
-                            <div className="border-t border-white/10 pt-2 mt-2">
-                              <span className="text-slate-400 text-xs">Capabilities:</span>
-                              <ul className="text-slate-300 text-xs mt-1 space-y-1">
-                                {userContext.capabilities?.map((cap: string, i: number) => (
-                                  <li key={i} className="flex items-center gap-1">
-                                    <CheckCircle className="w-3 h-3 text-emerald-400" />
-                                    {cap}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                            <div className="border-t border-white/10 pt-2 mt-2">
-                              <span className="text-amber-400 text-xs">⚠️ {userContext.restrictions}</span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Workspace:</span>
-                              <span className="text-white break-all text-right ml-2">{userContext.workspace?.name || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Serial #:</span>
-                              <span className="text-white font-mono text-xs break-all text-right ml-2">{userContext.workspace?.serialNumber || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">User ID:</span>
-                              <span className="text-white font-mono text-xs break-all text-right ml-2">{selectedUser.id}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    
-                    {/* Hide user history for bots */}
-                    {!userContext.isPlatformGenerated && (
-                      <button
-                        onClick={() => {
-                          toast({ title: "Success", description: `Viewing history for ${selectedUser.name}` });
-                          setShowDiagnostics(false);
-                        }}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover-elevate active-elevate-2 border border-white/10"
-                        data-testid="diagnostic-user-history"
-                      >
-                        <History className="w-5 h-5 text-violet-400" />
-                        <div className="flex-1 text-left">
-                          <div className="text-white font-medium text-sm">View User History</div>
-                          <div className="text-slate-400 text-xs">Complete interaction timeline</div>
-                        </div>
-                      </button>
-                    )}
-                  </div>
+                  ) : (
+                    /* Loading state */
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 mx-auto mb-4 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-slate-400 text-sm">Loading user information...</p>
+                    </div>
+                  )
                 ) : (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12">
                     <Users className="w-12 h-12 text-slate-600 mx-auto mb-4" />
                     <p className="text-slate-400 text-sm">Select a user to view diagnostics</p>
                   </div>
