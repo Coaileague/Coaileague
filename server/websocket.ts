@@ -369,13 +369,26 @@ export function setupWebSocket(server: Server) {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
                 const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
-                // 1. SYSTEM announcement (IRC-style): User joined
+                // Format role display for join message
+                const getRoleDisplayText = (role: string) => {
+                  switch(role) {
+                    case 'root': return '(Admin)';
+                    case 'deputy_admin': return '(Deputy)';
+                    case 'deputy_assistant': return '(Assistant)';
+                    case 'sysop': return '(Sysop)';
+                    default: return '';
+                  }
+                };
+                
+                const roleText = isStaff ? ` ${getRoleDisplayText(platformRole)}` : '';
+                
+                // 1. SYSTEM announcement (IRC-style): User joined with role badge for staff
                 const systemJoinMessage = await storage.createChatMessage({
                   conversationId: payload.conversationId,
                   senderId: null,
                   senderName: 'Server',
                   senderType: 'system',
-                  message: `${displayName} has joined the HelpDesk`,
+                  message: `${displayName}${roleText} has joined the HelpDesk`,
                   messageType: 'text',
                   isSystemMessage: true,
                 });
@@ -481,12 +494,25 @@ export function setupWebSocket(server: Server) {
               try {
                 const clients = conversationClients.get(payload.conversationId);
                 
+                // Format role display for welcome message
+                const getRoleDisplayText = (role: string) => {
+                  switch(role) {
+                    case 'root': return ' (Admin)';
+                    case 'deputy_admin': return ' (Deputy)';
+                    case 'deputy_assistant': return ' (Assistant)';
+                    case 'sysop': return ' (Sysop)';
+                    default: return '';
+                  }
+                };
+                
+                const roleText = isStaff ? getRoleDisplayText(platformRole) : '';
+                
                 // Determine greeting based on user type
                 let greeting = '';
                 if (isStaff) {
-                  greeting = `Welcome back, ${displayName}! Support chat is active. Right-click users for quick actions.`;
+                  greeting = `Welcome back, ${displayName}${roleText}! Support chat is active. Right-click users for quick actions.`;
                 } else {
-                  greeting = `Hello ${displayName}! Welcome to WorkforceOS Support. A staff member will be with you shortly. Use the command buttons above for quick access to tools.`;
+                  greeting = `Welcome! Please wait to be helped. You cannot send messages right now - wait, gather your thoughts, evidence, and problem details. We will be with you shortly.`;
                 }
 
                 // Create HelpOS public announcement message

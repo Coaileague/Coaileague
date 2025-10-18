@@ -645,9 +645,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (!roleText) return null;
     
     const isBot = role === 'bot';
-    // Larger text (text-[11px]) and higher opacity for better visibility
+    // Smaller superscript (text-[9px]) but still visible with space separation
     return (
-      <sup className={`text-[11px] font-semibold ml-0.5 ${isBot ? 'text-amber-500' : 'text-blue-500'}`}>
+      <sup className={`text-[9px] font-semibold ml-1 ${isBot ? 'text-amber-500' : 'text-indigo-500'}`}>
         ({roleText})
       </sup>
     );
@@ -675,11 +675,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       // Determine if it's a bot for styling
       const isBot = roleText === 'BOT AI';
       
-      // Add the username with superscript role - HARDCODED larger for readability
+      // Add the username with superscript role - HARDCODED smaller but visible
       parts.push(
         <span key={key++} className="font-semibold">
           {userName}
-          <sup className={`text-[11px] font-semibold ml-0.5 ${isBot ? 'text-amber-500' : 'text-blue-500'}`}>
+          <sup className={`text-[9px] font-semibold ml-1 ${isBot ? 'text-amber-500' : 'text-indigo-500'}`}>
             ({roleText})
           </sup>
         </span>
