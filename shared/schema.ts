@@ -3662,3 +3662,516 @@ export const insertTimeEntryDiscrepancySchema = createInsertSchema(timeEntryDisc
 
 export type InsertTimeEntryDiscrepancy = z.infer<typeof insertTimeEntryDiscrepancySchema>;
 export type TimeEntryDiscrepancy = typeof timeEntryDiscrepancies.$inferSelect;
+
+// ============================================================================
+// TALENTOS™ - RECRUITMENT, PERFORMANCE, & RETENTION (MONOPOLISTIC TIER)
+// ============================================================================
+
+// Internal Talent Marketplace - Internal project/role bidding system
+export const internalBids = pgTable("internal_bids", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Bid details
+  title: varchar("title").notNull(), // "Short-term Project: Install Security System at Site B"
+  description: text("description").notNull(),
+  bidType: varchar("bid_type").notNull(), // 'project', 'role', 'temporary_assignment'
+  
+  // Requirements
+  requiredSkills: jsonb("required_skills").$type<string[]>().notNull().default(sql`'[]'`), // ['Forklift Certified', 'OSHA 30']
+  requiredCertifications: jsonb("required_certifications").$type<string[]>().default(sql`'[]'`), // ['CPR', 'First Aid']
+  minimumExperience: integer("minimum_experience"), // Months
+  targetRole: varchar("target_role"), // "Senior Rigger", "Lead Technician"
+  
+  // Compensation & duration
+  compensationType: varchar("compensation_type").notNull(), // 'hourly_rate', 'flat_fee', 'promotion'
+  compensationAmount: decimal("compensation_amount", { precision: 10, scale: 2 }),
+  estimatedDuration: integer("estimated_duration"), // Days
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  
+  // Location & logistics
+  locationRequired: varchar("location_required"), // 'on_site', 'remote', 'hybrid'
+  siteLocation: text("site_location"),
+  clientId: varchar("client_id").references(() => clients.id),
+  
+  // Posting details
+  postedBy: varchar("posted_by").notNull().references(() => users.id),
+  status: varchar("status").default("open"), // 'open', 'in_progress', 'filled', 'cancelled'
+  maxApplicants: integer("max_applicants").default(10),
+  applicationDeadline: timestamp("application_deadline"),
+  
+  // Selected candidate
+  selectedEmployeeId: varchar("selected_employee_id").references(() => employees.id),
+  selectedAt: timestamp("selected_at"),
+  
+  // High-risk employee tracking (PredictionOS™ integration)
+  highRiskViewCount: integer("high_risk_view_count").default(0), // Count of high-risk employees viewing
+  highRiskViewers: jsonb("high_risk_viewers").$type<string[]>().default(sql`'[]'`), // Employee IDs with turnover score > 70%
+  lastHighRiskViewAt: timestamp("last_high_risk_view_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceStatusIndex: index("internal_bids_workspace_status_idx").on(table.workspaceId, table.status),
+  deadlineIndex: index("internal_bids_deadline_idx").on(table.applicationDeadline),
+}));
+
+export const insertInternalBidSchema = createInsertSchema(internalBids).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInternalBid = z.infer<typeof insertInternalBidSchema>;
+export type InternalBid = typeof internalBids.$inferSelect;
+
+// Bid Applications - Employee applications to internal opportunities
+export const bidApplications = pgTable("bid_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  bidId: varchar("bid_id").notNull().references(() => internalBids.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Application details
+  coverLetter: text("cover_letter"),
+  whyInterestedText: text("why_interested"), // "I want to grow my skills in X"
+  relevantExperience: text("relevant_experience"),
+  
+  // Skill/cert matching (auto-calculated)
+  skillMatchPercentage: decimal("skill_match_percentage", { precision: 5, scale: 2 }), // 0-100%
+  missingSkills: jsonb("missing_skills").$type<string[]>().default(sql`'[]'`),
+  matchingSkills: jsonb("matching_skills").$type<string[]>().default(sql`'[]'`),
+  
+  // PredictionOS™ risk score at time of application
+  turnoverRiskScore: integer("turnover_risk_score"), // 0-100 from PredictionOS™
+  isHighRisk: boolean("is_high_risk").default(false), // Score > 70%
+  
+  // Application lifecycle
+  status: varchar("status").default("pending"), // 'pending', 'reviewed', 'shortlisted', 'accepted', 'rejected'
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  
+  // Manager intervention flag (for high-risk employees)
+  interventionTriggered: boolean("intervention_triggered").default(false),
+  interventionBy: varchar("intervention_by").references(() => users.id),
+  interventionAt: timestamp("intervention_at"),
+  interventionNotes: text("intervention_notes"),
+  
+  appliedAt: timestamp("applied_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  bidEmployeeIndex: uniqueIndex("bid_applications_bid_employee_idx").on(table.bidId, table.employeeId),
+  employeeStatusIndex: index("bid_applications_employee_status_idx").on(table.employeeId, table.status),
+}));
+
+export const insertBidApplicationSchema = createInsertSchema(bidApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  appliedAt: true,
+});
+
+export type InsertBidApplication = z.infer<typeof insertBidApplicationSchema>;
+export type BidApplication = typeof bidApplications.$inferSelect;
+
+// Performance Reviews - Data-driven compensation recommendations
+export const performanceReviews = pgTable("performance_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Review period
+  reviewPeriodStart: timestamp("review_period_start").notNull(),
+  reviewPeriodEnd: timestamp("review_period_end").notNull(),
+  reviewType: varchar("review_type").notNull(), // 'annual', 'quarterly', 'probation', 'promotion'
+  
+  // Auto-calculated performance metrics (from Unified Data Nexus)
+  shiftsCompletedOnTime: integer("shifts_completed_on_time").default(0),
+  totalShiftsAssigned: integer("total_shifts_assigned").default(0),
+  attendanceRate: decimal("attendance_rate", { precision: 5, scale: 2 }), // Percentage
+  averageHoursWorkedPerWeek: decimal("average_hours_worked_per_week", { precision: 5, scale: 2 }),
+  overtimeHours: decimal("overtime_hours", { precision: 10, scale: 2 }),
+  
+  // Report quality metrics (ReportOS™ integration)
+  reportsSubmitted: integer("reports_submitted").default(0),
+  reportsApproved: integer("reports_approved").default(0),
+  reportsRejected: integer("reports_rejected").default(0),
+  reportQualityScore: decimal("report_quality_score", { precision: 5, scale: 2 }), // 0-100%
+  
+  // Compliance & safety
+  complianceViolations: integer("compliance_violations").default(0),
+  safetyIncidents: integer("safety_incidents").default(0),
+  trainingCompletionRate: decimal("training_completion_rate", { precision: 5, scale: 2 }),
+  
+  // Subjective ratings (manager input)
+  qualityOfWorkRating: integer("quality_of_work_rating"), // 1-5
+  teamworkRating: integer("teamwork_rating"), // 1-5
+  communicationRating: integer("communication_rating"), // 1-5
+  initiativeRating: integer("initiative_rating"), // 1-5
+  
+  // Overall composite score (auto-calculated from weighted metrics)
+  compositeScore: decimal("composite_score", { precision: 5, scale: 2 }), // 0-100%
+  performanceTier: varchar("performance_tier"), // 'exceptional', 'exceeds', 'meets', 'needs_improvement', 'unsatisfactory'
+  
+  // Auto-generated pay increase recommendation
+  currentHourlyRate: decimal("current_hourly_rate", { precision: 10, scale: 2 }),
+  suggestedPayIncrease: decimal("suggested_pay_increase", { precision: 10, scale: 2 }), // Dollar amount
+  suggestedPayIncreasePercentage: decimal("suggested_pay_increase_percentage", { precision: 5, scale: 2 }),
+  payIncreaseFormula: text("pay_increase_formula"), // "Base 3% + 0.5% per attendance point + 1% for quality > 90%"
+  payIncreaseJustification: text("pay_increase_justification"),
+  
+  // Manager override
+  managerApprovedIncrease: decimal("manager_approved_increase", { precision: 10, scale: 2 }),
+  managerOverrideReason: text("manager_override_reason"),
+  
+  // Review lifecycle
+  status: varchar("status").default("draft"), // 'draft', 'pending_manager', 'completed', 'archived'
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  managerComments: text("manager_comments"),
+  employeeComments: text("employee_comments"), // Self-reflection
+  employeeAcknowledgedAt: timestamp("employee_acknowledged_at"),
+  
+  // Goals & development (feeds into Career Pathing)
+  goalsMet: jsonb("goals_met").$type<string[]>().default(sql`'[]'`),
+  goalsNotMet: jsonb("goals_not_met").$type<string[]>().default(sql`'[]'`),
+  nextQuarterGoals: jsonb("next_quarter_goals").$type<string[]>().default(sql`'[]'`),
+  developmentNeeds: jsonb("development_needs").$type<string[]>().default(sql`'[]'`), // Links to LearnOS™
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  employeeIndex: index("performance_reviews_employee_idx").on(table.employeeId, table.reviewPeriodEnd),
+  workspaceStatusIndex: index("performance_reviews_workspace_status_idx").on(table.workspaceId, table.status),
+}));
+
+export const insertPerformanceReviewSchema = createInsertSchema(performanceReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPerformanceReview = z.infer<typeof insertPerformanceReviewSchema>;
+export type PerformanceReview = typeof performanceReviews.$inferSelect;
+
+// Role Templates - Career progression paths
+export const roleTemplates = pgTable("role_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Role definition
+  roleName: varchar("role_name").notNull(), // "Senior Rigger", "Lead Security Officer"
+  roleLevel: integer("role_level"), // 1 = Entry, 2 = Mid, 3 = Senior, 4 = Lead
+  department: varchar("department"), // "Operations", "Security", "Logistics"
+  
+  // Prerequisites (from current role)
+  fromRole: varchar("from_role"), // "Rigger" → "Senior Rigger"
+  minimumTimeInCurrentRole: integer("minimum_time_in_current_role"), // Months
+  minimumPerformanceScore: decimal("minimum_performance_score", { precision: 5, scale: 2 }), // Min composite score
+  
+  // Required skills & certifications
+  requiredSkills: jsonb("required_skills").$type<string[]>().notNull().default(sql`'[]'`),
+  requiredCertifications: jsonb("required_certifications").$type<string[]>().default(sql`'[]'`),
+  requiredTrainingCourses: jsonb("required_training_courses").$type<string[]>().default(sql`'[]'`), // Links to LearnOS™
+  
+  // Desired (optional) qualifications
+  desiredSkills: jsonb("desired_skills").$type<string[]>().default(sql`'[]'`),
+  desiredCertifications: jsonb("desired_certifications").$type<string[]>().default(sql`'[]'`),
+  
+  // Compensation range
+  minHourlyRate: decimal("min_hourly_rate", { precision: 10, scale: 2 }),
+  maxHourlyRate: decimal("max_hourly_rate", { precision: 10, scale: 2 }),
+  minSalary: decimal("min_salary", { precision: 12, scale: 2 }),
+  maxSalary: decimal("max_salary", { precision: 12, scale: 2 }),
+  
+  // Responsibilities & expectations
+  responsibilities: text("responsibilities"),
+  performanceExpectations: text("performance_expectations"),
+  
+  // Template metadata
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceRoleIndex: index("role_templates_workspace_role_idx").on(table.workspaceId, table.roleName),
+  levelIndex: index("role_templates_level_idx").on(table.roleLevel),
+}));
+
+export const insertRoleTemplateSchema = createInsertSchema(roleTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRoleTemplate = z.infer<typeof insertRoleTemplateSchema>;
+export type RoleTemplate = typeof roleTemplates.$inferSelect;
+
+// Skill Gap Analyses - Employee readiness for next role
+export const skillGapAnalyses = pgTable("skill_gap_analyses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  targetRoleId: varchar("target_role_id").notNull().references(() => roleTemplates.id),
+  
+  // Current state (from employee profile)
+  currentRole: varchar("current_role"),
+  currentSkills: jsonb("current_skills").$type<string[]>().default(sql`'[]'`),
+  currentCertifications: jsonb("current_certifications").$type<string[]>().default(sql`'[]'`),
+  currentTrainingCompleted: jsonb("current_training_completed").$type<string[]>().default(sql`'[]'`),
+  
+  // Gap analysis results
+  missingSkills: jsonb("missing_skills").$type<string[]>().default(sql`'[]'`),
+  missingCertifications: jsonb("missing_certifications").$type<string[]>().default(sql`'[]'`),
+  missingTraining: jsonb("missing_training").$type<string[]>().default(sql`'[]'`),
+  
+  // Readiness scoring
+  readinessScore: decimal("readiness_score", { precision: 5, scale: 2 }), // 0-100% overall readiness
+  skillsReadiness: decimal("skills_readiness", { precision: 5, scale: 2 }),
+  certificationsReadiness: decimal("certifications_readiness", { precision: 5, scale: 2 }),
+  trainingReadiness: decimal("training_readiness", { precision: 5, scale: 2 }),
+  experienceReadiness: decimal("experience_readiness", { precision: 5, scale: 2 }),
+  
+  // Time-to-ready estimate
+  estimatedTimeToReady: integer("estimated_time_to_ready"), // Months
+  blockers: jsonb("blockers").$type<string[]>().default(sql`'[]'`), // "Needs OSHA 30 certification"
+  
+  // Recommended next steps (auto-generated action plan)
+  recommendedActions: jsonb("recommended_actions").$type<{
+    action: string;
+    type: string; // 'skill_training', 'certification', 'course', 'experience'
+    priority: string; // 'high', 'medium', 'low'
+    estimatedTime: number; // Days to complete
+    learnOsLinkId?: string; // Links to LearnOS™ course
+  }[]>().default(sql`'[]'`),
+  
+  // Progress tracking
+  actionsCompleted: integer("actions_completed").default(0),
+  totalActions: integer("total_actions").default(0),
+  lastProgressUpdate: timestamp("last_progress_update"),
+  
+  // Lifecycle
+  status: varchar("status").default("active"), // 'active', 'in_progress', 'ready', 'cancelled'
+  employeeInterestedAt: timestamp("employee_interested_at"),
+  managerReviewedAt: timestamp("manager_reviewed_at"),
+  managerNotes: text("manager_notes"),
+  
+  generatedAt: timestamp("generated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  employeeTargetIndex: uniqueIndex("skill_gap_analyses_employee_target_idx").on(table.employeeId, table.targetRoleId),
+  readinessIndex: index("skill_gap_analyses_readiness_idx").on(table.readinessScore),
+}));
+
+export const insertSkillGapAnalysisSchema = createInsertSchema(skillGapAnalyses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  generatedAt: true,
+});
+
+export type InsertSkillGapAnalysis = z.infer<typeof insertSkillGapAnalysisSchema>;
+export type SkillGapAnalysis = typeof skillGapAnalyses.$inferSelect;
+
+// ============================================================================
+// ASSETOS™ - PHYSICAL RESOURCE ALLOCATION (MONOPOLISTIC TIER)
+// ============================================================================
+
+// Assets - Physical resources (trucks, rigs, equipment)
+export const assets = pgTable("assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Asset identification
+  assetNumber: varchar("asset_number").notNull(), // "TRUCK-001", "RIG-4"
+  assetName: varchar("asset_name").notNull(), // "2020 Ford F-150"
+  assetType: varchar("asset_type").notNull(), // 'vehicle', 'equipment', 'tool', 'facility'
+  category: varchar("category"), // "Pickup Truck", "Drilling Rig", "Forklift"
+  
+  // Asset details
+  manufacturer: varchar("manufacturer"),
+  model: varchar("model"),
+  serialNumber: varchar("serial_number"),
+  yearManufactured: integer("year_manufactured"),
+  purchaseDate: timestamp("purchase_date"),
+  purchasePrice: decimal("purchase_price", { precision: 12, scale: 2 }),
+  
+  // Location & assignment
+  currentLocation: text("current_location"),
+  homeLocation: text("home_location"), // Default storage location
+  assignedToClientId: varchar("assigned_to_client_id").references(() => clients.id),
+  
+  // Billing configuration
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }), // $75/hr for Rig usage
+  dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }),
+  weeklyRate: decimal("weekly_rate", { precision: 10, scale: 2 }),
+  billingType: varchar("billing_type").default("hourly"), // 'hourly', 'daily', 'weekly', 'flat_fee'
+  isBillable: boolean("is_billable").default(true),
+  
+  // Maintenance & compliance
+  lastMaintenanceDate: timestamp("last_maintenance_date"),
+  nextMaintenanceDate: timestamp("next_maintenance_date"),
+  maintenanceIntervalDays: integer("maintenance_interval_days"),
+  certifications: jsonb("certifications").$type<string[]>().default(sql`'[]'`), // ['DOT Inspection', 'Safety Certified']
+  certificationExpiry: timestamp("certification_expiry"),
+  
+  // Availability & status
+  status: varchar("status").default("available"), // 'available', 'in_use', 'maintenance', 'retired'
+  isSchedulable: boolean("is_schedulable").default(true),
+  requiresOperatorCertification: boolean("requires_operator_certification").default(false),
+  requiredCertifications: jsonb("required_certifications").$type<string[]>().default(sql`'[]'`), // Employee must have these
+  
+  // Documentation
+  photos: jsonb("photos").$type<string[]>().default(sql`'[]'`), // URLs to asset photos
+  documents: jsonb("documents").$type<string[]>().default(sql`'[]'`), // Manuals, insurance docs
+  notes: text("notes"),
+  
+  // Depreciation (for accounting)
+  depreciationMethod: varchar("depreciation_method"), // 'straight_line', 'declining_balance'
+  depreciationRate: decimal("depreciation_rate", { precision: 5, scale: 2 }),
+  currentValue: decimal("current_value", { precision: 12, scale: 2 }),
+  
+  // Metadata
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceNumberIndex: uniqueIndex("assets_workspace_number_idx").on(table.workspaceId, table.assetNumber),
+  statusIndex: index("assets_status_idx").on(table.status, table.isSchedulable),
+  maintenanceIndex: index("assets_maintenance_idx").on(table.nextMaintenanceDate),
+}));
+
+export const insertAssetSchema = createInsertSchema(assets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAsset = z.infer<typeof insertAssetSchema>;
+export type Asset = typeof assets.$inferSelect;
+
+// Asset Schedules - Dual-layer scheduling (people + assets)
+export const assetSchedules = pgTable("asset_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  assetId: varchar("asset_id").notNull().references(() => assets.id, { onDelete: 'cascade' }),
+  
+  // Linked to employee shift (dual-layer scheduling)
+  shiftId: varchar("shift_id").references(() => shifts.id, { onDelete: 'set null' }),
+  employeeId: varchar("employee_id").references(() => employees.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  
+  // Scheduling details
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  jobDescription: text("job_description"),
+  jobLocation: text("job_location"),
+  
+  // Conflict detection flags
+  hasConflict: boolean("has_conflict").default(false),
+  conflictWith: jsonb("conflict_with").$type<string[]>().default(sql`'[]'`), // Asset schedule IDs that overlap
+  
+  // Usage tracking (for billing)
+  actualStartTime: timestamp("actual_start_time"),
+  actualEndTime: timestamp("actual_end_time"),
+  actualHours: decimal("actual_hours", { precision: 10, scale: 2 }),
+  odometerStart: decimal("odometer_start", { precision: 10, scale: 2 }),
+  odometerEnd: decimal("odometer_end", { precision: 10, scale: 2 }),
+  fuelUsed: decimal("fuel_used", { precision: 10, scale: 2 }),
+  
+  // Billing (auto-calculated for BillOS™)
+  billableHours: decimal("billable_hours", { precision: 10, scale: 2 }),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }), // Snapshot from asset
+  totalCharge: decimal("total_charge", { precision: 10, scale: 2 }),
+  invoiced: boolean("invoiced").default(false),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  
+  // Pre/post inspection (safety compliance)
+  preInspectionCompleted: boolean("pre_inspection_completed").default(false),
+  preInspectionBy: varchar("pre_inspection_by").references(() => users.id),
+  preInspectionNotes: text("pre_inspection_notes"),
+  postInspectionCompleted: boolean("post_inspection_completed").default(false),
+  postInspectionBy: varchar("post_inspection_by").references(() => users.id),
+  postInspectionNotes: text("post_inspection_notes"),
+  damageReported: boolean("damage_reported").default(false),
+  damageDescription: text("damage_description"),
+  
+  // Status
+  status: varchar("status").default("scheduled"), // 'scheduled', 'in_progress', 'completed', 'cancelled'
+  cancelledBy: varchar("cancelled_by").references(() => users.id),
+  cancelledAt: timestamp("cancelled_at"),
+  cancellationReason: text("cancellation_reason"),
+  
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  assetTimeIndex: index("asset_schedules_asset_time_idx").on(table.assetId, table.startTime),
+  shiftIndex: index("asset_schedules_shift_idx").on(table.shiftId),
+  conflictIndex: index("asset_schedules_conflict_idx").on(table.hasConflict),
+}));
+
+export const insertAssetScheduleSchema = createInsertSchema(assetSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAssetSchedule = z.infer<typeof insertAssetScheduleSchema>;
+export type AssetSchedule = typeof assetSchedules.$inferSelect;
+
+// Asset Usage Logs - Detailed tracking for billing & analytics
+export const assetUsageLogs = pgTable("asset_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  assetId: varchar("asset_id").notNull().references(() => assets.id, { onDelete: 'cascade' }),
+  assetScheduleId: varchar("asset_schedule_id").references(() => assetSchedules.id),
+  
+  // Usage period
+  usagePeriodStart: timestamp("usage_period_start").notNull(),
+  usagePeriodEnd: timestamp("usage_period_end").notNull(),
+  totalHours: decimal("total_hours", { precision: 10, scale: 2 }),
+  
+  // Operator details
+  operatedBy: varchar("operated_by").references(() => employees.id),
+  operatorCertificationVerified: boolean("operator_certification_verified").default(false),
+  
+  // Client billing
+  clientId: varchar("client_id").references(() => clients.id),
+  billableAmount: decimal("billable_amount", { precision: 10, scale: 2 }),
+  costCenterCode: varchar("cost_center_code"), // For client's internal accounting
+  
+  // Maintenance tracking
+  maintenanceRequired: boolean("maintenance_required").default(false),
+  maintenanceNotes: text("maintenance_notes"),
+  issuesReported: jsonb("issues_reported").$type<string[]>().default(sql`'[]'`),
+  
+  // Auto-aggregated metrics
+  totalDistance: decimal("total_distance", { precision: 10, scale: 2 }), // Miles/KM
+  fuelConsumed: decimal("fuel_consumed", { precision: 10, scale: 2 }),
+  idleTime: decimal("idle_time", { precision: 10, scale: 2 }), // Hours
+  
+  // BillOS™ integration
+  invoiceLineItemId: varchar("invoice_line_item_id"),
+  billingStatus: varchar("billing_status").default("pending"), // 'pending', 'invoiced', 'paid'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  assetPeriodIndex: index("asset_usage_logs_asset_period_idx").on(table.assetId, table.usagePeriodStart),
+  clientIndex: index("asset_usage_logs_client_idx").on(table.clientId, table.billingStatus),
+}));
+
+export const insertAssetUsageLogSchema = createInsertSchema(assetUsageLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAssetUsageLog = z.infer<typeof insertAssetUsageLogSchema>;
+export type AssetUsageLog = typeof assetUsageLogs.$inferSelect;
