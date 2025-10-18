@@ -32,6 +32,12 @@ export async function initializeWorkflow(
     return;
   }
 
+  // Update submission status to 'pending_review'
+  await storage.updateReportSubmission(submissionId, workspaceId, {
+    status: 'pending_review',
+    submittedAt: new Date(),
+  });
+
   // Create approval steps based on workflow configuration
   const approvalSteps = workflow.approvalSteps as Array<{
     step: number;
@@ -181,10 +187,14 @@ async function finalizeWorkflow(
   switch (workflow.finalDestination) {
     case 'audit_database':
       // Already locked above - nothing more needed
+      // Notify submitter of final approval
+      await notifySubmitter(submissionId, 'approved');
       break;
 
     case 'email_client':
       await sendReportToClient(submissionId, workspaceId, workflow);
+      // Notify submitter that report was sent to client
+      await notifySubmitter(submissionId, 'approved');
       break;
 
     case 'return_to_submitter':
@@ -244,10 +254,8 @@ async function lockReportRecord(
     expiresAt,
   });
 
-  // Update submission to mark as locked
-  await storage.updateReportSubmission(submissionId, workspaceId, {
-    status: 'approved_locked',
-  });
+  // Note: Status is updated in finalizeWorkflow based on destination
+  // Don't override it here
 }
 
 /**
@@ -268,14 +276,26 @@ async function sendReportToClient(
     throw new Error('Client not found');
   }
 
-  // TODO: Integrate with Resend for email delivery
-  // For now, just mark as sent
+  // Mark as sent BEFORE attempting email (so status reflects intent)
   await storage.updateReportSubmission(submissionId, workspaceId, {
     status: 'sent_to_customer',
     sentToCustomerAt: new Date(),
   });
 
-  console.log(`Report ${submission.reportNumber} sent to client ${client.name}`);
+  // TODO: Integrate with Resend email service for actual delivery
+  // For now, log for manual verification
+  console.log(`[WORKFLOW] Report ${submission.reportNumber} marked as sent to client ${client.name} (${client.email || 'no email on file'})`);
+  
+  // Future: Use Resend integration
+  // const { Resend } = await import('resend');
+  // const resend = new Resend(process.env.RESEND_API_KEY);
+  // await resend.emails.send({
+  //   from: 'noreply@workforceos.com',
+  //   to: client.email,
+  //   subject: workflow.emailSubject || `Report: ${submission.reportNumber}`,
+  //   html: workflow.emailTemplate || 'Please see attached report.',
+  //   attachments: [{ filename: `${submission.reportNumber}.pdf`, content: pdfBuffer }]
+  // });
 }
 
 // ============================================================================
@@ -296,13 +316,37 @@ async function notifyNextApprover(
     return; // No pending steps
   }
 
+  const submission = await storage.getReportSubmissionById(submissionId);
+  if (!submission) return;
+
   // Mark notification as sent
   await storage.updateApprovalStep(pendingStep.id, {
     notificationSentAt: new Date(),
   });
 
-  // TODO: Integrate with SupportOS™ notification system
-  console.log(`Notification sent for approval step ${pendingStep.stepNumber}`);
+  // Create in-app notification for approver
+  const notificationMessage = `New report pending approval: ${submission.reportNumber} - Step ${pendingStep.stepNumber}`;
+  
+  // Log structured notification event
+  await storage.createAuditLog({
+    workspaceId,
+    userId: pendingStep.assignedTo || 'system',
+    action: 'workflow_notification',
+    entityType: 'report_approval',
+    entityId: submissionId,
+    metadata: {
+      type: 'approval_request',
+      stepId: pendingStep.id,
+      stepNumber: pendingStep.stepNumber,
+      message: notificationMessage,
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  console.log(`[WORKFLOW NOTIFICATION] ${notificationMessage}`);
+  
+  // Future: Integration with SupportOS™ push notifications
+  // await sendPushNotification(pendingStep.assignedTo, notificationMessage);
 }
 
 /**
@@ -312,8 +356,30 @@ async function notifySubmitter(
   submissionId: string,
   status: 'approved' | 'rejected'
 ): Promise<void> {
-  // TODO: Integrate with SupportOS™ notification system
-  console.log(`Submitter notified: Report ${submissionId} ${status}`);
+  const submission = await storage.getReportSubmissionById(submissionId);
+  if (!submission) return;
+
+  const notificationMessage = `Report ${submission.reportNumber} has been ${status}`;
+  
+  // Log structured notification event
+  await storage.createAuditLog({
+    workspaceId: submission.workspaceId,
+    userId: submission.employeeId,
+    action: 'workflow_notification',
+    entityType: 'report_submission',
+    entityId: submissionId,
+    metadata: {
+      type: 'final_decision',
+      status,
+      message: notificationMessage,
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  console.log(`[WORKFLOW NOTIFICATION] ${notificationMessage} to employee ${submission.employeeId}`);
+  
+  // Future: Integration with SupportOS™ push notifications
+  // await sendPushNotification(submission.employeeId, notificationMessage);
 }
 
 // ============================================================================
