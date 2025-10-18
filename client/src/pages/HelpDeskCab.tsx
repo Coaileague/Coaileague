@@ -222,6 +222,53 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     retry: 1,
   });
 
+  // Fetch promotional banners (staff only - API has authorization)
+  const { data: promotionalBannersRaw = [] } = useQuery<any[]>({
+    queryKey: ['/api/promotional-banners'],
+    enabled: isAuthenticated,
+    retry: 1,
+  });
+
+  // Transform promotional banners to match BannerManager format
+  const promotionalBanners = promotionalBannersRaw.map((banner: any) => ({
+    id: banner.id,
+    text: banner.message,
+    type: 'promo' as const,
+    link: banner.ctaLink,
+    enabled: banner.isActive,
+  }));
+
+  // Banner management mutations
+  const createBannerMutation = useMutation({
+    mutationFn: async (data: { message: string; ctaText?: string; ctaLink?: string; isActive?: boolean }) => {
+      return await apiRequest('POST', '/api/promotional-banners', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners'] });
+      toast({ title: "✓ Banner Created" });
+    },
+  });
+
+  const updateBannerMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest('PATCH', `/api/promotional-banners/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners'] });
+      toast({ title: "✓ Banner Updated" });
+    },
+  });
+
+  const deleteBannerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/promotional-banners/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners'] });
+      toast({ title: "✓ Banner Deleted" });
+    },
+  });
+
   // Fetch selected user context for profile/diagnostics
   const { data: userContext, error: userContextError, isError: userContextIsError } = useQuery<any>({
     queryKey: ['/api/helpdesk/user-context', selectedUserId],
@@ -1441,14 +1488,38 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         <BannerManager
           open={showBannerManager}
           onClose={() => setShowBannerManager(false)}
-          currentBanners={[]}
+          currentBanners={promotionalBanners}
           onSendCommand={(command) => {
-            if (isConnected) {
-              sendMessage(command, userName, 'support');
-              toast({
-                title: "Banner Command Sent",
-                description: "Your banner has been created and will appear for all users.",
-              });
+            // Parse banner commands and call API
+            const parts = command.split(' ');
+            const action = parts[1]; // 'add', 'remove', 'toggle'
+            
+            if (action === 'add') {
+              // Extract message from quotes
+              const messageMatch = command.match(/"([^"]+)"/);
+              const message = messageMatch ? messageMatch[1] : '';
+              
+              if (message) {
+                createBannerMutation.mutate({
+                  message,
+                  isActive: true, // Make new banners active by default
+                });
+                setShowBannerManager(false);
+              }
+            } else if (action === 'remove') {
+              const bannerId = parts[2];
+              if (bannerId) {
+                deleteBannerMutation.mutate(bannerId);
+              }
+            } else if (action === 'toggle') {
+              const bannerId = parts[2];
+              const isActive = parts[3] === 'on';
+              if (bannerId) {
+                updateBannerMutation.mutate({
+                  id: bannerId,
+                  data: { isActive },
+                });
+              }
             }
           }}
         />
