@@ -1,0 +1,219 @@
+/* SmartScheduleOS™ Custom Styling */
+
+/* Calendar Container */
+.smart-schedule-calendar {
+  font-family: inherit;
+}
+
+/* Calendar toolbar */
+.rbc-toolbar {
+  padding: 1rem;
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rbc-toolbar button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.rbc-toolbar button:hover {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+}
+
+.rbc-toolbar button.rbc-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.rbc-toolbar-label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+/* Time gutter (left side time labels) */
+.rbc-time-gutter {
+  background: hsl(var(--muted) / 0.3);
+  border-right: 1px solid hsl(var(--border));
+}
+
+.rbc-label {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Header cells (day names) */
+.rbc-header {
+  padding: 1rem 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted) / 0.3);
+  border-bottom: 2px solid hsl(var(--border));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rbc-today {
+  background-color: hsl(var(--primary) / 0.05) !important;
+}
+
+/* Time slots */
+.rbc-time-slot {
+  border-top: 1px solid hsl(var(--border) / 0.5);
+}
+
+.rbc-time-content {
+  border-top: 1px solid hsl(var(--border));
+}
+
+.rbc-day-slot {
+  border-left: 1px solid hsl(var(--border));
+}
+
+.rbc-day-slot:first-child {
+  border-left: none;
+}
+
+/* Events (Shifts) */
+.rbc-event {
+  border: none !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.rbc-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  z-index: 10;
+}
+
+.rbc-event.rbc-selected {
+  box-shadow: 0 0 0 2px hsl(var(--primary));
+}
+
+/* Conflict styling */
+.rbc-event.bg-red-600 {
+  animation: pulse-conflict 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-conflict {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Event labels */
+.rbc-event-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.rbc-event-content {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Current time indicator */
+.rbc-current-time-indicator {
+  background-color: hsl(var(--primary));
+  height: 2px;
+}
+
+.rbc-current-time-indicator::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  background-color: hsl(var(--primary));
+  border-radius: 50%;
+}
+
+/* Selection rectangle (draw-to-create) */
+.rbc-slot-selection {
+  background-color: hsl(var(--primary) / 0.2);
+  border: 2px dashed hsl(var(--primary));
+  border-radius: 0.375rem;
+}
+
+/* Drag and drop feedback */
+.rbc-addons-dnd-drag-preview {
+  opacity: 0.7;
+  transform: rotate(2deg);
+}
+
+.rbc-addons-dnd-over {
+  background-color: hsl(var(--primary) / 0.1) !important;
+}
+
+/* Week view specifics */
+.rbc-time-header-content {
+  border-left: 1px solid hsl(var(--border));
+}
+
+.rbc-time-header-gutter {
+  background: hsl(var(--muted) / 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .rbc-toolbar button {
+    width: 100%;
+  }
+  
+  .rbc-event-content {
+    font-size: 0.75rem;
+  }
+  
+  .rbc-header {
+    font-size: 0.75rem;
+    padding: 0.75rem 0.25rem;
+  }
+}
+
+/* Overlay for modals */
+.rbc-overlay {
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  padding: 1rem;
+}
+
+.rbc-overlay-header {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.5rem;
+}
