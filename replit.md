@@ -31,6 +31,10 @@ The platform features a CAD-style professional interface with a dark mode theme,
     - **HR & Compliance**: Report Management System (ReportOS™), HR Management Suite, Custom Forms System, Real-Time Geo-Compliance & Audit Trail, and Employee Self-Service (ESS).
     - **Communication & Engagement**: Live HelpDesk (SupportOS™) with a modern mobile chat interface, and EngagementOS™ (Bidirectional Employee-Employer Intelligence) for pulse surveys, feedback, and recognition.
     - **AI & Analytics**: AI Sales CRM, PredictionOS™ (AI Workforce Analytics), and features within EngagementOS™ for turnover risk prediction and employer benchmarking.
+    - **Intelligent Automation (NEW)**: 
+        - **KnowledgeOS™**: AI-powered knowledge base retrieval using OpenAI GPT-4. Employees can ask questions about policies, procedures, and benefits via `/ask` chat command or dedicated UI. Supports public knowledge articles accessible to all users.
+        - **Predictive Scheduling Alerts**: Detects over-allocation before it happens by analyzing upcoming schedules against available capacity. Generates alerts for managers with suggested actions.
+        - **Automated Status Reports**: One-click weekly status report generation using AI to summarize time tracking data, task completions, and accomplishments.
     - **Asset Management**: AssetOS™ for physical resource allocation and billing.
     - **Platform & Security**: Admin Dashboards, various Portals (Employee, Auditor, Client), Billing & Monetization, Security & Reliability features (audit logging, rate limiting, error handling), and an Escalation System.
     - **Workflow Automation**: Custom Logic Workflow Builder.
