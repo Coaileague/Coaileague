@@ -36,6 +36,8 @@ import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
+import HireOSWorkflowBuilder from "@/pages/hireos-workflow-builder";
+import EmployeeFileCabinet from "@/pages/employee-file-cabinet";
 import AdminUsage from "@/pages/admin-usage";
 import AdminSupport from "@/pages/admin-support";
 import AdminCommandCenter from "@/pages/admin-command-center";
@@ -160,6 +162,8 @@ function AppContent() {
                 <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/admin/command" component={AdminCommandCenter} />
                 <Route path="/admin/custom-forms" component={AdminCustomForms} />
+                <Route path="/owner/hireos/workflow-builder" component={HireOSWorkflowBuilder} />
+                <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
                 <Route path="/support/dashboard" component={SupportDashboard} />
                 <Route path="/platform/admin" component={PlatformAdmin} />
                 <Route path="/platform/users" component={PlatformUsers} />
