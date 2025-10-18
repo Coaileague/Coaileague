@@ -1073,85 +1073,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           </div>
         </section>
 
-        {/* RIGHT COLUMN: Quick Actions + User List */}
+        {/* RIGHT COLUMN: User List */}
         <section className="min-w-[200px] max-w-[260px] w-auto bg-gradient-to-b from-slate-100 via-blue-50 to-slate-100 backdrop-blur-sm flex flex-col flex-shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.1)]">
           
-          {/* Quick Actions Panel */}
-          <div className="flex-shrink-0 bg-gradient-to-br from-slate-800 to-slate-900 border-b-2 border-amber-500/30 p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Zap className="w-4 h-4 text-amber-400" />
-              <h3 className="text-white font-bold text-xs">Quick Actions</h3>
-            </div>
-            
-            <div className="space-y-1">
-              <Button
-                onClick={() => {
-                  sendQuickMessage("I need help with my account login");
-                  toast({ title: "Quick Action", description: "Login assistance sent" });
-                }}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-white text-[10px] h-7 border border-slate-600"
-                data-testid="quick-action-login"
-              >
-                <Key className="w-3 h-3 mr-1.5" />
-                Login Help
-              </Button>
-              <Button
-                onClick={() => {
-                  sendQuickMessage("I need to reset my password");
-                  toast({ title: "Quick Action", description: "Password reset sent" });
-                }}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-white text-[10px] h-7 border border-slate-600"
-                data-testid="quick-action-password"
-              >
-                <RefreshCw className="w-3 h-3 mr-1.5" />
-                Reset Password
-              </Button>
-              <Button
-                onClick={() => {
-                  sendQuickMessage("I found a bug or technical issue");
-                  toast({ title: "Quick Action", description: "Bug report sent" });
-                }}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-white text-[10px] h-7 border border-slate-600"
-                data-testid="quick-action-bug"
-              >
-                <AlertTriangle className="w-3 h-3 mr-1.5" />
-                Report Bug
-              </Button>
-              <Button
-                onClick={() => {
-                  sendQuickMessage("I have a question about my payment");
-                  toast({ title: "Quick Action", description: "Payment inquiry sent" });
-                }}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-white text-[10px] h-7 border border-slate-600"
-                data-testid="quick-action-payment"
-              >
-                <PackageCheck className="w-3 h-3 mr-1.5" />
-                Payment Question
-              </Button>
-              <Button
-                onClick={() => {
-                  sendQuickMessage("I have a general question");
-                  toast({ title: "Quick Action", description: "General inquiry sent" });
-                }}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-white text-[10px] h-7 border border-slate-600"
-                data-testid="quick-action-question"
-              >
-                <MessageCircle className="w-3 h-3 mr-1.5" />
-                General Question
-              </Button>
-            </div>
-          </div>
-
           {/* User List Header */}
           <div className="px-3 py-2 border-b border-blue-300/50 flex-shrink-0 bg-gradient-to-r from-blue-100/80 to-slate-100/80">
             <div className="flex items-center gap-1.5">
