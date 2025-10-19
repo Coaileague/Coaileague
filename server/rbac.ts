@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
-import { employees, workspaces, platformRoles } from '@shared/schema';
+import { employees, workspaces, platformRoles, users } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
 export type WorkspaceRole = 'owner' | 'manager' | 'hr_manager' | 'supervisor' | 'employee';
@@ -236,8 +236,31 @@ export async function getUserPlatformRole(userId: string): Promise<PlatformRole>
 
 export function requirePlatformRole(allowedRoles: PlatformRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user?.id) {
+    // Check session-based authentication first
+    if (!req.session?.userId && !req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get userId from session or req.user
+    const userId = req.session?.userId || req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // If req.user is not set, populate it from the session
+    if (!req.user) {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      
+      req.user = user;
     }
 
     const platformRole = await getUserPlatformRole(req.user.id);
