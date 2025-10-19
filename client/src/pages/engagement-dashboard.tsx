@@ -17,6 +17,7 @@ import { AlertCircle, TrendingUp, TrendingDown, Users, Heart, MessageSquare, Awa
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { MobileLoading } from "@/components/mobile-loading";
 
 interface EmployeeHealthScore {
   id: string;
@@ -191,81 +192,80 @@ export default function EngagementDashboard() {
 
   if (loadingHealthScores || loadingBenchmarks || loadingRecognitions) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading engagement data...</p>
-        </div>
+      <div className="h-full flex items-center justify-center">
+        <MobileLoading message="Loading engagement data..." />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="page-engagement-dashboard">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">EngagementOS™</h1>
-          <p className="text-muted-foreground">Employee engagement intelligence & health monitoring</p>
+    <div className="h-full overflow-auto mobile-scroll safe-bottom" data-testid="page-engagement-dashboard">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
+      {/* Mobile-optimized header */}
+      <div className="flex items-center justify-between safe-top">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate" data-testid="text-page-title">EngagementOS™</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Employee engagement intelligence & health monitoring</p>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Heart className="h-4 w-4 text-primary" />
-              Avg Engagement
+      {/* Mobile-optimized Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+        <Card className="mobile-card-enter">
+          <CardHeader className="pb-1.5 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2">
+              <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+              <span className="truncate">Avg Engagement</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="text-avg-engagement">{avgEngagement}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Across all employees</p>
+          <CardContent className="pb-3 sm:pb-6">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="text-avg-engagement">{avgEngagement}%</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">Across all employees</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              High Risk
+        <Card className="mobile-card-enter">
+          <CardHeader className="pb-1.5 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2">
+              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-destructive flex-shrink-0" />
+              <span className="truncate">High Risk</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-destructive" data-testid="text-high-risk-count">
+          <CardContent className="pb-3 sm:pb-6">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold text-destructive" data-testid="text-high-risk-count">
               {criticalRiskCount + highRiskCount}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{criticalRiskCount} critical, {highRiskCount} high</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{criticalRiskCount} critical, {highRiskCount} high</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
-              Action Required
+        <Card className="mobile-card-enter">
+          <CardHeader className="pb-1.5 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+              <span className="truncate">Action Required</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-500" data-testid="text-action-required-count">
+          <CardContent className="pb-3 sm:pb-6">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold text-orange-500" data-testid="text-action-required-count">
               {requiresActionCount}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Employees need attention</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">Employees need attention</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              Employer Score
+        <Card className="mobile-card-enter">
+          <CardHeader className="pb-1.5 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+              <span className="truncate">Employer Score</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="text-employer-score">
+          <CardContent className="pb-3 sm:pb-6">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="text-employer-score">
               {latestBenchmark ? `${parseFloat(latestBenchmark.overallScore).toFixed(1)}/5.0` : 'N/A'}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {latestBenchmark ? `${latestBenchmark.percentileRank}th percentile` : 'No data yet'}
             </p>
           </CardContent>
@@ -731,6 +731,7 @@ export default function EngagementDashboard() {
           </Form>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
