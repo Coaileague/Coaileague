@@ -523,11 +523,9 @@ export function setupWebSocket(server: Server) {
               }
             }
 
-            // HelpOS greets everyone who joins
+            // HelpOS greets everyone who joins (only send to the joining user, not the entire room)
             if (payload.conversationId === MAIN_ROOM_ID) {
               try {
-                const clients = conversationClients.get(payload.conversationId);
-                
                 // Format role display for welcome message
                 const getRoleDisplayText = (role: string) => {
                   switch(role) {
@@ -549,27 +547,25 @@ export function setupWebSocket(server: Server) {
                   greeting = `Welcome! Please wait to be helped. You cannot send messages right now - wait, gather your thoughts, evidence, and problem details. We will be with you shortly.`;
                 }
 
-                // Create HelpOS public announcement message
-                const helpOsMessage = await storage.createChatMessage({
-                  conversationId: payload.conversationId,
-                  senderId: 'helpos-ai-bot',
-                  senderName: 'HelpOS™',
-                  senderType: 'bot',
-                  message: greeting,
-                  messageType: 'text',
+                // Send welcome message ONLY to the joining user (not saved to DB)
+                const welcomePayload = JSON.stringify({
+                  type: 'private_message',
+                  message: {
+                    id: `welcome-${Date.now()}`,
+                    createdAt: new Date(),
+                    conversationId: payload.conversationId,
+                    senderId: 'helpos-ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: greeting,
+                    messageType: 'text',
+                    isSystemMessage: false,
+                  },
                 });
-
-                // Broadcast to ALL users in the chat
-                if (clients) {
-                  const publicPayload = JSON.stringify({
-                    type: 'new_message',
-                    message: helpOsMessage,
-                  });
-                  clients.forEach((client) => {
-                    if (client.readyState === WebSocket.OPEN) {
-                      client.send(publicPayload);
-                    }
-                  });
+                
+                // Send ONLY to the user who just joined
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(welcomePayload);
                 }
               } catch (greetError) {
                 console.error('HelpOS greeting failed:', greetError);

@@ -173,26 +173,30 @@ export function UserDiagnosticsPanel({
                   <Badge variant="secondary" className="w-fit">
                     {userContext.workspace.role || 'Member'}
                   </Badge>
-
-                  {userContext.workspace.subscriptionTier && (
-                    <>
-                      <span className="text-muted-foreground">Subscription:</span>
-                      <div className="flex gap-1">
-                        <Badge variant="outline" className="w-fit text-xs capitalize">
-                          {userContext.workspace.subscriptionTier}
-                        </Badge>
-                        {userContext.workspace.subscriptionStatus && (
-                          <Badge 
-                            variant={userContext.workspace.subscriptionStatus === 'active' ? 'default' : 'destructive'} 
-                            className="w-fit text-xs capitalize"
-                          >
-                            {userContext.workspace.subscriptionStatus}
-                          </Badge>
-                        )}
-                      </div>
-                    </>
-                  )}
                 </div>
+
+                {/* Subscription Info - Separate Row for Better Spacing */}
+                {userContext.workspace.subscriptionTier && (
+                  <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t border-border/50">
+                    <span className="text-muted-foreground">Subscription Tier:</span>
+                    <Badge variant="outline" className="w-fit text-xs capitalize" data-testid="badge-subscription-tier">
+                      {userContext.workspace.subscriptionTier}
+                    </Badge>
+                    
+                    {userContext.workspace.subscriptionStatus && (
+                      <>
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge 
+                          variant={userContext.workspace.subscriptionStatus === 'active' ? 'default' : 'destructive'} 
+                          className="w-fit text-xs capitalize"
+                          data-testid="badge-subscription-status"
+                        >
+                          {userContext.workspace.subscriptionStatus}
+                        </Badge>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground pl-6">No workspace associated</p>
