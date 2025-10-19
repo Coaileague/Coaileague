@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTransition } from "@/contexts/transition-context";
+import { MobileLoading } from "@/components/mobile-loading";
 
 export default function DashboardCompact() {
   const [, setLocation] = useLocation();
@@ -52,11 +53,7 @@ export default function DashboardCompact() {
   }, [isAuthenticated, isLoading]);
 
   if (isLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <MobileLoading fullScreen message="Loading Dashboard..." />;
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
@@ -70,55 +67,109 @@ export default function DashboardCompact() {
   const highRiskCount = (turnoverData as any)?.highRiskCount || 0;
 
   return (
-    <div className="p-3 max-w-[1920px] mx-auto">
-      {/* COMPACT HEADER - Actions Front */}
-      <div className="flex items-center justify-between mb-3 bg-gradient-to-r from-indigo-900 to-blue-900 text-white p-3 rounded-lg">
-        <div>
-          <h1 className="text-lg font-bold">Welcome back, {firstName}</h1>
-          <p className="text-xs opacity-75">
+    <div className="p-3 sm:p-4 md:p-6 max-w-[1920px] mx-auto space-y-3">
+      {/* MOBILE-FIRST HEADER */}
+      <div className="bg-gradient-to-r from-indigo-900 to-blue-900 text-white p-4 sm:p-6 rounded-xl shadow-lg">
+        <div className="mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold">Welcome back, {firstName}</h1>
+          <p className="text-sm opacity-90 mt-1">
             {workspaceRole === 'owner' ? 'Manage your entire workforce' : 
              workspaceRole === 'manager' ? 'Oversee your team' :
              'Track your time and tasks'}
           </p>
         </div>
         
-        {/* QUICK ACTIONS - Always Visible */}
-        <div className="flex items-center gap-2">
+        {/* QUICK ACTIONS - MOBILE FIRST (Grid Layout for Thumb Access) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {(workspaceRole === 'owner' || workspaceRole === 'manager') && (
             <>
-              <Link href="/employees">
-                <Button size="sm" variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white h-7 text-xs" data-testid="button-manage-employees">
-                  <Users className="h-3 w-3 mr-1" />
-                  Employees
+              <Link href="/schedule" className="block">
+                <Button 
+                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
+                  data-testid="button-schedules"
+                >
+                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
+                    <Calendar className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-sm font-medium">Schedule</span>
+                  </div>
                 </Button>
               </Link>
-              <Link href="/schedules">
-                <Button size="sm" variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white h-7 text-xs" data-testid="button-schedules">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  Schedules
+              
+              <Link href="/time-tracking" className="block">
+                <Button 
+                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
+                  data-testid="button-time-tracking"
+                >
+                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
+                    <Clock className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-sm font-medium">Time Clock</span>
+                  </div>
                 </Button>
               </Link>
-              <Link href="/time-tracking">
-                <Button size="sm" variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white h-7 text-xs" data-testid="button-time-tracking">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Time
+              
+              <Link href="/reports" className="block">
+                <Button 
+                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
+                  data-testid="button-reports"
+                >
+                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
+                    <FileText className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-sm font-medium">Reports</span>
+                  </div>
                 </Button>
               </Link>
-              <Link href="/invoices">
-                <Button size="sm" variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white h-7 text-xs" data-testid="button-invoices">
-                  <FileText className="h-3 w-3 mr-1" />
-                  Invoices
+              
+              <Link href="/employees" className="block">
+                <Button 
+                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
+                  data-testid="button-manage-employees"
+                >
+                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
+                    <Users className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-sm font-medium">Employees</span>
+                  </div>
                 </Button>
               </Link>
             </>
           )}
           {workspaceRole === 'employee' && (
-            <Link href="/time-tracking">
-              <Button size="sm" variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white h-7 text-xs" data-testid="button-clock-in">
-                <Clock className="h-3 w-3 mr-1" />
-                Clock In/Out
-              </Button>
-            </Link>
+            <>
+              <Link href="/time-tracking" className="block col-span-2">
+                <Button 
+                  className="w-full touch-target bg-emerald-500/30 hover:bg-emerald-500/40 border-2 border-emerald-400/50 text-white justify-center h-auto py-4 px-4" 
+                  data-testid="button-clock-in"
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-6 w-6" />
+                    <span className="text-base font-bold">Clock In/Out</span>
+                  </div>
+                </Button>
+              </Link>
+              
+              <Link href="/schedule" className="block">
+                <Button 
+                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start h-auto py-3 px-3" 
+                  data-testid="button-my-schedule"
+                >
+                  <div className="flex flex-col items-start gap-1 w-full">
+                    <Calendar className="h-5 w-5" />
+                    <span className="text-sm font-medium">My Schedule</span>
+                  </div>
+                </Button>
+              </Link>
+              
+              <Link href="/my-paychecks" className="block">
+                <Button 
+                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start h-auto py-3 px-3" 
+                  data-testid="button-paychecks"
+                >
+                  <div className="flex flex-col items-start gap-1 w-full">
+                    <DollarSign className="h-5 w-5" />
+                    <span className="text-sm font-medium">Paychecks</span>
+                  </div>
+                </Button>
+              </Link>
+            </>
           )}
         </div>
       </div>
