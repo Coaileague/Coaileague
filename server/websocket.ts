@@ -1570,12 +1570,14 @@ export function setupWebSocket(server: Server) {
             const statusMessage: ChatMessage = {
               id: Date.now().toString(),
               conversationId: ws.conversationId,
-              senderId: 'system',
+              senderId: null,
               senderName: 'System',
               message: `${ws.userName} is now ${payload.status === 'online' ? 'Available' : payload.status === 'away' ? 'Away' : 'Busy'}`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
+              isPrivateMessage: false,
+              recipientId: null,
               attachmentUrl: null,
               attachmentName: null,
               createdAt: new Date(),
@@ -1587,7 +1589,7 @@ export function setupWebSocket(server: Server) {
             try {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: statusMessage.message,
                 senderType: 'system',
@@ -1654,12 +1656,14 @@ export function setupWebSocket(server: Server) {
               const errorMessage: ChatMessage = {
                 id: Date.now().toString(),
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: `❌ DENIED: Cannot remove ${targetDisplayName}. Root administrators cannot be removed by non-root users.`,
                 senderType: 'system',
                 messageType: 'text',
                 isSystemMessage: true,
+                isPrivateMessage: false,
+                recipientId: null,
                 attachmentUrl: null,
                 attachmentName: null,
                 createdAt: new Date(),
@@ -1684,7 +1688,7 @@ export function setupWebSocket(server: Server) {
               try {
                 await storage.createChatMessage({
                   conversationId: ws.conversationId,
-                  senderId: 'system',
+                  senderId: null,
                   senderName: 'System',
                   message: errorMessage.message,
                   senderType: 'system',
@@ -1711,12 +1715,14 @@ export function setupWebSocket(server: Server) {
               const errorMessage: ChatMessage = {
                 id: Date.now().toString(),
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: `❌ DENIED: Cannot remove ${targetDisplayName}. Staff members cannot remove other staff members.`,
                 senderType: 'system',
                 messageType: 'text',
                 isSystemMessage: true,
+                isPrivateMessage: false,
+                recipientId: null,
                 attachmentUrl: null,
                 attachmentName: null,
                 createdAt: new Date(),
@@ -1741,7 +1747,7 @@ export function setupWebSocket(server: Server) {
               try {
                 await storage.createChatMessage({
                   conversationId: ws.conversationId,
-                  senderId: 'system',
+                  senderId: null,
                   senderName: 'System',
                   message: errorMessage.message,
                   senderType: 'system',
@@ -1819,12 +1825,14 @@ export function setupWebSocket(server: Server) {
             const kickMessage: ChatMessage = {
               id: Date.now().toString(),
               conversationId: ws.conversationId,
-              senderId: 'system',
+              senderId: null,
               senderName: 'System',
               message: `${targetUserName} has been removed from the chat (Reason: ${reason})`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
+              isPrivateMessage: false,
+              recipientId: null,
               attachmentUrl: null,
               attachmentName: null,
               createdAt: new Date(),
@@ -1836,7 +1844,7 @@ export function setupWebSocket(server: Server) {
             try {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: kickMessage.message,
                 senderType: 'system',
@@ -2092,12 +2100,14 @@ export function setupWebSocket(server: Server) {
             const silenceMessage: ChatMessage = {
               id: Date.now().toString(),
               conversationId: ws.conversationId,
-              senderId: 'system',
+              senderId: null,
               senderName: 'System',
               message: `🔇 ${targetUserName} has been silenced for ${duration} minutes by ${ws.userName}. Reason: ${reason}`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
+              isPrivateMessage: false,
+              recipientId: null,
               attachmentUrl: null,
               attachmentName: null,
               createdAt: new Date(),
@@ -2109,7 +2119,7 @@ export function setupWebSocket(server: Server) {
             try {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: silenceMessage.message,
                 senderType: 'system',
@@ -2280,12 +2290,14 @@ export function setupWebSocket(server: Server) {
             const unmuteMessage: ChatMessage = {
               id: Date.now().toString(),
               conversationId: ws.conversationId,
-              senderId: 'system',
+              senderId: null,
               senderName: 'System',
               message: `🔊 ${targetUserName} has been unmuted by ${ws.userName} and can now speak.`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
+              isPrivateMessage: false,
+              recipientId: null,
               attachmentUrl: null,
               attachmentName: null,
               createdAt: new Date(),
@@ -2297,7 +2309,7 @@ export function setupWebSocket(server: Server) {
             try {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: unmuteMessage.message,
                 senderType: 'system',
@@ -2493,12 +2505,14 @@ export function setupWebSocket(server: Server) {
             const transferMessage: ChatMessage = {
               id: Date.now().toString(),
               conversationId: ws.conversationId,
-              senderId: 'system',
+              senderId: null,
               senderName: 'System',
               message: `${ws.userName} has transferred the customer to the next available agent`,
               senderType: 'system',
               messageType: 'text',
               isSystemMessage: true,
+              isPrivateMessage: false,
+              recipientId: null,
               attachmentUrl: null,
               attachmentName: null,
               createdAt: new Date(),
@@ -2510,7 +2524,7 @@ export function setupWebSocket(server: Server) {
             try {
               await storage.createChatMessage({
                 conversationId: ws.conversationId,
-                senderId: 'system',
+                senderId: null,
                 senderName: 'System',
                 message: transferMessage.message,
                 senderType: 'system',
