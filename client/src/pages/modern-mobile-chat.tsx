@@ -9,6 +9,7 @@ import { useChatSounds } from "@/hooks/use-chat-sounds";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
+import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
 import { useTransition } from "@/contexts/transition-context";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -36,7 +37,7 @@ export default function ModernMobileChat() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
-  const [userContext, setUserContext] = useState<any>(null);
+  const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);
   const [showAgreement, setShowAgreement] = useState(false);
   const [hasAcceptedAgreement, setHasAcceptedAgreement] = useState(false);
   const [showFABs, setShowFABs] = useState(true);
@@ -583,54 +584,18 @@ export default function ModernMobileChat() {
     }
   };
 
-  // Check if selected user is a bot/platform-generated user
-  const isBotUser = selectedUser?.role === 'bot' || selectedUser?.id?.includes('helpos') || selectedUser?.id?.includes('-ai-');
-
-  // Fetch user context when user is selected (staff only) - Skip for bot users
-  const { data: fetchedUserContext } = useQuery<any>({
-    queryKey: ['/api/helpdesk/user-context', selectedUser?.id],
-    queryFn: async () => {
-      if (!selectedUser?.id) return null;
-      const res = await fetch(`/api/helpdesk/user-context/${selectedUser.id}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch user context');
-      return res.json();
-    },
-    enabled: Boolean(selectedUser && isStaff && !isBotUser),
-    retry: false,
-    staleTime: 30000,
-  });
-
-  // Update context when fetched OR generate bot context
-  useEffect(() => {
-    if (isBotUser && selectedUser) {
-      // Set special context for bot/platform-generated users
-      setUserContext({
-        isPlatformGenerated: true,
-        userType: 'Platform AI Bot',
-        userId: selectedUser.id,
-        userName: selectedUser.name,
-        role: selectedUser.role,
-        status: 'Active - Automated System',
-        description: 'This is a platform-generated AI assistant that provides automated support.',
-        capabilities: ['Automated responses', 'Queue management', 'User greeting', 'Basic troubleshooting'],
-        restrictions: 'Cannot be modified or removed by staff members'
-      });
-    } else if (fetchedUserContext) {
-      setUserContext(fetchedUserContext);
-    }
-  }, [fetchedUserContext, isBotUser, selectedUser]);
-
   const handleUserSelect = (user: OnlineUser) => {
     setSelectedUser(user);
-    setUserContext(null); // Clear old context
     setShowUserList(false);
+    
+    // Open diagnostics panel for this user (QueryOS™)
+    setDiagnosticsUserId(user.id);
+    setShowDiagnostics(true);
     
     const userTypeLabel = user.role === 'bot' ? '🤖 Platform Bot' : user.name;
     toast({ 
       title: "User Selected", 
-      description: `Viewing ${userTypeLabel} - All commands will apply to this user`
+      description: `Viewing ${userTypeLabel} diagnostics via QueryOS™`
     });
   };
 
@@ -1239,215 +1204,21 @@ export default function ModernMobileChat() {
             </SheetContent>
           </Sheet>
 
-          {/* Diagnostics Button */}
-          <Sheet open={showDiagnostics} onOpenChange={setShowDiagnostics}>
-            <SheetTrigger asChild>
-              <button
-                className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-600 to-teal-600 text-white shadow-lg hover:shadow-cyan-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
-                data-testid="button-float-diagnostics"
-              >
-                <Eye size={24} />
-              </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh]">
-              <SheetHeader>
-                <SheetTitle className="text-white flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-cyan-400" />
-                  Diagnostics
-                </SheetTitle>
-              </SheetHeader>
-              <div className="mt-4 max-h-[65vh] overflow-y-auto pr-2">
-                {selectedUser ? (
-                  userContext ? (
-                    <div className="space-y-4">
-                      {/* User Profile Header */}
-                      <div className="bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 border border-indigo-500/30 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            {userContext.isPlatformGenerated ? (
-                              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-600 ring-2 ring-amber-500/50">
-                                <Sparkles size={24} className="text-white" />
-                              </div>
-                            ) : (
-                              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-600 to-blue-600 ring-2 ring-indigo-500/50 text-white font-bold text-lg">
-                                {selectedUser.name.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-white font-bold text-base">
-                              {userContext.isPlatformGenerated ? 'HelpOS' : selectedUser.name}
-                            </h3>
-                            <p className={`text-xs ${userContext.isPlatformGenerated ? 'text-amber-300' : 'text-cyan-300'}`}>
-                              {userContext.isPlatformGenerated ? 'Platform AI Bot' : getRoleDisplay(selectedUser.role) || 'User'}
-                            </p>
-                          </div>
-                          {userContext.isPlatformGenerated && (
-                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                              BOT
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Bot-specific information */}
-                      {userContext.isPlatformGenerated ? (
-                        <div className="space-y-3">
-                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                              <Info className="w-4 h-4 text-cyan-400" />
-                              Bot Information
-                            </h4>
-                            <div className="space-y-3">
-                              <div>
-                                <span className="text-slate-400 text-xs block mb-1">Type</span>
-                                <span className="text-amber-400 text-sm font-medium">{userContext.userType}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 text-xs block mb-1">Status</span>
-                                <span className="text-emerald-400 text-sm font-medium">{userContext.status}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 text-xs block mb-1">Bot ID</span>
-                                <span className="text-white font-mono text-xs">{userContext.userId}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                            <h4 className="text-white font-semibold text-sm mb-3">Description</h4>
-                            <p className="text-slate-300 text-xs leading-relaxed">{userContext.description}</p>
-                          </div>
-
-                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                            <h4 className="text-white font-semibold text-sm mb-3">Capabilities</h4>
-                            <ul className="space-y-2">
-                              {userContext.capabilities?.map((cap: string, i: number) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                                  <span className="text-slate-300 text-xs">{cap}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                            <div className="flex items-start gap-2">
-                              <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                              <span className="text-amber-300 text-xs">{userContext.restrictions}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Real user information - Support staff sees full details */
-                        <div className="space-y-3">
-                          {isStaff ? (
-                            /* Full information for support staff */
-                            <>
-                              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                                <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                                  <Info className="w-4 h-4 text-cyan-400" />
-                                  User Details
-                                </h4>
-                                <div className="space-y-3">
-                                  <div>
-                                    <span className="text-slate-400 text-xs block mb-1">Full Name</span>
-                                    <span className="text-white text-sm font-medium">{selectedUser.name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 text-xs block mb-1">User ID</span>
-                                    <span className="text-white font-mono text-xs">{selectedUser.id}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 text-xs block mb-1">Role</span>
-                                    <Badge variant="secondary" className="text-xs">
-                                      {getRoleDisplay(selectedUser.role) || 'Customer'}
-                                    </Badge>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 text-xs block mb-1">Status</span>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                      <span className="text-emerald-400 text-sm">Active</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                                <h4 className="text-white font-semibold text-sm mb-3">Workspace Info</h4>
-                                <div className="space-y-3">
-                                  <div>
-                                    <span className="text-slate-400 text-xs block mb-1">Workspace</span>
-                                    <span className="text-white text-sm">{userContext.workspace?.name || 'Not Available'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 text-xs block mb-1">Serial Number</span>
-                                    <span className="text-white font-mono text-xs">{userContext.workspace?.serialNumber || 'N/A'}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <button
-                                onClick={() => {
-                                  toast({ title: "Success", description: `Viewing history for ${selectedUser.name}` });
-                                  setShowDiagnostics(false);
-                                }}
-                                className="w-full flex items-center gap-3 p-3 rounded-lg bg-indigo-500/20 hover-elevate active-elevate-2 border border-indigo-500/30"
-                                data-testid="diagnostic-user-history"
-                              >
-                                <History className="w-5 h-5 text-indigo-400" />
-                                <div className="flex-1 text-left">
-                                  <div className="text-white font-medium text-sm">View Full History</div>
-                                  <div className="text-slate-400 text-xs">Complete interaction timeline</div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-slate-500" />
-                              </button>
-                            </>
-                          ) : (
-                            /* Limited information for regular users */
-                            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                              <h4 className="text-white font-semibold text-sm mb-3">Basic Info</h4>
-                              <div className="space-y-3">
-                                <div>
-                                  <span className="text-slate-400 text-xs block mb-1">Name</span>
-                                  <span className="text-white text-sm">{selectedUser.name}</span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-400 text-xs block mb-1">Status</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-emerald-400 text-sm">Online</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                                <p className="text-blue-300 text-xs">
-                                  <Info className="w-3 h-3 inline mr-1" />
-                                  Full user details are only visible to support staff
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Loading state */
-                    <div className="text-center py-8">
-                      <div className="w-12 h-12 mx-auto mb-4 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
-                      <p className="text-slate-400 text-sm">Loading user information...</p>
-                    </div>
-                  )
-                ) : (
-                  <div className="text-center py-12">
-                    <Users className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                    <p className="text-slate-400 text-sm">Select a user to view diagnostics</p>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+          {/* Diagnostics Button - Opens QueryOS™ User Diagnostics Panel */}
+          <button
+            onClick={() => {
+              if (selectedUser) {
+                setDiagnosticsUserId(selectedUser.id);
+                setShowDiagnostics(true);
+              } else {
+                toast({ title: "No User Selected", description: "Please select a user from the user list first" });
+              }
+            }}
+            className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-600 to-teal-600 text-white shadow-lg hover:shadow-cyan-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
+            data-testid="button-float-diagnostics"
+          >
+            <Eye size={24} />
+          </button>
 
           {/* Tools Button */}
           <Sheet open={showTools} onOpenChange={setShowTools}>
@@ -1551,6 +1322,17 @@ export default function ModernMobileChat() {
           isSubmitting={acceptAgreementMutation.isPending}
         />
       )}
+
+      {/* QueryOS™ - User Diagnostics Panel (Mobile) */}
+      <UserDiagnosticsPanel
+        userId={diagnosticsUserId}
+        open={showDiagnostics}
+        onClose={() => {
+          setShowDiagnostics(false);
+          setDiagnosticsUserId(null);
+        }}
+        variant="mobile"
+      />
     </div>
   );
 }
