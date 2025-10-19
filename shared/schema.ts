@@ -3211,6 +3211,10 @@ export const chatMessages = pgTable("chat_messages", {
   messageType: varchar("message_type").default("text"), // 'text', 'file', 'system'
   isSystemMessage: boolean("is_system_message").default(false), // For breach notifications and system announcements (shown in gray)
   
+  // Private messages (DMs/Whispers)
+  isPrivateMessage: boolean("is_private_message").default(false), // True for private/whispered messages
+  recipientId: varchar("recipient_id").references(() => users.id, { onDelete: 'set null' }), // For direct messages to specific user
+  
   // File attachments
   attachmentUrl: varchar("attachment_url"),
   attachmentName: varchar("attachment_name"),

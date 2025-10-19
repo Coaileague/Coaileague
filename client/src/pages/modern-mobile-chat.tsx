@@ -1030,6 +1030,25 @@ export default function ModernMobileChat() {
           const msgRole = (msg as any).platformRole || msg.senderType;
           const roleDisplay = msgRole === 'bot' ? 'BOT AI' : getRoleDisplay(msgRole);
           const isCurrentUser = msg.senderId && isOwnMessage(msg.senderId);
+          const isPrivate = (msg as any).isPrivateMessage || false;
+          const isServerMessage = msg.senderType === 'system' || msg.senderId === 'system' || msg.senderId === null;
+          
+          // SERVER/SYSTEM MESSAGE - Modern style without avatar
+          if (isServerMessage) {
+            return (
+              <div key={msg.id} className="flex justify-center my-3 px-4 animate-in fade-in slide-in-from-bottom-2">
+                <div className="bg-gradient-to-r from-slate-800/40 via-slate-700/60 to-slate-800/40 rounded-lg px-4 py-2.5 max-w-[90%] border border-slate-600/30 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 justify-center mb-1">
+                    <WFLogoCompact size={14} className="text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">System</span>
+                  </div>
+                  <p className="text-sm text-slate-200 text-center leading-relaxed">
+                    {parseSystemMessage(msg.message)}
+                  </p>
+                </div>
+              </div>
+            );
+          }
           
           return (
           <div key={msg.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-bottom-2">
@@ -1072,26 +1091,24 @@ export default function ModernMobileChat() {
                     </sup>
                   )}
                 </span>
+                {/* Private Message Indicator with Glow Effect */}
+                {isPrivate && (
+                  <span className="text-[10px] font-bold text-purple-400 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 animate-pulse-glow" data-testid="badge-private-message">
+                    whispered
+                  </span>
+                )}
                 <span className="text-[10px] text-slate-500">
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
               </div>
-              {/* Message text with WFLogoCompact for system messages */}
-              {msg.senderId === 'system' ? (
-                <span className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap flex items-center gap-2">
-                  <WFLogoCompact size={14} />
-                  {parseSystemMessage(msg.message)}
-                </span>
-              ) : (
-                <p className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
-              )}
+              <p className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
             </div>
           </div>
         )})}
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Add glow animation for Admin badge */}
+      {/* Add glow animations */}
       <style>{`
         @keyframes glow {
           0%, 100% {
@@ -1100,6 +1117,19 @@ export default function ModernMobileChat() {
           50% {
             filter: drop-shadow(0 0 12px rgba(99, 102, 241, 1)) drop-shadow(0 0 20px rgba(139, 92, 246, 0.8));
           }
+        }
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 0 8px rgba(168, 85, 247, 0.4), 0 0 12px rgba(168, 85, 247, 0.2);
+            border-color: rgba(168, 85, 247, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 16px rgba(168, 85, 247, 0.6), 0 0 24px rgba(168, 85, 247, 0.3);
+            border-color: rgba(168, 85, 247, 0.5);
+          }
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
         }
       `}</style>
       

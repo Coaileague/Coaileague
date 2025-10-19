@@ -59,14 +59,23 @@ export function DesktopChatLayout({
   };
 
   const renderMessage = (msg: ChatMessage) => {
-    const isSystem = msg.senderType === 'system';
+    const isSystem = msg.senderType === 'system' || msg.senderId === 'system' || msg.senderId === null;
     const isBot = msg.senderType === 'bot';
     const isOwnMessage = msg.senderId === currentUser.id;
+    const isPrivate = (msg as any).isPrivateMessage || false;
 
+    // SERVER/SYSTEM MESSAGE - Modern centered style without avatar
     if (isSystem) {
       return (
-        <div key={msg.id} className="py-1 px-3 text-xs text-muted-foreground italic text-center">
-          <MessageTextWithIcons text={msg.message} />
+        <div key={msg.id} className="flex justify-center py-3 px-3">
+          <div className="bg-gradient-to-r from-slate-800/40 via-slate-700/60 to-slate-800/40 rounded-lg px-4 py-2.5 max-w-[80%] border border-slate-600/30 backdrop-blur-sm">
+            <div className="flex items-center gap-2 justify-center mb-1">
+              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">System</span>
+            </div>
+            <div className="text-sm text-slate-200 text-center leading-relaxed">
+              <MessageTextWithIcons text={msg.message} />
+            </div>
+          </div>
         </div>
       );
     }
@@ -93,7 +102,7 @@ export function DesktopChatLayout({
         key={msg.id}
         className={`py-2 px-3 hover-elevate ${isOwnMessage ? 'bg-accent/20' : ''}`}
       >
-        <div className="flex items-start gap-2">
+        <div className="flex items-start gap-2 flex-wrap">
           <UserContextMenu
             username={msg.senderName || 'Unknown'}
             isStaff={currentUser.isStaff}
@@ -104,6 +113,12 @@ export function DesktopChatLayout({
               className="text-sm font-semibold cursor-pointer hover:underline"
             />
           </UserContextMenu>
+          {/* Private Message Indicator with Glow Effect */}
+          {isPrivate && (
+            <span className="text-[10px] font-bold text-purple-400 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 animate-pulse-glow" data-testid="badge-private-message-desktop">
+              whispered
+            </span>
+          )}
           <span className="text-[10px] text-muted-foreground mt-0.5">
             {new Date(msg.createdAt || new Date()).toLocaleTimeString()}
           </span>
@@ -227,6 +242,23 @@ export function DesktopChatLayout({
           </div>
         </>
       )}
+      
+      {/* Glow animation for private message indicators */}
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 0 8px rgba(168, 85, 247, 0.4), 0 0 12px rgba(168, 85, 247, 0.2);
+            border-color: rgba(168, 85, 247, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 16px rgba(168, 85, 247, 0.6), 0 0 24px rgba(168, 85, 247, 0.3);
+            border-color: rgba(168, 85, 247, 0.5);
+          }
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
