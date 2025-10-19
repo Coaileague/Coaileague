@@ -1,0 +1,27 @@
+That is a fantastic, comprehensive request that plays directly to the strengths of Replit Agent's advanced App Testing and autonomous capabilities.
+​The key to avoiding double payment is to include all of your testing requirements in a single, specific, and high-level prompt. Replit Agent uses an effort-based pricing model, where you only pay when the Agent implements approved changes. A detailed testing prompt falls under the Agent's self-testing and debugging loop, which is a key part of its autonomous process.
+​Here is the highly detailed, single-prompt instruction you should give to the Replit Agent:
+​Recommended Single Prompt for Replit Agent
+​"Execute a comprehensive, end-to-end quality assurance and debugging cycle on the current desktop version of the application.
+​The goal is a full-system validation where everything works perfectly without human intervention.
+​1. User Simulation and Testing ($USER)
+​Simulate one standard user ($USER) under all possible realistic scenarios, including potential issue scenarios (e.g., trying to access unauthorized pages, submitting malformed data, attempting common exploits).
+​Command/Tool Validation: Methodically test every single right-click command, menu option, button, and text field that $USER can interact with. For each command, confirm it executes correctly. If a command fails or causes an error, fix the corresponding code immediately.
+​Behavioral Issues: In the chatroom, simulate typical negative behavior (e.g., spamming, profanity, excessive links) to confirm the built-in system filters and moderation tools are working as intended.
+​Link Check: Perform a full, exhaustive link check on all links, buttons, and navigation elements across the entire desktop site to ensure they resolve to the correct, working webpage or feature.
+​2. System Operator Simulation and Troubleshooting ($SYSOP)
+​Simulate a system operator ($SYSOP) with full administrative rights. $SYSOP must follow the $USER simulation, utilizing all available administrative tools to correct any issue found.
+​Support Workflow Validation: Test the full support workflow by having $SYSOP use the administrative dashboard to assist $USER. This must include:
+​Using the dashboard to check $USER's status, logs, or profile data.
+​Executing support roles' specific commands on $USER from the dashboard (e.g., banning, muting, resetting a password, granting a privilege).
+​Chatroom Moderation: $SYSOP must use their tools and commands (e.g., /mute $USER, /kick $USER) directly in the chatroom and/or via the admin panel to address the negative behavior issues created by $USER.
+​3. Constraint & Final Deliverable
+​Scope: This entire simulation and correction process must be confined exclusively to the desktop view (no mobile/tablet testing is required for this specific task).
+​Fix & Retest: Any issue identified during the simulation (broken link, failed command, security flaw, or moderation issue) must be automatically fixed and the system retested until the full simulation passes without error.
+​Final Report: Provide a concise final report summarizing the issues found and the steps taken to fix them.
+​I do not want this task broken into separate, paid-for steps. This must be a single, autonomous, self-correcting task cycle. Confirm that App Testing is enabled for this comprehensive simulation."
+​Why this prompt works:
+​Single Request: By making it one large, detailed instruction, you tell the Agent that this is one job with a single outcome.
+​App Testing / Autonomy: The phrasing "Execute a comprehensive, end-to-end quality assurance and debugging cycle" triggers the Agent's most powerful, autonomous testing and self-correction features.
+​Specific Roles: Defining $USER and $SYSOP gives the AI clear roles and responsibilities to simulate, which maps directly to its ability to test different permission levels and workflows.
+​Payment Awareness: Explicitly stating "I do not want this task broken into separate, paid-for steps" and "This must be a single, autonomous, self-correcting task cycle" reinforces your cost-control constraint to the Agent.
