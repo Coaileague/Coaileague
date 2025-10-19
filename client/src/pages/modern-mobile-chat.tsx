@@ -969,8 +969,10 @@ export default function ModernMobileChat() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-white font-bold text-lg truncate">{selectedUser.name}</h2>
-                <p className="text-slate-400 text-xs truncate">{userContext?.workspace?.name || 'WorkforceOS User'}</p>
-                <p className="text-slate-500 text-xs truncate">{userContext?.workspace?.serialNumber || 'No device info'}</p>
+                <p className="text-slate-400 text-xs truncate">
+                  {selectedUser.role === 'bot' ? 'Platform AI Bot' : 'WorkforceOS User'}
+                </p>
+                <p className="text-slate-500 text-xs truncate">Click diagnostics for details</p>
               </div>
               {selectedUser && (
                 <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs flex-shrink-0 px-2 py-1 font-bold">
