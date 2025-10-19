@@ -7796,31 +7796,11 @@ Return ONLY valid JSON array with this exact structure:
         console.error("Error fetching workspace:", err);
       }
 
-      // Get active escalation tickets
-      const activeTickets = await db
-        .select()
-        .from(escalationTickets)
-        .where(
-          and(
-            eq(escalationTickets.createdBy, userId),
-            eq(escalationTickets.status, 'open')
-          )
-        )
-        .orderBy(desc(escalationTickets.createdAt))
-        .limit(10);
-
-      // Get ticket history (resolved tickets)
-      const ticketHistory = await db
-        .select()
-        .from(escalationTickets)
-        .where(
-          and(
-            eq(escalationTickets.createdBy, userId),
-            inArray(escalationTickets.status, ['resolved', 'closed'])
-          )
-        )
-        .orderBy(desc(escalationTickets.updatedAt))
-        .limit(20);
+      // Get active escalation tickets (temporarily disabled - table doesn't exist)
+      const activeTickets = []; // await db.select().from(escalationTickets)...
+      
+      // Get ticket history (temporarily disabled - table doesn't exist)
+      const ticketHistory = []; // await db.select().from(escalationTickets)...
 
       // Get recent chat messages from user
       const recentMessages = await db
