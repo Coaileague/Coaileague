@@ -18,6 +18,7 @@ import { AlertCircle, CheckCircle, Clock, FileText, Scale, User, Calendar, Eye, 
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MobileLoading, LoadingCard } from "@/components/mobile-loading";
 
 export default function DisputesPage() {
   const { user } = useAuth();
@@ -146,21 +147,35 @@ export default function DisputesPage() {
     }
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <MobileLoading message="Loading disputes..." />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-6 border-b">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Dispute Management</h1>
-          <p className="text-sm text-muted-foreground">Fair employee/employer transparency system</p>
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b safe-top">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-page-title">Dispute Management</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Fair employee/employer transparency system</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-dispute">
-              <Scale className="w-4 h-4 mr-2" />
-              File New Dispute
+            <Button className="w-full sm:w-auto touch-target" data-testid="button-create-dispute">
+              <Scale className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="truncate">File New Dispute</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Mobile: Full-screen dialog, Desktop: Standard modal */}
+          <DialogContent className="w-full h-full sm:h-auto sm:w-auto sm:max-w-2xl p-0 sm:p-6 overflow-hidden bottom-sheet-enter">
+            <div className="h-full overflow-y-auto p-4 sm:p-0">
             <DialogHeader>
               <DialogTitle>File a Dispute</DialogTitle>
               <DialogDescription>
@@ -308,16 +323,20 @@ export default function DisputesPage() {
                 </div>
               </form>
             </Form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex-1 p-6 overflow-auto">
-        <div className="mb-4 flex items-center space-x-2">
+      {/* Main Content - Mobile optimized */}
+      <div className="flex-1 p-3 sm:p-6 overflow-auto mobile-scroll safe-bottom">
+        {/* Mobile-optimized filter buttons */}
+        <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2">
           <Button
             variant={filterStatus === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterStatus("all")}
+            className="touch-target text-xs sm:text-sm"
             data-testid="filter-all"
           >
             All
@@ -326,6 +345,7 @@ export default function DisputesPage() {
             variant={filterStatus === "pending" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterStatus("pending")}
+            className="touch-target text-xs sm:text-sm"
             data-testid="filter-pending"
           >
             Pending
@@ -334,6 +354,7 @@ export default function DisputesPage() {
             variant={filterStatus === "under_review" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterStatus("under_review")}
+            className="touch-target text-xs sm:text-sm"
             data-testid="filter-under-review"
           >
             Under Review
@@ -342,17 +363,14 @@ export default function DisputesPage() {
             variant={filterStatus === "resolved" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterStatus("resolved")}
+            className="touch-target text-xs sm:text-sm"
             data-testid="filter-resolved"
           >
             Resolved
           </Button>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-          </div>
-        ) : filteredDisputes.length === 0 ? (
+        {filteredDisputes.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center h-64 space-y-4">
               <Scale className="w-16 h-16 text-muted-foreground" />
@@ -365,49 +383,53 @@ export default function DisputesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3 sm:gap-4 mobile-card-enter">
             {filteredDisputes.map((dispute) => (
               <Card 
                 key={dispute.id} 
-                className="hover-elevate active-elevate-2 cursor-pointer"
+                className="hover-elevate active-elevate-2 cursor-pointer touch-active"
                 onClick={() => setSelectedDispute(dispute)}
                 data-testid={`card-dispute-${dispute.id}`}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="flex-1">
-                    <CardTitle className="text-base" data-testid={`text-title-${dispute.id}`}>
-                      {dispute.title}
-                    </CardTitle>
-                    <CardDescription className="flex items-center space-x-2 mt-1">
-                      <span>Filed {new Date(dispute.filedAt).toLocaleDateString()}</span>
-                      {dispute.reviewDeadline && (
-                        <>
-                          <span>•</span>
-                          <span>Review by {new Date(dispute.reviewDeadline).toLocaleDateString()}</span>
-                        </>
-                      )}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getPriorityColor(dispute.priority)} data-testid={`badge-priority-${dispute.id}`}>
-                      {dispute.priority || 'normal'}
-                    </Badge>
-                    <Badge className={getStatusColor(dispute.status)} data-testid={`badge-status-${dispute.id}`}>
-                      {getStatusIcon(dispute.status)}
-                      <span className="ml-1">{(dispute.status || 'pending').replace('_', ' ')}</span>
-                    </Badge>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                {/* Mobile-optimized header */}
+                <CardHeader className="pb-3 sm:pb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-sm sm:text-base line-clamp-2" data-testid={`text-title-${dispute.id}`}>
+                        {dispute.title}
+                      </CardTitle>
+                      <CardDescription className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs">
+                        <span>Filed {new Date(dispute.filedAt).toLocaleDateString()}</span>
+                        {dispute.reviewDeadline && (
+                          <>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="text-xs">Review by {new Date(dispute.reviewDeadline).toLocaleDateString()}</span>
+                          </>
+                        )}
+                      </CardDescription>
+                    </div>
+                    {/* Badges - stack on mobile */}
+                    <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                      <Badge className={`${getPriorityColor(dispute.priority)} text-xs`} data-testid={`badge-priority-${dispute.id}`}>
+                        {dispute.priority || 'normal'}
+                      </Badge>
+                      <Badge className={`${getStatusColor(dispute.status)} text-xs`} data-testid={`badge-status-${dispute.id}`}>
+                        {getStatusIcon(dispute.status)}
+                        <span className="ml-1">{(dispute.status || 'pending').replace('_', ' ')}</span>
+                      </Badge>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground hidden sm:block" />
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <FileText className="w-4 h-4 mr-1" />
-                      <span>{dispute.disputeType.replace('_', ' ')}</span>
+                <CardContent className="pt-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <FileText className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span className="truncate">{dispute.disputeType.replace('_', ' ')}</span>
                     </div>
-                    <div className="flex items-center">
-                      <User className="w-4 h-4 mr-1" />
-                      <span>{dispute.filedByRole}</span>
+                    <div className="flex items-center gap-1">
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span className="truncate">{dispute.filedByRole}</span>
                     </div>
                   </div>
                 </CardContent>
