@@ -105,7 +105,7 @@ export function AppSidebar() {
   const handleLogout = async () => {
     // Call logout API while staying in SPA
     try {
-      await fetch("/api/logout", {
+      await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include"
       });
@@ -113,7 +113,7 @@ export function AppSidebar() {
       console.error("Logout error:", error);
     }
     
-    // Show transition with auto-redirect to login
+    // Show transition with auto-redirect to homepage
     showLogoutTransition(transition);
   };
 
