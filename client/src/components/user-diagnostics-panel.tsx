@@ -45,7 +45,9 @@ export function UserDiagnosticsPanel({
       if (!response.ok) {
         throw new Error(`Failed to fetch user context: ${response.statusText}`);
       }
-      return response.json();
+      const data = await response.json();
+      console.log('📊 UserContext Data:', data);
+      return data;
     },
   });
 
@@ -275,16 +277,16 @@ export function UserDiagnosticsPanel({
   if (variant === 'mobile') {
     return (
       <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <SheetContent side="bottom" className="h-[85vh]">
-          <SheetHeader>
+        <SheetContent side="bottom" className="h-[90vh] flex flex-col overflow-hidden">
+          <SheetHeader className="flex-shrink-0">
             <SheetTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              User Diagnostics
+              User Diagnostics - QueryOS™
             </SheetTitle>
           </SheetHeader>
-          <ScrollArea className="h-[calc(85vh-80px)] mt-4">
+          <div className="flex-1 overflow-y-auto mt-4 pr-2">
             {content}
-          </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -293,16 +295,16 @@ export function UserDiagnosticsPanel({
   // Desktop variant uses Dialog (modal)
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
             User Diagnostics - QueryOS™
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <div className="flex-1 overflow-y-auto pr-2">
           {content}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
