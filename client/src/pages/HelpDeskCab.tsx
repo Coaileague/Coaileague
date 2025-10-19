@@ -53,6 +53,7 @@ import { TermsDialog } from "@/components/terms-dialog";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -109,6 +110,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showAgreement, setShowAgreement] = useState(false);
   const [hasAcceptedAgreement, setHasAcceptedAgreement] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // User state tracking for contextual menus
@@ -743,7 +746,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     return 'bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 shadow-sm';
   };
 
-  const isStaff = user && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes((user as any).platformRole);
+  const isStaff = user && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes((user as any).platformRole);
   const userPlatformRole = (user as any)?.platformRole;
   const queueLength = queueData?.length || 0;
 
@@ -1410,12 +1413,21 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         </>
                       ) : (
                         <>
+                          {isStaff && (
+                            <ContextMenuItem onClick={() => {
+                              setDiagnosticsUserId(u.id);
+                              setShowDiagnostics(true);
+                            }} data-testid={`button-view-profile-${u.id}`}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Profile (QueryOS™)
+                            </ContextMenuItem>
+                          )}
                           <ContextMenuItem onClick={() => {
                             setSelectedUserId(u.id);
                             setShowUserProfile(true);
                           }}>
                             <Info className="w-4 h-4 mr-2" />
-                            View Profile
+                            View Basic Info
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleMention(u.name)}>
                             💬 Mention {u.name}
@@ -1490,6 +1502,17 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           }
         }}
         onCancel={() => setSilenceDialogUser(null)}
+      />
+
+      {/* QueryOS™ - User Diagnostics Panel (Desktop) */}
+      <UserDiagnosticsPanel
+        userId={diagnosticsUserId}
+        open={showDiagnostics}
+        onClose={() => {
+          setShowDiagnostics(false);
+          setDiagnosticsUserId(null);
+        }}
+        variant="desktop"
       />
 
       {/* Tutorial Dialog */}
