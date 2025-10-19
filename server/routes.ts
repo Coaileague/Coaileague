@@ -2351,26 +2351,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      // Check if activated (paid) OR in trial period
-      const isActivated = !!workspace.scheduleosActivatedAt;
-      let isInTrial = false;
-      
-      if (workspace.scheduleosTrialStartedAt && !isActivated) {
-        const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-        const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const now = new Date();
-        const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        isInTrial = daysLeft > 0;
-      }
+      // Check if user is platform staff - grant full access
+      const platformRole = await storage.getUserPlatformRole(userId);
+      const isPlatformStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole);
 
-      // Require activation or active trial
-      if (!isActivated && !isInTrial) {
-        return res.status(403).json({
-          message: "ScheduleOS™ requires payment activation or active trial",
-          trialExpired: workspace.scheduleosTrialStartedAt ? true : false,
-          requiresPayment: true,
-          feature: "scheduleOS"
-        });
+      // Platform staff get full access without trial/activation checks
+      if (!isPlatformStaff) {
+        // Check if activated (paid) OR in trial period
+        const isActivated = !!workspace.scheduleosActivatedAt;
+        let isInTrial = false;
+        
+        if (workspace.scheduleosTrialStartedAt && !isActivated) {
+          const trialStart = new Date(workspace.scheduleosTrialStartedAt);
+          const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const now = new Date();
+          const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          isInTrial = daysLeft > 0;
+        }
+
+        // Require activation or active trial
+        if (!isActivated && !isInTrial) {
+          return res.status(403).json({
+            message: "ScheduleOS™ requires payment activation or active trial",
+            trialExpired: workspace.scheduleosTrialStartedAt ? true : false,
+            requiresPayment: true,
+            feature: "scheduleOS"
+          });
+        }
       }
 
       // Import ScheduleOS AI
