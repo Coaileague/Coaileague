@@ -60,6 +60,7 @@ export const users = pgTable("users", {
   
   // Multi-tenant
   currentWorkspaceId: varchar("current_workspace_id"),
+  role: varchar("role"), // Workspace role (owner, admin, employee, etc.)
   
   // Security
   lastLoginAt: timestamp("last_login_at"),

@@ -222,57 +222,64 @@ export default function ModernMobileChat() {
   const ADMIN_ONLY = ['root', 'deputy_admin'];
   const SYSTEM_ONLY = ['root', 'sysop'];
 
-  // Quick Responses for staff
-  const quickResponses = [
-    {
-      icon: CheckCircle,
-      label: 'Welcome & Introduction',
-      text: 'Welcome to WorkforceOS Support! I\'m here to assist you. How can I help you today?',
-      color: 'text-emerald-400'
-    },
-    {
-      icon: Clock,
-      label: 'Please Wait',
-      text: 'Thank you for your patience. I\'m looking into this for you right now and will have an answer shortly.',
-      color: 'text-blue-400'
-    },
-    {
-      icon: HelpCircle,
-      label: 'Need More Info',
-      text: 'To better assist you, could you provide more details about the issue you\'re experiencing?',
-      color: 'text-orange-400'
-    },
-    {
-      icon: FileSearch,
-      label: 'Investigating Issue',
-      text: 'I\'m investigating this issue now. I\'ll check our system logs and get back to you with a solution.',
-      color: 'text-purple-400'
-    },
-    {
-      icon: PackageCheck,
-      label: 'Issue Resolved',
-      text: 'Great! I\'ve resolved the issue. Please let me know if you need any further assistance.',
-      color: 'text-emerald-400'
-    },
-    {
-      icon: RefreshCw,
-      label: 'Try Refreshing',
-      text: 'Please try refreshing your browser or logging out and back in. This should resolve the issue.',
-      color: 'text-cyan-400'
-    },
-    {
-      icon: Mail,
-      label: 'Follow Up',
-      text: 'I\'ll follow up with our technical team and send you an email update within 24 hours.',
-      color: 'text-indigo-400'
-    },
-    {
-      icon: Star,
-      label: 'Closing Remarks',
-      text: 'Thank you for contacting WorkforceOS Support! Feel free to reach out anytime you need assistance.',
-      color: 'text-amber-400'
-    }
-  ];
+  // Quick Responses for staff - Personalized with selected user's name
+  const getQuickResponses = () => {
+    const userName = selectedUser?.name || 'there';
+    const firstName = userName.split(' ')[0]; // Get first name for more personal messages
+    
+    return [
+      {
+        icon: CheckCircle,
+        label: 'Welcome & Introduction',
+        text: `Hi ${firstName}! Welcome to WorkforceOS Support! I'm here to assist you. How can I help you today?`,
+        color: 'text-emerald-400'
+      },
+      {
+        icon: Clock,
+        label: 'Please Wait',
+        text: `Thank you for your patience, ${firstName}. I'm looking into this for you right now and will have an answer shortly.`,
+        color: 'text-blue-400'
+      },
+      {
+        icon: HelpCircle,
+        label: 'Need More Info',
+        text: `${firstName}, to better assist you, could you provide more details about the issue you're experiencing?`,
+        color: 'text-orange-400'
+      },
+      {
+        icon: FileSearch,
+        label: 'Investigating Issue',
+        text: `${firstName}, I'm investigating this issue now. I'll check our system logs and get back to you with a solution.`,
+        color: 'text-purple-400'
+      },
+      {
+        icon: PackageCheck,
+        label: 'Issue Resolved',
+        text: `Great news, ${firstName}! I've resolved the issue. Please let me know if you need any further assistance.`,
+        color: 'text-emerald-400'
+      },
+      {
+        icon: RefreshCw,
+        label: 'Try Refreshing',
+        text: `${firstName}, please try refreshing your browser or logging out and back in. This should resolve the issue.`,
+        color: 'text-cyan-400'
+      },
+      {
+        icon: Mail,
+        label: 'Follow Up',
+        text: `${firstName}, I'll follow up with our technical team and send you an email update within 24 hours.`,
+        color: 'text-indigo-400'
+      },
+      {
+        icon: Star,
+        label: 'Closing Remarks',
+        text: `Thank you for contacting WorkforceOS Support, ${firstName}! Feel free to reach out anytime you need assistance.`,
+        color: 'text-amber-400'
+      }
+    ];
+  };
+  
+  const quickResponses = getQuickResponses();
 
   // Comprehensive command system with role-based filtering
   const getAllCommands = () => {
@@ -1106,7 +1113,12 @@ export default function ModernMobileChat() {
           >
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-400" />
-              <span className="text-sm font-semibold">Quick Responses</span>
+              <div className="flex flex-col items-start">
+                <span className="text-sm font-semibold">Quick Responses</span>
+                <span className="text-[10px] text-emerald-400 font-medium">
+                  → {selectedUser.name.split(' ')[0]}
+                </span>
+              </div>
               <Badge variant="secondary" className="text-xs bg-amber-500/20 text-amber-400 border-amber-500/30">
                 {quickResponses.length}
               </Badge>
@@ -1236,7 +1248,14 @@ export default function ModernMobileChat() {
               <SheetHeader>
                 <SheetTitle className="text-white flex items-center gap-2">
                   <Settings className="w-5 h-5 text-purple-400" />
-                  Support Tools
+                  <div className="flex flex-col items-start">
+                    <span>Support Tools</span>
+                    {selectedUser && (
+                      <span className="text-xs text-emerald-400 font-normal">
+                        Active User: {selectedUser.name}
+                      </span>
+                    )}
+                  </div>
                 </SheetTitle>
               </SheetHeader>
               <div className="mt-4 max-h-[65vh] overflow-y-auto pr-2">
