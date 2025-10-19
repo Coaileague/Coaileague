@@ -217,13 +217,14 @@ export type WorkspaceTheme = typeof workspaceThemes.$inferSelect;
 // ============================================================================
 
 // Platform Support Staff Roles (WFOS Organization - Platform Level)
-// Platform Admin → Deputy Admin → Deputy Assistant → Sysop
+// Root Admin → Deputy Admin → Deputy Assistant → Sysop → Support
 export const platformRoleEnum = pgEnum('platform_role', [
-  'platform_admin',      // Creator - Highest authority
-  'deputy_admin',        // Assistant to creator  
-  'deputy_assistant',    // Deputy assistant
-  'sysop',              // System operators/help support staff
-  'none'                // Regular subscriber user (not platform staff)
+  'root',               // Creator - Highest authority (formerly 'platform_admin')
+  'deputy_admin',       // Assistant to creator  
+  'deputy_assistant',   // Deputy assistant
+  'sysop',             // System operators
+  'support',           // Support agents - Frontline help desk staff
+  'none'               // Regular subscriber user (not platform staff)
 ]);
 
 // Subscriber/Workspace Roles (Customer Organizations - Subscriber Level)

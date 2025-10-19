@@ -4,7 +4,7 @@ import { employees, workspaces, platformRoles } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
 export type WorkspaceRole = 'owner' | 'manager' | 'hr_manager' | 'supervisor' | 'employee';
-export type PlatformRole = 'root' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'none';
+export type PlatformRole = 'root' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'support' | 'none';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -257,10 +257,11 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
 // Require platform admin role (highest level - root only)
 export const requirePlatformAdmin = requirePlatformRole(['root']);
 
-// Require any platform staff role (root, deputy admin, deputy assistant, or sysop)
+// Require any platform staff role (root, deputy admin, deputy assistant, sysop, or support)
 export const requirePlatformStaff = requirePlatformRole([
   'root',
   'deputy_admin',
   'deputy_assistant',
-  'sysop'
+  'sysop',
+  'support'  // FIXED: Support agents need access to view user profiles for help tickets
 ]);

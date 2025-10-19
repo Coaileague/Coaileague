@@ -68,7 +68,7 @@ export default function ModernMobileChat() {
   const userName = currentUser?.user?.email || 'Guest';
   const userPlatformRole = currentUser?.user?.platformRole;
   const isStaff = userPlatformRole && 
-    ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(userPlatformRole);
+    ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(userPlatformRole);
   const isAuthenticated = !!currentUser?.user;
   
   // Get role display text
@@ -589,6 +589,14 @@ export default function ModernMobileChat() {
   // Fetch user context when user is selected (staff only) - Skip for bot users
   const { data: fetchedUserContext } = useQuery<any>({
     queryKey: ['/api/helpdesk/user-context', selectedUser?.id],
+    queryFn: async () => {
+      if (!selectedUser?.id) return null;
+      const res = await fetch(`/api/helpdesk/user-context/${selectedUser.id}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to fetch user context');
+      return res.json();
+    },
     enabled: Boolean(selectedUser && isStaff && !isBotUser),
     retry: false,
     staleTime: 30000,
