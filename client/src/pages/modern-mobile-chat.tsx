@@ -295,15 +295,6 @@ export default function ModernMobileChat() {
         tier: 'Basic Support'
       },
       { 
-        icon: MessageCircle, 
-        label: 'Quick Reply', 
-        action: () => handleQuickReply(),
-        color: 'text-cyan-400',
-        description: 'Send pre-configured quick response',
-        roles: ALL_STAFF,
-        tier: 'Basic Support'
-      },
-      { 
         icon: Info, 
         label: 'Request Info', 
         action: () => handleRequestInfo(),
@@ -1273,8 +1264,8 @@ export default function ModernMobileChat() {
                 <Settings size={24} />
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 max-h-[80vh]">
-              <SheetHeader>
+            <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 h-[80vh] flex flex-col">
+              <SheetHeader className="flex-shrink-0">
                 <SheetTitle className="text-white flex items-center gap-2">
                   <Settings className="w-5 h-5 text-purple-400" />
                   <div className="flex flex-col items-start">
@@ -1287,9 +1278,9 @@ export default function ModernMobileChat() {
                   </div>
                 </SheetTitle>
               </SheetHeader>
-              <div className="mt-4 max-h-[65vh] overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto mt-4 pr-2">
                 {selectedUser ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 pb-4">
                     {supportCommands.map((cmd, idx) => (
                       <button
                         key={idx}
@@ -1297,15 +1288,15 @@ export default function ModernMobileChat() {
                           cmd.action();
                           setShowTools(false);
                         }}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover-elevate active-elevate-2 border border-white/10"
+                        className="w-full flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover-elevate active-elevate-2 border border-white/10"
                         data-testid={`tool-${cmd.label.toLowerCase().replace(/\s+/g, '-')}`}
                       >
-                        <cmd.icon className={`w-5 h-5 flex-shrink-0 ${cmd.color}`} />
+                        <cmd.icon className={`w-4 h-4 flex-shrink-0 ${cmd.color}`} />
                         <div className="flex-1 text-left min-w-0">
-                          <div className="text-white font-medium text-sm">{cmd.label}</div>
-                          <div className="text-slate-400 text-xs break-words">{cmd.description}</div>
+                          <div className="text-white font-medium text-xs leading-tight">{cmd.label}</div>
+                          <div className="text-slate-400 text-[10px] break-words leading-tight">{cmd.description}</div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                        <ChevronRight className="w-3 h-3 text-slate-500 flex-shrink-0" />
                       </button>
                     ))}
                   </div>
