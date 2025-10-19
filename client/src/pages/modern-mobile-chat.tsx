@@ -1033,13 +1033,12 @@ export default function ModernMobileChat() {
           const isPrivate = (msg as any).isPrivateMessage || false;
           const isServerMessage = msg.senderType === 'system' || msg.senderId === 'system' || msg.senderId === null;
           
-          // SERVER/SYSTEM MESSAGE - Modern style without avatar
+          // SERVER/SYSTEM MESSAGE - Modern style without avatar/logo
           if (isServerMessage) {
             return (
               <div key={msg.id} className="flex justify-center my-3 px-4 animate-in fade-in slide-in-from-bottom-2">
                 <div className="bg-gradient-to-r from-slate-800/40 via-slate-700/60 to-slate-800/40 rounded-lg px-4 py-2.5 max-w-[90%] border border-slate-600/30 backdrop-blur-sm">
                   <div className="flex items-center gap-2 justify-center mb-1">
-                    <WFLogoCompact size={14} className="text-slate-400" />
                     <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">System</span>
                   </div>
                   <p className="text-sm text-slate-200 text-center leading-relaxed">
