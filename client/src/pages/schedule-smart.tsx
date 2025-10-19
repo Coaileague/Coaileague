@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Calendar, momentLocalizer, View, Event as BigCalendarEvent } from "react-big-calendar";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import { DndProvider } from "react-dnd";
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useSwipe } from "@/hooks/use-touch-swipe";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,6 +86,19 @@ export default function SmartScheduleOS() {
   // Mobile view state
   const [mobileTab, setMobileTab] = useState<'my-schedule' | 'full-schedule' | 'pending'>('full-schedule');
   const [selectedMobileDate, setSelectedMobileDate] = useState(new Date());
+  const mobileContentRef = useRef<HTMLDivElement>(null);
+  
+  // Swipe handlers for mobile navigation
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => {
+      // Navigate to next day
+      setSelectedMobileDate(moment(selectedMobileDate).add(1, 'day').toDate());
+    },
+    onSwipeRight: () => {
+      // Navigate to previous day
+      setSelectedMobileDate(moment(selectedMobileDate).subtract(1, 'day').toDate());
+    },
+  }, { minSwipeDistance: 75 });
   
   // Form state for shift creation
   const [formData, setFormData] = useState({
@@ -669,8 +683,14 @@ export default function SmartScheduleOS() {
           <span>{weekStats.totalHours}h</span>
         </div>
 
-        {/* Shifts List */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        {/* Shifts List - Swipeable */}
+        <div 
+          ref={mobileContentRef}
+          className="flex-1 overflow-y-auto bg-gray-50 mobile-scroll swipeable"
+          onTouchStart={swipeHandlers.onTouchStart as any}
+          onTouchMove={swipeHandlers.onTouchMove as any}
+          onTouchEnd={swipeHandlers.onTouchEnd as any}
+        >
           {(() => {
             // Filter shifts based on selected date and tab
             const dayShifts = shifts.filter(shift => {
