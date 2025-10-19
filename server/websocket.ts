@@ -1003,6 +1003,74 @@ export function setupWebSocket(server: Server) {
                   break;
                 }
                 
+                case 'whisper': {
+                  // Send private message to specific user (staff only)
+                  const targetUsername = parsedCommand.args[0];
+                  const privateMessage = parsedCommand.args.slice(1).join(' ');
+                  
+                  if (!targetUsername || !privateMessage) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /whisper <username> <message>',
+                    }));
+                    break;
+                  }
+                  
+                  // Find target user
+                  let targetClient: any = null;
+                  let targetUserId: string | null = null;
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.userName === targetUsername || client.userId === targetUsername) {
+                        targetClient = client;
+                        targetUserId = client.userId;
+                      }
+                    });
+                  }
+                  
+                  if (!targetClient) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: `User "${targetUsername}" not found or not currently online.`,
+                    }));
+                    break;
+                  }
+                  
+                  // Create private message (saved to database with isPrivateMessage = true)
+                  const whisperMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: ws.userId!,
+                    senderName: displayName,
+                    senderType: 'user',
+                    message: privateMessage,
+                    messageType: 'text',
+                    isPrivateMessage: true,
+                    recipientId: targetUserId,
+                  });
+                  
+                  // Send to target user only
+                  if (targetClient.readyState === WebSocket.OPEN) {
+                    targetClient.send(JSON.stringify({
+                      type: 'new_message',
+                      message: whisperMsg,
+                    }));
+                  }
+                  
+                  // Send confirmation back to sender
+                  ws.send(JSON.stringify({
+                    type: 'new_message',
+                    message: whisperMsg,
+                  }));
+                  
+                  // Send success notification to sender
+                  ws.send(JSON.stringify({
+                    type: 'command_success',
+                    message: `✅ Whisper sent to ${targetUsername}`,
+                  }));
+                  break;
+                }
+                
                 case 'transfer': {
                   // Transfer ticket to another staff member
                   const targetStaff = parsedCommand.args[0];

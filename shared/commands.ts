@@ -11,6 +11,7 @@ export type SlashCommand =
   | 'transfer'   // Transfer to another staff member
   | 'mute'       // Mute a user
   | 'kick'       // Remove user from chat
+  | 'whisper'    // Send private message to user (staff only)
   | 'auth'       // Request user authentication
   | 'verify'     // Verify user organization
   | 'resetpass'  // Send password reset
@@ -101,6 +102,14 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
     requiresStaff: true,
     minArgs: 1,
     maxArgs: 10,
+  },
+  whisper: {
+    command: 'whisper',
+    description: 'Send a private message to a specific user (only they can see it)',
+    usage: '/whisper <username> <message>',
+    requiresStaff: true,
+    minArgs: 2,
+    maxArgs: 100,
   },
   auth: {
     command: 'auth',
