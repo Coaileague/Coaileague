@@ -137,6 +137,12 @@ function AppContent() {
                 <Route path="/">
                   {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
                 </Route>
+                <Route path="/login">
+                  <Redirect to="/dashboard" />
+                </Route>
+                <Route path="/register">
+                  <Redirect to="/dashboard" />
+                </Route>
                 <Route path="/dashboard" component={Dashboard} />
                 <Route path="/schedule" component={SmartScheduleOS} />
                 <Route path="/time-tracking" component={TimeTracking} />
