@@ -374,6 +374,7 @@ export interface IStorage {
   // HelpDesk Room operations (Professional Support Chat)
   createSupportRoom(room: InsertSupportRoom): Promise<SupportRoom>;
   getSupportRoomBySlug(slug: string): Promise<SupportRoom | undefined>;
+  getAllSupportRooms(workspaceId?: string | null): Promise<SupportRoom[]>;
   updateSupportRoomStatus(slug: string, status: string, statusMessage: string | null, changedBy: string): Promise<SupportRoom | undefined>;
   verifyTicketForChatAccess(ticketNumber: string, userId: string): Promise<SupportTicket | undefined>;
   grantTicketAccess(access: InsertSupportTicketAccess): Promise<SupportTicketAccess>;
@@ -2275,6 +2276,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(supportRooms.slug, slug));
     
     return room;
+  }
+  
+  async getAllSupportRooms(workspaceId?: string | null): Promise<SupportRoom[]> {
+    // Return all platform-wide rooms (workspaceId is null) or workspace-specific rooms
+    if (workspaceId) {
+      return await db
+        .select()
+        .from(supportRooms)
+        .where(
+          or(
+            isNull(supportRooms.workspaceId),
+            eq(supportRooms.workspaceId, workspaceId)
+          )
+        )
+        .orderBy(supportRooms.name);
+    } else {
+      // Return only platform-wide rooms
+      return await db
+        .select()
+        .from(supportRooms)
+        .where(isNull(supportRooms.workspaceId))
+        .orderBy(supportRooms.name);
+    }
   }
   
   async updateSupportRoomStatus(

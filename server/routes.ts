@@ -6389,6 +6389,29 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // List all support rooms - Staff only (for room selector)
+  app.get('/api/helpdesk/rooms', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // SECURITY: Only platform staff can list rooms (all staff levels)
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Staff access required" });
+      }
+      
+      // Get user's workspace if they have one
+      const workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                        await storage.getWorkspaceByMembership(userId);
+      
+      const rooms = await storage.getAllSupportRooms(workspace?.id);
+      res.json(rooms);
+    } catch (error) {
+      console.error("Error listing HelpDesk rooms:", error);
+      res.status(500).json({ message: "Failed to list rooms" });
+    }
+  });
+
   // Toggle HelpDesk room status (open/closed) - Staff only
   app.post('/api/helpdesk/room/:slug/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
