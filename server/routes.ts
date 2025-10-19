@@ -6412,6 +6412,64 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // Create organization chatroom - Organization owners/managers only
+  app.post('/api/helpdesk/rooms', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { name, description, slug } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ message: "Room name and slug are required" });
+      }
+      
+      // Validate slug format (lowercase, alphanumeric, hyphens only)
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        return res.status(400).json({ message: "Invalid slug format. Use lowercase letters, numbers, and hyphens only." });
+      }
+      
+      // SECURITY: User must have a workspace (organizations only)
+      const workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                        await storage.getWorkspaceByMembership(userId);
+      
+      if (!workspace) {
+        return res.status(403).json({ message: "Unauthorized - Organization membership required" });
+      }
+      
+      // SECURITY: Only owners and managers can create rooms
+      const membership = await storage.getWorkspaceMembership(workspace.id, userId);
+      if (!membership || !['owner', 'manager'].includes(membership.role)) {
+        return res.status(403).json({ message: "Unauthorized - Owner or Manager role required" });
+      }
+      
+      // Check if slug already exists for this workspace
+      const existingRoom = await storage.getSupportRoomBySlug(slug);
+      if (existingRoom) {
+        return res.status(409).json({ message: "A room with this slug already exists" });
+      }
+      
+      // Create the organization room
+      const room = await storage.createSupportRoom({
+        slug,
+        name,
+        description: description || `Private chat room for ${workspace.name}`,
+        status: 'open',
+        statusMessage: null,
+        workspaceId: workspace.id, // ORG-SPECIFIC ROOM
+        conversationId: null, // Will be created on first use
+        requiresTicket: false,
+        allowedRoles: null, // Workspace members + support staff + invited auditors
+        lastStatusChange: new Date(),
+        statusChangedBy: null,
+        createdBy: userId,
+      });
+      
+      res.status(201).json(room);
+    } catch (error: any) {
+      console.error("Error creating organization room:", error);
+      res.status(500).json({ message: "Failed to create room" });
+    }
+  });
+
   // Toggle HelpDesk room status (open/closed) - Staff only
   app.post('/api/helpdesk/room/:slug/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
