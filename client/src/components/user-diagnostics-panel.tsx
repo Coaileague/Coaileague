@@ -152,17 +152,8 @@ export function UserDiagnosticsPanel({
                   {userContext.workspace.organizationId && (
                     <>
                       <span className="text-muted-foreground">Org ID:</span>
-                      <span className="text-xs font-mono" data-testid="text-org-id">
+                      <span className="text-xs font-mono break-all" data-testid="text-org-id">
                         {userContext.workspace.organizationId}
-                      </span>
-                    </>
-                  )}
-
-                  {userContext.workspace.organizationSerial && (
-                    <>
-                      <span className="text-muted-foreground">Org Serial:</span>
-                      <span className="text-xs font-mono" data-testid="text-org-serial">
-                        {userContext.workspace.organizationSerial}
                       </span>
                     </>
                   )}

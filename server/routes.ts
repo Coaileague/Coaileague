@@ -7851,11 +7851,10 @@ Return ONLY valid JSON array with this exact structure:
         workspace: workspace ? {
           id: workspace.id,
           name: workspace.name,
-          organizationId: workspace.organizationId,
-          organizationSerial: workspace.organizationSerial,
-          companyName: workspace.companyName,
-          subscriptionTier: workspace.subscriptionTier,
-          subscriptionStatus: workspace.subscriptionStatus,
+          organizationId: workspace.organizationId || null,
+          companyName: workspace.companyName || null,
+          subscriptionTier: workspace.subscriptionTier || null,
+          subscriptionStatus: workspace.subscriptionStatus || null,
           role: workspaceRole,
         } : null,
         tickets: {

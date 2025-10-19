@@ -555,11 +555,10 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
   
   async createWorkspace(workspaceData: InsertWorkspace): Promise<Workspace> {
-    // Auto-generate unique organization ID and serial if not provided
+    // Auto-generate unique organization ID if not provided
     const dataWithOrgInfo = {
       ...workspaceData,
       organizationId: workspaceData.organizationId || generateOrganizationId(),
-      organizationSerial: workspaceData.organizationSerial || await generateOrganizationSerial(),
     };
     
     const [workspace] = await db
