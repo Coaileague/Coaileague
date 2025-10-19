@@ -7852,6 +7852,7 @@ Return ONLY valid JSON array with this exact structure:
           id: workspace.id,
           name: workspace.name,
           organizationId: workspace.organizationId || null,
+          organizationSerial: workspace.organizationSerial || null,
           companyName: workspace.companyName || null,
           subscriptionTier: workspace.subscriptionTier || null,
           subscriptionStatus: workspace.subscriptionStatus || null,

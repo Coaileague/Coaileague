@@ -158,6 +158,15 @@ export function UserDiagnosticsPanel({
                     </>
                   )}
 
+                  {userContext.workspace.organizationSerial && (
+                    <>
+                      <span className="text-muted-foreground">Org Serial:</span>
+                      <span className="text-xs font-mono" data-testid="text-org-serial">
+                        {userContext.workspace.organizationSerial}
+                      </span>
+                    </>
+                  )}
+
                   <span className="text-muted-foreground">Role:</span>
                   <Badge variant="secondary" className="w-fit">
                     {userContext.workspace.role || 'Member'}
