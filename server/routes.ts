@@ -7719,6 +7719,10 @@ Return ONLY valid JSON array with this exact structure:
       });
     } catch (error: any) {
       console.error("Error checking agreement acceptance:", error);
+      // If table doesn't exist, return false (user hasn't accepted)
+      if (error.code === '42P01') {
+        return res.json({ hasAccepted: false, acceptedAt: null });
+      }
       res.status(500).json({ error: error.message });
     }
   });

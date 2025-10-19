@@ -468,18 +468,29 @@ export function setupWebSocket(server: Server) {
                       queueStatus.waitingCount
                     );
                     
-                    const botMessage = await storage.createChatMessage({
+                    // EPHEMERAL welcome message - NOT saved to database to prevent doubles
+                    // Create message object for WebSocket only
+                    const botMessage = {
+                      id: `temp-${Date.now()}`,
                       conversationId: payload.conversationId,
                       senderId: 'ai-bot',
                       senderName: 'HelpOS™',
                       senderType: 'bot',
                       message: welcomeMessage,
                       messageType: 'text',
-                    });
+                      createdAt: new Date(),
+                      isPrivateMessage: true,
+                      recipientId: payload.userId,
+                      isSystemMessage: false,
+                      attachmentUrl: null,
+                      attachmentName: null,
+                      isRead: false,
+                      readAt: null,
+                    };
 
                     await queueManager.markWelcomeSent(queueEntry.id);
 
-                    // Send PRIVATE HelpOS welcome DM (only to this user)
+                    // Send PRIVATE HelpOS welcome DM (only to this user, ephemeral)
                     const privateWelcome = JSON.stringify({
                       type: 'private_message',
                       message: botMessage,

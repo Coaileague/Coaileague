@@ -2522,17 +2522,25 @@ export class DatabaseStorage implements IStorage {
    * Get AI usage count for a user this month (for free tier limits)
    */
   async getAiUsageCount(userId: string): Promise<number> {
-    const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const logs = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiUsageLogs)
-      .where(
-        and(
-          eq(aiUsageLogs.userId, userId),
-          eq(aiUsageLogs.billingMonth, billingMonth)
-        )
-      );
-    return Number(logs[0]?.count || 0);
+    try {
+      const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const logs = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(aiUsageLogs)
+        .where(
+          and(
+            eq(aiUsageLogs.userId, userId),
+            eq(aiUsageLogs.billingMonth, billingMonth)
+          )
+        );
+      return Number(logs[0]?.count || 0);
+    } catch (error: any) {
+      // If table doesn't exist (error code 42P01), return 0
+      if (error.code === '42P01') {
+        return 0;
+      }
+      throw error;
+    }
   }
 
   /**
