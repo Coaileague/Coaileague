@@ -65,9 +65,9 @@ const adminMenuItems = [
 
 // Support & Communication
 const supportMenuItems = [
-  { title: "Live HelpDesk", url: "/live-chat", icon: MessageSquare },
-  { title: "Support Dashboard", url: "/support/dashboard", icon: Headphones },
-  { title: "Admin Support", url: "/admin/support", icon: Shield },
+  { title: "CommunicationOS™", url: "/communication", icon: MessageSquare },
+  { title: "Live HelpDesk", url: "/live-chat", icon: Headphones },
+  { title: "Support Dashboard", url: "/support/dashboard", icon: Shield },
   { title: "Mobile Chat", url: "/mobile-chat", icon: MessageSquare },
 ];
 
