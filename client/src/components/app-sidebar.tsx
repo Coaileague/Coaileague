@@ -61,6 +61,7 @@ const engagementMenuItems = [
 const adminMenuItems = [
   { title: "Command Center", url: "/admin/command", icon: Activity },
   { title: "Usage & Credits", url: "/admin/usage", icon: BarChart3 },
+  { title: "IntegrationOS™", url: "/integrations", icon: Zap },
   { title: "Custom Forms", url: "/admin/custom-forms", icon: FileCheck },
   { title: "HireOS Workflow", url: "/owner/hireos/workflow-builder", icon: Briefcase },
 ];
