@@ -74,6 +74,7 @@ const supportMenuItems = [
 // Platform Administration
 const platformAdminMenuItems = [
   { title: "Platform Dashboard", url: "/root-admin-portal", icon: Shield },
+  { title: "QueryOS™ Diagnostics", url: "/query-os", icon: Activity },
   { title: "Platform Admin", url: "/platform/admin", icon: Shield },
   { title: "Platform Users", url: "/platform/users", icon: UserCog },
   { title: "Sales Portal", url: "/platform/sales", icon: DollarSign },
