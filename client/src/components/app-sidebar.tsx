@@ -1,5 +1,5 @@
 // Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity, Headphones, CreditCard, Heart, Star, Plane, UserX, MessageSquare, Shield, UserCog, DollarSign, Receipt, Scale, Briefcase, FileCheck, TrendingUp, Zap, Package } from "lucide-react";
+import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity, Headphones, CreditCard, Heart, Star, Plane, UserX, MessageSquare, Shield, UserCog, DollarSign, Receipt, Scale, Briefcase, FileCheck, TrendingUp, Zap, Package, Lock } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -66,6 +66,7 @@ const adminMenuItems = [
 // Support & Communication
 const supportMenuItems = [
   { title: "CommunicationOS™", url: "/communication", icon: MessageSquare },
+  { title: "Private Messages", url: "/messages", icon: Lock },
   { title: "Live HelpDesk", url: "/live-chat", icon: Headphones },
   { title: "Support Dashboard", url: "/support/dashboard", icon: Shield },
   { title: "Mobile Chat", url: "/mobile-chat", icon: MessageSquare },
