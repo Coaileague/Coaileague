@@ -35,6 +35,7 @@ const coreMenuItems = [
 // Financial features
 const financeMenuItems = [
   { title: "PayrollOS™", url: "/payroll", icon: DollarSign },
+  { title: "BudgetOS™", url: "/budget", icon: TrendingUp },
   { title: "My Paychecks", url: "/my-paychecks", icon: Receipt },
   { title: "Billing", url: "/billing", icon: CreditCard },
 ];
