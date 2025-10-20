@@ -73,6 +73,7 @@ import Disputes from "@/pages/disputes";
 import CommunicationOS from "@/pages/communication-os";
 import QueryOS from "@/pages/query-os";
 import PrivateMessages from "@/pages/private-messages";
+import TrainingOS from "@/pages/training-os";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 
 function AppContent() {
@@ -172,6 +173,7 @@ function AppContent() {
                 <Route path="/communication" component={CommunicationOS} />
                 <Route path="/query-os" component={QueryOS} />
                 <Route path="/messages" component={PrivateMessages} />
+                <Route path="/training" component={TrainingOS} />
                 <Route path="/root-admin-portal" component={RootAdminDashboard} />
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />

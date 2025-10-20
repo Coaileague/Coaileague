@@ -53,6 +53,7 @@ const engagementMenuItems = [
   { title: "EngagementOS™ Dashboard", url: "/engagement/dashboard", icon: TrendingUp },
   { title: "Employee Engagement", url: "/engagement/employee", icon: Activity },
   { title: "Leaders Hub", url: "/leaders-hub", icon: UserCog },
+  { title: "TrainingOS™", url: "/training", icon: Package },
 ];
 
 // Admin & Workspace Management
