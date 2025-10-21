@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { Server } from 'http';
+import { Server, IncomingMessage } from 'http';
 import { storage } from './storage';
 import { formatUserDisplayName } from './utils/formatUserDisplayName';
 import { generateGreeting, generateStaffIntroduction, getAiResponse, shouldBotRespond, generateQueueWelcome, generateStaffQueueAlert } from './services/aiBot';
@@ -16,6 +16,8 @@ interface WebSocketClient extends WebSocket {
   userType?: 'staff' | 'subscriber' | 'org_user' | 'guest';
   isAlive?: boolean;
   pingInterval?: NodeJS.Timeout;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 interface ChatMessagePayload {
@@ -110,8 +112,18 @@ export function setupWebSocket(server: Server) {
   // Track removed simulated users (so they don't re-appear on reconnect)
   const removedSimulatedUsers = new Set<string>();
 
-  wss.on('connection', (ws: WebSocketClient) => {
-    console.log('New WebSocket connection established');
+  wss.on('connection', (ws: WebSocketClient, request: IncomingMessage) => {
+    // Extract IP address and user agent from request
+    const ipAddress = (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() 
+      || request.socket.remoteAddress 
+      || 'unknown';
+    const userAgent = request.headers['user-agent'] || 'unknown';
+    
+    // Store for audit trail
+    ws.ipAddress = ipAddress;
+    ws.userAgent = userAgent;
+    
+    console.log(`New WebSocket connection from ${ipAddress}`);
     
     // Initialize heartbeat
     ws.isAlive = true;
@@ -2006,8 +2018,8 @@ export function setupWebSocket(server: Server) {
                   },
                   isSimulatedUser: isSimulatedUser,
                 },
-                ipAddress: null, // TODO: Extract from request headers
-                userAgent: null, // TODO: Extract from connection
+                ipAddress: ws.ipAddress || null,
+                userAgent: ws.userAgent || null,
                 success: true,
                 errorMessage: null,
               });
@@ -2081,8 +2093,8 @@ export function setupWebSocket(server: Server) {
                       reason: payload.reason,
                     },
                   },
-                  ipAddress: null,
-                  userAgent: null,
+                  ipAddress: ws.ipAddress || null,
+                  userAgent: ws.userAgent || null,
                   success: false,
                   errorMessage: 'Permission denied - Staff role required',
                 });
@@ -2199,8 +2211,8 @@ export function setupWebSocket(server: Server) {
                   },
                   durationMinutes: duration,
                 },
-                ipAddress: null, // TODO: Extract from request headers
-                userAgent: null, // TODO: Extract from connection
+                ipAddress: ws.ipAddress || null,
+                userAgent: ws.userAgent || null,
                 success: true,
                 errorMessage: null,
               });
@@ -2273,8 +2285,8 @@ export function setupWebSocket(server: Server) {
                       targetUserId: payload.targetUserId,
                     },
                   },
-                  ipAddress: null,
-                  userAgent: null,
+                  ipAddress: ws.ipAddress || null,
+                  userAgent: ws.userAgent || null,
                   success: false,
                   errorMessage: 'Permission denied - Staff role required',
                 });
@@ -2386,8 +2398,8 @@ export function setupWebSocket(server: Server) {
                     targetUserId: payload.targetUserId,
                   },
                 },
-                ipAddress: null, // TODO: Extract from request headers
-                userAgent: null, // TODO: Extract from connection
+                ipAddress: ws.ipAddress || null,
+                userAgent: ws.userAgent || null,
                 success: true,
                 errorMessage: null,
               });
