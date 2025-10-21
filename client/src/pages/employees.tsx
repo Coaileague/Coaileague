@@ -23,6 +23,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { MobileLoading } from "@/components/mobile-loading";
+import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
+import { SwipeToDelete } from "@/components/swipe-to-delete";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +41,7 @@ import type { Employee } from "@shared/schema";
 export default function Employees() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -243,7 +247,18 @@ export default function Employees() {
 
   const pendingApprovals = employees?.filter(emp => emp.onboardingStatus === 'pending_review') || [];
 
-  return (
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+  };
+
+  const handleDeleteEmployee = (employeeId: number | string) => {
+    toast({
+      title: "Delete Employee",
+      description: "Employee deletion requires confirmation. Feature coming soon.",
+    });
+  };
+
+  const pageContent = (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">
@@ -431,7 +446,8 @@ export default function Employees() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEmployees.map((employee) => (
+            {filteredEmployees.map((employee) => {
+              const employeeCard = (
               <Card key={employee.id} className="hover-elevate" data-testid={`card-employee-${employee.id}`}>
                 <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
                   <Avatar className="h-12 w-12">
@@ -503,7 +519,22 @@ export default function Employees() {
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+
+              // Wrap in swipe-to-delete on mobile
+              if (isMobile) {
+                return (
+                  <SwipeToDelete 
+                    key={employee.id}
+                    onDelete={() => handleDeleteEmployee(employee.id)}
+                  >
+                    {employeeCard}
+                  </SwipeToDelete>
+                );
+              }
+
+              return employeeCard;
+            })}
           </div>
         )}
 
@@ -632,4 +663,18 @@ export default function Employees() {
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <MobilePageWrapper 
+        onRefresh={handleRefresh}
+        enablePullToRefresh={true}
+        withBottomNav={true}
+      >
+        {pageContent}
+      </MobilePageWrapper>
+    );
+  }
+
+  return pageContent;
 }

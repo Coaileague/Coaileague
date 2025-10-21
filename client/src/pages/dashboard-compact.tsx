@@ -11,11 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTransition } from "@/contexts/transition-context";
 import { MobileLoading } from "@/components/mobile-loading";
+import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
+import { queryClient } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function DashboardCompact() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { showTransition, hideTransition } = useTransition();
+  const isMobile = useIsMobile();
 
   const { data: stats } = useQuery({
     queryKey: ['/api/analytics/stats'],
@@ -66,7 +70,15 @@ export default function DashboardCompact() {
   const totalTurnoverCost = (turnoverData as any)?.totalTurnoverCost || 0;
   const highRiskCount = (turnoverData as any)?.highRiskCount || 0;
 
-  return (
+  const handleRefresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['/api/analytics/stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] }),
+      queryClient.invalidateQueries({ queryKey: ['/api/predict/turnover/workspace'] }),
+    ]);
+  };
+
+  const dashboardContent = (
     <div className="p-3 sm:p-4 md:p-6 max-w-[1920px] mx-auto space-y-3">
       {/* MOBILE-FIRST HEADER */}
       <div className="bg-gradient-to-r from-indigo-900 to-blue-900 text-white p-4 sm:p-6 rounded-xl shadow-lg">
@@ -220,4 +232,18 @@ export default function DashboardCompact() {
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <MobilePageWrapper 
+        onRefresh={handleRefresh}
+        enablePullToRefresh={true}
+        withBottomNav={true}
+      >
+        {dashboardContent}
+      </MobilePageWrapper>
+    );
+  }
+
+  return dashboardContent;
 }
