@@ -284,19 +284,19 @@ export async function seedDemoWorkspace() {
   const invoice1PlatformFee = invoice1Total * 0.10;
   const invoice1BusinessAmount = invoice1Total - invoice1PlatformFee;
 
-  // @ts-ignore - TypeScript inference issue with Drizzle insert
-  const [invoice1] = await db.insert(invoices).values({
+  const invoice1Result = await db.insert(invoices).values({
     workspaceId: DEMO_WORKSPACE_ID,
     clientId: createdClients[0].id,
     invoiceNumber: "INV-DEMO-001",
-    status: "paid",
+    status: "paid" as any,
     subtotal: invoice1Subtotal.toFixed(2),
     taxRate: invoice1TaxRate.toFixed(2),
     taxAmount: invoice1TaxAmount.toFixed(2),
     total: invoice1Total.toFixed(2),
     platformFee: invoice1PlatformFee.toFixed(2),
     businessAmount: invoice1BusinessAmount.toFixed(2),
-  }).returning();
+  } as any).returning();
+  const invoice1 = invoice1Result[0];
 
   await db.insert(invoiceLineItems).values({
     invoiceId: invoice1.id,
@@ -307,7 +307,6 @@ export async function seedDemoWorkspace() {
     amount: "600.00",
   });
 
-  // @ts-ignore - TypeScript inference issue with Drizzle partial updates
   await db.update(timeEntries)
     .set({ invoiceId: invoice1.id })
     .where(eq(timeEntries.id, createdTimeEntries[0].id));
@@ -320,19 +319,19 @@ export async function seedDemoWorkspace() {
   const invoice2PlatformFee = invoice2Total * 0.10;
   const invoice2BusinessAmount = invoice2Total - invoice2PlatformFee;
 
-  // @ts-ignore - TypeScript inference issue with Drizzle insert
-  const [invoice2] = await db.insert(invoices).values({
+  const invoice2Result = await db.insert(invoices).values({
     workspaceId: DEMO_WORKSPACE_ID,
     clientId: createdClients[1].id,
     invoiceNumber: "INV-DEMO-002",
-    status: "sent",
+    status: "sent" as any,
     subtotal: invoice2Subtotal.toFixed(2),
     taxRate: invoice2TaxRate.toFixed(2),
     taxAmount: invoice2TaxAmount.toFixed(2),
     total: invoice2Total.toFixed(2),
     platformFee: invoice2PlatformFee.toFixed(2),
     businessAmount: invoice2BusinessAmount.toFixed(2),
-  }).returning();
+  } as any).returning();
+  const invoice2 = invoice2Result[0];
 
   await db.insert(invoiceLineItems).values([
     {
@@ -353,12 +352,10 @@ export async function seedDemoWorkspace() {
     },
   ]);
 
-  // @ts-ignore - TypeScript inference issue with Drizzle partial updates
   await db.update(timeEntries)
     .set({ invoiceId: invoice2.id })
     .where(eq(timeEntries.id, createdTimeEntries[1].id));
 
-  // @ts-ignore - TypeScript inference issue with Drizzle partial updates
   await db.update(timeEntries)
     .set({ invoiceId: invoice2.id })
     .where(eq(timeEntries.id, createdTimeEntries[3].id));
