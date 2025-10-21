@@ -237,8 +237,17 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
             </Label>
           </div>
 
-          {/* Submit Button - Mobile optimized */}
+          {/* Action Buttons - Mobile optimized */}
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.history.back()}
+              className="border-white/20 text-slate-300 hover:bg-white/10 h-10 text-sm"
+              data-testid="button-agreement-decline"
+            >
+              Decline & Exit
+            </Button>
             <Button
               type="submit"
               disabled={!agreedToTerms || !fullName.trim() || isSubmitting}
