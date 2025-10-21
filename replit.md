@@ -3,6 +3,28 @@
 ## Overview
 WorkforceOS is a comprehensive workforce management operating system designed to automate HR functions for businesses. It offers features such as time tracking, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform aims to provide significant cost savings by integrating various HR functions into a single system, envisioning branded features like BillOS™, PayrollOS™, ScheduleOS™, HireOS™, TrackOS™, ReportOS™, and AnalyticsOS™ for a unified product identity. The project also focuses on monopolistic features to provide complete employee lifecycle management, granular role-based access control, and platform-level troubleshooting, justifying a premium pricing model.
 
+## Recent Changes (October 21, 2025)
+### Critical UX Improvements - User Navigation & Accessibility
+
+**User Requirement**: Users must NEVER be stuck - always have visible exit/navigation options and working accept/decline forms.
+
+**Improvements Made**:
+1. ✅ **Chat Agreement Modal** (`chat-agreement-modal.tsx`) - Added "Decline & Exit" button for users who don't want to accept terms
+   - Previously only had "I Agree" button, trapping users if they didn't want to proceed
+   - Now includes both "Decline & Exit" and "I Agree - Enter Chat" buttons
+   - Decline button uses `window.history.back()` to navigate away from blocking state
+   - Used in: HelpDeskCab, modern-mobile-chat
+2. ✅ **Terms Dialog** (`terms-dialog.tsx`) - Already has "Decline & Exit" and "Accept & Continue" buttons
+3. ✅ **Onboarding Wizard** - Uses shadcn Dialog component with X close button in top-right corner
+4. ✅ **Signature Step** - Has "Cancel" button when signing individual documents in onboarding flow
+5. ✅ **Mobile Navigation** - AppSidebar accessible via hamburger menu (SidebarTrigger) includes:
+   - Logout button (`data-testid="button-logout"`)
+   - Home/Dashboard navigation
+   - All OS Family navigation items
+   - Works on both mobile and desktop
+
+**Architecture Decision**: All acceptance forms (terms, agreements, contracts) now have BOTH accept and decline options to prevent users from getting stuck in mandatory flows.
+
 ## Recent Changes (October 20, 2025)
 ### Major Feature Completions - 6 New OS Modules
 
