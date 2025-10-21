@@ -1242,6 +1242,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all employees for the workspace
       const allEmployees = await storage.getEmployeesByWorkspace(workspaceId);
       
+      // Get pending PTO requests
+      const pendingPTORequests = await db
+        .select()
+        .from(ptoRequests)
+        .where(
+          and(
+            eq(ptoRequests.workspaceId, workspaceId),
+            eq(ptoRequests.status, 'pending')
+          )
+        );
+      
+      // Get recent leader actions count (last 7 days)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recentLeaderActions = await db
+        .select()
+        .from(leaderActions)
+        .where(
+          and(
+            eq(leaderActions.workspaceId, workspaceId),
+            gte(leaderActions.createdAt, sevenDaysAgo)
+          )
+        );
+      
+      // Get open escalation tickets
+      const openEscalations = await db
+        .select()
+        .from(escalationTickets)
+        .where(
+          and(
+            eq(escalationTickets.workspaceId, workspaceId),
+            inArray(escalationTickets.status, ['open', 'in_progress'])
+          )
+        );
+      
+      // Get time entry discrepancies (pending resolution)
+      const pendingDiscrepancies = await db
+        .select()
+        .from(timeEntryDiscrepancies)
+        .where(
+          and(
+            eq(timeEntryDiscrepancies.workspaceId, workspaceId),
+            eq(timeEntryDiscrepancies.status, 'open')
+          )
+        );
+      
+      // Get unresolved disputes
+      const pendingDisputes = await db
+        .select()
+        .from(disputes)
+        .where(
+          and(
+            eq(disputes.workspaceId, workspaceId),
+            inArray(disputes.status, ['pending', 'under_review'])
+          )
+        );
+      
       // Calculate stats
       const stats = {
         headcount: {
@@ -1251,18 +1307,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pendingOnboarding: allEmployees.filter(e => e.onboardingStatus === 'pending').length,
         },
         compliance: {
-          compliant: allEmployees.length, // TODO: Implement compliance checks
-          expiringSoon: 0,
-          overdue: 0,
+          compliant: allEmployees.length - pendingDiscrepancies.length - pendingDisputes.length,
+          expiringSoon: 0, // Could track certification expiration in future
+          overdue: pendingDiscrepancies.length,
         },
         pendingApprovals: {
-          scheduleSwaps: 0, // TODO: Implement schedule swap approvals
-          timeAdjustments: 0, // TODO: Implement time entry approvals
-          ptoRequests: 0, // TODO: Get pending PTO requests
+          scheduleSwaps: 0, // Swaps handled through shift replacements
+          timeAdjustments: pendingDiscrepancies.length,
+          ptoRequests: pendingPTORequests.length,
         },
         recentActivity: {
-          actionCount: 0, // TODO: Get count from leader_actions table
-          escalationCount: 0, // TODO: Get count from escalation_tickets table
+          actionCount: recentLeaderActions.length,
+          escalationCount: openEscalations.length,
         },
       };
       
@@ -10970,6 +11026,37 @@ Return ONLY valid JSON array with this exact structure:
         return sum + (hours > 8 ? hours - 8 : 0);
       }, 0);
 
+      // Get violations and discrepancies for this employee
+      const [violationsData, discrepanciesData] = await Promise.all([
+        // Get timeEntryDiscrepancies for this employee
+        db
+          .select()
+          .from(timeEntryDiscrepancies)
+          .where(
+            and(
+              eq(timeEntryDiscrepancies.employeeId, employee.id),
+              eq(timeEntryDiscrepancies.workspaceId, user.currentWorkspaceId)
+            )
+          ),
+        
+        // Get disputes filed by this employee
+        db
+          .select()
+          .from(disputes)
+          .where(
+            and(
+              eq(disputes.employeeId, employee.id),
+              eq(disputes.workspaceId, user.currentWorkspaceId)
+            )
+          ),
+      ]);
+      
+      // Calculate missed breaks from time entries (shifts > 6 hours without break)
+      const missedBreaks = shiftsData.filter((shift: any) => {
+        const hoursWorked = shift.hoursWorked || 0;
+        return hoursWorked > 6 && !shift.breakTaken; // Assuming shifts track break status
+      }).length;
+
       res.json({
         shifts: shiftsData,
         reviews: reviewsData,
@@ -10978,8 +11065,8 @@ Return ONLY valid JSON array with this exact structure:
         compliance: {
           totalHours,
           overtimeHours,
-          missedBreaks: 0, // TODO: Calculate from time entries
-          violations: 0, // TODO: Calculate from compliance reports
+          missedBreaks,
+          violations: violationsData.length + discrepanciesData.length,
         },
       });
     } catch (error) {
