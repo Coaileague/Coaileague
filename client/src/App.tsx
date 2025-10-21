@@ -76,6 +76,10 @@ import PrivateMessages from "@/pages/private-messages";
 import TrainingOS from "@/pages/training-os";
 import BudgetOS from "@/pages/budget-os";
 import IntegrationOS from "@/pages/integration-os";
+import CommunicationFamilyPage from "@/pages/os-family-communication";
+import OperationsFamilyPage from "@/pages/os-family-operations";
+import GrowthFamilyPage from "@/pages/os-family-growth";
+import PlatformFamilyPage from "@/pages/os-family-platform";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 
 function AppContent() {
@@ -178,6 +182,13 @@ function AppContent() {
                 <Route path="/training" component={TrainingOS} />
                 <Route path="/budget" component={BudgetOS} />
                 <Route path="/integrations" component={IntegrationOS} />
+                
+                {/* OS Family Showcase Pages */}
+                <Route path="/os-family/communication" component={CommunicationFamilyPage} />
+                <Route path="/os-family/operations" component={OperationsFamilyPage} />
+                <Route path="/os-family/growth" component={GrowthFamilyPage} />
+                <Route path="/os-family/platform" component={PlatformFamilyPage} />
+                
                 <Route path="/root-admin-portal" component={RootAdminDashboard} />
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />

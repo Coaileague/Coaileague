@@ -1,5 +1,5 @@
 // Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Building2, Clock, BarChart3, ClipboardCheck, Activity, Headphones, CreditCard, Heart, Star, Plane, UserX, MessageSquare, Shield, UserCog, DollarSign, Receipt, Scale, Briefcase, FileCheck, TrendingUp, Zap, Package, Lock } from "lucide-react";
+import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Clock, BarChart3, Activity, Headphones, CreditCard, MessageSquare, Shield, UserCog, DollarSign, Receipt, Briefcase, TrendingUp, Zap, Package, Lock, Sparkles, Brain, Target, Layers } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,82 +19,54 @@ import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { Badge } from "@/components/ui/badge";
 
-// Core workspace features
-const coreMenuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Schedule", url: "/schedule", icon: Calendar },
-  { title: "Time Tracking", url: "/time-tracking", icon: Clock },
-  { title: "Employees", url: "/employees", icon: Users },
-  { title: "Clients", url: "/clients", icon: UserCircle },
-  { title: "Invoices", url: "/invoices", icon: FileText },
-  { title: "Reports", url: "/reports", icon: ClipboardCheck },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-];
-
-// Financial features
-const financeMenuItems = [
-  { title: "PayrollOS™", url: "/payroll", icon: DollarSign },
-  { title: "BudgetOS™", url: "/budget", icon: TrendingUp },
-  { title: "My Paychecks", url: "/my-paychecks", icon: Receipt },
-  { title: "Billing", url: "/billing", icon: CreditCard },
-];
-
-// HR & People Management
-const hrMenuItems = [
-  { title: "Benefits", url: "/hr/benefits", icon: Heart },
-  { title: "Reviews", url: "/hr/reviews", icon: Star },
-  { title: "PTO", url: "/hr/pto", icon: Plane },
-  { title: "Terminations", url: "/hr/terminations", icon: UserX },
-  { title: "Disputes", url: "/disputes", icon: Scale },
-];
-
-// Engagement & Intelligence
-const engagementMenuItems = [
-  { title: "EngagementOS™ Dashboard", url: "/engagement/dashboard", icon: TrendingUp },
-  { title: "Employee Engagement", url: "/engagement/employee", icon: Activity },
-  { title: "Leaders Hub", url: "/leaders-hub", icon: UserCog },
-  { title: "TrainingOS™", url: "/training", icon: Package },
-];
-
-// Admin & Workspace Management
-const adminMenuItems = [
-  { title: "Command Center", url: "/admin/command", icon: Activity },
-  { title: "Usage & Credits", url: "/admin/usage", icon: BarChart3 },
-  { title: "IntegrationOS™", url: "/integrations", icon: Zap },
-  { title: "Custom Forms", url: "/admin/custom-forms", icon: FileCheck },
-  { title: "HireOS Workflow", url: "/owner/hireos/workflow-builder", icon: Briefcase },
-];
-
-// Support & Communication
-const supportMenuItems = [
+// FAMILY 1: Communication & Collaboration OS
+const communicationFamilyItems = [
+  { title: "📡 Communication Family", url: "/os-family/communication", icon: Sparkles, isFamily: true },
   { title: "CommunicationOS™", url: "/communication", icon: MessageSquare },
   { title: "Private Messages", url: "/messages", icon: Lock },
-  { title: "Live HelpDesk", url: "/live-chat", icon: Headphones },
-  { title: "Support Dashboard", url: "/support/dashboard", icon: Shield },
+  { title: "SupportOS™ HelpDesk", url: "/live-chat", icon: Headphones },
   { title: "Mobile Chat", url: "/mobile-chat", icon: MessageSquare },
 ];
 
-// Platform Administration
-const platformAdminMenuItems = [
-  { title: "Platform Dashboard", url: "/root-admin-portal", icon: Shield },
-  { title: "QueryOS™ Diagnostics", url: "/query-os", icon: Activity },
-  { title: "Platform Admin", url: "/platform/admin", icon: Shield },
-  { title: "Platform Users", url: "/platform/users", icon: UserCog },
-  { title: "Sales Portal", url: "/platform/sales", icon: DollarSign },
+// FAMILY 2: Workforce Operations OS
+const operationsFamilyItems = [
+  { title: "⚙️ Operations Family", url: "/os-family/operations", icon: Sparkles, isFamily: true },
+  { title: "ScheduleOS™", url: "/schedule", icon: Calendar },
+  { title: "TimeOS™", url: "/time-tracking", icon: Clock },
+  { title: "PayrollOS™", url: "/payroll", icon: DollarSign },
+  { title: "BillOS™", url: "/invoices", icon: FileText },
+  { title: "TrainingOS™", url: "/training", icon: Package },
+  { title: "Employees", url: "/employees", icon: Users },
+  { title: "Clients", url: "/clients", icon: UserCircle },
 ];
 
-// Portals
-const portalMenuItems = [
-  { title: "Employee Portal", url: "/employee/portal", icon: Users },
-  { title: "Client Portal", url: "/client/portal", icon: UserCircle },
-  { title: "Auditor Portal", url: "/auditor/portal", icon: Scale },
+// FAMILY 3: Growth & Intelligence OS
+const growthFamilyItems = [
+  { title: "🚀 Growth Family", url: "/os-family/growth", icon: Sparkles, isFamily: true },
+  { title: "HireOS™", url: "/owner/hireos/workflow-builder", icon: Briefcase },
+  { title: "TalentOS™", url: "/leaders-hub", icon: UserCog },
+  { title: "EngagementOS™", url: "/engagement/dashboard", icon: Activity },
+  { title: "AnalyticsOS™", url: "/analytics", icon: BarChart3 },
+  { title: "ReportOS™", url: "/reports", icon: FileText },
 ];
 
-// System & Settings
-const systemMenuItems = [
+// FAMILY 4: Platform & Control OS
+const platformFamilyItems = [
+  { title: "🎛️ Platform Family", url: "/os-family/platform", icon: Sparkles, isFamily: true },
+  { title: "QueryOS™", url: "/query-os", icon: Activity },
+  { title: "IntegrationOS™", url: "/integrations", icon: Zap },
+  { title: "BudgetOS™", url: "/budget", icon: TrendingUp },
+  { title: "Command Center", url: "/admin/command", icon: Shield },
+  { title: "Admin Dashboard", url: "/dashboard", icon: LayoutDashboard },
+];
+
+// Quick Access (non-OS features)
+const quickAccessItems = [
   { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Profile", url: "/employee/profile", icon: UserCircle },
+  { title: "Billing", url: "/billing", icon: CreditCard },
+  { title: "My Paychecks", url: "/my-paychecks", icon: Receipt },
 ];
 
 export function AppSidebar() {
@@ -108,7 +80,6 @@ export function AppSidebar() {
   };
 
   const handleLogout = async () => {
-    // Call logout API while staying in SPA
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -118,14 +89,14 @@ export function AppSidebar() {
       console.error("Logout error:", error);
     }
     
-    // Show transition with auto-redirect to homepage
     showLogoutTransition(transition);
   };
 
-  const renderMenuSection = (title: string, items: typeof coreMenuItems) => (
+  const renderMenuSection = (title: string, items: typeof communicationFamilyItems, showBadge?: boolean) => (
     <SidebarGroup>
-      <SidebarGroupLabel className="px-3 mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground/70">
+      <SidebarGroupLabel className="px-3 mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground/70 flex items-center gap-2">
         {title}
+        {showBadge && <Badge variant="outline" className="text-[9px] px-1.5 py-0">NEW</Badge>}
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="space-y-1">
@@ -134,12 +105,16 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 asChild 
                 isActive={location === item.url}
-                data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
-                className="hover-elevate active-elevate-2 overflow-visible"
+                data-testid={`link-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                className={`hover-elevate active-elevate-2 overflow-visible ${
+                  (item as any).isFamily ? 'bg-primary/10 font-bold border-l-2 border-primary' : ''
+                }`}
               >
                 <Link href={item.url}>
                   <item.icon className="h-4 w-4" />
-                  <span className="font-semibold">{item.title}</span>
+                  <span className={(item as any).isFamily ? "font-black" : "font-semibold"}>
+                    {item.title}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -158,32 +133,20 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="px-3 py-4">
-        {/* Core Features - Always visible to ALL users */}
-        {renderMenuSection("Core Features", coreMenuItems)}
+        {/* OS Family 1: Communication & Collaboration */}
+        {renderMenuSection("Communication & Collaboration", communicationFamilyItems, true)}
         
-        {/* Financial - Always visible */}
-        {renderMenuSection("Financial", financeMenuItems)}
+        {/* OS Family 2: Workforce Operations */}
+        {renderMenuSection("Workforce Operations", operationsFamilyItems, true)}
         
-        {/* HR Management - Always visible */}
-        {renderMenuSection("HR Management", hrMenuItems)}
+        {/* OS Family 3: Growth & Intelligence */}
+        {renderMenuSection("Growth & Intelligence", growthFamilyItems, true)}
         
-        {/* Engagement & Intelligence - Always visible */}
-        {renderMenuSection("Intelligence", engagementMenuItems)}
+        {/* OS Family 4: Platform & Control */}
+        {renderMenuSection("Platform & Control", platformFamilyItems, true)}
         
-        {/* Admin Tools - Always visible */}
-        {renderMenuSection("Admin", adminMenuItems)}
-        
-        {/* Support & Communication - Always visible */}
-        {renderMenuSection("Support", supportMenuItems)}
-        
-        {/* Platform Administration - Always visible */}
-        {renderMenuSection("Platform", platformAdminMenuItems)}
-        
-        {/* Portals - Always visible */}
-        {renderMenuSection("Portals", portalMenuItems)}
-        
-        {/* System & Settings - Always visible */}
-        {renderMenuSection("System", systemMenuItems)}
+        {/* Quick Access */}
+        {renderMenuSection("Quick Access", quickAccessItems)}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-white/[0.08]">
