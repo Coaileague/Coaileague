@@ -20,7 +20,9 @@ import { DemoBanner } from "@/components/demo-banner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileLoading } from "@/components/mobile-loading";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import CustomLogin from "@/pages/custom-login";
@@ -92,11 +94,18 @@ import { Sparkles } from "lucide-react";
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const isMobile = useIsMobile();
   
   // Check if on mobile chat OR desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/live-chat' || window.location.pathname.startsWith('/live-chat');
+  
+  // Routes that should NOT show bottom nav (full-screen experiences)
+  const hideBottomNavRoutes = ['/mobile-chat', '/live-chat', '/login', '/register', '/onboarding'];
+  const shouldShowBottomNav = isMobile && isAuthenticated && !hideBottomNavRoutes.some(route => 
+    window.location.pathname.startsWith(route)
+  );
   
   // Custom sidebar width for better workspace layout
   const style = {
@@ -159,7 +168,7 @@ function AppContent() {
               </header>
             )}
             
-            <main className="flex-1 overflow-auto bg-transparent min-h-0">
+            <main className={`flex-1 overflow-auto bg-transparent min-h-0 ${shouldShowBottomNav ? 'pb-16' : ''}`}>
               <Switch>
                 <Route path="/">
                   {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
@@ -236,6 +245,9 @@ function AppContent() {
                 <Route component={NotFound} />
               </Switch>
             </main>
+            
+            {/* Mobile Bottom Navigation */}
+            {shouldShowBottomNav && <MobileBottomNav />}
           </div>
         </div>
         <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
