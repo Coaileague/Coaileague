@@ -10637,6 +10637,27 @@ Return ONLY valid JSON array with this exact structure:
       const appealDeadline = new Date();
       appealDeadline.setDate(appealDeadline.getDate() + 14);
 
+      // Run AI analysis on the dispute (async - don't wait)
+      let aiAnalysis: any = null;
+      let complianceData: any = null;
+      
+      try {
+        // Detect compliance category
+        complianceData = detectComplianceCategory(data.reason, data.type);
+        
+        // Analyze dispute with AI
+        aiAnalysis = await analyzeDispute(
+          data.title,
+          data.reason,
+          data.type,
+          data.requestedOutcome || null,
+          data.evidence || null
+        );
+      } catch (aiError) {
+        console.error('AI analysis failed for dispute creation:', aiError);
+        // Continue creating dispute even if AI fails
+      }
+
       const dispute = await storage.createDispute({
         ...data,
         workspaceId: user.currentWorkspaceId,
@@ -10648,6 +10669,15 @@ Return ONLY valid JSON array with this exact structure:
         canBeAppealed: true,
         appealedToUpperManagement: false,
         changesApplied: false,
+        // Add AI analysis results
+        aiSummary: aiAnalysis?.summary || null,
+        aiRecommendation: aiAnalysis?.recommendation || null,
+        aiConfidenceScore: aiAnalysis?.confidenceScore?.toString() || null,
+        aiAnalysisFactors: aiAnalysis?.analysisFactors || null,
+        aiProcessedAt: aiAnalysis ? new Date() : null,
+        aiModel: aiAnalysis?.model || null,
+        complianceCategory: complianceData?.category || null,
+        regulatoryReference: complianceData?.regulatoryReference || null,
       });
 
       res.json(dispute);
