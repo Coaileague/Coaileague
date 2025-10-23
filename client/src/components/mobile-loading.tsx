@@ -14,20 +14,20 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
   if (fullScreen) {
     return (
       <div 
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl"
         data-testid="mobile-loading-fullscreen"
       >
-        <div className="flex flex-col items-center gap-6 px-4">
-          {/* New Animated Logo */}
-          <WorkforceOSLogo size="lg" showText={false} animated={true} />
-          
-          <div className="flex items-center gap-3 text-sm text-white/80 font-medium">
-            <Loader2 className="h-4 w-4 animate-spin text-teal-400" />
-            <span>{message}</span>
+        <div className="flex flex-col items-center gap-8 px-4">
+          {/* Large Animated Logo - No text needed */}
+          <div className="relative">
+            {/* Soft glow behind logo */}
+            <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full scale-150" />
+            <WorkforceOSLogo size="lg" animated={true} className="relative z-10" />
           </div>
           
-          <div className="mt-4 text-xs text-white/40 animate-pulse">
-            Powered by WorkforceOS Platform
+          <div className="flex items-center gap-3 text-base text-white/90 font-medium">
+            <Loader2 className="h-5 w-5 animate-spin text-teal-400" />
+            <span>{message}</span>
           </div>
         </div>
       </div>
@@ -36,11 +36,14 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
 
   return (
     <div className="flex flex-col items-center justify-center p-8 min-h-[200px]" data-testid="mobile-loading">
-      <div className="flex flex-col items-center gap-4">
-        {/* New Animated Logo */}
-        <WorkforceOSLogo size="md" showText={false} animated={true} />
+      <div className="flex flex-col items-center gap-6">
+        {/* Larger Logo - No text */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-teal-500/10 blur-2xl rounded-full scale-125" />
+          <WorkforceOSLogo size="md" animated={true} className="relative z-10" />
+        </div>
         
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-teal-500" />
           <span>{message}</span>
         </div>

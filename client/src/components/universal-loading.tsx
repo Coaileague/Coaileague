@@ -24,19 +24,19 @@ export function UniversalLoading({
   if (fullScreen) {
     return (
       <div 
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl"
         data-testid="universal-loading-fullscreen"
       >
-        <div className="flex flex-col items-center gap-6 px-4">
-          {/* New Animated Logo */}
-          <WorkforceOSLogo size={logoSize} showText={false} animated={true} />
+        <div className="flex flex-col items-center gap-8 px-4">
+          {/* Large Animated Logo with soft glow */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full scale-150" />
+            <WorkforceOSLogo size={logoSize} animated={true} className="relative z-10" />
+          </div>
           
-          <div className={`flex items-center gap-3 ${textSize} text-white/80 font-medium`}>
+          <div className={`flex items-center gap-3 ${textSize} text-white/90 font-medium`}>
             <Loader2 className={`${spinnerSize} animate-spin text-teal-400`} />
             <span>{message}</span>
-          </div>
-          <div className="mt-4 text-xs text-white/40 animate-pulse">
-            Powered by WorkforceOS Platform
           </div>
         </div>
       </div>
@@ -45,11 +45,14 @@ export function UniversalLoading({
 
   return (
     <div className="flex flex-col items-center justify-center p-8 min-h-[200px]" data-testid="universal-loading">
-      <div className="flex flex-col items-center gap-4">
-        {/* New Animated Logo */}
-        <WorkforceOSLogo size={logoSize} showText={false} animated={true} />
+      <div className="flex flex-col items-center gap-6">
+        {/* Larger Logo with glow */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-teal-500/10 blur-2xl rounded-full scale-125" />
+          <WorkforceOSLogo size={logoSize} animated={true} className="relative z-10" />
+        </div>
         
-        <div className={`flex items-center gap-2 ${textSize} text-muted-foreground`}>
+        <div className={`flex items-center gap-3 ${textSize} text-muted-foreground`}>
           <Loader2 className={`${spinnerSize} animate-spin text-teal-500`} />
           <span>{message}</span>
         </div>

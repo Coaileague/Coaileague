@@ -21,23 +21,23 @@ export function WorkforceOSLogo({
 }: WorkforceOSLogoProps) {
   const sizes = {
     sm: {
-      container: "w-24 h-24",
-      image: "w-full h-full object-contain"
-    },
-    md: {
-      container: "w-32 h-32",
-      image: "w-full h-full object-contain"
-    },
-    lg: {
       container: "w-48 h-48",
       image: "w-full h-full object-contain"
     },
-    xl: {
+    md: {
       container: "w-64 h-64",
       image: "w-full h-full object-contain"
     },
-    hero: {
+    lg: {
       container: "w-80 h-80",
+      image: "w-full h-full object-contain"
+    },
+    xl: {
+      container: "w-96 h-96",
+      image: "w-full h-full object-contain"
+    },
+    hero: {
+      container: "w-[32rem] h-[32rem]",
       image: "w-full h-full object-contain"
     }
   };
