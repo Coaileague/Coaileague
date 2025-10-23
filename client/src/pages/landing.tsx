@@ -33,16 +33,19 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Header */}
-      <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex h-16 items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10">
-                <WorkforceOSLogo size="sm" showText={false} />
+          <div className="flex h-20 items-center justify-between">
+            {/* Logo - Bigger and blended */}
+            <button 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="relative cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-teal-500/10 blur-2xl rounded-full scale-150" />
+              <div className="relative z-10 w-16 h-16 sm:w-20 sm:h-20">
+                <WorkforceOSLogo size="sm" animated={false} className="w-full h-full" />
               </div>
-              <span className="text-xl font-bold">WorkforceOS</span>
-            </div>
+            </button>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-6">
@@ -101,9 +104,19 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section - Fortune 500 Style */}
-      <section className="relative overflow-hidden border-b bg-gradient-to-b from-background to-muted/20">
+      <section className="relative overflow-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
         <div className="container mx-auto px-4 sm:px-6 py-16 sm:py-24 lg:py-32">
           <div className="max-w-5xl mx-auto text-center space-y-8">
+            {/* Large Prominent Logo */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                <div className="relative z-10 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64">
+                  <WorkforceOSLogo size="md" animated={true} className="w-full h-full" />
+                </div>
+              </div>
+            </div>
+            
             {/* Trust Badge */}
             <div className="flex items-center justify-center gap-2">
               <Badge variant="outline" className="text-xs font-normal px-4 py-1">
