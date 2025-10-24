@@ -42,24 +42,11 @@ export function WorkforceOSLogo({
     }
   };
 
-  if (!animated) {
-    // Static version - uses the PNG image
-    return (
-      <div className={cn("flex flex-col items-center", className)} data-testid="logo-static">
-        <div className={sizes[size].container}>
-          <img 
-            src={workforceOSLogo} 
-            alt="WorkforceOS - Complete Workforce Management Platform" 
-            className={sizes[size].image}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Animated version - SVG with CSS animations
+  // Always use SVG (with or without animations) - NO MORE PNG
+  const animationClass = animated ? '' : 'static-logo';
+  
   return (
-    <div className={cn("flex flex-col items-center", className)} data-testid="logo-animated">
+    <div className={cn("flex flex-col items-center", className)} data-testid={animated ? "logo-animated" : "logo-static"}>
       <div className={cn("relative", sizes[size].container)}>
         <svg
           viewBox="0 0 400 400"
@@ -98,7 +85,7 @@ export function WorkforceOSLogo({
           </defs>
 
           {/* Center Professional (Navy Blue - Dark with MORE DETAIL) */}
-          <g transform="translate(200, 230)" className="animate-pulse-slow">
+          <g transform="translate(200, 230)" className={animated ? "animate-pulse-slow" : ""}>
             {/* Body/Suit - More detailed */}
             <path
               d="M-45,-35 L-55,35 L-35,55 L35,55 L55,35 L45,-35 Z"
@@ -147,7 +134,7 @@ export function WorkforceOSLogo({
               stroke="#1e3a5f"
               strokeWidth="2"
               filter="url(#head-glow)"
-              className="animate-glow-pulse"
+              className={animated ? "animate-glow-pulse" : ""}
             />
             {/* Neck */}
             <rect
@@ -161,7 +148,7 @@ export function WorkforceOSLogo({
           </g>
 
           {/* Top Left: AI Brain Head (Teal) - MUCH MORE DETAIL like original */}
-          <g transform="translate(100, 80)" className="animate-float">
+          <g transform="translate(100, 80)" className={animated ? "animate-float" : ""}>
             {/* Head profile silhouette */}
             <path
               d="M5,-15 Q15,-20 25,-15 Q30,-10 30,0 Q30,8 28,15 Q25,25 20,32 Q15,38 8,40 Q0,42 -5,38 Q-10,30 -8,20 Q-6,10 0,5 Q2,0 5,-8 Z"
@@ -173,7 +160,7 @@ export function WorkforceOSLogo({
             <ellipse cx="28" cy="5" rx="4" ry="6" fill="#14b8a6" />
             
             {/* Circuit brain inside - MORE DETAIL */}
-            <g className="animate-circuit-pulse">
+            <g className={animated ? "animate-circuit-pulse" : ""}>
               {/* Main circuit nodes */}
               <circle cx="10" cy="8" r="3.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" />
               <circle cx="18" cy="5" r="2.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" />
@@ -191,7 +178,7 @@ export function WorkforceOSLogo({
           </g>
 
           {/* Top Right: Automation Gear (Teal) - MORE DETAILED 8-tooth gear */}
-          <g transform="translate(300, 80)" className="animate-spin-slow">
+          <g transform="translate(300, 80)" className={animated ? "animate-spin-slow" : ""}>
             {/* Main gear body */}
             <circle 
               cx="0" 
@@ -244,19 +231,19 @@ export function WorkforceOSLogo({
             />
             
             {/* Circuit pathways - MORE DETAIL */}
-            <g className="animate-circuit-pulse">
+            <g className={animated ? "animate-circuit-pulse" : ""}>
               {/* Left hemisphere nodes */}
-              <circle cx="-12" cy="8" r="3" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" className="animate-pulse" />
-              <circle cx="-10" cy="18" r="2.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" className="animate-pulse delay-300" />
+              <circle cx="-12" cy="8" r="3" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" className={animated ? "animate-pulse" : ""} />
+              <circle cx="-10" cy="18" r="2.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" className={animated ? "animate-pulse delay-300" : ""} />
               <circle cx="-6" cy="12" r="2" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" />
               
               {/* Right hemisphere nodes */}
-              <circle cx="12" cy="8" r="3" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" className="animate-pulse delay-300" />
-              <circle cx="10" cy="18" r="2.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" className="animate-pulse delay-600" />
+              <circle cx="12" cy="8" r="3" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" className={animated ? "animate-pulse delay-300" : ""} />
+              <circle cx="10" cy="18" r="2.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" className={animated ? "animate-pulse delay-600" : ""} />
               <circle cx="6" cy="12" r="2" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1" />
               
               {/* Central node */}
-              <circle cx="0" cy="22" r="3.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" className="animate-pulse delay-600" />
+              <circle cx="0" cy="22" r="3.5" fill="#f0f9ff" stroke="#e0f2fe" strokeWidth="1.5" className={animated ? "animate-pulse delay-600" : ""} />
               
               {/* Circuit connections */}
               <path d="M-12,8 L-6,12 L0,22" stroke="#f0f9ff" strokeWidth="2" opacity="0.8" />
@@ -267,7 +254,7 @@ export function WorkforceOSLogo({
           </g>
 
           {/* Bottom Right: Compliance Shield (Teal) - MORE DETAILED shield */}
-          <g transform="translate(300, 320)" className="animate-shield-pulse">
+          <g transform="translate(300, 320)" className={animated ? "animate-shield-pulse" : ""}>
             {/* Shield shape - Better proportions */}
             <path
               d="M0,-32 L-28,-22 L-28,8 Q-28,20 -20,28 Q-10,34 0,38 Q10,34 20,28 Q28,20 28,8 L28,-22 Z"
@@ -316,7 +303,7 @@ export function WorkforceOSLogo({
           </g>
 
           {/* Connection Lines */}
-          <g stroke="#0d9488" strokeWidth="2" opacity="0.3" className="animate-pulse-slow">
+          <g stroke="#0d9488" strokeWidth="2" opacity="0.3" className={animated ? "animate-pulse-slow" : ""}>
             <line x1="125" y1="100" x2="175" y2="200" />
             <line x1="275" y1="100" x2="225" y2="200" />
             <line x1="125" y1="300" x2="175" y2="250" />
