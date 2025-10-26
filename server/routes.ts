@@ -1783,13 +1783,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      // Validate with Zod and enforce workspace ownership
+      // Extract billing info from request
+      const { billableRate, billingCycle, serviceType, ...clientData } = req.body;
+
+      // Validate client data with Zod and enforce workspace ownership
       const validated = insertClientSchema.parse({
-        ...req.body,
+        ...clientData,
         workspaceId: workspace.id, // Force workspace from auth, ignore client input
       });
 
+      // Create the client
       const client = await storage.createClient(validated);
+
+      // Create client rate if billableRate is provided (with proper number conversion)
+      const rateValue = parseFloat(billableRate || "0");
+      if (!isNaN(rateValue) && rateValue > 0) {
+        await storage.createClientRate({
+          workspaceId: workspace.id,
+          clientId: client.id,
+          billableRate: rateValue.toFixed(2), // Convert to properly formatted decimal string
+          description: serviceType || "Standard hourly rate",
+          isActive: true,
+          hasSubscription: false,
+          subscriptionFrequency: billingCycle || "monthly", // Store billing cycle here
+        });
+      }
+
       res.json(client);
     } catch (error: any) {
       console.error("Error creating client:", error);

@@ -59,6 +59,21 @@ export default function Invoices() {
     taxRate: "8.5",
     selectedTimeEntries: [] as string[],
   });
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [invoicePreview, setInvoicePreview] = useState<{
+    lineItems: Array<{
+      description: string;
+      hours: number;
+      rate: number;
+      amount: number;
+      date: string;
+    }>;
+    subtotal: number;
+    taxAmount: number;
+    platformFeePercent: number;
+    platformFeeAmount: number;
+    total: number;
+  } | null>(null);
 
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
@@ -194,12 +209,50 @@ export default function Invoices() {
       return;
     }
 
+    // Calculate invoice preview
+    const selectedEntries = unbilledTimeEntries.filter(entry => 
+      generateFormData.selectedTimeEntries.includes(entry.id)
+    );
+
+    const lineItems = selectedEntries.map(entry => ({
+      description: entry.notes || `Work on ${new Date(entry.clockIn).toLocaleDateString()}`,
+      hours: parseFloat(entry.totalHours as string || "0"),
+      rate: parseFloat(entry.hourlyRate as string || "0"),
+      amount: parseFloat(entry.totalAmount as string || "0"),
+      date: new Date(entry.clockIn).toLocaleDateString(),
+    }));
+
+    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+    const taxRate = parseFloat(generateFormData.taxRate);
+    const taxAmount = (subtotal * taxRate) / 100;
+    // Note: Platform fee is calculated on backend, using 5% as display estimate
+    // Actual fee will be applied based on workspace settings
+    const platformFeePercent = 5; 
+    const platformFeeAmount = ((subtotal + taxAmount) * platformFeePercent) / 100;
+    const total = subtotal + taxAmount;
+
+    setInvoicePreview({
+      lineItems,
+      subtotal,
+      taxAmount,
+      platformFeePercent,
+      platformFeeAmount,
+      total,
+    });
+
+    // Close generate dialog and open review dialog
+    setIsGenerateDialogOpen(false);
+    setIsReviewDialogOpen(true);
+  };
+
+  const handleConfirmInvoice = () => {
     generateInvoiceMutation.mutate({
       clientId: generateFormData.clientId,
       timeEntryIds: generateFormData.selectedTimeEntries,
-      dueDate: generateFormData.dueDate,
+      dueDate: new Date(generateFormData.dueDate).toISOString(), // Convert to ISO format
       taxRate: parseFloat(generateFormData.taxRate),
     });
+    setIsReviewDialogOpen(false);
   };
 
   const toggleTimeEntry = (id: string) => {
@@ -356,6 +409,97 @@ export default function Invoices() {
                     data-testid="button-generate-invoice"
                   >
                     {generateInvoiceMutation.isPending ? "Generating..." : "Generate Invoice"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Invoice Review Dialog */}
+            <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Review Invoice</DialogTitle>
+                  <DialogDescription>
+                    Review the invoice details before creating
+                  </DialogDescription>
+                </DialogHeader>
+                {invoicePreview && (
+                  <div className="space-y-6 py-4">
+                    {/* Client & Due Date Info */}
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-md">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Client</p>
+                        <p className="font-medium">{getClientName(generateFormData.clientId)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Due Date</p>
+                        <p className="font-medium">{new Date(generateFormData.dueDate).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Line Items Table */}
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Hours</TableHead>
+                            <TableHead className="text-right">Rate</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invoicePreview.lineItems.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="text-sm">{item.date}</TableCell>
+                              <TableCell className="text-sm">{item.description}</TableCell>
+                              <TableCell className="text-right text-sm">{item.hours.toFixed(2)}</TableCell>
+                              <TableCell className="text-right text-sm">${item.rate.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-medium">${item.amount.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Totals Breakdown */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 border-t">
+                        <span className="text-sm">Subtotal</span>
+                        <span className="font-medium">${invoicePreview.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm">Tax ({generateFormData.taxRate}%)</span>
+                        <span className="font-medium">${invoicePreview.taxAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm text-muted-foreground">Platform Fee ({invoicePreview.platformFeePercent}%)</span>
+                        <span className="text-sm text-muted-foreground">-${invoicePreview.platformFeeAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-t-2 border-primary/20">
+                        <span className="text-lg font-semibold">Total</span>
+                        <span className="text-lg font-bold">${invoicePreview.total.toFixed(2)}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-right">
+                        You receive ${(invoicePreview.total - invoicePreview.platformFeeAmount).toFixed(2)} after platform fee
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => {
+                    setIsReviewDialogOpen(false);
+                    setIsGenerateDialogOpen(true);
+                  }} data-testid="button-back-to-edit">
+                    Back to Edit
+                  </Button>
+                  <Button 
+                    onClick={handleConfirmInvoice}
+                    disabled={generateInvoiceMutation.isPending}
+                    data-testid="button-confirm-invoice"
+                  >
+                    {generateInvoiceMutation.isPending ? "Creating..." : "Confirm & Create Invoice"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

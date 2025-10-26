@@ -17,6 +17,9 @@ import {
   Mail,
   Phone,
   FileText,
+  DollarSign,
+  Calendar,
+  Briefcase,
 } from "lucide-react";
 import { MobileLoading } from "@/components/mobile-loading";
 import {
@@ -30,6 +33,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Client } from "@shared/schema";
 
 export default function Clients() {
@@ -44,7 +54,12 @@ export default function Clients() {
     email: "",
     phone: "",
     address: "",
+    billingEmail: "",
     notes: "",
+    // Billing information
+    billableRate: "",
+    serviceType: "",
+    billingCycle: "monthly", // weekly, bi-weekly, monthly
   });
 
   const { data: clients, isLoading } = useQuery<Client[]>({
@@ -70,7 +85,11 @@ export default function Clients() {
         email: "",
         phone: "",
         address: "",
+        billingEmail: "",
         notes: "",
+        billableRate: "",
+        serviceType: "",
+        billingCycle: "monthly",
       });
     },
     onError: (error: Error) => {
@@ -116,6 +135,34 @@ export default function Clients() {
   };
 
   const handleSubmit = () => {
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName) {
+      toast({
+        title: "Validation Error",
+        description: "First name and last name are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.email) {
+      toast({
+        title: "Validation Error",
+        description: "Email is required for client communication",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.billableRate || parseFloat(formData.billableRate) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid hourly rate greater than $0",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createMutation.mutate(formData);
   };
 
@@ -144,33 +191,35 @@ export default function Clients() {
                 Add Client
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Client</DialogTitle>
                 <DialogDescription>
-                  Enter client details to add them to your workspace
+                  Enter client contact and billing details
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="space-y-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input 
                       id="firstName" 
                       placeholder="Jane" 
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                       data-testid="input-client-firstname" 
+                      required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName">Last Name *</Label>
                     <Input 
                       id="lastName" 
                       placeholder="Smith" 
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                       data-testid="input-client-lastname" 
+                      required
                     />
                   </div>
                 </div>
@@ -186,7 +235,7 @@ export default function Clients() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email *</Label>
                     <Input 
                       id="email" 
                       type="email" 
@@ -194,6 +243,7 @@ export default function Clients() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       data-testid="input-client-email" 
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -217,6 +267,73 @@ export default function Clients() {
                     data-testid="input-client-address" 
                   />
                 </div>
+
+                {/* Billing Information Section */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Billing Information
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="billableRate">Hourly Rate ($) *</Label>
+                        <Input 
+                          id="billableRate" 
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="75.00" 
+                          value={formData.billableRate}
+                          onChange={(e) => setFormData({ ...formData, billableRate: e.target.value })}
+                          data-testid="input-client-rate" 
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="billingCycle">Billing Cycle</Label>
+                        <Select 
+                          value={formData.billingCycle}
+                          onValueChange={(value) => setFormData({ ...formData, billingCycle: value })}
+                        >
+                          <SelectTrigger id="billingCycle" data-testid="select-billing-cycle">
+                            <SelectValue placeholder="Select cycle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="serviceType">Service Type</Label>
+                      <Input 
+                        id="serviceType" 
+                        placeholder="e.g., Consulting, IT Support, Maintenance" 
+                        value={formData.serviceType}
+                        onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                        data-testid="input-client-service" 
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="billingEmail">Billing Email</Label>
+                      <Input 
+                        id="billingEmail" 
+                        type="email" 
+                        placeholder="billing@example.com (defaults to contact email)" 
+                        value={formData.billingEmail}
+                        onChange={(e) => setFormData({ ...formData, billingEmail: e.target.value })}
+                        data-testid="input-client-billing-email" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes (Optional)</Label>
                   <Textarea 

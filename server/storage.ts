@@ -75,6 +75,8 @@ import {
   type InsertEmployeeTermination,
   type Client,
   type InsertClient,
+  type ClientRate,
+  type InsertClientRate,
   type Shift,
   type InsertShift,
   type ShiftTemplate,
@@ -201,6 +203,10 @@ export interface IStorage {
   getClientsByWorkspace(workspaceId: string): Promise<Client[]>;
   updateClient(id: string, workspaceId: string, data: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: string, workspaceId: string): Promise<boolean>;
+  
+  // Client Rate operations
+  createClientRate(rate: InsertClientRate): Promise<ClientRate>;
+  getClientRates(workspaceId: string, clientId: string): Promise<ClientRate[]>;
   
   // Shift operations
   createShift(shift: InsertShift): Promise<Shift>;
@@ -2831,7 +2837,16 @@ export class DatabaseStorage implements IStorage {
   // BILLOS™ OPERATIONS - EXTENDS EXISTING INVOICE/PAYROLL SYSTEMS
   // ============================================================================
   
-  async getClientRates(workspaceId: string, clientId: string): Promise<any[]> {
+  async createClientRate(rateData: InsertClientRate): Promise<ClientRate> {
+    const { clientRates } = await import("@shared/schema");
+    const [rate] = await db
+      .insert(clientRates)
+      .values(rateData)
+      .returning();
+    return rate;
+  }
+  
+  async getClientRates(workspaceId: string, clientId: string): Promise<ClientRate[]> {
     const { clientRates } = await import("@shared/schema");
     return await db
       .select()
