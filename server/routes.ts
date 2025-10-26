@@ -2821,6 +2821,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // INVOICE ROUTES (Multi-tenant isolated)
   // ============================================================================
+
+  // Auto-generate invoices for all clients due for billing (BillOS™ Automation)
+  app.post('/api/invoices/auto-generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const clients = await storage.getClientsByWorkspace(workspace.id);
+      const generatedInvoices = [];
+      const errors = [];
+
+      for (const client of clients) {
+        try {
+          // Get client's billing rate and cycle
+          const clientRate = await storage.getClientRate(workspace.id, client.id);
+          if (!clientRate || !clientRate.isActive) {
+            continue;
+          }
+
+          const billingCycle = clientRate.subscriptionFrequency || 'monthly';
+          
+          // Get last invoice for this client
+          const invoices = await storage.getInvoicesByWorkspace(workspace.id);
+          const clientInvoices = invoices.filter((inv: any) => inv.clientId === client.id);
+          const lastInvoice = clientInvoices.sort((a: any, b: any) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0];
+
+          // Determine if billing is due
+          const now = new Date();
+          let isDue = false;
+          
+          if (!lastInvoice) {
+            isDue = true;
+          } else {
+            const lastInvoiceDate = new Date(lastInvoice.createdAt);
+            const daysSinceLastInvoice = Math.floor((now.getTime() - lastInvoiceDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            switch (billingCycle) {
+              case 'weekly':
+                isDue = daysSinceLastInvoice >= 7;
+                break;
+              case 'bi-weekly':
+                isDue = daysSinceLastInvoice >= 14;
+                break;
+              case 'monthly':
+              default:
+                isDue = daysSinceLastInvoice >= 30;
+                break;
+            }
+          }
+
+          if (!isDue) {
+            continue;
+          }
+
+          // Get unbilled time entries
+          const timeEntries = await storage.getTimeEntriesByWorkspace(workspace.id);
+          const unbilledEntries = timeEntries.filter((entry: any) => 
+            entry.clientId === client.id && !entry.invoiceId && entry.clockOut
+          );
+
+          if (unbilledEntries.length === 0) {
+            continue;
+          }
+
+          // Calculate totals
+          let subtotal = 0;
+          unbilledEntries.forEach((entry: any) => {
+            const hours = parseFloat(entry.totalHours as string || "0");
+            const rate = parseFloat(clientRate.billableRate as string || "0");
+            subtotal += hours * rate;
+          });
+
+          const taxRate = 8.5;
+          const tax = (subtotal * taxRate) / 100;
+          const total = subtotal + tax;
+
+          const dueDate = new Date(now);
+          dueDate.setDate(dueDate.getDate() + 14);
+
+          // Generate draft invoice
+          const invoice = await storage.createInvoice({
+            workspaceId: workspace.id,
+            clientId: client.id,
+            invoiceNumber: `AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            issueDate: now.toISOString(),
+            dueDate: dueDate.toISOString(),
+            subtotal: subtotal.toFixed(2),
+            taxRate: taxRate.toFixed(2),
+            tax: tax.toFixed(2),
+            total: total.toFixed(2),
+            status: "draft",
+            notes: `Auto-generated invoice for ${billingCycle} billing cycle`,
+          });
+
+          // Link time entries
+          for (const entry of unbilledEntries) {
+            await storage.updateTimeEntry(entry.id, { invoiceId: invoice.id });
+          }
+
+          generatedInvoices.push({
+            invoice,
+            client,
+            unbilledHours: unbilledEntries.reduce((sum: number, e: any) => 
+              sum + parseFloat(e.totalHours as string || "0"), 0
+            ),
+          });
+
+        } catch (error: any) {
+          errors.push({
+            clientId: client.id,
+            clientName: `${client.firstName} ${client.lastName}`,
+            error: error.message,
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        generated: generatedInvoices.length,
+        invoices: generatedInvoices,
+        errors,
+      });
+
+    } catch (error: any) {
+      console.error("Error auto-generating invoices:", error);
+      res.status(500).json({ message: error.message || "Failed to auto-generate invoices" });
+    }
+  });
   
   app.get('/api/invoices', isAuthenticated, async (req: any, res) => {
     try {
