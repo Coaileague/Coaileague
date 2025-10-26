@@ -1,0 +1,67 @@
+WorkforceOS Platform Archive - Reassembly Instructions
+======================================================
+
+Your WorkforceOS platform has been split into 2 files for easier uploading:
+
+FILES:
+------
+1. workforceos-platform.tar.gz.partaa (100 MB)
+2. workforceos-platform.tar.gz.partab (91 MB)
+
+HOW TO REASSEMBLE:
+------------------
+
+On Linux/Mac:
+-------------
+1. Download both .partaa and .partab files to the same directory
+2. Open terminal in that directory
+3. Run: cat workforceos-platform.tar.gz.part* > workforceos-platform.tar.gz
+4. Extract: tar -xzf workforceos-platform.tar.gz
+5. Install dependencies: npm install
+6. Run the platform: npm run dev
+
+On Windows:
+-----------
+Option 1 - Using Command Prompt:
+1. Download both .partaa and .partab files to the same directory
+2. Open Command Prompt in that directory
+3. Run: copy /b workforceos-platform.tar.gz.partaa + workforceos-platform.tar.gz.partab workforceos-platform.tar.gz
+4. Use 7-Zip or WinRAR to extract the .tar.gz file
+5. Install dependencies: npm install
+6. Run the platform: npm run dev
+
+Option 2 - Using PowerShell:
+1. Download both .partaa and .partab files to the same directory
+2. Open PowerShell in that directory
+3. Run: Get-Content workforceos-platform.tar.gz.part* -Raw | Set-Content workforceos-platform.tar.gz -Encoding Byte
+4. Use 7-Zip or WinRAR to extract the .tar.gz file
+5. Install dependencies: npm install
+6. Run the platform: npm run dev
+
+WHAT'S INCLUDED:
+----------------
+✓ Complete source code (client + server)
+✓ Database schemas and migrations
+✓ All UI components and pages
+✓ Assets and branding files
+✓ Configuration files
+✓ Documentation (replit.md)
+
+WHAT'S EXCLUDED (need to reinstall/configure):
+-----------------------------------------------
+✗ node_modules (run: npm install)
+✗ Environment secrets (.env files)
+✗ Database data
+✗ Build artifacts
+
+ENVIRONMENT SETUP:
+------------------
+After extracting, you'll need to configure:
+1. DATABASE_URL - Your PostgreSQL connection string
+2. SESSION_SECRET - Random secret for sessions
+3. STRIPE_SECRET_KEY - Your Stripe secret key (optional)
+4. VITE_STRIPE_PUBLIC_KEY - Your Stripe public key (optional)
+
+Then run: npm install && npm run dev
+
+Questions? Check replit.md for full documentation.
