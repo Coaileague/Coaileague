@@ -2955,6 +2955,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message || "Failed to auto-generate invoices" });
     }
   });
+
+  // Send invoice email to client
+  app.post('/api/invoices/:id/send-email', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { id } = req.params;
+      const invoice = await storage.getInvoice(id, workspace.id);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Get client details
+      const client = await storage.getClient(invoice.clientId, workspace.id);
+      if (!client || !client.email) {
+        return res.status(400).json({ message: "Client email not found" });
+      }
+
+      // Send email
+      const { sendInvoiceGeneratedEmail } = await import('./email');
+      const emailResult = await sendInvoiceGeneratedEmail(client.email, {
+        clientName: `${client.firstName} ${client.lastName}`,
+        invoiceNumber: invoice.invoiceNumber,
+        total: parseFloat(invoice.total as string || "0").toFixed(2),
+        dueDate: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : "N/A",
+      });
+
+      if (!emailResult.success) {
+        return res.status(500).json({ message: "Failed to send email", error: emailResult.error });
+      }
+
+      // Update invoice status to 'sent' (with workspace scope)
+      const updatedInvoice = await storage.updateInvoice(invoice.id, workspace.id, { status: 'sent' });
+
+      res.json({ 
+        success: true, 
+        message: "Invoice sent successfully",
+        emailId: emailResult.data 
+      });
+
+    } catch (error: any) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ message: error.message || "Failed to send invoice email" });
+    }
+  });
   
   app.get('/api/invoices', isAuthenticated, async (req: any, res) => {
     try {

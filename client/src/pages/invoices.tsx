@@ -17,6 +17,8 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
+  Mail,
+  Send,
 } from "lucide-react";
 import {
   Table,
@@ -330,6 +332,27 @@ export default function Invoices() {
   );
 
   const draftInvoices = invoices.filter(inv => inv.status === "draft");
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await apiRequest("POST", `/api/invoices/${invoiceId}/send-email`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invoice Sent",
+        description: "Invoice email sent successfully to client",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Send Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
@@ -841,9 +864,26 @@ export default function Invoices() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" data-testid={`button-view-invoice-${invoice.id}`}>
-                        View
-                      </Button>
+                      <div className="flex gap-2">
+                        {(invoice.status === 'draft' || invoice.status === 'pending') && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => sendEmailMutation.mutate(invoice.id)}
+                            disabled={sendEmailMutation.isPending}
+                            data-testid={`button-send-invoice-${invoice.id}`}
+                          >
+                            <Send className="h-4 w-4 mr-1" />
+                            Send
+                          </Button>
+                        )}
+                        {invoice.status === 'sent' && (
+                          <Badge variant="outline" className="gap-1">
+                            <Mail className="h-3 w-3" />
+                            Sent
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
