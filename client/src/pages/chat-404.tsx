@@ -64,7 +64,7 @@ export default function Chat404() {
           {/* WorkforceOS Logo */}
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl backdrop-blur-sm border border-blue-400/30">
-              <WorkforceOSLogo className="w-16 h-16" />
+              <WorkforceOSLogo variant="icon" size="sm" />
             </div>
           </div>
 

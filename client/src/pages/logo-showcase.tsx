@@ -21,7 +21,7 @@ export default function LogoShowcase() {
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 border border-emerald-500/20">
                 <WorkforceOSLogo 
                   size="hero" 
-                  showText={true}
+                  variant="full"
                 />
               </div>
               <p className="text-slate-400 text-sm mt-6 text-center max-w-md">
@@ -44,7 +44,7 @@ export default function LogoShowcase() {
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-emerald-500/20 flex justify-center">
                 <WorkforceOSLogo 
                   size="xl" 
-                  showText={true}
+                  variant="full"
                 />
               </div>
               <p className="text-slate-400 text-sm mt-6 text-center max-w-md mx-auto">

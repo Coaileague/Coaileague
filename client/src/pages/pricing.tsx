@@ -110,7 +110,7 @@ export default function Pricing() {
       {/* Modern Header */}
       <div className="bg-card-translucent border-b border-indigo-500/20 backdrop-blur-sm">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <WorkforceOSLogo size="sm" showText={true} />
+          <WorkforceOSLogo size="sm" variant="full" />
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -368,7 +368,7 @@ export default function Pricing() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-400">
-              <WorkforceOSLogo size="sm" showText={false} />
+              <WorkforceOSLogo size="sm" variant="icon" />
               <span>© 2025 WorkForceOS by Drill Consulting 360. Enterprise-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-slate-400">

@@ -207,7 +207,7 @@ export default function RootAdminDashboard() {
             {/* Logo and Title */}
             <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 mb-6">
               <div className="transform hover:scale-105 transition-transform duration-300 drop-shadow-2xl">
-                <WorkforceOSLogo size="lg" showText={true} />
+                <WorkforceOSLogo size="lg" variant="full" />
               </div>
               <div className="text-center sm:text-left flex-1">
                 <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-2">

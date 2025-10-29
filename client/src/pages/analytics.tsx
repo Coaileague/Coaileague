@@ -66,7 +66,7 @@ export default function Analytics() {
           <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
             <div className="flex items-center gap-4">
               <div className="transform hover:scale-105 transition-transform duration-300">
-                <WorkforceOSLogo size="lg" showText={false} />
+                <WorkforceOSLogo size="lg" variant="icon" />
               </div>
               <div className="flex-1">
                 <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-1" data-testid="heading-analytics">

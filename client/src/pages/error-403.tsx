@@ -29,7 +29,7 @@ export default function Error403() {
           {/* WorkforceOS Logo */}
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-amber-500/20 to-red-500/20 rounded-2xl backdrop-blur-sm border border-amber-400/30">
-              <WorkforceOSLogo className="w-16 h-16" />
+              <WorkforceOSLogo variant="icon" size="sm" />
             </div>
           </div>
 
