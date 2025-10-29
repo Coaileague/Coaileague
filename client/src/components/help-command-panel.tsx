@@ -112,7 +112,7 @@ export function HelpCommandPanel({
           
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <WorkforceOSLogo size="sm" showText={false} />
+              <WorkforceOSLogo size="sm" variant="icon" />
             </div>
             <div>
               <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
@@ -140,7 +140,7 @@ export function HelpCommandPanel({
                 <div className="relative overflow-hidden rounded-xl border-2 border-slate-600/50 bg-slate-800/50 backdrop-blur-sm transition-all hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1">
                   {/* Logo Badge */}
                   <div className="absolute top-2 left-2 z-10 scale-50">
-                    <WorkforceOSLogo size="sm" showText={false} className="opacity-50" />
+                    <WorkforceOSLogo size="sm" variant="icon" className="opacity-50" />
                   </div>
                   
                   {/* Close X (decorative) */}

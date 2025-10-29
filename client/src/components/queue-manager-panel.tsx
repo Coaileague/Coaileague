@@ -142,7 +142,7 @@ export function QueueManagerPanel({
         <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center gap-3 mb-2">
-              <WorkforceOSLogo size="sm" showText={false} />
+              <WorkforceOSLogo size="sm" variant="icon" />
               <div>
                 <DialogTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />

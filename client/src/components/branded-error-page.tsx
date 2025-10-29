@@ -62,7 +62,7 @@ export function BrandedErrorPage({
       <div className="max-w-md w-full bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-lg p-8 flex flex-col items-center gap-6">
         {/* Logo */}
         <div className="animate-pulse">
-          <WorkforceOSLogo size="lg" showText={true} />
+          <WorkforceOSLogo size="lg" variant="full" />
         </div>
 
         {/* Error Icon */}

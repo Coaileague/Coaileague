@@ -102,7 +102,7 @@ export function MotdDialog({
             {/* Logo and Icon */}
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center">
-                <WorkforceOSLogo size="sm" showText={false} />
+                <WorkforceOSLogo size="sm" variant="icon" />
               </div>
               <div 
                 className="p-3 rounded-lg backdrop-blur-sm animate-pulse"

@@ -50,7 +50,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
           <div className="flex items-center gap-4">
             {/* WorkforceOS Logo */}
             <div className="flex items-center justify-center">
-              <WorkforceOSLogo size="md" showText={false} />
+              <WorkforceOSLogo size="md" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-2xl font-black text-white">

@@ -3,7 +3,7 @@ import logoImage from "@assets/image_1761703297679.png";
 
 interface WorkforceOSLogoProps {
   variant?: "nav" | "icon" | "full";
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "hero";
   animated?: boolean;
   className?: string;
 }
@@ -15,23 +15,41 @@ export function WorkforceOSLogo({
   className 
 }: WorkforceOSLogoProps) {
   
-  const sizeClasses = {
-    sm: "w-24 h-24",
-    md: "w-32 h-32",
-    lg: "w-48 h-48",
-    xl: "w-64 h-64"
+  // Realistic size mapping for icon variant (matching common UI needs)
+  const iconSizeClasses = {
+    sm: "w-6 h-6",      // 24px - for compact UI, icons
+    md: "w-8 h-8",      // 32px - standard size
+    lg: "w-12 h-12",    // 48px - larger contexts
+    xl: "w-16 h-16",    // 64px - prominent placements
+    hero: "w-32 h-32"   // 128px - hero sections
+  };
+  
+  // Full variant uses larger default sizing
+  const fullSizeClasses = {
+    sm: "w-16 h-16",    // 64px
+    md: "w-24 h-24",    // 96px
+    lg: "w-32 h-32",    // 128px
+    xl: "w-48 h-48",    // 192px
+    hero: "w-64 h-64"   // 256px
   };
   
   // Full logo variant - complete branded image with text
+  // Best for: auth pages, hero sections, prominent placements
   if (variant === "full") {
     return (
-      <div className={cn("relative flex items-center justify-center", className)} data-testid="logo-full">
+      <div 
+        className={cn(
+          "relative flex items-center justify-center",
+          fullSizeClasses[size],
+          className
+        )} 
+        data-testid="logo-full"
+      >
         <img 
           src={logoImage} 
           alt="WorkforceOS - Full Workforce Optimization Operating System" 
           className={cn(
-            "object-contain",
-            sizeClasses[size],
+            "w-full h-full object-contain",
             animated && "animate-pulse-slow"
           )}
           style={{
@@ -42,16 +60,25 @@ export function WorkforceOSLogo({
     );
   }
   
-  // Icon only variant - just the image, no text wrapper
+  // Icon only variant - compact size for UI elements
+  // Best for: toolbars, modals, compact UI, inline contexts
+  // Respects custom sizing via className
   if (variant === "icon") {
     return (
-      <div className={cn("relative", className)} data-testid="logo-icon">
+      <div 
+        className={cn(
+          "relative flex-shrink-0",
+          // Only apply default sizing if className doesn't include width/height
+          !className?.match(/[wh]-\d+/) && iconSizeClasses[size],
+          className
+        )} 
+        data-testid="logo-icon"
+      >
         <img 
           src={logoImage} 
           alt="WorkforceOS" 
           className={cn(
-            "object-contain",
-            sizeClasses[size],
+            "w-full h-full object-contain",
             animated && "animate-pulse-slow"
           )}
           style={{
@@ -62,7 +89,8 @@ export function WorkforceOSLogo({
     );
   }
 
-  // Navigation variant - compact with background
+  // Navigation variant - optimized for sidebars/headers
+  // Best for: navigation bars, sidebars, headers
   return (
     <div 
       className={cn(
@@ -71,7 +99,7 @@ export function WorkforceOSLogo({
       )} 
       data-testid="logo-nav"
     >
-      <div className="relative w-12 h-12 flex-shrink-0">
+      <div className="relative w-8 h-8 flex-shrink-0">
         <img 
           src={logoImage} 
           alt="" 
@@ -84,6 +112,7 @@ export function WorkforceOSLogo({
           }}
         />
       </div>
+      <span className="text-sm font-bold text-foreground">WorkforceOS</span>
     </div>
   );
 }

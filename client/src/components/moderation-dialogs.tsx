@@ -66,7 +66,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <WorkforceOSLogo size="sm" showText={false} />
+              <WorkforceOSLogo size="sm" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -247,7 +247,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <WorkforceOSLogo size="sm" showText={false} />
+              <WorkforceOSLogo size="sm" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
