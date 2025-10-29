@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { SchedulePreview } from "@/components/schedule-preview";
 import { useLocation } from "wouter";
 import {
   Shield,
@@ -163,27 +164,17 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Right: Product Screenshot/Visual */}
+              {/* Right: REAL Product Preview - ScheduleOS */}
               <div className="relative">
                 <div className="aspect-video rounded-xl border-2 bg-card/50 backdrop-blur-sm overflow-hidden shadow-2xl">
-                  {/* Placeholder for product screenshot - will add real screenshots */}
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-8">
-                    <div className="space-y-4 w-full">
-                      <div className="h-12 bg-primary/20 rounded-lg animate-pulse" />
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="h-24 bg-primary/15 rounded-lg animate-pulse" />
-                        <div className="h-24 bg-primary/15 rounded-lg animate-pulse" style={{ animationDelay: '0.1s' }} />
-                        <div className="h-24 bg-primary/15 rounded-lg animate-pulse" style={{ animationDelay: '0.2s' }} />
-                      </div>
-                      <div className="h-32 bg-primary/10 rounded-lg animate-pulse" style={{ animationDelay: '0.3s' }} />
-                    </div>
-                  </div>
+                  {/* REAL WorkforceOS Schedule Interface - NOT a placeholder! */}
+                  <SchedulePreview />
                 </div>
                 {/* Product badge */}
                 <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
                   <Badge className="px-4 py-2 text-sm font-semibold shadow-lg">
                     <Sparkles className="h-4 w-4 mr-1.5" />
-                    8 Integrated Modules
+                    Live Product Preview
                   </Badge>
                 </div>
               </div>
