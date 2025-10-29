@@ -22,6 +22,8 @@ import {
   sendRatingDeletedEmail,
   sendWriteUpDeletedEmail
 } from "./email";
+import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
+import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
@@ -1140,6 +1142,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error denying PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to deny PTO request" });
+    }
+  });
+
+  // ============================================================================
+  // HR AUTOMATION - PTO ACCRUAL & PERFORMANCE REVIEW REMINDERS
+  // ============================================================================
+  
+  // Get all PTO balances (Manager/Owner only)
+  app.get('/api/hr/pto-balances', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const balances = await getAllPtoBalances(workspaceId);
+      res.json(balances);
+    } catch (error: any) {
+      console.error("Error fetching PTO balances:", error);
+      res.status(500).json({ message: "Failed to fetch PTO balances" });
+    }
+  });
+  
+  // Get specific employee PTO balance
+  app.get('/api/hr/pto-balances/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { employeeId } = req.params;
+      
+      const balance = await calculatePtoAccrual(workspaceId, employeeId);
+      
+      if (!balance) {
+        return res.status(404).json({ message: "Employee or PTO benefit not found" });
+      }
+      
+      res.json(balance);
+    } catch (error: any) {
+      console.error("Error fetching employee PTO balance:", error);
+      res.status(500).json({ message: "Failed to fetch PTO balance" });
+    }
+  });
+  
+  // Manually trigger weekly PTO accrual (Owner only)
+  app.post('/api/hr/pto-accrual/run', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const updatedCount = await runWeeklyPtoAccrual(workspaceId);
+      
+      res.json({ 
+        success: true, 
+        message: `PTO accrual updated for ${updatedCount} employees`,
+        updatedCount 
+      });
+    } catch (error: any) {
+      console.error("Error running PTO accrual:", error);
+      res.status(500).json({ message: "Failed to run PTO accrual" });
+    }
+  });
+  
+  // Get performance review reminders summary (Manager/Owner only)
+  app.get('/api/hr/review-reminders/summary', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const summary = await getReviewReminderSummary(workspaceId);
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Error fetching review reminder summary:", error);
+      res.status(500).json({ message: "Failed to fetch review reminders" });
+    }
+  });
+  
+  // Get all overdue performance reviews (Manager/Owner only)
+  app.get('/api/hr/review-reminders/overdue', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const overdueReviews = await getOverdueReviews(workspaceId);
+      res.json(overdueReviews);
+    } catch (error: any) {
+      console.error("Error fetching overdue reviews:", error);
+      res.status(500).json({ message: "Failed to fetch overdue reviews" });
+    }
+  });
+  
+  // Get upcoming performance reviews (Manager/Owner only)
+  app.get('/api/hr/review-reminders/upcoming', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const daysAhead = parseInt(req.query.days as string) || 30;
+      const upcomingReviews = await getUpcomingReviews(workspaceId, daysAhead);
+      res.json(upcomingReviews);
+    } catch (error: any) {
+      console.error("Error fetching upcoming reviews:", error);
+      res.status(500).json({ message: "Failed to fetch upcoming reviews" });
     }
   });
 
