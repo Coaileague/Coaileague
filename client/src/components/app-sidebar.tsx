@@ -128,7 +128,7 @@ export function AppSidebar() {
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
       <SidebarHeader className="p-6 border-b border-white/[0.08]">
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-          <WorkforceOSLogo size="sm" showText={true} />
+          <WorkforceOSLogo variant="full" size="sm" />
         </div>
       </SidebarHeader>
       

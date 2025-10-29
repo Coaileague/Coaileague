@@ -89,7 +89,7 @@ export default function Register() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <WorkforceOSLogo className="h-12 w-auto" />
+            <WorkforceOSLogo variant="full" size="sm" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
