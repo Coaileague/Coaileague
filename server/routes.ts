@@ -24,6 +24,7 @@ import {
 } from "./email";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
+import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
 import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
@@ -10073,6 +10074,66 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching pulse survey responses:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey responses" });
+    }
+  });
+  
+  // [2.5] AUTOMATED PULSE SURVEY DISTRIBUTION
+  
+  // Get survey distribution summary (Manager/Owner only)
+  app.get('/api/engagement/pulse-surveys/distribution/summary', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const summary = await getSurveyDistributionSummary(workspaceId);
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Error fetching survey distribution summary:", error);
+      res.status(500).json({ message: "Failed to fetch survey distribution summary" });
+    }
+  });
+  
+  // Get all employees due for surveys today (Manager/Owner only)
+  app.get('/api/engagement/pulse-surveys/distribution', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const distributions = await getEmployeesDueForSurveys(workspaceId);
+      res.json(distributions);
+    } catch (error: any) {
+      console.error("Error fetching survey distributions:", error);
+      res.status(500).json({ message: "Failed to fetch survey distributions" });
+    }
+  });
+  
+  // Get pending surveys for specific employee
+  app.get('/api/engagement/pulse-surveys/distribution/employee/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { employeeId } = req.params;
+      
+      const pendingSurveys = await getEmployeePendingSurveys(workspaceId, employeeId);
+      res.json(pendingSurveys);
+    } catch (error: any) {
+      console.error("Error fetching employee pending surveys:", error);
+      res.status(500).json({ message: "Failed to fetch pending surveys" });
+    }
+  });
+  
+  // Get survey analytics (Manager/Owner only)
+  app.get('/api/engagement/pulse-surveys/analytics/:surveyId', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { surveyId } = req.params;
+      const { periodDays } = req.query;
+      
+      const analytics = await calculateSurveyResponseRate(
+        workspaceId,
+        surveyId,
+        periodDays ? parseInt(periodDays as string) : 30
+      );
+      
+      res.json(analytics);
+    } catch (error: any) {
+      console.error("Error calculating survey analytics:", error);
+      res.status(500).json({ message: "Failed to calculate survey analytics" });
     }
   });
   
