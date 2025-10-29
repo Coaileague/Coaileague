@@ -90,7 +90,7 @@ export default function CustomRegister() {
         {/* Logo and Branding */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <WorkforceOSLogo size="xl" showText={false} />
+            <WorkforceOSLogo size="xl" variant="icon" />
           </div>
           <div>
             <h1 className="text-3xl font-black text-[hsl(var(--cad-text-primary))]">

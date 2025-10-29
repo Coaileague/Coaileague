@@ -1052,7 +1052,7 @@ export default function ModernMobileChat() {
               {msg.senderType === 'bot' ? (
                 <Sparkles size={20} className="text-white font-bold" />
               ) : (
-                <WorkforceOSLogo className="h-7 w-7 font-bold" showText={false} />
+                <WorkforceOSLogo className="h-7 w-7 font-bold" variant="icon" />
               )}
             </div>
             {/* WF Logo for STAFF ONLY */}

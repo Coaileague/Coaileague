@@ -20,7 +20,7 @@ export default function NotFound() {
           {/* WorkforceOS Logo */}
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl backdrop-blur-sm border border-blue-400/30">
-              <WorkforceOSLogo size="lg" showText={false} />
+              <WorkforceOSLogo size="lg" variant="icon" />
             </div>
           </div>
 
