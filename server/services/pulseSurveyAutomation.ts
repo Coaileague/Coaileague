@@ -192,10 +192,29 @@ export async function getSurveyDistributionSummary(
     byFrequency[d.frequency] = (byFrequency[d.frequency] || 0) + 1;
   });
 
-  // Estimate upcoming (employees due within next 7 days)
-  const upcomingThisWeek = distributions.filter(d =>
-    !d.shouldReceiveSurvey && d.daysSinceLastResponse >= 0 && d.daysSinceLastResponse <= 7
-  ).length;
+  // Helper function to get frequency threshold in days
+  const getFrequencyThreshold = (frequency: string): number => {
+    switch (frequency) {
+      case 'weekly': return 7;
+      case 'biweekly': return 14;
+      case 'monthly': return 30;
+      case 'quarterly': return 90;
+      case 'annual': return 365;
+      case 'one_time': return Infinity; // Never upcoming for one-time
+      default: return 30;
+    }
+  };
+
+  // Calculate upcoming (employees due within next 7 days based on their frequency)
+  const upcomingThisWeek = distributions.filter(d => {
+    if (d.shouldReceiveSurvey) return false; // Already due today
+    
+    const threshold = getFrequencyThreshold(d.frequency);
+    const daysUntilDue = threshold - d.daysSinceLastResponse;
+    
+    // Upcoming if within 7 days of threshold but not yet due
+    return daysUntilDue > 0 && daysUntilDue <= 7;
+  }).length;
 
   // Unique surveys and employees
   const uniqueSurveys = new Set(distributions.map(d => d.surveyTemplateId));
