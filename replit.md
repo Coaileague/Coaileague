@@ -37,6 +37,58 @@ The platform features a CAD-style professional interface with a dark mode theme,
     - **HR Automation**: Performance Review Reminders, PTO Accrual, Automated Pulse Surveys.
     - **Integrations**: IntegrationOS™ for external service ecosystem.
 
+## Recent Feature Additions
+
+### ROOT Admin Dashboard - User Management (November 3, 2025)
+
+**Purpose**: Comprehensive platform administration for ROOT users to manage all system users and platform roles.
+
+**Implementation**:
+- **Backend Routes** (`server/routes.ts`):
+  - `GET /api/platform/users/search` - Search users by ID, work ID, email, or name (ROOT only)
+  - `GET /api/platform/users` - Get all platform staff users (ROOT only)
+  - `GET /api/platform/users/:userId` - Get detailed user information with workspace memberships (ROOT only)
+  - `POST /api/platform/users` - Create new user with optional platform role (ROOT only)
+  - `PATCH /api/platform/users/:userId` - Update user profile information (ROOT only)
+  - `POST /api/platform/users/:userId/set-password` - Reset user password (ROOT only)
+  - `POST /api/platform/users/:userId/grant-role` - Grant platform role with audit trail (ROOT only)
+  - `POST /api/platform/users/:userId/revoke-role` - Revoke platform role (ROOT only)
+
+- **Frontend Component** (`client/src/components/user-management-panel.tsx`):
+  - Live user search with multi-criteria matching (ID, work ID, email, name)
+  - User creation form with platform role assignment
+  - Comprehensive user details dialog/sandbox for safe editing
+  - Password reset functionality
+  - Platform role management with reason tracking
+  - Workspace membership display
+  - Visual role indicators with color-coded badges
+
+- **Integration** (`client/src/pages/admin-command-center.tsx`):
+  - UserManagementPanel visible only to ROOT users
+  - MasterKeysPanel for organization management (ROOT only)
+  - Proper RBAC enforcement at both frontend and backend
+
+**Security**:
+- All user management operations restricted to ROOT role using `requirePlatformAdmin` middleware
+- Support staff cannot access user management panel (use `admin-support.tsx` for read-only workspace search)
+- Password validation (minimum 8 characters)
+- Email uniqueness validation
+- Platform role changes tracked with audit trail (grantedBy, grantedReason, revokedBy, revokedReason)
+
+**Platform Role Hierarchy**:
+- ROOT: Full platform administration (highest privilege)
+- Deputy Admin: Deputy administrator
+- Deputy Assistant: Deputy assistant administrator
+- Sysop: System operator
+- Support: Read-only workspace access (lowest privilege)
+
+**Test Account**:
+- Email: test@workforceos.demo
+- Password: TestPassword123!
+- Platform Role: ROOT
+- Organization: TEST ORG - Full Access (ID: 2015f09f-47e6-4a05-9c83-b0a5775b00c9)
+- Tier: Enterprise (unlimited employees/clients)
+
 ## Recent Feature Additions (October 29, 2025)
 
 ### HR Automation - PTO Accrual & Balance Tracking
