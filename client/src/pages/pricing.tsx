@@ -72,16 +72,16 @@ export default function Pricing() {
       features: [
         { name: "Unlimited employees", included: true },
         { name: "Everything in Professional", included: true },
-        { name: "Advanced Analytics & Forecasting", included: true },
-        { name: "Custom Integrations & API Access", included: true },
-        { name: "SOC2-Ready Audit Compliance", included: true },
-        { name: "White-Label Branding", included: true },
-        { name: "99.9% Uptime SLA", included: true },
+        { name: "Advanced Analytics Dashboards", included: true },
+        { name: "Custom Reporting & Exports", included: true },
+        { name: "API Access & Webhooks", included: true },
         { name: "Dedicated Account Manager", included: true },
-        { name: "24/7 Phone Support", included: true },
-        { name: "Custom Feature Development", included: true },
-        { name: "On-Premise Deployment Option", included: true },
-        { name: "Priority Implementation", included: true },
+        { name: "Priority Email & Chat Support", included: true },
+        { name: "Custom Integration Assistance", included: true },
+        { name: "Flexible Billing & Payment Terms", included: true },
+        { name: "White-Label Branding (Roadmap)", included: false },
+        { name: "99.9% SLA (Roadmap)", included: false },
+        { name: "Custom Feature Development (Roadmap)", included: false },
       ],
     },
   ];
@@ -233,28 +233,28 @@ export default function Pricing() {
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
+                  plan: "Starter",
+                  price: "$299/mo",
+                  replaces: ["Part-time Scheduler ($2.5k/mo)", "Time Tracking Software ($500/mo)", "Manual Invoicing ($1k/mo)"],
+                  totalSaved: "$48k/yr",
+                  costOfPlan: "$3.6k/yr",
+                  netSavings: "$44k/yr"
+                },
+                {
                   plan: "Professional",
-                  price: "$2,999/mo",
-                  replaces: ["Scheduler ($55k/yr)", "Billing Clerk ($48k/yr)", "Payroll Staff ($41k/yr)"],
-                  totalSaved: "$144k/yr",
-                  costOfPlan: "$36k/yr",
-                  netSavings: "$108k/yr"
+                  price: "$999/mo",
+                  replaces: ["HR Coordinator ($55k/yr)", "Payroll Specialist ($48k/yr)", "LMS Platform ($12k/yr)"],
+                  totalSaved: "$115k/yr",
+                  costOfPlan: "$12k/yr",
+                  netSavings: "$103k/yr"
                 },
                 {
                   plan: "Enterprise",
-                  price: "$7,999/mo",
-                  replaces: ["HR Manager ($120k/yr)", "Payroll ($88k/yr)", "Scheduler ($80k/yr)", "Billing ($56k/yr)", "Compliance ($40k/yr)"],
-                  totalSaved: "$384k/yr",
-                  costOfPlan: "$96k/yr",
-                  netSavings: "$288k/yr"
-                },
-                {
-                  plan: "Elite",
-                  price: "$19,999/mo",
-                  replaces: ["Full HR Dept ($380k/yr)", "Compliance ($180k/yr)", "Benefits ($220k/yr)", "Payroll ($180k/yr)"],
-                  totalSaved: "$960k/yr",
-                  costOfPlan: "$240k/yr",
-                  netSavings: "$720k/yr"
+                  price: "Custom",
+                  replaces: ["HR Manager ($120k/yr)", "Full Payroll Team ($180k/yr)", "Benefits Admin ($85k/yr)", "Training Coordinator ($65k/yr)"],
+                  totalSaved: "$450k/yr",
+                  costOfPlan: "Custom",
+                  netSavings: "$300k+/yr"
                 },
               ].map((breakdown) => (
                 <div key={breakdown.plan} className="bg-slate-900/50 border border-indigo-500/20 rounded-lg p-6 space-y-4">
@@ -292,6 +292,21 @@ export default function Pricing() {
                 </div>
               ))}
             </div>
+
+            {/* Overage Information */}
+            <div className="mt-8 p-6 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-white">Fair Usage & Overage Billing</h3>
+                  <p className="text-sm text-slate-400">
+                    Each plan includes a set number of employees (25 for Starter, 100 for Professional). 
+                    If you exceed your plan limit, additional employees are billed at <strong className="text-amber-400">$15/employee/month</strong>.
+                    This ensures you only pay for what you use while maintaining consistent pricing.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -304,28 +319,28 @@ export default function Pricing() {
           <div className="space-y-4">
             {[
               {
-                q: "Why are the prices higher than competitors?",
-                a: "Because we replace 3-5 full-time staff positions with complete automation. Our Enterprise plan costs $96k/year but saves you $288k annually - that's a 4x return on investment. Most competitors only replace scheduling, not your entire HR department.",
+                q: "How does WorkforceOS save me money?",
+                a: "WorkforceOS automates tasks traditionally handled by multiple staff members. At $999/month for Professional, you save over $100k/year by replacing HR coordinators, payroll specialists, and training platforms. The ROI is typically 10-20x your monthly investment.",
               },
               {
                 q: "What's included in the free trial?",
-                a: "Full access to all features in your chosen plan for 14 days. No credit card required. Experience GPS clock-ins, auto-payroll, smart scheduling, and RMS reporting risk-free.",
+                a: "Full access to all features in your chosen plan for 14 days. No credit card required. Experience smart scheduling, automated payroll, time tracking, and client portals risk-free.",
               },
               {
-                q: "Can I start with Professional and upgrade later?",
-                a: "Absolutely. Most customers start with Professional and upgrade within 3-6 months as they see ROI. Your data migrates seamlessly, and we'll credit any unused time toward your new plan.",
+                q: "Can I start with Starter and upgrade later?",
+                a: "Absolutely. Most customers start with Starter ($299/mo) and upgrade to Professional ($999/mo) within 3-6 months as they see ROI. Your data migrates seamlessly, and we'll credit any unused time toward your new plan.",
+              },
+              {
+                q: "What happens if I exceed my employee limit?",
+                a: "No problem! Additional employees beyond your plan limit are billed at $15/employee/month. For example, if you have 30 employees on the Starter plan (25 included), you'll pay $299 + (5 × $15) = $374/month total.",
               },
               {
                 q: "What payment methods do you accept?",
-                a: "All major credit cards, ACH transfers, and wire transfers. Elite plans include net-30 payment terms and can be invoiced quarterly or annually.",
-              },
-              {
-                q: "Is implementation included?",
-                a: "Professional includes self-service setup with video tutorials. Enterprise includes guided onboarding. Elite includes white-glove implementation with a dedicated account manager.",
+                a: "All major credit cards, ACH transfers, and wire transfers. Enterprise plans can be invoiced quarterly or annually with custom payment terms.",
               },
               {
                 q: "What if I need custom features?",
-                a: "Elite plans include custom feature development. We'll work with your team to build integrations, custom reports, or workflow automations specific to your business.",
+                a: "Enterprise plans include API access, webhooks, and custom integration assistance. Our team can help you connect WorkforceOS to your existing tools and workflows. Future roadmap includes custom feature development and white-label options—contact sales to discuss.",
               },
             ].map((faq) => (
               <div

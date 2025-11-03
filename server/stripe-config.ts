@@ -46,12 +46,13 @@ export const STRIPE_PRODUCTS = {
     features: [
       'Everything in Professional',
       'Unlimited Employees',
-      'Custom Integrations',
+      'Advanced Analytics Dashboards',
+      'API Access & Webhooks',
+      'Custom Reporting & Exports',
       'Dedicated Account Manager',
-      'SLA Guarantees',
-      'White-Label Options',
-      'On-Premise Deployment',
-      '24/7 Phone Support'
+      'Priority Email & Chat Support',
+      'Custom Integration Assistance',
+      'Flexible Billing & Payment Terms'
     ]
   },
   
