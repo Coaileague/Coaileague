@@ -1,0 +1,283 @@
+MASTER BUILD PROMPT (Final) — WorkforceOS w/ Sales+Procurement
+System
+
+You are building WorkforceOS: an Autonomous Workforce Management Platform focused first on Security/Public Safety (WatchOps edition), then adaptable to EMS, Cleaning, Construction.
+
+Prime Directive:
+
+REUSE existing code/modules exactly as-is where possible.
+
+UPGRADE only when necessary; do not regenerate working components.
+
+NO DUPLICATION: enforce one source of truth per feature and schema.
+
+TOKEN DISCIPLINE: chunk inputs, cache summaries, use deterministic templates.
+
+Core Engine: PulseCore (AI engine for tracking → payroll → invoicing → insights).
+New Scope (this release): Add Sales & Procurement Automation end-to-end, wired into existing ops, without mess.
+
+Developer
+0) Inventory & Reuse Plan (mandatory, no code yet)
+
+Scan the repo and produce a Reuse Map listing which modules exist and their status:
+
+Auth/Roles, Multi-tenant, Schedules, Timesheets, Payroll, Invoicing, Incident Reports, Compliance, RFP/Proposal (if any), Notifications, Integrations (Stripe/Twilio/QuickBooks), Dashboards.
+
+For each, mark: KEEP, KEEP+ADAPT (list changes), or NEW.
+
+Stop if overlap detected: propose merges/migrations instead of new files.
+
+Output a one-page Impact Plan (migrations, new tables, routes) before writing code.
+
+1) Modules (target state)
+A. Ops Foundation (reuse first)
+
+Scheduling & Smart Scheduling (exists): Use site coverage rules, rates, licenses, OT logic.
+
+Auto Payroll (exists): Input = verified shifts → wage rules → summaries/export.
+
+Auto Invoicing (exists): Input = client/site/rates → invoice PDF + QuickBooks sync.
+
+AI Report Writer (exists): Guard notes/voice → formatted incident/daily logs.
+
+Compliance (exists): Licenses, training, expirations, alerts.
+
+WatchOps Edition (exists/seed): post orders, patrol templates, TSMS-style check-ins.
+
+B. NEW: Sales & Procurement (end-to-end)
+
+Lead Intelligence & Procurement
+
+RFP Hunter: ingest SAM.gov + state portals (RSS/API/scrape adapters).
+
+RFP Summarizer: scope, due dates, forms, insurance, red flags. Cache per doc hash.
+
+Private-Sector Lead Finder: Google Maps/Places + LinkedIn company pages (connector-ready stubs) → company metadata.
+
+POC Discovery: enrich domain → likely POC emails (pattern heuristics + partner enrichment APIs). Store confidence score & source.
+
+Proposal & Collateral
+
+Proposal Builder: templates for security (SOO/SOW, staffing plan, resumes, QA, past performance, pricing tables). DOCX/PDF export.
+
+Capabilities One-Pager (brandable), Intro Deck, Pricing Sheet (rate cards per site type).
+
+Outreach & Sequencing
+
+List Builder (by NAICS/geo/keywords).
+
+Sequencer: multi-step emails (new lead → follow-ups → bump → close).
+
+Personalization: use company meta + role + RFP fields.
+
+Compliance: footer + unsubscribe + respect send windows; log consent/source.
+
+Mailbox Integration (optional stub): IMAP/API for reply detection.
+
+Pipeline → Contract Close
+
+CRM Pipeline: Stages = Prospect → Qualified → RFP Identified → Proposal Sent → Negotiation → Awarded → Implementing.
+
+Tasks & Reminders: owner, due, SLA timers.
+
+Documents: per deal: RFP, proposal versioning, insurance/COI, W-9, MSA/SOW.
+
+Handoff to Ops: upon “Awarded,” auto-spawn Contract, Sites, Post Orders, Schedule Draft, Billing Profile.
+
+Sales Org
+
+Sales Teams & Territories: assign reps, round-robin, capacity caps.
+
+Dashboards:
+
+Owner view: pipeline, conversion, velocity, forecast.
+
+Company view: ARR/MRR forecast, bids out, win rate, avg days to close.
+
+Commissions (Phase 2): percent of invoice or fixed bounty.
+
+2) Roles & Permissions (augment existing)
+
+Admin: all modules + billing + integrations.
+
+Sales Manager: leads, pipeline, teams, sequences, proposal approvals.
+
+Sales Rep: assigned leads/deals, sequences, proposal drafts.
+
+Ops Manager: schedules, staffing, onboarding, handoff intake from Sales.
+
+Finance: invoices, payments, pricing, margins.
+
+Client (optional portal): invoices, reports, coverage dashboards.
+
+3) Data Model (additive, minimal, no dupes)
+
+(Use existing tables where possible; only add if missing.)
+
+companies (exists)
+
+users (exists), user_roles (exists)
+
+contacts: id, company_id, name, title, email, phone, source, consent_flag, confidence
+
+accounts: target organizations (prospects/clients), domain, naics, size, region
+
+leads: id, account_id, contact_id?, source, status, owner_id, score, notes
+
+deals: id, account_id, amount_est, stage, close_prob, owner_id, opened_at, expected_close_at
+
+rfps: id, source_url, buyer, title, due_at, value_est, summary, red_flags, hash
+
+proposal_templates: id, industry, section_name, content_template
+
+proposals: id, deal_id/rfp_id, version, status, file_url
+
+sequences: id, name, steps(json), throttle, window
+
+sequence_sends: id, lead_id/deal_id, step_no, subject, body, sent_at, opened?, replied?
+
+tasks: id, owner_id, entity_type(entity_id), due_at, status
+
+pricing_ratecards: company_id, role, base_rate, ot_rate, holiday_rate
+
+contracts: id, account_id, start/end, terms, billing_profile_id, status
+
+sites: id, contract_id, address, post_order_id
+
+post_orders: id, contract_id/site_id, duties(json), compliance
+
+billing_profiles: id, contract_id, rates(json), invoice_cycle, net_terms
+
+invoices (exists), payroll_runs (exists) – link to contracts/sites.
+
+Add required FKs and indexes; keep naming consistent with current schema.
+
+4) Integrations (stubs first, adapters later)
+
+Email: Resend/SendGrid for sends; optional Gmail/O365 read for replies.
+
+Accounting: QuickBooks Online (existing—reuse).
+
+Enrichment: Plug-in adapter interface (Apollo/Clearbit/etc.) behind EmailFinder service.
+
+RFP Sources: SAM.gov API + state portal adapters (queue + cache).
+
+5) AI Behaviors (PulseCore + Sales)
+
+Summarizers: RFP → key facts, proposal checklists. Cache by rfps.hash.
+
+Generators: proposal sections, outreach emails → template-driven JSON → render.
+
+Schedulers: smart fill coverage; sales sequencer throttling windows; SLA alerts.
+
+Insights: win-probability (basic rules now; ML later), pricing suggestions, margin warnings.
+
+Token discipline:
+
+Strict schemas, few-shot prompts, short outputs, reuse cached chunks, deterministic temperature.
+
+6) UX & Dashboards
+
+Home (Company): Ops KPIs (coverage, OT risk, invoices) + Sales KPIs (pipeline, forecast, bids out).
+
+Sales → Leads/Accounts: list, filters, enrichment, assign.
+
+Sales → Deals/Pipeline: kanban + forecast, tasks, files, proposal status.
+
+Sales → Sequences: create templates, variables, send windows, results.
+
+Procurement: RFP feed, saved searches, due-date calendar, one-click “Draft Proposal”.
+
+Ops Handoff: “Awarded → Generate Contract & Sites → Draft Schedule → Billing Profile”.
+
+7) Compliance & Safeguards
+
+Email laws: record source/consent, include unsubscribe, honor suppressions.
+
+Data: PII encrypted at rest; audit logs for outreach and proposal edits.
+
+Security: RBAC enforcement on every route; least-privilege defaults.
+
+8) Migration & Refactor Rules
+
+Prefer feature flags to introduce new modules.
+
+If an existing table overlaps, migrate; do not fork.
+
+Deprecate legacy endpoints with adapters; write backfill scripts if needed.
+
+Provide a Settings → Modules page to toggle editions (WatchOps, MediOps, etc.).
+
+9) Deliverables (this iteration)
+
+Reuse Map + Impact Plan (markdown).
+
+Minimal DB migrations for new tables only.
+
+API endpoints (REST or tRPC) for Sales/Procurement: leads, deals, sequences, rfps, proposals, tasks.
+
+UI:
+
+Sales → Leads/Deals/Sequences
+
+Procurement → RFP Feed + Proposal Draft
+
+Handoff → “Create Contract & Sites” wizard
+
+AI Prompt Packs (JSON templates) for: RFP summary, proposal sections (security), outreach emails (persona-aware).
+
+Unit tests for critical services; smoke tests for flows.
+
+Docs: short admin guide + sales playbook (how to run sequences, proposal pipeline).
+
+10) Phased Rollout
+
+Phase A (2–3 weeks): RFP feed + summary; pipeline + deals; sequences (manual send); proposal builder (template v1); handoff to ops.
+
+Phase B: Email reply detection; enrichment adapters; commission calc; client portal quotes.
+
+Phase C: ML-style win probability; territory automation; deeper SAM/state adapters.
+
+11) Success Criteria
+
+Reused ≥ 80% of existing ops code unchanged.
+
+No duplicated schemas, services, or components.
+
+Sales can take a prospect from Lead → Awarded → Ops Handoff with 1 flow.
+
+Auto invoice/payroll remains stable and shared across editions.
+
+Token usage per typical proposal flow <$0.10 (cached summaries/templates).
+
+Notes to Agent
+
+Ask clarifying questions only if a module is missing and reuse is impossible.
+
+Otherwise, proceed with Impact Plan → Migrations → APIs → UI → Prompts.
+
+Keep diffs small, cohesive, and documented.
+
+(Optional) Naming in UI
+
+Parent: WorkforceOS
+
+AI core: PulseCore
+
+Security edition: WatchOps
+
+Sales module label: DealOps
+
+Procurement/RFP module: BidOps
+
+If you want, I can also generate ready-to-paste JSON prompt templates for:
+
+RFP summarization,
+
+Proposal section generation (Security SOW/Staffing/QA/Past Performance),
+
+Persona-aware outreach emails,
+
+Sales task creation & SLA nudges.
+
+Just say the word and I’ll add those templates next.
