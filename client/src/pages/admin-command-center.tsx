@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { WorkforceOSLogo } from "@/components/workforceos-logo";
 import { MasterKeysPanel } from "@/components/master-keys-panel";
+import { UserManagementPanel } from "@/components/user-management-panel";
 
 export default function AdminCommandCenter() {
   const [, setLocation] = useLocation();
@@ -249,6 +250,13 @@ export default function AdminCommandCenter() {
                 Usage
               </Button>
             </div>
+
+            {/* User Management - ROOT ONLY */}
+            {(user as any)?.platformRole === 'root' && (
+              <div className="mt-6">
+                <UserManagementPanel />
+              </div>
+            )}
 
             {/* Master Keys - ROOT ONLY */}
             {(user as any)?.platformRole === 'root' && (

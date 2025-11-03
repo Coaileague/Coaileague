@@ -6728,14 +6728,369 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
-  // Get all platform users
-  app.get('/api/platform/users', requirePlatformStaff, async (req, res) => {
-    await getPlatformUsers(req, res);
+  // ============================================================================
+  // USER MANAGEMENT - ROOT ADMIN DASHBOARD
+  // ============================================================================
+  
+  // Search users by ID, work ID, email, or name (ROOT/DEPUTY ADMIN only)
+  app.get('/api/platform/users/search', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { q } = req.query;
+      const searchQuery = q as string;
+      
+      if (!searchQuery || searchQuery.trim().length === 0) {
+        return res.status(400).json({ error: "Search query required" });
+      }
+
+      // Search users by multiple criteria
+      const allUsers = await db.select().from(users);
+      
+      const matchedUsers = allUsers.filter(user => {
+        const query = searchQuery.toLowerCase();
+        return (
+          user.id.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query) ||
+          user.workId?.toLowerCase().includes(query) ||
+          user.firstName?.toLowerCase().includes(query) ||
+          user.lastName?.toLowerCase().includes(query) ||
+          `${user.firstName} ${user.lastName}`.toLowerCase().includes(query)
+        );
+      });
+
+      // Get platform roles for matched users
+      const userIds = matchedUsers.map(u => u.id);
+      const allPlatformRoles = await db.select().from(platformRoles).where(
+        sql`${platformRoles.userId} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)}) AND ${platformRoles.revokedAt} IS NULL`
+      );
+
+      // Get workspace memberships
+      const allEmployees = await db.select().from(employees).where(
+        sql`${employees.userId} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`
+      );
+
+      const results = matchedUsers.map(user => {
+        const role = allPlatformRoles.find(r => r.userId === user.id);
+        const employeeRecords = allEmployees.filter(e => e.userId === user.id);
+        
+        return {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          workId: user.workId,
+          platformRole: role?.role || 'none',
+          workspaceCount: employeeRecords.length,
+          emailVerified: user.emailVerified,
+          lastLoginAt: user.lastLoginAt,
+          createdAt: user.createdAt,
+        };
+      });
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ error: "Failed to search users" });
+    }
   });
 
-  // Create platform user (admin or support staff)
-  app.post('/api/platform/users', requirePlatformAdmin, async (req, res) => {
-    await createPlatformUser(req, res);
+  // Get all platform users (staff) - ROOT/DEPUTY ADMIN only
+  app.get('/api/platform/users', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get all users with platform roles
+      const activePlatformRoles = await db
+        .select()
+        .from(platformRoles)
+        .where(isNull(platformRoles.revokedAt));
+      
+      const userIds = activePlatformRoles.map(r => r.userId);
+      
+      if (userIds.length === 0) {
+        return res.json([]);
+      }
+      
+      const staffUsers = await db
+        .select()
+        .from(users)
+        .where(sql`${users.id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
+
+      const results = staffUsers.map(user => {
+        const role = activePlatformRoles.find(r => r.userId === user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          workId: user.workId,
+          platformRole: role?.role || 'none',
+          grantedAt: role?.createdAt,
+          emailVerified: user.emailVerified,
+          lastLoginAt: user.lastLoginAt,
+          createdAt: user.createdAt,
+        };
+      });
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("Error fetching platform users:", error);
+      res.status(500).json({ error: "Failed to fetch platform users" });
+    }
+  });
+
+  // Get user details by ID (ROOT/DEPUTY ADMIN only)
+  app.get('/api/platform/users/:userId', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get platform role
+      const platformRole = await db.query.platformRoles.findFirst({
+        where: and(
+          eq(platformRoles.userId, userId),
+          isNull(platformRoles.revokedAt)
+        ),
+      });
+
+      // Get workspace memberships
+      const employeeRecords = await db
+        .select({
+          employee: employees,
+          workspace: workspaces,
+        })
+        .from(employees)
+        .leftJoin(workspaces, eq(employees.workspaceId, workspaces.id))
+        .where(eq(employees.userId, userId));
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          workId: user.workId,
+          phone: user.phone,
+          emailVerified: user.emailVerified,
+          lastLoginAt: user.lastLoginAt,
+          loginAttempts: user.loginAttempts,
+          lockedUntil: user.lockedUntil,
+          createdAt: user.createdAt,
+        },
+        platformRole: platformRole?.role || 'none',
+        workspaces: employeeRecords.map(r => ({
+          workspaceId: r.workspace?.id,
+          workspaceName: r.workspace?.name,
+          companyName: r.workspace?.companyName,
+          role: r.employee.workspaceRole,
+          title: r.employee.title,
+          department: r.employee.department,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error fetching user details:", error);
+      res.status(500).json({ error: "Failed to fetch user details" });
+    }
+  });
+
+  // Update user (ROOT only)
+  app.patch('/api/platform/users/:userId', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { email, firstName, lastName, phone, workId } = req.body;
+      
+      const [existingUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if email is being changed and if it's already in use
+      if (email && email !== existingUser.email) {
+        const [emailExists] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+        
+        if (emailExists) {
+          return res.status(400).json({ error: "Email already in use" });
+        }
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({
+          email: email || existingUser.email,
+          firstName: firstName || existingUser.firstName,
+          lastName: lastName || existingUser.lastName,
+          phone: phone !== undefined ? phone : existingUser.phone,
+          workId: workId !== undefined ? workId : existingUser.workId,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json({ success: true, user: updated });
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  // Set user password (ROOT only)
+  app.post('/api/platform/users/:userId/set-password', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { password } = req.body;
+      
+      if (!password || password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      await db
+        .update(users)
+        .set({
+          passwordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error: any) {
+      console.error("Error setting password:", error);
+      res.status(500).json({ error: "Failed to set password" });
+    }
+  });
+
+  // Grant platform role (ROOT only)
+  app.post('/api/platform/users/:userId/grant-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { role, reason } = req.body;
+      
+      if (!role || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(role)) {
+        return res.status(400).json({ error: "Invalid platform role" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Revoke existing platform roles
+      await db
+        .update(platformRoles)
+        .set({
+          revokedAt: new Date(),
+          revokedBy: req.user!.id,
+          revokedReason: `Replaced with ${role} role`,
+        })
+        .where(and(
+          eq(platformRoles.userId, userId),
+          isNull(platformRoles.revokedAt)
+        ));
+
+      // Grant new role
+      const [newRole] = await db
+        .insert(platformRoles)
+        .values({
+          userId,
+          role,
+          grantedBy: req.user!.id,
+          grantedReason: reason || `Granted ${role} role`,
+        })
+        .returning();
+
+      res.json({ success: true, platformRole: newRole });
+    } catch (error: any) {
+      console.error("Error granting platform role:", error);
+      res.status(500).json({ error: "Failed to grant platform role" });
+    }
+  });
+
+  // Revoke platform role (ROOT only)
+  app.post('/api/platform/users/:userId/revoke-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body;
+      
+      await db
+        .update(platformRoles)
+        .set({
+          revokedAt: new Date(),
+          revokedBy: req.user!.id,
+          revokedReason: reason || 'Role revoked by admin',
+        })
+        .where(and(
+          eq(platformRoles.userId, userId),
+          isNull(platformRoles.revokedAt)
+        ));
+
+      res.json({ success: true, message: "Platform role revoked successfully" });
+    } catch (error: any) {
+      console.error("Error revoking platform role:", error);
+      res.status(500).json({ error: "Failed to revoke platform role" });
+    }
+  });
+
+  // Create new user (ROOT only)
+  app.post('/api/platform/users', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { email, firstName, lastName, password, platformRole } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required" });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      // Check if email already exists
+      const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      
+      if (existing) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Generate work ID
+      const workId = `${firstName || 'User'}-${Math.floor(Math.random() * 100)}-${Math.floor(Math.random() * 1000)}-${Math.floor(Math.random() * 100)}-${Math.floor(Math.random() * 10000)}`;
+
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email,
+          firstName,
+          lastName,
+          passwordHash,
+          workId,
+          emailVerified: true,
+        })
+        .returning();
+
+      // Grant platform role if specified
+      if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
+        await db.insert(platformRoles).values({
+          userId: newUser.id,
+          role: platformRole,
+          grantedBy: req.user!.id,
+          grantedReason: `Created with ${platformRole} role`,
+        });
+      }
+
+      res.json({ success: true, user: newUser });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
   });
   
   // Save platform settings
