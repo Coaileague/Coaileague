@@ -45,7 +45,6 @@ const operationsFamilyItems = [
 // FAMILY 3: Growth & Intelligence OS
 const growthFamilyItems = [
   { title: "🚀 Growth Family", url: "/os-family/growth", icon: Sparkles, isFamily: true },
-  { title: "HireOS™", url: "/owner/hireos/workflow-builder", icon: Briefcase },
   { title: "TalentOS™", url: "/leaders-hub", icon: UserCog },
   { title: "EngagementOS™", url: "/engagement/dashboard", icon: Activity },
   { title: "AnalyticsOS™", url: "/analytics", icon: BarChart3 },
@@ -55,10 +54,7 @@ const growthFamilyItems = [
 // FAMILY 4: Platform & Control OS
 const platformFamilyItems = [
   { title: "🎛️ Platform Family", url: "/os-family/platform", icon: Sparkles, isFamily: true },
-  { title: "QueryOS™", url: "/query-os", icon: Activity },
   { title: "IntegrationOS™", url: "/integrations", icon: Zap },
-  { title: "BudgetOS™", url: "/budget", icon: TrendingUp },
-  { title: "Command Center", url: "/admin/command", icon: Shield },
   { title: "Admin Dashboard", url: "/dashboard", icon: LayoutDashboard },
 ];
 
