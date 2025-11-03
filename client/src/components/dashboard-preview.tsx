@@ -20,7 +20,6 @@ export function DashboardPreview() {
         <Card className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
             <Users className="h-4 w-4 text-indigo-400" />
-            <div className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-pulse" />
           </div>
           <div className="text-xs text-slate-300">Total Employees</div>
           <div className="text-2xl font-bold text-white">142</div>
@@ -29,7 +28,6 @@ export function DashboardPreview() {
         <Card className="bg-gradient-to-br from-emerald-500/10 to-green-500/5 border-emerald-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
             <DollarSign className="h-4 w-4 text-emerald-400" />
-            <div className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-pulse" />
           </div>
           <div className="text-xs text-slate-300">Revenue</div>
           <div className="text-2xl font-bold text-white">$287K</div>
@@ -38,7 +36,6 @@ export function DashboardPreview() {
         <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/5 border-purple-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
             <Clock className="h-4 w-4 text-purple-400" />
-            <div className="h-1.5 w-1.5 bg-purple-400 rounded-full animate-pulse" />
           </div>
           <div className="text-xs text-slate-300">Active Today</div>
           <div className="text-2xl font-bold text-white">98</div>
@@ -47,7 +44,6 @@ export function DashboardPreview() {
         <Card className="bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border-amber-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
             <TrendingUp className="h-4 w-4 text-amber-400" />
-            <div className="h-1.5 w-1.5 bg-amber-400 rounded-full animate-pulse" />
           </div>
           <div className="text-xs text-slate-300">Growth</div>
           <div className="text-2xl font-bold text-white">+18%</div>
