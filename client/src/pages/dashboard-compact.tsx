@@ -266,7 +266,7 @@ export default function DashboardCompact() {
       {/* Desktop Only: Stat Cards Grid */}
       <div className="hidden md:grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 sm:gap-px bg-border p-1 sm:p-0">
         {statCards.map((stat, index) => (
-          <Link key={index} href={stat.link} className="block touch-target">
+          <Link key={index} href={stat.link} className="block touch-target" data-testid={`link-${stat.testid}`}>
             <Card className="rounded-lg sm:rounded-none border sm:border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
               <CardContent className="p-5 sm:p-4 lg:p-6 text-center flex flex-col items-center justify-center h-full min-h-[120px] sm:min-h-[110px]">
                 <stat.icon className={`h-8 w-8 sm:h-8 sm:w-8 lg:h-10 lg:w-10 mb-2 sm:mb-2 ${stat.color} shrink-0`} />
@@ -290,7 +290,7 @@ export default function DashboardCompact() {
             className="w-full justify-between text-primary hover:bg-primary/10 h-12"
             asChild
           >
-            <Link href="/schedule">
+            <Link href="/schedule" data-testid="button-todays-roster">
               <span className="font-medium">Today's roster</span>
               <span className="text-xl">&gt;</span>
             </Link>
