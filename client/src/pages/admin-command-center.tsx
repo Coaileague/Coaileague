@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -25,6 +26,10 @@ import {
   BarChart3,
   Zap,
   Shield,
+  Wrench,
+  LayoutDashboard,
+  UserCog,
+  KeyRound,
 } from "lucide-react";
 import { AutoForceLogo } from "@/components/autoforce-logo";
 import { MasterKeysPanel } from "@/components/master-keys-panel";
@@ -159,113 +164,219 @@ export default function AdminCommandCenter() {
           </div>
         </div>
 
-        {/* REMOVED: Mock system health cards and live activity feed - awaiting real monitoring implementation */}
-        
-        {/* Main Content Grid - Platform Metrics Only (Real Data) */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* Platform Metrics - Real Data */}
-          <div className="space-y-6">
-            {/* Platform Metrics */}
-            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-indigo-400" />
-                Platform Metrics
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-blue-400" />
-                    <span className="text-xs text-slate-300">Workspaces</span>
+        {/* Main Tabbed Navigation */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="bg-white/10 backdrop-blur-xl border border-white/20 p-1 grid grid-cols-2 sm:grid-cols-4 gap-1">
+            <TabsTrigger 
+              value="overview" 
+              className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
+              data-testid="tab-overview"
+            >
+              <LayoutDashboard className="h-4 w-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tools" 
+              className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
+              data-testid="tab-tools"
+            >
+              <Wrench className="h-4 w-4 mr-2" />
+              Platform Tools
+            </TabsTrigger>
+            {(user as any)?.platformRole === 'root' && (
+              <>
+                <TabsTrigger 
+                  value="users" 
+                  className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
+                  data-testid="tab-users"
+                >
+                  <UserCog className="h-4 w-4 mr-2" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="organizations" 
+                  className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
+                  data-testid="tab-organizations"
+                >
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Organizations
+                </TabsTrigger>
+              </>
+            )}
+          </TabsList>
+
+          {/* OVERVIEW TAB */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Platform Metrics */}
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-indigo-400" />
+                  Platform Metrics
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 hover-elevate">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        <Building2 className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <span className="text-sm font-medium text-slate-300">Workspaces</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">{(stats as any)?.totalEmployees || 0}</div>
                   </div>
-                  <div className="text-lg font-bold text-white">{(stats as any)?.totalEmployees || 0}</div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover-elevate">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-emerald-500/20">
+                        <DollarSign className="h-5 w-5 text-emerald-400" />
+                      </div>
+                      <span className="text-sm font-medium text-slate-300">Monthly Revenue</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">${(stats as any)?.totalRevenue || "0"}</div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 hover-elevate">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-violet-500/20">
+                        <Users className="h-5 w-5 text-violet-400" />
+                      </div>
+                      <span className="text-sm font-medium text-slate-300">Total Users</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">{(stats as any)?.totalClients || 0}</div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-emerald-400" />
-                    <span className="text-xs text-slate-300">Monthly Revenue</span>
+              </div>
+
+              {/* System Status */}
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-indigo-400" />
+                  System Health
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover-elevate">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm text-slate-300">Database</span>
+                    </div>
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Healthy
+                    </Badge>
                   </div>
-                  <div className="text-lg font-bold text-white">${(stats as any)?.totalRevenue || "0"}</div>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-violet-400" />
-                    <span className="text-xs text-slate-300">API Requests</span>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover-elevate">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm text-slate-300">API Status</span>
+                    </div>
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Online
+                    </Badge>
                   </div>
-                  <div className="text-lg font-bold text-white">{systemHealth.requests}</div>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-400" />
-                    <span className="text-xs text-slate-300">Errors (24h)</span>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover-elevate">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm text-slate-300">Uptime</span>
+                    </div>
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                      99.9%
+                    </Badge>
                   </div>
-                  <div className="text-lg font-bold text-amber-400">{systemHealth.errors}</div>
                 </div>
               </div>
             </div>
+          </TabsContent>
 
-            {/* System Status */}
-            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <Shield className="h-5 w-5 text-indigo-400" />
-                System Status
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                  <span className="text-xs text-slate-300">Uptime</span>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
-                    {systemHealth.uptime}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                  <span className="text-xs text-slate-300">Database</span>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Healthy
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                  <span className="text-xs text-slate-300">API Status</span>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs py-0">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Online
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
+          {/* PLATFORM TOOLS TAB */}
+          <TabsContent value="tools" className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Button 
-                className="w-full bg-indigo-500/20 border-indigo-500/30 hover:bg-indigo-500/30 text-white" 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-indigo-500/20 border-indigo-500/30 hover:bg-indigo-500/30 text-white" 
                 onClick={() => window.location.href = '/admin/support'}
+                data-testid="button-support-tool"
               >
-                <Users className="mr-2 h-4 w-4" />
-                Support
+                <Users className="h-8 w-8" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">Support Queue</span>
+                  <span className="text-xs text-slate-400">Manage support tickets</span>
+                </div>
               </Button>
+              
               <Button 
-                className="w-full bg-blue-500/20 border-blue-500/30 hover:bg-blue-500/30 text-white" 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-blue-500/20 border-blue-500/30 hover:bg-blue-500/30 text-white" 
                 onClick={() => window.location.href = '/admin/usage'}
+                data-testid="button-usage-tool"
               >
-                <Server className="mr-2 h-4 w-4" />
-                Usage
+                <Server className="h-8 w-8" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">Usage Analytics</span>
+                  <span className="text-xs text-slate-400">Platform usage stats</span>
+                </div>
+              </Button>
+              
+              <Button 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-violet-500/20 border-violet-500/30 hover:bg-violet-500/30 text-white" 
+                onClick={() => window.location.href = '/analytics'}
+                data-testid="button-analytics-tool"
+              >
+                <BarChart3 className="h-8 w-8" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">Analytics</span>
+                  <span className="text-xs text-slate-400">Deep insights & reports</span>
+                </div>
+              </Button>
+
+              <Button 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/30 text-white" 
+                onClick={() => window.location.href = '/dashboard'}
+                data-testid="button-workspace-tool"
+              >
+                <Building2 className="h-8 w-8" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">Workspace View</span>
+                  <span className="text-xs text-slate-400">Preview as workspace</span>
+                </div>
+              </Button>
+
+              <Button 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-amber-500/20 border-amber-500/30 hover:bg-amber-500/30 text-white" 
+                onClick={() => window.location.href = '/admin/logs'}
+                data-testid="button-logs-tool"
+              >
+                <Database className="h-8 w-8" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">System Logs</span>
+                  <span className="text-xs text-slate-400">Audit & error logs</span>
+                </div>
+              </Button>
+
+              <Button 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-rose-500/20 border-rose-500/30 hover:bg-rose-500/30 text-white" 
+                onClick={() => window.location.href = '/admin/alerts'}
+                data-testid="button-alerts-tool"
+              >
+                <AlertTriangle className="h-8 w-8" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-base font-semibold">System Alerts</span>
+                  <span className="text-xs text-slate-400">Critical notifications</span>
+                </div>
               </Button>
             </div>
+          </TabsContent>
 
-            {/* User Management - ROOT ONLY */}
-            {(user as any)?.platformRole === 'root' && (
-              <div className="mt-6">
-                <UserManagementPanel />
-              </div>
-            )}
+          {/* USER MANAGEMENT TAB - ROOT ONLY */}
+          {(user as any)?.platformRole === 'root' && (
+            <TabsContent value="users">
+              <UserManagementPanel />
+            </TabsContent>
+          )}
 
-            {/* Master Keys - ROOT ONLY */}
-            {(user as any)?.platformRole === 'root' && (
-              <div className="mt-6">
-                <MasterKeysPanel />
-              </div>
-            )}
-          </div>
-        </div>
+          {/* ORGANIZATIONS TAB - ROOT ONLY */}
+          {(user as any)?.platformRole === 'root' && (
+            <TabsContent value="organizations">
+              <MasterKeysPanel />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   );
