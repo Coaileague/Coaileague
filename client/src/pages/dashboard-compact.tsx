@@ -185,10 +185,10 @@ export default function DashboardCompact() {
 
   // Quick Access Menu Items
   const quickAccessFeatures = [
-    { icon: Calendar, label: "Schedule", link: "/schedule-grid", color: "text-blue-500", testid: "quick-schedule" },
+    { icon: Calendar, label: "Schedule", link: "/schedule", color: "text-blue-500", testid: "quick-schedule" },
     { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-emerald-500", testid: "quick-timeclock" },
     { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-purple-500", testid: "quick-invoices" },
-    { icon: DollarSign, label: "Payroll", link: "/payroll", color: "text-green-500", testid: "quick-payroll" },
+    { icon: DollarSign, label: "Payroll", link: "/payroll-dashboard", color: "text-green-500", testid: "quick-payroll" },
     { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-orange-500", testid: "quick-hiring" },
     { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-indigo-500", testid: "quick-training" },
     { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-pink-500", testid: "quick-analytics" },

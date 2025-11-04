@@ -66,6 +66,20 @@ The platform features a CAD-style professional interface with a dark mode theme,
 
 **Navigation Pattern (2024-11-04)**: All feature pages include Back/Home navigation buttons to prevent users from getting lost. Time Tracking includes Back arrow (ArrowLeft) + Dashboard button with Home icon. Schedule Grid includes Dashboard button in top toolbar. All navigation uses wouter's Link component for client-side routing, with data-testid attributes for testing. Mobile-responsive with proper spacing and tooltips.
 
+**Landing Page Navigation & CTA Improvements (2024-11-04)**:
+- **Responsive Logo**: AutoForceLogo component nav variant adapts to screen size - icon-only on mobile (<640px), full logo with text on desktop (≥640px) to prevent cutoff
+- **Mobile Navigation**: Hamburger menu (44px touch target) opens Sheet with navigation links (Features, Pricing, About, Contact); desktop shows full navigation in header
+- **Enhanced CTAs**: "Try Free" and "Request Demo" buttons are 56px height on mobile (min-h-[56px]), full-width on mobile (w-full sm:w-auto), proper touch targets for accessibility
+- **Stats Section**: Responsive text sizing (text-2xl sm:text-4xl lg:text-5xl), break-words to prevent overflow, grid-cols-1 sm:grid-cols-3 layout
+- **Semantic Anchors**: All navigation uses proper anchor semantics (`<Button asChild><Link>` pattern) for screen reader support, keyboard navigation, and standard browser behaviors (open-in-new-tab, context menu)
+
+**Dashboard Quick Access Menu (2024-11-04)**: Horizontal scrolling quick access bar at top of dashboard with 8 key feature buttons (Schedule, Time Clock, Invoices, Payroll, Hiring, Training, Analytics, All Features). Each button has:
+- Colored icon + label for visual hierarchy
+- 64px+ touch targets (min-h-[64px] sm:min-h-[72px])
+- Semantic anchor navigation (Button asChild pattern)
+- Horizontal scroll with mobile-scroll class for smooth touch scrolling
+- Direct links to: /schedule, /time-tracking, /invoices, /payroll-dashboard, /employees, /training-os, /analytics, /os-family-platform
+
 **Mobile-First Responsive Design (2024-11-04)**: Comprehensive mobile optimization added across all pages:
 - **Typography**: Responsive text sizes (text-xl sm:text-2xl lg:text-3xl), proper text wrapping with `break-anywhere` for long content, `truncate-1/2/3` for multi-line truncation
 - **Containers**: `mobile-container` utility provides proper padding (1rem mobile, 1.5rem tablet, 2rem desktop)
@@ -87,7 +101,7 @@ The platform features a CAD-style professional interface with a dark mode theme,
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for request body validation.
 - **Database**: PostgreSQL with Drizzle ORM.
-- **Authentication**: Custom session-based authentication with bcrypt, account locking, and password reset.
+- **Authentication**: Custom session-based authentication with bcrypt, account locking, and password reset. Password requirements: 8+ characters, uppercase, lowercase, number, special character (!@#$%^&*(),.?":{}|<>).
 - **Multi-Tenancy**: Workspace-based data isolation.
 - **Role-Based Access Control (RBAC)**: Supports various roles with hierarchical management and API protection.
 - **IRC-Style Command/Response Architecture**: WebSocket commands use unique command IDs for request/response matching, with server-side validation, permission checks, and broadcasting.
