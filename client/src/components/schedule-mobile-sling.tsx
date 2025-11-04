@@ -18,6 +18,7 @@ interface SlingMobileScheduleProps {
   employees: Employee[];
   clients: Client[];
   currentDate: Date;
+  currentEmployeeId?: string;
   onDateChange: (date: Date) => void;
   onShiftClick: (shift: Shift) => void;
 }
@@ -29,6 +30,7 @@ export function SlingMobileSchedule({
   employees,
   clients,
   currentDate,
+  currentEmployeeId,
   onDateChange,
   onShiftClick,
 }: SlingMobileScheduleProps) {
@@ -49,7 +51,7 @@ export function SlingMobileSchedule({
 
   // Filter shifts for the current week
   const weekShifts = useMemo(() => {
-    return shifts.filter((shift) => {
+    let filteredShifts = shifts.filter((shift) => {
       const shiftDate = moment(shift.startTime);
       return shiftDate.isBetween(
         selectedWeekStart,
@@ -58,7 +60,19 @@ export function SlingMobileSchedule({
         "[)"
       );
     });
-  }, [shifts, selectedWeekStart]);
+
+    // Apply tab-specific filtering
+    if (activeTab === "my-schedule" && currentEmployeeId) {
+      // Show only current user's shifts
+      filteredShifts = filteredShifts.filter(shift => shift.employeeId === currentEmployeeId);
+    } else if (activeTab === "pending") {
+      // Show only draft/pending shifts
+      filteredShifts = filteredShifts.filter(shift => shift.status === "draft");
+    }
+    // "full-schedule" shows all shifts (no additional filtering)
+
+    return filteredShifts;
+  }, [shifts, selectedWeekStart, activeTab, currentEmployeeId]);
 
   // Group shifts by day
   const shiftsByDay = useMemo(() => {
@@ -93,6 +107,15 @@ export function SlingMobileSchedule({
   // Navigate week
   const navigateWeek = (direction: "prev" | "next") => {
     const newStart = selectedWeekStart.clone().add(direction === "next" ? 7 : -7, "days");
+    setSelectedWeekStart(newStart);
+    onDateChange(newStart.toDate());
+  };
+
+  // Handle month selection
+  const handleMonthChange = (monthYear: string) => {
+    // Parse "MMMM YYYY" format to a moment object
+    const newMonth = moment(monthYear, "MMMM YYYY");
+    const newStart = newMonth.startOf("month").startOf("week");
     setSelectedWeekStart(newStart);
     onDateChange(newStart.toDate());
   };
@@ -169,7 +192,7 @@ export function SlingMobileSchedule({
     <div className="flex flex-col h-full bg-background">
       {/* Month Selector */}
       <div className="border-b bg-background px-4 py-3">
-        <Select value={currentMonth}>
+        <Select value={currentMonth} onValueChange={handleMonthChange}>
           <SelectTrigger className="w-full font-semibold" data-testid="select-month">
             <SelectValue />
           </SelectTrigger>

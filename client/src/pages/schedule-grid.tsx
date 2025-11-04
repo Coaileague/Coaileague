@@ -14,6 +14,7 @@ import {
   useDroppable,
 } from "@dnd-kit/core";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -411,6 +412,7 @@ function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients, onAddAckno
 
 export default function ScheduleGrid() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'bi-week' | 'semi-monthly' | 'monthly'>('week');
@@ -443,6 +445,11 @@ export default function ScheduleGrid() {
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
+
+  // Find current user's employee record
+  const currentEmployee = useMemo(() => {
+    return employees.find(emp => emp.userId === user?.id);
+  }, [employees, user?.id]);
 
   // Calculate days to display based on view mode
   const getDaysToShow = (): number => {
@@ -756,6 +763,7 @@ export default function ScheduleGrid() {
           employees={employees}
           clients={clients}
           currentDate={currentDate}
+          currentEmployeeId={currentEmployee?.id}
           onDateChange={setCurrentDate}
           onShiftClick={handleShiftClick}
         />
