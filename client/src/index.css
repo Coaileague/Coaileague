@@ -346,7 +346,10 @@
     box-sizing: border-box;
   }
   
-  *:not(svg *) {
+  /* Target only specific container elements for max-width, NOT all elements */
+  .container, [class*="container"],
+  .card, [class*="card"],
+  main, section, article, aside, header, footer, nav {
     max-width: 100%;
   }
 
