@@ -122,20 +122,20 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section - SALES FOCUSED */}
-      <section className="relative overflow-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
-        <div className="responsive-container responsive-spacing-y">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className="relative overflow-x-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="responsive-container responsive-spacing-y overflow-x-hidden">
+          <div className="max-w-6xl mx-auto w-full overflow-x-hidden px-0">
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-center w-full overflow-x-hidden">
               {/* Left: Sales Copy */}
-              <div className="space-y-6 fix-overflow">
+              <div className="space-y-6 fix-overflow w-full max-w-full min-w-0">
                 <Badge variant="outline" className="text-xs font-normal px-4 py-1.5">
                   <Building2 className="h-3 w-3 mr-1.5" />
                   Enterprise Workforce Management
                 </Badge>
                 
-                <h1 className="responsive-h1">
-                  <span className="text-wrap-auto">Automate 5+ HR Functions </span>
-                  <span className="block text-primary mt-2 text-wrap-auto">in One Integrated Platform</span>
+                <h1 className="responsive-h1 max-w-full">
+                  <span className="text-wrap-auto break-words">Automate 5+ HR Functions </span>
+                  <span className="block text-primary mt-2 text-wrap-auto break-words">in One Integrated Platform</span>
                 </h1>
                 
                 <p className="responsive-body text-muted-foreground text-wrap-auto">
@@ -146,11 +146,11 @@ export default function Landing() {
                   *Actual time and cost savings will vary based on your organization's size, current processes, and implementation. Platform features designed to automate manual tasks.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 w-full max-w-full">
                   <Button
                     size="lg"
                     onClick={() => setLocation("/register")}
-                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
+                    className="text-base sm:text-lg px-4 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
                     data-testid="button-start-trial"
                   >
                     Start Free Trial
@@ -160,7 +160,7 @@ export default function Landing() {
                     size="lg"
                     variant="outline"
                     onClick={() => window.location.href = "/api/demo-login"}
-                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
+                    className="text-base sm:text-lg px-4 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
                     data-testid="button-view-demo"
                   >
                     View Live Demo
