@@ -10,11 +10,6 @@ export function FloatingChatButton() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
-  
-  // Don't show on chat pages - user is already in the chat!
-  if (location === "/live-chat" || location === "/mobile-chat") {
-    return null;
-  }
 
   // Load saved position from localStorage or calculate default position on mount
   useEffect(() => {
@@ -103,6 +98,11 @@ export function FloatingChatButton() {
     // Desktop or no custom position: fixed bottom-right
     return {};
   };
+
+  // Don't show on chat pages - user is already in the chat!
+  if (location === "/live-chat" || location === "/mobile-chat" || location === "/modern-mobile-chat") {
+    return null;
+  }
 
   return (
     <button
