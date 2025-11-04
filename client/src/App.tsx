@@ -264,6 +264,7 @@ function AppContent() {
                 <Route path="/client/portal" component={ClientPortal} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/employee/profile" component={EmployeeProfile} />
+                <Route path="/pricing" component={Pricing} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support/chat" component={HelpdeskChat} />
