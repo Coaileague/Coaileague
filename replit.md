@@ -33,16 +33,30 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
 - **AI**: OpenAI GPT-4 (`gpt-4o-mini`)
 
 ## Recent Changes (November 2025)
-### 🔄 UI/UX Redesign In Progress (November 4, 2025)
-**Status**: Addressing user feedback on logo visibility, chat layout, and overall polish
-- **Logo Redesign**: Replaced geometric "A" with user-requested "human + AI network" design
-  - Central human figure with 8 AI nodes radiating outward representing intelligent automation
-  - Adaptive colors: white/light for dark backgrounds, charcoal/crimson for light backgrounds
-  - Clean, modern SaaS aesthetic (not "IBM computer platform")
-  - Added `lightMode` prop to AutoForceLogo component for dark background support
-- **Chat Layout Fix**: Removed max-width constraint causing empty left/right sidebars - chat now full-width
-- **Logo Visibility**: Updated admin command center to use light logo variant on dark background
-- **In Progress**: Updating all remaining dark-themed pages, reducing header heights, adding navigation buttons
+### ✅ RecordOS™ & InsightOS™ AI Platform Upgrade (COMPLETED - November 4, 2025)
+**Status**: Production-ready AI-powered features with tiered pricing model
+- **Logo Redesign**: Replaced generic network nodes with AI work-replacement icons
+  - Central white human silhouette with 8 orbiting AI automation icons (calendar, chart, bot, document, money, clock, email, team)
+  - 20-second smooth rotation animation showing AI agents replacing human tasks
+  - Adaptive color switching for light/dark backgrounds
+- **RecordOS™ - Natural Language Search** (`/search`):
+  - AI-powered search across employees, clients, invoices, time entries, shifts
+  - Natural language queries: "Show me employees hired this month" or "Find invoices over $5000"
+  - Real-time search with performance tracking (execution time displayed)
+  - Search history with quick re-run capability
+  - Backend: PostgreSQL full-text search with query logging
+- **InsightOS™ - Autonomous AI Analytics** (`/insights`):
+  - AI-generated insights for cost savings, productivity, anomalies, predictions
+  - Autonomous insight generation with confidence scores
+  - Priority-based dashboard (critical, high, normal, low)
+  - Actionable recommendations with estimated impact
+  - Insight dismissal with reason tracking for ML feedback loop
+  - Backend: Metrics snapshots for trend analysis (daily, weekly, monthly)
+- **Pricing Update**: New tiered model aligned with AI features
+  - **Starter ($149/mo)**: Up to 25 employees, core automation (no AI features)
+  - **Professional ($299/mo)**: Up to 100 employees, RecordOS™ + InsightOS™, $50/mo AI credits included
+  - **Enterprise ($599/mo)**: Unlimited employees, premium AI features, $200/mo AI credits included
+  - Customer-pays AI token model for transparent scaling
 
 ### ✅ Time Tracking & Billing System (COMPLETED - November 4, 2025)
 **Status**: Core time tracking → invoicing → payroll flow is fully operational
