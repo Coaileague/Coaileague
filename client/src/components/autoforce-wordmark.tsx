@@ -9,7 +9,7 @@ export function AutoForceWordmark({ variant = "stability", className }: AutoForc
   if (variant === "stability") {
     return (
       <div className={cn("flex items-baseline font-inter", className)}>
-        <span className="text-white font-extrabold tracking-tight" style={{ fontSize: '1em', letterSpacing: '-0.03em' }}>
+        <span className="text-foreground dark:text-white font-extrabold tracking-tight" style={{ fontSize: '1em', letterSpacing: '-0.03em' }}>
           AutoForce
         </span>
         <span className="text-primary font-extrabold tracking-tight" style={{ fontSize: '1em', letterSpacing: '-0.03em' }}>
@@ -22,11 +22,11 @@ export function AutoForceWordmark({ variant = "stability", className }: AutoForc
   if (variant === "integrated") {
     return (
       <div className={cn("flex items-center font-inter", className)}>
-        <span className="text-white font-black tracking-tight uppercase" style={{ fontSize: '1em', letterSpacing: '-0.02em' }}>
+        <span className="text-foreground dark:text-white font-black tracking-tight uppercase" style={{ fontSize: '1em', letterSpacing: '-0.02em' }}>
           AUTOFORCE
         </span>
         <span 
-          className="bg-primary text-white font-black rounded px-1.5 py-0.5 ml-1.5 inline-block"
+          className="bg-primary text-primary-foreground font-black rounded px-1.5 py-0.5 ml-1.5 inline-block"
           style={{ 
             fontSize: '0.4em',
             transform: 'translateY(-0.3em)'
@@ -41,7 +41,7 @@ export function AutoForceWordmark({ variant = "stability", className }: AutoForc
   // efficiency variant
   return (
     <div className={cn("flex items-baseline font-inter", className)}>
-      <span className="text-white font-extralight tracking-widest uppercase" style={{ fontSize: '1em', letterSpacing: '0.08em' }}>
+      <span className="text-foreground dark:text-white font-extralight tracking-widest uppercase" style={{ fontSize: '1em', letterSpacing: '0.08em' }}>
         AUTOFORCE
       </span>
       <span className="text-primary font-extralight tracking-widest uppercase" style={{ fontSize: '1em', letterSpacing: '0.08em' }}>

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
 import { showLoginTransition, showErrorTransition, showSuccessTransition } from "@/lib/transition-utils";
 import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AutoForceWordmark } from "@/components/autoforce-wordmark";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -88,15 +89,13 @@ export default function CustomLogin() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo and Branding */}
         <div className="text-center space-y-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-3">
             <AutoForceLogo size="xl" variant="icon" />
+            <AutoForceWordmark variant="stability" className="text-4xl" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-[hsl(var(--cad-text-primary))]">
-              WorkforceOS
-            </h1>
-            <p className="text-sm text-[hsl(var(--cad-text-secondary))] mt-2">
-              Complete Workforce Automation Platform
+            <p className="text-sm text-muted-foreground mt-2">
+              Autonomous Workforce Management Solutions
             </p>
           </div>
         </div>
