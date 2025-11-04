@@ -185,66 +185,21 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ROI Calculator Section - IMMEDIATE VALUE PROPOSITION */}
-      <section className="border-b bg-muted/30 py-12">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold mb-2">Potential Workforce Optimization</h2>
-              <p className="text-muted-foreground">Estimate how automation could impact your business</p>
-            </div>
-            
-            <Card className="p-8">
-              <div className="grid md:grid-cols-3 gap-8">
-                <div className="text-center space-y-2">
-                  <div className="text-5xl font-bold text-primary">5+</div>
-                  <div className="text-sm font-medium">HR Tasks Automated</div>
-                  <div className="text-xs text-muted-foreground">Scheduling, Payroll, Billing, Tracking, Reporting</div>
-                </div>
-                <div className="flex items-center justify-center">
-                  <ArrowRight className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="text-5xl font-bold text-green-500">$100k+*</div>
-                  <div className="text-sm font-medium">Potential Annual Value</div>
-                  <div className="text-xs text-muted-foreground">*Estimated labor cost reduction</div>
-                </div>
-              </div>
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground text-center">
-                  *Savings estimates are examples only and will vary based on your organization size, current processes, labor costs, and implementation. Actual results depend on individual circumstances. Not a guarantee of savings.
-                </p>
-              </div>
-              <div className="mt-6 text-center">
-                <Button
-                  size="lg"
-                  onClick={() => setLocation("/pricing")}
-                  data-testid="button-roi-calculator-pricing"
-                >
-                  View Pricing - Starts at $299/mo
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* Stats Bar - PLATFORM CAPABILITIES */}
       <section className="border-b py-12">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
             <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-bold text-primary">20+</div>
-              <div className="text-sm text-muted-foreground">Integrated Features</div>
-            </div>
-            <div className="space-y-2">
               <div className="text-4xl sm:text-5xl font-bold text-primary">8</div>
               <div className="text-sm text-muted-foreground">Core OS Modules</div>
             </div>
             <div className="space-y-2">
+              <div className="text-4xl sm:text-5xl font-bold text-primary">99.9%</div>
+              <div className="text-sm text-muted-foreground">Uptime SLA</div>
+            </div>
+            <div className="space-y-2">
               <div className="text-4xl sm:text-5xl font-bold text-primary">24/7</div>
-              <div className="text-sm text-muted-foreground">AI Chat Support</div>
+              <div className="text-sm text-muted-foreground">AI Support</div>
             </div>
           </div>
         </div>
@@ -591,61 +546,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ROI Section */}
-      <section className="border-y bg-muted/30 py-20">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Designed to Replace Up to 5 Full-Time Positions
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Potential annual savings by automating these roles
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-              {[
-                { role: "HR Manager", salary: "$65,000" },
-                { role: "Scheduler", salary: "$45,000" },
-                { role: "Payroll Specialist", salary: "$50,000" },
-                { role: "Billing Clerk", salary: "$40,000" },
-                { role: "Compliance Officer", salary: "$55,000" },
-              ].map((position) => (
-                <Card key={position.role} className="p-4 text-center">
-                  <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">
-                    {position.role}
-                  </div>
-                  <div className="text-xl font-bold text-primary">
-                    {position.salary}
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="text-5xl sm:text-6xl font-black text-green-600">
-                Up to $255,000<span className="text-2xl">/year</span>
-              </div>
-              <p className="text-muted-foreground">
-                Potential annual savings including salaries, benefits, and overhead costs*
-              </p>
-              <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
-                * Savings estimates based on average industry salaries. Actual savings will vary based on your organization's specific circumstances, location, and implementation. Not a guarantee of results.
-              </p>
-              <Button
-                size="lg"
-                onClick={() => setLocation("/pricing")}
-                className="mt-4"
-                data-testid="button-roi-pricing"
-              >
-                View Pricing Plans
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Pricing Preview */}
       <section className="py-20 sm:py-28">

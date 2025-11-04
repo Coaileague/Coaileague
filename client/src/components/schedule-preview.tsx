@@ -1,92 +1,121 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, MapPin } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Calendar, GripVertical, Sparkles } from "lucide-react";
 
 /**
- * ScheduleOS Preview Component
- * Shows a real representation of the WorkforceOS Schedule interface
- * NOT a generic placeholder - this is actual product UI
+ * ScheduleOS Preview Component - GetSling-Style Drag & Drop Grid
+ * Shows the modern drag-and-drop scheduling interface
+ * Showcases the actual product's advanced scheduling capabilities
  */
 export function SchedulePreview() {
-  // Sample schedule data representing real shifts
-  const scheduleData = [
-    { id: 1, employee: "Sarah M.", client: "Tech Corp", time: "9:00 AM - 5:00 PM", status: "confirmed", color: "bg-blue-500" },
-    { id: 2, employee: "John D.", client: "Retail Plus", time: "10:00 AM - 6:00 PM", status: "confirmed", color: "bg-green-500" },
-    { id: 3, employee: "Maria G.", client: "Healthcare Inc", time: "2:00 PM - 10:00 PM", status: "pending", color: "bg-amber-500" },
+  // Time slots for grid
+  const timeSlots = ["7 AM", "9 AM", "11 AM", "1 PM", "3 PM", "5 PM"];
+  
+  // Employees with shifts
+  const employees = [
+    { id: "e1", name: "Sarah M.", initials: "SM", color: "bg-blue-500" },
+    { id: "e2", name: "John D.", initials: "JD", color: "bg-green-500" },
+    { id: "e3", name: "Maria G.", initials: "MG", color: "bg-purple-500" },
   ];
 
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  // Shifts positioned in the grid (simplified for preview)
+  const shifts = [
+    { employeeId: "e1", timeSlot: "9 AM", status: "published", client: "Tech Corp", hours: "4h" },
+    { employeeId: "e1", timeSlot: "1 PM", status: "published", client: "Retail Co", hours: "4h" },
+    { employeeId: "e2", timeSlot: "7 AM", status: "draft", client: "Healthcare", hours: "8h" },
+    { employeeId: "e3", timeSlot: "3 PM", status: "published", client: "Finance Inc", hours: "6h" },
+  ];
   
+  const getStatusColor = (status: string) => {
+    return status === "published" ? "border-primary" : "border-amber-500 border-dashed animate-pulse";
+  };
+
   return (
-    <div className="w-full h-full bg-background rounded-lg overflow-hidden border shadow-xl">
-      {/* ScheduleOS Header - matches actual product */}
-      <div className="border-b bg-card/50 backdrop-blur-sm px-4 py-3 flex items-center justify-between">
+    <div className="w-full h-full bg-background rounded-lg overflow-hidden shadow-xl">
+      {/* Header - Modern ScheduleOS branding */}
+      <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-background px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
           <h3 className="font-bold text-sm">ScheduleOS™</h3>
-          <Badge variant="outline" className="text-xs">Week View</Badge>
+          <Badge variant="outline" className="text-xs px-2">
+            <Sparkles className="h-3 w-3 mr-1" />
+            Drag & Drop Grid
+          </Badge>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Users className="h-3 w-3" />
-          <span>{scheduleData.length} Shifts</span>
-        </div>
+        <Badge className="text-xs">Week: Dec 9-15</Badge>
       </div>
 
-      {/* Calendar Grid - showing real schedule interface */}
-      <div className="p-3">
-        {/* Week header */}
-        <div className="grid grid-cols-5 gap-2 mb-2">
-          {days.map((day, idx) => (
-            <div key={day} className="text-center py-2 rounded-md bg-muted/50 text-xs font-medium">
-              <div>{day}</div>
-              <div className="text-muted-foreground text-[10px]">Dec {10 + idx}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Shift cards - actual WorkforceOS shift representation */}
-        <div className="space-y-2 mt-3">
-          {scheduleData.map((shift) => (
-            <Card key={shift.id} className="p-3 hover-elevate cursor-pointer">
-              <div className="flex items-start gap-3">
-                <div className={`w-1 h-full rounded-full ${shift.color}`} />
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm truncate">{shift.employee}</span>
-                    <Badge 
-                      variant={shift.status === "confirmed" ? "default" : "secondary"}
-                      className="text-[10px] h-5"
-                    >
-                      {shift.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    <span className="truncate">{shift.client}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>{shift.time}</span>
-                  </div>
-                </div>
+      {/* Grid Container - GetSling-style interface */}
+      <div className="p-2 overflow-auto">
+        <div className="min-w-[500px]">
+          {/* Time header row */}
+          <div className="flex gap-1 mb-2">
+            <div className="w-24 flex-shrink-0" /> {/* Employee column spacer */}
+            {timeSlots.map((time) => (
+              <div key={time} className="flex-1 text-center text-[10px] font-medium text-muted-foreground py-1">
+                {time}
               </div>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Stats footer - showing real metrics */}
-        <div className="mt-4 pt-3 border-t grid grid-cols-3 gap-2 text-center">
+          {/* Employee rows with shift cards */}
           <div className="space-y-1">
-            <div className="text-lg font-bold text-primary">24</div>
-            <div className="text-[10px] text-muted-foreground">Total Shifts</div>
+            {employees.map((employee) => (
+              <div key={employee.id} className="flex gap-1">
+                {/* Employee header cell */}
+                <div className="w-24 flex-shrink-0 flex items-center gap-2 py-1 px-2 rounded bg-muted/30">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="text-[10px]">{employee.initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs font-medium truncate">{employee.name}</span>
+                </div>
+
+                {/* Time slot cells */}
+                {timeSlots.map((time) => {
+                  const shift = shifts.find(s => s.employeeId === employee.id && s.timeSlot === time);
+                  return (
+                    <div key={time} className="flex-1 min-h-[48px] p-0.5">
+                      {shift ? (
+                        <Card className={`h-full p-2 relative border-2 ${getStatusColor(shift.status)} hover-elevate cursor-grab active:cursor-grabbing transition-all`}>
+                          <div className="absolute top-0.5 left-0.5 text-muted-foreground/50">
+                            <GripVertical className="h-3 w-3" />
+                          </div>
+                          <div className="text-[10px] font-semibold truncate pl-3">{shift.client}</div>
+                          <div className="text-[9px] text-muted-foreground">{shift.hours}</div>
+                          <Badge 
+                            variant={shift.status === "published" ? "default" : "secondary"}
+                            className="absolute -top-1 -right-1 h-4 px-1 text-[8px]"
+                          >
+                            {shift.status === "published" ? "✓" : "!"}
+                          </Badge>
+                        </Card>
+                      ) : (
+                        <div className="h-full rounded border border-dashed border-muted-foreground/20 bg-muted/10 hover:bg-muted/30 hover:border-primary/40 transition-colors cursor-pointer" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
-          <div className="space-y-1">
-            <div className="text-lg font-bold text-green-500">18</div>
-            <div className="text-[10px] text-muted-foreground">Confirmed</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-lg font-bold text-amber-500">6</div>
-            <div className="text-[10px] text-muted-foreground">Pending</div>
+
+          {/* Stats footer */}
+          <div className="mt-3 pt-2 border-t flex items-center justify-around text-center">
+            <div className="space-y-0.5">
+              <div className="text-sm font-bold text-primary">24</div>
+              <div className="text-[9px] text-muted-foreground">Total Shifts</div>
+            </div>
+            <div className="h-6 w-px bg-border" />
+            <div className="space-y-0.5">
+              <div className="text-sm font-bold text-green-500">156h</div>
+              <div className="text-[9px] text-muted-foreground">Scheduled</div>
+            </div>
+            <div className="h-6 w-px bg-border" />
+            <div className="space-y-0.5">
+              <div className="text-sm font-bold text-blue-500">$4,280</div>
+              <div className="text-[9px] text-muted-foreground">Labor Cost</div>
+            </div>
           </div>
         </div>
       </div>

@@ -209,3 +209,29 @@ The platform features a CAD-style professional interface with a dark mode theme,
 - **Payment Processing**: Stripe Connect
 - **Email**: Resend
 - **AI**: OpenAI GPT-4
+
+### AI Token Billing Model (HelpOS™ & Smart Features)
+
+**Subscriber-Pays-All Architecture**: Organizations pay for their own AI usage, NOT the platform.
+
+**Implementation Details**:
+- **Model**: `gpt-4o-mini` (cost-efficient: $0.15/1M input tokens, $0.60/1M output tokens)
+- **Tracking**: `workspaceAiUsage` table logs all AI operations per workspace
+- **Billing**: Monthly billing cycles (`billingMonth` field in YYYY-MM format)
+- **Free Trial**: Free guests get 3 AI responses as trial, then must subscribe
+- **Cost Calculation**: 
+  - `promptCost` = (promptTokens / 1,000,000) × $0.15
+  - `completionCost` = (completionTokens / 1,000,000) × $0.60
+  - `totalCost` = promptCost + completionCost (in USD)
+
+**Features Using AI**:
+- **HelpOS™**: AI chat support assistant (24/7 automated assistance)
+- **ScheduleOS™**: AI-powered auto-scheduling (coming soon)
+- **ReportOS™**: Executive summary generation (GPT-4)
+
+**Database Schema**:
+- Table: `workspaceAiUsage`
+- Fields: `workspaceId`, `userId`, `model`, `promptTokens`, `completionTokens`, `totalTokens`, `promptCost`, `completionCost`, `totalCost`, `userTier`, `billingMonth`
+- Purpose: Monthly billing per workspace, organizations reimburse platform costs
+
+**Key Principle**: The platform is a pass-through for AI costs. Organizations authorized to use AI features pay their own token consumption costs, ensuring platform profitability without subsidizing AI usage.
