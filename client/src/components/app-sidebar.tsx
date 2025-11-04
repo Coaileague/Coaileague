@@ -131,10 +131,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
-      <SidebarHeader className="p-6 border-b border-white/[0.08]">
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-          <AutoForceLogo variant="full" size="sm" />
-        </div>
+      <SidebarHeader className="p-4 border-b border-white/[0.08]">
+        <AutoForceLogo variant="nav" size="md" />
       </SidebarHeader>
       
       <SidebarContent className="px-3 py-4">
@@ -233,12 +231,6 @@ export function AppSidebar() {
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Product updates</span>
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href="https://getsling.com/app" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer" data-testid="link-get-app">
-                <Download className="mr-2 h-4 w-4" />
-                <span>Get the Sling app</span>
-              </a>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/help" className="flex items-center cursor-pointer" data-testid="link-help">
