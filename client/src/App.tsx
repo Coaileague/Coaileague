@@ -33,6 +33,7 @@ import Support from "@/pages/support";
 import Dashboard from "@/pages/dashboard-compact";
 import { Redirect } from "wouter";
 import SmartScheduleOS from "@/pages/schedule-grid";
+import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
 import Clients from "@/pages/clients";
@@ -182,6 +183,7 @@ function AppContent() {
                 </Route>
                 <Route path="/dashboard" component={Dashboard} />
                 <Route path="/schedule" component={SmartScheduleOS} />
+                <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
                 <Route path="/employees" component={Employees} />
                 <Route path="/engagement/dashboard" component={EngagementDashboard} />

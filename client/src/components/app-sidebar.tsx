@@ -45,6 +45,7 @@ const operationsFamilyItems = [
 // FAMILY 3: Growth & Intelligence OS
 const growthFamilyItems = [
   { title: "🚀 Growth Family", url: "/os-family/growth", icon: Sparkles, isFamily: true },
+  { title: "DealOS™ Sales", url: "/sales", icon: Target },
   { title: "TalentOS™", url: "/leaders-hub", icon: UserCog },
   { title: "EngagementOS™", url: "/engagement/dashboard", icon: Activity },
   { title: "AnalyticsOS™", url: "/analytics", icon: BarChart3 },

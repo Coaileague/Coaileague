@@ -123,6 +123,18 @@ import {
   knowledgeQueries,
   capacityAlerts,
   autoReports,
+  // Sales MVP: DealOS™ + BidOS™
+  deals,
+  rfps,
+  leads,
+  proposals,
+  contacts,
+  emailSequences,
+  sequenceSends,
+  dealTasks,
+  insertDealSchema,
+  insertRfpSchema,
+  insertLeadSchema,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, lte, gte, desc, inArray, ne } from "drizzle-orm";
@@ -13723,6 +13735,121 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  // ==========================================
+  // SALES MVP: DealOS™ + BidOS™ Routes
+  // ==========================================
+
+  // GET /api/sales/deals - Fetch all deals
+  app.get("/api/sales/deals", requireAuth, async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      const allDeals = await db.query.deals.findMany({
+        where: (deals, { eq }) => eq(deals.workspaceId, workspaceId!),
+        orderBy: (deals, { desc }) => [desc(deals.createdAt)],
+      });
+      res.json(allDeals);
+    } catch (error) {
+      console.error("Error fetching deals:", error);
+      res.status(500).json({ message: "Failed to fetch deals" });
+    }
+  });
+
+  // POST /api/sales/deals - Create new deal (RBAC: Manager+ only)
+  app.post("/api/sales/deals", requireManager, async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      
+      // Validate request body with Zod
+      const validatedData = insertDealSchema.parse(req.body);
+      
+      const newDeal = await db.insert(deals).values({
+        ...validatedData,
+        workspaceId,
+      }).returning();
+      res.json(newDeal[0]);
+    } catch (error) {
+      console.error("Error creating deal:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid deal data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create deal" });
+    }
+  });
+
+  // GET /api/sales/rfps - Fetch all RFPs
+  app.get("/api/sales/rfps", requireAuth, async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      const allRfps = await db.query.rfps.findMany({
+        where: (rfps, { eq }) => eq(rfps.workspaceId, workspaceId!),
+        orderBy: (rfps, { desc }) => [desc(rfps.createdAt)],
+      });
+      res.json(allRfps);
+    } catch (error) {
+      console.error("Error fetching RFPs:", error);
+      res.status(500).json({ message: "Failed to fetch RFPs" });
+    }
+  });
+
+  // POST /api/sales/rfps - Create new RFP (RBAC: Manager+ only)
+  app.post("/api/sales/rfps", requireManager, async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      
+      // Validate request body with Zod
+      const validatedData = insertRfpSchema.parse(req.body);
+      
+      const newRfp = await db.insert(rfps).values({
+        ...validatedData,
+        workspaceId,
+      }).returning();
+      res.json(newRfp[0]);
+    } catch (error) {
+      console.error("Error creating RFP:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid RFP data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create RFP" });
+    }
+  });
+
+  // GET /api/sales/leads - Fetch all leads
+  app.get("/api/sales/leads", requireAuth, async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      const allLeads = await db.query.leads.findMany({
+        where: (leads, { eq }) => eq(leads.workspaceId, workspaceId!),
+        orderBy: (leads, { desc }) => [desc(leads.createdAt)],
+      });
+      res.json(allLeads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  // POST /api/sales/leads - Create new lead (RBAC: Manager+ only)
+  app.post("/api/sales/leads", requireManager, async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      
+      // Validate request body with Zod
+      const validatedData = insertLeadSchema.parse(req.body);
+      
+      const newLead = await db.insert(leads).values({
+        ...validatedData,
+        workspaceId,
+      }).returning();
+      res.json(newLead[0]);
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid lead data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create lead" });
     }
   });
 
