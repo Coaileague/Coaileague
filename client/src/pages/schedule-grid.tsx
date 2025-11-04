@@ -39,7 +39,9 @@ import {
   Users,
   Sparkles,
   GripVertical,
+  UserPlus,
 } from "lucide-react";
+import { EnhancedEmptyState } from "@/components/enhanced-empty-state";
 import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
 
@@ -267,48 +269,47 @@ function PlaceholderEmployeeColumn({ onCreateShift, onAddEmployee }: {
 }) {
   return (
     <div className="flex-1 min-w-[200px] sm:min-w-[250px]">
-      {/* Placeholder header */}
-      <div className="sticky top-0 z-10 bg-muted/20 border-b p-3 space-y-2">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Users className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold">No Employees Yet</div>
-            <div className="text-xs text-muted-foreground mb-2">
-              Add employees to schedule shifts
-            </div>
-            <Button 
-              size="sm" 
-              onClick={onAddEmployee}
-              data-testid="button-add-first-employee"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add Employee
-            </Button>
-          </div>
-        </div>
+      {/* Enhanced empty state header */}
+      <div className="sticky top-0 z-10 bg-gradient-to-b from-background via-muted/10 to-transparent border-b p-4">
+        <EnhancedEmptyState 
+          icon={UserPlus}
+          title="Build Your Team"
+          description="Start scheduling by adding your first team member"
+          actionLabel="Add Employee"
+          onAction={onAddEmployee}
+          testId="button-add-first-employee"
+          variant="emerald"
+        />
       </div>
 
-      {/* Clickable time grid */}
+      {/* Clickable time grid with visual enhancements */}
       <div className="relative">
-        {TIME_SLOTS.map((slot) => (
+        {TIME_SLOTS.map((slot, index) => (
           <div
             key={`placeholder-${slot.hour}`}
             onClick={() => onCreateShift && onCreateShift('open', slot.hour, new Date())}
             className={`
-              min-h-[80px] border-b border-r p-2 relative group cursor-pointer
-              ${slot.hour % 2 === 0 ? 'bg-muted/5' : 'bg-background'}
-              hover-elevate transition-all
+              min-h-[80px] border-b border-r p-2 relative group cursor-pointer transition-all
+              ${slot.hour % 2 === 0 ? 'bg-gradient-to-r from-muted/5 to-transparent' : 'bg-background'}
+              hover:bg-emerald-500/5 hover:border-emerald-500/30
             `}
             data-testid={`placeholder-slot-${slot.hour}`}
           >
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="bg-primary/20 backdrop-blur-sm border border-primary/30 rounded-lg px-3 py-2 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-primary" />
-                <span className="text-xs font-medium text-primary">Create Open Shift</span>
+            {/* Animated hover overlay */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+              <div className="bg-gradient-to-r from-emerald-500/20 to-primary/20 backdrop-blur-sm border border-emerald-500/40 rounded-xl px-4 py-3 flex items-center gap-2 shadow-lg transform scale-95 group-hover:scale-100 transition-transform">
+                <div className="p-1 bg-emerald-500/30 rounded-lg">
+                  <Plus className="h-4 w-4 text-emerald-400" strokeWidth={2.5} />
+                </div>
+                <span className="text-sm font-semibold text-emerald-400">Add Open Shift</span>
+                <Sparkles className="h-3 w-3 text-emerald-300 animate-pulse" />
               </div>
             </div>
+
+            {/* Decorative gradient line */}
+            {index === 0 && (
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+            )}
           </div>
         ))}
       </div>
@@ -362,8 +363,27 @@ function OpenShiftsColumn({ shifts, date, onShiftClick, clients }: {
           </div>
         ))}
         {openShifts.length === 0 && (
-          <div className="text-center text-sm text-muted-foreground py-8">
-            No open shifts
+          <div className="py-8 px-4">
+            <div className="relative w-20 h-20 mx-auto mb-4">
+              {/* Gradient circle with glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-purple-400/10 to-transparent rounded-full animate-pulse" />
+              <div className="absolute inset-0 rounded-full blur-lg bg-purple-500/20 shadow-2xl" />
+              
+              {/* Icon */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="p-4 rounded-xl bg-purple-500/20 backdrop-blur-sm border border-white/10 shadow-lg">
+                  <Users className="h-8 w-8 text-purple-400 drop-shadow-lg" strokeWidth={1.5} />
+                </div>
+              </div>
+              
+              {/* Decorative ring */}
+              <div className="absolute inset-0 rounded-full border-2 border-purple-500/20 border-dashed animate-spin" style={{ animationDuration: '20s' }} />
+            </div>
+            
+            <div className="text-center space-y-1">
+              <p className="text-sm font-semibold">All Shifts Assigned</p>
+              <p className="text-xs text-muted-foreground">No unassigned shifts at the moment</p>
+            </div>
           </div>
         )}
       </div>
