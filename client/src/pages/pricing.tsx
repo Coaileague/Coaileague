@@ -307,6 +307,40 @@ export default function Pricing() {
                 </div>
               </div>
             </div>
+
+            {/* AI Features & Token Usage */}
+            <div className="mt-4 p-6 bg-purple-500/5 border border-purple-500/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-white">AI Features & Token Usage</h3>
+                  <p className="text-sm text-slate-400">
+                    AI-powered features (HelpOS™ Support Bot, TrainingOS™ AI, Smart RFP Analysis, Platform Healing) operate on a <strong className="text-purple-400">customer-pays usage model</strong> to ensure fair pricing as we scale.
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-purple-400">HelpOS™ Support Bot</div>
+                      <div className="text-xs text-slate-400">$0.002 per message • ~$0.50 avg per session</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-purple-400">TrainingOS™ AI Tutor</div>
+                      <div className="text-xs text-slate-400">$0.003 per interaction • ~$2 avg per course</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-purple-400">Smart RFP Analysis</div>
+                      <div className="text-xs text-slate-400">$0.10 per RFP document analyzed</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-purple-400">Platform Healing AI</div>
+                      <div className="text-xs text-slate-400">$0.005 per diagnostic session</div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 pt-2 border-t border-purple-500/10">
+                    <strong>Example:</strong> Professional plan with 50 employees using AI features moderately: Base $999/mo + ~$25/mo AI usage = $1,024/mo total (still saving $100k+/year vs. traditional staffing).
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -339,8 +373,12 @@ export default function Pricing() {
                 a: "All major credit cards, ACH transfers, and wire transfers. Enterprise plans can be invoiced quarterly or annually with custom payment terms.",
               },
               {
+                q: "How does AI feature billing work?",
+                a: "AI-powered features (HelpOS™, TrainingOS™, RFP Analysis, Platform Healing) use a customer-pays usage model where you only pay for what you use. Typical costs are very low: $0.002-$0.10 per interaction. Most businesses see $10-$50/month in AI usage, still providing 10-20x ROI compared to traditional solutions. Detailed usage appears on your monthly invoice.",
+              },
+              {
                 q: "What if I need custom features?",
-                a: "Enterprise plans include API access, webhooks, and custom integration assistance. Our team can help you connect WorkforceOS to your existing tools and workflows. Future roadmap includes custom feature development and white-label options—contact sales to discuss.",
+                a: "Enterprise plans include API access, webhooks, and custom integration assistance. Our team can help you connect AutoForce™ to your existing tools and workflows. Future roadmap includes custom feature development and white-label options—contact sales to discuss.",
               },
             ].map((faq) => (
               <div

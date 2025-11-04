@@ -958,34 +958,33 @@ export default function ModernMobileChat() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      {/* Header with User Profile Card */}
-      <div className="relative z-10 backdrop-blur-xl bg-transparent border-b border-white/10 px-4 py-3">
+      {/* Header with User Profile Card - Reduced height for more chat space */}
+      <div className="relative z-10 backdrop-blur-xl bg-transparent border-b border-white/10 px-3 py-2">
         {selectedUser && isStaff ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-xl">{selectedUser.name.charAt(0)}</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-base">{selectedUser.name.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-white font-bold text-lg truncate">{selectedUser.name}</h2>
-                <p className="text-slate-400 text-xs truncate">
-                  {selectedUser.role === 'bot' ? 'Platform AI Bot' : 'WorkforceOS User'}
+                <h2 className="text-white font-bold text-sm truncate">{selectedUser.name}</h2>
+                <p className="text-slate-400 text-[10px] truncate">
+                  {selectedUser.role === 'bot' ? 'Platform AI Bot' : 'AutoForce™ User'}
                 </p>
-                <p className="text-slate-500 text-xs truncate">Click diagnostics for details</p>
               </div>
               {selectedUser && (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs flex-shrink-0 px-2 py-1 font-bold">
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px] flex-shrink-0 px-1.5 py-0.5 font-bold">
                   URGENT
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-400">
+            <div className="flex items-center gap-2 text-[10px] text-slate-400">
               <div className="flex items-center gap-1">
-                <Clock size={12} />
+                <Clock size={10} />
                 <span>Session: {Math.floor((Date.now() - new Date().getTime()) / 60000) || 5}:23</span>
               </div>
               <div className="flex items-center gap-1">
-                <Circle className={`w-2 h-2 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
                 <span className={isConnected ? 'text-emerald-400' : 'text-red-400'}>
                   {isConnected ? 'Connected' : 'Disconnected'}
                 </span>
@@ -993,23 +992,23 @@ export default function ModernMobileChat() {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 p-[2px]">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center">
-                  <WFLogoCompact size={20} />
+                  <WFLogoCompact size={16} />
                 </div>
               </div>
-              <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${
+              <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
                 helpDeskRoom?.status === 'open' ? 'bg-emerald-500' : 'bg-red-500'
               }`}></div>
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-white font-bold text-xs sm:text-sm break-words">WorkforceOS Support</h2>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Users size={12} />
+              <h2 className="text-white font-bold text-sm break-words">Help Desk</h2>
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                <Users size={10} />
                 <span>{onlineUsers.length} online</span>
-                <Circle className={`w-2 h-2 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
               </div>
             </div>
           </div>
@@ -1068,7 +1067,7 @@ export default function ModernMobileChat() {
                   msg.senderType === 'support' ? 'text-indigo-400' :
                   'text-white'
                 }`}>
-                  {msg.senderType === 'bot' ? 'HelpOS' : msg.senderName?.split('(')[0].trim()}
+                  {msg.senderType === 'bot' ? 'HelpOS AI Bot' : msg.senderName?.split('(')[0].trim()}
                   {/* Role badge as superscript - attached inline like 10² */}
                   {(roleDisplay || (msg.senderId === userId && userPlatformRole)) && (
                     <sup className={`text-[8px] font-normal ${

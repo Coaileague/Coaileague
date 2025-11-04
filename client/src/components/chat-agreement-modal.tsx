@@ -167,31 +167,31 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-xl shadow-2xl shadow-indigo-500/20 w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header - Compact for mobile */}
-        <div className="p-3 sm:p-4 border-b border-white/10 bg-black/40">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg">
-              <AutoForceLogo className="h-5 w-5 sm:h-6 sm:w-6" variant="icon" />
+        <div className="p-2 sm:p-3 border-b border-white/10 bg-black/40 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg">
+              <AutoForceLogo className="h-4 w-4 sm:h-5 sm:w-5" variant="icon" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-base sm:text-lg font-bold text-white truncate">Terms & Conditions</h2>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">Required for {roomName} access</p>
+              <h2 className="text-sm sm:text-base font-bold text-white truncate">Terms & Conditions</h2>
+              <p className="text-[9px] sm:text-[10px] text-slate-400 truncate">Required for {roomName} access</p>
             </div>
           </div>
         </div>
 
-        {/* Scrollable Content Area - Optimized for mobile */}
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full px-3 sm:px-4 py-2 sm:py-3">
-            <div className="prose prose-invert prose-sm max-w-none">
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-2 sm:p-3 mb-3 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+        {/* Scrollable Content Area - Much larger for mobile readability */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <ScrollArea className="h-full">
+            <div className="px-3 sm:px-4 py-2 sm:py-3">
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-2 mb-3 flex items-start gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-amber-400 font-semibold text-xs sm:text-sm mb-0.5">Legal Document</p>
-                  <p className="text-slate-300 text-[10px] sm:text-xs">Scroll to read all terms</p>
+                  <p className="text-amber-400 font-semibold text-[10px] sm:text-xs mb-0.5">Legal Document</p>
+                  <p className="text-slate-300 text-[9px] sm:text-[10px]">Scroll to read all terms</p>
                 </div>
               </div>
               
-              <pre className="whitespace-pre-wrap text-slate-300 text-[10px] sm:text-xs leading-relaxed font-sans">
+              <pre className="whitespace-pre-wrap text-slate-300 text-[9px] sm:text-[10px] leading-relaxed font-sans">
                 {agreementText}
               </pre>
             </div>
@@ -199,11 +199,11 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
         </div>
 
         {/* Footer - Compact Agreement Form */}
-        <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t border-white/10 bg-black/40 space-y-2 sm:space-y-3">
+        <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t border-white/10 bg-black/40 space-y-1.5 sm:space-y-2 shrink-0">
           {/* Signature Input - Compact */}
-          <div className="space-y-1">
-            <Label htmlFor="fullName" className="text-white text-xs sm:text-sm flex items-center gap-1.5">
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400" />
+          <div className="space-y-0.5">
+            <Label htmlFor="fullName" className="text-white text-[10px] sm:text-xs flex items-center gap-1">
+              <FileText className="w-3 h-3 text-indigo-400" />
               <span className="truncate">Electronic Signature</span>
             </Label>
             <Input
@@ -212,7 +212,7 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Your full name"
-              className="bg-white/5 border-white/20 text-white placeholder:text-slate-500 h-9 text-sm"
+              className="bg-white/5 border-white/20 text-white placeholder:text-slate-500 h-8 text-xs"
               required
               disabled={isSubmitting}
               data-testid="input-agreement-signature"
@@ -220,46 +220,46 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
           </div>
 
           {/* Checkbox Agreement - Compact */}
-          <div className="flex items-start gap-2 p-2 sm:p-2.5 bg-white/5 rounded-lg border border-white/10">
+          <div className="flex items-start gap-1.5 p-1.5 sm:p-2 bg-white/5 rounded-lg border border-white/10">
             <Checkbox
               id="terms"
               checked={agreedToTerms}
               onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-              className="mt-0.5"
+              className="mt-0.5 shrink-0"
               disabled={isSubmitting}
               data-testid="checkbox-agreement-terms"
             />
             <Label 
               htmlFor="terms" 
-              className="text-[10px] sm:text-xs text-slate-300 leading-tight cursor-pointer"
+              className="text-[9px] sm:text-[10px] text-slate-300 leading-tight cursor-pointer"
             >
               I agree to be legally bound by these Terms & Conditions. I acknowledge my chat will be recorded and my signature is legally binding.
             </Label>
           </div>
 
           {/* Action Buttons - Mobile optimized */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => window.history.back()}
-              className="border-white/20 text-slate-300 hover:bg-white/10 h-10 text-sm"
+              className="border-white/20 text-slate-300 hover:bg-white/10 h-8 sm:h-9 text-[10px] sm:text-xs px-2 sm:px-3"
               data-testid="button-agreement-decline"
             >
-              Decline & Exit
+              Decline
             </Button>
             <Button
               type="submit"
               disabled={!agreedToTerms || !fullName.trim() || isSubmitting}
-              className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-semibold h-10 text-sm"
+              className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-semibold h-8 sm:h-9 text-[10px] sm:text-xs"
               data-testid="button-agreement-submit"
             >
-              <Shield className="w-3.5 h-3.5 mr-1.5" />
-              {isSubmitting ? "Submitting..." : "I Agree - Enter Chat"}
+              <Shield className="w-3 h-3 mr-1" />
+              {isSubmitting ? "Submitting..." : "I Agree"}
             </Button>
           </div>
 
-          <p className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">
+          <p className="text-[8px] sm:text-[9px] text-slate-500 text-center leading-tight">
             Your acceptance is recorded with timestamp and IP address
           </p>
         </form>

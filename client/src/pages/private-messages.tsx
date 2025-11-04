@@ -317,10 +317,10 @@ export default function PrivateMessages() {
       {/* Chat Area */}
       <div className="flex-1 flex flex-col bg-background">
         {!selectedConversation ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-            <Lock className="h-16 w-16 mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
-            <p className="text-sm">Choose a private chat or start a new one</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground px-4">
+            <Lock className="h-12 sm:h-16 w-12 sm:w-16 mb-4 opacity-50" />
+            <h3 className="text-base sm:text-lg font-medium mb-2 text-center">Select a conversation</h3>
+            <p className="text-xs sm:text-sm text-center">Choose a private chat or start a new one</p>
           </div>
         ) : (
           <>

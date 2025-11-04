@@ -442,19 +442,19 @@ export default function Support() {
       {/* Footer */}
       <footer className="border-t border-[hsl(var(--cad-border))] bg-[hsl(var(--cad-chrome))]">
         <div className="container mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-[hsl(var(--cad-text-tertiary))]">
               <AutoForceLogo size="sm" variant="icon" />
-              <span>© 2025 WorkforceOS. Elite-grade workforce automation.</span>
+              <span className="whitespace-nowrap">© 2025 AutoForce™</span>
             </div>
-            <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
-              <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-contact">
+            <div className="flex gap-3 sm:gap-6 text-xs text-[hsl(var(--cad-text-tertiary))] flex-wrap">
+              <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))] whitespace-nowrap" data-testid="link-contact">
                 Contact Us
               </a>
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
+              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))] whitespace-nowrap">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
+              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))] whitespace-nowrap">
                 Terms
               </a>
             </div>
