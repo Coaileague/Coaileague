@@ -25,21 +25,27 @@ WorkforceOS is a comprehensive workforce management operating system designed to
 - ✅ **Seed Script Updated**: Future deployments will use new credentials
 - ⚠️ **SECURITY NOTICE**: These are temporary credentials - MUST be changed before production launch!
 
-### November 4, 2025 - Database Schema Synchronization & Visual Enhancements
+### November 4, 2025 - ScheduleOS Multi-Day Grid Refactor
 
-**Critical Database Schema Fixes:**
-- ✅ **Missing Columns Added**: Fixed cascading query failures by adding missing workspace columns:
-  - `feature_supportos_enabled` (boolean, default true)
-  - `feature_communicationos_enabled` (boolean, default true)
-  - `billing_override_type` (varchar)
-  - `billing_override_discount_percent` (integer)
-  - `billing_override_custom_price` (decimal 10,2)
-  - `billing_override_reason` (text)
-  - `billing_override_applied_by` (varchar)
-  - `billing_override_applied_at` (timestamp)
-  - `billing_override_expires_at` (timestamp)
-- ✅ **Root Cause**: Schema drift between Drizzle definitions and actual database structure caused ALL queries to fail
-- ✅ **Impact**: Fixed shift creation, employee management, client queries, and workspace operations
+**Major UI Overhaul - Sling-Style Weekly/Bi-Weekly View:**
+- ✅ **Complete Grid Redesign**: Changed from single-day vertical layout to Sling-style multi-day horizontal grid
+  - Employees now displayed as rows (not columns)
+  - Days shown as columns across the top (7 for week, 14 for bi-week)
+  - Each cell = employee × day with shifts displayed as cards
+- ✅ **View Mode Selector**: Added Week/2 Weeks toggle buttons in header
+- ✅ **Dynamic Day Headers**: Shows SUN-SAT with dates, highlights current day with emerald accent
+- ✅ **Improved Navigation**: Prev/Next buttons advance by 7 or 14 days based on view mode
+- ✅ **Open Shifts Section**: Bottom row shows unassigned shifts organized by day across all visible dates
+- ✅ **Mobile Optimized**: Sticky employee column, horizontal scroll for day columns, responsive headers
+- ✅ **Drag & Drop Enhanced**: Works across all days and employees, preserves shift times when moving between days
+
+**Database Schema Synchronization Complete:**
+- ✅ **19 Missing Columns Added**: Fixed all schema drift issues
+  - **Workspaces** (14 columns): feature_supportos_enabled, feature_communicationos_enabled, billing_override_type, billing_override_discount_percent, billing_override_custom_price, billing_override_reason, billing_override_applied_by, billing_override_applied_at, billing_override_expires_at, admin_notes, admin_flags, last_admin_action, last_admin_action_by, last_admin_action_at
+  - **Shifts** (4 columns): ai_generated, requires_acknowledgment, acknowledged_at, denied_at
+  - **Clients** (2 columns): latitude, longitude
+- ✅ **Root Cause**: Schema drift between Drizzle definitions and actual database structure
+- ✅ **Impact**: Fixed ALL API endpoints (shifts, employees, clients, workspaces) - no more 500 errors
 
 **Visual Design Overhaul - "More Graphic Detailed Images":**
 - ✅ **New Component**: Created `EnhancedEmptyState` component replacing boring single-icon placeholders
