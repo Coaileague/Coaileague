@@ -93,6 +93,18 @@ export default function DashboardCompact() {
     return sum + (hours * rate);
   }, 0);
 
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  // Count active time entries (clocked in)
+  const activeTimeEntries = timeEntries?.filter((entry: any) => entry.status === 'active') || [];
+  const clockedInCount = activeTimeEntries.length;
+
   // Stat cards - Sling style
   const statCards = [
     {
@@ -197,7 +209,37 @@ export default function DashboardCompact() {
 
   const dashboardContent = (
     <div className="min-h-screen bg-background">
-      {/* Quick Access Menu - Desktop only (redundant on mobile with bottom nav) */}
+      {/* Mobile: Greeting Section - Sling style */}
+      <div className="md:hidden bg-gradient-to-br from-primary/90 to-primary text-white px-5 py-6">
+        <h1 className="text-xl font-semibold mb-1" data-testid="greeting-message">
+          {getGreeting()} {firstName}
+        </h1>
+        <p className="text-sm opacity-90">
+          You have no unread notifications
+        </p>
+      </div>
+
+      {/* Mobile: Quick Status Card */}
+      {isMobile && (
+        <div className="bg-primary/10 border-l-4 border-primary mx-4 my-4 p-4 rounded-r-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/20 rounded-full">
+              <Calendar className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {clockedInCount > 0 
+                  ? `${clockedInCount} ${clockedInCount === 1 ? 'person' : 'people'} currently clocked in`
+                  : (stats as any)?.upcomingShifts > 0 
+                    ? `You have ${(stats as any)?.upcomingShifts} shifts scheduled` 
+                    : "You don't have any shifts scheduled"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop: Quick Access Menu */}
       <div className="hidden md:block border-b bg-muted/30 px-4 sm:px-6 py-4 sm:py-5">
         <div className="flex items-center gap-2 mb-3 sm:mb-4">
           <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
@@ -221,8 +263,8 @@ export default function DashboardCompact() {
         </div>
       </div>
 
-      {/* Sling-style Stat Cards - More spacious on mobile */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 sm:gap-px bg-border p-1 sm:p-0">
+      {/* Desktop Only: Stat Cards Grid */}
+      <div className="hidden md:grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 sm:gap-px bg-border p-1 sm:p-0">
         {statCards.map((stat, index) => (
           <Link key={index} href={stat.link} className="block touch-target">
             <Card className="rounded-lg sm:rounded-none border sm:border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
@@ -240,71 +282,106 @@ export default function DashboardCompact() {
         ))}
       </div>
 
-      {/* Blue Banner (No shifts scheduled) - More padding on mobile */}
-      {workspaceRole !== 'employee' && (
-        <div className="bg-blue-600 text-white px-5 sm:px-4 py-4 sm:py-4 flex items-center gap-3 sm:gap-3 mt-1 sm:mt-0">
-          <Square className="h-5 w-5 sm:h-5 sm:w-5 shrink-0" />
-          <p className="text-sm sm:text-sm font-medium break-anywhere">
-            {(stats as any)?.upcomingShifts > 0 
-              ? `You have ${(stats as any)?.upcomingShifts} shifts scheduled` 
-              : "You don't have any shifts scheduled"}
-          </p>
+      {/* Mobile: Today's Roster Quick Link */}
+      {isMobile && (
+        <div className="px-4 mb-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-between text-primary hover:bg-primary/10 h-12"
+            asChild
+          >
+            <Link href="/schedule">
+              <span className="font-medium">Today's roster</span>
+              <span className="text-xl">&gt;</span>
+            </Link>
+          </Button>
         </div>
       )}
 
-      {/* Notifications & Roster Tabs - Better mobile spacing */}
-      <div className="mobile-container px-4 sm:px-4 py-5 sm:py-4">
-        <Tabs defaultValue="notifications" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 touch-target h-12 sm:h-10">
-            <TabsTrigger value="notifications" className="text-sm sm:text-sm" data-testid="tab-notifications">
-              NOTIFICATIONS
-            </TabsTrigger>
-            <TabsTrigger value="roster" className="text-sm sm:text-sm" data-testid="tab-roster">
-              ROSTER
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="notifications" className="space-y-3 sm:space-y-3 mt-4 sm:mt-4">
-            {notifications.map((notif, index) => (
-              <Card key={index} className="hover-elevate touch-friendly" data-testid={`notification-${index}`}>
-                <CardContent className="p-4 sm:p-4">
-                  <div className="flex items-start gap-3 sm:gap-3">
-                    <div className={`p-2 sm:p-2 rounded-full bg-muted ${notif.color} shrink-0`}>
-                      <notif.icon className="h-5 w-5 sm:h-5 sm:w-5" />
+      {/* Activity Feed / Notifications - Cleaner mobile formatting */}
+      <div className="mobile-container px-4 sm:px-4 py-2 sm:py-4">
+        {/* Mobile: Simple title instead of tabs */}
+        {isMobile ? (
+          <>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Activity Feed</h2>
+            <div className="space-y-2">
+              {notifications.map((notif, index) => (
+                <div 
+                  key={index} 
+                  className="bg-card border rounded-lg p-4 hover-elevate touch-friendly"
+                  data-testid={`notification-${index}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2.5 rounded-full bg-muted/50 ${notif.color} shrink-0`}>
+                      <notif.icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm sm:text-sm break-anywhere leading-relaxed">{notif.message}</p>
+                      <p className="text-sm leading-relaxed">{notif.message}</p>
                       {notif.time && (
-                        <p className="text-xs sm:text-xs text-muted-foreground mt-1 sm:mt-1">
-                          {notif.time.toLocaleString()}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {notif.time.toLocaleDateString()} • {notif.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       )}
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          /* Desktop: Keep tabs */
+          <Tabs defaultValue="notifications" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2 touch-target h-12 sm:h-10">
+              <TabsTrigger value="notifications" className="text-sm sm:text-sm" data-testid="tab-notifications">
+                NOTIFICATIONS
+              </TabsTrigger>
+              <TabsTrigger value="roster" className="text-sm sm:text-sm" data-testid="tab-roster">
+                ROSTER
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="notifications" className="space-y-3 sm:space-y-3 mt-4 sm:mt-4">
+              {notifications.map((notif, index) => (
+                <Card key={index} className="hover-elevate touch-friendly" data-testid={`notification-${index}`}>
+                  <CardContent className="p-4 sm:p-4">
+                    <div className="flex items-start gap-3 sm:gap-3">
+                      <div className={`p-2 sm:p-2 rounded-full bg-muted ${notif.color} shrink-0`}>
+                        <notif.icon className="h-5 w-5 sm:h-5 sm:w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-sm break-anywhere leading-relaxed">{notif.message}</p>
+                        {notif.time && (
+                          <p className="text-xs sm:text-xs text-muted-foreground mt-1 sm:mt-1">
+                            {notif.time.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </TabsContent>
+
+            <TabsContent value="roster" className="space-y-3 mt-4">
+              <Card>
+                <CardContent className="p-8 sm:p-6 text-center">
+                  <Users className="h-14 w-14 sm:h-12 sm:w-12 mx-auto mb-4 sm:mb-3 text-muted-foreground" />
+                  <p className="text-sm sm:text-sm text-muted-foreground mb-4 sm:mb-4">
+                    Employee roster view coming soon
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
+                    onClick={() => setLocation("/employees")}
+                    data-testid="button-view-employees"
+                  >
+                    View All Employees
+                  </Button>
                 </CardContent>
               </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="roster" className="space-y-3 mt-4">
-            <Card>
-              <CardContent className="p-8 sm:p-6 text-center">
-                <Users className="h-14 w-14 sm:h-12 sm:w-12 mx-auto mb-4 sm:mb-3 text-muted-foreground" />
-                <p className="text-sm sm:text-sm text-muted-foreground mb-4 sm:mb-4">
-                  Employee roster view coming soon
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
-                  onClick={() => setLocation("/employees")}
-                  data-testid="button-view-employees"
-                >
-                  View All Employees
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );
