@@ -752,18 +752,19 @@ export default function ScheduleGrid() {
       
       {/* Bar 1: Top Navigation Tabs */}
       <div className="border-b bg-muted/30">
-        <div className="flex items-center justify-between px-4 py-2 overflow-x-auto">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 mobile-scroll gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-xs whitespace-nowrap bg-muted" 
+                  className="text-[10px] sm:text-xs whitespace-nowrap bg-muted min-h-[44px] min-w-[44px] px-2 sm:px-3" 
                   data-testid="tab-all-schedule"
+                  aria-label="All Schedule"
                 >
-                  <LayoutGrid className="h-3 w-3 mr-1" />
-                  ALL SCHEDULE
+                  <LayoutGrid className="h-3 w-3 sm:mr-1 shrink-0" />
+                  <span className="hidden sm:inline">ALL SCHEDULE</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>View all employee schedules</TooltipContent>
@@ -774,12 +775,13 @@ export default function ScheduleGrid() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-xs whitespace-nowrap" 
+                  className="text-[10px] sm:text-xs whitespace-nowrap min-h-[44px] min-w-[44px] px-2 sm:px-3" 
                   onClick={() => toast({ title: "Coming Soon", description: "My Schedule view is under development" })}
                   data-testid="tab-my-schedule"
+                  aria-label="My Schedule"
                 >
-                  <User className="h-3 w-3 mr-1" />
-                  MY SCHEDULE
+                  <User className="h-3 w-3 sm:mr-1 shrink-0" />
+                  <span className="hidden sm:inline">MY SCHEDULE</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>View only your shifts</TooltipContent>
@@ -790,12 +792,13 @@ export default function ScheduleGrid() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-xs whitespace-nowrap" 
+                  className="text-[10px] sm:text-xs whitespace-nowrap min-h-[44px] min-w-[44px] px-2 sm:px-3" 
                   onClick={() => setLocation("/schedule")}
                   data-testid="tab-grid-view"
+                  aria-label="Grid View"
                 >
-                  <ListChecks className="h-3 w-3 mr-1" />
-                  GRID VIEW
+                  <ListChecks className="h-3 w-3 sm:mr-1 shrink-0" />
+                  <span className="hidden sm:inline">GRID VIEW</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Switch to grid view</TooltipContent>
@@ -806,12 +809,13 @@ export default function ScheduleGrid() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-xs whitespace-nowrap" 
+                  className="text-[10px] sm:text-xs whitespace-nowrap min-h-[44px] min-w-[44px] px-2 sm:px-3" 
                   onClick={() => setLocation("/time-tracking")}
                   data-testid="tab-time-clock"
+                  aria-label="Time Clock"
                 >
-                  <Clock className="h-3 w-3 mr-1" />
-                  TIME CLOCK
+                  <Clock className="h-3 w-3 sm:mr-1 shrink-0" />
+                  <span className="hidden sm:inline">TIME CLOCK</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Track employee time & generate payroll reports</TooltipContent>
@@ -819,18 +823,19 @@ export default function ScheduleGrid() {
           </div>
 
           {/* Navigation & Help */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link href="/dashboard">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-7 text-xs"
+                    className="min-h-[44px] min-w-[44px] text-[10px] sm:text-xs px-2 sm:px-3"
                     data-testid="button-back-dashboard"
+                    aria-label="Dashboard"
                   >
-                    <Home className="h-3.5 w-3.5 mr-1" />
-                    Dashboard
+                    <Home className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:mr-1 shrink-0" />
+                    <span className="hidden sm:inline">Dashboard</span>
                   </Button>
                 </Link>
               </TooltipTrigger>
