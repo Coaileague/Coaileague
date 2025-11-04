@@ -73,6 +73,17 @@ The platform features a CAD-style professional interface with a dark mode theme,
 - **Design Philosophy**: Mobile prioritizes content over redundant navigation, desktop shows full feature set with Quick Access shortcuts
 - **Performance**: Animated gradient backgrounds disabled on mobile for better battery life and performance
 
+**Sidebar Branding & Design (2024-11-04)**: Comprehensive sidebar improvements for better usability and branding:
+- **Branding Cleanup**: Removed all competitor references (Sling "Get the app" links), 100% AutoForce™ branded
+- **Logo Fix**: Changed sidebar logo from 'full' variant (caused line breaks) to 'nav' variant for clean single-line display
+- **Scrolling**: Made sidebar scrollable with visible scrollbar (overflow-y-auto) so users can access all menu sections
+- **Sidebar Width**: Increased from 20rem to 22rem (352px) to prevent menu item text truncation
+- **Typography Hierarchy**: Implemented clear visual distinction between section titles and menu links:
+  - Section titles: text-[10px], uppercase, tracking-widest, text-muted-foreground/50 (small and subtle)
+  - Menu links: text-sm, font-medium/bold, h-9 height (larger and clearer)
+  - Icon spacing: gap-3 between icon and text, icons set to shrink-0 h-4 w-4
+- **Design Goal**: Organized, professional menu with clear visual hierarchy where section titles are distinct from clickable links
+
 **Landing Page Navigation & CTA Improvements (2024-11-04)**:
 - **Responsive Logo**: AutoForceLogo component nav variant adapts to screen size - icon-only on mobile (<640px), full logo with text on desktop (≥640px) to prevent cutoff
 - **Mobile Navigation**: Hamburger menu (44px touch target) opens Sheet with navigation links (Features, Pricing, About, Contact); desktop shows full navigation in header
