@@ -801,13 +801,13 @@ export type Client = typeof clients.$inferSelect;
 // SCHEDULING TABLES
 // ============================================================================
 
-export const shiftStatusEnum = pgEnum('shift_status', ['scheduled', 'in_progress', 'completed', 'cancelled']);
+export const shiftStatusEnum = pgEnum('shift_status', ['draft', 'published', 'scheduled', 'in_progress', 'completed', 'cancelled']);
 
 // Shifts (Scheduled time blocks)
 export const shifts = pgTable("shifts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }),
   clientId: varchar("client_id").references(() => clients.id, { onDelete: 'set null' }),
   
   // Shift details
@@ -831,7 +831,7 @@ export const shifts = pgTable("shifts", {
   riskFactors: jsonb("risk_factors").$type<string[]>(), // ['high_tardiness', 'location_far', 'low_performance']
   
   // Status and tracking
-  status: shiftStatusEnum("status").default('scheduled'),
+  status: shiftStatusEnum("status").default('draft'),
   
   // Billing
   billableToClient: boolean("billable_to_client").default(true),

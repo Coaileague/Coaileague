@@ -32,7 +32,7 @@ import Contact from "@/pages/contact";
 import Support from "@/pages/support";
 import Dashboard from "@/pages/dashboard-compact";
 import { Redirect } from "wouter";
-import SmartScheduleOS from "@/pages/schedule-smart";
+import SmartScheduleOS from "@/pages/schedule-grid";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
 import Clients from "@/pages/clients";
