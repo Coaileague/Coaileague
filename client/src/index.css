@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FORTUNE 500 LIGHT MODE - Boardroom Navy + Platinum + Emerald */
+/* FORTUNE 500 LIGHT MODE - Power & Authority (Charcoal + Platinum + Crimson) */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -11,8 +11,8 @@
   --opaque-button-border-intensity: -8; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(11, 29, 58, .03);  /* Navy tint for elevation */
-  --elevate-2: rgba(11, 29, 58, .08);
+  --elevate-1: rgba(31, 41, 55, .03);  /* Charcoal tint for elevation */
+  --elevate-2: rgba(31, 41, 55, .08);
 
   /* Fortune 500 Platinum Foundation */
   --background: 220 20% 98%;           /* Platinum 50 - Page background */
@@ -27,22 +27,22 @@
 
   --card-border: 220 12% 88%;          /* Platinum 200 - Card borders */
 
-  /* Sidebar - Professional Navy */
-  --sidebar: 218 85% 12%;              /* Navy 950 - Sidebar background */
+  /* Sidebar - Professional Charcoal */
+  --sidebar: 216 19% 17%;              /* Charcoal - Sidebar background */
 
   --sidebar-foreground: 220 20% 98%;   /* Platinum 50 - Sidebar text */
 
-  --sidebar-border: 218 70% 20%;       /* Navy border */
+  --sidebar-border: 216 15% 25%;       /* Charcoal border */
 
-  --sidebar-primary: 158 64% 35%;      /* Emerald 600 - Active items */
+  --sidebar-primary: 0 84% 56%;        /* Crimson - Active items */
 
   --sidebar-primary-foreground: 220 20% 98%;
 
-  --sidebar-accent: 218 80% 18%;       /* Navy 900 - Hover state */
+  --sidebar-accent: 216 19% 22%;       /* Charcoal hover - Hover state */
 
   --sidebar-accent-foreground: 220 20% 98%;
 
-  --sidebar-ring: 158 64% 35%;         /* Emerald focus ring */
+  --sidebar-ring: 0 84% 56%;           /* Crimson focus ring */
 
   /* Popovers */
   --popover: 220 15% 95%;              /* Platinum 100 */
@@ -51,10 +51,10 @@
 
   --popover-border: 220 12% 88%;       /* Platinum 200 */
 
-  /* Primary - Emerald Authority */
-  --primary: 158 64% 35%;              /* Emerald 600 - CTAs */
+  /* Primary - Crimson Authority */
+  --primary: 0 84% 56%;                /* Crimson - CTAs */
 
-  --primary-foreground: 0 0% 100%;     /* White text on emerald */
+  --primary-foreground: 0 0% 100%;     /* White text on crimson */
 
   /* Secondary */
   --secondary: 220 12% 88%;            /* Platinum 200 */
@@ -67,9 +67,9 @@
   --muted-foreground: 220 10% 40%;     /* Platinum 700 */
 
   /* Accent */
-  --accent: 158 60% 96%;               /* Emerald 50 - Light accent */
+  --accent: 0 85% 94%;                 /* Light Crimson - Light accent */
 
-  --accent-foreground: 158 64% 28%;    /* Emerald 700 */
+  --accent-foreground: 0 77% 42%;      /* Dark Crimson */
 
   /* Destructive */
   --destructive: 0 70% 50%;            /* Error red */
@@ -78,11 +78,11 @@
 
   /* Input & Ring */
   --input: 220 12% 88%;                /* Platinum 200 */
-  --ring: 158 64% 35%;                 /* Emerald 600 focus ring */
+  --ring: 0 84% 56%;                   /* Crimson focus ring */
   
   /* Charts - Professional palette */
-  --chart-1: 218 85% 12%;              /* Navy 950 */
-  --chart-2: 158 64% 35%;              /* Emerald 600 */
+  --chart-1: 216 19% 17%;              /* Charcoal */
+  --chart-2: 0 84% 56%;                /* Crimson */
   --chart-3: 38 95% 55%;               /* Warning */
   --chart-4: 210 85% 50%;              /* Info */
   --chart-5: 0 70% 50%;                /* Error */
@@ -160,60 +160,60 @@
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(46, 139, 87, 0.04);  /* Emerald tint for dark mode */
-  --elevate-2: rgba(46, 139, 87, 0.12);
+  --elevate-1: rgba(220, 38, 38, 0.05);  /* Crimson tint for dark mode */
+  --elevate-2: rgba(220, 38, 38, 0.15);
 
-  /* Fortune 500 Dark Mode - Professional Navy Foundation */
-  --background: 218 85% 8%;            /* Deep navy background */
+  /* Fortune 500 Dark Mode - Power & Authority (Deep Charcoal) */
+  --background: 216 19% 10%;           /* Deep charcoal background */
   --foreground: 220 20% 98%;           /* Platinum 50 text */
   
-  --border: 218 70% 18%;               /* Navy borders */
+  --border: 216 15% 22%;               /* Charcoal borders */
   
-  --card: 218 80% 12%;                 /* Navy 950 cards */
+  --card: 216 19% 14%;                 /* Charcoal cards */
   --card-foreground: 220 20% 98%;
-  --card-border: 218 70% 18%;
+  --card-border: 216 15% 22%;
   
-  /* Sidebar - Darker navy */
-  --sidebar: 218 85% 10%;              /* Slightly darker navy */
+  /* Sidebar - Darker charcoal */
+  --sidebar: 216 19% 12%;              /* Slightly darker charcoal */
   --sidebar-foreground: 220 20% 98%;
-  --sidebar-border: 218 70% 20%;
-  --sidebar-primary: 158 64% 35%;      /* Emerald 600 */
+  --sidebar-border: 216 15% 25%;
+  --sidebar-primary: 0 84% 60%;        /* Crimson (brighter for dark) */
   --sidebar-primary-foreground: 220 20% 98%;
-  --sidebar-accent: 218 80% 15%;       /* Hover state */
+  --sidebar-accent: 216 19% 18%;       /* Hover state */
   --sidebar-accent-foreground: 220 20% 98%;
-  --sidebar-ring: 158 64% 35%;
+  --sidebar-ring: 0 84% 60%;
   
   /* Popovers */
-  --popover: 218 80% 12%;
+  --popover: 216 19% 14%;
   --popover-foreground: 220 20% 98%;
-  --popover-border: 218 70% 18%;
+  --popover-border: 216 15% 22%;
   
-  /* Primary - Emerald (slightly brighter in dark mode) */
-  --primary: 158 64% 42%;              /* Emerald 500 - brighter for dark mode */
+  /* Primary - Crimson (slightly brighter in dark mode) */
+  --primary: 0 84% 60%;                /* Crimson - brighter for dark mode */
   --primary-foreground: 0 0% 100%;
   
   /* Secondary */
-  --secondary: 218 70% 18%;            /* Navy tone */
+  --secondary: 216 15% 22%;            /* Charcoal tone */
   --secondary-foreground: 220 20% 98%;
   
   /* Muted */
-  --muted: 218 75% 15%;
+  --muted: 216 19% 18%;
   --muted-foreground: 220 10% 65%;     /* Platinum 600 */
   
   /* Accent */
-  --accent: 158 60% 20%;               /* Emerald dark */
-  --accent-foreground: 158 60% 85%;    /* Emerald light */
+  --accent: 0 75% 25%;                 /* Dark Crimson */
+  --accent-foreground: 0 75% 85%;      /* Light Crimson */
   
   /* Destructive */
   --destructive: 0 70% 55%;
   --destructive-foreground: 0 0% 100%;
   
   /* Input & Ring */
-  --input: 218 70% 20%;
-  --ring: 158 64% 42%;                 /* Emerald focus ring */
+  --input: 216 15% 25%;
+  --ring: 0 84% 60%;                   /* Crimson focus ring */
   
   /* Charts - Professional dark mode palette */
-  --chart-1: 158 64% 42%;              /* Emerald */
+  --chart-1: 0 84% 60%;                /* Crimson */
   --chart-2: 210 85% 55%;              /* Bright blue */
   --chart-3: 38 95% 60%;               /* Warning */
   --chart-4: 271 70% 60%;              /* Purple */

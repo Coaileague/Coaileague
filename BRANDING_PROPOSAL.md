@@ -73,16 +73,16 @@ ShiftForce (Workforce Management Platform)
 - Represents protection + power
 - Colors: Deep Blue (#1E3A8A) + Electric Blue (#3B82F6) + White
 
-**Concept B: "The Command Center"**
+**Concept B: "The Command Center"** ✅ CURRENT BRAND
 ```
     ┌─────────┐
-    │ ▲ SF ▲  │
-    │ ShiftForce │
+    │ ▲ AF ▲  │
+    │ AutoForce │
     └─────────┘
 ```
-- Military-inspired command center aesthetic
-- Upward arrows showing growth
-- Colors: Navy (#0F172A) + Cyan (#06B6D4) + Silver
+- Enterprise command center aesthetic - Power & Authority theme
+- Geometric "A" with workforce network nodes
+- Colors: Charcoal (#1F2937) + Crimson (#DC2626) + Platinum neutrals
 
 **Concept C: "The Grid" (RECOMMENDED)**
 ```

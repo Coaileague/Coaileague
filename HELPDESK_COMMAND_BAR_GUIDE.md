@@ -11,8 +11,8 @@ The HelpDesk Command Bar is a horizontal toolbar above the chat interface that p
 - **Sections**: Commands grouped by role and separated by vertical borders
 - **Color Coding**: 
   - White buttons with slate borders: Basic commands
-  - Colored backgrounds: Special actions (amber=priority, violet=AI, orange=escalate, green=resolved, blue=room, red=close)
-  - Emerald section: Staff status controls
+  - Colored backgrounds: Special actions (amber=priority, violet=AI, orange=escalate, crimson=resolved, blue=room, red=close)
+  - Crimson section: Staff status controls
 
 ## Available Commands by Role
 
@@ -63,7 +63,7 @@ The HelpDesk Command Bar is a horizontal toolbar above the chat interface that p
 
 ### 4. **Support Staff Only**
 
-#### Status Controls (Emerald Section)
+#### Status Controls (Crimson Section)
 - **Status Dropdown**: 
   - ● Available (online)
   - ● Away
@@ -108,7 +108,7 @@ The HelpDesk Command Bar is a horizontal toolbar above the chat interface that p
 
 - **Resolved**
   - **Command**: `/resolved`
-  - **Button**: Green background with green border
+  - **Button**: Crimson background with crimson border (Power/Authority theme)
   - **Action**: Mark ticket as resolved
   - **Test ID**: `button-resolved`
 
@@ -121,7 +121,7 @@ The HelpDesk Command Bar is a horizontal toolbar above the chat interface that p
 
 - **Voice**
   - **Command**: `/voice`
-  - **Icon**: CheckCircle (green)
+  - **Icon**: CheckCircle (crimson)
   - **Action**: Enable voice support features
   - **Test ID**: `button-voice`
 
@@ -155,7 +155,7 @@ Support staff can edit rotating announcement banners using the `/banner` command
 ### Banner Types
 - `info` - Blue informational banner (default)
 - `warning` - Yellow warning banner
-- `success` - Green success banner
+- `success` - Crimson success banner (Power/Authority theme)
 - `promo` - Purple promotional banner
 - `queue` - Amber queue status banner
 
@@ -286,10 +286,10 @@ Result: Purple promotional banner with lightning icon and link
 | Organization | purple-50 | purple-500 | purple-900 | Org features |
 | AI | violet-50 | violet-600 | violet-900 | AI commands |
 | Escalate | orange-50 | orange-500 | orange-900 | Escalation |
-| Resolved | green-50 | green-600 | green-900 | Resolution |
+| Resolved | red-50 | red-600 | red-900 | Resolution (Crimson) |
 | Room | blue-50 | blue-600 | blue-900 | Room controls |
 | Close | red-50 | red-600 | red-900 | Close ticket |
-| Staff Status | emerald-100 | emerald-600 | emerald-900 | Staff section |
+| Staff Status | red-100 | red-600 | red-900 | Staff section (Crimson) |
 
 ### Accessibility Features
 - Minimum 4.5:1 contrast ratio on all buttons
