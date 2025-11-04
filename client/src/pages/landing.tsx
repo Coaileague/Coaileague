@@ -37,12 +37,12 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Navigation Header */}
       <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-3 sm:px-6">
-          <div className="flex h-16 sm:h-20 items-center justify-between gap-2">
-            {/* Professional Navigation Logo - Responsive */}
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex h-16 sm:h-20 items-center justify-between gap-3">
+            {/* Professional Navigation Logo - Responsive with proper mobile sizing */}
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
+              className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0 max-w-[140px] sm:max-w-none"
               aria-label="Scroll to top"
               data-testid="button-logo-home"
             >
@@ -50,9 +50,9 @@ export default function Landing() {
               <div className="hidden sm:block">
                 <AutoForceLogo variant="nav" />
               </div>
-              {/* Mobile: Show compact icon only */}
-              <div className="block sm:hidden">
-                <AutoForceLogo variant="icon" size="md" />
+              {/* Mobile: Show compact nav logo with text */}
+              <div className="block sm:hidden w-full">
+                <AutoForceLogo variant="nav" className="scale-90" />
               </div>
             </button>
 

@@ -197,41 +197,41 @@ export default function DashboardCompact() {
 
   const dashboardContent = (
     <div className="min-h-screen bg-background">
-      {/* Quick Access Menu */}
-      <div className="border-b bg-muted/30 px-3 sm:px-4 py-3 sm:py-4">
-        <div className="flex items-center gap-2 mb-2 sm:mb-3">
-          <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-          <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide">Quick Access</h2>
+      {/* Quick Access Menu - Compact on mobile, spacious on desktop */}
+      <div className="border-b bg-muted/30 px-4 sm:px-6 py-4 sm:py-5">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+          <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+          <h2 className="text-sm sm:text-base font-semibold uppercase tracking-wide">Quick Access</h2>
         </div>
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 mobile-scroll">
           {quickAccessFeatures.map((feature) => (
             <Button
               key={feature.link}
               variant="outline"
               size="sm"
-              className="flex-col h-auto min-h-[64px] sm:min-h-[72px] min-w-[72px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap"
+              className="flex-col h-auto min-h-[72px] sm:min-h-[80px] min-w-[80px] sm:min-w-[90px] px-3 sm:px-4 py-3 sm:py-4 gap-2 hover-elevate whitespace-nowrap"
               asChild
             >
               <Link href={feature.link} data-testid={feature.testid}>
-                <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                <span className="text-[10px] sm:text-xs font-medium leading-tight">{feature.label}</span>
+                <feature.icon className={`h-6 w-6 sm:h-7 sm:w-7 ${feature.color} shrink-0`} />
+                <span className="text-xs sm:text-sm font-medium leading-tight">{feature.label}</span>
               </Link>
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Sling-style Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-px bg-border">
+      {/* Sling-style Stat Cards - More spacious on mobile */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 sm:gap-px bg-border p-1 sm:p-0">
         {statCards.map((stat, index) => (
           <Link key={index} href={stat.link} className="block touch-target">
-            <Card className="rounded-none border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
-              <CardContent className="p-3 sm:p-4 lg:p-6 text-center flex flex-col items-center justify-center h-full min-h-[100px] sm:min-h-[120px]">
-                <stat.icon className={`h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 mb-1 sm:mb-2 ${stat.color} shrink-0`} />
-                <p className="text-[10px] sm:text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-0.5 sm:mb-1 break-anywhere">
+            <Card className="rounded-lg sm:rounded-none border sm:border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
+              <CardContent className="p-5 sm:p-4 lg:p-6 text-center flex flex-col items-center justify-center h-full min-h-[120px] sm:min-h-[110px]">
+                <stat.icon className={`h-8 w-8 sm:h-8 sm:w-8 lg:h-10 lg:w-10 mb-2 sm:mb-2 ${stat.color} shrink-0`} />
+                <p className="text-xs sm:text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-1 break-anywhere">
                   {stat.label}
                 </p>
-                <p className="text-sm sm:text-lg lg:text-2xl font-bold break-anywhere">
+                <p className="text-lg sm:text-lg lg:text-2xl font-bold break-anywhere">
                   {stat.value}
                 </p>
               </CardContent>
@@ -240,11 +240,11 @@ export default function DashboardCompact() {
         ))}
       </div>
 
-      {/* Blue Banner (No shifts scheduled) */}
+      {/* Blue Banner (No shifts scheduled) - More padding on mobile */}
       {workspaceRole !== 'employee' && (
-        <div className="bg-blue-600 text-white px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
-          <Square className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-          <p className="text-xs sm:text-sm font-medium break-anywhere">
+        <div className="bg-blue-600 text-white px-5 sm:px-4 py-4 sm:py-4 flex items-center gap-3 sm:gap-3 mt-1 sm:mt-0">
+          <Square className="h-5 w-5 sm:h-5 sm:w-5 shrink-0" />
+          <p className="text-sm sm:text-sm font-medium break-anywhere">
             {(stats as any)?.upcomingShifts > 0 
               ? `You have ${(stats as any)?.upcomingShifts} shifts scheduled` 
               : "You don't have any shifts scheduled"}
@@ -252,30 +252,30 @@ export default function DashboardCompact() {
         </div>
       )}
 
-      {/* Notifications & Roster Tabs */}
-      <div className="mobile-container p-3 sm:p-4">
+      {/* Notifications & Roster Tabs - Better mobile spacing */}
+      <div className="mobile-container px-4 sm:px-4 py-5 sm:py-4">
         <Tabs defaultValue="notifications" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 touch-target">
-            <TabsTrigger value="notifications" className="text-xs sm:text-sm" data-testid="tab-notifications">
+          <TabsList className="grid w-full max-w-md grid-cols-2 touch-target h-12 sm:h-10">
+            <TabsTrigger value="notifications" className="text-sm sm:text-sm" data-testid="tab-notifications">
               NOTIFICATIONS
             </TabsTrigger>
-            <TabsTrigger value="roster" className="text-xs sm:text-sm" data-testid="tab-roster">
+            <TabsTrigger value="roster" className="text-sm sm:text-sm" data-testid="tab-roster">
               ROSTER
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="notifications" className="space-y-2 sm:space-y-3 mt-3 sm:mt-4">
+          <TabsContent value="notifications" className="space-y-3 sm:space-y-3 mt-4 sm:mt-4">
             {notifications.map((notif, index) => (
               <Card key={index} className="hover-elevate touch-friendly" data-testid={`notification-${index}`}>
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <div className={`p-1.5 sm:p-2 rounded-full bg-muted ${notif.color} shrink-0`}>
-                      <notif.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <CardContent className="p-4 sm:p-4">
+                  <div className="flex items-start gap-3 sm:gap-3">
+                    <div className={`p-2 sm:p-2 rounded-full bg-muted ${notif.color} shrink-0`}>
+                      <notif.icon className="h-5 w-5 sm:h-5 sm:w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm break-anywhere">{notif.message}</p>
+                      <p className="text-sm sm:text-sm break-anywhere leading-relaxed">{notif.message}</p>
                       {notif.time && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                        <p className="text-xs sm:text-xs text-muted-foreground mt-1 sm:mt-1">
                           {notif.time.toLocaleString()}
                         </p>
                       )}
@@ -288,14 +288,14 @@ export default function DashboardCompact() {
 
           <TabsContent value="roster" className="space-y-3 mt-4">
             <Card>
-              <CardContent className="p-6 text-center">
-                <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="p-8 sm:p-6 text-center">
+                <Users className="h-14 w-14 sm:h-12 sm:w-12 mx-auto mb-4 sm:mb-3 text-muted-foreground" />
+                <p className="text-sm sm:text-sm text-muted-foreground mb-4 sm:mb-4">
                   Employee roster view coming soon
                 </p>
                 <Button 
                   variant="outline" 
-                  className="mt-4"
+                  className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
                   onClick={() => setLocation("/employees")}
                   data-testid="button-view-employees"
                 >
