@@ -85,6 +85,8 @@ import PrivateMessages from "@/pages/private-messages";
 import TrainingOS from "@/pages/training-os";
 import BudgetOS from "@/pages/budget-os";
 import IntegrationOS from "@/pages/integration-os";
+import RecordOS from "@/pages/record-os";
+import InsightOS from "@/pages/insight-os";
 import CommunicationFamilyPage from "@/pages/os-family-communication";
 import OperationsFamilyPage from "@/pages/os-family-operations";
 import GrowthFamilyPage from "@/pages/os-family-growth";
@@ -237,6 +239,8 @@ function AppContent() {
                 <Route path="/training" component={TrainingOS} />
                 <Route path="/budget" component={BudgetOS} />
                 <Route path="/integrations" component={IntegrationOS} />
+                <Route path="/search" component={RecordOS} />
+                <Route path="/insights" component={InsightOS} />
                 
                 {/* OS Family Showcase Pages */}
                 <Route path="/os-family/communication" component={CommunicationFamilyPage} />
