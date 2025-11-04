@@ -46,10 +46,11 @@ import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
 
 // Draggable shift card
-function DraggableShiftCard({ shift, employee, client }: {
+function DraggableShiftCard({ shift, employee, client, onAddAcknowledgment }: {
   shift: Shift;
   employee?: Employee;
   client?: Client;
+  onAddAcknowledgment?: (shift: Shift) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,
@@ -69,7 +70,7 @@ function DraggableShiftCard({ shift, employee, client }: {
       ref={setNodeRef}
       style={style}
       className={`
-        p-2 rounded-lg border-2 transition-all cursor-grab active:cursor-grabbing mb-1
+        p-2 rounded-lg border-2 transition-all cursor-grab active:cursor-grabbing mb-1 relative group
         ${isDraft ? 'border-amber-500/50 bg-amber-500/10 shadow-amber-500/20 shadow-lg animate-pulse' : ''}
         ${isPublished ? 'border-blue-500 bg-blue-500/20' : ''}
         ${isOpen ? 'border-purple-500/50 bg-purple-500/10 border-dashed' : ''}
@@ -88,16 +89,32 @@ function DraggableShiftCard({ shift, employee, client }: {
               {moment(shift.startTime).format('h:mm A')} - {moment(shift.endTime).format('h:mm A')}
             </span>
           </div>
-          {isDraft && (
-            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
-              Draft
-            </Badge>
-          )}
-          {isOpen && (
-            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20">
-              Open
-            </Badge>
-          )}
+          <div className="flex items-center gap-1">
+            {onAddAcknowledgment && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddAcknowledgment(shift);
+                }}
+                data-testid={`button-add-acknowledgment-${shift.id}`}
+              >
+                <Plus className="h-3 w-3 text-emerald-400" />
+              </Button>
+            )}
+            {isDraft && (
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+                Draft
+              </Badge>
+            )}
+            {isOpen && (
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20">
+                Open
+              </Badge>
+            )}
+          </div>
         </div>
 
         {!isOpen && employee && (
@@ -131,7 +148,7 @@ function DraggableShiftCard({ shift, employee, client }: {
 }
 
 // Droppable day cell for an employee
-function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShiftClick, onCreateShift }: {
+function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShiftClick, onCreateShift, onAddAcknowledgment }: {
   employeeId: string;
   date: Date;
   shifts: Shift[];
@@ -139,6 +156,7 @@ function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShif
   clients: Client[];
   onShiftClick: (shift: Shift) => void;
   onCreateShift?: (employeeId: string, date: Date) => void;
+  onAddAcknowledgment?: (shift: Shift) => void;
 }) {
   const dropId = `${employeeId}-${moment(date).format('YYYY-MM-DD')}`;
   const { setNodeRef, isOver } = useDroppable({
@@ -185,6 +203,7 @@ function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShif
             shift={shift}
             employee={employees.find(e => e.id === shift.employeeId)}
             client={clients.find(c => c.id === shift.clientId)}
+            onAddAcknowledgment={onAddAcknowledgment}
           />
         </div>
       ))}
@@ -203,7 +222,7 @@ function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShif
 }
 
 // Employee row with day columns
-function EmployeeRow({ employee, weekDays, shifts, employees, clients, onShiftClick, onCreateShift }: {
+function EmployeeRow({ employee, weekDays, shifts, employees, clients, onShiftClick, onCreateShift, onAddAcknowledgment }: {
   employee: Employee;
   weekDays: Date[];
   shifts: Shift[];
@@ -211,6 +230,7 @@ function EmployeeRow({ employee, weekDays, shifts, employees, clients, onShiftCl
   clients: Client[];
   onShiftClick: (shift: Shift) => void;
   onCreateShift?: (employeeId: string, date: Date) => void;
+  onAddAcknowledgment?: (shift: Shift) => void;
 }) {
   return (
     <div className="flex">
@@ -242,6 +262,7 @@ function EmployeeRow({ employee, weekDays, shifts, employees, clients, onShiftCl
           clients={clients}
           onShiftClick={onShiftClick}
           onCreateShift={onCreateShift}
+          onAddAcknowledgment={onAddAcknowledgment}
         />
       ))}
     </div>
@@ -294,11 +315,12 @@ function PlaceholderEmployeeRow({ weekDays, onCreateShift, onAddEmployee }: {
 }
 
 // Open shifts section
-function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients }: {
+function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients, onAddAcknowledgment }: {
   shifts: Shift[];
   weekDays: Date[];
   onShiftClick: (shift: Shift) => void;
   clients: Client[];
+  onAddAcknowledgment?: (shift: Shift) => void;
 }) {
   const openShiftsByDay = useMemo(() => {
     const byDay: Record<string, Shift[]> = {};
@@ -352,6 +374,7 @@ function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients }: {
                 <DraggableShiftCard
                   shift={shift}
                   client={clients.find(c => c.id === shift.clientId)}
+                  onAddAcknowledgment={onAddAcknowledgment}
                 />
               </div>
             ))}
@@ -378,6 +401,15 @@ export default function ScheduleGrid() {
     employeeId: string;
     date: Date;
   } | null>(null);
+  const [isAcknowledgmentDialogOpen, setIsAcknowledgmentDialogOpen] = useState(false);
+  const [selectedShiftForAck, setSelectedShiftForAck] = useState<Shift | null>(null);
+  
+  // Acknowledgment form state
+  const [ackType, setAckType] = useState('post_order');
+  const [ackTitle, setAckTitle] = useState('');
+  const [ackContent, setAckContent] = useState('');
+  const [ackPriority, setAckPriority] = useState('normal');
+  const [ackRequired, setAckRequired] = useState(true);
 
   // Fetch data
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
@@ -478,6 +510,49 @@ export default function ScheduleGrid() {
     },
   });
 
+  // Create acknowledgment mutation
+  const createAcknowledgmentMutation = useMutation({
+    mutationFn: async (data: {
+      shiftId: string;
+      acknowledgmentType: string;
+      title: string;
+      content: string;
+      priority: string;
+      requiresAcknowledgment: boolean;
+      employeeId?: string;
+    }) => {
+      return await apiRequest("POST", `/api/shifts/${data.shiftId}/acknowledgments`, {
+        acknowledgmentType: data.acknowledgmentType,
+        title: data.title,
+        content: data.content,
+        priority: data.priority,
+        requiresAcknowledgment: data.requiresAcknowledgment,
+        employeeId: data.employeeId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      toast({
+        title: "Acknowledgment Created",
+        description: "The employee will need to acknowledge this before clocking in",
+      });
+      setIsAcknowledgmentDialogOpen(false);
+      // Reset form
+      setAckType('post_order');
+      setAckTitle('');
+      setAckContent('');
+      setAckPriority('normal');
+      setAckRequired(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create acknowledgment",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDragStart = (event: DragStartEvent) => {
     const shift = shifts.find(s => s.id === event.active.id);
     setActiveShift(shift || null);
@@ -532,6 +607,11 @@ export default function ScheduleGrid() {
 
   const handleAddEmployee = () => {
     window.location.href = '/employees';
+  };
+
+  const handleAddAcknowledgment = (shift: Shift) => {
+    setSelectedShiftForAck(shift);
+    setIsAcknowledgmentDialogOpen(true);
   };
 
   const handlePublishShift = () => {
@@ -710,6 +790,7 @@ export default function ScheduleGrid() {
                     clients={clients}
                     onShiftClick={handleShiftClick}
                     onCreateShift={handleCreateShift}
+                    onAddAcknowledgment={handleAddAcknowledgment}
                   />
                 ))}
               </>
@@ -721,6 +802,7 @@ export default function ScheduleGrid() {
               weekDays={weekDays}
               onShiftClick={handleShiftClick}
               clients={clients}
+              onAddAcknowledgment={handleAddAcknowledgment}
             />
           </div>
         </div>
@@ -731,6 +813,7 @@ export default function ScheduleGrid() {
               shift={activeShift}
               employee={employees.find(e => e.id === activeShift.employeeId)}
               client={clients.find(c => c.id === activeShift.clientId)}
+              onAddAcknowledgment={handleAddAcknowledgment}
             />
           )}
         </DragOverlay>
@@ -873,6 +956,163 @@ export default function ScheduleGrid() {
                   Publish
                 </Button>
               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Acknowledgment Dialog (Post Order / Special Order) */}
+      {selectedShiftForAck && (
+        <Dialog open={isAcknowledgmentDialogOpen} onOpenChange={setIsAcknowledgmentDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add Post Order / Special Order</DialogTitle>
+              <DialogDescription>
+                Create a post order or special instruction that the employee must acknowledge before clocking in
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="grid gap-4">
+                <div>
+                  <Label htmlFor="ack-type">Type</Label>
+                  <select
+                    id="ack-type"
+                    value={ackType}
+                    onChange={(e) => setAckType(e.target.value)}
+                    className="w-full p-2 border rounded-md bg-background"
+                    data-testid="select-acknowledgment-type"
+                  >
+                    <option value="post_order">Post Order</option>
+                    <option value="special_order">Special Order</option>
+                    <option value="safety_notice">Safety Notice</option>
+                    <option value="site_instruction">Site Instruction</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="ack-title">Title</Label>
+                  <input
+                    id="ack-title"
+                    type="text"
+                    value={ackTitle}
+                    onChange={(e) => setAckTitle(e.target.value)}
+                    placeholder="e.g., Special patrol instructions"
+                    className="w-full p-2 border rounded-md bg-background"
+                    data-testid="input-acknowledgment-title"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ack-content">Instructions / Details</Label>
+                  <textarea
+                    id="ack-content"
+                    rows={6}
+                    value={ackContent}
+                    onChange={(e) => setAckContent(e.target.value)}
+                    placeholder="Enter detailed instructions that the employee must read and acknowledge..."
+                    className="w-full p-2 border rounded-md bg-background resize-none"
+                    data-testid="input-acknowledgment-content"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ack-priority">Priority</Label>
+                  <select
+                    id="ack-priority"
+                    value={ackPriority}
+                    onChange={(e) => setAckPriority(e.target.value)}
+                    className="w-full p-2 border rounded-md bg-background"
+                    data-testid="select-acknowledgment-priority"
+                  >
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="ack-required"
+                    checked={ackRequired}
+                    onChange={(e) => setAckRequired(e.target.checked)}
+                    className="h-4 w-4"
+                    data-testid="checkbox-acknowledgment-required"
+                  />
+                  <Label htmlFor="ack-required" className="text-sm cursor-pointer">
+                    Require acknowledgment before clock-in
+                  </Label>
+                </div>
+              </div>
+
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-emerald-500/20 rounded-lg">
+                    <Clock className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold">Shift Details</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {moment(selectedShiftForAck.startTime).format('ddd, MMM D, YYYY • h:mm A')} - {moment(selectedShiftForAck.endTime).format('h:mm A')}
+                    </div>
+                    {employees.find(e => e.id === selectedShiftForAck.employeeId) && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Employee: {employees.find(e => e.id === selectedShiftForAck.employeeId)!.firstName} {employees.find(e => e.id === selectedShiftForAck.employeeId)!.lastName}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsAcknowledgmentDialogOpen(false)}
+                data-testid="button-cancel-acknowledgment"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedShiftForAck) return;
+                  
+                  // Validate required fields
+                  if (!ackTitle.trim()) {
+                    toast({
+                      variant: "destructive",
+                      title: "Validation Error",
+                      description: "Title is required",
+                    });
+                    return;
+                  }
+                  if (!ackContent.trim()) {
+                    toast({
+                      variant: "destructive",
+                      title: "Validation Error",
+                      description: "Instructions/Details are required",
+                    });
+                    return;
+                  }
+
+                  createAcknowledgmentMutation.mutate({
+                    shiftId: selectedShiftForAck.id,
+                    acknowledgmentType: ackType,
+                    title: ackTitle,
+                    content: ackContent,
+                    priority: ackPriority,
+                    requiresAcknowledgment: ackRequired,
+                    employeeId: selectedShiftForAck.employeeId || undefined,
+                  });
+                }}
+                disabled={createAcknowledgmentMutation.isPending}
+                data-testid="button-create-acknowledgment"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {createAcknowledgmentMutation.isPending ? 'Creating...' : 'Create Acknowledgment'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

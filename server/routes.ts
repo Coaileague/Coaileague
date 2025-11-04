@@ -2902,6 +2902,232 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // SHIFT ACKNOWLEDGMENT ROUTES (Post Orders & Special Orders)
+  // ============================================================================
+
+  // Get all acknowledgments for a shift
+  app.get('/api/shifts/:shiftId/acknowledgments', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+
+      const { shiftAcknowledgments } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      // Verify shift belongs to workspace
+      const shift = await db.query.shifts.findFirst({
+        where: and(
+          eq(shifts.id, req.params.shiftId),
+          eq(shifts.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      const acknowledgments = await db.query.shiftAcknowledgments.findMany({
+        where: and(
+          eq(shiftAcknowledgments.workspaceId, workspaceId),
+          eq(shiftAcknowledgments.shiftId, req.params.shiftId)
+        ),
+        with: {
+          shift: true,
+          employee: true,
+        },
+      });
+
+      res.json(acknowledgments);
+    } catch (error: any) {
+      console.error("Error fetching shift acknowledgments:", error);
+      res.status(500).json({ message: "Failed to fetch acknowledgments" });
+    }
+  });
+
+  // Create a new acknowledgment (Post Order/Special Order)
+  app.post('/api/shifts/:shiftId/acknowledgments', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+
+      const { eq, and } = await import("drizzle-orm");
+
+      // Verify shift belongs to workspace
+      const shift = await db.query.shifts.findFirst({
+        where: and(
+          eq(shifts.id, req.params.shiftId),
+          eq(shifts.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found in this workspace" });
+      }
+
+      // Get the current employee (who is creating the acknowledgment)
+      const currentEmployee = await db.query.employees.findFirst({
+        where: eq(employees.userId, userId),
+      });
+
+      if (!currentEmployee) {
+        return res.status(404).json({ message: "Employee record not found" });
+      }
+
+      // Verify target employee belongs to workspace
+      if (req.body.employeeId) {
+        const targetEmployee = await db.query.employees.findFirst({
+          where: and(
+            eq(employees.id, req.body.employeeId),
+            eq(employees.workspaceId, workspaceId)
+          ),
+        });
+
+        if (!targetEmployee) {
+          return res.status(404).json({ message: "Target employee not found in this workspace" });
+        }
+      }
+
+      const { insertShiftAcknowledgmentSchema, shiftAcknowledgments } = await import("@shared/schema");
+      
+      const validatedData = insertShiftAcknowledgmentSchema.parse({
+        ...req.body,
+        workspaceId,
+        shiftId: req.params.shiftId,
+        createdBy: currentEmployee.id,
+      });
+
+      const [acknowledgment] = await db.insert(shiftAcknowledgments)
+        .values(validatedData)
+        .returning();
+
+      res.json(acknowledgment);
+    } catch (error: any) {
+      console.error("Error creating shift acknowledgment:", error);
+      res.status(400).json({ message: error.message || "Failed to create acknowledgment" });
+    }
+  });
+
+  // Employee acknowledges a shift acknowledgment
+  app.patch('/api/acknowledgments/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+
+      const { eq, and } = await import("drizzle-orm");
+
+      const currentEmployee = await db.query.employees.findFirst({
+        where: eq(employees.userId, userId),
+      });
+
+      if (!currentEmployee) {
+        return res.status(404).json({ message: "Employee record not found" });
+      }
+
+      const { shiftAcknowledgments } = await import("@shared/schema");
+
+      const acknowledgment = await db.query.shiftAcknowledgments.findFirst({
+        where: and(
+          eq(shiftAcknowledgments.id, req.params.id),
+          eq(shiftAcknowledgments.workspaceId, workspaceId),
+          eq(shiftAcknowledgments.employeeId, currentEmployee.id)
+        ),
+      });
+
+      if (!acknowledgment) {
+        return res.status(404).json({ message: "Acknowledgment not found or not assigned to you" });
+      }
+
+      const [updated] = await db.update(shiftAcknowledgments)
+        .set({
+          acknowledgedAt: new Date(),
+          acknowledgedBy: currentEmployee.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(shiftAcknowledgments.id, req.params.id))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error acknowledging:", error);
+      res.status(500).json({ message: "Failed to acknowledge" });
+    }
+  });
+
+  // Employee denies/declines a shift acknowledgment
+  app.patch('/api/acknowledgments/:id/deny', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+
+      const { eq, and } = await import("drizzle-orm");
+
+      const currentEmployee = await db.query.employees.findFirst({
+        where: eq(employees.userId, userId),
+      });
+
+      if (!currentEmployee) {
+        return res.status(404).json({ message: "Employee record not found" });
+      }
+
+      const { shiftAcknowledgments } = await import("@shared/schema");
+
+      const acknowledgment = await db.query.shiftAcknowledgments.findFirst({
+        where: and(
+          eq(shiftAcknowledgments.id, req.params.id),
+          eq(shiftAcknowledgments.workspaceId, workspaceId),
+          eq(shiftAcknowledgments.employeeId, currentEmployee.id)
+        ),
+      });
+
+      if (!acknowledgment) {
+        return res.status(404).json({ message: "Acknowledgment not found or not assigned to you" });
+      }
+
+      const [updated] = await db.update(shiftAcknowledgments)
+        .set({
+          deniedAt: new Date(),
+          denialReason: req.body.denialReason || 'Declined by employee',
+          updatedAt: new Date(),
+        })
+        .where(eq(shiftAcknowledgments.id, req.params.id))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error denying acknowledgment:", error);
+      res.status(500).json({ message: "Failed to deny acknowledgment" });
+    }
+  });
+
+  // Delete an acknowledgment (manager only)
+  app.delete('/api/acknowledgments/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+
+      const { shiftAcknowledgments } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const acknowledgment = await db.query.shiftAcknowledgments.findFirst({
+        where: and(
+          eq(shiftAcknowledgments.id, req.params.id),
+          eq(shiftAcknowledgments.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!acknowledgment) {
+        return res.status(404).json({ message: "Acknowledgment not found" });
+      }
+
+      await db.delete(shiftAcknowledgments)
+        .where(eq(shiftAcknowledgments.id, req.params.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting acknowledgment:", error);
+      res.status(500).json({ message: "Failed to delete acknowledgment" });
+    }
+  });
+
+  // ============================================================================
   // TIME ENTRY ROUTES (Multi-tenant isolated)
   // ============================================================================
   

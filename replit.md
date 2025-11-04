@@ -18,6 +18,36 @@ WorkforceOS is a comprehensive workforce management operating system designed to
 - ✅ **Components Updated**: Dialog, AlertDialog, Sheet base components now include navigation
 - ✅ **Optional Flag**: Can disable with `showHomeButton={false}` if needed
 
+### November 4, 2025 - Shift Acknowledgment System (Post Orders/Special Orders)
+
+**Backend Implementation:**
+- ✅ **Database Schema**: Created `shift_acknowledgments` table with enum types (post_order, special_order, safety_notice, site_instruction)
+- ✅ **API Routes**: Added 5 secure routes for managing acknowledgments:
+  - GET `/api/shifts/:shiftId/acknowledgments` - Fetch all acknowledgments for a shift
+  - POST `/api/shifts/:shiftId/acknowledgments` - Create new post order/special order (manager only)
+  - PATCH `/api/acknowledgments/:id/acknowledge` - Employee acknowledges
+  - PATCH `/api/acknowledgments/:id/deny` - Employee denies
+  - DELETE `/api/acknowledgments/:id` - Delete acknowledgment (manager only)
+- ✅ **Security Hardening**: Fixed critical workspace resolution bug - all routes now use `requireAuth` + `req.workspace!.id` pattern, validating shift/employee ownership before operations
+- ✅ **Multi-tenant Isolation**: Proper workspace validation ensures acknowledgments cannot leak across tenants
+
+**Frontend UI:**
+- ✅ **Shift Card Enhancement**: Added + button to shift cards (appears on hover) for attaching acknowledgments
+- ✅ **Acknowledgment Dialog**: Created comprehensive dialog for managers to add post orders with:
+  - Type selector (post_order, special_order, safety_notice, site_instruction)
+  - Title and content fields for detailed instructions
+  - Priority levels (low, normal, high, urgent)
+  - Required acknowledgment toggle (prevents clock-in if checked)
+  - Visual shift details summary with employee info
+- ⚠️ **UI Wiring**: Partially complete - handler added, some component tree updates done, need to finish wiring and add API integration
+
+**Pending Work:**
+- 🔲 Complete UI component tree wiring for all DraggableShiftCard usages
+- 🔲 Add API mutation integration to acknowledgment dialog
+- 🔲 Implement clock-in validation to prevent clock-in without acknowledgment
+- 🔲 Add employee profile view to show all acknowledgments
+- 🔲 Build reporting tools for hours/payroll/invoice tracking
+
 ### November 4, 2025 - Root Credentials Updated
 **Root Admin Access Standardized:**
 - ✅ **Email Changed**: Updated from root@workforceos.com to root@getdc360.com
