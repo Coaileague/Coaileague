@@ -316,7 +316,7 @@ export default function TimeTracking() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/dashboard">
-              <Button variant="outline" size="icon" className="touch-target shrink-0" data-testid="button-back-dashboard">
+              <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px] shrink-0" data-testid="button-back-dashboard" aria-label="Back to Dashboard">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
@@ -331,7 +331,7 @@ export default function TimeTracking() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Link href="/dashboard" className="flex-1 sm:flex-initial">
-              <Button variant="outline" size="sm" className="w-full sm:w-auto touch-target" data-testid="button-home">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto min-h-[44px]" data-testid="button-home">
                 <Home className="mr-2 h-4 w-4" />
                 <span className="whitespace-nowrap">Dashboard</span>
               </Button>
@@ -339,7 +339,7 @@ export default function TimeTracking() {
             {(workspaceRole === 'owner' || workspaceRole === 'manager') && (
               <Dialog open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button data-testid="button-clock-in">
+                  <Button className="min-h-[44px]" data-testid="button-clock-in">
                     <Play className="mr-2 h-4 w-4" />
                     Clock In
                   </Button>
@@ -529,7 +529,7 @@ export default function TimeTracking() {
             {/* Export Button */}
             <Button 
               variant="default" 
-              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto touch-target"
+              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto min-h-[44px]"
               onClick={handleExportTimesheet}
               data-testid="button-export-timesheet"
             >
@@ -602,7 +602,7 @@ export default function TimeTracking() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="w-full sm:w-auto touch-target shrink-0"
+                      className="w-full sm:w-auto min-h-[44px] shrink-0"
                       onClick={() => clockOutMutation.mutate(entry.id)}
                       disabled={clockOutMutation.isPending}
                       data-testid={`button-clock-out-${entry.id}`}
