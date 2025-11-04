@@ -6,8 +6,9 @@ import { useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { GraduationCap } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
@@ -154,17 +155,39 @@ function AppContent() {
             {!isMobileChat && !isHelpDesk && (
               <header className="flex items-center justify-end px-2 sm:px-3 py-1 border-b bg-card shrink-0">
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowOnboarding(true)}
-                    data-testid="button-open-onboarding"
-                    title="Platform Tour"
-                    className="h-8 w-8 sm:h-9 sm:w-9"
-                  >
-                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
+                  {/* Menu Toggle with label */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5">
+                        <SidebarTrigger data-testid="button-sidebar-toggle" />
+                        <span className="hidden md:inline text-xs text-muted-foreground font-medium">Menu</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Toggle sidebar menu</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Tutorial/Tour Button - Better icon and tooltip */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowOnboarding(true)}
+                        data-testid="button-open-onboarding"
+                        className="gap-1.5 h-8 sm:h-9"
+                      >
+                        <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden md:inline text-xs font-medium">Tutorial</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Start platform walkthrough</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Theme Toggle with label */}
                   <ThemeToggle />
                 </div>
               </header>
