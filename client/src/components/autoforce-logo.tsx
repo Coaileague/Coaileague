@@ -31,23 +31,40 @@ export function AutoForceLogo({
     hero: "w-96 h-96"
   };
   
-  // AutoForce Icon - Lightning bolt + Force symbol
+  // New Professional AutoForce Icon - Geometric "A" + Workforce Network
   const AutoForceIcon = ({ iconClassName }: { iconClassName?: string }) => (
     <svg 
-      viewBox="0 0 100 100" 
+      viewBox="0 0 120 120" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
       className={cn("w-full h-full", iconClassName)}
     >
-      {/* Gradient Definition - Emerald Theme to match website */}
       <defs>
-        <linearGradient id="autoforce-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#059669" />
-          <stop offset="50%" stopColor="#10b981" />
+        {/* Navy to Emerald Gradient */}
+        <linearGradient id="af-primary-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0B1D3A" />
+          <stop offset="50%" stopColor="#2E8B57" />
           <stop offset="100%" stopColor="#6ee7b7" />
         </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+        
+        {/* Emerald Glow Gradient */}
+        <linearGradient id="af-glow-gradient" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.8"/>
+          <stop offset="100%" stopColor="#2E8B57" stopOpacity="0.3"/>
+        </linearGradient>
+        
+        {/* Glow Filter */}
+        <filter id="af-glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        
+        {/* Stronger Glow for Animation */}
+        <filter id="af-glow-strong">
+          <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
@@ -55,35 +72,109 @@ export function AutoForceLogo({
         </filter>
       </defs>
       
-      {/* Circular Background */}
+      {/* Background Circle */}
       <circle 
-        cx="50" 
-        cy="50" 
-        r="45" 
-        fill="url(#autoforce-gradient)" 
-        opacity="0.1"
+        cx="60" 
+        cy="60" 
+        r="55" 
+        fill="url(#af-primary-gradient)" 
+        opacity="0.08"
+        className={animated ? "animate-pulse-slow" : ""}
       />
       
-      {/* Lightning Bolt Symbol (representing "Auto") */}
-      <path 
-        d="M55 20 L35 55 L45 55 L40 80 L65 45 L55 45 Z" 
-        fill="url(#autoforce-gradient)"
-        filter="url(#glow)"
-        className={animated ? "animate-pulse" : ""}
+      {/* Outer Ring - representing workforce connection */}
+      <circle 
+        cx="60" 
+        cy="60" 
+        r="48" 
+        stroke="url(#af-primary-gradient)"
+        strokeWidth="2"
+        fill="none"
+        opacity="0.3"
+        className={animated ? "animate-spin-slow" : ""}
+        style={{ transformOrigin: "60px 60px", animation: animated ? "spin 20s linear infinite reverse" : "none" }}
       />
       
-      {/* "AF" Monogram overlay */}
-      <text 
-        x="50" 
-        y="90" 
-        fontSize="14" 
-        fontWeight="900" 
-        fill="url(#autoforce-gradient)"
-        textAnchor="middle"
-        fontFamily="system-ui, -apple-system, sans-serif"
-      >
-        AF
-      </text>
+      {/* Geometric "A" Shape - Modern & Bold */}
+      <g className={animated ? "animate-pulse-slow" : ""}>
+        {/* Left side of A */}
+        <path 
+          d="M 45 75 L 55 35 L 60 35 L 60 75 Z" 
+          fill="url(#af-primary-gradient)"
+          filter="url(#af-glow)"
+        />
+        {/* Right side of A */}
+        <path 
+          d="M 65 35 L 75 75 L 60 75 L 60 35 Z" 
+          fill="url(#af-primary-gradient)"
+          filter="url(#af-glow)"
+        />
+        {/* Crossbar of A */}
+        <rect 
+          x="48" 
+          y="52" 
+          width="24" 
+          height="6" 
+          fill="url(#af-glow-gradient)"
+          filter="url(#af-glow-strong)"
+          rx="3"
+        />
+      </g>
+      
+      {/* Workforce Network Nodes - 4 orbiting dots representing people/team */}
+      <g className={animated ? "animate-orbit" : ""} style={{ transformOrigin: "60px 60px" }}>
+        <circle cx="60" cy="20" r="4" fill="#2E8B57" opacity="0.6">
+          {animated && (
+            <animate 
+              attributeName="opacity" 
+              values="0.4;0.8;0.4" 
+              dur="3s" 
+              repeatCount="indefinite"
+            />
+          )}
+        </circle>
+        <circle cx="96" cy="60" r="4" fill="#2E8B57" opacity="0.6">
+          {animated && (
+            <animate 
+              attributeName="opacity" 
+              values="0.6;1;0.6" 
+              dur="3s" 
+              begin="0.75s"
+              repeatCount="indefinite"
+            />
+          )}
+        </circle>
+        <circle cx="60" cy="100" r="4" fill="#2E8B57" opacity="0.6">
+          {animated && (
+            <animate 
+              attributeName="opacity" 
+              values="0.4;0.8;0.4" 
+              dur="3s" 
+              begin="1.5s"
+              repeatCount="indefinite"
+            />
+          )}
+        </circle>
+        <circle cx="24" cy="60" r="4" fill="#2E8B57" opacity="0.6">
+          {animated && (
+            <animate 
+              attributeName="opacity" 
+              values="0.6;1;0.6" 
+              dur="3s" 
+              begin="2.25s"
+              repeatCount="indefinite"
+            />
+          )}
+        </circle>
+      </g>
+      
+      {/* Connection Lines - subtle network effect */}
+      <g opacity="0.15" stroke="url(#af-primary-gradient)" strokeWidth="1">
+        <line x1="60" y1="20" x2="60" y2="35" />
+        <line x1="96" y1="60" x2="75" y2="60" />
+        <line x1="60" y1="100" x2="60" y2="75" />
+        <line x1="24" y1="60" x2="45" y2="60" />
+      </g>
     </svg>
   );
   
@@ -123,19 +214,19 @@ export function AutoForceLogo({
       >
         {/* Icon */}
         <div className={iconSizes[size]}>
-          <AutoForceIcon iconClassName={animated ? "animate-pulse-slow" : ""} />
+          <AutoForceIcon iconClassName={animated ? "animate-float" : ""} />
         </div>
         
         {/* Brand Name */}
         <div className="flex flex-col items-center gap-1 sm:gap-2 w-full px-4">
           <div className="flex items-baseline gap-1 justify-center flex-wrap">
             <span className={cn(
-              "font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent",
+              "font-black bg-gradient-to-r from-[#0B1D3A] via-[#2E8B57] to-[#6ee7b7] bg-clip-text text-transparent",
               titleSizes[size]
             )}>
               AutoForce
             </span>
-            <span className="text-[10px] font-black text-emerald-500 align-super">™</span>
+            <span className="text-[10px] font-black text-[#2E8B57] align-super">™</span>
           </div>
           <span className={cn(
             "font-semibold text-muted-foreground text-center leading-tight break-words w-full",
@@ -159,7 +250,7 @@ export function AutoForceLogo({
         )} 
         data-testid="logo-icon"
       >
-        <AutoForceIcon iconClassName={animated ? "animate-pulse-slow" : ""} />
+        <AutoForceIcon iconClassName={animated ? "animate-float" : ""} />
       </div>
     );
   }
@@ -177,10 +268,10 @@ export function AutoForceLogo({
         <AutoForceIcon />
       </div>
       <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-        <span className="text-xs sm:text-sm font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent truncate">
+        <span className="text-xs sm:text-sm font-black bg-gradient-to-r from-[#0B1D3A] via-[#2E8B57] to-[#6ee7b7] bg-clip-text text-transparent truncate">
           AutoForce
         </span>
-        <span className="text-[7px] sm:text-[8px] font-black text-emerald-500 align-super flex-shrink-0">™</span>
+        <span className="text-[7px] sm:text-[8px] font-black text-[#2E8B57] align-super flex-shrink-0">™</span>
       </div>
     </div>
   );

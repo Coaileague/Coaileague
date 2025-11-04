@@ -8,6 +8,45 @@
 
 ---
 
+## Brand Identity
+
+### Logo Design (Updated November 2025)
+**Concept**: Geometric "A" + Workforce Network
+The AutoForce™ logo represents autonomous workforce management through a modern, professional design:
+
+**Icon Elements**:
+- **Geometric "A"**: Bold, modern letterform in Navy-to-Emerald gradient
+- **Orbital Network Nodes**: 4 orbiting dots representing connected workforce/team members
+- **Outer Ring**: Subtle rotating ring symbolizing continuous automation and connection
+- **Connection Lines**: Network effect showing team integration
+
+**Color Treatment**:
+- Navy-to-Emerald gradient (#0B1D3A → #2E8B57 → #6ee7b7)
+- Emerald accent nodes for workforce representation
+- Glowing effects for premium, modern feel
+
+**Animation States**:
+- **Static**: Clean, professional icon for navigation and static contexts
+- **Animated**: Smooth floating, pulsing, and orbital animations for loading screens and pop-ups
+  - Float animation: 6s ease-in-out (gentle vertical movement)
+  - Pulse slow: 4s subtle opacity fade
+  - Orbit: 30s rotation for network nodes
+  - Ring spin: 20s reverse rotation
+
+**Variants**:
+- **Icon**: Square logo mark, perfect for favicons and small spaces
+- **Nav**: Horizontal logo with brand name in pill container
+- **Full**: Vertical layout with icon, "AutoForce™" wordmark, and tagline
+
+**Usage Guidelines**:
+- Loading screens: Use animated "full" variant with size "sm" or "md"
+- Pop-ups/modals: Animated "icon" variant
+- Navigation: Static "nav" variant
+- Error pages: Animated "full" variant
+- Headers: Static "nav" or "icon" variant
+
+---
+
 ## Core Color Palette
 
 ### Primary - Boardroom Navy
