@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { Input } from "@/components/ui/input";
 import {
   Book,
@@ -140,7 +140,7 @@ export default function Support() {
     <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
       {/* CAD-Style Top Bar */}
       <div className="h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] flex items-center justify-between px-6">
-        <WorkforceOSLogo size="sm" variant="full" />
+        <AutoForceLogo size="sm" variant="full" />
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -444,7 +444,7 @@ export default function Support() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
-              <WorkforceOSLogo size="sm" variant="icon" />
+              <AutoForceLogo size="sm" variant="icon" />
               <span>© 2025 WorkforceOS. Elite-grade workforce automation.</span>
             </div>
             <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">

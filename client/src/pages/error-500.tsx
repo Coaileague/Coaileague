@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ServerCrash, Home, RefreshCw, MessageSquare } from "lucide-react";
 import { useState } from "react";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 
 export default function Error500() {
   const [, setLocation] = useLocation();
@@ -38,7 +38,7 @@ export default function Error500() {
           {/* WorkforceOS Logo */}
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-2xl backdrop-blur-sm border border-red-400/30">
-              <WorkforceOSLogo variant="icon" size="sm" />
+              <AutoForceLogo variant="icon" size="sm" />
             </div>
           </div>
 

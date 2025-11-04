@@ -34,7 +34,7 @@ import {
   History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch
 } from "lucide-react";
 import { WFLogoCompact } from "@/components/wf-logo";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
@@ -562,7 +562,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (role === 'root') {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
-          <WorkforceOSLogo size="sm" variant="icon" />
+          <AutoForceLogo size="sm" variant="icon" />
         </div>
       );
     }
@@ -580,7 +580,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
-          <WorkforceOSLogo size="sm" variant="icon" />
+          <AutoForceLogo size="sm" variant="icon" />
         </div>
       );
     }
@@ -1831,7 +1831,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
-              <WorkforceOSLogo size="sm" variant="icon" />
+              <AutoForceLogo size="sm" variant="icon" />
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-cyan-400" />
                 User Profile & Diagnostics
@@ -2115,7 +2115,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
               /* Loading state with WorkforceOS branding */
               <div className="text-center py-8">
                 <div className="mb-4 flex justify-center">
-                  <WorkforceOSLogo size="lg" variant="icon" className="opacity-75" />
+                  <AutoForceLogo size="lg" variant="icon" className="opacity-75" />
                 </div>
                 <div className="w-12 h-12 mx-auto mb-4 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-slate-400 text-sm font-medium">Loading user information...</p>

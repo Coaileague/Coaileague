@@ -6,7 +6,7 @@ import {
   FileText, Calendar, Clock, ArrowRight 
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { useTransition } from "@/contexts/transition-context";
 import { MobileLoading } from "@/components/mobile-loading";
 
@@ -72,7 +72,7 @@ export default function Dashboard() {
           <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
             <div className="flex items-center gap-4 mb-4">
               <div className="transform hover:scale-105 transition-transform duration-300">
-                <WorkforceOSLogo variant="full" size="md" />
+                <AutoForceLogo variant="full" size="md" />
               </div>
               <div className="flex-1">
                 <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-1 break-words" data-testid="text-welcome">

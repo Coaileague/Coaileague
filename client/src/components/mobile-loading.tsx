@@ -1,4 +1,4 @@
-import { WorkforceOSLogo } from "./workforceos-logo";
+import { AutoForceLogo } from "./workforceos-logo";
 import { Loader2 } from "lucide-react";
 
 interface MobileLoadingProps {
@@ -26,7 +26,7 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
             
             {/* Glass container with new professional logo */}
             <div className="relative z-10 rounded-2xl bg-gradient-to-br from-slate-900/10 via-slate-800/5 to-slate-900/10 backdrop-blur-sm p-6 border border-white/5">
-              <WorkforceOSLogo variant="full" size="lg" animated={true} className="opacity-100" />
+              <AutoForceLogo variant="full" size="lg" animated={true} className="opacity-100" />
             </div>
           </div>
           
@@ -48,7 +48,7 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
           
           {/* Logo container */}
           <div className="relative z-10 rounded-2xl bg-gradient-to-br from-background/40 via-background/20 to-background/40 backdrop-blur-sm p-6 border border-border/30">
-            <WorkforceOSLogo variant="full" size="md" animated={true} className="opacity-100" />
+            <AutoForceLogo variant="full" size="md" animated={true} className="opacity-100" />
           </div>
         </div>
         

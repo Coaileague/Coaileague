@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { SupportMobileMenu } from "@/components/support-mobile-menu";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
@@ -518,7 +518,7 @@ export default function LiveChatroomPage() {
             
             {/* WorkforceOS Branding - Hidden on small mobile */}
             <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-              <WorkforceOSLogo size="sm" variant="icon" />
+              <AutoForceLogo size="sm" variant="icon" />
               <div className="hidden sm:block h-8 w-px bg-white/30" />
             </div>
             
@@ -966,7 +966,7 @@ export default function LiveChatroomPage() {
                         {/* Message Header with Logo for Support Staff */}
                         <div className={`flex items-center gap-2 mb-1.5 ${isSupport || isBot ? '' : 'justify-end'}`}>
                           {isSupport && (
-                            <WorkforceOSLogo size="sm" variant="icon" className="flex-shrink-0" />
+                            <AutoForceLogo size="sm" variant="icon" className="flex-shrink-0" />
                           )}
                           {isBot && getRoleIcon(message.senderName || '', message.senderType)}
                           <span className="text-xs font-semibold text-slate-300">
@@ -1116,7 +1116,7 @@ export default function LiveChatroomPage() {
             
             {/* WorkforceOS Branding at top */}
             <div className="relative z-10 flex justify-center mb-4">
-              <WorkforceOSLogo size="md" variant="full" />
+              <AutoForceLogo size="md" variant="full" />
             </div>
             
             <DialogHeader className="relative z-10">

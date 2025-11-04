@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { DashboardPreview } from "@/components/dashboard-preview";
 import { TimeTrackingPreview } from "@/components/time-tracking-preview";
@@ -44,7 +44,7 @@ export default function Landing() {
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="relative cursor-pointer hover-elevate transition-all duration-300"
             >
-              <WorkforceOSLogo variant="nav" />
+              <AutoForceLogo variant="nav" />
             </button>
 
             {/* Desktop Navigation */}

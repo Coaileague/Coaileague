@@ -18,7 +18,7 @@ import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { Badge } from "@/components/ui/badge";
 
 // FAMILY 1: Communication & Collaboration OS
@@ -124,7 +124,7 @@ export function AppSidebar() {
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
       <SidebarHeader className="p-6 border-b border-white/[0.08]">
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-          <WorkforceOSLogo variant="full" size="sm" />
+          <AutoForceLogo variant="full" size="sm" />
         </div>
       </SidebarHeader>
       

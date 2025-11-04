@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Send, Users, Settings } from "lucide-react";
 import { UserContextMenu } from "./user-context-menu";
-import { WorkforceOSLogo } from "./workforceos-logo";
+import { AutoForceLogo } from "./workforceos-logo";
 import { StaffNameDisplay } from "./staff-name-display";
 import { MessageTextWithIcons } from "./message-text-with-icons";
 import type { ChatMessage } from "@shared/schema";
@@ -85,7 +85,7 @@ export function DesktopChatLayout({
         <div key={msg.id} className="py-2 px-3 bg-blue-500/5 border-l-2 border-blue-500">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-4 h-4">
-              <WorkforceOSLogo />
+              <AutoForceLogo />
             </div>
             <StaffNameDisplay name={msg.senderName || 'HelpOS™'} className="text-xs font-bold text-blue-400" />
             <span className="text-[10px] text-muted-foreground">
@@ -136,7 +136,7 @@ export function DesktopChatLayout({
         <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8">
-              <WorkforceOSLogo />
+              <AutoForceLogo />
             </div>
             <div>
               <h2 className="text-lg font-bold" data-testid="chat-title">
