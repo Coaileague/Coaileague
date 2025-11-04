@@ -69,13 +69,18 @@ The platform features a CAD-style professional interface with a dark mode theme,
 **Mobile-First Responsive Design (2024-11-04)**: Comprehensive mobile optimization added across all pages:
 - **Typography**: Responsive text sizes (text-xl sm:text-2xl lg:text-3xl), proper text wrapping with `break-anywhere` for long content, `truncate-1/2/3` for multi-line truncation
 - **Containers**: `mobile-container` utility provides proper padding (1rem mobile, 1.5rem tablet, 2rem desktop)
-- **Touch Targets**: 44px minimum size via `touch-target` class, `touch-friendly` for tap highlight removal
+- **Touch Targets**: All interactive buttons meet 44px minimum size via `min-h-[44px]` for regular buttons and `min-h-[44px] min-w-[44px]` for icon buttons. `touch-friendly` class removes tap highlight artifacts.
+- **Accessibility**: All icon-only buttons include `aria-label` attributes for screen reader compatibility (e.g., Schedule Grid tabs, navigation icons)
 - **Responsive Tables**: `mobile-table-stack` converts tables to card layout on mobile with data-labels
 - **Grid Layouts**: `mobile-grid` (1-col mobile, 2-col tablet, 3-col desktop) and `mobile-stack` (column mobile, row desktop)
 - **Images**: `img-responsive`, `img-contain`, `img-cover` utilities for proper scaling
 - **Mobile Scroll**: `-webkit-overflow-scrolling: touch` and `overscroll-behavior` for smooth native scrolling
 - **Safe Areas**: iOS notch support via `safe-top/bottom/left/right` padding utilities
 - **Responsive Visibility**: `mobile-only` and `desktop-only` classes for conditional rendering
+- **Page-Specific Optimizations**:
+  - **Time Tracking**: Responsive filters with flex-1 min-w-[140px], full-width buttons on mobile (w-full sm:w-auto), mobile-table-stack for time entries
+  - **Dashboard**: Stat cards in 2-column grid on mobile (grid-cols-2 sm:grid-cols-4 lg:grid-cols-8), scaled icons (h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10)
+  - **Schedule Grid**: Icon-only tabs on mobile with hidden text labels (`<span className="hidden sm:inline">`), all tabs meet 44x44px touch targets
 - All interactive elements use proper sizing (shrink-0, flex-1, min-w-0) to prevent crushing/overflow
 
 ### Technical Implementations
