@@ -66,6 +66,18 @@ The platform features a CAD-style professional interface with a dark mode theme,
 
 **Navigation Pattern (2024-11-04)**: All feature pages include Back/Home navigation buttons to prevent users from getting lost. Time Tracking includes Back arrow (ArrowLeft) + Dashboard button with Home icon. Schedule Grid includes Dashboard button in top toolbar. All navigation uses wouter's Link component for client-side routing, with data-testid attributes for testing. Mobile-responsive with proper spacing and tooltips.
 
+**Mobile-First Responsive Design (2024-11-04)**: Comprehensive mobile optimization added across all pages:
+- **Typography**: Responsive text sizes (text-xl sm:text-2xl lg:text-3xl), proper text wrapping with `break-anywhere` for long content, `truncate-1/2/3` for multi-line truncation
+- **Containers**: `mobile-container` utility provides proper padding (1rem mobile, 1.5rem tablet, 2rem desktop)
+- **Touch Targets**: 44px minimum size via `touch-target` class, `touch-friendly` for tap highlight removal
+- **Responsive Tables**: `mobile-table-stack` converts tables to card layout on mobile with data-labels
+- **Grid Layouts**: `mobile-grid` (1-col mobile, 2-col tablet, 3-col desktop) and `mobile-stack` (column mobile, row desktop)
+- **Images**: `img-responsive`, `img-contain`, `img-cover` utilities for proper scaling
+- **Mobile Scroll**: `-webkit-overflow-scrolling: touch` and `overscroll-behavior` for smooth native scrolling
+- **Safe Areas**: iOS notch support via `safe-top/bottom/left/right` padding utilities
+- **Responsive Visibility**: `mobile-only` and `desktop-only` classes for conditional rendering
+- All interactive elements use proper sizing (shrink-0, flex-1, min-w-0) to prevent crushing/overflow
+
 ### Technical Implementations
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for request body validation.

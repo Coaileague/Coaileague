@@ -311,29 +311,29 @@ export default function TimeTracking() {
 
   const pageContent = (
     <div className="min-h-screen w-full bg-background">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+      <div className="mobile-container p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6">
         {/* Header with Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/dashboard">
-              <Button variant="outline" size="icon" data-testid="button-back-dashboard">
+              <Button variant="outline" size="icon" className="touch-target shrink-0" data-testid="button-back-dashboard">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-timetracking-title">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-0.5 sm:mb-1 break-anywhere" data-testid="text-timetracking-title">
                 Time Clock
               </h2>
-              <p className="text-sm text-muted-foreground" data-testid="text-timetracking-subtitle">
+              <p className="text-xs sm:text-sm text-muted-foreground break-anywhere" data-testid="text-timetracking-subtitle">
                 Manage employee clock-ins and timesheet reports
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm" data-testid="button-home">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link href="/dashboard" className="flex-1 sm:flex-initial">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto touch-target" data-testid="button-home">
                 <Home className="mr-2 h-4 w-4" />
-                Dashboard
+                <span className="whitespace-nowrap">Dashboard</span>
               </Button>
             </Link>
             {(workspaceRole === 'owner' || workspaceRole === 'manager') && (
@@ -438,13 +438,13 @@ export default function TimeTracking() {
 
         {/* Sling-style Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
+        <CardContent className="p-3 sm:p-4">
+          <div className="mobile-stack sm:flex-row flex-wrap">
             {/* Date Range */}
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-[150px]" data-testid="select-date-range">
+                <SelectTrigger className="w-full sm:w-[150px] touch-target" data-testid="select-date-range">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -458,10 +458,10 @@ export default function TimeTracking() {
             </div>
 
             {/* Filter by Employee */}
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 flex-1 min-w-[160px]">
+              <User className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={filterEmployee} onValueChange={setFilterEmployee}>
-                <SelectTrigger className="w-[180px]" data-testid="select-filter-employee">
+                <SelectTrigger className="w-full sm:w-[180px] touch-target" data-testid="select-filter-employee">
                   <SelectValue placeholder="All Employees" />
                 </SelectTrigger>
                 <SelectContent>
@@ -476,10 +476,10 @@ export default function TimeTracking() {
             </div>
 
             {/* Filter by Group/Client */}
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 flex-1 min-w-[160px]">
+              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={filterGroup} onValueChange={setFilterGroup}>
-                <SelectTrigger className="w-[180px]" data-testid="select-filter-group">
+                <SelectTrigger className="w-full sm:w-[180px] touch-target" data-testid="select-filter-group">
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
                 <SelectContent>
@@ -494,10 +494,10 @@ export default function TimeTracking() {
             </div>
 
             {/* Filter by Status */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 flex-1 min-w-[130px]">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[150px]" data-testid="select-filter-status">
+                <SelectTrigger className="w-full sm:w-[150px] touch-target" data-testid="select-filter-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -511,10 +511,10 @@ export default function TimeTracking() {
             </div>
 
             {/* Sort By */}
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-sm text-muted-foreground">Sort by:</span>
+            <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:ml-auto min-w-[130px]">
+              <span className="text-xs sm:text-sm text-muted-foreground shrink-0">Sort by:</span>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[150px]" data-testid="select-sort-by">
+                <SelectTrigger className="w-full sm:w-[150px] touch-target" data-testid="select-sort-by">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -529,18 +529,18 @@ export default function TimeTracking() {
             {/* Export Button */}
             <Button 
               variant="default" 
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto touch-target"
               onClick={handleExportTimesheet}
               data-testid="button-export-timesheet"
             >
               <Download className="mr-2 h-4 w-4" />
-              EXPORT TIMESHEET
+              <span className="whitespace-nowrap">EXPORT TIMESHEET</span>
             </Button>
           </div>
 
           {/* Results summary */}
           <div className="mt-3 pt-3 border-t">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground break-anywhere">
               Showing <strong>{filteredTimeEntries.length}</strong> time {filteredTimeEntries.length === 1 ? "entry" : "entries"}
               {filterEmployee !== "all" && ` for ${employees.find(e => e.id === filterEmployee)?.firstName || "selected employee"}`}
               {filterGroup !== "all" && ` at ${clients.find(c => c.id === filterGroup)?.companyName || "selected location"}`}
@@ -552,16 +552,16 @@ export default function TimeTracking() {
       {/* Active Time Entries */}
       {activeTimeEntries.length > 0 && (
         <Card data-testid="card-active-entries">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Active Time Tracking</CardTitle>
-                <CardDescription>{activeTimeEntries.length} employee(s) currently clocked in</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-base sm:text-lg break-anywhere">Active Time Tracking</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{activeTimeEntries.length} employee(s) currently clocked in</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
             {activeTimeEntries.map(entry => {
               const employee = employees.find(e => e.id === entry.employeeId);
               const client = clients.find(c => c.id === entry.clientId);
@@ -570,42 +570,45 @@ export default function TimeTracking() {
               const minutes = elapsed % 60;
               
               return (
-                <Card key={entry.id} className="p-4 hover-elevate" data-testid={`card-active-entry-${entry.id}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-semibold">{employee?.firstName} {employee?.lastName}</span>
-                        <Badge variant="outline" className="ml-2">Active</Badge>
+                <Card key={entry.id} className="p-3 sm:p-4 hover-elevate touch-friendly" data-testid={`card-active-entry-${entry.id}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="font-semibold text-sm sm:text-base break-anywhere">{employee?.firstName} {employee?.lastName}</span>
+                        <Badge variant="outline" className="text-xs">Active</Badge>
                       </div>
                       {client && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Building2 className="h-4 w-4" />
-                          <span>{client.companyName || `${client.firstName} ${client.lastName}`}</span>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <Building2 className="h-4 w-4 shrink-0" />
+                          <span className="truncate-1">{client.companyName || `${client.firstName} ${client.lastName}`}</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>Started: {format(new Date(entry.clockIn), "MMM d, h:mm a")}</span>
-                        <span className="ml-2">•</span>
-                        <span className="font-mono">{hours}h {minutes}m elapsed</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 shrink-0" />
+                          <span className="whitespace-nowrap">Started: {format(new Date(entry.clockIn), "MMM d, h:mm a")}</span>
+                        </div>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="font-mono whitespace-nowrap">{hours}h {minutes}m elapsed</span>
                       </div>
                       {entry.hourlyRate && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <DollarSign className="h-4 w-4" />
-                          <span>${entry.hourlyRate}/hr • Estimated: ${(parseFloat(entry.hourlyRate) * (elapsed / 60)).toFixed(2)}</span>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                          <DollarSign className="h-4 w-4 shrink-0" />
+                          <span className="break-anywhere">${entry.hourlyRate}/hr • Estimated: ${(parseFloat(entry.hourlyRate) * (elapsed / 60)).toFixed(2)}</span>
                         </div>
                       )}
                     </div>
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="w-full sm:w-auto touch-target shrink-0"
                       onClick={() => clockOutMutation.mutate(entry.id)}
                       disabled={clockOutMutation.isPending}
                       data-testid={`button-clock-out-${entry.id}`}
                     >
                       <Square className="mr-2 h-4 w-4" />
-                      Clock Out
+                      <span className="whitespace-nowrap">Clock Out</span>
                     </Button>
                   </div>
                 </Card>
@@ -618,22 +621,22 @@ export default function TimeTracking() {
       {/* Completed Time Entries Table */}
       {completedTimeEntries.length > 0 && (
         <Card data-testid="card-completed-entries">
-          <CardHeader>
-            <CardTitle>Completed Time Entries</CardTitle>
-            <CardDescription>{completedTimeEntries.length} completed time {completedTimeEntries.length === 1 ? "entry" : "entries"}</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Completed Time Entries</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">{completedTimeEntries.length} completed time {completedTimeEntries.length === 1 ? "entry" : "entry"}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="p-0 sm:p-6">
+            <div className="mobile-table-wrapper mobile-table-stack">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2 text-sm font-semibold">Employee</th>
-                    <th className="text-left p-2 text-sm font-semibold">Client</th>
-                    <th className="text-left p-2 text-sm font-semibold">Clock In</th>
-                    <th className="text-left p-2 text-sm font-semibold">Clock Out</th>
-                    <th className="text-left p-2 text-sm font-semibold">Hours</th>
-                    <th className="text-left p-2 text-sm font-semibold">Total</th>
-                    <th className="text-left p-2 text-sm font-semibold">Status</th>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Employee</th>
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Client</th>
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Clock In</th>
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Clock Out</th>
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Hours</th>
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Total</th>
+                    <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -647,14 +650,14 @@ export default function TimeTracking() {
 
                     return (
                       <tr key={entry.id} className="border-b hover:bg-muted/50" data-testid={`row-entry-${entry.id}`}>
-                        <td className="p-2 text-sm">{employee?.firstName} {employee?.lastName}</td>
-                        <td className="p-2 text-sm">{client?.companyName || client?.firstName || "N/A"}</td>
-                        <td className="p-2 text-sm">{format(new Date(entry.clockIn), "MMM d, h:mm a")}</td>
-                        <td className="p-2 text-sm">{entry.clockOut && format(new Date(entry.clockOut), "MMM d, h:mm a")}</td>
-                        <td className="p-2 text-sm">{hours}h</td>
-                        <td className="p-2 text-sm font-semibold">${total.toFixed(2)}</td>
-                        <td className="p-2 text-sm">
-                          <Badge variant={entry.invoiceId ? "default" : "secondary"}>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm" data-label="Employee">{employee?.firstName} {employee?.lastName}</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm truncate-1" data-label="Client">{client?.companyName || client?.firstName || "N/A"}</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap" data-label="Clock In">{format(new Date(entry.clockIn), "MMM d, h:mm a")}</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap" data-label="Clock Out">{entry.clockOut && format(new Date(entry.clockOut), "MMM d, h:mm a")}</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm" data-label="Hours">{hours}h</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm font-semibold" data-label="Total">${total.toFixed(2)}</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm" data-label="Status">
+                          <Badge variant={entry.invoiceId ? "default" : "secondary"} className="text-xs">
                             {entry.invoiceId ? "billed" : "unbilled"}
                           </Badge>
                         </td>

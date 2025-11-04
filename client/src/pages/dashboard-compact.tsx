@@ -187,14 +187,14 @@ export default function DashboardCompact() {
       {/* Sling-style Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-px bg-border">
         {statCards.map((stat, index) => (
-          <Link key={index} href={stat.link} className="block">
+          <Link key={index} href={stat.link} className="block touch-target">
             <Card className="rounded-none border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
-              <CardContent className="p-4 sm:p-6 text-center flex flex-col items-center justify-center h-full min-h-[120px]">
-                <stat.icon className={`h-8 w-8 sm:h-10 sm:w-10 mb-2 ${stat.color}`} />
-                <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-1">
+              <CardContent className="p-3 sm:p-4 lg:p-6 text-center flex flex-col items-center justify-center h-full min-h-[100px] sm:min-h-[120px]">
+                <stat.icon className={`h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 mb-1 sm:mb-2 ${stat.color} shrink-0`} />
+                <p className="text-[10px] sm:text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-0.5 sm:mb-1 break-anywhere">
                   {stat.label}
                 </p>
-                <p className="text-lg sm:text-2xl font-bold">
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold break-anywhere">
                   {stat.value}
                 </p>
               </CardContent>
@@ -205,9 +205,9 @@ export default function DashboardCompact() {
 
       {/* Blue Banner (No shifts scheduled) */}
       {workspaceRole !== 'employee' && (
-        <div className="bg-blue-600 text-white px-4 py-4 flex items-center gap-3">
-          <Square className="h-5 w-5" />
-          <p className="text-sm font-medium">
+        <div className="bg-blue-600 text-white px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
+          <Square className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+          <p className="text-xs sm:text-sm font-medium break-anywhere">
             {(stats as any)?.upcomingShifts > 0 
               ? `You have ${(stats as any)?.upcomingShifts} shifts scheduled` 
               : "You don't have any shifts scheduled"}
@@ -216,29 +216,29 @@ export default function DashboardCompact() {
       )}
 
       {/* Notifications & Roster Tabs */}
-      <div className="p-4">
+      <div className="mobile-container p-3 sm:p-4">
         <Tabs defaultValue="notifications" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="notifications" data-testid="tab-notifications">
+          <TabsList className="grid w-full max-w-md grid-cols-2 touch-target">
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm" data-testid="tab-notifications">
               NOTIFICATIONS
             </TabsTrigger>
-            <TabsTrigger value="roster" data-testid="tab-roster">
+            <TabsTrigger value="roster" className="text-xs sm:text-sm" data-testid="tab-roster">
               ROSTER
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="notifications" className="space-y-3 mt-4">
+          <TabsContent value="notifications" className="space-y-2 sm:space-y-3 mt-3 sm:mt-4">
             {notifications.map((notif, index) => (
-              <Card key={index} className="hover-elevate" data-testid={`notification-${index}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-full bg-muted ${notif.color}`}>
-                      <notif.icon className="h-5 w-5" />
+              <Card key={index} className="hover-elevate touch-friendly" data-testid={`notification-${index}`}>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <div className={`p-1.5 sm:p-2 rounded-full bg-muted ${notif.color} shrink-0`}>
+                      <notif.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm">{notif.message}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm break-anywhere">{notif.message}</p>
                       {notif.time && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                           {notif.time.toLocaleString()}
                         </p>
                       )}
