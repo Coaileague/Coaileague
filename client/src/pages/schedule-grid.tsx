@@ -17,7 +17,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -40,19 +39,11 @@ import {
   Sparkles,
   GripVertical,
   UserPlus,
+  Calendar,
 } from "lucide-react";
 import { EnhancedEmptyState } from "@/components/enhanced-empty-state";
 import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
-
-// Time slots for the grid (7 AM - 11 PM in 1-hour increments)
-const TIME_SLOTS = Array.from({ length: 17 }, (_, i) => {
-  const hour = i + 7;
-  return {
-    label: moment().hour(hour).minute(0).format('h:mm A'),
-    hour,
-  };
-});
 
 // Draggable shift card
 function DraggableShiftCard({ shift, employee, client }: {
@@ -78,7 +69,7 @@ function DraggableShiftCard({ shift, employee, client }: {
       ref={setNodeRef}
       style={style}
       className={`
-        p-2 rounded-lg border-2 transition-all cursor-grab active:cursor-grabbing
+        p-2 rounded-lg border-2 transition-all cursor-grab active:cursor-grabbing mb-1
         ${isDraft ? 'border-amber-500/50 bg-amber-500/10 shadow-amber-500/20 shadow-lg animate-pulse' : ''}
         ${isPublished ? 'border-blue-500 bg-blue-500/20' : ''}
         ${isOpen ? 'border-purple-500/50 bg-purple-500/10 border-dashed' : ''}
@@ -139,50 +130,50 @@ function DraggableShiftCard({ shift, employee, client }: {
   );
 }
 
-// Droppable time slot
-function DroppableTimeSlot({ employeeId, hour, date, shifts, employees, clients, onShiftClick, onCreateShift }: {
+// Droppable day cell for an employee
+function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShiftClick, onCreateShift }: {
   employeeId: string;
-  hour: number;
   date: Date;
   shifts: Shift[];
   employees: Employee[];
   clients: Client[];
   onShiftClick: (shift: Shift) => void;
-  onCreateShift?: (employeeId: string, hour: number, date: Date) => void;
+  onCreateShift?: (employeeId: string, date: Date) => void;
 }) {
-  const dropId = `${employeeId}-${hour}`;
+  const dropId = `${employeeId}-${moment(date).format('YYYY-MM-DD')}`;
   const { setNodeRef, isOver } = useDroppable({
     id: dropId,
-    data: { employeeId, hour, date },
+    data: { employeeId, date },
   });
 
-  const shiftsInSlot = useMemo(() => {
+  const shiftsInDay = useMemo(() => {
     return shifts.filter(shift => {
       if (shift.employeeId !== employeeId) return false;
-      const shiftStart = moment(shift.startTime);
-      return shiftStart.isSame(date, 'day') && shiftStart.hour() === hour;
-    });
-  }, [shifts, employeeId, date, hour]);
+      return moment(shift.startTime).isSame(date, 'day');
+    }).sort((a, b) => moment(a.startTime).diff(moment(b.startTime)));
+  }, [shifts, employeeId, date]);
 
   const handleCellClick = () => {
-    if (shiftsInSlot.length === 0 && onCreateShift) {
-      onCreateShift(employeeId, hour, date);
+    if (shiftsInDay.length === 0 && onCreateShift) {
+      onCreateShift(employeeId, date);
     }
   };
+
+  const isToday = moment(date).isSame(moment(), 'day');
 
   return (
     <div
       ref={setNodeRef}
       onClick={handleCellClick}
       className={`
-        min-h-[80px] border-b border-r p-2 space-y-1 relative group cursor-pointer
+        min-h-[120px] border-r border-b p-2 relative group cursor-pointer transition-all
         ${isOver ? 'bg-primary/10 ring-2 ring-primary' : 'bg-background'}
-        ${hour % 2 === 0 ? 'bg-muted/5' : ''}
-        hover-elevate transition-all
+        ${isToday ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}
+        hover-elevate
       `}
       data-testid={`drop-zone-${dropId}`}
     >
-      {shiftsInSlot.map(shift => (
+      {shiftsInDay.map(shift => (
         <div
           key={shift.id}
           onClick={(e) => {
@@ -199,7 +190,7 @@ function DroppableTimeSlot({ employeeId, hour, date, shifts, employees, clients,
       ))}
       
       {/* Add Shift Hint - shows on hover for empty cells */}
-      {shiftsInSlot.length === 0 && (
+      {shiftsInDay.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="bg-primary/20 backdrop-blur-sm border border-primary/30 rounded-lg px-3 py-2 flex items-center gap-2">
             <Plus className="h-4 w-4 text-primary" />
@@ -211,129 +202,127 @@ function DroppableTimeSlot({ employeeId, hour, date, shifts, employees, clients,
   );
 }
 
-// Employee column with droppable time slots
-function EmployeeColumn({ employee, shifts, date, onShiftClick, employees, clients, onCreateShift }: {
+// Employee row with day columns
+function EmployeeRow({ employee, weekDays, shifts, employees, clients, onShiftClick, onCreateShift }: {
   employee: Employee;
+  weekDays: Date[];
   shifts: Shift[];
-  date: Date;
-  onShiftClick: (shift: Shift) => void;
   employees: Employee[];
   clients: Client[];
-  onCreateShift?: (employeeId: string, hour: number, date: Date) => void;
+  onShiftClick: (shift: Shift) => void;
+  onCreateShift?: (employeeId: string, date: Date) => void;
 }) {
   return (
-    <div className="flex-1 min-w-[150px] sm:min-w-[180px]">
-      {/* Employee header */}
-      <div className="sticky top-0 z-10 bg-card border-b p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs bg-primary/20">
-              {employee.firstName[0]}{employee.lastName[0]}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="text-sm font-semibold truncate">
-              {employee.firstName} {employee.lastName}
-            </div>
-            <div className="text-xs text-muted-foreground truncate">
-              {employee.role}
-            </div>
+    <div className="flex">
+      {/* Employee name cell */}
+      <div className="sticky left-0 z-10 w-[180px] sm:w-[200px] border-r border-b bg-card p-3 flex items-center gap-2">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="text-xs bg-primary/20">
+            {employee.firstName[0]}{employee.lastName[0]}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold truncate">
+            {employee.firstName} {employee.lastName}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            {employee.role}
           </div>
         </div>
       </div>
 
-      {/* Time grid */}
-      <div className="relative">
-        {TIME_SLOTS.map((slot) => (
-          <DroppableTimeSlot
-            key={`${employee.id}-${slot.hour}`}
-            employeeId={employee.id}
-            hour={slot.hour}
-            date={date}
-            shifts={shifts}
-            employees={employees}
-            clients={clients}
-            onShiftClick={onShiftClick}
-            onCreateShift={onCreateShift}
-          />
-        ))}
-      </div>
+      {/* Day columns */}
+      {weekDays.map((day) => (
+        <DroppableDayCell
+          key={`${employee.id}-${moment(day).format('YYYY-MM-DD')}`}
+          employeeId={employee.id}
+          date={day}
+          shifts={shifts}
+          employees={employees}
+          clients={clients}
+          onShiftClick={onShiftClick}
+          onCreateShift={onCreateShift}
+        />
+      ))}
     </div>
   );
 }
 
-// Placeholder column when no employees exist
-function PlaceholderEmployeeColumn({ onCreateShift, onAddEmployee }: {
-  onCreateShift?: (employeeId: string, hour: number, date: Date) => void;
+// Placeholder row when no employees exist
+function PlaceholderEmployeeRow({ weekDays, onCreateShift, onAddEmployee }: {
+  weekDays: Date[];
+  onCreateShift?: (employeeId: string, date: Date) => void;
   onAddEmployee?: () => void;
 }) {
   return (
-    <div className="flex-1 min-w-[200px] sm:min-w-[250px]">
-      {/* Enhanced empty state header */}
-      <div className="sticky top-0 z-10 bg-gradient-to-b from-background via-muted/10 to-transparent border-b p-4">
-        <EnhancedEmptyState 
-          icon={UserPlus}
-          title="Build Your Team"
-          description="Start scheduling by adding your first team member"
-          actionLabel="Add Employee"
-          onAction={onAddEmployee}
-          testId="button-add-first-employee"
-          variant="emerald"
-        />
-      </div>
-
-      {/* Clickable time grid with visual enhancements */}
-      <div className="relative">
-        {TIME_SLOTS.map((slot, index) => (
-          <div
-            key={`placeholder-${slot.hour}`}
-            onClick={() => onCreateShift && onCreateShift('open', slot.hour, new Date())}
-            className={`
-              min-h-[80px] border-b border-r p-2 relative group cursor-pointer transition-all
-              ${slot.hour % 2 === 0 ? 'bg-gradient-to-r from-muted/5 to-transparent' : 'bg-background'}
-              hover:bg-emerald-500/5 hover:border-emerald-500/30
-            `}
-            data-testid={`placeholder-slot-${slot.hour}`}
-          >
-            {/* Animated hover overlay */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-              <div className="bg-gradient-to-r from-emerald-500/20 to-primary/20 backdrop-blur-sm border border-emerald-500/40 rounded-xl px-4 py-3 flex items-center gap-2 shadow-lg transform scale-95 group-hover:scale-100 transition-transform">
-                <div className="p-1 bg-emerald-500/30 rounded-lg">
-                  <Plus className="h-4 w-4 text-emerald-400" strokeWidth={2.5} />
-                </div>
-                <span className="text-sm font-semibold text-emerald-400">Add Open Shift</span>
-                <Sparkles className="h-3 w-3 text-emerald-300 animate-pulse" />
-              </div>
-            </div>
-
-            {/* Decorative gradient line */}
-            {index === 0 && (
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
-            )}
+    <div className="flex">
+      {/* Empty state cell */}
+      <div className="sticky left-0 z-10 w-[180px] sm:w-[200px] border-r border-b bg-gradient-to-b from-background via-muted/10 to-transparent p-4">
+        <div className="text-center">
+          <div className="p-3 mx-auto w-fit bg-gradient-to-br from-emerald-500/20 via-emerald-400/10 to-transparent rounded-full mb-2">
+            <UserPlus className="h-6 w-6 text-emerald-400" />
           </div>
-        ))}
+          <Button
+            onClick={onAddEmployee}
+            size="sm"
+            variant="outline"
+            className="w-full"
+            data-testid="button-add-first-employee"
+          >
+            <UserPlus className="h-3 w-3 mr-1" />
+            Add Employee
+          </Button>
+        </div>
       </div>
+
+      {/* Day columns with click hints */}
+      {weekDays.map((day) => (
+        <div
+          key={moment(day).format('YYYY-MM-DD')}
+          onClick={() => onCreateShift && onCreateShift('open', day)}
+          className="min-h-[120px] border-r border-b p-2 relative group cursor-pointer transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30"
+          data-testid={`placeholder-slot-${moment(day).format('YYYY-MM-DD')}`}
+        >
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+            <div className="bg-gradient-to-r from-emerald-500/20 to-primary/20 backdrop-blur-sm border border-emerald-500/40 rounded-xl px-4 py-3 flex items-center gap-2 shadow-lg transform scale-95 group-hover:scale-100 transition-transform">
+              <div className="p-1 bg-emerald-500/30 rounded-lg">
+                <Plus className="h-4 w-4 text-emerald-400" strokeWidth={2.5} />
+              </div>
+              <span className="text-sm font-semibold text-emerald-400">Add Open Shift</span>
+              <Sparkles className="h-3 w-3 text-emerald-300 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-// Open shifts column
-function OpenShiftsColumn({ shifts, date, onShiftClick, clients }: {
+// Open shifts section
+function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients }: {
   shifts: Shift[];
-  date: Date;
+  weekDays: Date[];
   onShiftClick: (shift: Shift) => void;
   clients: Client[];
 }) {
-  const openShifts = useMemo(() => {
-    return shifts.filter(s =>
-      !s.employeeId &&
-      moment(s.startTime).isSame(date, 'day')
-    );
-  }, [shifts, date]);
+  const openShiftsByDay = useMemo(() => {
+    const byDay: Record<string, Shift[]> = {};
+    weekDays.forEach(day => {
+      const dayKey = moment(day).format('YYYY-MM-DD');
+      byDay[dayKey] = shifts.filter(s =>
+        !s.employeeId &&
+        moment(s.startTime).isSame(day, 'day')
+      ).sort((a, b) => moment(a.startTime).diff(moment(b.startTime)));
+    });
+    return byDay;
+  }, [shifts, weekDays]);
+
+  const totalOpenShifts = Object.values(openShiftsByDay).reduce((sum, arr) => sum + arr.length, 0);
 
   return (
-    <div className="flex-1 min-w-[150px] sm:min-w-[180px]">
-      <div className="sticky top-0 z-10 bg-purple-500/20 border-b border-purple-500/30 p-3">
+    <div className="flex border-t-2 border-purple-500/30">
+      {/* Open shifts label */}
+      <div className="sticky left-0 z-10 w-[180px] sm:w-[200px] border-r bg-purple-500/20 p-3">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-purple-500/20">
             <Users className="h-4 w-4 text-purple-400" />
@@ -343,50 +332,42 @@ function OpenShiftsColumn({ shifts, date, onShiftClick, clients }: {
               Open Shifts
             </div>
             <div className="text-xs text-muted-foreground">
-              {openShifts.length} unassigned
+              {totalOpenShifts} unassigned
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-3 space-y-2">
-        {openShifts.map(shift => (
+      {/* Day columns */}
+      {weekDays.map((day) => {
+        const dayKey = moment(day).format('YYYY-MM-DD');
+        const dayOpenShifts = openShiftsByDay[dayKey] || [];
+
+        return (
           <div
-            key={shift.id}
-            onClick={() => onShiftClick(shift)}
-            data-testid={`open-shift-${shift.id}`}
+            key={dayKey}
+            className="min-h-[120px] border-r border-b bg-purple-500/5 p-2"
           >
-            <DraggableShiftCard
-              shift={shift}
-              client={clients.find(c => c.id === shift.clientId)}
-            />
-          </div>
-        ))}
-        {openShifts.length === 0 && (
-          <div className="py-8 px-4">
-            <div className="relative w-20 h-20 mx-auto mb-4">
-              {/* Gradient circle with glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-purple-400/10 to-transparent rounded-full animate-pulse" />
-              <div className="absolute inset-0 rounded-full blur-lg bg-purple-500/20 shadow-2xl" />
-              
-              {/* Icon */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="p-4 rounded-xl bg-purple-500/20 backdrop-blur-sm border border-white/10 shadow-lg">
-                  <Users className="h-8 w-8 text-purple-400 drop-shadow-lg" strokeWidth={1.5} />
-                </div>
+            {dayOpenShifts.map(shift => (
+              <div
+                key={shift.id}
+                onClick={() => onShiftClick(shift)}
+                data-testid={`open-shift-${shift.id}`}
+              >
+                <DraggableShiftCard
+                  shift={shift}
+                  client={clients.find(c => c.id === shift.clientId)}
+                />
               </div>
-              
-              {/* Decorative ring */}
-              <div className="absolute inset-0 rounded-full border-2 border-purple-500/20 border-dashed animate-spin" style={{ animationDuration: '20s' }} />
-            </div>
-            
-            <div className="text-center space-y-1">
-              <p className="text-sm font-semibold">All Shifts Assigned</p>
-              <p className="text-xs text-muted-foreground">No unassigned shifts at the moment</p>
-            </div>
+            ))}
+            {dayOpenShifts.length === 0 && (
+              <div className="h-full flex items-center justify-center opacity-30">
+                <Users className="h-6 w-6 text-purple-300" />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -394,12 +375,12 @@ function OpenShiftsColumn({ shifts, date, onShiftClick, clients }: {
 export default function ScheduleGrid() {
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'week' | 'bi-week'>('week');
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateShiftDialogOpen, setIsCreateShiftDialogOpen] = useState(false);
   const [createShiftContext, setCreateShiftContext] = useState<{
     employeeId: string;
-    hour: number;
     date: Date;
   } | null>(null);
 
@@ -415,6 +396,13 @@ export default function ScheduleGrid() {
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
+
+  // Calculate days to display based on view mode
+  const weekDays = useMemo(() => {
+    const start = moment(currentDate).startOf('week');
+    const daysToShow = viewMode === 'week' ? 7 : 14;
+    return Array.from({ length: daysToShow }, (_, i) => start.clone().add(i, 'days').toDate());
+  }, [currentDate, viewMode]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -513,19 +501,19 @@ export default function ScheduleGrid() {
     
     if (!shift) return;
 
-    if (dropData && dropData.employeeId && dropData.hour !== undefined) {
-      // CRITICAL: Preserve the original shift's date, only change hour and employee
-      // This prevents data corruption when dragging shifts from different days
-      const newStart = moment(shift.startTime)
-        .hour(dropData.hour)
-        .minute(0)
+    if (dropData && dropData.employeeId && dropData.date) {
+      // Preserve the shift's time, but update to the new date and employee
+      const originalStart = moment(shift.startTime);
+      const newStart = moment(dropData.date)
+        .hour(originalStart.hour())
+        .minute(originalStart.minute())
         .second(0)
         .toDate();
       
       const duration = moment(shift.endTime).diff(moment(shift.startTime), 'hours');
       const newEnd = moment(newStart).add(duration, 'hours').toDate();
 
-      // Update shift with new employee and times (preserving original date)
+      // Update shift with new employee and date
       updateShiftMutation.mutate({
         id: shiftId,
         data: {
@@ -542,13 +530,12 @@ export default function ScheduleGrid() {
     setIsEditDialogOpen(true);
   };
 
-  const handleCreateShift = (employeeId: string, hour: number, date: Date) => {
-    setCreateShiftContext({ employeeId, hour, date });
+  const handleCreateShift = (employeeId: string, date: Date) => {
+    setCreateShiftContext({ employeeId, date });
     setIsCreateShiftDialogOpen(true);
   };
 
   const handleAddEmployee = () => {
-    // Navigate to employee creation page
     window.location.href = '/employees';
   };
 
@@ -564,17 +551,19 @@ export default function ScheduleGrid() {
     }
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
+  const navigatePeriod = (direction: 'prev' | 'next') => {
+    const daysToMove = viewMode === 'week' ? 7 : 14;
     setCurrentDate(prev =>
-      moment(prev).add(direction === 'next' ? 7 : -7, 'days').toDate()
+      moment(prev).add(direction === 'next' ? daysToMove : -daysToMove, 'days').toDate()
     );
   };
 
-  const weekLabel = useMemo(() => {
+  const periodLabel = useMemo(() => {
     const start = moment(currentDate).startOf('week');
-    const end = moment(currentDate).endOf('week');
+    const daysToShow = viewMode === 'week' ? 7 : 14;
+    const end = start.clone().add(daysToShow - 1, 'days');
     return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`;
-  }, [currentDate]);
+  }, [currentDate, viewMode]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -592,25 +581,25 @@ export default function ScheduleGrid() {
           </div>
         </div>
 
-        {/* Week navigation */}
+        {/* Period navigation & view selector */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigateWeek('prev')}
-              data-testid="button-prev-week"
+              onClick={() => navigatePeriod('prev')}
+              data-testid="button-prev-period"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="text-xs sm:text-sm font-semibold flex-1 sm:flex-none sm:min-w-[200px] text-center">
-              {weekLabel}
+              {periodLabel}
             </div>
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigateWeek('next')}
-              data-testid="button-next-week"
+              onClick={() => navigatePeriod('next')}
+              data-testid="button-next-period"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -624,7 +613,32 @@ export default function ScheduleGrid() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            {/* View mode selector */}
+            <div className="flex items-center gap-1 border rounded-lg p-1">
+              <Button
+                variant={viewMode === 'week' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('week')}
+                data-testid="button-view-week"
+                className="h-7 px-2 text-xs"
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                Week
+              </Button>
+              <Button
+                variant={viewMode === 'bi-week' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('bi-week')}
+                data-testid="button-view-bi-week"
+                className="h-7 px-2 text-xs"
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                2 Weeks
+              </Button>
+            </div>
+
+            {/* Legend */}
             <div className="flex items-center gap-2 flex-wrap text-[10px] sm:text-xs">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 border-2 border-amber-500 rounded animate-pulse"></div>
@@ -650,55 +664,69 @@ export default function ScheduleGrid() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-x-auto overflow-y-auto">
-          <div className="flex min-w-fit">
-            {/* Time column */}
-            <div className="sticky left-0 z-20 bg-background border-r">
-              <div className="h-[72px] border-b bg-muted/20"></div>
+        <div className="flex-1 overflow-auto">
+          <div className="min-w-fit">
+            {/* Day headers */}
+            <div className="flex sticky top-0 z-20 bg-background border-b-2">
+              {/* Empty corner cell */}
+              <div className="sticky left-0 z-30 w-[180px] sm:w-[200px] border-r bg-muted/20"></div>
               
-              {TIME_SLOTS.map((slot, idx) => (
-                <div
-                  key={slot.hour}
-                  className={`
-                    h-[80px] border-b px-3 flex items-center justify-end text-xs font-medium text-muted-foreground
-                    ${idx % 2 === 0 ? 'bg-muted/5' : 'bg-background'}
-                  `}
-                >
-                  {slot.label}
-                </div>
-              ))}
+              {/* Day column headers */}
+              {weekDays.map((day) => {
+                const isToday = moment(day).isSame(moment(), 'day');
+                return (
+                  <div
+                    key={moment(day).format('YYYY-MM-DD')}
+                    className={`
+                      min-w-[160px] sm:min-w-[180px] border-r p-3 text-center
+                      ${isToday ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : 'bg-muted/10'}
+                    `}
+                  >
+                    <div className={`text-xs font-semibold uppercase ${isToday ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                      {moment(day).format('ddd')}
+                    </div>
+                    <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : ''}`}>
+                      {moment(day).format('D')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {moment(day).format('MMM')}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Employee columns */}
-            <div className="flex">
-              {employees.length === 0 ? (
-                <PlaceholderEmployeeColumn 
-                  onCreateShift={handleCreateShift}
-                  onAddEmployee={handleAddEmployee}
-                />
-              ) : (
-                employees.map(employee => (
-                  <EmployeeColumn
+            {/* Employee rows */}
+            {employees.length === 0 ? (
+              <PlaceholderEmployeeRow 
+                weekDays={weekDays}
+                onCreateShift={handleCreateShift}
+                onAddEmployee={handleAddEmployee}
+              />
+            ) : (
+              <>
+                {employees.map(employee => (
+                  <EmployeeRow
                     key={employee.id}
                     employee={employee}
+                    weekDays={weekDays}
                     shifts={shifts}
-                    date={currentDate}
-                    onShiftClick={handleShiftClick}
                     employees={employees}
                     clients={clients}
+                    onShiftClick={handleShiftClick}
                     onCreateShift={handleCreateShift}
                   />
-                ))
-              )}
+                ))}
+              </>
+            )}
 
-              {/* Open shifts column */}
-              <OpenShiftsColumn
-                shifts={shifts}
-                date={currentDate}
-                onShiftClick={handleShiftClick}
-                clients={clients}
-              />
-            </div>
+            {/* Open shifts section */}
+            <OpenShiftsSection
+              shifts={shifts}
+              weekDays={weekDays}
+              onShiftClick={handleShiftClick}
+              clients={clients}
+            />
           </div>
         </div>
 
@@ -720,7 +748,7 @@ export default function ScheduleGrid() {
             <DialogHeader>
               <DialogTitle>Create New Shift</DialogTitle>
               <DialogDescription>
-                {moment(createShiftContext.date).format('MMMM D, YYYY')} at {moment().hour(createShiftContext.hour).minute(0).format('h:mm A')}
+                {moment(createShiftContext.date).format('dddd, MMMM D, YYYY')}
               </DialogDescription>
             </DialogHeader>
 
