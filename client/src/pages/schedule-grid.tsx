@@ -166,7 +166,7 @@ function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShif
       ref={setNodeRef}
       onClick={handleCellClick}
       className={`
-        min-h-[120px] border-r border-b p-2 relative group cursor-pointer transition-all
+        min-h-[60px] border-r border-b p-1.5 relative group cursor-pointer transition-all
         ${isOver ? 'bg-primary/10 ring-2 ring-primary' : 'bg-background'}
         ${isToday ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}
         hover-elevate
@@ -215,17 +215,17 @@ function EmployeeRow({ employee, weekDays, shifts, employees, clients, onShiftCl
   return (
     <div className="flex">
       {/* Employee name cell */}
-      <div className="sticky left-0 z-10 w-[180px] sm:w-[200px] border-r border-b bg-card p-3 flex items-center gap-2">
-        <Avatar className="h-8 w-8">
+      <div className="sticky left-0 z-10 w-[140px] sm:w-[160px] border-r border-b bg-card p-2 flex items-center gap-2 min-h-[60px]">
+        <Avatar className="h-7 w-7">
           <AvatarFallback className="text-xs bg-primary/20">
             {employee.firstName[0]}{employee.lastName[0]}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold truncate">
+          <div className="text-xs font-semibold truncate">
             {employee.firstName} {employee.lastName}
           </div>
-          <div className="text-xs text-muted-foreground truncate">
+          <div className="text-[10px] text-muted-foreground truncate">
             {employee.role}
           </div>
         </div>
@@ -257,22 +257,17 @@ function PlaceholderEmployeeRow({ weekDays, onCreateShift, onAddEmployee }: {
   return (
     <div className="flex">
       {/* Empty state cell */}
-      <div className="sticky left-0 z-10 w-[180px] sm:w-[200px] border-r border-b bg-gradient-to-b from-background via-muted/10 to-transparent p-4">
-        <div className="text-center">
-          <div className="p-3 mx-auto w-fit bg-gradient-to-br from-emerald-500/20 via-emerald-400/10 to-transparent rounded-full mb-2">
-            <UserPlus className="h-6 w-6 text-emerald-400" />
-          </div>
-          <Button
-            onClick={onAddEmployee}
-            size="sm"
-            variant="outline"
-            className="w-full"
-            data-testid="button-add-first-employee"
-          >
-            <UserPlus className="h-3 w-3 mr-1" />
-            Add Employee
-          </Button>
-        </div>
+      <div className="sticky left-0 z-10 w-[140px] sm:w-[160px] border-r border-b bg-gradient-to-b from-background via-muted/10 to-transparent p-2 min-h-[60px] flex items-center justify-center">
+        <Button
+          onClick={onAddEmployee}
+          size="sm"
+          variant="outline"
+          className="w-full"
+          data-testid="button-add-first-employee"
+        >
+          <UserPlus className="h-3 w-3 mr-1" />
+          Add Employee
+        </Button>
       </div>
 
       {/* Day columns with click hints */}
@@ -280,7 +275,7 @@ function PlaceholderEmployeeRow({ weekDays, onCreateShift, onAddEmployee }: {
         <div
           key={moment(day).format('YYYY-MM-DD')}
           onClick={() => onCreateShift && onCreateShift('open', day)}
-          className="min-h-[120px] border-r border-b p-2 relative group cursor-pointer transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30"
+          className="min-h-[60px] border-r border-b p-1.5 relative group cursor-pointer transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30"
           data-testid={`placeholder-slot-${moment(day).format('YYYY-MM-DD')}`}
         >
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -322,16 +317,16 @@ function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients }: {
   return (
     <div className="flex border-t-2 border-purple-500/30">
       {/* Open shifts label */}
-      <div className="sticky left-0 z-10 w-[180px] sm:w-[200px] border-r bg-purple-500/20 p-3">
+      <div className="sticky left-0 z-10 w-[140px] sm:w-[160px] border-r bg-purple-500/20 p-2 min-h-[60px] flex items-center">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-purple-500/20">
-            <Users className="h-4 w-4 text-purple-400" />
+          <div className="p-1.5 rounded-lg bg-purple-500/20">
+            <Users className="h-3 w-3 text-purple-400" />
           </div>
           <div>
-            <div className="text-sm font-semibold">
+            <div className="text-xs font-semibold">
               Open Shifts
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-[10px] text-muted-foreground">
               {totalOpenShifts} unassigned
             </div>
           </div>
@@ -346,7 +341,7 @@ function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients }: {
         return (
           <div
             key={dayKey}
-            className="min-h-[120px] border-r border-b bg-purple-500/5 p-2"
+            className="min-h-[60px] border-r border-b bg-purple-500/5 p-1.5"
           >
             {dayOpenShifts.map(shift => (
               <div
@@ -669,7 +664,7 @@ export default function ScheduleGrid() {
             {/* Day headers */}
             <div className="flex sticky top-0 z-20 bg-background border-b-2">
               {/* Empty corner cell */}
-              <div className="sticky left-0 z-30 w-[180px] sm:w-[200px] border-r bg-muted/20"></div>
+              <div className="sticky left-0 z-30 w-[140px] sm:w-[160px] border-r bg-muted/20 h-[60px]"></div>
               
               {/* Day column headers */}
               {weekDays.map((day) => {
@@ -678,17 +673,17 @@ export default function ScheduleGrid() {
                   <div
                     key={moment(day).format('YYYY-MM-DD')}
                     className={`
-                      min-w-[160px] sm:min-w-[180px] border-r p-3 text-center
+                      min-w-[100px] sm:min-w-[120px] border-r p-2 text-center flex flex-col justify-center h-[60px]
                       ${isToday ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : 'bg-muted/10'}
                     `}
                   >
-                    <div className={`text-xs font-semibold uppercase ${isToday ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                    <div className={`text-[10px] font-semibold uppercase ${isToday ? 'text-emerald-400' : 'text-muted-foreground'}`}>
                       {moment(day).format('ddd')}
                     </div>
-                    <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : ''}`}>
+                    <div className={`text-base font-bold ${isToday ? 'text-emerald-400' : ''}`}>
                       {moment(day).format('D')}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[10px] text-muted-foreground">
                       {moment(day).format('MMM')}
                     </div>
                   </div>
