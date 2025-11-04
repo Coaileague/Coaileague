@@ -99,9 +99,8 @@ export function AppSidebar() {
 
   const renderMenuSection = (title: string, items: typeof communicationFamilyItems, showBadge?: boolean) => (
     <SidebarGroup>
-      <SidebarGroupLabel className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 flex items-center gap-2">
+      <SidebarGroupLabel className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-2">
         {title}
-        {showBadge && <Badge variant="outline" className="text-[8px] px-1 py-0">NEW</Badge>}
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="space-y-0.5">
@@ -112,12 +111,12 @@ export function AppSidebar() {
                 isActive={location === item.url}
                 data-testid={`link-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                 className={`hover-elevate active-elevate-2 h-9 px-3 ${
-                  (item as any).isFamily ? 'bg-primary/10 font-bold border-l-2 border-primary text-primary' : ''
+                  (item as any).isFamily ? 'border-l-4 border-[hsl(217,91%,20%)]' : ''
                 }`}
               >
                 <Link href={item.url} className="flex items-center gap-3 w-full">
-                  <item.icon className={`h-4 w-4 shrink-0 ${(item as any).isFamily ? 'text-primary' : ''}`} />
-                  <span className={`text-sm leading-tight ${(item as any).isFamily ? "font-bold text-primary" : "font-medium text-foreground/90"}`}>
+                  <item.icon className={`h-4 w-4 shrink-0 ${(item as any).isFamily ? 'text-[hsl(217,91%,60%)]' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm leading-tight ${(item as any).isFamily ? "font-bold" : "font-medium"} text-foreground`}>
                     {item.title}
                   </span>
                 </Link>
