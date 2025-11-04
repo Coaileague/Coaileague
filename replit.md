@@ -52,11 +52,13 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
   - Actionable recommendations with estimated impact
   - Insight dismissal with reason tracking for ML feedback loop
   - Backend: Metrics snapshots for trend analysis (daily, weekly, monthly)
-- **Pricing Update**: Premium tiered model reflecting AI automation value
-  - **Starter ($299/mo)**: Up to 25 employees, core automation, $15/employee overage
-  - **Professional ($799/mo)**: Up to 100 employees, RecordOS™ + InsightOS™, $100/mo AI credits, $12/employee overage
-  - **Enterprise ($2,999/mo)**: Up to 250 employees, premium AI features, $500/mo AI credits, $10/employee overage
+- **Pricing Update**: Value-based tiered model with clear automation segmentation
+  - **Basic ($299/mo)**: Up to 25 employees, manual tools only (no automation), $20/employee overage
+  - **Starter ($599/mo)**: Up to 50 employees, FULL AUTOMATION (auto-billing, auto-payroll weekly/bi-weekly), $15/employee overage
+  - **Professional ($999/mo)**: Up to 150 employees, AI features (RecordOS™ + InsightOS™), $150/mo AI credits, $12/employee overage
+  - **Enterprise ($2,999/mo)**: Unlimited employees, premium AI + white-label, $500/mo AI credits, $10/employee overage
   - Customer-pays overage model: No loss on additional usage, automation costs covered by customer
+  - Key insight: $599 Starter tier justified by weekly payroll/billing automation saving $15k/month
 
 ### ✅ Time Tracking & Billing System (COMPLETED - November 4, 2025)
 **Status**: Core time tracking → invoicing → payroll flow is fully operational
