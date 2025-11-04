@@ -112,12 +112,12 @@ export function AppSidebar() {
                 isActive={location === item.url}
                 data-testid={`link-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                 className={`hover-elevate active-elevate-2 h-9 px-3 ${
-                  (item as any).isFamily ? 'bg-primary/10 font-bold border-l-2 border-primary' : ''
+                  (item as any).isFamily ? 'bg-primary/10 font-bold border-l-2 border-primary text-primary' : ''
                 }`}
               >
                 <Link href={item.url} className="flex items-center gap-3 w-full">
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span className={`text-sm leading-tight ${(item as any).isFamily ? "font-bold" : "font-medium"}`}>
+                  <item.icon className={`h-4 w-4 shrink-0 ${(item as any).isFamily ? 'text-primary' : ''}`} />
+                  <span className={`text-sm leading-tight ${(item as any).isFamily ? "font-bold text-primary" : "font-medium text-foreground/90"}`}>
                     {item.title}
                   </span>
                 </Link>
@@ -136,17 +136,17 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="px-3 py-4 overflow-y-auto">
-        {/* OS Family 1: Communication & Collaboration */}
-        {renderMenuSection("Communication & Collaboration", communicationFamilyItems, true)}
+        {/* OS Family 1: Communication */}
+        {renderMenuSection("Communication", communicationFamilyItems, true)}
         
-        {/* OS Family 2: Workforce Operations */}
-        {renderMenuSection("Workforce Operations", operationsFamilyItems, true)}
+        {/* OS Family 2: Operations */}
+        {renderMenuSection("Operations", operationsFamilyItems, true)}
         
-        {/* OS Family 3: Growth & Intelligence */}
-        {renderMenuSection("Growth & Intelligence", growthFamilyItems, true)}
+        {/* OS Family 3: Growth & AI */}
+        {renderMenuSection("Growth & AI", growthFamilyItems, true)}
         
-        {/* OS Family 4: Platform & Control */}
-        {renderMenuSection("Platform & Control", platformFamilyItems, true)}
+        {/* OS Family 4: Platform */}
+        {renderMenuSection("Platform", platformFamilyItems, true)}
         
         {/* Quick Access */}
         {renderMenuSection("Quick Access", quickAccessItems)}
