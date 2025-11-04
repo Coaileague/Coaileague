@@ -394,9 +394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Get or create workspace for current user
-  app.get('/api/workspace', isAuthenticated, async (req: any, res) => {
+  app.get('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       let workspace = await storage.getWorkspaceByOwnerId(userId);
       
       // Auto-create workspace on first login
@@ -420,9 +420,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update workspace (Users can only update basic settings, Platform Admin can update critical org info)
-  app.patch('/api/workspace', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -431,11 +431,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Users can only update basic settings, not critical organization data
       // Platform admins use the /api/admin/workspace endpoint for full control
-      const allowedFields = ['name', 'companyWebsite', 'companyPhone', 'logoUrl'];
+      // Map frontend field names to backend field names
+      const fieldMapping: Record<string, string> = {
+        'name': 'name',
+        'website': 'companyWebsite',
+        'phone': 'companyPhone',
+        'companyName': 'companyName',
+        'taxId': 'taxId',
+        'address': 'address',
+        'logoUrl': 'logoUrl',
+      };
+      
       const filteredData: any = {};
-      for (const key of allowedFields) {
-        if (req.body[key] !== undefined) {
-          filteredData[key] = req.body[key];
+      for (const [frontendKey, backendKey] of Object.entries(fieldMapping)) {
+        if (req.body[frontendKey] !== undefined) {
+          filteredData[backendKey] = req.body[frontendKey];
         }
       }
 
@@ -447,8 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateWorkspace(workspace.id, validated);
       
       // Security: Redact sensitive fields for non-root users
-      const platformRole = (req as any).platformRole;
-      const safeWorkspace = redactSensitiveWorkspaceFields(updated, platformRole);
+      const safeWorkspace = redactSensitiveWorkspaceFields(updated, req.user?.platformRole);
       
       res.json(safeWorkspace);
     } catch (error: any) {
@@ -485,9 +494,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get workspace theme
-  app.get('/api/workspace/theme', isAuthenticated, async (req: any, res) => {
+  app.get('/api/workspace/theme', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
       
@@ -504,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get available business categories
-  app.get('/api/business-categories', isAuthenticated, async (req: any, res) => {
+  app.get('/api/business-categories', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { businessCategories } = await import("./seedFormTemplates");
       res.json(businessCategories);
@@ -515,9 +524,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Seed form templates for workspace based on business category
-  app.post('/api/workspace/seed-form-templates', isAuthenticated, async (req: any, res) => {
+  app.post('/api/workspace/seed-form-templates', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
