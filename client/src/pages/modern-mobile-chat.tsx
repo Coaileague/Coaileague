@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useToast } from "@/hooks/use-toast";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
 import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
@@ -1052,7 +1052,7 @@ export default function ModernMobileChat() {
               {msg.senderType === 'bot' ? (
                 <Sparkles size={20} className="text-white font-bold" />
               ) : (
-                <WorkforceOSLogo className="h-7 w-7 font-bold" variant="icon" />
+                <AutoForceLogo className="h-7 w-7 font-bold" variant="icon" />
               )}
             </div>
             {/* WF Logo for STAFF ONLY */}

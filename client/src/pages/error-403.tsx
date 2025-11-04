@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, Home, ArrowLeft, Lock } from "lucide-react";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 
 export default function Error403() {
   const [, setLocation] = useLocation();
@@ -29,7 +29,7 @@ export default function Error403() {
           {/* WorkforceOS Logo */}
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-amber-500/20 to-red-500/20 rounded-2xl backdrop-blur-sm border border-amber-400/30">
-              <WorkforceOSLogo variant="icon" size="sm" />
+              <AutoForceLogo variant="icon" size="sm" />
             </div>
           </div>
 

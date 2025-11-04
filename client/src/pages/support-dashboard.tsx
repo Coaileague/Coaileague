@@ -13,7 +13,7 @@ import {
   Activity, Headphones
 } from "lucide-react";
 import type { ChatConversation } from "@shared/schema";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 
 export default function SupportDashboard() {
   const { toast } = useToast();
@@ -104,7 +104,7 @@ export default function SupportDashboard() {
           {/* Logo and Title */}
           <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
             <div className="transform hover:scale-105 transition-transform duration-300 drop-shadow-2xl">
-              <WorkforceOSLogo size="lg" variant="full" />
+              <AutoForceLogo size="lg" variant="full" />
             </div>
             <div className="text-center sm:text-left">
               <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-2">

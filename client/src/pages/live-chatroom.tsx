@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import HelpDeskCab from "./HelpDeskCab";
 import HelpDesk5 from "./HelpDesk5";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 
 // Device detection wrapper that loads correct chat interface
 export default function LiveChatroom() {
@@ -96,7 +96,7 @@ export default function LiveChatroom() {
         {/* WorkForceOS™ Neon Logo - Compact for mobile */}
         <div className={`mb-4 sm:mb-8 transition-all duration-1000 ${stage >= 1 ? 'scale-110' : 'scale-100'} w-full max-w-[200px] sm:max-w-xs`}>
           <div className="relative px-2 sm:px-4 flex items-center justify-center">
-            <WorkforceOSLogo className="relative z-10" size="sm" variant="full" />
+            <AutoForceLogo className="relative z-10" size="sm" variant="full" />
             {/* Pulsing glow ring */}
             <div className="absolute inset-0 animate-ping opacity-20">
               <div className="w-full h-full rounded-full bg-blue-500 blur-xl" />

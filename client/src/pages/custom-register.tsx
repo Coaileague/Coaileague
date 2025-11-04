@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -90,7 +90,7 @@ export default function CustomRegister() {
         {/* Logo and Branding */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <WorkforceOSLogo size="xl" variant="icon" />
+            <AutoForceLogo size="xl" variant="icon" />
           </div>
           <div>
             <h1 className="text-3xl font-black text-[hsl(var(--cad-text-primary))]">

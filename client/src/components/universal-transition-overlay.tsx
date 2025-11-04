@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { WorkforceOSLogo } from "./workforceos-logo";
+import { AutoForceLogo } from "./workforceos-logo";
 import { Loader2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 export type TransitionStatus = "loading" | "success" | "error" | "info";
@@ -118,7 +118,7 @@ export function UniversalTransitionOverlay({
                   stiffness: 150
                 }}
               >
-                <WorkforceOSLogo variant="full" size="sm" animated={true} />
+                <AutoForceLogo variant="full" size="sm" animated={true} />
               </motion.div>
             </div>
 

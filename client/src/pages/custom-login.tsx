@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
 import { showLoginTransition, showErrorTransition, showSuccessTransition } from "@/lib/transition-utils";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -89,7 +89,7 @@ export default function CustomLogin() {
         {/* Logo and Branding */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <WorkforceOSLogo size="xl" variant="icon" />
+            <AutoForceLogo size="xl" variant="icon" />
           </div>
           <div>
             <h1 className="text-3xl font-black text-[hsl(var(--cad-text-primary))]">

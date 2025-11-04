@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { WorkforceOSLogo } from "@/components/workforceos-logo";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 import { Loader2, LogIn, Mail, Lock, Github } from "lucide-react";
 import { SiGoogle, SiFacebook } from "react-icons/si";
 
@@ -70,7 +70,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <WorkforceOSLogo variant="full" size="sm" />
+            <AutoForceLogo variant="full" size="sm" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
