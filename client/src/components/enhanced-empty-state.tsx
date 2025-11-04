@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
+import { AutoForceLogo } from "@/components/autoforce-logo";
 
 interface EnhancedEmptyStateProps {
   icon: LucideIcon;
@@ -9,6 +10,7 @@ interface EnhancedEmptyStateProps {
   onAction?: () => void;
   testId?: string;
   variant?: "default" | "purple" | "emerald" | "blue";
+  showLogo?: boolean;
 }
 
 export function EnhancedEmptyState({
@@ -18,7 +20,8 @@ export function EnhancedEmptyState({
   actionLabel,
   onAction,
   testId,
-  variant = "emerald"
+  variant = "emerald",
+  showLogo = true
 }: EnhancedEmptyStateProps) {
   const variantStyles = {
     default: {
@@ -51,6 +54,13 @@ export function EnhancedEmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-12 px-4">
+      {/* WorkforceOS Logo */}
+      {showLogo && (
+        <div className="mb-4">
+          <AutoForceLogo size="sm" variant="icon" animated={false} />
+        </div>
+      )}
+
       {/* Animated gradient background circle */}
       <div className={`relative w-32 h-32 bg-gradient-to-br ${styles.gradient} rounded-full animate-pulse`}>
         {/* Glow effect */}

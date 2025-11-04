@@ -669,6 +669,58 @@ export default function ScheduleGrid() {
     return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`;
   }, [currentDate, viewMode]);
 
+  // Export schedule to CSV
+  const handleExportSchedule = () => {
+    const csvRows = [];
+    
+    // Header row
+    const headers = ['Employee', ...weekDays.map(d => moment(d).format('ddd MMM D'))];
+    csvRows.push(headers.join(','));
+    
+    // Employee rows
+    employees.forEach(emp => {
+      const row = [`"${emp.firstName} ${emp.lastName}"`];
+      
+      weekDays.forEach(day => {
+        const dayShifts = shifts.filter(s => 
+          s.employeeId === emp.id && moment(s.startTime).isSame(day, 'day')
+        );
+        
+        const shiftText = dayShifts.map(s => 
+          `${moment(s.startTime).format('h:mm A')}-${moment(s.endTime).format('h:mm A')}`
+        ).join('; ');
+        
+        row.push(`"${shiftText || '-'}"`);
+      });
+      
+      csvRows.push(row.join(','));
+    });
+    
+    // Download CSV
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `schedule_${moment(currentDate).format('YYYY-MM-DD')}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Schedule Exported",
+      description: "Schedule has been exported to CSV",
+    });
+  };
+
+  // Print schedule
+  const handlePrintSchedule = () => {
+    window.print();
+    toast({
+      title: "Print Dialog Opened",
+      description: "Use your browser's print dialog to customize and print",
+    });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Sling-style: Separate horizontal bars */}
@@ -785,10 +837,23 @@ export default function ScheduleGrid() {
               </div>
             </div>
             
-            <Button variant="outline" size="sm" className="h-8 text-xs" data-testid="button-export">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs" 
+              onClick={handleExportSchedule}
+              data-testid="button-export"
+            >
+              <Send className="h-3 w-3 mr-1" />
               Export
             </Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs" data-testid="button-print">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs" 
+              onClick={handlePrintSchedule}
+              data-testid="button-print"
+            >
               <Printer className="h-3 w-3 mr-1" />
               Print
             </Button>
