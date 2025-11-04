@@ -123,26 +123,26 @@ export default function Landing() {
 
       {/* Hero Section - SALES FOCUSED */}
       <section className="relative overflow-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
-        <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-20">
+        <div className="responsive-container responsive-spacing-y">
           <div className="max-w-6xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Left: Sales Copy */}
-              <div className="space-y-6">
+              <div className="space-y-6 fix-overflow">
                 <Badge variant="outline" className="text-xs font-normal px-4 py-1.5">
                   <Building2 className="h-3 w-3 mr-1.5" />
                   Enterprise Workforce Management
                 </Badge>
                 
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight">
-                  Automate 5+ HR Functions
-                  <span className="block text-primary mt-2">in One Integrated Platform</span>
+                <h1 className="responsive-h1">
+                  <span className="text-wrap-auto">Automate 5+ HR Functions </span>
+                  <span className="block text-primary mt-2 text-wrap-auto">in One Integrated Platform</span>
                 </h1>
                 
-                <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed">
+                <p className="responsive-body text-muted-foreground text-wrap-auto">
                   Complete workforce automation combining scheduling, time tracking, payroll, billing, hiring, reporting, analytics, and AI-powered support—designed to streamline operations and reduce administrative burden.*
                 </p>
                 
-                <p className="text-xs text-muted-foreground/80 max-w-xl">
+                <p className="responsive-small text-muted-foreground/80 text-wrap-auto">
                   *Actual time and cost savings will vary based on your organization's size, current processes, and implementation. Platform features designed to automate manual tasks.
                 </p>
 
@@ -205,36 +205,36 @@ export default function Landing() {
 
       {/* Stats Bar - PLATFORM CAPABILITIES */}
       <section className="border-b py-8 sm:py-12">
-        <div className="container mx-auto px-3 sm:px-6">
+        <div className="responsive-container">
           <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-4xl mx-auto text-center">
             <div className="space-y-1 sm:space-y-2">
-              <div className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary">8</div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground break-words leading-tight">Core OS Modules</div>
+              <div className="responsive-h2 text-primary">8</div>
+              <div className="responsive-small text-muted-foreground text-wrap-auto">Core OS Modules</div>
             </div>
             <div className="space-y-1 sm:space-y-2">
-              <div className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary">99.9%</div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground break-words leading-tight">Uptime SLA</div>
+              <div className="responsive-h2 text-primary">99.9%</div>
+              <div className="responsive-small text-muted-foreground text-wrap-auto">Uptime SLA</div>
             </div>
             <div className="space-y-1 sm:space-y-2">
-              <div className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary">24/7</div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground break-words leading-tight">AI Support</div>
+              <div className="responsive-h2 text-primary">24/7</div>
+              <div className="responsive-small text-muted-foreground text-wrap-auto">AI Support</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Product Showcase - Visual Demonstrations */}
-      <section className="border-b bg-gradient-to-b from-muted/30 to-background py-20">
-        <div className="container mx-auto px-4 sm:px-6">
+      <section className="border-b bg-gradient-to-b from-muted/30 to-background responsive-spacing-y">
+        <div className="responsive-container">
           <div className="text-center mb-16">
             <Badge variant="outline" className="mb-4">
               <Sparkles className="h-3 w-3 mr-1" />
               Platform Preview
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="responsive-h2 mb-4 text-wrap-auto">
               See the Platform in Action
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="responsive-body text-muted-foreground max-w-2xl mx-auto text-wrap-auto">
               Every module designed for enterprise-grade performance and ease of use
             </p>
           </div>

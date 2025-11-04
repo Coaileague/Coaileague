@@ -113,16 +113,16 @@ export default function Pricing() {
       </div>
 
       {/* Pricing Hero */}
-      <section className="container mx-auto px-6 py-16">
-        <div className="text-center space-y-4 mb-12 animate-slide-up">
+      <section className="responsive-container responsive-spacing-y">
+        <div className="text-center space-y-4 mb-12 animate-slide-up fix-overflow">
           <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 mb-2">
             <Sparkles className="h-3 w-3 mr-1" />
             Enterprise-Grade ROI
           </Badge>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
+          <h1 className="responsive-h1 text-wrap-auto">
             <span className="gradient-text">Investment That Pays Itself</span> In Weeks
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="responsive-body text-slate-400 max-w-2xl mx-auto text-wrap-auto">
             Replace entire departments. Save $100k-$500k annually. All plans include 14-day free trial.
           </p>
         </div>
