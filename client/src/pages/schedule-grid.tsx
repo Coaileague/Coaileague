@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   DndContext,
   DragOverlay,
@@ -47,6 +47,8 @@ import {
   LayoutGrid,
   User,
   ListChecks,
+  Home,
+  ArrowLeft,
 } from "lucide-react";
 import {
   Select,
@@ -816,8 +818,25 @@ export default function ScheduleGrid() {
             </Tooltip>
           </div>
 
-          {/* Help & Bug Report */}
+          {/* Navigation & Help */}
           <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/dashboard">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 text-xs"
+                    data-testid="button-back-dashboard"
+                  >
+                    <Home className="h-3.5 w-3.5 mr-1" />
+                    Dashboard
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>Return to dashboard</TooltipContent>
+            </Tooltip>
+            
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 

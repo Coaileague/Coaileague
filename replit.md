@@ -64,6 +64,8 @@ Do not make changes to the file `Y`.
 ### UI/UX Decisions
 The platform features a CAD-style professional interface with a dark mode theme, emphasizing precision. It includes an application frame with a menu, toolbar, and status bar. The design is modern, professional, mobile-first, and utilizes corporate blue gradient accents. The official logo is a realistic neon-style "W" with glowing "OS" superscript. A universal transition system provides smooth visual feedback. Key UI components include tab-based navigation, collapsible sections, and mobile-optimized design elements. All acceptance forms have both accept and decline options. Enhanced empty states utilize animated gradient backgrounds, layered icon containers, and decorative spinning rings.
 
+**Navigation Pattern (2024-11-04)**: All feature pages include Back/Home navigation buttons to prevent users from getting lost. Time Tracking includes Back arrow (ArrowLeft) + Dashboard button with Home icon. Schedule Grid includes Dashboard button in top toolbar. All navigation uses wouter's Link component for client-side routing, with data-testid attributes for testing. Mobile-responsive with proper spacing and tooltips.
+
 ### Technical Implementations
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for request body validation.

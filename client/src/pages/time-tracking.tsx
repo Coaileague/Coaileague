@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -22,17 +22,18 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Play, Square, Calendar, DollarSign, User, Building2 } from "lucide-react";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { Clock, Play, Square, Calendar, DollarSign, User, Building2, Download, Filter, Home, ArrowLeft } from "lucide-react";
+import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { MobileLoading } from "@/components/mobile-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Link } from "wouter";
 
 export default function TimeTracking() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const isMobile = useIsMobile();
   const [clockInDialogOpen, setClockInDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
@@ -40,6 +41,13 @@ export default function TimeTracking() {
   const [notes, setNotes] = useState("");
   const [selectedShift, setSelectedShift] = useState<string>("");
   const [now, setNow] = useState(Date.now());
+
+  // Filtering states
+  const [filterEmployee, setFilterEmployee] = useState<string>("all");
+  const [filterGroup, setFilterGroup] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("date-desc");
+  const [dateRange, setDateRange] = useState<string>("week");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -79,10 +87,24 @@ export default function TimeTracking() {
     enabled: isAuthenticated,
   });
 
-  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
+  const { data: allTimeEntries = [] } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries"],
     enabled: isAuthenticated,
   });
+
+  // Get current user's employee record to determine role
+  const currentEmployee = employees.find(emp => emp.userId === user?.id);
+  const workspaceRole = currentEmployee?.workspaceRole || 'employee';
+
+  // Role-based filtering: employees see only their own entries
+  const timeEntries = useMemo(() => {
+    if (workspaceRole === 'employee') {
+      // Employees see only their own time entries
+      return allTimeEntries.filter(entry => entry.employeeId === currentEmployee?.id);
+    }
+    // Managers and owners see all entries
+    return allTimeEntries;
+  }, [allTimeEntries, workspaceRole, currentEmployee]);
 
   const clockInMutation = useMutation({
     mutationFn: async (data: { employeeId: string; clientId?: string; shiftId?: string; notes?: string; hourlyRate: string }) => {
@@ -151,8 +173,128 @@ export default function TimeTracking() {
     });
   };
 
-  const activeTimeEntries = timeEntries.filter(entry => !entry.clockOut);
-  const completedTimeEntries = timeEntries.filter(entry => entry.clockOut);
+  // Calculate date range
+  const getDateRangeFilter = () => {
+    const today = new Date();
+    switch (dateRange) {
+      case "today":
+        return { start: startOfWeek(today), end: endOfWeek(today) };
+      case "week":
+        return { start: startOfWeek(today), end: endOfWeek(today) };
+      case "2weeks":
+        return { start: subDays(today, 14), end: today };
+      case "month":
+        return { start: subDays(today, 30), end: today };
+      default:
+        return null;
+    }
+  };
+
+  // Filter and sort time entries
+  const filteredTimeEntries = useMemo(() => {
+    let filtered = [...timeEntries];
+
+    // Filter by employee
+    if (filterEmployee !== "all") {
+      filtered = filtered.filter(entry => entry.employeeId === filterEmployee);
+    }
+
+    // Filter by group/client
+    if (filterGroup !== "all") {
+      filtered = filtered.filter(entry => entry.clientId === filterGroup);
+    }
+
+    // Filter by status
+    if (filterStatus !== "all") {
+      if (filterStatus === "active") {
+        filtered = filtered.filter(entry => !entry.clockOut);
+      } else if (filterStatus === "completed") {
+        filtered = filtered.filter(entry => entry.clockOut);
+      } else if (filterStatus === "unbilled") {
+        filtered = filtered.filter(entry => entry.invoiceId === null);
+      } else if (filterStatus === "billed") {
+        filtered = filtered.filter(entry => entry.invoiceId !== null);
+      }
+    }
+
+    // Filter by date range
+    const range = getDateRangeFilter();
+    if (range) {
+      filtered = filtered.filter(entry => {
+        const entryDate = new Date(entry.clockIn);
+        return entryDate >= range.start && entryDate <= range.end;
+      });
+    }
+
+    // Sort
+    switch (sortBy) {
+      case "date-desc":
+        filtered.sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime());
+        break;
+      case "date-asc":
+        filtered.sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
+        break;
+      case "employee":
+        filtered.sort((a, b) => {
+          const empA = employees.find(e => e.id === a.employeeId);
+          const empB = employees.find(e => e.id === b.employeeId);
+          return (empA?.firstName || "").localeCompare(empB?.firstName || "");
+        });
+        break;
+      case "hours":
+        filtered.sort((a, b) => {
+          const hoursA = a.clockOut ? (new Date(a.clockOut).getTime() - new Date(a.clockIn).getTime()) / (1000 * 60 * 60) : 0;
+          const hoursB = b.clockOut ? (new Date(b.clockOut).getTime() - new Date(b.clockIn).getTime()) / (1000 * 60 * 60) : 0;
+          return hoursB - hoursA;
+        });
+        break;
+    }
+
+    return filtered;
+  }, [timeEntries, filterEmployee, filterGroup, filterStatus, dateRange, sortBy, employees]);
+
+  // Export to CSV
+  const handleExportTimesheet = () => {
+    const csvHeaders = "Employee,Client,Clock In,Clock Out,Hours,Rate,Total,Location,Status\n";
+    const csvRows = filteredTimeEntries.map(entry => {
+      const employee = employees.find(e => e.id === entry.employeeId);
+      const client = clients.find(c => c.id === entry.clientId);
+      const hours = entry.clockOut 
+        ? ((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)).toFixed(2)
+        : "Active";
+      const rate = entry.hourlyRate || "0";
+      const total = typeof hours === "string" ? "N/A" : (parseFloat(hours) * parseFloat(rate)).toFixed(2);
+      
+      return [
+        `"${employee?.firstName || ""} ${employee?.lastName || ""}"`,
+        `"${client?.companyName || client?.firstName || "N/A"}"`,
+        `"${format(new Date(entry.clockIn), "yyyy-MM-dd HH:mm")}"`,
+        entry.clockOut ? `"${format(new Date(entry.clockOut), "yyyy-MM-dd HH:mm")}"` : "Active",
+        hours,
+        rate,
+        `$${total}`,
+        `"${entry.jobSiteAddress || "N/A"}"`,
+        entry.invoiceId ? "billed" : "unbilled"
+      ].join(",");
+    }).join("\n");
+
+    const csv = csvHeaders + csvRows;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `timesheet-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Timesheet Exported",
+      description: "Timesheet has been exported to CSV",
+    });
+  };
+
+  const activeTimeEntries = filteredTimeEntries.filter(entry => !entry.clockOut);
+  const completedTimeEntries = filteredTimeEntries.filter(entry => entry.clockOut);
 
   const handleRefresh = async () => {
     await Promise.all([
@@ -168,273 +310,389 @@ export default function TimeTracking() {
   }
 
   const pageContent = (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-4 sm:space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen w-full bg-background">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+        {/* Header with Navigation */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <Button variant="outline" size="icon" data-testid="button-back-dashboard">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-timetracking-title">
-                Time Tracking
+                Time Clock
               </h2>
-              <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]" data-testid="text-timetracking-subtitle">
-              Manage employee clock-ins and timesheet reports
-            </p>
+              <p className="text-sm text-muted-foreground" data-testid="text-timetracking-subtitle">
+                Manage employee clock-ins and timesheet reports
+              </p>
+            </div>
           </div>
-          <Dialog open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-clock-in">
-                <Play className="mr-2 h-4 w-4" />
-                Clock In
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard">
+              <Button variant="outline" size="sm" data-testid="button-home">
+                <Home className="mr-2 h-4 w-4" />
+                Dashboard
               </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="dialog-clock-in">
-              <DialogHeader>
-                <DialogTitle>Clock In Employee</DialogTitle>
-                <DialogDescription>
-                  Start tracking time for an employee
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Employee *</Label>
-                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                    <SelectTrigger data-testid="select-clockin-employee">
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.map(employee => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.firstName} {employee.lastName} - {employee.role || "Staff"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Shift (Optional)</Label>
-                  <Select value={selectedShift} onValueChange={setSelectedShift}>
-                    <SelectTrigger data-testid="select-clockin-shift">
-                      <SelectValue placeholder="Select shift" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {shifts
-                        .filter(shift => !selectedEmployee || shift.employeeId === selectedEmployee)
-                        .map(shift => {
-                          const shiftEmployee = employees.find(e => e.id === shift.employeeId);
-                          const shiftClient = clients.find(c => c.id === shift.clientId);
-                          const startTime = typeof shift.startTime === 'string' ? shift.startTime : shift.startTime.toISOString();
-                          return (
-                            <SelectItem key={shift.id} value={shift.id}>
-                              {shiftEmployee?.firstName} - {format(parseISO(startTime), "MMM d, h:mm a")}
-                              {shiftClient && ` (${shiftClient.firstName} ${shiftClient.lastName})`}
-                            </SelectItem>
-                          );
-                        })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Client (Optional)</Label>
-                  <Select value={selectedClient} onValueChange={setSelectedClient}>
-                    <SelectTrigger data-testid="select-clockin-client">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.firstName} {client.lastName}
-                          {client.companyName && ` - ${client.companyName}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Notes (Optional)</Label>
-                  <Textarea
-                    placeholder="Add any notes about this time entry"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    data-testid="textarea-clockin-notes"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleClockIn}
-                  disabled={clockInMutation.isPending}
-                  className="w-full"
-                  data-testid="button-submit-clockin"
-                >
-                  {clockInMutation.isPending ? "Clocking In..." : "Start Tracking"}
-                </Button>
+            </Link>
+            {(workspaceRole === 'owner' || workspaceRole === 'manager') && (
+              <Dialog open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-clock-in">
+                    <Play className="mr-2 h-4 w-4" />
+                    Clock In
+                  </Button>
+                </DialogTrigger>
+                <DialogContent data-testid="dialog-clock-in">
+            <DialogHeader>
+              <DialogTitle>Clock In Employee</DialogTitle>
+              <DialogDescription>
+                Start tracking time for an employee
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Employee *</Label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger data-testid="select-clockin-employee">
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map(employee => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName} - {employee.role || "Staff"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </DialogContent>
-          </Dialog>
+
+              <div className="space-y-2">
+                <Label>Shift (Optional)</Label>
+                <Select value={selectedShift} onValueChange={setSelectedShift}>
+                  <SelectTrigger data-testid="select-clockin-shift">
+                    <SelectValue placeholder="Select shift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {shifts
+                      .filter(shift => !selectedEmployee || shift.employeeId === selectedEmployee)
+                      .map(shift => {
+                        const shiftEmployee = employees.find(e => e.id === shift.employeeId);
+                        const shiftClient = clients.find(c => c.id === shift.clientId);
+                        const startTime = typeof shift.startTime === 'string' ? shift.startTime : shift.startTime.toISOString();
+                        return (
+                          <SelectItem key={shift.id} value={shift.id}>
+                            {shiftEmployee?.firstName} - {format(parseISO(startTime), "MMM d, h:mm a")}
+                            {shiftClient && ` (${shiftClient.firstName} ${shiftClient.lastName})`}
+                          </SelectItem>
+                        );
+                      })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Client (Optional)</Label>
+                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <SelectTrigger data-testid="select-clockin-client">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {clients.map(client => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.firstName} {client.lastName}
+                        {client.companyName && ` - ${client.companyName}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes (Optional)</Label>
+                <Textarea
+                  placeholder="Add any notes about this time entry"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  data-testid="textarea-clockin-notes"
+                />
+              </div>
+
+              <Button
+                onClick={handleClockIn}
+                disabled={clockInMutation.isPending}
+                className="w-full"
+                data-testid="button-submit-clockin"
+              >
+                {clockInMutation.isPending ? "Clocking In..." : "Start Tracking"}
+              </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            )}
+          </div>
         </div>
 
-        {/* Active Time Entries */}
-        {activeTimeEntries.length > 0 && (
-          <Card data-testid="card-active-entries">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle>Active Time Tracking</CardTitle>
-                  <CardDescription>{activeTimeEntries.length} employee(s) currently clocked in</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {activeTimeEntries.map(entry => {
-                const employee = employees.find(e => e.id === entry.employeeId);
-                const client = clients.find(c => c.id === entry.clientId);
-                return (
-                  <Card key={entry.id} className="p-4 hover-elevate" data-testid={`card-active-entry-${entry.id}`}>
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {employee?.firstName} {employee?.lastName}
-                          </span>
-                          <Badge variant="outline">{employee?.role || "Staff"}</Badge>
-                        </div>
-                        {client && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Building2 className="h-4 w-4" />
-                            <span>
-                              {client.firstName} {client.lastName}
-                              {client.companyName && ` - ${client.companyName}`}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span key={now}>Started {formatDistanceToNow(parseISO(typeof entry.clockIn === 'string' ? entry.clockIn : entry.clockIn.toISOString()), { addSuffix: false })} ago</span>
-                        </div>
-                        {entry.notes && (
-                          <p className="text-sm text-muted-foreground mt-2">{entry.notes}</p>
-                        )}
-                      </div>
-                      <Button
-                        onClick={() => clockOutMutation.mutate(entry.id)}
-                        disabled={clockOutMutation.isPending}
-                        variant="destructive"
-                        data-testid={`button-clockout-${entry.id}`}
-                      >
-                        <Square className="mr-2 h-4 w-4" />
-                        Clock Out
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
+        {/* Sling-style Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Date Range */}
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[150px]" data-testid="select-date-range">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="2weeks">Last 2 Weeks</SelectItem>
+                  <SelectItem value="month">Last 30 Days</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Completed Time Entries */}
-        <Card data-testid="card-timesheet">
+            {/* Filter by Employee */}
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <Select value={filterEmployee} onValueChange={setFilterEmployee}>
+                <SelectTrigger className="w-[180px]" data-testid="select-filter-employee">
+                  <SelectValue placeholder="All Employees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filter by Group/Client */}
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <Select value={filterGroup} onValueChange={setFilterGroup}>
+                <SelectTrigger className="w-[180px]" data-testid="select-filter-group">
+                  <SelectValue placeholder="All Locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.companyName || `${client.firstName} ${client.lastName}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filter by Status */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[150px]" data-testid="select-filter-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="unbilled">Unbilled</SelectItem>
+                  <SelectItem value="billed">Billed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sort By */}
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[150px]" data-testid="select-sort-by">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-desc">Date (Newest)</SelectItem>
+                  <SelectItem value="date-asc">Date (Oldest)</SelectItem>
+                  <SelectItem value="employee">Employee Name</SelectItem>
+                  <SelectItem value="hours">Hours Worked</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Export Button */}
+            <Button 
+              variant="default" 
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={handleExportTimesheet}
+              data-testid="button-export-timesheet"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              EXPORT TIMESHEET
+            </Button>
+          </div>
+
+          {/* Results summary */}
+          <div className="mt-3 pt-3 border-t">
+            <p className="text-sm text-muted-foreground">
+              Showing <strong>{filteredTimeEntries.length}</strong> time {filteredTimeEntries.length === 1 ? "entry" : "entries"}
+              {filterEmployee !== "all" && ` for ${employees.find(e => e.id === filterEmployee)?.firstName || "selected employee"}`}
+              {filterGroup !== "all" && ` at ${clients.find(c => c.id === filterGroup)?.companyName || "selected location"}`}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Time Entries */}
+      {activeTimeEntries.length > 0 && (
+        <Card data-testid="card-active-entries">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-primary" />
+              <Clock className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle>Timesheet</CardTitle>
-                <CardDescription>Completed time entries and hours worked</CardDescription>
+                <CardTitle>Active Time Tracking</CardTitle>
+                <CardDescription>{activeTimeEntries.length} employee(s) currently clocked in</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {completedTimeEntries.length === 0 ? (
-              <div className="text-center py-12">
-                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground" data-testid="text-no-completed-entries">
-                  No completed time entries yet
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Clock in employees to start tracking their time
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {completedTimeEntries.map(entry => {
-                  const employee = employees.find(e => e.id === entry.employeeId);
-                  const client = clients.find(c => c.id === entry.clientId);
-                  return (
-                    <Card key={entry.id} className="p-4 hover-elevate" data-testid={`card-timesheet-entry-${entry.id}`}>
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">
-                              {employee?.firstName} {employee?.lastName}
-                            </span>
-                            <Badge variant="outline">{employee?.role || "Staff"}</Badge>
-                          </div>
-                          {client && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Building2 className="h-4 w-4" />
-                              <span>
-                                {client.firstName} {client.lastName}
-                                {client.companyName && ` - ${client.companyName}`}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <span>
-                              {format(parseISO(typeof entry.clockIn === 'string' ? entry.clockIn : entry.clockIn.toISOString()), "MMM d, yyyy h:mm a")} - 
-                              {entry.clockOut && format(parseISO(typeof entry.clockOut === 'string' ? entry.clockOut : entry.clockOut.toISOString()), " h:mm a")}
-                            </span>
-                          </div>
-                          {entry.notes && (
-                            <p className="text-sm text-muted-foreground mt-2">{entry.notes}</p>
-                          )}
-                        </div>
-                        <div className="text-right space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">{entry.totalHours} hrs</span>
-                          </div>
-                          {entry.totalAmount && (
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-semibold">${entry.totalAmount}</span>
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            ${entry.hourlyRate}/hr
-                          </div>
-                        </div>
+          <CardContent className="space-y-4">
+            {activeTimeEntries.map(entry => {
+              const employee = employees.find(e => e.id === entry.employeeId);
+              const client = clients.find(c => c.id === entry.clientId);
+              const elapsed = Math.floor((now - new Date(entry.clockIn).getTime()) / 1000 / 60);
+              const hours = Math.floor(elapsed / 60);
+              const minutes = elapsed % 60;
+              
+              return (
+                <Card key={entry.id} className="p-4 hover-elevate" data-testid={`card-active-entry-${entry.id}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">{employee?.firstName} {employee?.lastName}</span>
+                        <Badge variant="outline" className="ml-2">Active</Badge>
                       </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                      {client && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building2 className="h-4 w-4" />
+                          <span>{client.companyName || `${client.firstName} ${client.lastName}`}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>Started: {format(new Date(entry.clockIn), "MMM d, h:mm a")}</span>
+                        <span className="ml-2">•</span>
+                        <span className="font-mono">{hours}h {minutes}m elapsed</span>
+                      </div>
+                      {entry.hourlyRate && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <DollarSign className="h-4 w-4" />
+                          <span>${entry.hourlyRate}/hr • Estimated: ${(parseFloat(entry.hourlyRate) * (elapsed / 60)).toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => clockOutMutation.mutate(entry.id)}
+                      disabled={clockOutMutation.isPending}
+                      data-testid={`button-clock-out-${entry.id}`}
+                    >
+                      <Square className="mr-2 h-4 w-4" />
+                      Clock Out
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </CardContent>
         </Card>
-        </div>
+      )}
+
+      {/* Completed Time Entries Table */}
+      {completedTimeEntries.length > 0 && (
+        <Card data-testid="card-completed-entries">
+          <CardHeader>
+            <CardTitle>Completed Time Entries</CardTitle>
+            <CardDescription>{completedTimeEntries.length} completed time {completedTimeEntries.length === 1 ? "entry" : "entries"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 text-sm font-semibold">Employee</th>
+                    <th className="text-left p-2 text-sm font-semibold">Client</th>
+                    <th className="text-left p-2 text-sm font-semibold">Clock In</th>
+                    <th className="text-left p-2 text-sm font-semibold">Clock Out</th>
+                    <th className="text-left p-2 text-sm font-semibold">Hours</th>
+                    <th className="text-left p-2 text-sm font-semibold">Total</th>
+                    <th className="text-left p-2 text-sm font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedTimeEntries.map(entry => {
+                    const employee = employees.find(e => e.id === entry.employeeId);
+                    const client = clients.find(c => c.id === entry.clientId);
+                    const hours = entry.clockOut 
+                      ? ((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)).toFixed(2)
+                      : "0";
+                    const total = parseFloat(hours) * parseFloat(entry.hourlyRate || "0");
+
+                    return (
+                      <tr key={entry.id} className="border-b hover:bg-muted/50" data-testid={`row-entry-${entry.id}`}>
+                        <td className="p-2 text-sm">{employee?.firstName} {employee?.lastName}</td>
+                        <td className="p-2 text-sm">{client?.companyName || client?.firstName || "N/A"}</td>
+                        <td className="p-2 text-sm">{format(new Date(entry.clockIn), "MMM d, h:mm a")}</td>
+                        <td className="p-2 text-sm">{entry.clockOut && format(new Date(entry.clockOut), "MMM d, h:mm a")}</td>
+                        <td className="p-2 text-sm">{hours}h</td>
+                        <td className="p-2 text-sm font-semibold">${total.toFixed(2)}</td>
+                        <td className="p-2 text-sm">
+                          <Badge variant={entry.invoiceId ? "default" : "secondary"}>
+                            {entry.invoiceId ? "billed" : "unbilled"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {filteredTimeEntries.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Clock className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No Time Entries Found</h3>
+            <p className="text-muted-foreground mb-6">
+              {dateRange !== "all" ? "Try adjusting your filters to see more results." : "Start tracking time by clocking in an employee."}
+            </p>
+            <Button onClick={() => setClockInDialogOpen(true)}>
+              <Play className="mr-2 h-4 w-4" />
+              Clock In Employee
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       </div>
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <MobilePageWrapper 
-        onRefresh={handleRefresh}
-        enablePullToRefresh={true}
-        withBottomNav={true}
-      >
-        {pageContent}
-      </MobilePageWrapper>
-    );
-  }
-
-  return pageContent;
+  return isMobile ? (
+    <MobilePageWrapper onRefresh={handleRefresh} enablePullToRefresh>
+      {pageContent}
+    </MobilePageWrapper>
+  ) : (
+    pageContent
+  );
 }

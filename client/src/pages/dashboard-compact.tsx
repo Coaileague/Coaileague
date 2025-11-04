@@ -1,14 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  Users, Activity, DollarSign, 
-  FileText, Calendar, Clock, TrendingUp, Briefcase, AlertTriangle, Brain 
+  Users, MapPin, Tag, Settings, DollarSign, Briefcase, Clock, CheckCircle, Square, Bell, FileText
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTransition } from "@/contexts/transition-context";
 import { MobileLoading } from "@/components/mobile-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
@@ -31,14 +31,18 @@ export default function DashboardCompact() {
     enabled: isAuthenticated,
   });
 
+  const { data: clients } = useQuery<any[]>({
+    queryKey: ['/api/clients'],
+    enabled: isAuthenticated,
+  });
+
+  const { data: timeEntries } = useQuery<any[]>({
+    queryKey: ['/api/time-entries'],
+    enabled: isAuthenticated,
+  });
+
   const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
   const workspaceRole = currentEmployee?.workspaceRole || 'employee';
-
-  // PredictionOS™ - Fetch turnover predictions for Owner/Manager
-  const { data: turnoverData } = useQuery({
-    queryKey: ['/api/predict/turnover/workspace'],
-    enabled: isAuthenticated && (workspaceRole === 'owner' || workspaceRole === 'manager'),
-  });
 
   useEffect(() => {
     showTransition({
@@ -61,189 +65,218 @@ export default function DashboardCompact() {
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
-  const totalEmployees = (stats as any)?.totalEmployees || 0;
-  const activeToday = (stats as any)?.activeToday || 0;
-  const totalRevenue = (stats as any)?.totalRevenue || 0;
-  const totalShifts = (stats as any)?.upcomingShifts || 0;
+  const totalEmployees = allEmployees?.length || 0;
+  const totalClients = clients?.length || 0;
   
-  // PredictionOS™ metrics
-  const totalTurnoverCost = (turnoverData as any)?.totalTurnoverCost || 0;
-  const highRiskCount = (turnoverData as any)?.highRiskCount || 0;
+  // Count unique positions/roles
+  const positions = new Set(allEmployees?.map(emp => emp.role || 'Employee').filter(Boolean));
+  const totalPositions = positions.size;
+  
+  // Count unique locations (from clients)
+  const locations = new Set(clients?.map(client => client.location || client.city).filter(Boolean));
+  const totalLocations = locations.size || totalClients; // Fallback to client count
+  
+  // Groups - could be departments or teams (for now, using clients as groups)
+  const totalGroups = totalClients || 0;
+  
+  // Tags - for now, count active vs inactive employees
+  const totalTags = 5; // Placeholder: Active, Inactive, Full-time, Part-time, Contractor
+  
+  // Calculate labor cost from recent time entries
+  const recentTimeEntries = timeEntries?.filter((entry: any) => entry.billingStatus !== 'paid') || [];
+  const laborCost = recentTimeEntries.reduce((sum: number, entry: any) => {
+    const hours = entry.clockOut && entry.clockIn 
+      ? (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)
+      : 0;
+    const rate = parseFloat(entry.hourlyRate || '0');
+    return sum + (hours * rate);
+  }, 0);
 
-  const handleRefresh = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['/api/analytics/stats'] }),
-      queryClient.invalidateQueries({ queryKey: ['/api/employees'] }),
-      queryClient.invalidateQueries({ queryKey: ['/api/predict/turnover/workspace'] }),
-    ]);
-  };
+  // Stat cards - Sling style
+  const statCards = [
+    {
+      icon: Users,
+      label: "EMPLOYEES",
+      value: totalEmployees,
+      color: "text-blue-500",
+      link: "/employees",
+      testid: "stat-employees"
+    },
+    {
+      icon: Briefcase,
+      label: "POSITIONS",
+      value: totalPositions,
+      color: "text-emerald-500",
+      link: "/employees",
+      testid: "stat-positions"
+    },
+    {
+      icon: MapPin,
+      label: "LOCATIONS",
+      value: totalLocations,
+      color: "text-purple-500",
+      link: "/clients",
+      testid: "stat-locations"
+    },
+    {
+      icon: Users,
+      label: "GROUPS",
+      value: totalGroups,
+      color: "text-orange-500",
+      link: "/clients",
+      testid: "stat-groups"
+    },
+    {
+      icon: Tag,
+      label: "TAGS",
+      value: totalTags,
+      color: "text-pink-500",
+      link: "/employees",
+      testid: "stat-tags"
+    },
+    {
+      icon: Bell,
+      label: "ANNOUNCEMENTS",
+      value: 0,
+      color: "text-yellow-500",
+      link: "/communication",
+      testid: "stat-announcements"
+    },
+    {
+      icon: DollarSign,
+      label: "LABOR COST",
+      value: `$${laborCost.toFixed(2)}`,
+      color: "text-green-500",
+      link: "/payroll",
+      testid: "stat-labor-cost"
+    },
+    {
+      icon: Settings,
+      label: "SETTINGS",
+      value: "",
+      color: "text-gray-500",
+      link: "/settings",
+      testid: "stat-settings"
+    }
+  ];
+
+  // Sample notifications
+  const notifications = [
+    {
+      type: "timesheet",
+      message: `Hello ${firstName}, the following items need your attention`,
+      time: null,
+      icon: Clock,
+      color: "text-blue-500"
+    },
+    ...(recentTimeEntries.slice(0, 3).map((entry: any) => {
+      const employee = allEmployees?.find(emp => emp.id === entry.employeeId);
+      const client = clients?.find(c => c.id === entry.clientId);
+      return {
+        type: "activity",
+        message: `${employee?.firstName || 'Employee'} clocked ${entry.clockOut ? 'out' : 'in'} at ${client?.name || 'Location'}`,
+        time: new Date(entry.clockIn),
+        icon: entry.clockOut ? CheckCircle : Clock,
+        color: entry.clockOut ? "text-green-500" : "text-blue-500"
+      };
+    }))
+  ];
 
   const dashboardContent = (
-    <div className="p-3 sm:p-4 md:p-6 max-w-[1920px] mx-auto space-y-3">
-      {/* MOBILE-FIRST HEADER */}
-      <div className="bg-gradient-to-r from-indigo-900 to-blue-900 text-white p-4 sm:p-6 rounded-xl shadow-lg">
-        <div className="mb-4">
-          <h1 className="text-xl sm:text-2xl font-bold">Welcome back, {firstName}</h1>
-          <p className="text-sm opacity-90 mt-1">
-            {workspaceRole === 'owner' ? 'Manage your entire workforce' : 
-             workspaceRole === 'manager' ? 'Oversee your team' :
-             'Track your time and tasks'}
-          </p>
-        </div>
-        
-        {/* QUICK ACTIONS - MOBILE FIRST (Grid Layout for Thumb Access) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          {(workspaceRole === 'owner' || workspaceRole === 'manager') && (
-            <>
-              <Link href="/schedule" className="block">
-                <Button 
-                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
-                  data-testid="button-schedules"
-                >
-                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
-                    <Calendar className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-sm font-medium">Schedule</span>
-                  </div>
-                </Button>
-              </Link>
-              
-              <Link href="/time-tracking" className="block">
-                <Button 
-                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
-                  data-testid="button-time-tracking"
-                >
-                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
-                    <Clock className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-sm font-medium">Time Clock</span>
-                  </div>
-                </Button>
-              </Link>
-              
-              <Link href="/reports" className="block">
-                <Button 
-                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
-                  data-testid="button-reports"
-                >
-                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
-                    <FileText className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-sm font-medium">Reports</span>
-                  </div>
-                </Button>
-              </Link>
-              
-              <Link href="/employees" className="block">
-                <Button 
-                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start sm:justify-center h-auto py-3 px-3" 
-                  data-testid="button-manage-employees"
-                >
-                  <div className="flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-2 w-full">
-                    <Users className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-sm font-medium">Employees</span>
-                  </div>
-                </Button>
-              </Link>
-            </>
-          )}
-          {workspaceRole === 'employee' && (
-            <>
-              <Link href="/time-tracking" className="block col-span-2">
-                <Button 
-                  className="w-full touch-target bg-emerald-500/30 hover:bg-emerald-500/40 border-2 border-emerald-400/50 text-white justify-center h-auto py-4 px-4" 
-                  data-testid="button-clock-in"
-                >
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-6 w-6" />
-                    <span className="text-base font-bold">Clock In/Out</span>
-                  </div>
-                </Button>
-              </Link>
-              
-              <Link href="/schedule" className="block">
-                <Button 
-                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start h-auto py-3 px-3" 
-                  data-testid="button-my-schedule"
-                >
-                  <div className="flex flex-col items-start gap-1 w-full">
-                    <Calendar className="h-5 w-5" />
-                    <span className="text-sm font-medium">My Schedule</span>
-                  </div>
-                </Button>
-              </Link>
-              
-              <Link href="/my-paychecks" className="block">
-                <Button 
-                  className="w-full touch-target bg-white/20 hover:bg-white/30 border border-white/30 text-white justify-start h-auto py-3 px-3" 
-                  data-testid="button-paychecks"
-                >
-                  <div className="flex flex-col items-start gap-1 w-full">
-                    <DollarSign className="h-5 w-5" />
-                    <span className="text-sm font-medium">Paychecks</span>
-                  </div>
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Sling-style Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-px bg-border">
+        {statCards.map((stat, index) => (
+          <Link key={index} href={stat.link} className="block">
+            <Card className="rounded-none border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
+              <CardContent className="p-4 sm:p-6 text-center flex flex-col items-center justify-center h-full min-h-[120px]">
+                <stat.icon className={`h-8 w-8 sm:h-10 sm:w-10 mb-2 ${stat.color}`} />
+                <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-1">
+                  {stat.label}
+                </p>
+                <p className="text-lg sm:text-2xl font-bold">
+                  {stat.value}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
       </div>
 
-      {/* SIMPLIFIED STATS - Role-relevant metrics only */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground truncate">Employees</div>
-                <div className="text-2xl font-bold" data-testid="stat-employees">{totalEmployees}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Blue Banner (No shifts scheduled) */}
+      {workspaceRole !== 'employee' && (
+        <div className="bg-blue-600 text-white px-4 py-4 flex items-center gap-3">
+          <Square className="h-5 w-5" />
+          <p className="text-sm font-medium">
+            {(stats as any)?.upcomingShifts > 0 
+              ? `You have ${(stats as any)?.upcomingShifts} shifts scheduled` 
+              : "You don't have any shifts scheduled"}
+          </p>
+        </div>
+      )}
 
-        <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground truncate">Active Today</div>
-                <div className="text-2xl font-bold" data-testid="stat-active">{activeToday}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Notifications & Roster Tabs */}
+      <div className="p-4">
+        <Tabs defaultValue="notifications" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="notifications" data-testid="tab-notifications">
+              NOTIFICATIONS
+            </TabsTrigger>
+            <TabsTrigger value="roster" data-testid="tab-roster">
+              ROSTER
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="notifications" className="space-y-3 mt-4">
+            {notifications.map((notif, index) => (
+              <Card key={index} className="hover-elevate" data-testid={`notification-${index}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-full bg-muted ${notif.color}`}>
+                      <notif.icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm">{notif.message}</p>
+                      {notif.time && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {notif.time.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground truncate">Revenue</div>
-                <div className="text-2xl font-bold" data-testid="stat-revenue">${totalRevenue.toFixed(0)}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <TabsContent value="roster" className="space-y-3 mt-4">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Employee roster view coming soon
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setLocation("/employees")}
+                  data-testid="button-view-employees"
+                >
+                  View All Employees
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <MobilePageWrapper 
-        onRefresh={handleRefresh}
-        enablePullToRefresh={true}
-        withBottomNav={true}
-      >
-        {dashboardContent}
-      </MobilePageWrapper>
-    );
-  }
-
-  return dashboardContent;
+  return isMobile ? (
+    <MobilePageWrapper>
+      {dashboardContent}
+    </MobilePageWrapper>
+  ) : (
+    dashboardContent
+  );
 }
