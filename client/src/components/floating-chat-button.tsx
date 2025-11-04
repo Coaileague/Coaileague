@@ -6,7 +6,7 @@ export function FloatingChatButton() {
   const [location, setLocation] = useLocation();
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
@@ -16,7 +16,7 @@ export function FloatingChatButton() {
     return null;
   }
 
-  // Load saved position from localStorage on mount
+  // Load saved position from localStorage or calculate default position on mount
   useEffect(() => {
     const savedPosition = localStorage.getItem('chat-button-position');
     if (savedPosition) {
@@ -24,7 +24,8 @@ export function FloatingChatButton() {
         const parsed = JSON.parse(savedPosition);
         setPosition(parsed);
       } catch (e) {
-        // If parsing fails, use default position
+        // If parsing fails, calculate default position
+        setPosition(null);
       }
     }
   }, []);
@@ -32,15 +33,20 @@ export function FloatingChatButton() {
   // Handle touch start
   const handleTouchStart = (e: React.TouchEvent) => {
     // Only enable dragging on mobile (check if screen width < 768px)
-    if (window.innerWidth >= 768) return;
+    if (window.innerWidth >= 768 || !buttonRef.current) return;
     
     const touch = e.touches[0];
+    const rect = buttonRef.current.getBoundingClientRect();
+    
     setIsDragging(true);
     hasMoved.current = false;
+    
+    // Store the offset between touch point and button's current position
     dragStart.current = {
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
     };
+    
     e.preventDefault(); // Prevent scrolling while dragging
   };
 
@@ -70,7 +76,9 @@ export function FloatingChatButton() {
     setIsDragging(false);
     
     // Save position to localStorage
-    localStorage.setItem('chat-button-position', JSON.stringify(position));
+    if (position) {
+      localStorage.setItem('chat-button-position', JSON.stringify(position));
+    }
   };
 
   // Handle click - only navigate if button wasn't dragged
@@ -82,8 +90,8 @@ export function FloatingChatButton() {
 
   // Determine button position style
   const getPositionStyle = () => {
-    // On mobile, use absolute positioning if dragged
-    if (window.innerWidth < 768 && (position.x !== 0 || position.y !== 0)) {
+    // On mobile, use absolute positioning if position has been set
+    if (window.innerWidth < 768 && position) {
       return {
         position: 'fixed' as const,
         left: `${position.x}px`,
@@ -92,7 +100,7 @@ export function FloatingChatButton() {
         right: 'auto',
       };
     }
-    // Desktop: fixed bottom-right
+    // Desktop or no custom position: fixed bottom-right
     return {};
   };
 
