@@ -68,89 +68,78 @@ function DraggableShiftCard({ shift, employee, client, onAddAcknowledgment }: {
   const duration = moment.duration(moment(shift.endTime).diff(moment(shift.startTime)));
   const hours = duration.asHours().toFixed(1);
 
+  // Sling-style: Large colored block filling the cell
   return (
-    <Card
+    <div
       ref={setNodeRef}
       style={style}
       className={`
-        p-3 rounded-lg border-2 transition-all cursor-grab active:cursor-grabbing mb-2 relative group min-h-[90px]
-        ${isDraft ? 'border-amber-500/50 bg-amber-500/10 shadow-amber-500/20 shadow-lg animate-pulse' : ''}
-        ${isPublished ? 'border-blue-500 bg-blue-500/20' : ''}
-        ${isOpen ? 'border-purple-500/50 bg-purple-500/10 border-dashed' : ''}
-        ${isDragging ? 'opacity-30' : 'hover-elevate'}
+        w-full rounded-md p-3 mb-2 cursor-grab active:cursor-grabbing relative group
+        transition-all
+        ${isDraft ? 'bg-gradient-to-br from-amber-500 to-amber-600 border-2 border-amber-400 animate-pulse' : ''}
+        ${isPublished && !isOpen ? 'bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-400' : ''}
+        ${isOpen ? 'bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-dashed border-purple-400' : ''}
+        ${isDragging ? 'opacity-50' : 'hover-elevate active-elevate-2'}
       `}
       data-testid={`shift-card-${shift.id}`}
       {...listeners}
       {...attributes}
     >
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="font-bold text-sm">
-                {moment(shift.startTime).format('h:mm A')} - {moment(shift.endTime).format('h:mm A')}
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground ml-6">
-              {hours} hours
-            </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {onAddAcknowledgment && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddAcknowledgment(shift);
-                }}
-                data-testid={`button-add-acknowledgment-${shift.id}`}
-              >
-                <Plus className="h-4 w-4 text-emerald-400" />
-              </Button>
-            )}
-            {isDraft && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
-                Draft
-              </Badge>
-            )}
-            {isOpen && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 bg-purple-500/20">
-                Open
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {!isOpen && employee && (
-          <div className="text-sm font-semibold">
-            {employee.firstName} {employee.lastName}
-          </div>
-        )}
-
-        {isOpen && (
-          <div className="text-sm font-semibold text-purple-400 flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            Unassigned
-          </div>
-        )}
-
-        {client && (
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{client.firstName} {client.lastName}</span>
-          </div>
-        )}
-
-        {shift.description && (
-          <div className="text-xs text-muted-foreground line-clamp-2">
-            {shift.description}
-          </div>
-        )}
+      {/* Time - Very prominent like Sling */}
+      <div className="text-white font-bold text-base mb-1">
+        {moment(shift.startTime).format('h:mm A')} - {moment(shift.endTime).format('h:mm A')}
       </div>
-    </Card>
+      
+      {/* Duration */}
+      <div className="text-white/90 text-sm mb-2">
+        {hours} hours
+      </div>
+
+      {/* Location/Client - Prominent like Sling */}
+      {client && (
+        <div className="text-white/95 font-semibold text-sm mb-1">
+          {client.firstName} {client.lastName}
+        </div>
+      )}
+
+      {/* Employee name (not shown if open shift) */}
+      {!isOpen && employee && (
+        <div className="text-white/80 text-xs">
+          {employee.firstName} {employee.lastName}
+        </div>
+      )}
+
+      {/* Open shift indicator */}
+      {isOpen && (
+        <div className="text-white/95 font-semibold text-sm flex items-center gap-1">
+          <Users className="h-4 w-4" />
+          Unassigned
+        </div>
+      )}
+
+      {/* Add acknowledgment button - top right corner */}
+      {onAddAcknowledgment && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddAcknowledgment(shift);
+          }}
+          data-testid={`button-add-acknowledgment-${shift.id}`}
+        >
+          <Plus className="h-4 w-4 text-white" />
+        </Button>
+      )}
+
+      {/* Status badge - bottom right */}
+      {isDraft && (
+        <div className="absolute bottom-2 right-2 bg-white/20 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-md font-semibold">
+          DRAFT
+        </div>
+      )}
+    </div>
   );
 }
 
