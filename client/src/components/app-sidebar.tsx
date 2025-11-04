@@ -135,7 +135,7 @@ export function AppSidebar() {
         <AutoForceLogo variant="nav" size="md" />
       </SidebarHeader>
       
-      <SidebarContent className="px-3 py-4">
+      <SidebarContent className="px-3 py-4 overflow-y-auto">
         {/* OS Family 1: Communication & Collaboration */}
         {renderMenuSection("Communication & Collaboration", communicationFamilyItems, true)}
         
