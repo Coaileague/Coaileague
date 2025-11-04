@@ -819,9 +819,6 @@ export const shifts = pgTable("shifts", {
   // Smart Schedule™ tracking
   aiGenerated: boolean("ai_generated").default(false),
   requiresAcknowledgment: boolean("requires_acknowledgment").default(false),
-  acknowledgedAt: timestamp("acknowledged_at"),
-  deniedAt: timestamp("denied_at"),
-  denialReason: text("denial_reason"),
   replacementForShiftId: varchar("replacement_for_shift_id"), // If this shift replaces a denied one
   autoReplacementAttempts: integer("auto_replacement_attempts").default(0), // Track replacement tries
   
