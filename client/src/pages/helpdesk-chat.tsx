@@ -509,6 +509,7 @@ export default function HelpdeskChatPage() {
                 placeholder="Type your message..."
                 className="flex-1 bg-[#2b2b2b] border-[#3a3a3a] text-white placeholder:text-gray-500 font-mono min-h-[44px]"
                 disabled={sendMessage.isPending}
+                autoFocus
                 data-testid="input-message"
               />
               <Button

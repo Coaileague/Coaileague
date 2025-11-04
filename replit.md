@@ -8,14 +8,17 @@ WorkforceOS is a comprehensive workforce management operating system designed to
 ### November 4, 2025 - Platform-Wide Fixes Complete
 
 **Critical Settings Page Bug Fixed:**
-- ✅ **Root Cause**: Workspace endpoints used OAuth middleware (`isAuthenticated`) but root admins use session-based auth
+- ✅ **Root Cause 1 (Auth)**: Workspace endpoints used OAuth middleware (`isAuthenticated`) but root admins use session-based auth
+- ✅ **Root Cause 2 (Database)**: Missing column `feature_analyticsos_enabled` in workspaces table caused SQL errors
 - ✅ **Solution**: Changed `/api/workspace` routes to use `requireAuth` (session-based) instead of `isAuthenticated` (OAuth)
+- ✅ **Database Fix**: Added missing column `feature_analyticsos_enabled` to workspaces table
 - ✅ **Field Mapping Fixed**: Added proper mapping between frontend field names (phone, website) and backend schema (companyPhone, companyWebsite)
 - ✅ **New Fields Supported**: Now allows updating companyName, taxId, and address fields
 - ✅ **Impact**: ALL users (including root admins and regular workspace owners) can now update organization settings
 
-**UI Enhancement:**
+**UI Enhancements:**
 - ✅ **All scrollbars hidden**: Global CSS fix removes scrollbars across entire app while maintaining scroll functionality
+- ✅ **Chat input auto-focus**: Added autoFocus to chat input - users can start typing immediately without clicking first
 
 ### November 4, 2025 - Sales MVP Launch Ready
 **Sales & Procurement System (DealOS™ + BidOS™) - Production Ready:**
