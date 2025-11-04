@@ -168,19 +168,19 @@ export function AutoForceLogo({
   return (
     <div 
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-lg bg-card/30 border border-border/50 backdrop-blur-sm",
+        "flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-card/30 border border-border/50 backdrop-blur-sm max-w-full",
         className
       )} 
       data-testid="logo-nav"
     >
-      <div className="relative w-8 h-8 flex-shrink-0">
+      <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
         <AutoForceIcon />
       </div>
-      <div className="flex items-center gap-1">
-        <span className="text-sm font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent">
+      <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+        <span className="text-xs sm:text-sm font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent truncate">
           AutoForce
         </span>
-        <span className="text-[8px] font-black text-emerald-500 align-super">™</span>
+        <span className="text-[7px] sm:text-[8px] font-black text-emerald-500 align-super flex-shrink-0">™</span>
       </div>
     </div>
   );

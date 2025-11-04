@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  Users, MapPin, Tag, Settings, DollarSign, Briefcase, Clock, CheckCircle, Square, Bell, FileText
+  Users, MapPin, Tag, Settings, DollarSign, Briefcase, Clock, CheckCircle, Square, Bell, FileText,
+  Calendar, BarChart3, GraduationCap, Receipt, UserPlus, TrendingUp, Grid3x3
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,8 +183,44 @@ export default function DashboardCompact() {
     }))
   ];
 
+  // Quick Access Menu Items
+  const quickAccessFeatures = [
+    { icon: Calendar, label: "Schedule", link: "/schedule-grid", color: "text-blue-500", testid: "quick-schedule" },
+    { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-emerald-500", testid: "quick-timeclock" },
+    { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-purple-500", testid: "quick-invoices" },
+    { icon: DollarSign, label: "Payroll", link: "/payroll", color: "text-green-500", testid: "quick-payroll" },
+    { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-orange-500", testid: "quick-hiring" },
+    { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-indigo-500", testid: "quick-training" },
+    { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-pink-500", testid: "quick-analytics" },
+    { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-gray-500", testid: "quick-all" }
+  ];
+
   const dashboardContent = (
     <div className="min-h-screen bg-background">
+      {/* Quick Access Menu */}
+      <div className="border-b bg-muted/30 px-3 sm:px-4 py-3 sm:py-4">
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+          <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide">Quick Access</h2>
+        </div>
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+          {quickAccessFeatures.map((feature) => (
+            <Button
+              key={feature.link}
+              variant="outline"
+              size="sm"
+              className="flex-col h-auto min-h-[64px] sm:min-h-[72px] min-w-[72px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap"
+              asChild
+            >
+              <Link href={feature.link} data-testid={feature.testid}>
+                <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                <span className="text-[10px] sm:text-xs font-medium leading-tight">{feature.label}</span>
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {/* Sling-style Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-px bg-border">
         {statCards.map((stat, index) => (

@@ -37,45 +37,59 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Navigation Header */}
       <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex h-20 items-center justify-between">
-            {/* Professional Navigation Logo */}
+        <div className="container mx-auto px-3 sm:px-6">
+          <div className="flex h-16 sm:h-20 items-center justify-between gap-2">
+            {/* Professional Navigation Logo - Responsive */}
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="relative cursor-pointer hover-elevate transition-all duration-300"
+              className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
+              aria-label="Scroll to top"
+              data-testid="button-logo-home"
             >
-              <AutoForceLogo variant="nav" />
+              {/* Desktop: Show full nav logo */}
+              <div className="hidden sm:block">
+                <AutoForceLogo variant="nav" />
+              </div>
+              {/* Mobile: Show compact icon only */}
+              <div className="block sm:hidden">
+                <AutoForceLogo variant="icon" size="md" />
+              </div>
             </button>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-4 lg:gap-6">
               <button
                 onClick={() => setLocation("/pricing")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
+                data-testid="link-pricing"
               >
                 Pricing
               </button>
               <button
                 onClick={() => window.scrollTo({ top: document.getElementById('features')?.offsetTop || 0, behavior: 'smooth' })}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
+                data-testid="link-features"
               >
                 Features
               </button>
               <button
                 onClick={() => setLocation("/contact")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
+                data-testid="link-contact"
               >
                 Contact
               </button>
               <div className="h-6 w-px bg-border" />
               <Button
                 variant="ghost"
+                className="min-h-[44px]"
                 onClick={() => setLocation("/login")}
                 data-testid="button-login"
               >
                 Login
               </Button>
               <Button
+                className="min-h-[44px]"
                 onClick={() => setLocation("/register")}
                 data-testid="button-get-started"
               >
@@ -83,18 +97,22 @@ export default function Landing() {
               </Button>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu - Improved touch targets */}
             <div className="flex md:hidden items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
+                className="min-h-[44px]"
                 onClick={() => setLocation("/login")}
+                data-testid="button-login-mobile"
               >
                 Login
               </Button>
               <Button
                 size="sm"
+                className="min-h-[44px] whitespace-nowrap"
                 onClick={() => setLocation("/register")}
+                data-testid="button-signup-mobile"
               >
                 Sign Up
               </Button>
@@ -128,11 +146,11 @@ export default function Landing() {
                   *Actual time and cost savings will vary based on your organization's size, current processes, and implementation. Platform features designed to automate manual tasks.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                   <Button
                     size="lg"
                     onClick={() => setLocation("/register")}
-                    className="text-base px-8 h-12"
+                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
                     data-testid="button-start-trial"
                   >
                     Start Free Trial
@@ -142,7 +160,7 @@ export default function Landing() {
                     size="lg"
                     variant="outline"
                     onClick={() => window.location.href = "/api/demo-login"}
-                    className="text-base px-8 h-12"
+                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
                     data-testid="button-view-demo"
                   >
                     View Live Demo
@@ -186,20 +204,20 @@ export default function Landing() {
       </section>
 
       {/* Stats Bar - PLATFORM CAPABILITIES */}
-      <section className="border-b py-12">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
-            <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-bold text-primary">8</div>
-              <div className="text-sm text-muted-foreground">Core OS Modules</div>
+      <section className="border-b py-8 sm:py-12">
+        <div className="container mx-auto px-3 sm:px-6">
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-4xl mx-auto text-center">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary">8</div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground break-words leading-tight">Core OS Modules</div>
             </div>
-            <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-bold text-primary">99.9%</div>
-              <div className="text-sm text-muted-foreground">Uptime SLA</div>
+            <div className="space-y-1 sm:space-y-2">
+              <div className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary">99.9%</div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground break-words leading-tight">Uptime SLA</div>
             </div>
-            <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-bold text-primary">24/7</div>
-              <div className="text-sm text-muted-foreground">AI Support</div>
+            <div className="space-y-1 sm:space-y-2">
+              <div className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary">24/7</div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground break-words leading-tight">AI Support</div>
             </div>
           </div>
         </div>
@@ -246,6 +264,7 @@ export default function Landing() {
                 <Button
                   size="lg"
                   onClick={() => window.location.href = "/api/demo-login"}
+                  className="min-h-[44px] w-full sm:w-auto"
                   data-testid="button-demo-timeos"
                 >
                   Try Live Demo
@@ -289,6 +308,7 @@ export default function Landing() {
                   size="lg"
                   variant="outline"
                   onClick={() => setLocation("/register")}
+                  className="min-h-[44px] w-full sm:w-auto"
                   data-testid="button-trial-scheduleos"
                 >
                   Start Free Trial
@@ -646,13 +666,14 @@ export default function Landing() {
                   ))}
                 </ul>
                 <Button
-                  className="w-full"
+                  className="w-full min-h-[44px]"
                   variant={plan.featured ? "default" : "outline"}
                   onClick={() =>
                     plan.tier === "Enterprise"
                       ? setLocation("/contact")
                       : setLocation("/register")
                   }
+                  data-testid={`button-pricing-${plan.tier.toLowerCase()}`}
                 >
                   {plan.tier === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
                 </Button>
@@ -681,11 +702,11 @@ export default function Landing() {
             <p className="text-lg text-muted-foreground">
               Join growing organizations automating workforce management. Start your free trial today—no credit card required.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4">
               <Button
                 size="lg"
                 onClick={() => setLocation("/register")}
-                className="text-base px-8 h-12"
+                className="text-base sm:text-lg px-6 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
                 data-testid="button-final-cta-trial"
               >
                 Start Free Trial
@@ -695,7 +716,7 @@ export default function Landing() {
                 size="lg"
                 variant="outline"
                 onClick={() => setLocation("/contact")}
-                className="text-base px-8 h-12"
+                className="text-base sm:text-lg px-6 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
                 data-testid="button-final-cta-demo"
               >
                 Schedule Demo
