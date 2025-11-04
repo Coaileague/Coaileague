@@ -63,6 +63,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EnhancedEmptyState } from "@/components/enhanced-empty-state";
+import { SlingMobileSchedule } from "@/components/schedule-mobile-sling";
 import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
 
@@ -747,11 +748,25 @@ export default function ScheduleGrid() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Sling-style: Separate horizontal bars */}
-      
-      {/* Bar 1: Top Navigation Tabs */}
-      <div className="border-b bg-muted/30">
+    <>
+      {/* Mobile View - Sling Style (shown on screens < md) */}
+      <div className="md:hidden h-screen">
+        <SlingMobileSchedule
+          shifts={shifts}
+          employees={employees}
+          clients={clients}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          onShiftClick={handleShiftClick}
+        />
+      </div>
+
+      {/* Desktop View - Grid Style (shown on screens >= md) */}
+      <div className="hidden md:flex flex-col h-screen bg-background">
+        {/* Sling-style: Separate horizontal bars */}
+        
+        {/* Bar 1: Top Navigation Tabs */}
+        <div className="border-b bg-muted/30">
         <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 mobile-scroll gap-2">
           <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
             <Tooltip>
@@ -1135,7 +1150,9 @@ export default function ScheduleGrid() {
           )}
         </DragOverlay>
       </DndContext>
+      </div>
 
+      {/* Shared Dialogs - Available to both mobile and desktop views */}
       {/* Create Shift Dialog */}
       {createShiftContext && (
         <Dialog open={isCreateShiftDialogOpen} onOpenChange={setIsCreateShiftDialogOpen}>
@@ -1434,6 +1451,6 @@ export default function ScheduleGrid() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 }
