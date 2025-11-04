@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import {
   Activity, Users, Building2, DollarSign, Server, Database, Cpu, HardDrive,
   AlertTriangle, CheckCircle, TrendingUp, Shield, RefreshCw, Settings,
   Zap, Clock, UserCheck, Ticket, MessageSquare, BarChart3, Search, ExternalLink,
-  MapPin, Calendar, Mail, Phone, User, Save
+  MapPin, Calendar, Mail, Phone, User, Save, Receipt, UserPlus, GraduationCap, Grid3x3
 } from "lucide-react";
 import { AutoForceLogo } from "@/components/autoforce-logo";
 
@@ -247,6 +247,41 @@ export default function RootAdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Quick Access Menu */}
+        <Card className="border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-indigo-950/30 to-slate-900/50 backdrop-blur-sm">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-400 shrink-0" />
+              <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
+            </div>
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+              {[
+                { icon: Calendar, label: "Schedule", link: "/schedule", color: "text-blue-500", testid: "quick-schedule" },
+                { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-emerald-500", testid: "quick-timeclock" },
+                { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-purple-500", testid: "quick-invoices" },
+                { icon: DollarSign, label: "Payroll", link: "/payroll-dashboard", color: "text-green-500", testid: "quick-payroll" },
+                { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-orange-500", testid: "quick-hiring" },
+                { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-indigo-500", testid: "quick-training" },
+                { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-pink-500", testid: "quick-analytics" },
+                { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-gray-400", testid: "quick-all" }
+              ].map((feature) => (
+                <Button
+                  key={feature.link}
+                  variant="outline"
+                  size="sm"
+                  className="flex-col h-auto min-h-[64px] sm:min-h-[72px] min-w-[72px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-indigo-500/20 hover:border-indigo-400/40"
+                  asChild
+                >
+                  <Link href={feature.link} data-testid={feature.testid}>
+                    <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                    <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* My Profile Section */}
         <Card className="border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-indigo-950/30 to-slate-900/50 backdrop-blur-sm">
