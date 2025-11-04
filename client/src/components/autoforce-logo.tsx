@@ -89,30 +89,59 @@ export function AutoForceLogo({
   
   // Full variant with tagline
   if (variant === "full") {
+    const iconSizes = {
+      sm: "w-16 h-16 sm:w-20 sm:h-20",
+      md: "w-20 h-20 sm:w-24 sm:h-24",
+      lg: "w-24 h-24 sm:w-32 sm:h-32",
+      xl: "w-32 h-32 sm:w-40 sm:h-40",
+      hero: "w-40 h-40 sm:w-48 sm:h-48"
+    };
+    
+    const titleSizes = {
+      sm: "text-2xl sm:text-3xl",
+      md: "text-3xl sm:text-4xl",
+      lg: "text-4xl sm:text-5xl",
+      xl: "text-5xl sm:text-6xl",
+      hero: "text-6xl sm:text-7xl"
+    };
+    
+    const taglineSizes = {
+      sm: "text-[10px] sm:text-xs",
+      md: "text-xs sm:text-sm",
+      lg: "text-sm sm:text-base",
+      xl: "text-base sm:text-lg",
+      hero: "text-lg sm:text-xl"
+    };
+    
     return (
       <div 
         className={cn(
-          "flex flex-col items-center justify-center gap-4",
-          fullSizeClasses[size],
+          "flex flex-col items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-sm",
           className
         )} 
         data-testid="logo-full"
       >
         {/* Icon */}
-        <div className="w-24 h-24">
+        <div className={iconSizes[size]}>
           <AutoForceIcon iconClassName={animated ? "animate-pulse-slow" : ""} />
         </div>
         
         {/* Brand Name */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-black bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-400 bg-clip-text text-transparent">
+        <div className="flex flex-col items-center gap-1 sm:gap-2 w-full px-4">
+          <div className="flex items-baseline gap-1 justify-center flex-wrap">
+            <span className={cn(
+              "font-black bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-400 bg-clip-text text-transparent",
+              titleSizes[size]
+            )}>
               AutoForce
             </span>
-            <span className="text-xs font-black text-blue-500 align-super">™</span>
+            <span className="text-[10px] font-black text-blue-500 align-super">™</span>
           </div>
-          <span className="text-xs font-semibold text-muted-foreground text-center max-w-xs">
-            Autonomous Workforce Management Solutions
+          <span className={cn(
+            "font-semibold text-muted-foreground text-center leading-tight break-words w-full",
+            taglineSizes[size]
+          )}>
+            Autonomous Workforce<br className="sm:hidden" /> Management Solutions
           </span>
         </div>
       </div>

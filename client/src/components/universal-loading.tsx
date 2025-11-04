@@ -25,25 +25,25 @@ export function UniversalLoading({
   if (fullScreen) {
     return (
       <div 
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl px-4"
         data-testid="universal-loading-fullscreen"
       >
-        <div className="flex flex-col items-center gap-6 sm:gap-8 px-4">
+        <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
           {/* Responsive Animated Logo - Glass morphism design */}
-          <div className="relative">
+          <div className="relative w-full max-w-[280px] sm:max-w-[320px]">
             {/* Multi-layer glow - responsive */}
             <div className="absolute inset-0 bg-gradient-to-r from-teal-500/30 via-blue-500/30 to-purple-500/30 blur-2xl sm:blur-3xl rounded-full scale-125 sm:scale-150" />
             <div className="absolute inset-0 bg-teal-400/20 blur-xl sm:blur-2xl rounded-full scale-110 sm:scale-125" />
             
             {/* Glass container with responsive padding */}
-            <div className="relative z-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-900/10 via-slate-800/5 to-slate-900/10 backdrop-blur-sm p-4 sm:p-6 md:p-8 border border-white/5">
+            <div className="relative z-10 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/10 via-slate-800/5 to-slate-900/10 backdrop-blur-sm p-6 sm:p-8 border border-white/5">
               <AutoForceLogo variant="full" size={logoSize} animated={true} className="opacity-100" />
             </div>
           </div>
           
-          <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-white/90 font-medium`}>
-            <Loader2 className={`${spinnerSize} sm:h-5 sm:w-5 animate-spin text-teal-400`} />
-            <span className="text-center">{message}</span>
+          <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-white/90 font-medium w-full justify-center px-4`}>
+            <Loader2 className={`${spinnerSize} sm:h-5 sm:w-5 animate-spin text-teal-400 flex-shrink-0`} />
+            <span className="text-center break-words">{message}</span>
           </div>
         </div>
       </div>
@@ -51,21 +51,21 @@ export function UniversalLoading({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 sm:p-8 min-h-[200px]" data-testid="universal-loading">
-      <div className="flex flex-col items-center gap-4 sm:gap-6">
+    <div className="flex flex-col items-center justify-center p-4 sm:p-8 min-h-[200px] w-full" data-testid="universal-loading">
+      <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
         {/* Responsive Logo - Better blending */}
-        <div className="relative">
+        <div className="relative w-full max-w-[240px] sm:max-w-[280px]">
           <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-blue-500/20 blur-xl sm:blur-2xl rounded-full scale-110 sm:scale-125" />
           
           {/* Logo container with responsive padding */}
-          <div className="relative z-10 rounded-lg sm:rounded-2xl bg-gradient-to-br from-background/40 via-background/20 to-background/40 backdrop-blur-sm p-3 sm:p-6 border border-border/30">
+          <div className="relative z-10 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-background/40 via-background/20 to-background/40 backdrop-blur-sm p-4 sm:p-6 border border-border/30">
             <AutoForceLogo variant="full" size={logoSize} animated={true} className="opacity-100" />
           </div>
         </div>
         
-        <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-muted-foreground`}>
-          <Loader2 className={`${spinnerSize} animate-spin text-teal-500`} />
-          <span className="text-center px-2">{message}</span>
+        <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-muted-foreground w-full justify-center px-4`}>
+          <Loader2 className={`${spinnerSize} animate-spin text-teal-500 flex-shrink-0`} />
+          <span className="text-center break-words">{message}</span>
         </div>
       </div>
     </div>
