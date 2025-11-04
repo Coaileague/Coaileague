@@ -205,12 +205,13 @@
 
 ## 🎨 Design Specifications
 
-### Color Palette:
-- **Primary**: Indigo #6366f1 / #4f46e5
-- **Success**: Emerald #10b981 / #059669
+### Color Palette - Power & Authority Theme:
+- **Primary**: Deep Charcoal #1F2937 - Command center aesthetic
+- **Accent**: Crimson #DC2626 / #EF4444 - Decisive action
 - **Warning**: Amber #f59e0b / #d97706
 - **Error**: Rose #ef4444 / #dc2626
 - **Info**: Blue #3b82f6 / #2563eb
+- **Neutral**: Platinum grays for professional foundation
 
 ### Typography:
 - **Headings**: Bold, 2xl-3xl font size

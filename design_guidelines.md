@@ -11,19 +11,20 @@
 ## Brand Identity
 
 ### Logo Design (Updated November 2025)
-**Concept**: Geometric "A" + Workforce Network
-The AutoForce™ logo represents autonomous workforce management through a modern, professional design:
+**Concept**: Human + AI Network (User-Requested Design)
+The AutoForce™ logo represents autonomous workforce management through a clean, modern human-centric design:
 
 **Icon Elements**:
-- **Geometric "A"**: Bold, modern letterform in Navy-to-Emerald gradient
-- **Orbital Network Nodes**: 4 orbiting dots representing connected workforce/team members
-- **Outer Ring**: Subtle rotating ring symbolizing continuous automation and connection
-- **Connection Lines**: Network effect showing team integration
+- **Central Human Figure**: Simple, modern silhouette representing the workforce
+- **AI Network Nodes**: 8 nodes radiating outward representing AI-powered automation
+- **Connection Branches**: Network lines connecting human to AI nodes, showing intelligent workforce management
+- **Adaptive Colors**: Automatically switches between light and dark variants for perfect visibility
 
-**Color Treatment**:
-- Navy-to-Emerald gradient (#0B1D3A → #2E8B57 → #6ee7b7)
-- Emerald accent nodes for workforce representation
-- Glowing effects for premium, modern feel
+**Color Variants**:
+- **Light Mode** (for dark backgrounds): White/Light Crimson (#FFFFFF → #FCA5A5)
+- **Dark Mode** (for light backgrounds): Charcoal/Crimson (#1F2937 → #DC2626 → #EF4444)
+- Nodes pulse with animation for dynamic, modern feel
+- Clean, professional aesthetic - modern SaaS, not "IBM computer platform"
 
 **Animation States**:
 - **Static**: Clean, professional icon for navigation and static contexts
@@ -47,13 +48,13 @@ The AutoForce™ logo represents autonomous workforce management through a moder
 
 ---
 
-## Core Color Palette
+## Core Color Palette - Power & Authority Theme
 
-### Primary - Boardroom Navy
-- **Navy 950**: hsl(218, 85%, 12%) - Primary brand, headers, premium buttons
-- **Navy 900**: hsl(218, 80%, 18%) - Hover states, active elements
-- **Navy 100**: hsl(218, 70%, 96%) - Subtle backgrounds
-- **Navy 50**: hsl(218, 60%, 98%) - Card backgrounds on light themes
+### Primary - Deep Charcoal (Command Center)
+- **Charcoal**: hsl(216, 19%, 17%) - Primary brand, headers, sidebar, enterprise strength
+- **Charcoal Hover**: hsl(216, 19%, 22%) - Hover states, active elements
+- **Charcoal Border**: hsl(216, 15%, 25%) - Borders, dividers
+- **Charcoal Light**: hsl(216, 19%, 30%) - Subtle backgrounds
 
 ### Neutral - Platinum Foundation
 - **Platinum 50**: hsl(220, 20%, 98%) - Page backgrounds
@@ -62,14 +63,14 @@ The AutoForce™ logo represents autonomous workforce management through a moder
 - **Platinum 700**: hsl(220, 10%, 40%) - Secondary text
 - **Platinum 900**: hsl(220, 15%, 15%) - Headings, primary text
 
-### Accent - Emerald Authority
-- **Emerald 600**: hsl(158, 64%, 35%) - Primary CTAs, success states
-- **Emerald 700**: hsl(158, 64%, 28%) - CTA hover
-- **Emerald 50**: hsl(158, 60%, 96%) - Success backgrounds
+### Accent - Crimson Authority (Decisive Action)
+- **Crimson**: hsl(0, 84%, 56%) - Primary CTAs, active states, urgency
+- **Crimson Dark**: hsl(0, 77%, 42%) - CTA hover
+- **Crimson Light**: hsl(0, 85%, 94%) - Subtle accent backgrounds
 
 ### System Status
 - **Warning**: hsl(38, 95%, 55%) - Pending, caution
-- **Error**: hsl(0, 70%, 50%) - Critical alerts
+- **Error**: hsl(0, 70%, 50%) - Critical alerts  
 - **Info**: hsl(210, 85%, 50%) - Informational
 
 ---
@@ -115,22 +116,22 @@ The AutoForce™ logo represents autonomous workforce management through a moder
 **Height**: 90vh with content centered
 **Background**: Gradient from Platinum-50 to white, or professional photography (executive team, modern office, data visualization screens)
 **Content Layout**: Centered text block (max-w-3xl), headline + subheadline + dual CTAs
-**Image Treatment**: If using photo - subtle overlay (Navy-950 at 15% opacity), high-quality corporate imagery
-**CTA Buttons**: Primary (Emerald-600, backdrop-blur-md bg-opacity-95), Secondary (Navy-950, backdrop-blur-md bg-opacity-90) - both white text, no hover opacity changes
+**Image Treatment**: If using photo - subtle overlay (Charcoal at 15% opacity), high-quality corporate imagery
+**CTA Buttons**: Primary (Crimson, backdrop-blur-md bg-opacity-95), Secondary (Charcoal, backdrop-blur-md bg-opacity-90) - both white text, no hover opacity changes
 
 ### Premium Stat Cards
 **Base**: White background, 1px Platinum-200 border, 12px radius
 **Hover**: Lift -4px with subtle shadow (0 8px 24px rgba(0,0,0,0.08))
-**Number**: 44px/700 Navy-950, tabular-nums
+**Number**: 44px/700 Charcoal, tabular-nums
 **Label**: 13px/600 uppercase Platinum-700, 0.5px tracking
-**Trend**: Emerald/Error color with arrow icon, 15px/600
+**Trend**: Crimson/Error color with arrow icon, 15px/600
 **Layout**: Number dominant, label below, trend indicator top-right
 
 ### Executive Dashboard Cards
 **Container**: White bg, 2px radius 16px, p-8, border Platinum-200
 **Header**: H2 title + action button aligned
 **Content**: Generous whitespace, clear hierarchy
-**Charts**: 4-color max (Navy-900, Emerald-600, Warning, Info)
+**Charts**: 4-color max (Charcoal, Crimson, Warning, Info)
 
 ### Navigation System
 **Top Bar**: 
@@ -140,32 +141,32 @@ The AutoForce™ logo represents autonomous workforce management through a moder
 
 **Sidebar** (Dashboard):
 - Width 280px, Platinum-50 bg, collapsible to 72px
-- Active: Navy-950 bg, white text, 4px left Emerald-600 accent
+- Active: Charcoal bg, white text, 4px left Crimson accent
 - Hover: Platinum-100 bg with smooth transition
 
 ### Data Tables (Dashboard)
-**Header**: Platinum-100 bg, 13px/700 uppercase Navy-950, sticky top
+**Header**: Platinum-100 bg, 13px/700 uppercase Charcoal, sticky top
 **Rows**: White bg, 1px bottom Platinum-200 border, hover Platinum-50
 **Cell Padding**: px-6 py-4
 **Sorting**: Arrow icons with smooth rotation
 **Actions**: Icon buttons right-aligned per row
 
 ### Button System
-**Primary CTA**: Emerald-600 bg, white text, 600 weight, px-8 py-3.5, 8px radius, shadow-sm
-**Secondary**: Navy-950 bg, white text, same padding
-**Outline**: 2px Navy-950 border, Navy-950 text, transparent bg
-**Ghost**: No border, Navy-900 text, hover Platinum-100 bg
+**Primary CTA**: Crimson bg, white text, 600 weight, px-8 py-3.5, 8px radius, shadow-sm
+**Secondary**: Charcoal bg, white text, same padding
+**Outline**: 2px Charcoal border, Charcoal text, transparent bg
+**Ghost**: No border, Charcoal text, hover Platinum-100 bg
 **Icon**: 44px square, icon centered, hover Platinum-100
 
 ### Form Inputs
 **Base**: White bg, 1px Platinum-200 border, 8px radius, 44px height
-**Focus**: 2px Navy-950 border, no ring
-**Label**: 13px/600 Navy-900, mb-2
+**Focus**: 2px Charcoal border, no ring
+**Label**: 13px/600 Charcoal, mb-2
 **Error**: 1px Error border, error message below with icon
 
 ### Badges & Tags
 **Shape**: 20px radius (pill), px-4 py-1.5, 13px/600 text
-**Success**: Emerald-50 bg, Emerald-700 text
+**Success**: Crimson Light bg, Crimson Dark text
 **Warning**: Warning at 15% opacity bg, Warning text
 **Inactive**: Platinum-200 bg, Platinum-700 text
 
@@ -183,25 +184,25 @@ Logo grid of Fortune 500 clients, Platinum-50 bg, "Trusted by industry leaders" 
 3-column grid, icon + headline + description cards, white bg with border, hover lift effect, alternating image-left/image-right on desktop, screenshots of dashboard features
 
 ### 4. ROI Calculator / Interactive Demo
-2-column split: Left - input form (team size, hourly rate), Right - live calculation display, Emerald highlights for savings numbers, "See Your Savings" CTA
+2-column split: Left - input form (team size, hourly rate), Right - live calculation display, Crimson highlights for savings numbers, "See Your Savings" CTA
 
 ### 5. Platform Capabilities
-4-column icon grid, Navy-100 bg section, each capability: icon (32px), title (H3), 2-line description, "Learn More" links
+4-column icon grid, Platinum-100 bg section, each capability: icon (32px), title (H3), 2-line description, "Learn More" links
 
 ### 6. Testimonial Carousel
-2-column staggered cards, executive headshots (80px circular), quote in large text (24px/500), company logo, role/name, Navy-50 card backgrounds
+2-column staggered cards, executive headshots (80px circular), quote in large text (24px/500), company logo, role/name, Platinum-50 card backgrounds
 
 ### 7. Security & Compliance
 Trust badges grid (SOC 2, ISO 27001, GDPR), centered layout, Platinum-100 bg, "Enterprise-grade security" headline
 
 ### 8. Pricing Tiers
-3-column cards (Starter, Professional, Enterprise), white cards with Navy-950 border on "Popular" tier, feature checkmarks (Emerald), "Contact Sales" for Enterprise, annual/monthly toggle
+3-column cards (Starter, Professional, Enterprise), white cards with Charcoal border on "Popular" tier, feature checkmarks (Crimson), "Contact Sales" for Enterprise, annual/monthly toggle
 
 ### 9. CTA Section
-Navy-950 bg with subtle gradient, white text, centered headline + CTA, pattern background (subtle grid or dots)
+Charcoal bg with subtle gradient, white text, centered headline + CTA, pattern background (subtle grid or dots)
 
 ### 10. Footer
-Navy-950 bg, 4-column layout (Product, Company, Resources, Legal), newsletter signup, social links, copyright
+Charcoal bg, 4-column layout (Product, Company, Resources, Legal), newsletter signup, social links, copyright
 
 ---
 
@@ -215,8 +216,8 @@ Navy-950 bg, 4-column layout (Product, Company, Resources, Legal), newsletter si
 - **Number Counters**: Animate stat numbers on viewport entry, 1.5s duration
 - **Chart Animations**: Smooth draw-in (0.8s), delay sequential bars
 - **Button Interactions**: Scale 0.98 on press, 0.2s spring
-- **Loading States**: Navy-950 spinner (40px), skeleton screens in Platinum-100
-- **Success Feedback**: Emerald checkmark scale-in (0.3s), brief toast notification
+- **Loading States**: Charcoal spinner (40px), skeleton screens in Platinum-100
+- **Success Feedback**: Crimson checkmark scale-in (0.3s), brief toast notification
 - **Form Validation**: Instant inline, smooth height transitions for error messages
 
 ---
@@ -225,7 +226,7 @@ Navy-950 bg, 4-column layout (Product, Company, Resources, Legal), newsletter si
 
 **Hero Image**: YES - Executive-grade professional photography
 - Options: Modern office spaces, diverse professional team collaborating, sleek data visualization screens, boardroom settings
-- Treatment: 60% opacity Navy-950 overlay for text contrast, high resolution (1920px+ width)
+- Treatment: 60% opacity Charcoal overlay for text contrast, high resolution (1920px+ width)
 - Placement: Full-width background, content overlay centered
 
 **Feature Screenshots**:
@@ -249,8 +250,8 @@ Navy-950 bg, 4-column layout (Product, Company, Resources, Legal), newsletter si
 
 ## Accessibility
 
-- **Contrast**: WCAG AAA compliance (Navy-950 on white: 14:1)
-- **Focus Indicators**: 3px Navy-900 ring, 2px offset
+- **Contrast**: WCAG AAA compliance (Charcoal on white: 12:1)
+- **Focus Indicators**: 3px Charcoal ring, 2px offset
 - **Keyboard Nav**: Full support, logical tab order, skip links
 - **ARIA**: Comprehensive labels on interactive elements, live regions for dynamic content
 - **Motion**: Respect prefers-reduced-motion, remove animations when set

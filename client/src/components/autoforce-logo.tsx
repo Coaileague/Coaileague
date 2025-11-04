@@ -5,277 +5,260 @@ interface AutoForceLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
   animated?: boolean;
   className?: string;
+  lightMode?: boolean; // For dark backgrounds, use light/white logo
 }
 
 export function AutoForceLogo({ 
   variant = "nav",
   size = "md",
   animated = false,
-  className 
+  className,
+  lightMode = false
 }: AutoForceLogoProps) {
   
   // Size mappings
   const iconSizeClasses = {
-    sm: "w-6 h-6",
-    md: "w-8 h-8",
+    sm: "w-8 h-8",
+    md: "w-10 h-10",
     lg: "w-12 h-12",
     xl: "w-16 h-16",
-    hero: "w-32 h-32"
+    hero: "w-24 h-24"
   };
   
   const fullSizeClasses = {
-    sm: "w-32 h-32",
-    md: "w-48 h-48",
-    lg: "w-64 h-64",
-    xl: "w-80 h-80",
-    hero: "w-96 h-96"
+    sm: "w-48 h-48",
+    md: "w-64 h-64",
+    lg: "w-80 h-80",
+    xl: "w-96 h-96",
+    hero: "w-[480px] h-[480px]"
   };
   
-  // New Professional AutoForce Icon - Geometric "A" + Workforce Network
-  const AutoForceIcon = ({ iconClassName }: { iconClassName?: string }) => (
-    <svg 
-      viewBox="0 0 120 120" 
-      fill="none" 
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn("w-full h-full", iconClassName)}
-    >
-      <defs>
-        {/* Navy to Emerald Gradient */}
-        <linearGradient id="af-primary-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0B1D3A" />
-          <stop offset="50%" stopColor="#2E8B57" />
-          <stop offset="100%" stopColor="#6ee7b7" />
-        </linearGradient>
-        
-        {/* Emerald Glow Gradient */}
-        <linearGradient id="af-glow-gradient" x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.8"/>
-          <stop offset="100%" stopColor="#2E8B57" stopOpacity="0.3"/>
-        </linearGradient>
-        
-        {/* Glow Filter */}
-        <filter id="af-glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-        
-        {/* Stronger Glow for Animation */}
-        <filter id="af-glow-strong">
-          <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      
-      {/* Background Circle */}
-      <circle 
-        cx="60" 
-        cy="60" 
-        r="55" 
-        fill="url(#af-primary-gradient)" 
-        opacity="0.08"
-        className={animated ? "animate-pulse-slow" : ""}
-      />
-      
-      {/* Outer Ring - representing workforce connection */}
-      <circle 
-        cx="60" 
-        cy="60" 
-        r="48" 
-        stroke="url(#af-primary-gradient)"
-        strokeWidth="2"
-        fill="none"
-        opacity="0.3"
-        className={animated ? "animate-spin-slow" : ""}
-        style={{ transformOrigin: "60px 60px", animation: animated ? "spin 20s linear infinite reverse" : "none" }}
-      />
-      
-      {/* Geometric "A" Shape - Modern & Bold */}
-      <g className={animated ? "animate-pulse-slow" : ""}>
-        {/* Left side of A */}
-        <path 
-          d="M 45 75 L 55 35 L 60 35 L 60 75 Z" 
-          fill="url(#af-primary-gradient)"
-          filter="url(#af-glow)"
-        />
-        {/* Right side of A */}
-        <path 
-          d="M 65 35 L 75 75 L 60 75 L 60 35 Z" 
-          fill="url(#af-primary-gradient)"
-          filter="url(#af-glow)"
-        />
-        {/* Crossbar of A */}
-        <rect 
-          x="48" 
-          y="52" 
-          width="24" 
-          height="6" 
-          fill="url(#af-glow-gradient)"
-          filter="url(#af-glow-strong)"
-          rx="3"
-        />
-      </g>
-      
-      {/* Workforce Network Nodes - 4 orbiting dots representing people/team */}
-      <g className={animated ? "animate-orbit" : ""} style={{ transformOrigin: "60px 60px" }}>
-        <circle cx="60" cy="20" r="4" fill="#2E8B57" opacity="0.6">
-          {animated && (
-            <animate 
-              attributeName="opacity" 
-              values="0.4;0.8;0.4" 
-              dur="3s" 
-              repeatCount="indefinite"
-            />
-          )}
-        </circle>
-        <circle cx="96" cy="60" r="4" fill="#2E8B57" opacity="0.6">
-          {animated && (
-            <animate 
-              attributeName="opacity" 
-              values="0.6;1;0.6" 
-              dur="3s" 
-              begin="0.75s"
-              repeatCount="indefinite"
-            />
-          )}
-        </circle>
-        <circle cx="60" cy="100" r="4" fill="#2E8B57" opacity="0.6">
-          {animated && (
-            <animate 
-              attributeName="opacity" 
-              values="0.4;0.8;0.4" 
-              dur="3s" 
-              begin="1.5s"
-              repeatCount="indefinite"
-            />
-          )}
-        </circle>
-        <circle cx="24" cy="60" r="4" fill="#2E8B57" opacity="0.6">
-          {animated && (
-            <animate 
-              attributeName="opacity" 
-              values="0.6;1;0.6" 
-              dur="3s" 
-              begin="2.25s"
-              repeatCount="indefinite"
-            />
-          )}
-        </circle>
-      </g>
-      
-      {/* Connection Lines - subtle network effect */}
-      <g opacity="0.15" stroke="url(#af-primary-gradient)" strokeWidth="1">
-        <line x1="60" y1="20" x2="60" y2="35" />
-        <line x1="96" y1="60" x2="75" y2="60" />
-        <line x1="60" y1="100" x2="60" y2="75" />
-        <line x1="24" y1="60" x2="45" y2="60" />
-      </g>
-    </svg>
-  );
+  // AutoForce Icon - Human + AI Network (User's requested design)
+  const AutoForceIcon = ({ iconClassName }: { iconClassName?: string }) => {
+    // Adaptive colors based on background
+    const primaryColor = lightMode ? "#FFFFFF" : "#1F2937";
+    const accentColor = lightMode ? "#FCA5A5" : "#DC2626";
+    const nodeColor = lightMode ? "#FECACA" : "#EF4444";
+    
+    return (
+      <svg 
+        viewBox="0 0 100 100" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        className={cn("w-full h-full", iconClassName)}
+      >
+        {/* Central Human Figure */}
+        <g className={animated ? "animate-pulse-slow" : ""}>
+          {/* Head */}
+          <circle 
+            cx="50" 
+            cy="30" 
+            r="8" 
+            fill={primaryColor}
+            opacity="0.9"
+          />
+          {/* Body */}
+          <rect 
+            x="45" 
+            y="38" 
+            width="10" 
+            height="18" 
+            rx="2"
+            fill={primaryColor}
+            opacity="0.9"
+          />
+          {/* Arms */}
+          <rect 
+            x="38" 
+            y="42" 
+            width="24" 
+            height="4" 
+            rx="2"
+            fill={primaryColor}
+            opacity="0.9"
+          />
+          {/* Legs */}
+          <rect 
+            x="45" 
+            y="56" 
+            width="4" 
+            height="12" 
+            rx="2"
+            fill={primaryColor}
+            opacity="0.9"
+          />
+          <rect 
+            x="51" 
+            y="56" 
+            width="4" 
+            height="12" 
+            rx="2"
+            fill={primaryColor}
+            opacity="0.9"
+          />
+        </g>
+
+        {/* AI Network Nodes - 8 nodes radiating outward */}
+        <g>
+          {/* Top */}
+          <circle cx="50" cy="8" r="3" fill={accentColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Top Right */}
+          <circle cx="72" cy="15" r="3" fill={accentColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.25s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Right */}
+          <circle cx="85" cy="40" r="3" fill={nodeColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.5s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Bottom Right */}
+          <circle cx="72" cy="70" r="3" fill={accentColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.75s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Bottom */}
+          <circle cx="50" cy="85" r="3" fill={accentColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Bottom Left */}
+          <circle cx="28" cy="70" r="3" fill={nodeColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.25s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Left */}
+          <circle cx="15" cy="40" r="3" fill={accentColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.5s" repeatCount="indefinite" />
+            )}
+          </circle>
+          {/* Top Left */}
+          <circle cx="28" cy="15" r="3" fill={nodeColor} opacity="0.8">
+            {animated && (
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.75s" repeatCount="indefinite" />
+            )}
+          </circle>
+        </g>
+
+        {/* Connection Lines - AI Network Branches */}
+        <g stroke={accentColor} strokeWidth="1.5" opacity="0.4">
+          {/* Lines from human to nodes */}
+          <line x1="50" y1="30" x2="50" y2="8" />
+          <line x1="55" y1="33" x2="72" y2="15" />
+          <line x1="60" y1="45" x2="85" y2="40" />
+          <line x1="55" y1="60" x2="72" y2="70" />
+          <line x1="50" y1="68" x2="50" y2="85" />
+          <line x1="45" y1="60" x2="28" y2="70" />
+          <line x1="40" y1="45" x2="15" y2="40" />
+          <line x1="45" y1="33" x2="28" y2="15" />
+        </g>
+      </svg>
+    );
+  };
   
   // Full variant with tagline
   if (variant === "full") {
     const iconSizes = {
-      sm: "w-16 h-16 sm:w-20 sm:h-20",
-      md: "w-20 h-20 sm:w-24 sm:h-24",
-      lg: "w-24 h-24 sm:w-32 sm:h-32",
-      xl: "w-32 h-32 sm:w-40 sm:h-40",
-      hero: "w-40 h-40 sm:w-48 sm:h-48"
+      sm: "w-20 h-20",
+      md: "w-24 h-24",
+      lg: "w-32 h-32",
+      xl: "w-40 h-40",
+      hero: "w-48 h-48"
     };
     
     const titleSizes = {
-      sm: "text-2xl sm:text-3xl",
-      md: "text-3xl sm:text-4xl",
-      lg: "text-4xl sm:text-5xl",
-      xl: "text-5xl sm:text-6xl",
-      hero: "text-6xl sm:text-7xl"
+      sm: "text-2xl",
+      md: "text-3xl",
+      lg: "text-4xl",
+      xl: "text-5xl",
+      hero: "text-6xl"
     };
     
     const taglineSizes = {
-      sm: "text-[10px] sm:text-xs",
-      md: "text-xs sm:text-sm",
-      lg: "text-sm sm:text-base",
-      xl: "text-base sm:text-lg",
-      hero: "text-lg sm:text-xl"
+      sm: "text-xs",
+      md: "text-sm",
+      lg: "text-base",
+      xl: "text-lg",
+      hero: "text-xl"
     };
     
     return (
       <div 
-        className={cn(
-          "flex flex-col items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-sm",
-          className
-        )} 
+        className={cn("flex flex-col items-center justify-center gap-2", className)} 
         data-testid="logo-full"
       >
-        {/* Icon */}
         <div className={iconSizes[size]}>
           <AutoForceIcon iconClassName={animated ? "animate-float" : ""} />
         </div>
         
-        {/* Brand Name */}
-        <div className="flex flex-col items-center gap-1 sm:gap-2 w-full px-4">
-          <div className="flex items-baseline gap-1 justify-center flex-wrap">
-            <span className={cn(
-              "font-black bg-gradient-to-r from-[#0B1D3A] via-[#2E8B57] to-[#6ee7b7] bg-clip-text text-transparent",
-              titleSizes[size]
-            )}>
-              AutoForce
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-baseline gap-1 justify-center">
+            <span 
+              className={cn(
+                "font-black",
+                lightMode ? "text-white" : "text-foreground",
+                titleSizes[size]
+              )}
+              data-testid="logo-text-auto"
+            >
+              Auto
             </span>
-            <span className="text-[10px] font-black text-[#2E8B57] align-super">™</span>
+            <span 
+              className={cn(
+                "font-black",
+                lightMode ? "text-red-300" : "text-destructive",
+                titleSizes[size]
+              )}
+              data-testid="logo-text-force"
+            >
+              Force
+            </span>
+            <span 
+              className={cn(
+                "font-black text-xs align-super",
+                lightMode ? "text-white" : "text-foreground"
+              )}
+              data-testid="logo-trademark"
+            >
+              ™
+            </span>
           </div>
-          <span className={cn(
-            "font-semibold text-muted-foreground text-center leading-tight break-words w-full",
-            taglineSizes[size]
-          )}>
-            Autonomous Workforce<br className="sm:hidden" /> Management Solutions
-          </span>
+          
+          <p 
+            className={cn(
+              "tracking-wide uppercase font-medium",
+              lightMode ? "text-gray-300" : "text-muted-foreground",
+              taglineSizes[size]
+            )}
+            data-testid="logo-tagline"
+          >
+            Autonomous Workforce Management
+          </p>
         </div>
       </div>
     );
   }
   
-  // Icon only variant
-  if (variant === "icon") {
-    return (
-      <div 
-        className={cn(
-          "relative flex-shrink-0",
-          !className?.match(/[wh]-\d+/) && iconSizeClasses[size],
-          className
-        )} 
-        data-testid="logo-icon"
-      >
-        <AutoForceIcon iconClassName={animated ? "animate-float" : ""} />
-      </div>
-    );
-  }
-
-  // Navigation variant
+  // Icon variant (default for nav/icon)
   return (
     <div 
-      className={cn(
-        "flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-card/30 border border-border/50 backdrop-blur-sm max-w-full",
-        className
-      )} 
-      data-testid="logo-nav"
+      className={cn(iconSizeClasses[size], className)} 
+      data-testid={`logo-${variant}`}
     >
-      <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
-        <AutoForceIcon />
-      </div>
-      <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-        <span className="text-xs sm:text-sm font-black bg-gradient-to-r from-[#0B1D3A] via-[#2E8B57] to-[#6ee7b7] bg-clip-text text-transparent truncate">
-          AutoForce
-        </span>
-        <span className="text-[7px] sm:text-[8px] font-black text-[#2E8B57] align-super flex-shrink-0">™</span>
-      </div>
+      <AutoForceIcon iconClassName={animated ? "animate-float" : ""} />
     </div>
   );
 }
 
-// Export alias for backwards compatibility during migration
+// Export alias for backwards compatibility
 export { AutoForceLogo as WorkforceOSLogo };

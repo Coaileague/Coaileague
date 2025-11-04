@@ -1039,7 +1039,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       </div>
 
       {/* Main Layout - Full Width with MSN-style separation */}
-      <main className="flex flex-grow overflow-hidden max-w-7xl mx-auto w-full relative z-10 border-l-4 border-r-4 border-slate-300/50">
+      <main className="flex flex-grow overflow-hidden w-full relative z-10">
         {/* CENTER COLUMN: Chat Area - Clear boundary */}
         <section className="flex-grow flex flex-col bg-white/60 backdrop-blur-md relative border-r-2 border-slate-300/70 shadow-inner">
           {/* Messages Area */}

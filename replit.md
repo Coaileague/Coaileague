@@ -12,7 +12,7 @@ All branding must be 100% AutoForce™ (not WorkforceOS).
 ## System Architecture
 AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, TrackOS™, TrainingOS™, HelpOS™), emphasizing extension over rebuilding, clean code, and a single source of truth for each feature domain. The platform's revenue model combines subscription fees with usage-based AI pricing in a customer-pays model, ensuring transparent pricing as the platform scales.
 
-**UI/UX Decisions:** The platform features a Fortune 500-caliber professional interface with Boardroom Navy (#0B1D3A), Platinum neutrals, and Emerald Green (#2E8B57) accents. The new animated logo features a geometric "A" with orbiting workforce network nodes, representing autonomous team management. It prioritizes mobile-first design with responsive layouts, accessible touch targets, and optimized navigation patterns. Specific UI components include tab-based navigation, collapsible sections, enhanced empty states, and a universal transition system. Navigation is designed to be intuitive, with clear back/home buttons and a Sling-style mobile dashboard layout for quick access. The sidebar is branded, scrollable, and features a clear typography hierarchy.
+**UI/UX Decisions:** The platform features a Fortune 500-caliber professional interface with Deep Charcoal (#1F2937), Platinum neutrals, and Crimson (#DC2626) accents for a Power & Authority aesthetic. The animated logo features a geometric "A" with orbiting workforce network nodes in the Charcoal-to-Crimson gradient, representing autonomous team management with enterprise command center styling. Logos are 50% larger for better visibility. It prioritizes mobile-first design with responsive layouts, accessible touch targets, and optimized navigation patterns. Specific UI components include tab-based navigation, collapsible sections, enhanced empty states, and a universal transition system. Navigation is designed to be intuitive, with clear back/home buttons and a Sling-style mobile dashboard layout for quick access. The sidebar is branded, scrollable, and features a clear typography hierarchy.
 
 **Technical Implementations:**
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
@@ -33,6 +33,17 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
 - **AI**: OpenAI GPT-4 (`gpt-4o-mini`)
 
 ## Recent Changes (November 2025)
+### 🔄 UI/UX Redesign In Progress (November 4, 2025)
+**Status**: Addressing user feedback on logo visibility, chat layout, and overall polish
+- **Logo Redesign**: Replaced geometric "A" with user-requested "human + AI network" design
+  - Central human figure with 8 AI nodes radiating outward representing intelligent automation
+  - Adaptive colors: white/light for dark backgrounds, charcoal/crimson for light backgrounds
+  - Clean, modern SaaS aesthetic (not "IBM computer platform")
+  - Added `lightMode` prop to AutoForceLogo component for dark background support
+- **Chat Layout Fix**: Removed max-width constraint causing empty left/right sidebars - chat now full-width
+- **Logo Visibility**: Updated admin command center to use light logo variant on dark background
+- **In Progress**: Updating all remaining dark-themed pages, reducing header heights, adding navigation buttons
+
 ### ✅ Time Tracking & Billing System (COMPLETED - November 4, 2025)
 **Status**: Core time tracking → invoicing → payroll flow is fully operational
 - **Dual Authentication System**: Fixed demo login to support BOTH Replit Auth (OIDC) and Custom Auth
