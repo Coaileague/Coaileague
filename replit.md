@@ -39,6 +39,53 @@ The platform features a CAD-style professional interface with a dark mode theme,
 
 ## Recent Feature Additions
 
+### GetSling-Style ScheduleOS™ Grid with Drag-and-Drop (November 4, 2025)
+
+**Purpose**: Complete rebuild of scheduling interface with GetSling-inspired drag-and-drop functionality for efficient workforce scheduling.
+
+**Implementation**:
+- **Grid Layout** (`client/src/pages/schedule-grid.tsx`):
+  - Employee columns (horizontal) × Time rows (vertical, 7AM-11PM)
+  - Sticky time column on left with hour labels
+  - Sticky employee headers with avatars and roles
+  - Alternating row colors for readability
+
+- **Drag-and-Drop (@dnd-kit)**:
+  - `DraggableShiftCard` component with `useDraggable` hook
+  - `DroppableTimeSlot` component with `useDroppable` hook
+  - `handleDragEnd` reassigns shifts via PATCH `/api/shifts/:id`
+  - Visual feedback: drop zones highlight on hover with primary ring
+  - **Critical Fix**: Preserves original shift dates when dragging (uses `moment(shift.startTime)` instead of `dropData.date`)
+
+- **Shift Status System**:
+  - **Draft** (amber glowing border with animate-pulse): New shifts awaiting approval
+  - **Published** (solid blue border): Finalized shifts visible to employees
+  - **Open** (dashed purple border): Unassigned shifts (employeeId=null) in dedicated column
+  - Status badges on each shift card
+
+- **Database Schema Updates**:
+  - Added 'draft' and 'published' to shift_status enum (via direct SQL)
+  - Made employee_id nullable for open shifts support
+  - Enables open shift workflow: create unassigned → drag to employee → publish
+
+- **Shift Management**:
+  - Click shift to view details dialog
+  - Publish button (draft → published transition)
+  - Delete button with confirmation
+  - Week navigation (prev/next/today buttons)
+  - Time range display (h:mm A format)
+  - Client location indicators
+
+**Security**:
+- Shift mutations restricted to Manager/Owner roles via RBAC
+- No privilege escalation vulnerabilities
+- Audit trail maintained via AuditOS™
+
+**Testing**:
+- Workflow running successfully with no runtime errors
+- Drag-drop preserves dates across multi-day scenarios (architect verified)
+- Visual states rendering correctly for all shift types
+
 ### ROOT Admin Dashboard - User Management (November 3, 2025)
 
 **Purpose**: Comprehensive platform administration for ROOT users to manage all system users and platform roles.
