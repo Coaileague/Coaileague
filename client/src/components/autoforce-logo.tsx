@@ -98,56 +98,73 @@ export function AutoForceLogo({
           />
         </g>
 
-        {/* AI Network Nodes - 8 nodes radiating outward */}
-        <g>
-          {/* Top */}
-          <circle cx="50" cy="8" r="3" fill={accentColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Top Right */}
-          <circle cx="72" cy="15" r="3" fill={accentColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.25s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Right */}
-          <circle cx="85" cy="40" r="3" fill={nodeColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.5s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Bottom Right */}
-          <circle cx="72" cy="70" r="3" fill={accentColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.75s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Bottom */}
-          <circle cx="50" cy="85" r="3" fill={accentColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Bottom Left */}
-          <circle cx="28" cy="70" r="3" fill={nodeColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.25s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Left */}
-          <circle cx="15" cy="40" r="3" fill={accentColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.5s" repeatCount="indefinite" />
-            )}
-          </circle>
-          {/* Top Left */}
-          <circle cx="28" cy="15" r="3" fill={nodeColor} opacity="0.8">
-            {animated && (
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.75s" repeatCount="indefinite" />
-            )}
-          </circle>
+        {/* AI Work-Replacement Icons - Orbiting around human */}
+        <g className={animated ? "origin-center" : ""}>
+          {animated && (
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from="0 50 50"
+              to="360 50 50"
+              dur="20s"
+              repeatCount="indefinite"
+            />
+          )}
+          
+          {/* Calendar/Scheduling Icon - Top */}
+          <g transform="translate(50, 8)">
+            <rect x="-4" y="-4" width="8" height="8" rx="1" fill={accentColor} opacity="0.9"/>
+            <line x1="-3" y1="-2" x2="3" y2="-2" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+            <line x1="-2" y1="0" x2="-2" y2="2" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+            <line x1="2" y1="0" x2="2" y2="2" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+          </g>
+          
+          {/* Chart/Analytics Icon - Top Right */}
+          <g transform="translate(72, 15)">
+            <rect x="-4" y="-4" width="8" height="8" rx="1" fill={accentColor} opacity="0.9"/>
+            <polyline points="-2,2 -1,0 1,-1 2,1" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5" fill="none"/>
+          </g>
+          
+          {/* Bot/AI Icon - Right */}
+          <g transform="translate(85, 40)">
+            <circle cx="0" cy="0" r="4" fill={nodeColor} opacity="0.9"/>
+            <circle cx="-1" cy="-0.5" r="0.5" fill={lightMode ? "#1F2937" : "#FFFFFF"}/>
+            <circle cx="1" cy="-0.5" r="0.5" fill={lightMode ? "#1F2937" : "#FFFFFF"}/>
+            <path d="M -1.5 1 Q 0 1.5 1.5 1" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5" fill="none"/>
+          </g>
+          
+          {/* Document/File Icon - Bottom Right */}
+          <g transform="translate(72, 70)">
+            <rect x="-4" y="-4" width="8" height="8" rx="1" fill={accentColor} opacity="0.9"/>
+            <line x1="-2" y1="-1" x2="2" y2="-1" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+            <line x1="-2" y1="1" x2="2" y2="1" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+          </g>
+          
+          {/* Invoice/Money Icon - Bottom */}
+          <g transform="translate(50, 85)">
+            <rect x="-4" y="-4" width="8" height="8" rx="1" fill={accentColor} opacity="0.9"/>
+            <text x="0" y="2" fontSize="6" fill={lightMode ? "#1F2937" : "#FFFFFF"} textAnchor="middle" fontWeight="bold">$</text>
+          </g>
+          
+          {/* Clock/Time Icon - Bottom Left */}
+          <g transform="translate(28, 70)">
+            <circle cx="0" cy="0" r="4" fill={nodeColor} opacity="0.9"/>
+            <line x1="0" y1="0" x2="0" y2="-2" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+            <line x1="0" y1="0" x2="1.5" y2="0" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5"/>
+          </g>
+          
+          {/* Email/Communication Icon - Left */}
+          <g transform="translate(15, 40)">
+            <rect x="-4" y="-3" width="8" height="6" rx="1" fill={accentColor} opacity="0.9"/>
+            <path d="M -4 -3 L 0 0 L 4 -3" stroke={lightMode ? "#1F2937" : "#FFFFFF"} strokeWidth="0.5" fill="none"/>
+          </g>
+          
+          {/* Team/Users Icon - Top Left */}
+          <g transform="translate(28, 15)">
+            <circle cx="-1" cy="-1" r="1.5" fill={nodeColor} opacity="0.9"/>
+            <circle cx="1" cy="-1" r="1.5" fill={nodeColor} opacity="0.9"/>
+            <path d="M -2.5 1.5 Q -1 2 0 1.5 Q 1 2 2.5 1.5" fill={nodeColor} opacity="0.9"/>
+          </g>
         </g>
 
         {/* Connection Lines - AI Network Branches */}

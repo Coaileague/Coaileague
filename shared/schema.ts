@@ -6435,3 +6435,124 @@ export const createDisputeSchema = insertDisputeSchema.omit({
 export type InsertDispute = z.infer<typeof insertDisputeSchema>;
 export type CreateDispute = z.infer<typeof createDisputeSchema>;
 export type Dispute = typeof disputes.$inferSelect;
+
+// ============================================================================
+// RECORDOS™ - NATURAL LANGUAGE SEARCH
+// ============================================================================
+
+export const searchQueries = pgTable("search_queries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Search details
+  query: text("query").notNull(), // Natural language search query
+  searchType: varchar("search_type").notNull(), // 'employees', 'invoices', 'time_entries', 'all', etc.
+  resultsCount: integer("results_count").default(0),
+  
+  // AI processing
+  aiProcessed: boolean("ai_processed").default(false),
+  aiInterpretation: text("ai_interpretation"), // How AI understood the query
+  searchFilters: text("search_filters"), // JSON of applied filters
+  
+  executionTimeMs: integer("execution_time_ms"), // Performance tracking
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("search_queries_workspace_idx").on(table.workspaceId),
+  userIdx: index("search_queries_user_idx").on(table.userId),
+  typeIdx: index("search_queries_type_idx").on(table.searchType),
+}));
+
+export const insertSearchQuerySchema = createInsertSchema(searchQueries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSearchQuery = z.infer<typeof insertSearchQuerySchema>;
+export type SearchQuery = typeof searchQueries.$inferSelect;
+
+// ============================================================================
+// INSIGHTOS™ - AI ANALYTICS & AUTONOMOUS INSIGHTS
+// ============================================================================
+
+export const aiInsights = pgTable("ai_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Insight metadata
+  title: varchar("title", { length: 200 }).notNull(),
+  category: varchar("category").notNull(), // 'cost_savings', 'productivity', 'anomaly', 'prediction', 'recommendation'
+  priority: varchar("priority").default('normal'), // 'low', 'normal', 'high', 'critical'
+  
+  // Insight content
+  summary: text("summary").notNull(), // Short description
+  details: text("details"), // Full analysis
+  dataPoints: text("data_points"), // JSON array of supporting metrics
+  
+  // AI generation details
+  generatedBy: varchar("generated_by").default('gpt-4'), // AI model used
+  confidence: decimal("confidence", { precision: 5, scale: 2 }), // 0-100 confidence score
+  
+  // Actions & impact
+  actionable: boolean("actionable").default(true),
+  suggestedActions: text("suggested_actions").array(), // Array of recommended actions
+  estimatedImpact: varchar("estimated_impact"), // e.g., "$5K savings", "20% faster"
+  
+  // Status
+  status: varchar("status").default('active'), // 'active', 'dismissed', 'acted_upon'
+  dismissedBy: varchar("dismissed_by").references(() => users.id),
+  dismissedAt: timestamp("dismissed_at"),
+  dismissReason: text("dismiss_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("ai_insights_workspace_idx").on(table.workspaceId),
+  categoryIdx: index("ai_insights_category_idx").on(table.category),
+  priorityIdx: index("ai_insights_priority_idx").on(table.priority),
+  statusIdx: index("ai_insights_status_idx").on(table.status),
+}));
+
+export const insertAiInsightSchema = createInsertSchema(aiInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiInsight = z.infer<typeof insertAiInsightSchema>;
+export type AiInsight = typeof aiInsights.$inferSelect;
+
+// Metrics snapshots for trend analysis
+export const metricsSnapshots = pgTable("metrics_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Snapshot timing
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  period: varchar("period").notNull(), // 'daily', 'weekly', 'monthly'
+  
+  // Core metrics (JSON for flexibility)
+  metrics: text("metrics").notNull(), // JSON object with all metrics
+  
+  // Key performance indicators
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }),
+  totalExpenses: decimal("total_expenses", { precision: 12, scale: 2 }),
+  netProfit: decimal("net_profit", { precision: 12, scale: 2 }),
+  employeeCount: integer("employee_count"),
+  activeClients: integer("active_clients"),
+  hoursTracked: decimal("hours_tracked", { precision: 10, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("metrics_snapshots_workspace_idx").on(table.workspaceId),
+  dateIdx: index("metrics_snapshots_date_idx").on(table.snapshotDate),
+  periodIdx: index("metrics_snapshots_period_idx").on(table.period),
+}));
+
+export const insertMetricsSnapshotSchema = createInsertSchema(metricsSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMetricsSnapshot = z.infer<typeof insertMetricsSnapshotSchema>;
+export type MetricsSnapshot = typeof metricsSnapshots.$inferSelect;
