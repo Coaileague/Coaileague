@@ -170,7 +170,7 @@ function AppContent() {
               </header>
             )}
             
-            <main className={`flex-1 overflow-auto bg-transparent min-h-0 ${shouldShowBottomNav ? 'pb-16' : ''}`}>
+            <main className={`flex-1 overflow-auto scrollbar-hide bg-transparent min-h-0 ${shouldShowBottomNav ? 'pb-16' : ''}`}>
               <Switch>
                 <Route path="/">
                   {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
