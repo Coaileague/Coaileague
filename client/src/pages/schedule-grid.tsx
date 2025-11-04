@@ -191,7 +191,7 @@ function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShif
       ref={setNodeRef}
       onClick={handleCellClick}
       className={`
-        min-h-[120px] min-w-[180px] sm:min-w-[220px] border-r border-b p-2 relative group cursor-pointer transition-all
+        min-h-[120px] flex-1 min-w-[140px] border-r border-b p-2 relative group cursor-pointer transition-all
         ${isOver ? 'bg-primary/10 ring-2 ring-primary' : 'bg-background'}
         ${isToday ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}
         hover-elevate
@@ -304,7 +304,7 @@ function PlaceholderEmployeeRow({ weekDays, onCreateShift, onAddEmployee }: {
         <div
           key={moment(day).format('YYYY-MM-DD')}
           onClick={() => onCreateShift && onCreateShift('open', day)}
-          className="min-h-[120px] min-w-[180px] sm:min-w-[220px] border-r border-b p-2 relative group cursor-pointer transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30"
+          className="min-h-[120px] flex-1 min-w-[140px] border-r border-b p-2 relative group cursor-pointer transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30"
           data-testid={`placeholder-slot-${moment(day).format('YYYY-MM-DD')}`}
         >
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -371,7 +371,7 @@ function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients, onAddAckno
         return (
           <div
             key={dayKey}
-            className="min-h-[120px] min-w-[180px] sm:min-w-[220px] border-r border-b bg-purple-500/5 p-2"
+            className="min-h-[120px] flex-1 min-w-[140px] border-r border-b bg-purple-500/5 p-2"
           >
             {dayOpenShifts.map(shift => (
               <div
@@ -789,7 +789,7 @@ export default function ScheduleGrid() {
                   <div
                     key={moment(day).format('YYYY-MM-DD')}
                     className={`
-                      min-w-[180px] sm:min-w-[220px] border-r p-3 text-center flex flex-col justify-center h-[60px]
+                      flex-1 min-w-[140px] border-r p-3 text-center flex flex-col justify-center h-[60px]
                       ${isToday ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : 'bg-muted/10'}
                     `}
                   >
