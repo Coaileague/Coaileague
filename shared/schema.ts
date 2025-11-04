@@ -853,6 +853,48 @@ export const insertShiftSchema = createInsertSchema(shifts).omit({
 export type InsertShift = z.infer<typeof insertShiftSchema>;
 export type Shift = typeof shifts.$inferSelect;
 
+// Shift Acknowledgments (Post Orders & Special Orders)
+export const shiftAcknowledgmentTypeEnum = pgEnum('shift_acknowledgment_type', ['post_order', 'special_order', 'safety_notice', 'site_instruction']);
+
+export const shiftAcknowledgments = pgTable("shift_acknowledgments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  shiftId: varchar("shift_id").notNull().references(() => shifts.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Acknowledgment details
+  type: shiftAcknowledgmentTypeEnum("type").notNull(),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  priority: varchar("priority").default('normal'), // 'low', 'normal', 'high', 'urgent'
+  
+  // File attachments
+  attachmentUrls: text("attachment_urls").array(),
+  
+  // Status tracking
+  isRequired: boolean("is_required").default(true), // Must acknowledge before clock-in
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: varchar("acknowledged_by").references(() => employees.id),
+  deniedAt: timestamp("denied_at"),
+  denialReason: text("denial_reason"),
+  
+  // Metadata
+  createdBy: varchar("created_by").notNull().references(() => employees.id),
+  expiresAt: timestamp("expires_at"), // Optional expiration
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertShiftAcknowledgmentSchema = createInsertSchema(shiftAcknowledgments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertShiftAcknowledgment = z.infer<typeof insertShiftAcknowledgmentSchema>;
+export type ShiftAcknowledgment = typeof shiftAcknowledgments.$inferSelect;
+
 // Shift Templates (Reusable shift patterns)
 export const shiftTemplates = pgTable("shift_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
