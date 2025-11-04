@@ -111,7 +111,7 @@ function AppContent() {
   
   // Custom sidebar width for better workspace layout (increased for longer menu text)
   const style = {
-    "--sidebar-width": "20rem",  // 320px - prevents text truncation
+    "--sidebar-width": "22rem",  // 352px - prevents text truncation
     "--sidebar-width-icon": "4rem",
   };
 

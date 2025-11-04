@@ -99,25 +99,25 @@ export function AppSidebar() {
 
   const renderMenuSection = (title: string, items: typeof communicationFamilyItems, showBadge?: boolean) => (
     <SidebarGroup>
-      <SidebarGroupLabel className="px-3 mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground/70 flex items-center gap-2">
+      <SidebarGroupLabel className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 flex items-center gap-2">
         {title}
-        {showBadge && <Badge variant="outline" className="text-[9px] px-1.5 py-0">NEW</Badge>}
+        {showBadge && <Badge variant="outline" className="text-[8px] px-1 py-0">NEW</Badge>}
       </SidebarGroupLabel>
       <SidebarGroupContent>
-        <SidebarMenu className="space-y-1">
+        <SidebarMenu className="space-y-0.5">
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton 
                 asChild 
                 isActive={location === item.url}
                 data-testid={`link-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                className={`hover-elevate active-elevate-2 overflow-visible ${
+                className={`hover-elevate active-elevate-2 h-9 px-3 ${
                   (item as any).isFamily ? 'bg-primary/10 font-bold border-l-2 border-primary' : ''
                 }`}
               >
-                <Link href={item.url}>
-                  <item.icon className="h-4 w-4" />
-                  <span className={(item as any).isFamily ? "font-black" : "font-semibold"}>
+                <Link href={item.url} className="flex items-center gap-3 w-full">
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className={`text-sm leading-tight ${(item as any).isFamily ? "font-bold" : "font-medium"}`}>
                     {item.title}
                   </span>
                 </Link>
