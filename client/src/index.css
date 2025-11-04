@@ -559,6 +559,16 @@
     display: none;  /* Chrome, Safari, Opera */
   }
 
+  /* Hide ALL scrollbars by default across the entire app */
+  * {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  *::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
+
   /* Animated Background Mesh - WorkforceOS Style */
   @keyframes mesh-flow {
     0%, 100% { opacity: 0.3; }
