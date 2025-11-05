@@ -83,7 +83,7 @@ export function useChatroomWebSocket(
   const [roomStatus, setRoomStatus] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [temporaryError, setTemporaryError] = useState(false);
-  
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const reconnectAttemptsRef = useRef(0);
@@ -92,13 +92,13 @@ export function useChatroomWebSocket(
 
   const connect = useCallback(() => {
     if (!userId) return;
-    
+
     // STRICT duplicate connection prevention
     if (isConnectingRef.current) {
       console.log('⚠️ Already connecting, aborting duplicate');
       return;
     }
-    
+
     if (wsRef.current) {
       const state = wsRef.current.readyState;
       // Block if CONNECTING (0) or OPEN (1) - only allow if CLOSING (2) or CLOSED (3)
@@ -107,7 +107,7 @@ export function useChatroomWebSocket(
         return;
       }
     }
-    
+
     console.log('🔌 Creating new WebSocket connection for user:', userId);
     isConnectingRef.current = true;
 
@@ -119,7 +119,10 @@ export function useChatroomWebSocket(
     try {
       // Connect to WebSocket server
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+      // Fix: Use window.location.host for proper host/port resolution
+      const wsHost = window.location.host;
+      const wsUrl = `${protocol}://${wsHost}/ws/chat`;
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -164,7 +167,7 @@ export function useChatroomWebSocket(
               const errorMessage = typeof data.message === 'string' ? data.message : 'An error occurred';
               console.error('WebSocket error:', errorMessage);
               setError(errorMessage);
-              
+
               // Extract HelpDesk access control fields
               if (data.requiresTicket) {
                 setRequiresTicket(true);
@@ -211,12 +214,12 @@ export function useChatroomWebSocket(
                     name: data.typingUserName,
                     isStaff: data.typingUserIsStaff || false
                   });
-                  
+
                   // Auto-clear after 3 seconds
                   const timeout = setTimeout(() => {
                     setTypingUserInfo(null);
                   }, 3000);
-                  
+
                   // Clear any existing timeout
                   const existing = typingTimeoutRef.current.get(data.userId);
                   if (existing) clearTimeout(existing);
@@ -230,7 +233,7 @@ export function useChatroomWebSocket(
                     typingTimeoutRef.current.delete(data.userId);
                   }
                 }
-                
+
                 // Still track in set for compatibility
                 setTypingUsers((prev) => {
                   const next = new Set(prev);
@@ -343,7 +346,7 @@ export function useChatroomWebSocket(
               // Staff received secure data from a user - show in chat as formatted message
               const secureData = (data as any).data;
               let secureDataSummary = `🔒 Secure Data from ${(data as any).fromUser}:\n`;
-              
+
               // Format the secure data safely for display
               if (secureData.email) secureDataSummary += `📧 Email: ${secureData.email}\n`;
               if (secureData.accountId) secureDataSummary += `🆔 Account ID: ${secureData.accountId}\n`;
@@ -393,11 +396,11 @@ export function useChatroomWebSocket(
         console.log('WebSocket disconnected');
         setIsConnected(false);
         isConnectingRef.current = false; // Reset connection flag
-        
+
         // Attempt to reconnect with exponential backoff
         const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
         reconnectAttemptsRef.current++;
-        
+
         reconnectTimeoutRef.current = setTimeout(() => {
           console.log(`Reconnecting... (attempt ${reconnectAttemptsRef.current})`);
           connect();
@@ -431,7 +434,7 @@ export function useChatroomWebSocket(
       senderType: senderType,
     }));
   }, []);
-  
+
   // Send typing indicator
   const sendTyping = useCallback((isTyping: boolean) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !userId) {

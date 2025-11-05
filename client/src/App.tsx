@@ -104,18 +104,18 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const isMobile = useIsMobile();
-  
+
   // Check if on mobile chat OR desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/live-chat' || window.location.pathname.startsWith('/live-chat');
-  
+
   // Routes that should NOT show bottom nav (full-screen experiences)
   const hideBottomNavRoutes = ['/mobile-chat', '/live-chat', '/login', '/register', '/onboarding'];
   const shouldShowBottomNav = isMobile && isAuthenticated && !hideBottomNavRoutes.some(route => 
     window.location.pathname.startsWith(route)
   );
-  
+
   // Custom sidebar width for better workspace layout (increased for longer menu text)
   const style = {
     "--sidebar-width": "22rem",  // 352px - prevents text truncation
@@ -157,7 +157,7 @@ function AppContent() {
           {!isMobileChat && <AppSidebar />}
           <div className="flex flex-col flex-1 min-h-0">
             <DemoBanner />
-            
+
             {/* Global Header with Sidebar Toggle - Hidden for mobile chat AND HelpDesk */}
             {!isMobileChat && !isHelpDesk && (
               <header className="flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card shrink-0 h-14">
@@ -201,7 +201,7 @@ function AppContent() {
                 </div>
               </header>
             )}
-            
+
             <main className={`flex-1 overflow-auto scrollbar-hide bg-transparent min-h-0 ${shouldShowBottomNav ? 'pb-16' : ''}`}>
               <Switch>
                 <Route path="/">
@@ -248,20 +248,20 @@ function AppContent() {
                 <Route path="/integrations" component={IntegrationOS} />
                 <Route path="/search" component={RecordOS} />
                 <Route path="/insights" component={InsightOS} />
-                
+
                 {/* OS Family Showcase Pages */}
                 <Route path="/os-family/communication" component={CommunicationFamilyPage} />
                 <Route path="/os-family/operations" component={OperationsFamilyPage} />
                 <Route path="/os-family/growth" component={GrowthFamilyPage} />
                 <Route path="/os-family/platform" component={PlatformFamilyPage} />
-                
+
                 {/* User Menu Routes */}
                 <Route path="/profile" component={Profile} />
                 <Route path="/unavailability" component={Unavailability} />
                 <Route path="/create-org" component={CreateOrg} />
                 <Route path="/updates" component={Updates} />
                 <Route path="/help" component={Help} />
-                
+
                 <Route path="/root-admin-portal" component={RootAdminDashboard} />
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
@@ -290,7 +290,7 @@ function AppContent() {
                 <Route component={NotFound} />
               </Switch>
             </main>
-            
+
             {/* Mobile Bottom Navigation */}
             {shouldShowBottomNav && <MobileBottomNav />}
           </div>

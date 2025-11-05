@@ -28,3 +28,14 @@ if (databaseUrl && !databaseUrl.includes('neon.tech') && !databaseUrl.includes('
 
 export const pool = new Pool({ connectionString: databaseUrl });
 export const db = drizzle({ client: pool, schema });
+
+// Health check function
+export async function checkDatabaseHealth(): Promise<boolean> {
+  try {
+    await pool.query('SELECT 1');
+    return true;
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    return false;
+  }
+}

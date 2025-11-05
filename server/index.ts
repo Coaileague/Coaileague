@@ -1,10 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import pgSession from "connect-pg-simple";
+import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connection pool
+
+const PgStore = pgSession(session);
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Trust proxy for accurate IP detection behind load balancers
+app.set('trust proxy', 1);
+
+// Add health check endpoint BEFORE authentication middleware
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -34,6 +47,34 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  store: new PgStore({
+    pool,
+    tableName: 'sessions',
+    createTableIfMissing: true,
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    sameSite: 'lax',
+  },
+  name: 'wfos.sid', // Custom session name
+}));
+
+// Session error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  if (err && err.code === 'SESSION_ERROR') {
+    console.error('Session error:', err);
+    res.clearCookie('wfos.sid');
+    return res.status(401).json({ message: 'Session expired, please login again' });
+  }
+  next(err);
 });
 
 (async () => {
