@@ -9,8 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
 import { showLoginTransition, showErrorTransition, showSuccessTransition } from "@/lib/transition-utils";
-import { AutoForceLogo } from "@/components/autoforce-logo";
-import { AutoForceWordmark } from "@/components/autoforce-wordmark";
+import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -88,16 +87,8 @@ export default function CustomLogin() {
     <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--cad-background))] p-4">
       <div className="w-full max-w-md space-y-8">
         {/* Logo and Branding */}
-        <div className="text-center space-y-4">
-          <div className="flex justify-center items-center gap-3">
-            <AutoForceLogo size="xl" variant="icon" />
-            <AutoForceWordmark variant="stability" className="text-4xl" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Autonomous Workforce Management Solutions
-            </p>
-          </div>
+        <div className="flex justify-center">
+          <AutoForceLogoFull size="lg" />
         </div>
 
         {/* Login Card */}

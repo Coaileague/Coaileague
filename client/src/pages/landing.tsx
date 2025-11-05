@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { DashboardPreview } from "@/components/dashboard-preview";
 import { TimeTrackingPreview } from "@/components/time-tracking-preview";
@@ -42,17 +43,17 @@ export default function Landing() {
             {/* Professional Navigation Logo - Responsive with proper mobile sizing */}
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0 max-w-[140px] sm:max-w-none"
+              className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
               aria-label="Scroll to top"
               data-testid="button-logo-home"
             >
-              {/* Desktop: Show full nav logo */}
+              {/* Desktop: Show full animated logo */}
               <div className="hidden sm:block">
-                <AutoForceLogo variant="nav" />
+                <AutoForceLogoFull size="sm" />
               </div>
-              {/* Mobile: Show compact nav logo with text */}
-              <div className="block sm:hidden w-full">
-                <AutoForceLogo variant="nav" className="scale-90" />
+              {/* Mobile: Show icon only */}
+              <div className="block sm:hidden">
+                <AutoForceLogo variant="icon" size="md" />
               </div>
             </button>
 

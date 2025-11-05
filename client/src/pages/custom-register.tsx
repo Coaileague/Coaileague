@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { AutoForceLogo } from "@/components/autoforce-logo";
-import { AutoForceWordmark } from "@/components/autoforce-wordmark";
+import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -90,16 +89,8 @@ export default function CustomRegister() {
     <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--cad-background))] p-4">
       <div className="w-full max-w-2xl space-y-8">
         {/* Logo and Branding */}
-        <div className="text-center space-y-4">
-          <div className="flex justify-center items-center gap-3">
-            <AutoForceLogo size="xl" variant="icon" />
-            <AutoForceWordmark variant="stability" className="text-4xl" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Autonomous Workforce Management Solutions
-            </p>
-          </div>
+        <div className="flex justify-center">
+          <AutoForceLogoFull size="lg" />
         </div>
 
         {/* Register Card */}
