@@ -1,0 +1,69 @@
+Missing Features Compared to Major SaaS Platforms:
+Header/Top Bar Utilities:
+🔔 Notifications Center
+
+Bell icon with unread badge
+Dropdown showing recent activity, mentions, updates
+Mark as read functionality
+Examples: Slack, GitHub, Linear
+❓ Quick Help Dropdown
+
+Contextual help based on current page
+Quick links to docs, support, keyboard shortcuts
+Live chat launcher
+Examples: Notion, Intercom, HubSpot
+🎯 Global Search/Command Palette Trigger
+
+Visible search icon (we have it but it's hidden - Cmd+K)
+Quick access to "Press Cmd+K to search"
+Examples: Linear (Cmd+K), Notion, GitHub
+🏢 Workspace/Organization Switcher
+
+Dropdown to switch between workspaces
+Create new workspace button
+Examples: Slack, Notion, Asana
+⚡ Quick Actions Button
+
+"+" or "New" button for common actions
+Create invoice, add employee, schedule shift
+Examples: Most project management tools
+🆕 What's New Badge
+
+Indicator for new features/updates
+Changelog dropdown
+Examples: Linear's "What's New" sparkle icon
+📊 Status Indicators
+
+Sync status (syncing, synced, error)
+Connection status
+Background job progress
+Examples: Notion, Figma
+⌨️ Keyboard Shortcuts Menu
+
+Quick access to see all shortcuts
+Searchable command palette
+Examples: Gmail, Linear
+Additional Missing Features:
+Breadcrumb Navigation (in header, not page-specific)
+
+Show current location hierarchy
+Quick navigation up levels
+User Status Indicator
+
+Online/Away/Busy status
+Custom status messages
+Current Plan Badge
+
+"Professional Plan" indicator
+Quick upgrade button for lower tiers
+Feedback Widget
+
+"Send Feedback" or bug report
+Feature request voting
+Would you like me to implement any of these? The highest impact ones would probably be:
+
+Notifications Center (essential for any collaborative platform)
+Quick Actions "+" Button (for rapid task creation)
+Workspace Switcher (for multi-tenant management)
+Visible Search Trigger (make Cmd+K more discoverable)
+What's New Badge (drive feature adoption)
