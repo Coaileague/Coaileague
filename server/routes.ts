@@ -11,6 +11,7 @@ import authRoutes from "./authRoutes"; // Custom auth routes
 import { auditContextMiddleware } from "./middleware/audit";
 import { apiLimiter, authLimiter, mutationLimiter, readLimiter } from "./middleware/rateLimiter";
 import Stripe from 'stripe';
+import PDFDocument from 'pdfkit';
 import { 
   sendShiftAssignmentEmail, 
   sendInvoiceGeneratedEmail, 
@@ -81,6 +82,8 @@ import {
   employeeTaxForms,
   employeeBankAccounts,
   offCyclePayrollRuns,
+  payrollRuns,
+  payrollEntries,
   // EngagementOS™ Tables
   pulseSurveyTemplates,
   pulseSurveyResponses,
@@ -147,6 +150,7 @@ import {
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, lte, gte, desc, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
+import { format } from "date-fns";
 import { setupWebSocket } from "./websocket";
 import { 
   detectPayPeriod, 
@@ -688,24 +692,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export report in various formats
-  app.post('/api/reports/export', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
-    try {
-      const { reportType, startDate, endDate, format: exportFormat } = req.body;
-      const workspaceId = req.workspace!.id;
+  // ============================================================================
+  // EXPORT FUNCTIONALITY (PDF/CSV/Excel) - Enterprise Feature #3
+  // ============================================================================
 
-      // Generate report data (reuse logic above)
-      // For now, return mock download URL
-      const filename = `${reportType}-${format(new Date(startDate), 'yyyy-MM-dd')}-to-${format(new Date(endDate), 'yyyy-MM-dd')}.${exportFormat}`;
+  // Export invoice as PDF
+  app.get('/api/invoices/:id/pdf', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+
+      // Get workspace from user (support both OIDC and Custom Auth)
+      const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Get invoice with line items
+      const invoice = await storage.getInvoice(id, workspace.id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      const lineItems = await storage.getInvoiceLineItems(id);
+      const client = invoice.clientId ? await db.select().from(clients).where(eq(clients.id, invoice.clientId)).limit(1) : null;
+
+      // Create PDF
+      const doc = new PDFDocument({ size: 'LETTER', margins: { top: 50, bottom: 50, left: 50, right: 50 } });
       
-      res.json({
-        downloadUrl: `/api/reports/download/${filename}`,
-        filename,
-        message: "Report export prepared (mock - integrate with PDF/Excel library)",
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
+      
+      doc.pipe(res);
+
+      // Header
+      doc.fontSize(24).text(workspace.companyName || 'AutoForce™', { align: 'center' });
+      doc.fontSize(10).text(workspace.address || '', { align: 'center' });
+      doc.moveDown();
+      
+      // Invoice title
+      doc.fontSize(20).text(`INVOICE #${invoice.invoiceNumber}`, { align: 'center' });
+      doc.moveDown();
+
+      // Client & dates
+      doc.fontSize(12).text(`Bill To: ${client?.[0]?.name || 'N/A'}`, 50, 150);
+      doc.text(`Date: ${invoice.invoiceDate ? format(new Date(invoice.invoiceDate), 'MM/dd/yyyy') : 'N/A'}`, 350, 150);
+      doc.text(`Due: ${invoice.dueDate ? format(new Date(invoice.dueDate), 'MM/dd/yyyy') : 'N/A'}`, 350, 165);
+      doc.text(`Status: ${invoice.status?.toUpperCase() || 'PENDING'}`, 350, 180);
+      doc.moveDown(3);
+
+      // Line items table
+      const tableTop = 220;
+      doc.fontSize(10).text('Description', 50, tableTop);
+      doc.text('Qty', 300, tableTop);
+      doc.text('Rate', 350, tableTop);
+      doc.text('Amount', 450, tableTop, { align: 'right' });
+      doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+
+      let y = tableTop + 25;
+      lineItems.forEach((item: any) => {
+        doc.text(item.description || 'Service', 50, y);
+        doc.text(item.quantity?.toString() || '1', 300, y);
+        doc.text(`$${item.rate || '0.00'}`, 350, y);
+        doc.text(`$${item.amount || '0.00'}`, 450, y, { align: 'right' });
+        y += 20;
       });
+
+      // Totals
+      doc.moveTo(50, y).lineTo(550, y).stroke();
+      y += 15;
+      doc.fontSize(12).text('Subtotal:', 350, y);
+      doc.text(`$${invoice.subtotal}`, 450, y, { align: 'right' });
+      y += 20;
+      doc.text('Tax:', 350, y);
+      doc.text(`$${invoice.taxAmount || '0.00'}`, 450, y, { align: 'right' });
+      y += 20;
+      doc.fontSize(14).text('TOTAL:', 350, y);
+      doc.text(`$${invoice.total}`, 450, y, { align: 'right' });
+
+      doc.end();
     } catch (error: any) {
-      console.error("Error exporting report:", error);
-      res.status(500).json({ message: "Failed to export report" });
+      console.error("Error generating invoice PDF:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Export payroll report as CSV
+  app.get('/api/payroll/export/csv', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const workspaceId = workspace.id;
+      const { startDate, endDate } = req.query;
+
+      // Get payroll runs
+      const runs = await db.select().from(payrollRuns)
+        .where(eq(payrollRuns.workspaceId, workspaceId))
+        .orderBy(desc(payrollRuns.createdAt));
+
+      // Get all payroll entries
+      const entries = await db.select({
+        id: payrollEntries.id,
+        employeeId: payrollEntries.employeeId,
+        periodStart: payrollRuns.periodStart,
+        periodEnd: payrollRuns.periodEnd,
+        regularHours: payrollEntries.regularHours,
+        overtimeHours: payrollEntries.overtimeHours,
+        hourlyRate: payrollEntries.hourlyRate,
+        grossPay: payrollEntries.grossPay,
+        federalTax: payrollEntries.federalTax,
+        stateTax: payrollEntries.stateTax,
+        socialSecurity: payrollEntries.socialSecurity,
+        medicare: payrollEntries.medicare,
+        netPay: payrollEntries.netPay,
+        createdAt: payrollEntries.createdAt,
+      })
+        .from(payrollEntries)
+        .leftJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
+        .where(eq(payrollEntries.workspaceId, workspaceId));
+
+      // Generate CSV
+      const csvHeader = 'Employee ID,Period Start,Period End,Regular Hours,Overtime Hours,Hourly Rate,Gross Pay,Federal Tax,State Tax,Social Security,Medicare,Net Pay,Date\n';
+      const csvRows = entries.map((e: any) => 
+        `${e.employeeId},${e.periodStart || ''},${e.periodEnd || ''},${e.regularHours},${e.overtimeHours},${e.hourlyRate},${e.grossPay},${e.federalTax},${e.stateTax},${e.socialSecurity},${e.medicare},${e.netPay},${format(new Date(e.createdAt), 'yyyy-MM-dd')}`
+      ).join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="payroll-export-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
+      res.send(csvHeader + csvRows);
+    } catch (error: any) {
+      console.error("Error exporting payroll CSV:", error);
+      res.status(500).json({ message: "Failed to export payroll" });
+    }
+  });
+
+  // Export time entries as CSV
+  app.get('/api/time-entries/export/csv', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const workspaceId = workspace.id;
+      const { startDate, endDate, clientId } = req.query;
+
+      let query = db.select().from(timeEntriesTable).where(eq(timeEntriesTable.workspaceId, workspaceId));
+
+      const entries = await query.orderBy(desc(timeEntriesTable.clockIn));
+
+      // Generate CSV
+      const csvHeader = 'Employee ID,Client ID,Clock In,Clock Out,Total Hours,Hourly Rate,Total Amount,Status,Billable\n';
+      const csvRows = entries.map((e: any) => 
+        `${e.employeeId},${e.clientId || ''},${format(new Date(e.clockIn), 'yyyy-MM-dd HH:mm')},${e.clockOut ? format(new Date(e.clockOut), 'yyyy-MM-dd HH:mm') : ''},${e.totalHours || ''},${e.hourlyRate || ''},${e.totalAmount || ''},${e.status || 'pending'},${e.billableToClient ? 'Yes' : 'No'}`
+      ).join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="time-entries-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
+      res.send(csvHeader + csvRows);
+    } catch (error: any) {
+      console.error("Error exporting time entries CSV:", error);
+      res.status(500).json({ message: "Failed to export time entries" });
     }
   });
 

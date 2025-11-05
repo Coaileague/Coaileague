@@ -1803,3 +1803,65 @@
   min-width: 0;
   flex-shrink: 1;
 }
+
+
+/* ============================================================================
+   PRINT LAYOUTS - Enterprise Feature #4
+   Professional print styling for invoices, payroll documents, and reports
+   ============================================================================ */
+@media print {
+  nav, .sidebar, header, footer, button, .no-print {
+    display: none !important;
+  }
+
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #000;
+    background: white;
+  }
+
+  main, .container, .print-content {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .invoice-print, .payroll-print, .timesheet-print {
+    page-break-inside: avoid;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #000;
+    padding: 8px;
+  }
+
+  th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page-break {
+    page-break-after: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+}
