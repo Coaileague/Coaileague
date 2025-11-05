@@ -151,7 +151,7 @@ import {
   type InsertExpenseReceipt,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, isNotNull, isNull, or, like, sql } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, or, like, sql, lte } from "drizzle-orm";
 
 // Generate unique organization ID: wfosupport-#########
 function generateOrganizationId(): string {

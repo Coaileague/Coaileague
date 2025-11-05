@@ -199,7 +199,7 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             {categories.map((cat: any) => (
-                              <SelectItem key={cat.id} value={cat.id}>
+                              <SelectItem key={cat.id} value={cat.id} data-testid={`option-category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}>
                                 {cat.name}
                               </SelectItem>
                             ))}
