@@ -56,6 +56,12 @@ import {
   documentAccessLogs,
   onboardingChecklists,
   disputes,
+  expenseCategories,
+  expenses,
+  expenseReceipts,
+  employeeI9Records,
+  companyPolicies,
+  policyAcknowledgments,
   type User,
   type UpsertUser,
   type AbuseViolation,
@@ -149,6 +155,12 @@ import {
   type InsertExpense,
   type ExpenseReceipt,
   type InsertExpenseReceipt,
+  type EmployeeI9Record,
+  type InsertEmployeeI9Record,
+  type CompanyPolicy,
+  type InsertCompanyPolicy,
+  type PolicyAcknowledgment,
+  type InsertPolicyAcknowledgment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, isNull, or, like, sql, lte } from "drizzle-orm";
@@ -620,7 +632,35 @@ export class DatabaseStorage implements IStorage {
       .insert(workspaces)
       .values(dataWithOrgInfo)
       .returning();
+    
+    // Auto-seed default expense categories for new workspace
+    await this.seedDefaultExpenseCategories(workspace.id);
+    
     return workspace;
+  }
+  
+  // Helper method to seed default expense categories
+  private async seedDefaultExpenseCategories(workspaceId: string): Promise<void> {
+    const defaultCategories = [
+      { name: 'Mileage', description: 'Vehicle mileage reimbursement' },
+      { name: 'Meals', description: 'Business meals and entertainment' },
+      { name: 'Travel', description: 'Flights, hotels, and transportation' },
+      { name: 'Office Supplies', description: 'Office equipment and supplies' },
+    ];
+    
+    for (const category of defaultCategories) {
+      try {
+        await db.insert(expenseCategories).values({
+          workspaceId,
+          name: category.name,
+          description: category.description,
+          isActive: true,
+        });
+      } catch (error) {
+        // Ignore duplicate errors, continue with next category
+        console.log(`Category ${category.name} already exists for workspace ${workspaceId}`);
+      }
+    }
   }
 
   async getWorkspace(id: string): Promise<Workspace | undefined> {
@@ -2946,13 +2986,11 @@ export class DatabaseStorage implements IStorage {
   
   // Expense Categories
   async createExpenseCategory(category: InsertExpenseCategory) {
-    const { expenseCategories } = await import("@shared/schema");
     const [created] = await db.insert(expenseCategories).values(category).returning();
     return created;
   }
   
   async getExpenseCategory(id: string, workspaceId: string) {
-    const { expenseCategories } = await import("@shared/schema");
     const [category] = await db
       .select()
       .from(expenseCategories)
@@ -2965,7 +3003,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getExpenseCategoriesByWorkspace(workspaceId: string) {
-    const { expenseCategories } = await import("@shared/schema");
     return await db
       .select()
       .from(expenseCategories)
@@ -2977,7 +3014,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateExpenseCategory(id: string, workspaceId: string, data: Partial<InsertExpenseCategory>) {
-    const { expenseCategories } = await import("@shared/schema");
     const [updated] = await db
       .update(expenseCategories)
       .set({ ...data, createdAt: undefined })
@@ -2990,7 +3026,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteExpenseCategory(id: string, workspaceId: string): Promise<boolean> {
-    const { expenseCategories } = await import("@shared/schema");
     const result = await db
       .delete(expenseCategories)
       .where(and(
