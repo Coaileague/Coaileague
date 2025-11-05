@@ -2652,8 +2652,27 @@ export class DatabaseStorage implements IStorage {
   
   async getPayrollEntriesByEmployee(employeeId: string, workspaceId: string): Promise<PayrollEntry[]> {
     return await db
-      .select()
+      .select({
+        id: payrollEntries.id,
+        payrollRunId: payrollEntries.payrollRunId,
+        employeeId: payrollEntries.employeeId,
+        workspaceId: payrollEntries.workspaceId,
+        regularHours: payrollEntries.regularHours,
+        overtimeHours: payrollEntries.overtimeHours,
+        hourlyRate: payrollEntries.hourlyRate,
+        grossPay: payrollEntries.grossPay,
+        federalTax: payrollEntries.federalTax,
+        stateTax: payrollEntries.stateTax,
+        socialSecurity: payrollEntries.socialSecurity,
+        medicare: payrollEntries.medicare,
+        netPay: payrollEntries.netPay,
+        notes: payrollEntries.notes,
+        createdAt: payrollEntries.createdAt,
+        periodStart: payrollRuns.periodStart,
+        periodEnd: payrollRuns.periodEnd,
+      })
       .from(payrollEntries)
+      .leftJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
       .where(
         and(
           eq(payrollEntries.employeeId, employeeId),

@@ -144,7 +144,7 @@ export default function MyPaychecks() {
                       <TableCell>
                         <div>
                           {paycheck.regularHours} reg
-                          {paycheck.overtimeHours > 0 && (
+                          {parseFloat(paycheck.overtimeHours || '0') > 0 && (
                             <div className="text-xs text-muted-foreground">
                               +{paycheck.overtimeHours} OT
                             </div>
