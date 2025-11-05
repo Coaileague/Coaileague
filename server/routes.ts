@@ -5866,11 +5866,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle events
       switch (event.type) {
         case 'payment_intent.succeeded':
-          console.log('Payment succeeded:', event.data.object.id);
+          const successPayment = event.data.object as any;
+          console.log('Payment succeeded:', successPayment.id);
+          
+          // Update invoice payment record
+          await db
+            .update(invoicePayments)
+            .set({
+              status: 'succeeded',
+              paidAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(invoicePayments.stripePaymentIntentId, successPayment.id));
+          
+          // Update invoice status
+          const [payment] = await db
+            .select()
+            .from(invoicePayments)
+            .where(eq(invoicePayments.stripePaymentIntentId, successPayment.id))
+            .limit(1);
+          
+          if (payment) {
+            await db
+              .update(invoices)
+              .set({
+                status: 'paid',
+                paidAt: new Date(),
+                paymentIntentId: successPayment.id,
+                updatedAt: new Date(),
+              })
+              .where(eq(invoices.id, payment.invoiceId));
+          }
           break;
         
         case 'payment_intent.payment_failed':
-          console.log('Payment failed:', event.data.object.id);
+          const failedPayment = event.data.object as any;
+          console.log('Payment failed:', failedPayment.id);
+          
+          await db
+            .update(invoicePayments)
+            .set({
+              status: 'failed',
+              failureCode: failedPayment.last_payment_error?.code || 'unknown',
+              failureMessage: failedPayment.last_payment_error?.message || 'Payment failed',
+              updatedAt: new Date(),
+            })
+            .where(eq(invoicePayments.stripePaymentIntentId, failedPayment.id));
+          break;
+        
+        case 'charge.refunded':
+          const refund = event.data.object as any;
+          const refundedAmount = refund.amount_refunded / 100; // Convert from cents
+          
+          await db
+            .update(invoicePayments)
+            .set({
+              status: refund.refunded ? 'refunded' : 'partially_refunded',
+              refundedAmount: refundedAmount.toFixed(2),
+              refundedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(invoicePayments.stripeChargeId, refund.id));
           break;
         
         case 'customer.subscription.updated':
@@ -5885,6 +5941,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Webhook error:', error.message);
       res.status(400).send(`Webhook Error: ${error.message}`);
+    }
+  });
+
+  // ============================================================================
+  // ONLINE INVOICE PAYMENTS - STRIPE INTEGRATION
+  // ============================================================================
+
+  // Create payment intent for end customer to pay invoice online
+  app.post('/api/invoices/:id/create-payment', async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: 'Payment processing not configured' });
+      }
+
+      const { id } = req.params;
+      const { payerEmail, payerName, returnUrl } = req.body;
+
+      // Get invoice
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: 'Invoice not found' });
+      }
+
+      // Check if invoice is already paid
+      if (invoice.status === 'paid') {
+        return res.status(400).json({ message: 'Invoice already paid' });
+      }
+
+      // Get or create Stripe customer for the client
+      const client = await storage.getClient(invoice.clientId);
+      if (!client) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
+
+      const { clientPaymentInfo } = await import("@shared/schema");
+      
+      let paymentInfo = await db
+        .select()
+        .from(clientPaymentInfo)
+        .where(eq(clientPaymentInfo.clientId, invoice.clientId))
+        .limit(1)
+        .then(rows => rows[0]);
+
+      let stripeCustomerId = paymentInfo?.stripeCustomerId;
+
+      // Create Stripe customer if doesn't exist
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: payerEmail || client.email || undefined,
+          name: payerName || client.name,
+          metadata: {
+            clientId: client.id,
+            workspaceId: invoice.workspaceId,
+          },
+        });
+        stripeCustomerId = customer.id;
+
+        // Save to database
+        if (paymentInfo) {
+          await db
+            .update(clientPaymentInfo)
+            .set({
+              stripeCustomerId: customer.id,
+              billingEmail: payerEmail || client.email || paymentInfo.billingEmail,
+              updatedAt: new Date(),
+            })
+            .where(eq(clientPaymentInfo.clientId, client.id));
+        } else {
+          await db.insert(clientPaymentInfo).values({
+            workspaceId: invoice.workspaceId,
+            clientId: client.id,
+            stripeCustomerId: customer.id,
+            billingEmail: payerEmail || client.email || undefined,
+          });
+        }
+      }
+
+      // Create payment intent
+      const amount = Math.round(parseFloat(invoice.total) * 100); // Convert to cents
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'usd',
+        customer: stripeCustomerId,
+        metadata: {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          workspaceId: invoice.workspaceId,
+          clientId: invoice.clientId,
+        },
+        description: `Payment for Invoice ${invoice.invoiceNumber}`,
+      });
+
+      // Create invoice payment record
+      await db.insert(invoicePayments).values({
+        workspaceId: invoice.workspaceId,
+        invoiceId: invoice.id,
+        stripePaymentIntentId: paymentIntent.id,
+        stripeCustomerId,
+        amount: invoice.total,
+        currency: 'usd',
+        status: 'pending',
+        payerEmail: payerEmail || client.email || undefined,
+        payerName: payerName || client.name,
+      });
+
+      // Update invoice with payment intent ID
+      await db
+        .update(invoices)
+        .set({
+          paymentIntentId: paymentIntent.id,
+          status: 'pending_payment',
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, invoice.id));
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: invoice.total,
+        currency: 'usd',
+      });
+    } catch (error: any) {
+      console.error('Error creating payment intent:', error);
+      res.status(500).json({ message: error.message || 'Failed to create payment intent' });
+    }
+  });
+
+  // Get invoice payment status (public - no auth required)
+  app.get('/api/invoices/:id/payment-status', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: 'Invoice not found' });
+      }
+
+      const payments = await db
+        .select()
+        .from(invoicePayments)
+        .where(eq(invoicePayments.invoiceId, id))
+        .orderBy(desc(invoicePayments.createdAt));
+
+      res.json({
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        total: invoice.total,
+        status: invoice.status,
+        paidAt: invoice.paidAt,
+        payments: payments.map(p => ({
+          id: p.id,
+          amount: p.amount,
+          status: p.status,
+          paymentMethod: p.paymentMethod,
+          last4: p.last4,
+          paidAt: p.paidAt,
+          receiptUrl: p.receiptUrl,
+        })),
+      });
+    } catch (error: any) {
+      console.error('Error getting payment status:', error);
+      res.status(500).json({ message: error.message || 'Failed to get payment status' });
+    }
+  });
+
+  // Get payment history for a client (auth required)
+  app.get('/api/clients/:clientId/payments', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { clientId } = req.params;
+
+      const payments = await db
+        .select({
+          id: invoicePayments.id,
+          invoiceId: invoicePayments.invoiceId,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoicePayments.amount,
+          status: invoicePayments.status,
+          paymentMethod: invoicePayments.paymentMethod,
+          last4: invoicePayments.last4,
+          paidAt: invoicePayments.paidAt,
+          refundedAmount: invoicePayments.refundedAmount,
+          createdAt: invoicePayments.createdAt,
+        })
+        .from(invoicePayments)
+        .leftJoin(invoices, eq(invoicePayments.invoiceId, invoices.id))
+        .where(
+          and(
+            eq(invoicePayments.workspaceId, workspaceId),
+            eq(invoices.clientId, clientId)
+          )
+        )
+        .orderBy(desc(invoicePayments.createdAt));
+
+      res.json(payments);
+    } catch (error: any) {
+      console.error('Error getting client payments:', error);
+      res.status(500).json({ message: error.message || 'Failed to get payments' });
     }
   });
 
