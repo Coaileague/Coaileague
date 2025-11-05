@@ -5607,6 +5607,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.warn('⚠️  STRIPE_SECRET_KEY not found. Payment processing disabled. Add keys to activate.');
   }
 
+  // Get Stripe configuration (public key for frontend)
+  app.get('/api/stripe/config', async (req, res) => {
+    res.json({
+      publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || null,
+      isConfigured: !!stripe,
+    });
+  });
+
   // Create Stripe Connect account for workspace
   app.post('/api/stripe/connect-account', isAuthenticated, async (req: any, res) => {
     try {
