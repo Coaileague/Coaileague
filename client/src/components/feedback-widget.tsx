@@ -40,11 +40,20 @@ export function FeedbackWidget() {
 
     // Send feedback to support
     try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, message }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send feedback');
+
       toast({
         title: "Feedback sent!",
         description: "Thank you for helping us improve.",
       });
       setMessage('');
+      setType('feedback');
       setOpen(false);
     } catch (error) {
       toast({

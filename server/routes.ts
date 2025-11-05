@@ -367,6 +367,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Submit user feedback
+  app.post('/api/feedback', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { type, message } = req.body;
+      
+      if (!type || !message) {
+        return res.status(400).json({ message: 'Type and message are required' });
+      }
+
+      // Create support ticket for feedback
+      const ticket = await storage.createSupportTicket({
+        workspaceId: req.user!.currentWorkspaceId || '',
+        requestorId: userId,
+        requestorEmail: req.user!.email || '',
+        category: type === 'bug' ? 'bug_report' : type === 'feature' ? 'feature_request' : 'feedback',
+        subject: `User Feedback: ${type}`,
+        description: message,
+        priority: 'normal',
+        status: 'open',
+      });
+
+      res.json({ success: true, ticketId: ticket.id });
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      res.status(500).json({ message: 'Failed to submit feedback' });
+    }
+  });
+
   // Get all workspaces user has access to (for workspace switcher)
   app.get('/api/workspaces/all', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -937,6 +966,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting employee:", error);
       res.status(500).json({ message: "Failed to delete employee" });
+    }
+  });
+
+  // Get current workspace info
+  app.get('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      let workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      // Auto-create workspace on first login
+      if (!workspace) {
+        const user = await storage.getUser(userId);
+        workspace = await storage.createWorkspace({
+          name: `${user?.firstName || user?.email || 'My'}'s Workspace`,
+          ownerId: userId,
+        });
+      }
+      
+      // Security: Redact sensitive fields for non-root users
+      const platformRole = (req as any).platformRole;
+      const safeWorkspace = redactSensitiveWorkspaceFields(workspace, platformRole);
+      
+      res.json(safeWorkspace);
+    } catch (error) {
+      console.error("Error fetching workspace:", error);
+      res.status(500).json({ message: "Failed to fetch workspace" });
     }
   });
 

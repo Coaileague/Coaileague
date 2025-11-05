@@ -54,7 +54,14 @@ export function PlanBadge() {
           </p>
           <Button 
             className="w-full gap-2" 
-            onClick={() => setLocation('/pricing')}
+            onClick={() => {
+              setLocation('/pricing');
+              // Close popover after navigation
+              const popoverTrigger = document.querySelector('[data-state="open"]');
+              if (popoverTrigger) {
+                (popoverTrigger as HTMLElement).click();
+              }
+            }}
           >
             <ArrowUpCircle className="h-4 w-4" />
             Upgrade Plan

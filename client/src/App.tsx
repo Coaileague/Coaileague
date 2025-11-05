@@ -203,10 +203,15 @@ function AppContent() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
-                          document.dispatchEvent(event);
+                          if ((window as any).openCommandPalette) {
+                            (window as any).openCommandPalette();
+                          } else {
+                            const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                            document.dispatchEvent(event);
+                          }
                         }}
                         className="gap-1.5 h-9 shrink-0"
+                        data-testid="button-global-search"
                       >
                         <Search className="h-4 w-4" />
                         <span className="hidden xl:inline text-xs text-muted-foreground">

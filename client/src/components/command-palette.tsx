@@ -56,6 +56,11 @@ export function CommandPalette() {
     setLocation(path);
   };
 
+  // Expose open function globally for search button
+  useEffect(() => {
+    (window as any).openCommandPalette = () => setOpen(true);
+  }, []);
+
   const mainPages = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", shortcut: "⌘D" },
     { label: "Schedule", icon: Calendar, path: "/schedule", shortcut: "⌘S" },
