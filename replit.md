@@ -35,6 +35,27 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
       - Shift action approvals (accept/deny/switch with notes)
       - Timesheet edit approvals (clock in/out changes with before/after comparison)
       - Time-off approvals (vacation/sick/personal/unpaid with duration calculation)
+    - **ExpenseOS™ (NEW - Schema Complete)**:
+      - Employee expense submission with category tracking
+      - Mileage tracking with IRS rate calculation
+      - Multi-receipt upload support (expenseReceipts table)
+      - Manager approval workflow with review notes
+      - Payment tracking and reimbursement
+    - **I-9 Re-verification (NEW - Schema Complete)**:
+      - Work authorization document tracking
+      - Expiration date monitoring with automated alerts
+      - Re-verification workflow for expiring documents
+      - Comprehensive verification record audit trail
+      - Document type tracking (passport, green card, work permit, etc.)
+    - **PolicIOS™ - Policy Management (NEW - Schema Complete)**:
+      - Handbook/policy version control
+      - Employee acknowledgment tracking with e-signatures
+      - Multi-policy support with categorization
+      - Acknowledgment date/IP tracking for compliance
+    - **AssetOS™ (EXISTING - Verified)**:
+      - Vehicle and equipment tracking
+      - Billing rates and maintenance schedules
+      - Asset assignment and availability tracking
     - **AI Features (RecordOS™, InsightOS™)**: Natural language search, autonomous AI analytics with insights for cost savings, productivity, anomalies, and predictions.
     - **Learning & Development (TrainingOS™)**
     - **Financial Planning (BudgetOS™)**
