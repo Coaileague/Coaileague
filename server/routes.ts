@@ -7318,26 +7318,44 @@ ${application.email}`,
   app.post('/api/timesheet-edit-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const employeeId = req.user?.id;
-      const { timesheetEditRequests, insertTimesheetEditRequestSchema } = await import("@shared/schema");
+      const requestedBy = req.user?.id;
+      const { timesheetEditRequests, timeEntries } = await import("@shared/schema");
       
-      // SECURITY: Validate with Zod
-      const validated = insertTimesheetEditRequestSchema.partial().parse({
-        ...req.body,
-        workspaceId,
-        employeeId,
-      });
-      
-      const { timeEntryId, requestedChanges, reason } = validated;
+      const {
+        timeEntryId,
+        proposedClockIn,
+        proposedClockOut,
+        proposedNotes,
+        reason
+      } = req.body;
+
+      // Fetch original time entry values for comparison
+      const [originalEntry] = await db
+        .select()
+        .from(timeEntries)
+        .where(and(
+          eq(timeEntries.id, timeEntryId),
+          eq(timeEntries.workspaceId, workspaceId)
+        ))
+        .limit(1);
+
+      if (!originalEntry) {
+        return res.status(404).json({ message: 'Time entry not found' });
+      }
 
       const [request] = await db
         .insert(timesheetEditRequests)
         .values({
           workspaceId,
           timeEntryId,
-          employeeId: employeeId!,
-          requestedChanges,
+          requestedBy: requestedBy!,
           reason,
+          proposedClockIn: proposedClockIn ? new Date(proposedClockIn) : null,
+          proposedClockOut: proposedClockOut ? new Date(proposedClockOut) : null,
+          proposedNotes,
+          originalClockIn: originalEntry.clockIn,
+          originalClockOut: originalEntry.clockOut,
+          originalNotes: originalEntry.notes,
           status: 'pending',
         })
         .returning();
@@ -7346,6 +7364,45 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error creating edit request:', error);
       res.status(500).json({ message: error.message || 'Failed to create edit request' });
+    }
+  });
+
+  // Get pending timesheet edit requests for managers (with employee and time entry details)
+  app.get('/api/timesheet-edit-requests/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { timesheetEditRequests, employees, timeEntries } = await import("@shared/schema");
+
+      const requests = await db
+        .select({
+          id: timesheetEditRequests.id,
+          timeEntryId: timesheetEditRequests.timeEntryId,
+          requestedBy: timesheetEditRequests.requestedBy,
+          requestedByName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
+          reason: timesheetEditRequests.reason,
+          proposedClockIn: timesheetEditRequests.proposedClockIn,
+          proposedClockOut: timesheetEditRequests.proposedClockOut,
+          proposedNotes: timesheetEditRequests.proposedNotes,
+          originalClockIn: timesheetEditRequests.originalClockIn,
+          originalClockOut: timesheetEditRequests.originalClockOut,
+          originalNotes: timesheetEditRequests.originalNotes,
+          status: timesheetEditRequests.status,
+          createdAt: timesheetEditRequests.createdAt,
+        })
+        .from(timesheetEditRequests)
+        .innerJoin(employees, eq(timesheetEditRequests.requestedBy, employees.id))
+        .where(
+          and(
+            eq(timesheetEditRequests.workspaceId, workspaceId),
+            eq(timesheetEditRequests.status, 'pending')
+          )
+        )
+        .orderBy(timesheetEditRequests.createdAt);
+
+      res.json(requests);
+    } catch (error: any) {
+      console.error('Error fetching pending edit requests:', error);
+      res.status(500).json({ message: error.message || 'Failed to fetch pending edit requests' });
     }
   });
 
@@ -7380,13 +7437,13 @@ ${application.email}`,
   });
 
   // Approve/deny timesheet edit request (supervisor/manager only)
-  app.put('/api/timesheet-edit-requests/:id/review', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.put('/api/timesheet-edit-requests/:id/review', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const { id } = req.params;
       const { approved, reviewNotes } = req.body;
       const reviewerId = req.user?.id;
-      const { timesheetEditRequests, employees } = await import("@shared/schema");
+      const { timesheetEditRequests, employees, timeEntries } = await import("@shared/schema");
 
       const [updated] = await db
         .update(timesheetEditRequests)
@@ -7410,19 +7467,32 @@ ${application.email}`,
       }
 
       // If approved, apply the changes to the time entry
-      if (approved && updated.timeEntryId && updated.requestedChanges) {
+      if (approved && updated.timeEntryId) {
         try {
-          const changes = typeof updated.requestedChanges === 'string' 
-            ? JSON.parse(updated.requestedChanges) 
-            : updated.requestedChanges;
+          const changes: any = {};
           
-          await db
-            .update(timeEntries)
-            .set({
-              ...changes,
-              updatedAt: new Date(),
-            })
-            .where(eq(timeEntries.id, updated.timeEntryId));
+          if (updated.proposedClockIn) changes.clockIn = updated.proposedClockIn;
+          if (updated.proposedClockOut) changes.clockOut = updated.proposedClockOut;
+          if (updated.proposedNotes !== undefined) changes.notes = updated.proposedNotes;
+          
+          if (Object.keys(changes).length > 0) {
+            changes.updatedAt = new Date();
+            
+            await db
+              .update(timeEntries)
+              .set(changes)
+              .where(eq(timeEntries.id, updated.timeEntryId));
+            
+            // Update status to 'applied'
+            await db
+              .update(timesheetEditRequests)
+              .set({
+                status: 'applied',
+                appliedBy: reviewerId,
+                appliedAt: new Date(),
+              })
+              .where(eq(timesheetEditRequests.id, id));
+          }
         } catch (error) {
           console.error('Error applying timesheet changes:', error);
         }
@@ -7433,16 +7503,18 @@ ${application.email}`,
         const [employee] = await db
           .select()
           .from(employees)
-          .where(eq(employees.id, updated.employeeId))
+          .where(eq(employees.id, updated.requestedBy))
           .limit(1);
 
         if (employee?.email) {
           const emailData = {
             employeeName: `${employee.firstName} ${employee.lastName}`,
             requestDate: new Date(updated.createdAt).toLocaleDateString('en-US', { dateStyle: 'full' }),
-            requestedChanges: typeof updated.requestedChanges === 'string'
-              ? JSON.parse(updated.requestedChanges)
-              : updated.requestedChanges,
+            proposedChanges: {
+              clockIn: updated.proposedClockIn,
+              clockOut: updated.proposedClockOut,
+              notes: updated.proposedNotes,
+            },
             denialReason: reviewNotes
           };
 
