@@ -189,7 +189,7 @@ export default function Landing() {
               {/* Right: REAL Product Preview - ScheduleOS */}
               <div className="relative">
                 <div className="aspect-video rounded-xl border-2 bg-card/50 backdrop-blur-sm overflow-hidden shadow-2xl">
-                  {/* REAL WorkforceOS Schedule Interface - NOT a placeholder! */}
+                  {/* REAL AutoForce™ Schedule Interface - NOT a placeholder! */}
                   <SchedulePreview />
                 </div>
                 {/* Product badge */}
@@ -687,7 +687,7 @@ export default function Landing() {
           <div className="max-w-4xl mx-auto mt-12 text-center">
             <p className="text-sm text-muted-foreground">
               <span className="font-semibold">All prices exclude taxes.</span> You are responsible for determining and paying any applicable taxes in your jurisdiction. 
-              WorkforceOS does not collect, calculate, or remit taxes on your behalf. 
+              AutoForce™ does not collect, calculate, or remit taxes on your behalf. 
               Please consult your tax professional regarding your tax obligations.
             </p>
           </div>
@@ -764,7 +764,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>© 2025 WorkforceOS. All rights reserved.</p>
+            <p>© 2025 AutoForce™. All rights reserved.</p>
           </div>
         </div>
       </footer>

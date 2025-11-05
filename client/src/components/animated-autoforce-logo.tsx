@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import autoforceGearLogo from "../../../attached_assets/Gemini_Generated_Image_vdrh7kvdrh7kvdrh (1)_1762384766382.png";
+import autoforceGearLogo from "@/assets/autoforce-logo-full.png";
 
 interface AnimatedAutoForceLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
