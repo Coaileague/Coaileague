@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Receipt, DollarSign, MapPin, Calendar, FileText } from "lucide-react";
+import { Plus, Receipt, DollarSign, MapPin, Calendar, FileText, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -38,6 +38,7 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ['/api/expense-categories'],
@@ -68,7 +69,38 @@ export default function ExpensesPage() {
 
   const createExpenseMutation = useMutation({
     mutationFn: async (values: ExpenseFormValues) => {
-      return apiRequest('/api/expenses', 'POST', values);
+      const expense = await apiRequest('/api/expenses', 'POST', values);
+      
+      // Upload receipts if any selected
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          // Upload to object storage
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('path', `receipts/${expense.id}/${file.name}`);
+          
+          const uploadRes = await fetch('/api/object-storage/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!uploadRes.ok) {
+            throw new Error('Failed to upload receipt');
+          }
+          
+          const { url } = await uploadRes.json();
+          
+          // Create receipt record
+          await apiRequest(`/api/expenses/${expense.id}/receipts`, 'POST', {
+            fileName: file.name,
+            fileUrl: url,
+            fileType: file.type,
+            fileSize: file.size,
+          });
+        }
+      }
+      
+      return expense;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -78,6 +110,7 @@ export default function ExpensesPage() {
       });
       setShowForm(false);
       form.reset();
+      setSelectedFiles([]);
     },
     onError: (error: any) => {
       toast({
@@ -340,6 +373,64 @@ export default function ExpensesPage() {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Receipt Attachments</label>
+                  <div className="border-2 border-dashed rounded-md p-4">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setSelectedFiles(Array.from(e.target.files));
+                        }
+                      }}
+                      className="hidden"
+                      id="receipt-upload"
+                      data-testid="input-receipt-upload"
+                    />
+                    <label
+                      htmlFor="receipt-upload"
+                      className="flex flex-col items-center gap-2 cursor-pointer"
+                    >
+                      <Upload className="w-8 h-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Click to upload receipts (images or PDFs)
+                      </span>
+                    </label>
+                    {selectedFiles.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {selectedFiles.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-muted rounded"
+                            data-testid={`receipt-file-${index}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              <span className="text-sm">{file.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                ({(file.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+                              }}
+                              data-testid={`button-remove-receipt-${index}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex gap-2 justify-end">
                   <Button
