@@ -5110,6 +5110,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get contracts for onboarding application (public route with validation)
+  app.get('/api/onboarding/contracts/:applicationId', async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const { workspaceId } = req.query;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+
+      // SECURITY: Verify application exists and matches workspace
+      const application = await storage.getOnboardingApplication(applicationId, workspaceId as string);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Check if contracts exist, if not create them
+      let contracts = await db
+        .select()
+        .from(documentSignatures)
+        .where(
+          and(
+            eq(documentSignatures.applicationId, applicationId),
+            eq(documentSignatures.workspaceId, workspaceId as string)
+          )
+        )
+        .orderBy(documentSignatures.createdAt);
+
+      // Initialize contracts if none exist
+      if (contracts.length === 0) {
+        const isW4Employee = application.taxClassification === 'w4_employee';
+        const isW9Contractor = application.taxClassification === 'w9_contractor';
+
+        const contractsToCreate: any[] = [];
+
+        // I-9 Form (required for all employees, not contractors)
+        if (isW4Employee) {
+          contractsToCreate.push({
+            workspaceId: workspaceId as string,
+            applicationId,
+            documentType: 'i9_form',
+            documentTitle: 'Form I-9: Employment Eligibility Verification',
+            documentContent: `EMPLOYMENT ELIGIBILITY VERIFICATION
+Form I-9 - Department of Homeland Security
+
+I attest, under penalty of perjury, that I am:
+☐ A citizen of the United States
+☐ A noncitizen national of the United States
+☐ A lawful permanent resident
+☐ An alien authorized to work
+
+I certify that the information provided above is true and correct. I understand that federal law provides for imprisonment and/or fines for false statements or use of false documents in connection with the completion of this form.
+
+Employee Full Name: ${application.firstName} ${application.lastName}
+Email: ${application.email}
+Date of Hire: [To be determined]
+
+DEADLINE: This form must be completed within 3 business days of your start date.`,
+            status: 'pending',
+          });
+
+          contractsToCreate.push({
+            workspaceId: workspaceId as string,
+            applicationId,
+            documentType: 'w4_form',
+            documentTitle: 'Form W-4: Employee Withholding Certificate',
+            documentContent: `EMPLOYEE'S WITHHOLDING CERTIFICATE
+Form W-4 - Internal Revenue Service
+
+Employee Name: ${application.firstName} ${application.lastName}
+Social Security Number: [Protected]
+Address: ${application.address || '[To be completed]'}
+
+I certify that I have completed the W-4 withholding information during onboarding and understand that this affects my federal income tax withholding.
+
+By signing below, I authorize my employer to withhold federal income tax from my wages based on the information I have provided.`,
+            status: 'pending',
+          });
+        }
+
+        // W-9 Form (for contractors)
+        if (isW9Contractor) {
+          contractsToCreate.push({
+            workspaceId: workspaceId as string,
+            applicationId,
+            documentType: 'w9_form',
+            documentTitle: 'Form W-9: Request for Taxpayer Identification',
+            documentContent: `REQUEST FOR TAXPAYER IDENTIFICATION NUMBER AND CERTIFICATION
+Form W-9 - Internal Revenue Service
+
+Name: ${application.firstName} ${application.lastName}
+Business name (if different): ${application.businessName || '[Individual]'}
+Tax Classification: ☐ Individual/sole proprietor ☐ LLC ☐ Corporation
+
+Federal Tax Classification: Independent Contractor
+
+I certify that:
+1. The TIN provided is correct
+2. I am not subject to backup withholding
+3. I am a U.S. citizen or other U.S. person
+4. The FATCA code(s) entered on this form (if any) is correct
+
+By signing below, I certify under penalties of perjury that the information provided is true, correct, and complete.`,
+            status: 'pending',
+          });
+        }
+
+        // Employee Handbook (for all)
+        contractsToCreate.push({
+          workspaceId: workspaceId as string,
+          applicationId,
+          documentType: 'handbook',
+          documentTitle: 'Employee Handbook Acknowledgment',
+          documentContent: `EMPLOYEE HANDBOOK ACKNOWLEDGMENT
+
+I acknowledge that I have received and read the company Employee Handbook. I understand that:
+
+1. The handbook contains important information about company policies, procedures, and expectations
+2. I am responsible for reading and understanding all policies
+3. The handbook is not a contract of employment
+4. Policies may be updated at the company's discretion
+5. I agree to comply with all company policies and procedures
+
+I understand that violation of company policies may result in disciplinary action, up to and including termination of employment.
+
+Employee: ${application.firstName} ${application.lastName}
+Email: ${application.email}`,
+          status: 'pending',
+        });
+
+        // Confidentiality Agreement
+        contractsToCreate.push({
+          workspaceId: workspaceId as string,
+          applicationId,
+          documentType: 'confidentiality',
+          documentTitle: 'Confidentiality & Non-Disclosure Agreement',
+          documentContent: `CONFIDENTIALITY AND NON-DISCLOSURE AGREEMENT
+
+I understand that during my ${isW4Employee ? 'employment' : 'engagement'}, I may have access to confidential and proprietary information including:
+- Trade secrets and business strategies
+- Customer and client information
+- Financial data and projections
+- Proprietary systems and processes
+- Personnel information
+
+I agree to:
+1. Maintain strict confidentiality of all proprietary information
+2. Not disclose confidential information to any third party
+3. Use confidential information only for authorized business purposes
+4. Return all confidential materials upon termination
+5. Continue to maintain confidentiality after my ${isW4Employee ? 'employment' : 'engagement'} ends
+
+I understand that breach of this agreement may result in legal action and damages.
+
+${application.firstName} ${application.lastName}
+${application.email}`,
+          status: 'pending',
+        });
+
+        // Insert all contracts
+        if (contractsToCreate.length > 0) {
+          contracts = await db
+            .insert(documentSignatures)
+            .values(contractsToCreate)
+            .returning();
+        }
+      }
+
+      res.json(contracts);
+    } catch (error) {
+      console.error("Error fetching onboarding contracts:", error);
+      res.status(500).json({ message: "Failed to fetch contracts" });
+    }
+  });
+
+  // Sign a contract (public route with validation)
+  app.post('/api/onboarding/contracts/:contractId/sign', mutationLimiter, async (req, res) => {
+    try {
+      const { contractId } = req.params;
+      const { workspaceId } = req.query;
+      const { signedByName, applicationId } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+
+      if (!signedByName || !applicationId) {
+        return res.status(400).json({ message: "Signature name and application ID are required" });
+      }
+
+      // SECURITY: Verify application exists and matches workspace
+      const application = await storage.getOnboardingApplication(applicationId, workspaceId as string);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // SECURITY: Verify contract belongs to this application and workspace
+      const [existingContract] = await db
+        .select()
+        .from(documentSignatures)
+        .where(
+          and(
+            eq(documentSignatures.id, contractId),
+            eq(documentSignatures.applicationId, applicationId),
+            eq(documentSignatures.workspaceId, workspaceId as string)
+          )
+        )
+        .limit(1);
+
+      if (!existingContract) {
+        return res.status(404).json({ message: "Contract not found or access denied" });
+      }
+
+      if (existingContract.status === 'signed') {
+        return res.status(400).json({ message: "Contract has already been signed" });
+      }
+
+      // Record signature with audit trail
+      const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.get('user-agent') || 'unknown';
+
+      const [updatedContract] = await db
+        .update(documentSignatures)
+        .set({
+          status: 'signed',
+          signedByName: signedByName.trim(),
+          signedAt: new Date(),
+          ipAddress,
+          userAgent,
+          updatedAt: new Date(),
+        })
+        .where(eq(documentSignatures.id, contractId))
+        .returning();
+
+      res.json(updatedContract);
+    } catch (error: any) {
+      console.error("Error signing contract:", error);
+      res.status(500).json({ message: error.message || "Failed to sign contract" });
+    }
+  });
+
   // ============================================================================
   // HIREOS™ - Digital File Cabinet & Compliance Workflow
   // ============================================================================
