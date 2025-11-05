@@ -7,7 +7,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building2, DollarSign, AlertCircle } from "lucide-react";
+import { Building2, DollarSign, AlertCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const payrollInfoSchema = z.object({
   // Bank Account Info
@@ -46,24 +48,38 @@ interface PayrollInfoStepProps {
 }
 
 export function PayrollInfoStep({ application, onNext, onBack }: PayrollInfoStepProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
   const form = useForm<PayrollInfoFormData>({
     resolver: zodResolver(payrollInfoSchema),
     defaultValues: {
-      bankName: "",
-      routingNumber: "",
-      accountNumber: "",
-      accountType: undefined,
-      filingStatus: undefined,
-      multipleJobs: "no",
-      dependentsAmount: "",
-      otherIncome: "",
-      deductions: "",
-      extraWithholding: "",
+      bankName: application?.bankName || "",
+      routingNumber: application?.routingNumber || "",
+      accountNumber: application?.accountNumber || "",
+      accountType: application?.accountType || undefined,
+      filingStatus: application?.filingStatus || undefined,
+      multipleJobs: application?.multipleJobs || "no",
+      dependentsAmount: application?.dependentsAmount || "",
+      otherIncome: application?.otherIncome || "",
+      deductions: application?.deductions || "",
+      extraWithholding: application?.extraWithholding || "",
     },
   });
 
-  const onSubmit = (data: PayrollInfoFormData) => {
-    onNext(data);
+  const onSubmit = async (data: PayrollInfoFormData) => {
+    setIsSubmitting(true);
+    try {
+      onNext(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save payroll information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -340,6 +356,7 @@ export function PayrollInfoStep({ application, onNext, onBack }: PayrollInfoStep
                 type="button" 
                 variant="outline" 
                 onClick={onBack}
+                disabled={isSubmitting}
                 data-testid="button-back"
               >
                 Back
@@ -348,9 +365,17 @@ export function PayrollInfoStep({ application, onNext, onBack }: PayrollInfoStep
             <Button 
               type="submit" 
               className="ml-auto"
+              disabled={isSubmitting}
               data-testid="button-next-payroll"
             >
-              Continue to Availability
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Continue to Availability"
+              )}
             </Button>
           </div>
         </form>

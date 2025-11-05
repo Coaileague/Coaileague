@@ -1788,6 +1788,20 @@ export const onboardingApplications = pgTable("onboarding_applications", {
   // Tax Classification
   taxClassification: taxClassificationEnum("tax_classification"),
 
+  // Payroll Information (W-4 employees only)
+  bankName: varchar("bank_name"),
+  routingNumber: varchar("routing_number"), // Encrypted in production
+  accountNumber: varchar("account_number"), // Encrypted in production
+  accountType: varchar("account_type"), // 'checking' or 'savings'
+
+  // W-4 Tax Withholding
+  filingStatus: varchar("filing_status"), // 'single', 'married_filing_jointly', 'married_filing_separately', 'head_of_household'
+  multipleJobs: varchar("multiple_jobs"), // 'yes' or 'no'
+  dependentsAmount: varchar("dependents_amount"), // Dollar amount for dependent credits
+  otherIncome: varchar("other_income"), // Other income not from jobs
+  deductions: varchar("deductions"), // Deductions beyond standard
+  extraWithholding: varchar("extra_withholding"), // Extra amount to withhold per paycheck
+
   // Work Availability (for AI scheduling)
   availableMonday: boolean("available_monday").default(true),
   availableTuesday: boolean("available_tuesday").default(true),

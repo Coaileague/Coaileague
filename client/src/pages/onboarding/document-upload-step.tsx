@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,39 @@ export function DocumentUploadStep({ application, onNext }: DocumentUploadStepPr
   const [uploads, setUploads] = useState<Record<string, UploadedDocument>>({});
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  // Fetch existing documents
+  const { data: existingDocuments, isLoading: documentsLoading } = useQuery({
+    queryKey: ['/api/onboarding/documents', application.id, application.workspaceId],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/onboarding/documents/${application.id}?workspaceId=${application.workspaceId}`
+      );
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+      return response.json();
+    },
+    enabled: !!application.id && !!application.workspaceId,
+  });
+
+  // Initialize uploads state from existing documents
+  useEffect(() => {
+    if (existingDocuments && existingDocuments.length > 0) {
+      const uploadMap: Record<string, UploadedDocument> = {};
+      existingDocuments.forEach((doc: any) => {
+        uploadMap[`${doc.documentType}_${doc.id}`] = {
+          id: doc.id,
+          fileName: doc.originalFileName || doc.documentName,
+          filePath: doc.fileUrl,
+          documentType: doc.documentType,
+          status: 'uploaded',
+          progress: 100,
+        };
+      });
+      setUploads(uploadMap);
+    }
+  }, [existingDocuments]);
 
   const uploadDocument = async (file: File, documentType: string) => {
     const uploadId = `${documentType}_${Date.now()}`;
