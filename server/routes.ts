@@ -7188,8 +7188,53 @@ ${application.email}`,
     }
   });
 
+  // Get pending shift actions for managers
+  app.get('/api/shift-actions/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { shiftActions, employees, shifts } = await import("@shared/schema");
+
+      const pendingActions = await db
+        .select({
+          id: shiftActions.id,
+          actionType: shiftActions.actionType,
+          status: shiftActions.status,
+          requestedBy: shiftActions.requestedBy,
+          requestedByName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
+          targetEmployeeId: shiftActions.targetEmployeeId,
+          targetEmployeeName: sql<string>`COALESCE(target_emp.first_name || ' ' || target_emp.last_name, NULL)`,
+          reason: shiftActions.reason,
+          shiftId: shiftActions.shiftId,
+          shiftDate: shifts.date,
+          shiftStart: shifts.startTime,
+          shiftEnd: shifts.endTime,
+          denialReason: shiftActions.denialReason,
+          createdAt: shiftActions.createdAt,
+        })
+        .from(shiftActions)
+        .innerJoin(employees, eq(shiftActions.requestedBy, employees.id))
+        .innerJoin(shifts, eq(shiftActions.shiftId, shifts.id))
+        .leftJoin(
+          sql`${employees} as target_emp`,
+          sql`${shiftActions.targetEmployeeId} = target_emp.id`
+        )
+        .where(
+          and(
+            eq(shiftActions.workspaceId, workspaceId),
+            eq(shiftActions.status, 'pending')
+          )
+        )
+        .orderBy(shiftActions.createdAt);
+
+      res.json(pendingActions);
+    } catch (error: any) {
+      console.error('Error fetching pending shift actions:', error);
+      res.status(500).json({ message: error.message || 'Failed to fetch pending shift actions' });
+    }
+  });
+
   // Approve/deny shift switch (manager only)
-  app.put('/api/shift-actions/:id/approve', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.put('/api/shift-actions/:id/approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const { id } = req.params;
@@ -7203,8 +7248,7 @@ ${application.email}`,
           status: approved ? 'approved' : 'denied',
           approvedBy: managerId,
           approvedAt: new Date(),
-          managerNotes,
-          processedAt: new Date(),
+          denialReason: approved ? null : managerNotes,
           updatedAt: new Date(),
         })
         .where(
@@ -7224,7 +7268,7 @@ ${application.email}`,
         const [employee] = await db
           .select()
           .from(employees)
-          .where(eq(employees.id, updated.employeeId))
+          .where(eq(employees.id, updated.requestedBy))
           .limit(1);
 
         const [shift] = await db
@@ -7238,7 +7282,7 @@ ${application.email}`,
             employeeName: `${employee.firstName} ${employee.lastName}`,
             actionType: updated.actionType,
             shiftTitle: shift.title || 'Shift',
-            shiftDate: new Date(shift.startTime).toLocaleDateString('en-US', {
+            shiftDate: shift.date || new Date(shift.startTime).toLocaleDateString('en-US', {
               dateStyle: 'full'
             }),
             denialReason: managerNotes
