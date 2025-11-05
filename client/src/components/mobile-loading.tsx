@@ -1,5 +1,4 @@
-import { AutoForceLogoFull } from "./autoforce-logo-full";
-import { AnimatedBootupLogo } from "./animated-bootup-logo";
+import { AnimatedAutoForceLogo } from "./animated-autoforce-logo";
 import { Loader2 } from "lucide-react";
 
 interface MobileLoadingProps {
@@ -8,10 +7,10 @@ interface MobileLoadingProps {
 }
 
 /**
- * Mobile-optimized loading screen with branded logo
+ * Mobile-optimized loading screen with branded AutoForce™ logo
  * Shows during page transitions and data loading
  */
-export function MobileLoading({ message = "Loading...", fullScreen = false }: MobileLoadingProps) {
+export function MobileLoading({ message = "Loading AutoForce™...", fullScreen = false }: MobileLoadingProps) {
   if (fullScreen) {
     return (
       <div 
@@ -19,26 +18,16 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
         data-testid="mobile-loading-fullscreen"
       >
         <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
-          {/* Animated Boot-Up Logo */}
-          <div className="relative w-full max-w-[200px] sm:max-w-[240px]">
-            {/* Multi-layer glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-cyan-500/30 to-blue-500/30 blur-2xl sm:blur-3xl rounded-full scale-150" />
-            <div className="absolute inset-0 bg-blue-400/20 blur-xl sm:blur-2xl rounded-full scale-125" />
-            
-            {/* Animated Boot Logo */}
-            <div className="relative z-10 flex items-center justify-center">
-              <AnimatedBootupLogo size="xl" />
-            </div>
-          </div>
+          {/* New Animated AutoForce™ Gear Logo */}
+          <AnimatedAutoForceLogo 
+            variant="full" 
+            size="lg" 
+            animated={true} 
+          />
           
-          <div className="flex flex-col items-center gap-3 w-full">
-            <div className="text-2xl font-bold text-white/90 tracking-tight">
-              Auto<span className="text-primary">Force</span>™
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-white/70 font-medium">
-              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-primary flex-shrink-0" />
-              <span className="text-center break-words">{message}</span>
-            </div>
+          <div className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-white/70 font-medium">
+            <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-cyan-400 flex-shrink-0" />
+            <span className="text-center break-words">{message}</span>
           </div>
         </div>
       </div>
@@ -48,18 +37,15 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
   return (
     <div className="flex flex-col items-center justify-center p-4 sm:p-8 min-h-[200px] w-full" data-testid="mobile-loading">
       <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
-        {/* Animated Boot-Up Logo - Inline version */}
-        <div className="relative w-full max-w-[160px] sm:max-w-[200px]">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 blur-xl sm:blur-2xl rounded-full scale-110 sm:scale-125" />
-          
-          {/* Animated Boot Logo */}
-          <div className="relative z-10 flex items-center justify-center">
-            <AnimatedBootupLogo size="lg" />
-          </div>
-        </div>
+        {/* New Animated AutoForce™ Gear Logo */}
+        <AnimatedAutoForceLogo 
+          variant="gear" 
+          size="md" 
+          animated={true} 
+        />
         
         <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground w-full justify-center px-4">
-          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-primary flex-shrink-0" />
+          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-cyan-500 flex-shrink-0" />
           <span className="text-center break-words">{message}</span>
         </div>
       </div>
