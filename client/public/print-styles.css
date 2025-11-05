@@ -1,0 +1,238 @@
+/* ============================================================================
+   PRINT LAYOUTS - Enterprise Feature #4
+   Professional print styling for invoices, payroll documents, and reports
+   ============================================================================ */
+@media print {
+  /* Hide all navigation and UI chrome */
+  nav,
+  .sidebar,
+  header,
+  footer,
+  button,
+  .no-print,
+  [data-sidebar],
+  [class*="sidebar"],
+  [class*="nav"] {
+    display: none !important;
+  }
+
+  /* Professional page setup */
+  @page {
+    margin: 0.5in;
+    size: letter portrait;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #000 !important;
+    background: white !important;
+  }
+
+  /* Ensure content uses full width */
+  main,
+  .container,
+  .print-content,
+  [role="main"] {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Invoice Print Styling */
+  .invoice-print {
+    page-break-inside: avoid;
+    border: 1px solid #000;
+    padding: 20px;
+  }
+
+  .invoice-header {
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+
+  .invoice-title {
+    font-size: 20pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  /* Table Styling for Invoices & Payroll */
+  table,
+  .invoice-table,
+  .payroll-table,
+  .timesheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 10pt;
+  }
+
+  table th,
+  table td,
+  .invoice-table th,
+  .invoice-table td,
+  .payroll-table th,
+  .payroll-table td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: left;
+  }
+
+  table th,
+  .invoice-table th,
+  .payroll-table th {
+    background-color: #e0e0e0 !important;
+    font-weight: bold;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Invoice Totals */
+  .invoice-total,
+  .payroll-summary {
+    font-size: 12pt;
+    font-weight: bold;
+    text-align: right;
+    margin-top: 20px;
+    padding: 10px;
+    border-top: 2px solid #000;
+  }
+
+  /* Payroll Print Styling */
+  .payroll-print {
+    page-break-inside: avoid;
+  }
+
+  .payroll-header {
+    font-size: 16pt;
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+  }
+
+  .paycheck-details {
+    page-break-inside: avoid;
+    margin-bottom: 30px;
+  }
+
+  /* Time Sheet Print Styling */
+  .timesheet-print {
+    page-break-inside: avoid;
+  }
+
+  .timesheet-header {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  /* General Print Improvements */
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Force colors for professional printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page break utilities */
+  .page-break {
+    page-break-after: always;
+  }
+
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* Signatures and legal sections */
+  .signature-line {
+    border-top: 1px solid #000;
+    margin-top: 50px;
+    padding-top: 10px;
+    width: 300px;
+  }
+
+  .signature-section {
+    margin-top: 40px;
+    page-break-inside: avoid;
+  }
+
+  /* Document metadata */
+  .print-watermark {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 8pt;
+    color: #666;
+  }
+
+  .print-date {
+    font-size: 9pt;
+    color: #666;
+  }
+
+  /* Company header for official documents */
+  .company-header {
+    text-align: center;
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+  }
+
+  .company-logo {
+    max-width: 200px;
+    max-height: 80px;
+  }
+
+  /* Hide interactive elements */
+  [type="button"],
+  [type="submit"],
+  [role="button"],
+  a[href^="javascript"],
+  .btn,
+  .interactive,
+  .hover-effect {
+    display: none !important;
+  }
+
+  /* Ensure text is readable */
+  .text-muted,
+  .text-secondary {
+    color: #666 !important;
+  }
+
+  /* Remove backgrounds for clean printing */
+  .bg-card,
+  .bg-muted,
+  .bg-accent {
+    background: white !important;
+  }
+
+  /* Keep only essential borders */
+  .border,
+  [class*="border-"] {
+    border-color: #ddd !important;
+  }
+}
