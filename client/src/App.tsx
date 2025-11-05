@@ -103,6 +103,10 @@ import { NotificationsCenter } from "@/components/notifications-center";
 import { QuickActionsMenu } from "@/components/quick-actions-menu";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
+import { HelpDropdown } from "@/components/help-dropdown";
+import { StatusIndicators } from "@/components/status-indicators";
+import { PlanBadge } from "@/components/plan-badge";
+import { FeedbackWidget } from "@/components/feedback-widget";
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -186,6 +190,12 @@ function AppContent() {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
+                  {/* Status Indicators (Sync/Connection) */}
+                  <StatusIndicators />
+
+                  {/* Plan Badge */}
+                  <PlanBadge />
+
                   {/* Global Search Trigger */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -217,6 +227,12 @@ function AppContent() {
 
                   {/* Notifications Center */}
                   <NotificationsCenter />
+
+                  {/* Help Dropdown */}
+                  <HelpDropdown />
+
+                  {/* Feedback Widget */}
+                  <FeedbackWidget />
 
                   {/* Tutorial/Tour Button */}
                   <Tooltip>
