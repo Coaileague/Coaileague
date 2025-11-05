@@ -97,6 +97,7 @@ import CreateOrg from "@/pages/create-org";
 import Updates from "@/pages/updates";
 import Help from "@/pages/help";
 import CompanyReports from "./pages/company-reports";
+import PayInvoice from "@/pages/pay-invoice";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Sparkles, Search } from "lucide-react";
@@ -149,6 +150,7 @@ function AppContent() {
         <Route path="/design-comparison" component={DesignComparison} />
         <Route path="/logo-showcase" component={LogoShowcase} />
         <Route path="/onboarding/:token" component={OnboardingPage} />
+        <Route path="/pay-invoice/:id" component={PayInvoice} />
         <Route component={Landing} />
       </Switch>
     );
