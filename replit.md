@@ -25,7 +25,16 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
 - **AuditOS™**: Comprehensive audit logging.
 - **Key Feature Areas**:
     - **Client Management, Billing & Payroll (BillOS™, PayrollOS™)**: Automated invoice generation, payment processing (Stripe), time tracking, payroll calculation.
-    - **Employee Lifecycle Management**: Onboarding (payroll info, documents, certifications, availability), shift management (accept/deny/switch requests), timesheet edit requests, contract management (I9, W9, W4).
+    - **Employee Lifecycle Management**: 
+      - Onboarding (payroll info, documents, certifications, availability)
+      - Contract management (I9, W9, W4) with e-signature workflow
+      - Shift management with approval workflows (accept/deny/switch requests)
+      - Timesheet edit requests with manager approval
+      - Time-off requests with manager approval
+    - **Manager Approval Dashboards**:
+      - Shift action approvals (accept/deny/switch with notes)
+      - Timesheet edit approvals (clock in/out changes with before/after comparison)
+      - Time-off approvals (vacation/sick/personal/unpaid with duration calculation)
     - **AI Features (RecordOS™, InsightOS™)**: Natural language search, autonomous AI analytics with insights for cost savings, productivity, anomalies, and predictions.
     - **Learning & Development (TrainingOS™)**
     - **Financial Planning (BudgetOS™)**
