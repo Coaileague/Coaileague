@@ -14,6 +14,14 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
 
 **UI/UX Decisions:** The platform features a Fortune 500-caliber professional interface with Deep Charcoal (#1F2937), Platinum neutrals, and Crimson (#DC2626) accents. The animated logo features a geometric "A" with orbiting workforce network nodes, representing autonomous team management. Logos are 50% larger for better visibility. It prioritizes mobile-first design with responsive layouts, accessible touch targets, and optimized navigation patterns, including tab-based navigation, collapsible sections, and a Sling-style mobile dashboard.
 
+**Logo Implementation:**
+- **Component**: `AnimatedAutoForceLogo` with three variants (gear, wordmark, full)
+- **Asset Location**: `client/src/assets/autoforce-logo-full.png`
+- **Animations**: 12s rotation (spin-slow) + 2s intensity pulse (glow-pulse)
+- **Sizing**: Responsive sizes (sm, md, lg, xl, hero) for different contexts
+- **Integration**: Loading screens, sidebar header, landing page
+- **Technical Approach**: Single sprite image with CSS background-position for variant extraction
+
 **Technical Implementations:**
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for validation.
