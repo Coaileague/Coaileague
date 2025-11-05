@@ -5854,6 +5854,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const sig = req.headers['stripe-signature'];
+      
+      // CRITICAL SECURITY: Verify signature exists
+      if (!sig || typeof sig !== 'string') {
+        console.error('Stripe webhook signature missing or invalid');
+        return res.status(401).send('Unauthorized - Invalid signature');
+      }
+
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
       if (!webhookSecret) {
@@ -5861,6 +5868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send('Webhook secret required');
       }
 
+      // SECURITY: This throws an error if signature is invalid
       const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
 
       // Handle events
@@ -6146,12 +6154,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EMPLOYEE ONBOARDING & MANAGEMENT
   // ============================================================================
 
-  // Get employee payroll information
-  app.get('/api/employees/:employeeId/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
+  // Get employee payroll information - CRITICAL: Requires MANAGER+ role
+  app.get('/api/employees/:employeeId/payroll', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const { employeeId } = req.params;
+      const userId = req.user?.id;
       const { employeePayrollInfo } = await import("@shared/schema");
+
+      // SECURITY: Only allow viewing own payroll info unless manager+
+      const userRole = req.user?.role;
+      const isManager = ['manager', 'owner', 'admin', 'root_admin'].includes(userRole || '');
+      
+      if (!isManager && userId !== employeeId) {
+        return res.status(403).json({ message: 'Forbidden - Can only view own payroll information' });
+      }
 
       const payrollInfo = await db
         .select()
@@ -6176,12 +6193,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update employee payroll information
-  app.put('/api/employees/:employeeId/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
+  // Update employee payroll information - CRITICAL: Requires OWNER+ role  
+  app.put('/api/employees/:employeeId/payroll', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const { employeeId } = req.params;
-      const { employeePayrollInfo } = await import("@shared/schema");
+      const { employeePayrollInfo, insertEmployeePayrollInfoSchema } = await import("@shared/schema");
+
+      // SECURITY: Validate with Zod schema
+      const validated = insertEmployeePayrollInfoSchema.partial().parse(req.body);
 
       const {
         taxId,
@@ -6194,7 +6214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         directDepositConsent,
         w9OnFile,
         i9OnFile,
-      } = req.body;
+      } = validated;
 
       // Check if payroll info exists
       const existing = await db
@@ -6362,8 +6382,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/time-off-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const { employeeId, startDate, endDate, requestType, reason, notes } = req.body;
-      const { timeOffRequests } = await import("@shared/schema");
+      const userId = req.user?.id;
+      const { timeOffRequests, insertTimeOffRequestSchema } = await import("@shared/schema");
+      
+      // SECURITY: Employees can only submit for themselves, managers can submit for reports
+      const requestEmployeeId = req.body.employeeId || userId;
+      const userRole = req.user?.role;
+      const isManager = ['manager', 'owner', 'admin', 'root_admin'].includes(userRole || '');
+      
+      if (!isManager && requestEmployeeId !== userId) {
+        return res.status(403).json({ message: 'Forbidden - Can only submit time off requests for yourself' });
+      }
+      
+      // SECURITY: Validate with Zod (use pick for required fields)
+      const validated = insertTimeOffRequestSchema.pick({
+        startDate: true,
+        endDate: true,
+        requestType: true,
+        reason: true,
+        notes: true,
+      }).parse(req.body);
+      
+      const { startDate, endDate, requestType, reason, notes } = validated;
+      const employeeId = requestEmployeeId;
 
       // Calculate total days
       const start = new Date(startDate);
@@ -6458,12 +6499,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Submit contract document (I9, W9, W4)
-  app.post('/api/contract-documents', requireAuth, async (req: AuthenticatedRequest, res) => {
+  // Submit contract document (I9, W9, W4) - Requires OWNER+  
+  app.post('/api/contract-documents', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const { employeeId, documentType, signedAt, fileUrl, metadata } = req.body;
-      const { contractDocuments } = await import("@shared/schema");
+      const { contractDocuments, insertContractDocumentSchema } = await import("@shared/schema");
+      
+      // SECURITY: Validate with Zod
+      const validated = insertContractDocumentSchema.parse({
+        ...req.body,
+        workspaceId,
+      });
+      
+      const { employeeId, documentType, signedAt, fileUrl, metadata } = validated;
 
       if (!['i9', 'w9', 'w4'].includes(documentType)) {
         return res.status(400).json({ message: 'Invalid document type. Must be i9, w9, or w4.' });
@@ -6667,9 +6715,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/timesheet-edit-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const { timeEntryId, requestedChanges, reason } = req.body;
       const employeeId = req.user?.id;
-      const { timesheetEditRequests } = await import("@shared/schema");
+      const { timesheetEditRequests, insertTimesheetEditRequestSchema } = await import("@shared/schema");
+      
+      // SECURITY: Validate with Zod
+      const validated = insertTimesheetEditRequestSchema.partial().parse({
+        ...req.body,
+        workspaceId,
+        employeeId,
+      });
+      
+      const { timeEntryId, requestedChanges, reason } = validated;
 
       const [request] = await db
         .insert(timesheetEditRequests)
