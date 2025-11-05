@@ -245,6 +245,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(auditContextMiddleware);
 
   // ============================================================================
+  // NOTIFICATIONS & FEATURE UPDATES
+  // ============================================================================
+
+  // Get user notifications
+  app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Mock notifications for now - replace with actual implementation
+      const notifications = [
+        {
+          id: '1',
+          type: 'shift_assigned',
+          title: 'New shift assigned',
+          message: 'You have been assigned to work on Monday, 9 AM - 5 PM',
+          isRead: false,
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          actionUrl: '/schedule',
+        },
+        {
+          id: '2',
+          type: 'pto_approved',
+          title: 'PTO request approved',
+          message: 'Your PTO request for Dec 25-26 has been approved',
+          isRead: true,
+          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          actionUrl: '/hr/pto',
+        },
+      ];
+      
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+
+  // Mark notification as read
+  app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      // Implementation would mark notification as read in DB
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ message: 'Failed to mark notification as read' });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      // Implementation would mark all notifications as read in DB
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ message: 'Failed to mark all notifications as read' });
+    }
+  });
+
+  // Get feature updates (What's New)
+  app.get('/api/feature-updates', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const updates = [
+        {
+          id: '1',
+          title: 'ScheduleOS™ Auto-Scheduling',
+          description: 'AI-powered automatic shift scheduling with conflict detection and optimization',
+          category: 'new',
+          releaseDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          learnMoreUrl: '/schedule',
+        },
+        {
+          id: '2',
+          title: 'Enhanced Mobile Chat',
+          description: 'Redesigned mobile chat experience with improved performance and UX',
+          category: 'improvement',
+          releaseDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+          learnMoreUrl: '/mobile-chat',
+        },
+        {
+          id: '3',
+          title: 'Quick Actions Menu',
+          description: 'Fast access to common tasks from anywhere in the platform',
+          category: 'new',
+          releaseDate: new Date(),
+          learnMoreUrl: null,
+        },
+      ];
+      
+      res.json(updates);
+    } catch (error) {
+      console.error('Error fetching feature updates:', error);
+      res.status(500).json({ message: 'Failed to fetch feature updates' });
+    }
+  });
+
+  // Get last viewed feature updates timestamp
+  app.get('/api/feature-updates/last-viewed', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      // Mock - would fetch from user preferences in DB
+      res.json(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+    } catch (error) {
+      console.error('Error fetching last viewed:', error);
+      res.status(500).json({ message: 'Failed to fetch last viewed timestamp' });
+    }
+  });
+
+  // Mark feature updates as viewed
+  app.post('/api/feature-updates/mark-viewed', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      // Implementation would update user preferences in DB
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking updates as viewed:', error);
+      res.status(500).json({ message: 'Failed to mark updates as viewed' });
+    }
+  });
+
+  // Get all workspaces user has access to (for workspace switcher)
+  app.get('/api/workspaces/all', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get user's owned workspace
+      const ownedWorkspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      // In future, could add workspaces user is a member of
+      const workspaces = ownedWorkspace ? [ownedWorkspace] : [];
+      
+      res.json(workspaces);
+    } catch (error) {
+      console.error('Error fetching workspaces:', error);
+      res.status(500).json({ message: 'Failed to fetch workspaces' });
+    }
+  });
+
+  // Switch workspace
+  app.post('/api/workspace/switch/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { workspaceId } = req.params;
+      
+      // Verify user has access to this workspace
+      const workspace = await storage.getWorkspace(workspaceId);
+      if (!workspace || workspace.ownerId !== userId) {
+        return res.status(403).json({ message: 'Access denied to this workspace' });
+      }
+      
+      // Update user's current workspace
+      await storage.updateUser(userId, {
+        currentWorkspaceId: workspaceId,
+      });
+      
+      res.json({ success: true, workspaceId });
+    } catch (error) {
+      console.error('Error switching workspace:', error);
+      res.status(500).json({ message: 'Failed to switch workspace' });
+    }
+  });
+
+  // ============================================================================
   // HEALTH CHECK & MONITORING (No rate limiting)
   // ============================================================================
   

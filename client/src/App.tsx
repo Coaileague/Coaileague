@@ -98,7 +98,11 @@ import Updates from "@/pages/updates";
 import Help from "@/pages/help";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Search } from "lucide-react";
+import { NotificationsCenter } from "@/components/notifications-center";
+import { QuickActionsMenu } from "@/components/quick-actions-menu";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { WhatsNewBadge } from "@/components/whats-new-badge";
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -174,21 +178,57 @@ function AppContent() {
                       <p>Toggle sidebar menu</p>
                     </TooltipContent>
                   </Tooltip>
+
+                  {/* Workspace Switcher */}
+                  <div className="hidden md:block">
+                    <WorkspaceSwitcher />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3">
-                  {/* Tutorial/Tour Button */}
+                <div className="flex items-center gap-1 sm:gap-2">
+                  {/* Global Search Trigger */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setShowOnboarding(true)}
-                        data-testid="button-open-onboarding"
+                        onClick={() => {
+                          const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                          document.dispatchEvent(event);
+                        }}
                         className="gap-1.5 h-9 shrink-0"
                       >
+                        <Search className="h-4 w-4" />
+                        <span className="hidden xl:inline text-xs text-muted-foreground">
+                          ⌘K
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Search (Cmd/Ctrl + K)</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Quick Actions */}
+                  <QuickActionsMenu />
+
+                  {/* What's New Badge */}
+                  <WhatsNewBadge />
+
+                  {/* Notifications Center */}
+                  <NotificationsCenter />
+
+                  {/* Tutorial/Tour Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowOnboarding(true)}
+                        data-testid="button-open-onboarding"
+                        className="shrink-0"
+                      >
                         <GraduationCap className="h-4 w-4" />
-                        <span className="hidden lg:inline text-xs font-medium">Tutorial</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
