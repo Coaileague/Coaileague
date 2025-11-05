@@ -98,3 +98,22 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
 - **Navigation**: Desktop chat sidebar (w-64) hidden on mobile with `hidden md:flex`
 - **Pricing Page**: AI token usage pricing detailed with customer-pays model, fully responsive with no overflow
 - **Known Issue**: Landing page hero section has horizontal overflow on small mobile viewports (scrollWidth ~536px on 375px viewport) - requires deeper investigation into responsive CSS utilities. All other pages display correctly.
+
+### ✅ Navigation & Sidebar Menu Audit (COMPLETED - November 5, 2025)
+**Status**: All 42 sidebar menu links verified working
+- **Audit Results**: Fixed 5 missing user menu routes that were causing broken navigation
+  - `/profile` - Redirects to employee profile page
+  - `/unavailability` - Time off request management with calendar interface
+  - `/create-org` - Organization creation form for multi-tenant workspaces
+  - `/updates` - Product changelog showing latest features & improvements
+  - `/help` - Help Center with searchable documentation and quick links
+- **Animated Logo Integration**: Deployed AutoForceLogoFull animated SVG across landing, login, register pages with theme-aware gradients
+- **Navigation Structure**: 4 OS Families (Communication, Operations, Growth & AI, Platform) + Quick Access section all fully functional
+
+### ✅ Logo Visibility Fixes (COMPLETED - November 5, 2025)
+**Status**: All logo display issues resolved
+- **Sidebar Logo**: Replaced small icon+wordmark with full AutoForceLogoFull (md size) with gradient background
+- **Loading Screens**: Fixed outdated WorkforceOS logo → AutoForceLogoFull with theme-aware backgrounds
+- **Landing Page**: Increased navigation logo size (sm → md) for better visibility
+- **Contrast Improvements**: Added gradient backgrounds and primary border accents throughout
+- All logos now highly visible on both light and dark backgrounds

@@ -47,13 +47,13 @@ export default function Landing() {
               aria-label="Scroll to top"
               data-testid="button-logo-home"
             >
-              {/* Desktop: Show full animated logo */}
+              {/* Desktop: Show full animated logo - larger size */}
               <div className="hidden sm:block">
-                <AutoForceLogoFull size="sm" />
+                <AutoForceLogoFull size="md" />
               </div>
-              {/* Mobile: Show icon only */}
+              {/* Mobile: Show full logo smaller */}
               <div className="block sm:hidden">
-                <AutoForceLogo variant="icon" size="md" />
+                <AutoForceLogoFull size="sm" />
               </div>
             </button>
 

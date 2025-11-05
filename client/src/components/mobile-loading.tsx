@@ -1,4 +1,4 @@
-import { AutoForceLogo } from "./workforceos-logo";
+import { AutoForceLogoFull } from "./autoforce-logo-full";
 import { Loader2 } from "lucide-react";
 
 interface MobileLoadingProps {
@@ -25,8 +25,8 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
             <div className="absolute inset-0 bg-teal-400/20 blur-xl sm:blur-2xl rounded-full scale-110 sm:scale-125" />
             
             {/* Glass container - smaller padding on mobile */}
-            <div className="relative z-10 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/10 via-slate-800/5 to-slate-900/10 backdrop-blur-sm p-6 sm:p-8 border border-white/5">
-              <AutoForceLogo variant="full" size="sm" animated={true} className="opacity-100" />
+            <div className="relative z-10 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-background/60 via-muted/40 to-background/60 backdrop-blur-sm p-6 sm:p-8 border border-primary/20">
+              <AutoForceLogoFull size="lg" className="w-full" />
             </div>
           </div>
           
@@ -47,8 +47,8 @@ export function MobileLoading({ message = "Loading...", fullScreen = false }: Mo
           <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-blue-500/20 blur-xl sm:blur-2xl rounded-full scale-110 sm:scale-125" />
           
           {/* Logo container - compact padding */}
-          <div className="relative z-10 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-background/40 via-background/20 to-background/40 backdrop-blur-sm p-4 sm:p-6 border border-border/30">
-            <AutoForceLogo variant="full" size="sm" animated={true} className="opacity-100" />
+          <div className="relative z-10 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-background/60 via-muted/40 to-background/60 backdrop-blur-sm p-4 sm:p-6 border border-primary/20">
+            <AutoForceLogoFull size="md" className="w-full" />
           </div>
         </div>
         

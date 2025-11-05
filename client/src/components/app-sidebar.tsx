@@ -18,8 +18,7 @@ import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { AutoForceLogo } from "@/components/autoforce-logo";
-import { AutoForceWordmark } from "@/components/autoforce-wordmark";
+import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -131,10 +130,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
-      <SidebarHeader className="p-4 border-b border-white/[0.08]">
-        <Link href="/dashboard" className="flex items-center gap-2" data-testid="link-dashboard-logo">
-          <AutoForceLogo variant="nav" size="sm" />
-          <AutoForceWordmark variant="stability" className="text-2xl" />
+      <SidebarHeader className="p-4 border-b border-white/[0.08] bg-gradient-to-br from-background/80 to-muted/20">
+        <Link href="/dashboard" className="block" data-testid="link-dashboard-logo">
+          <AutoForceLogoFull size="md" className="w-full" />
         </Link>
       </SidebarHeader>
       
