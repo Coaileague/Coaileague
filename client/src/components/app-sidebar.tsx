@@ -94,7 +94,7 @@ export function AppSidebar() {
     } catch (error) {
       console.error("Logout error:", error);
     }
-    
+
     showLogoutTransition(transition);
   };
 
@@ -136,20 +136,20 @@ export function AppSidebar() {
           <NeuralALogo size="xl" showText={true} />
         </Link>
       </SidebarHeader>
-      
+
       <SidebarContent className="px-3 py-4 overflow-y-auto">
         {/* OS Family 1: Communication */}
         {renderMenuSection("Communication", communicationFamilyItems, true)}
-        
+
         {/* OS Family 2: Operations */}
         {renderMenuSection("Operations", operationsFamilyItems, true)}
-        
+
         {/* OS Family 3: Growth & AI */}
         {renderMenuSection("Growth & AI", growthFamilyItems, true)}
-        
+
         {/* OS Family 4: Platform */}
         {renderMenuSection("Platform", platformFamilyItems, true)}
-        
+
         {/* Quick Access */}
         {renderMenuSection("Quick Access", quickAccessItems)}
       </SidebarContent>

@@ -586,6 +586,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // COMPANY REPORTS & ANALYTICS (Manager/Owner Access)
+  // ============================================================================
+  
+  // Generate company report with aggregated data
+  app.post('/api/reports/generate', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reportType, startDate, endDate } = req.body;
+      const workspaceId = req.workspace!.id;
+
+      let reportData: any = {};
+
+      switch (reportType) {
+        case 'payroll-summary':
+          // Aggregate payroll data
+          const payrollRuns = await db
+            .select()
+            .from(payrollRuns)
+            .where(
+              and(
+                eq(payrollRuns.workspaceId, workspaceId),
+                gte(payrollRuns.periodStart, new Date(startDate)),
+                lte(payrollRuns.periodEnd, new Date(endDate))
+              )
+            );
+          
+          reportData = {
+            totalPayroll: payrollRuns.reduce((sum, r) => sum + parseFloat(r.totalNetPay || '0'), 0),
+            payrollCount: payrollRuns.length,
+            details: payrollRuns.map(r => ({
+              name: `Payroll Run ${format(new Date(r.periodStart), 'MMM d')} - ${format(new Date(r.periodEnd), 'MMM d')}`,
+              value: `$${parseFloat(r.totalNetPay || '0').toFixed(2)}`,
+              details: `${r.status} - Processed ${r.processedAt ? format(new Date(r.processedAt), 'MMM d, yyyy') : 'N/A'}`,
+              badge: r.status,
+            })),
+          };
+          break;
+
+        case 'time-tracking':
+          const timeEntries = await db
+            .select()
+            .from(timeEntriesTable)
+            .where(
+              and(
+                eq(timeEntriesTable.workspaceId, workspaceId),
+                gte(timeEntriesTable.clockIn, new Date(startDate)),
+                lte(timeEntriesTable.clockIn, new Date(endDate))
+              )
+            );
+          
+          reportData = {
+            totalHours: timeEntries.reduce((sum, e) => sum + parseFloat(e.totalHours?.toString() || '0'), 0),
+            activeEmployees: new Set(timeEntries.map(e => e.employeeId)).size,
+            details: Object.entries(
+              timeEntries.reduce((acc: any, e) => {
+                if (!acc[e.employeeId]) acc[e.employeeId] = { hours: 0, count: 0 };
+                acc[e.employeeId].hours += parseFloat(e.totalHours?.toString() || '0');
+                acc[e.employeeId].count++;
+                return acc;
+              }, {})
+            ).map(([empId, data]: [string, any]) => ({
+              name: `Employee ${empId}`,
+              value: `${data.hours.toFixed(2)} hrs`,
+              details: `${data.count} time entries`,
+            })),
+          };
+          break;
+
+        case 'invoicing':
+          const invoices = await db
+            .select()
+            .from(invoices)
+            .where(
+              and(
+                eq(invoices.workspaceId, workspaceId),
+                gte(invoices.createdAt, new Date(startDate)),
+                lte(invoices.createdAt, new Date(endDate))
+              )
+            );
+          
+          reportData = {
+            totalRevenue: invoices.reduce((sum, i) => sum + parseFloat(i.total?.toString() || '0'), 0),
+            invoiceCount: invoices.length,
+            details: invoices.map(i => ({
+              name: i.invoiceNumber,
+              value: `$${parseFloat(i.total?.toString() || '0').toFixed(2)}`,
+              details: `Due ${i.dueDate ? format(new Date(i.dueDate), 'MMM d, yyyy') : 'N/A'}`,
+              badge: i.status,
+            })),
+          };
+          break;
+
+        default:
+          return res.status(400).json({ message: "Invalid report type" });
+      }
+
+      res.json(reportData);
+    } catch (error: any) {
+      console.error("Error generating report:", error);
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Export report in various formats
+  app.post('/api/reports/export', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reportType, startDate, endDate, format: exportFormat } = req.body;
+      const workspaceId = req.workspace!.id;
+
+      // Generate report data (reuse logic above)
+      // For now, return mock download URL
+      const filename = `${reportType}-${format(new Date(startDate), 'yyyy-MM-dd')}-to-${format(new Date(endDate), 'yyyy-MM-dd')}.${exportFormat}`;
+      
+      res.json({
+        downloadUrl: `/api/reports/download/${filename}`,
+        filename,
+        message: "Report export prepared (mock - integrate with PDF/Excel library)",
+      });
+    } catch (error: any) {
+      console.error("Error exporting report:", error);
+      res.status(500).json({ message: "Failed to export report" });
+    }
+  });
+
+  // Share report via workflow
+  app.post('/api/reports/share', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reportType, startDate, endDate, recipients, notes } = req.body;
+      const workspaceId = req.workspace!.id;
+      const userId = req.user!.id;
+
+      // Create workflow notification for each recipient
+      for (const email of recipients) {
+        // Log audit trail
+        await storage.createAuditLog({
+          workspaceId,
+          userId,
+          action: 'report_shared',
+          entityType: 'company_report',
+          entityId: `${reportType}-${new Date().getTime()}`,
+          metadata: {
+            reportType,
+            startDate,
+            endDate,
+            recipient: email,
+            notes,
+          },
+        });
+
+        // TODO: Send email notification with report link
+        console.log(`[REPORT WORKFLOW] Shared ${reportType} report to ${email}`);
+      }
+
+      res.json({
+        success: true,
+        message: `Report shared with ${recipients.length} recipient(s)`,
+      });
+    } catch (error: any) {
+      console.error("Error sharing report:", error);
+      res.status(500).json({ message: "Failed to share report" });
+    }
+  });
+
+  // ============================================================================
   // WORKSPACE ROUTES
   // ============================================================================
 

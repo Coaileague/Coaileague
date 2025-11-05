@@ -96,6 +96,7 @@ import Unavailability from "@/pages/unavailability";
 import CreateOrg from "@/pages/create-org";
 import Updates from "@/pages/updates";
 import Help from "@/pages/help";
+import CompanyReports from "./pages/company-reports";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Sparkles, Search } from "lucide-react";
@@ -333,6 +334,7 @@ function AppContent() {
                 <Route path="/support/dashboard" component={SupportDashboard} />
                 <Route path="/platform/admin" component={PlatformAdmin} />
                 <Route path="/platform/users" component={PlatformUsers} />
+                <Route path="/company-reports" component={<CompanyReports />} />
                 <Route path="/platform/sales" component={SalesPortal} />
                 <Route path="/employee/portal" component={EmployeePortal} />
                 <Route path="/auditor/portal" component={AuditorPortal} />
