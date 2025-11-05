@@ -4,31 +4,225 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-export function DocumentUploadStep({ application, onNext }: any) {
-  const [uploadedDocs, setUploadedDocs] = useState<{
-    governmentId?: File;
-    proofOfEligibility?: File;
-    certifications?: File[];
-  }>({});
+interface UploadedDocument {
+  id?: string;
+  fileName: string;
+  filePath: string;
+  documentType: string;
+  status: 'uploading' | 'uploaded' | 'failed';
+  progress: number;
+  error?: string;
+}
 
-  const handleFileUpload = (docType: string, file: File | null) => {
+interface DocumentUploadStepProps {
+  application: any;
+  onNext: (data: any) => void;
+}
+
+export function DocumentUploadStep({ application, onNext }: DocumentUploadStepProps) {
+  const [uploads, setUploads] = useState<Record<string, UploadedDocument>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
+
+  const uploadDocument = async (file: File, documentType: string) => {
+    const uploadId = `${documentType}_${Date.now()}`;
+
+    // Initialize upload tracking
+    setUploads(prev => ({
+      ...prev,
+      [uploadId]: {
+        fileName: file.name,
+        filePath: '',
+        documentType,
+        status: 'uploading',
+        progress: 0,
+      }
+    }));
+
+    setIsUploading(true);
+
+    try {
+      // Step 1: Get signed upload URL
+      const uploadUrlResponse = await apiRequest('POST', '/api/onboarding/documents/upload-url', {
+        applicationId: application.id,
+        workspaceId: application.workspaceId,
+        documentType,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+
+      if (!uploadUrlResponse.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const { uploadUrl, filePath } = await uploadUrlResponse.json();
+
+      // Update progress
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: { ...prev[uploadId], progress: 25 }
+      }));
+
+      // Step 2: Upload file to GCS
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('File upload failed');
+      }
+
+      // Update progress
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: { ...prev[uploadId], progress: 75 }
+      }));
+
+      // Step 3: Confirm upload with backend
+      const confirmResponse = await apiRequest('POST', '/api/onboarding/documents/confirm', {
+        applicationId: application.id,
+        workspaceId: application.workspaceId,
+        filePath,
+        documentType,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+
+      if (!confirmResponse.ok) {
+        throw new Error('Failed to confirm upload');
+      }
+
+      const document = await confirmResponse.json();
+
+      // Update upload status
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: {
+          ...prev[uploadId],
+          id: document.id,
+          filePath,
+          status: 'uploaded',
+          progress: 100,
+        }
+      }));
+
+      toast({
+        title: "Document uploaded",
+        description: `${file.name} uploaded successfully`,
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: {
+          ...prev[uploadId],
+          status: 'failed',
+          error: error.message,
+        }
+      }));
+
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload document",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = async (docType: string, file: File | null) => {
     if (file) {
-      setUploadedDocs(prev => ({ ...prev, [docType]: file }));
+      // Validate file size (15MB max)
+      const maxSize = 15 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: "File size must be less than 15MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await uploadDocument(file, docType);
     }
   };
 
   const handleNext = () => {
-    // In a real app, you would upload files to a storage service here
-    // For now, we'll just simulate the upload
+    const uploadedDocuments = Object.values(uploads).filter(u => u.status === 'uploaded');
     onNext({
-      // Store file metadata or URLs in the application
+      uploadedDocuments,
     });
   };
 
-  const hasRequiredDocs = uploadedDocs.governmentId && uploadedDocs.proofOfEligibility;
+  const getUploadsByType = (type: string) => {
+    return Object.values(uploads).filter(u => u.documentType === type);
+  };
+
+  const hasRequiredDocs = () => {
+    const govId = getUploadsByType('government_id').some(u => u.status === 'uploaded');
+    const eligibility = getUploadsByType('i9_form').some(u => u.status === 'uploaded') ||
+                        getUploadsByType('ssn_card').some(u => u.status === 'uploaded');
+    return govId && eligibility;
+  };
+
+  const renderUploadStatus = (type: string) => {
+    const docs = getUploadsByType(type);
+    const uploading = docs.find(d => d.status === 'uploading');
+    const uploaded = docs.filter(d => d.status === 'uploaded');
+    const failed = docs.filter(d => d.status === 'failed');
+
+    if (uploading) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Uploading {uploading.fileName}...</span>
+          </div>
+          <Progress value={uploading.progress} />
+        </div>
+      );
+    }
+
+    if (uploaded.length > 0) {
+      return (
+        <div className="space-y-1">
+          {uploaded.map((doc, idx) => (
+            <p key={idx} className="text-sm text-muted-foreground flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-600" />
+              {doc.fileName}
+            </p>
+          ))}
+        </div>
+      );
+    }
+
+    if (failed.length > 0) {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Upload failed: {failed[0].error}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <div>
@@ -52,12 +246,14 @@ export function DocumentUploadStep({ application, onNext }: any) {
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
                   Government-Issued ID*
-                  {uploadedDocs.governmentId && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                  {getUploadsByType('government_id').some(u => u.status === 'uploaded') && (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  )}
                 </CardTitle>
                 <CardDescription>Driver's License, Passport, or State ID</CardDescription>
               </div>
-              <Badge variant={uploadedDocs.governmentId ? "default" : "secondary"}>
-                {uploadedDocs.governmentId ? "Uploaded" : "Required"}
+              <Badge variant={getUploadsByType('government_id').some(u => u.status === 'uploaded') ? "default" : "secondary"}>
+                {getUploadsByType('government_id').some(u => u.status === 'uploaded') ? "Uploaded" : "Required"}
               </Badge>
             </div>
           </CardHeader>
@@ -68,49 +264,61 @@ export function DocumentUploadStep({ application, onNext }: any) {
                 id="government-id"
                 type="file"
                 accept="image/*,.pdf"
-                onChange={(e) => handleFileUpload('governmentId', e.target.files?.[0] || null)}
+                onChange={(e) => handleFileChange('government_id', e.target.files?.[0] || null)}
+                disabled={isUploading}
                 data-testid="input-file-government-id"
               />
-              {uploadedDocs.governmentId && (
-                <p className="text-sm text-muted-foreground">
-                  ✓ {uploadedDocs.governmentId.name}
-                </p>
-              )}
+              {renderUploadStatus('government_id')}
             </div>
           </CardContent>
         </Card>
 
-        {/* Proof of Work Eligibility (I-9) */}
+        {/* Proof of Work Eligibility (I-9 or SSN) */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
-                  Proof of Work Eligibility (I-9)*
-                  {uploadedDocs.proofOfEligibility && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                  Proof of Work Eligibility*
+                  {(getUploadsByType('i9_form').some(u => u.status === 'uploaded') || 
+                    getUploadsByType('ssn_card').some(u => u.status === 'uploaded')) && (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  )}
                 </CardTitle>
-                <CardDescription>Social Security Card, Birth Certificate, or Passport</CardDescription>
+                <CardDescription>Social Security Card, I-9 Form, Birth Certificate, or Passport</CardDescription>
               </div>
-              <Badge variant={uploadedDocs.proofOfEligibility ? "default" : "secondary"}>
-                {uploadedDocs.proofOfEligibility ? "Uploaded" : "Required"}
+              <Badge variant={(getUploadsByType('i9_form').some(u => u.status === 'uploaded') || getUploadsByType('ssn_card').some(u => u.status === 'uploaded')) ? "default" : "secondary"}>
+                {(getUploadsByType('i9_form').some(u => u.status === 'uploaded') || getUploadsByType('ssn_card').some(u => u.status === 'uploaded')) ? "Uploaded" : "Required"}
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="proof-eligibility">Upload Color Copy</Label>
-              <Input
-                id="proof-eligibility"
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(e) => handleFileUpload('proofOfEligibility', e.target.files?.[0] || null)}
-                data-testid="input-file-eligibility"
-              />
-              {uploadedDocs.proofOfEligibility && (
-                <p className="text-sm text-muted-foreground">
-                  ✓ {uploadedDocs.proofOfEligibility.name}
-                </p>
-              )}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="ssn-card">Social Security Card</Label>
+                <Input
+                  id="ssn-card"
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => handleFileChange('ssn_card', e.target.files?.[0] || null)}
+                  disabled={isUploading}
+                  data-testid="input-file-ssn"
+                />
+                {renderUploadStatus('ssn_card')}
+              </div>
+              <div className="text-center text-sm text-muted-foreground">- OR -</div>
+              <div className="space-y-2">
+                <Label htmlFor="i9-form">I-9 Form / Birth Certificate / Passport</Label>
+                <Input
+                  id="i9-form"
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => handleFileChange('i9_form', e.target.files?.[0] || null)}
+                  disabled={isUploading}
+                  data-testid="input-file-eligibility"
+                />
+                {renderUploadStatus('i9_form')}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -133,18 +341,11 @@ export function DocumentUploadStep({ application, onNext }: any) {
                 id="certifications"
                 type="file"
                 accept="image/*,.pdf"
-                multiple
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  setUploadedDocs(prev => ({ ...prev, certifications: files }));
-                }}
+                onChange={(e) => handleFileChange('certification', e.target.files?.[0] || null)}
+                disabled={isUploading}
                 data-testid="input-file-certifications"
               />
-              {uploadedDocs.certifications && uploadedDocs.certifications.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  ✓ {uploadedDocs.certifications.length} file(s) selected
-                </p>
-              )}
+              {renderUploadStatus('certification')}
             </div>
           </CardContent>
         </Card>
@@ -156,10 +357,17 @@ export function DocumentUploadStep({ application, onNext }: any) {
         </p>
         <Button 
           onClick={handleNext} 
-          disabled={!hasRequiredDocs}
+          disabled={!hasRequiredDocs() || isUploading}
           data-testid="button-next-documents"
         >
-          Continue to Agreements
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            "Continue to Agreements"
+          )}
         </Button>
       </div>
     </div>
