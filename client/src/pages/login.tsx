@@ -51,7 +51,7 @@ export default function Login() {
         // Auditors → Auditor Portal
         setLocation("/auditor-portal");
       } else {
-        // Regular users → Employee Dashboard
+        // Regular users → Dashboard (creates workspace automatically if first login)
         setLocation("/dashboard");
       }
     } catch (error) {

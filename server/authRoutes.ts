@@ -70,6 +70,21 @@ router.post("/api/auth/register", async (req, res) => {
       })
       .returning();
 
+    // Auto-create workspace for new user
+    const { storage } = await import("./storage");
+    const workspace = await storage.createWorkspace({
+      name: `${data.firstName}'s Workspace`,
+      ownerId: newUser.id,
+      subscriptionTier: "free",
+      subscriptionStatus: "active",
+    });
+
+    // Update user with workspace ID
+    await db
+      .update(users)
+      .set({ currentWorkspaceId: workspace.id })
+      .where(eq(users.id, newUser.id));
+
     // Create verification token
     const verificationToken = await createVerificationToken(newUser.id);
 
@@ -87,6 +102,7 @@ router.post("/api/auth/register", async (req, res) => {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         role: newUser.role,
+        currentWorkspaceId: workspace.id,
       },
     });
   } catch (error) {
