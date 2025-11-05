@@ -169,20 +169,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HEALTH CHECK ENDPOINT (for Render and monitoring)
   // ============================================================================
   app.get('/health', async (_req, res) => {
-    const health = {
+    const health: any = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
       features: getFeatureStatus(),
+      dependencies: {},
     };
 
     // Test database connection
     try {
       await db.select().from(users).limit(1);
+      health.dependencies.database = 'ok';
     } catch (error) {
       console.error('Health check database error:', error);
       health.status = 'degraded';
+      health.dependencies.database = 'error';
       const dbFeature = health.features.find(f => f.feature === 'DATABASE');
       if (dbFeature) {
         dbFeature.status = 'error';
@@ -191,18 +194,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(503).json(health);
     }
 
+    // Test session store
+    try {
+      await pool.query('SELECT 1 FROM sessions LIMIT 1');
+      health.dependencies.sessions = 'ok';
+    } catch (error) {
+      console.error('Health check sessions error:', error);
+      health.dependencies.sessions = 'degraded';
+    }
+
     // Test Stripe connection if enabled
     if (FEATURES.STRIPE_PAYMENTS) {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-        // Test with a quick API call (2 second timeout)
         await Promise.race([
           stripe.prices.list({ limit: 1 }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Stripe timeout')), 2000))
         ]);
+        health.dependencies.stripe = 'ok';
       } catch (error) {
         console.error('Health check Stripe error:', error);
         health.status = 'degraded';
+        health.dependencies.stripe = 'error';
         const stripeFeature = health.features.find(f => f.feature === 'STRIPE_PAYMENTS');
         if (stripeFeature) {
           stripeFeature.status = 'error';

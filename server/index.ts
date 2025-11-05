@@ -67,14 +67,26 @@ app.use(session({
   name: 'wfos.sid', // Custom session name
 }));
 
-// Session error handler
+// Session error handler with retry mechanism
 app.use((err: any, req: any, res: any, next: any) => {
-  if (err && err.code === 'SESSION_ERROR') {
+  if (err && (err.code === 'SESSION_ERROR' || err.message?.includes('session'))) {
     console.error('Session error:', err);
     res.clearCookie('wfos.sid');
-    return res.status(401).json({ message: 'Session expired, please login again' });
+    return res.status(401).json({ 
+      message: 'Session expired, please login again',
+      sessionError: true 
+    });
   }
   next(err);
+});
+
+// Graceful session cleanup on server shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, cleaning up sessions...');
+  pool.end(() => {
+    console.log('Session pool closed');
+    process.exit(0);
+  });
 });
 
 (async () => {

@@ -89,9 +89,19 @@ export function useChatroomWebSocket(
   const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false); // Track if connection is in progress
   const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const lastConnectAttemptRef = useRef<number>(0);
+  const MIN_RECONNECT_INTERVAL = 1000; // Minimum 1 second between attempts
 
   const connect = useCallback(() => {
     if (!userId) return;
+
+    // Rate limit connection attempts
+    const now = Date.now();
+    if (now - lastConnectAttemptRef.current < MIN_RECONNECT_INTERVAL) {
+      console.log('⚠️ Connection rate limited, waiting...');
+      return;
+    }
+    lastConnectAttemptRef.current = now;
 
     // STRICT duplicate connection prevention
     if (isConnectingRef.current) {
