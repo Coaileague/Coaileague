@@ -4927,6 +4927,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload document during onboarding (public route with token validation)
+  app.post('/api/onboarding/documents/upload-url', mutationLimiter, async (req, res) => {
+    try {
+      const { applicationId, workspaceId, documentType, fileName, fileType, fileSize } = req.body;
+
+      // Validate required fields
+      if (!applicationId || !workspaceId || !documentType || !fileName || !fileType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate file size (15MB max)
+      const maxSizeBytes = 15 * 1024 * 1024;
+      if (fileSize && fileSize > maxSizeBytes) {
+        return res.status(400).json({ message: "File size exceeds 15MB limit" });
+      }
+
+      // SECURITY: Verify application exists and matches workspace
+      const application = await storage.getOnboardingApplication(applicationId, workspaceId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found or access denied" });
+      }
+
+      // Verify invite is still valid (not expired)
+      if (application.inviteId) {
+        const invite = await storage.getOnboardingInvite(application.inviteId);
+        if (!invite || new Date() > new Date(invite.expiresAt)) {
+          return res.status(400).json({ message: "Invitation has expired" });
+        }
+      }
+
+      // Sanitize filename (remove path traversal attempts, special chars)
+      const sanitizedFileName = fileName
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .substring(0, 255);
+
+      // Generate unique file path for object storage
+      const timestamp = Date.now();
+      const fileExtension = sanitizedFileName.split('.').pop();
+      const objectPath = `onboarding/${workspaceId}/${applicationId}/${documentType}_${timestamp}.${fileExtension}`;
+
+      // Get signed upload URL from object storage
+      const { ObjectStorageService } = await import('./objectStorage');
+      const objectStorage = new ObjectStorageService();
+      const privateDir = objectStorage.getPrivateObjectDir();
+      const fullPath = `${privateDir}/${objectPath}`;
+
+      const uploadUrl = await objectStorage.generateSignedUploadUrl(
+        fullPath,
+        fileType,
+        60 * 5 // 5 minute expiry
+      );
+
+      // Return upload URL and metadata for client to complete upload
+      res.json({
+        uploadUrl,
+        filePath: fullPath,
+        documentType,
+        fileName: sanitizedFileName,
+      });
+    } catch (error: any) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ message: error.message || "Failed to generate upload URL" });
+    }
+  });
+
+  // Confirm document upload and store metadata (after client uploads to signed URL)
+  app.post('/api/onboarding/documents/confirm', mutationLimiter, async (req, res) => {
+    try {
+      const crypto = require('crypto');
+      const { applicationId, workspaceId, filePath, documentType, fileName, fileType, fileSize } = req.body;
+
+      // Validate required fields
+      if (!applicationId || !workspaceId || !filePath || !documentType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // SECURITY: Verify application exists and matches workspace
+      const application = await storage.getOnboardingApplication(applicationId, workspaceId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found or access denied" });
+      }
+
+      // Get or create employee record for this application
+      let employeeId = application.employeeId;
+      if (!employeeId) {
+        // Create placeholder employee (will be finalized when onboarding completes)
+        const employee = await storage.createEmployee({
+          workspaceId,
+          firstName: application.firstName,
+          lastName: application.lastName,
+          email: application.email,
+          phone: application.phone,
+          employeeNumber: application.employeeNumber,
+          onboardingStatus: 'in_progress',
+        });
+        employeeId = employee.id;
+
+        // Link employee to application
+        await storage.updateOnboardingApplication(applicationId, workspaceId, {
+          employeeId,
+        });
+      }
+
+      const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.get('user-agent') || 'unknown';
+
+      // Calculate SHA-256 hash for compliance documents
+      const isComplianceDoc = ['government_id', 'i9_form', 'w4_form', 'w9_form', 'ssn_card'].includes(documentType);
+      let digitalSignatureHash = null;
+      if (isComplianceDoc) {
+        digitalSignatureHash = crypto.createHash('sha256').update(filePath + Date.now()).digest('hex');
+      }
+
+      // Auto-calculate delete-after date (7 years for compliance)
+      const retentionYears = isComplianceDoc ? 7 : 3;
+      const deleteAfter = new Date();
+      deleteAfter.setFullYear(deleteAfter.getFullYear() + retentionYears);
+
+      // Store document metadata
+      const document = await storage.createEmployeeDocument({
+        workspaceId,
+        employeeId,
+        applicationId,
+        documentType,
+        documentName: fileName || documentType,
+        fileUrl: filePath,
+        fileSize,
+        fileType,
+        originalFileName: fileName,
+        uploadedBy: application.employeeId || null,
+        uploadedByEmail: application.email,
+        uploadedByRole: 'employee',
+        uploadIpAddress: ipAddress,
+        uploadUserAgent: userAgent,
+        status: 'uploaded',
+        isComplianceDocument: isComplianceDoc,
+        retentionPeriodYears: retentionYears,
+        digitalSignatureHash,
+        deleteAfter,
+        isImmutable: isComplianceDoc,
+      });
+
+      res.json(document);
+    } catch (error: any) {
+      console.error("Error confirming document upload:", error);
+      res.status(500).json({ message: error.message || "Failed to confirm upload" });
+    }
+  });
+
+  // Get documents for onboarding application (public route with validation)
+  app.get('/api/onboarding/documents/:applicationId', async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const { workspaceId } = req.query;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+
+      // SECURITY: Verify application exists and matches workspace
+      const application = await storage.getOnboardingApplication(applicationId, workspaceId as string);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Get all documents for this application
+      const documents = await db
+        .select()
+        .from(employeeDocuments)
+        .where(
+          and(
+            eq(employeeDocuments.applicationId, applicationId),
+            eq(employeeDocuments.workspaceId, workspaceId as string)
+          )
+        );
+
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching onboarding documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
   // ============================================================================
   // HIREOS™ - Digital File Cabinet & Compliance Workflow
   // ============================================================================
