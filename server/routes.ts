@@ -4426,6 +4426,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // I-9 RE-VERIFICATION & COMPLIANCE
+  // ============================================================================
+  
+  // Get all I-9 records for workspace (Manager/Admin only)
+  app.get('/api/i9-records', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const records = await storage.getI9RecordsByWorkspace(workspaceId);
+      res.json(records);
+    } catch (error: any) {
+      console.error("Error fetching I-9 records:", error);
+      res.status(500).json({ message: "Failed to fetch I-9 records" });
+    }
+  });
+
+  // Get expiring I-9 authorizations (Manager/Admin only)
+  app.get('/api/i9-records/expiring', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const daysAhead = parseInt(req.query.days as string) || 30;
+      const records = await storage.getExpiringI9Authorizations(workspaceId, daysAhead);
+      res.json(records);
+    } catch (error: any) {
+      console.error("Error fetching expiring I-9 records:", error);
+      res.status(500).json({ message: "Failed to fetch expiring I-9 records" });
+    }
+  });
+
+  // Get I-9 record by employee ID
+  app.get('/api/i9-records/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      
+      // Employees can only view their own record, managers can view all
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (user?.role !== 'manager' && user?.role !== 'owner' && user?.role !== 'admin' && 
+          employee?.id !== req.params.employeeId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const record = await storage.getI9RecordByEmployee(req.params.employeeId, workspaceId);
+      if (!record) {
+        return res.status(404).json({ message: "I-9 record not found" });
+      }
+      
+      res.json(record);
+    } catch (error: any) {
+      console.error("Error fetching I-9 record:", error);
+      res.status(500).json({ message: "Failed to fetch I-9 record" });
+    }
+  });
+
+  // ============================================================================
+  // POLICIOS™ - POLICY & HANDBOOK MANAGEMENT
+  // ============================================================================
+  
+  // Create policy (Manager/Admin only)
+  app.post('/api/policies', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      
+      const policy = await storage.createCompanyPolicy({
+        ...req.body,
+        workspaceId,
+        createdBy: userId,
+        status: 'draft',
+      });
+      
+      res.json(policy);
+    } catch (error: any) {
+      console.error("Error creating policy:", error);
+      res.status(400).json({ message: error.message || "Failed to create policy" });
+    }
+  });
+
+  // Get all policies for workspace
+  app.get('/api/policies', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const policies = await storage.getCompanyPolicies(workspaceId);
+      res.json(policies);
+    } catch (error: any) {
+      console.error("Error fetching policies:", error);
+      res.status(500).json({ message: "Failed to fetch policies" });
+    }
+  });
+
+  // Get single policy
+  app.get('/api/policies/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const policy = await storage.getCompanyPolicy(req.params.id, workspaceId);
+      
+      if (!policy) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+      
+      res.json(policy);
+    } catch (error: any) {
+      console.error("Error fetching policy:", error);
+      res.status(500).json({ message: "Failed to fetch policy" });
+    }
+  });
+
+  // Publish policy (Manager/Admin only)
+  app.patch('/api/policies/:id/publish', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      
+      const policy = await storage.publishPolicy(req.params.id, workspaceId, userId);
+      
+      if (!policy) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+      
+      res.json(policy);
+    } catch (error: any) {
+      console.error("Error publishing policy:", error);
+      res.status(500).json({ message: "Failed to publish policy" });
+    }
+  });
+
+  // Acknowledge policy (Employee)
+  app.post('/api/policies/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee || employee.workspaceId !== workspaceId) {
+        return res.status(404).json({ message: "Employee record not found" });
+      }
+
+      const policy = await storage.getCompanyPolicy(req.params.id, workspaceId);
+      if (!policy) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+
+      const { signatureUrl, ipAddress, userAgent } = req.body;
+
+      const acknowledgment = await storage.createPolicyAcknowledgment({
+        workspaceId,
+        policyId: policy.id,
+        employeeId: employee.id,
+        policyVersion: policy.version,
+        policyTitle: policy.title,
+        signatureUrl,
+        ipAddress,
+        userAgent,
+      });
+      
+      res.json(acknowledgment);
+    } catch (error: any) {
+      console.error("Error acknowledging policy:", error);
+      res.status(400).json({ message: error.message || "Failed to acknowledge policy" });
+    }
+  });
+
+  // Get policy acknowledgments (Manager/Admin only)
+  app.get('/api/policies/:id/acknowledgments', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const acknowledgments = await storage.getPolicyAcknowledgments(req.params.id);
+      res.json(acknowledgments);
+    } catch (error: any) {
+      console.error("Error fetching policy acknowledgments:", error);
+      res.status(500).json({ message: "Failed to fetch policy acknowledgments" });
+    }
+  });
+
+  // ============================================================================
   // TIME ENTRY APPROVAL (Multi-Level Approval Workflow)
   // ============================================================================
   

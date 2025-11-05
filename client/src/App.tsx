@@ -100,6 +100,8 @@ import CompanyReports from "./pages/company-reports";
 import PayInvoice from "@/pages/pay-invoice";
 import Expenses from "@/pages/expenses";
 import ExpenseApprovals from "@/pages/expense-approvals";
+import I9Compliance from "@/pages/i9-compliance";
+import Policies from "@/pages/policies";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Sparkles, Search } from "lucide-react";
@@ -293,6 +295,8 @@ function AppContent() {
                 <Route path="/billing" component={Billing} />
                 <Route path="/expenses" component={Expenses} />
                 <Route path="/expense-approvals" component={ExpenseApprovals} />
+                <Route path="/i9-compliance" component={I9Compliance} />
+                <Route path="/policies" component={Policies} />
                 <Route path="/payroll" component={PayrollDashboard} />
                 <Route path="/my-paychecks" component={MyPaychecks} />
                 <Route path="/leaders-hub">

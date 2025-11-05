@@ -7,19 +7,33 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, DollarSign, Calendar, MapPin, FileText, Receipt } from "lucide-react";
+import { CheckCircle2, XCircle, DollarSign, Calendar, MapPin, FileText, Receipt, Paperclip, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
 export default function ExpenseApprovalsPage() {
   const { toast } = useToast();
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewNotes, setReviewNotes] = useState("");
 
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ['/api/expenses'],
+  });
+
+  const { data: expenseDetails } = useQuery({
+    queryKey: ['/api/expenses', selectedExpenseId],
+    queryFn: async () => {
+      if (!selectedExpenseId) return null;
+      const response = await fetch(`/api/expenses/${selectedExpenseId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch expense details');
+      return response.json();
+    },
+    enabled: !!selectedExpenseId,
   });
 
   const approveMutation = useMutation({
@@ -32,8 +46,7 @@ export default function ExpenseApprovalsPage() {
         title: "Success",
         description: "Expense approved successfully",
       });
-      setReviewDialogOpen(false);
-      setReviewNotes("");
+      handleCloseDialog();
     },
     onError: (error: any) => {
       toast({
@@ -54,8 +67,7 @@ export default function ExpenseApprovalsPage() {
         title: "Success",
         description: "Expense rejected",
       });
-      setReviewDialogOpen(false);
-      setReviewNotes("");
+      handleCloseDialog();
     },
     onError: (error: any) => {
       toast({
@@ -88,8 +100,15 @@ export default function ExpenseApprovalsPage() {
 
   const handleReview = (expense: any, action: 'approve' | 'reject') => {
     setSelectedExpense(expense);
+    setSelectedExpenseId(expense.id);
     setReviewAction(action);
     setReviewDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setReviewDialogOpen(false);
+    setSelectedExpenseId(null);
+    setReviewNotes("");
   };
 
   const handleSubmitReview = () => {
@@ -292,7 +311,7 @@ export default function ExpenseApprovalsPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+      <Dialog open={reviewDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent data-testid="dialog-review">
           <DialogHeader>
             <DialogTitle>
@@ -308,6 +327,39 @@ export default function ExpenseApprovalsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {expenseDetails?.receipts && expenseDetails.receipts.length > 0 && (
+              <div>
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" />
+                  Receipts ({expenseDetails.receipts.length})
+                </label>
+                <div className="mt-2 space-y-2">
+                  {expenseDetails.receipts.map((receipt: any, index: number) => (
+                    <div
+                      key={receipt.id}
+                      className="flex items-center justify-between p-2 border rounded hover-elevate"
+                      data-testid={`receipt-${index}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{receipt.fileName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(receipt.fileSize / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(receipt.fileUrl, '_blank')}
+                        data-testid={`button-view-receipt-${index}`}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium">
                 {reviewAction === 'approve' ? 'Review Notes (Optional)' : 'Reason for Rejection'}
@@ -324,7 +376,7 @@ export default function ExpenseApprovalsPage() {
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => setReviewDialogOpen(false)}
+                onClick={handleCloseDialog}
                 data-testid="button-cancel-review"
               >
                 Cancel
