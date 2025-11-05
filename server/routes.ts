@@ -6143,6 +6143,640 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // EMPLOYEE ONBOARDING & MANAGEMENT
+  // ============================================================================
+
+  // Get employee payroll information
+  app.get('/api/employees/:employeeId/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { employeePayrollInfo } = await import("@shared/schema");
+
+      const payrollInfo = await db
+        .select()
+        .from(employeePayrollInfo)
+        .where(
+          and(
+            eq(employeePayrollInfo.workspaceId, workspaceId),
+            eq(employeePayrollInfo.employeeId, employeeId)
+          )
+        )
+        .limit(1)
+        .then(rows => rows[0]);
+
+      if (!payrollInfo) {
+        return res.status(404).json({ message: 'Payroll information not found' });
+      }
+
+      res.json(payrollInfo);
+    } catch (error: any) {
+      console.error('Error getting payroll info:', error);
+      res.status(500).json({ message: error.message || 'Failed to get payroll information' });
+    }
+  });
+
+  // Update employee payroll information
+  app.put('/api/employees/:employeeId/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { employeePayrollInfo } = await import("@shared/schema");
+
+      const {
+        taxId,
+        bankAccountNumber,
+        routingNumber,
+        paymentMethod,
+        w4Allowances,
+        additionalWithholding,
+        filingStatus,
+        directDepositConsent,
+        w9OnFile,
+        i9OnFile,
+      } = req.body;
+
+      // Check if payroll info exists
+      const existing = await db
+        .select()
+        .from(employeePayrollInfo)
+        .where(
+          and(
+            eq(employeePayrollInfo.workspaceId, workspaceId),
+            eq(employeePayrollInfo.employeeId, employeeId)
+          )
+        )
+        .limit(1)
+        .then(rows => rows[0]);
+
+      let result;
+      if (existing) {
+        // Update existing
+        [result] = await db
+          .update(employeePayrollInfo)
+          .set({
+            taxId,
+            bankAccountNumber,
+            routingNumber,
+            paymentMethod,
+            w4Allowances,
+            additionalWithholding,
+            filingStatus,
+            directDepositConsent,
+            w9OnFile,
+            i9OnFile,
+            updatedAt: new Date(),
+          })
+          .where(eq(employeePayrollInfo.id, existing.id))
+          .returning();
+      } else {
+        // Create new
+        [result] = await db
+          .insert(employeePayrollInfo)
+          .values({
+            workspaceId,
+            employeeId,
+            taxId,
+            bankAccountNumber,
+            routingNumber,
+            paymentMethod,
+            w4Allowances,
+            additionalWithholding,
+            filingStatus,
+            directDepositConsent,
+            w9OnFile,
+            i9OnFile,
+          })
+          .returning();
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error updating payroll info:', error);
+      res.status(500).json({ message: error.message || 'Failed to update payroll information' });
+    }
+  });
+
+  // Get employee availability
+  app.get('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { employeeAvailability } = await import("@shared/schema");
+
+      const availability = await db
+        .select()
+        .from(employeeAvailability)
+        .where(
+          and(
+            eq(employeeAvailability.workspaceId, workspaceId),
+            eq(employeeAvailability.employeeId, employeeId)
+          )
+        )
+        .orderBy(employeeAvailability.dayOfWeek);
+
+      res.json(availability);
+    } catch (error: any) {
+      console.error('Error getting availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to get availability' });
+    }
+  });
+
+  // Set employee availability
+  app.post('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { availability } = req.body; // Array of availability objects
+      const { employeeAvailability } = await import("@shared/schema");
+
+      // Delete existing availability
+      await db
+        .delete(employeeAvailability)
+        .where(
+          and(
+            eq(employeeAvailability.workspaceId, workspaceId),
+            eq(employeeAvailability.employeeId, employeeId)
+          )
+        );
+
+      // Insert new availability
+      if (availability && availability.length > 0) {
+        const values = availability.map((slot: any) => ({
+          workspaceId,
+          employeeId,
+          dayOfWeek: slot.dayOfWeek,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          isAvailable: slot.isAvailable ?? true,
+        }));
+
+        await db.insert(employeeAvailability).values(values);
+      }
+
+      // Return updated availability
+      const updated = await db
+        .select()
+        .from(employeeAvailability)
+        .where(
+          and(
+            eq(employeeAvailability.workspaceId, workspaceId),
+            eq(employeeAvailability.employeeId, employeeId)
+          )
+        )
+        .orderBy(employeeAvailability.dayOfWeek);
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error setting availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to set availability' });
+    }
+  });
+
+  // Get time off requests for employee
+  app.get('/api/employees/:employeeId/time-off', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { timeOffRequests } = await import("@shared/schema");
+
+      const requests = await db
+        .select()
+        .from(timeOffRequests)
+        .where(
+          and(
+            eq(timeOffRequests.workspaceId, workspaceId),
+            eq(timeOffRequests.employeeId, employeeId)
+          )
+        )
+        .orderBy(desc(timeOffRequests.createdAt));
+
+      res.json(requests);
+    } catch (error: any) {
+      console.error('Error getting time off requests:', error);
+      res.status(500).json({ message: error.message || 'Failed to get time off requests' });
+    }
+  });
+
+  // Create time off request
+  app.post('/api/time-off-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId, startDate, endDate, requestType, reason, notes } = req.body;
+      const { timeOffRequests } = await import("@shared/schema");
+
+      // Calculate total days
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      const [request] = await db
+        .insert(timeOffRequests)
+        .values({
+          workspaceId,
+          employeeId,
+          startDate: start,
+          endDate: end,
+          requestType,
+          totalDays,
+          reason,
+          notes,
+          status: 'pending',
+        })
+        .returning();
+
+      res.json(request);
+    } catch (error: any) {
+      console.error('Error creating time off request:', error);
+      res.status(500).json({ message: error.message || 'Failed to create time off request' });
+    }
+  });
+
+  // Approve/deny time off request
+  app.put('/api/time-off-requests/:id/status', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      const { status, reviewNotes } = req.body;
+      const userId = req.user?.id;
+      const { timeOffRequests } = await import("@shared/schema");
+
+      if (!['approved', 'denied'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status. Must be approved or denied.' });
+      }
+
+      const [updated] = await db
+        .update(timeOffRequests)
+        .set({
+          status,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(timeOffRequests.id, id),
+            eq(timeOffRequests.workspaceId, workspaceId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Time off request not found' });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating time off request:', error);
+      res.status(500).json({ message: error.message || 'Failed to update time off request' });
+    }
+  });
+
+  // Contract document management
+  app.get('/api/employees/:employeeId/contracts', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { contractDocuments } = await import("@shared/schema");
+
+      const contracts = await db
+        .select()
+        .from(contractDocuments)
+        .where(
+          and(
+            eq(contractDocuments.workspaceId, workspaceId),
+            eq(contractDocuments.employeeId, employeeId)
+          )
+        )
+        .orderBy(desc(contractDocuments.createdAt));
+
+      res.json(contracts);
+    } catch (error: any) {
+      console.error('Error getting contracts:', error);
+      res.status(500).json({ message: error.message || 'Failed to get contracts' });
+    }
+  });
+
+  // Submit contract document (I9, W9, W4)
+  app.post('/api/contract-documents', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId, documentType, signedAt, fileUrl, metadata } = req.body;
+      const { contractDocuments } = await import("@shared/schema");
+
+      if (!['i9', 'w9', 'w4'].includes(documentType)) {
+        return res.status(400).json({ message: 'Invalid document type. Must be i9, w9, or w4.' });
+      }
+
+      const [contract] = await db
+        .insert(contractDocuments)
+        .values({
+          workspaceId,
+          employeeId,
+          documentType,
+          signedAt: signedAt ? new Date(signedAt) : new Date(),
+          status: 'pending',
+          fileUrl,
+          metadata,
+        })
+        .returning();
+
+      res.json(contract);
+    } catch (error: any) {
+      console.error('Error creating contract document:', error);
+      res.status(500).json({ message: error.message || 'Failed to create contract document' });
+    }
+  });
+
+  // Approve/reject contract document
+  app.put('/api/contract-documents/:id/status', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      const { status, reviewNotes } = req.body;
+      const userId = req.user?.id;
+      const { contractDocuments } = await import("@shared/schema");
+
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status. Must be approved or rejected.' });
+      }
+
+      const [updated] = await db
+        .update(contractDocuments)
+        .set({
+          status,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(contractDocuments.id, id),
+            eq(contractDocuments.workspaceId, workspaceId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Contract document not found' });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating contract status:', error);
+      res.status(500).json({ message: error.message || 'Failed to update contract status' });
+    }
+  });
+
+  // ============================================================================
+  // SHIFT MANAGEMENT - Accept/Deny/Switch
+  // ============================================================================
+
+  // Get shift actions for employee
+  app.get('/api/employees/:employeeId/shift-actions', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId } = req.params;
+      const { shiftActions } = await import("@shared/schema");
+
+      const actions = await db
+        .select()
+        .from(shiftActions)
+        .where(
+          and(
+            eq(shiftActions.workspaceId, workspaceId),
+            eq(shiftActions.employeeId, employeeId)
+          )
+        )
+        .orderBy(desc(shiftActions.createdAt));
+
+      res.json(actions);
+    } catch (error: any) {
+      console.error('Error getting shift actions:', error);
+      res.status(500).json({ message: error.message || 'Failed to get shift actions' });
+    }
+  });
+
+  // Accept/Deny shift
+  app.post('/api/shifts/:shiftId/respond', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { shiftId } = req.params;
+      const { action, reason } = req.body; // action: 'accept' or 'deny'
+      const employeeId = req.user?.id;
+      const { shiftActions } = await import("@shared/schema");
+
+      if (!['accept', 'deny'].includes(action)) {
+        return res.status(400).json({ message: 'Invalid action. Must be accept or deny.' });
+      }
+
+      const [shiftAction] = await db
+        .insert(shiftActions)
+        .values({
+          workspaceId,
+          shiftId,
+          employeeId: employeeId!,
+          actionType: action,
+          status: 'completed',
+          reason,
+          processedAt: new Date(),
+        })
+        .returning();
+
+      res.json(shiftAction);
+    } catch (error: any) {
+      console.error('Error responding to shift:', error);
+      res.status(500).json({ message: error.message || 'Failed to respond to shift' });
+    }
+  });
+
+  // Request shift switch
+  app.post('/api/shifts/:shiftId/switch', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { shiftId } = req.params;
+      const { targetEmployeeId, reason } = req.body;
+      const employeeId = req.user?.id;
+      const { shiftActions } = await import("@shared/schema");
+
+      const [switchRequest] = await db
+        .insert(shiftActions)
+        .values({
+          workspaceId,
+          shiftId,
+          employeeId: employeeId!,
+          targetEmployeeId,
+          actionType: 'switch',
+          status: 'pending_approval',
+          reason,
+        })
+        .returning();
+
+      res.json(switchRequest);
+    } catch (error: any) {
+      console.error('Error requesting shift switch:', error);
+      res.status(500).json({ message: error.message || 'Failed to request shift switch' });
+    }
+  });
+
+  // Approve/deny shift switch (manager only)
+  app.put('/api/shift-actions/:id/approve', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      const { approved, managerNotes } = req.body;
+      const managerId = req.user?.id;
+      const { shiftActions } = await import("@shared/schema");
+
+      const [updated] = await db
+        .update(shiftActions)
+        .set({
+          status: approved ? 'approved' : 'denied',
+          approvedBy: managerId,
+          approvedAt: new Date(),
+          managerNotes,
+          processedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(shiftActions.id, id),
+            eq(shiftActions.workspaceId, workspaceId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Shift action not found' });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error approving shift action:', error);
+      res.status(500).json({ message: error.message || 'Failed to approve shift action' });
+    }
+  });
+
+  // ============================================================================
+  // TIMESHEET EDIT REQUESTS - Employees cannot edit own timesheets
+  // ============================================================================
+
+  // Request timesheet edit (employee submits request)
+  app.post('/api/timesheet-edit-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { timeEntryId, requestedChanges, reason } = req.body;
+      const employeeId = req.user?.id;
+      const { timesheetEditRequests } = await import("@shared/schema");
+
+      const [request] = await db
+        .insert(timesheetEditRequests)
+        .values({
+          workspaceId,
+          timeEntryId,
+          employeeId: employeeId!,
+          requestedChanges,
+          reason,
+          status: 'pending',
+        })
+        .returning();
+
+      res.json(request);
+    } catch (error: any) {
+      console.error('Error creating edit request:', error);
+      res.status(500).json({ message: error.message || 'Failed to create edit request' });
+    }
+  });
+
+  // Get edit requests for supervisor/manager
+  app.get('/api/timesheet-edit-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { status } = req.query;
+      const { timesheetEditRequests } = await import("@shared/schema");
+
+      let query = db
+        .select()
+        .from(timesheetEditRequests)
+        .where(eq(timesheetEditRequests.workspaceId, workspaceId));
+
+      if (status) {
+        query = query.where(
+          and(
+            eq(timesheetEditRequests.workspaceId, workspaceId),
+            eq(timesheetEditRequests.status, status as string)
+          )
+        );
+      }
+
+      const requests = await query.orderBy(desc(timesheetEditRequests.createdAt));
+
+      res.json(requests);
+    } catch (error: any) {
+      console.error('Error getting edit requests:', error);
+      res.status(500).json({ message: error.message || 'Failed to get edit requests' });
+    }
+  });
+
+  // Approve/deny timesheet edit request (supervisor/manager only)
+  app.put('/api/timesheet-edit-requests/:id/review', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      const { approved, reviewNotes } = req.body;
+      const reviewerId = req.user?.id;
+      const { timesheetEditRequests } = await import("@shared/schema");
+
+      const [updated] = await db
+        .update(timesheetEditRequests)
+        .set({
+          status: approved ? 'approved' : 'denied',
+          reviewedBy: reviewerId,
+          reviewedAt: new Date(),
+          reviewNotes,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(timesheetEditRequests.id, id),
+            eq(timesheetEditRequests.workspaceId, workspaceId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Edit request not found' });
+      }
+
+      // If approved, apply the changes to the time entry
+      if (approved && updated.timeEntryId && updated.requestedChanges) {
+        try {
+          const changes = typeof updated.requestedChanges === 'string' 
+            ? JSON.parse(updated.requestedChanges) 
+            : updated.requestedChanges;
+          
+          await db
+            .update(timeEntries)
+            .set({
+              ...changes,
+              updatedAt: new Date(),
+            })
+            .where(eq(timeEntries.id, updated.timeEntryId));
+        } catch (error) {
+          console.error('Error applying timesheet changes:', error);
+        }
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error reviewing edit request:', error);
+      res.status(500).json({ message: error.message || 'Failed to review edit request' });
+    }
+  });
+
+  // ============================================================================
   // SUPPORT & CONTACT ROUTES
   // ============================================================================
   
