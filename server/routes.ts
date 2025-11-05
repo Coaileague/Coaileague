@@ -10496,13 +10496,20 @@ Return ONLY valid JSON array with this exact structure:
   app.get('/api/payroll/my-paychecks', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      const workspaceId = req.workspace!.id;
 
-      // Find employee record
-      const employee = await storage.getEmployeeByUserId(userId, workspaceId);
-      if (!employee) {
+      // Find employee record for this user
+      const allEmployees = await db
+        .select()
+        .from(employees)
+        .where(eq(employees.userId, userId));
+
+      if (!allEmployees || allEmployees.length === 0) {
         return res.status(404).json({ message: "Employee record not found" });
       }
+
+      // Use the first employee record (users typically belong to one workspace)
+      const employee = allEmployees[0];
+      const workspaceId = employee.workspaceId;
 
       const paychecks = await storage.getPayrollEntriesByEmployee(employee.id, workspaceId);
       res.json(paychecks);
