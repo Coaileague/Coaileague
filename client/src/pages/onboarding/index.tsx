@@ -12,7 +12,7 @@ import { TaxSelectionStep } from "./tax-selection-step";
 import { PayrollInfoStep } from "./payroll-info-step";
 import { WorkAvailabilityStep } from "./work-availability-step";
 import { DocumentUploadStep } from "./document-upload-step";
-import { SignatureStep } from "./signature-step";
+import { ContractsStep } from "./contracts-step";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
 type OnboardingStep = 
@@ -254,7 +254,9 @@ export default function OnboardingPage() {
                 <DocumentUploadStep application={application} onNext={nextStep} />
               )}
               {application?.currentStep === 'contract_signature' && (
-                <SignatureStep application={application} onNext={nextStep} />
+                <ContractsStep application={application} onNext={() => {
+                  updateStepMutation.mutate({ status: 'completed' });
+                }} />
               )}
             </div>
           </CardContent>
