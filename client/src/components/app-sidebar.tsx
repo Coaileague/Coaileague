@@ -19,6 +19,7 @@ import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
+import { NeuralALogo } from "@/components/neural-a-logo";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -131,8 +132,8 @@ export function AppSidebar() {
   return (
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
       <SidebarHeader className="p-4 border-b border-white/[0.08] bg-gradient-to-br from-background/80 to-muted/20">
-        <Link href="/dashboard" className="block" data-testid="link-dashboard-logo">
-          <AutoForceLogoFull size="md" className="w-full" />
+        <Link href="/dashboard" className="flex items-center justify-center" data-testid="link-dashboard-logo">
+          <NeuralALogo size="xl" showText={true} />
         </Link>
       </SidebarHeader>
       

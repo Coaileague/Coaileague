@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AutoForceLogo } from "@/components/autoforce-logo";
 import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
+import { NeuralALogo } from "@/components/neural-a-logo";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { DashboardPreview } from "@/components/dashboard-preview";
 import { TimeTrackingPreview } from "@/components/time-tracking-preview";
@@ -40,20 +41,20 @@ export default function Landing() {
       <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex h-16 sm:h-20 items-center justify-between gap-3">
-            {/* Professional Navigation Logo - Responsive with proper mobile sizing */}
+            {/* Professional Navigation Logo - Neural 'A' with text */}
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
               aria-label="Scroll to top"
               data-testid="button-logo-home"
             >
-              {/* Desktop: Show full animated logo - larger size */}
+              {/* Desktop: Show Neural A with text */}
               <div className="hidden sm:block">
-                <AutoForceLogoFull size="md" />
+                <NeuralALogo size="lg" showText={true} />
               </div>
-              {/* Mobile: Show full logo smaller */}
+              {/* Mobile: Show Neural A smaller with text */}
               <div className="block sm:hidden">
-                <AutoForceLogoFull size="sm" />
+                <NeuralALogo size="md" showText={true} />
               </div>
             </button>
 

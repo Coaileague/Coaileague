@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { AutoForceLogoFull } from "@/components/autoforce-logo-full";
+import { NeuralALogo } from "@/components/neural-a-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -88,9 +89,17 @@ export default function CustomRegister() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--cad-background))] p-4">
       <div className="w-full max-w-2xl space-y-8">
-        {/* Logo and Branding */}
-        <div className="flex justify-center">
-          <AutoForceLogoFull size="lg" />
+        {/* Logo and Branding - Neural A */}
+        <div className="flex flex-col items-center gap-4">
+          <NeuralALogo size="xl" />
+          <div className="text-center">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Auto<span className="text-primary">Force</span>™
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Autonomous Workforce Management Solutions
+            </p>
+          </div>
         </div>
 
         {/* Register Card */}
