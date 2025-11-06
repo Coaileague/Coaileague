@@ -611,6 +611,18 @@ export interface IStorage {
   // Onboarding operations
   getOrganizationRoomOnboarding(workspaceId: string): Promise<any | undefined>;
   updateOrganizationRoomOnboarding(workspaceId: string, data: any): Promise<any | undefined>;
+  
+  // ========================================================================
+  // CHAT EXPORT METHODS - SUPPORT STAFF ONLY
+  // ========================================================================
+  // Export support conversation with messages
+  getSupportConversationForExport(conversationId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date } | null>;
+  
+  // Export CommOS room with messages and members
+  getCommRoomForExport(roomId: string): Promise<{ room: any; messages: ChatMessage[]; members: any[]; exportedAt: Date } | null>;
+  
+  // Export private DM conversation with DECRYPTED messages (requires authorization)
+  getPrivateConversationForExport(conversationId: string, userId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date; auditInfo: any } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4986,28 +4998,45 @@ export class DatabaseStorage implements IStorage {
   async getCommRoomForExport(roomId: string): Promise<any | null> {
     const room = await db
       .select()
-      .from(commRooms)
-      .where(eq(commRooms.id, roomId))
+      .from(organizationChatRooms)
+      .where(eq(organizationChatRooms.id, roomId))
       .limit(1);
     
     if (room.length === 0) {
       return null;
     }
     
-    const messages = await db
+    // Get all channels for this room
+    const channels = await db
       .select()
-      .from(commRoomMessages)
-      .where(eq(commRoomMessages.roomId, roomId))
-      .orderBy(commRoomMessages.createdAt);
+      .from(organizationChatChannels)
+      .where(eq(organizationChatChannels.roomId, roomId));
     
+    // Get messages from all channels (each channel has a conversationId)
+    const allMessages: ChatMessage[] = [];
+    for (const channel of channels) {
+      if (channel.conversationId) {
+        const channelMessages = await db
+          .select()
+          .from(chatMessages)
+          .where(eq(chatMessages.conversationId, channel.conversationId))
+          .orderBy(chatMessages.createdAt);
+        allMessages.push(...channelMessages);
+      }
+    }
+    
+    // Sort all messages by timestamp
+    allMessages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    
+    // Get room members
     const members = await db
       .select()
-      .from(commRoomMembers)
-      .where(eq(commRoomMembers.roomId, roomId));
+      .from(organizationRoomMembers)
+      .where(eq(organizationRoomMembers.roomId, roomId));
     
     return {
       room: room[0],
-      messages,
+      messages: allMessages,
       members,
       exportedAt: new Date(),
     };

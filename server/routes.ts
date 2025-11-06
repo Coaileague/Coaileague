@@ -17843,8 +17843,14 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
   // Chat Export Routes for Support Staff
   // POST /api/chat-export/support-conversation/:id - Export support conversation (PDF or HTML)
-  app.post('/api/chat-export/support-conversation/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/chat-export/support-conversation/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      // Support staff authorization
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Access denied. Support staff only." });
+      }
+
       const conversationId = req.params.id;
       const { format } = req.body;
 
@@ -17856,6 +17862,21 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       if (!data) {
         return res.status(404).json({ message: "Conversation not found" });
       }
+
+      // Log export action for audit compliance
+      await storage.createAuditLog({
+        workspaceId: data.conversation.workspaceId || 'platform',
+        userId: req.user!.id,
+        action: 'chat_export_support_conversation',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: {
+          format,
+          messageCount: data.messages.length,
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          ipAddress: req.ip,
+        },
+      });
 
       const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
 
@@ -17872,6 +17893,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         metadata: {
           exportedAt: new Date(),
           exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          exportedByRole: req.user!.role,
           totalMessages: data.messages.length,
           dateRange: data.messages.length > 0 ? {
             start: new Date(data.messages[0].createdAt),
@@ -17898,8 +17920,14 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
   });
 
   // POST /api/chat-export/comm-room/:id - Export CommOS room (PDF or HTML)
-  app.post('/api/chat-export/comm-room/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/chat-export/comm-room/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      // Support staff authorization
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Access denied. Support staff only." });
+      }
+
       const roomId = req.params.id;
       const { format } = req.body;
 
@@ -17911,6 +17939,22 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       if (!data) {
         return res.status(404).json({ message: "Chat room not found" });
       }
+
+      // Log export action for audit compliance
+      await storage.createAuditLog({
+        workspaceId: data.room.workspaceId || 'platform',
+        userId: req.user!.id,
+        action: 'chat_export_comm_room',
+        targetType: 'comm_room',
+        targetId: roomId,
+        details: {
+          format,
+          messageCount: data.messages.length,
+          memberCount: data.members?.length || 0,
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          ipAddress: req.ip,
+        },
+      });
 
       const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
 
@@ -17927,12 +17971,13 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         metadata: {
           exportedAt: new Date(),
           exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          exportedByRole: req.user!.role,
           totalMessages: data.messages.length,
           dateRange: data.messages.length > 0 ? {
             start: new Date(data.messages[0].createdAt),
             end: new Date(data.messages[data.messages.length - 1].createdAt),
           } : undefined,
-          participants: data.members.map((m: any) => m.memberName).filter(Boolean),
+          participants: data.members?.map((m: any) => m.memberName).filter(Boolean) || [],
         },
       };
 
@@ -17953,8 +17998,14 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
   });
 
   // POST /api/chat-export/private-conversation/:id - Export private DM conversation (requires audit approval)
-  app.post('/api/chat-export/private-conversation/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/chat-export/private-conversation/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      // Support staff authorization (only platform_admin or support_staff can export encrypted DMs)
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Access denied. Support staff only." });
+      }
+
       const userId = req.user!.id;
       const conversationId = req.params.id;
       const { format } = req.body;
@@ -17963,16 +18014,34 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
       }
 
+      // This method handles DM decryption and audit authorization internally
       const data = await storage.getPrivateConversationForExport(conversationId, userId);
       if (!data) {
-        return res.status(404).json({ message: "Conversation not found" });
+        return res.status(404).json({ message: "Conversation not found or access denied" });
       }
+
+      // Log export action for audit compliance
+      await storage.createAuditLog({
+        workspaceId: data.conversation.workspaceId || 'platform',
+        userId: req.user!.id,
+        action: 'chat_export_private_dm',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: {
+          format,
+          messageCount: data.messages.length,
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          auditRequestId: data.auditInfo?.auditRequestId,
+          ipAddress: req.ip,
+          confidential: true,
+        },
+      });
 
       const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
 
       const exportData = {
-        title: 'Private Conversation',
-        subtitle: `Conversation ID: ${conversationId} - CONFIDENTIAL`,
+        title: 'Private Conversation - CONFIDENTIAL',
+        subtitle: `Conversation ID: ${conversationId} • Audit Request: ${data.auditInfo?.auditRequestId || 'N/A'}`,
         messages: data.messages.map((m: any) => ({
           id: m.id,
           senderId: m.senderId,
@@ -17982,13 +18051,16 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         })),
         metadata: {
           exportedAt: new Date(),
-          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim() + ' (Authorized Audit)',
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim() + ' (Authorized Investigation)',
+          exportedByRole: req.user!.role,
+          auditRequestId: data.auditInfo?.auditRequestId,
+          auditReason: data.auditInfo?.reason,
           totalMessages: data.messages.length,
           dateRange: data.messages.length > 0 ? {
             start: new Date(data.messages[0].createdAt),
             end: new Date(data.messages[data.messages.length - 1].createdAt),
           } : undefined,
-          participants: [data.conversation.customerName, data.conversation.supportAgentName].filter(Boolean),
+          participants: data.participants || [],
         },
       };
 
@@ -18004,7 +18076,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       }
     } catch (error: any) {
       console.error("Error exporting private conversation:", error);
-      res.status(403).json({ message: error.message || "Failed to export conversation" });
+      res.status(403).json({ message: error.message || "Failed to export conversation - audit approval required" });
     }
   });
 
