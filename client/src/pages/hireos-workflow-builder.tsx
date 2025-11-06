@@ -563,7 +563,7 @@ export default function HireOSWorkflowBuilder() {
           <Alert className="mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-xs">
-              <strong>Monopolistic Feature:</strong> This workflow builder eliminates the need for external HR software. Custom sequences adapt to any industry.
+              <strong>Flexible Workflow System:</strong> Create custom onboarding sequences that adapt to your industry-specific needs and compliance requirements.
             </AlertDescription>
           </Alert>
         </div>

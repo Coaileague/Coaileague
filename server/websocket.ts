@@ -98,6 +98,24 @@ type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPay
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to WorkforceOS HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
 
+// GLOBAL CONNECTION TRACKING for Platform Stats
+const globalConnections = {
+  allUsers: new Map<string, WebSocketClient>(), // userId -> WebSocket
+  staffUsers: new Set<string>(), // staff user IDs
+  subscriberUsers: new Set<string>(), // subscriber user IDs
+  totalConnections: 0
+};
+
+// Export function to get live connection stats
+export function getLiveConnectionStats() {
+  return {
+    totalConnections: globalConnections.totalConnections,
+    chatUsers: globalConnections.subscriberUsers.size,
+    chatStaff: globalConnections.staffUsers.size,
+    allActiveUsers: globalConnections.allUsers.size
+  };
+}
+
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
     server,
@@ -221,6 +239,16 @@ export function setupWebSocket(server: Server) {
               conversationClients.set(payload.conversationId, new Set());
             }
             conversationClients.get(payload.conversationId)!.add(ws);
+
+            // GLOBAL TRACKING: Add to platform-wide stats
+            globalConnections.totalConnections++;
+            globalConnections.allUsers.set(payload.userId, ws);
+            if (userType === 'staff') {
+              globalConnections.staffUsers.add(payload.userId);
+            } else if (userType === 'org_user' || userType === 'guest') {
+              // Track non-staff users as subscribers
+              globalConnections.subscriberUsers.add(payload.userId);
+            }
 
             // Send conversation history
             const messages = await storage.getChatMessagesByConversation(payload.conversationId);
@@ -2711,6 +2739,14 @@ export function setupWebSocket(server: Server) {
       // Clean up heartbeat interval
       if (ws.pingInterval) {
         clearInterval(ws.pingInterval);
+      }
+
+      // GLOBAL TRACKING CLEANUP: Remove from platform-wide stats
+      if (ws.userId) {
+        globalConnections.totalConnections = Math.max(0, globalConnections.totalConnections - 1);
+        globalConnections.allUsers.delete(ws.userId);
+        globalConnections.staffUsers.delete(ws.userId);
+        globalConnections.subscriberUsers.delete(ws.userId);
       }
       
       // Send leave announcement for main chatroom

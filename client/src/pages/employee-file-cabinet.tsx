@@ -348,7 +348,7 @@ export default function EmployeeFileCabinet() {
         <Alert>
           <Shield className="h-4 w-4" />
           <AlertDescription>
-            <strong>Monopolistic Feature:</strong> All documents permanently stored with full audit trail. Locked documents cannot be tampered with. 7-year retention for compliance.
+            <strong>Compliance & Security:</strong> All documents permanently stored with full audit trail. Locked documents cannot be tampered with. 7-year retention for compliance requirements.
           </AlertDescription>
         </Alert>
       </div>

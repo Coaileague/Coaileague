@@ -9,103 +9,81 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * Polished AutoForce™ AF Logo Component
- * Features sharp, tech-style "A" and "F" with professional animations
- * Based on the AF Core Scan design
+ * Simplified AutoForce™ AF Logo Component
+ * Clean lightning bolt design for emergency services branding
+ * Features circular badge with emerald green theme
  */
 export function AutoForceAFLogo({
   size = "md",
   variant = "icon",
-  animated = true,
+  animated = false,
   showF = false,
   className
 }: AutoForceAFLogoProps) {
   
-  // Size mappings
-  const iconSizes = {
+  // Size mappings for the circular badge
+  const containerSizes = {
     sm: "w-12 h-12",
-    md: "w-16 h-16",
-    lg: "w-24 h-24",
-    xl: "w-32 h-32",
+    md: "w-20 h-20",
+    lg: "w-28 h-28",
+    xl: "w-36 h-36",
     hero: "w-48 h-48"
   };
 
-  const containerSizes = {
-    sm: "w-20 h-20",
-    md: "w-24 h-24",
-    lg: "w-32 h-32",
-    xl: "w-44 h-44",
-    hero: "w-64 h-64"
+  const textSizes = {
+    sm: "text-[8px]",
+    md: "text-xs",
+    lg: "text-base",
+    xl: "text-xl",
+    hero: "text-2xl"
   };
 
-  // Icon only - just the AF symbol
+  // Icon only - circular badge with lightning bolt
   if (variant === "icon") {
     return (
       <div 
         className={cn(
-          "relative flex items-center justify-center",
+          "relative flex flex-col items-center justify-center rounded-full shrink-0",
           containerSizes[size],
           className
         )}
+        style={{
+          background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #6ee7b7 100%)',
+          boxShadow: animated ? '0 0 20px rgba(16, 185, 129, 0.4)' : '0 4px 10px rgba(0, 0, 0, 0.1)'
+        }}
         data-testid="autoforce-af-logo-icon"
       >
-        {/* Outer ring spinner */}
-        {animated && (
-          <div 
-            className="absolute inset-1 rounded-full border-2 border-transparent border-t-purple-500/80 border-r-purple-500/80 animate-spin-slow"
-            style={{ filter: 'drop-shadow(0 0 5px rgba(155, 93, 229, 0.5))' }}
-          />
-        )}
-
-        {/* Glow effects */}
-        {animated && (
-          <div className="absolute inset-0 bg-cyan-500/10 blur-xl rounded-full animate-pulse-slow" />
-        )}
-
-        {/* AF Symbol */}
-        <div className="relative z-10 flex items-center justify-center">
-          {/* Sharp "A" SVG */}
-          <svg 
-            className={cn(
-              iconSizes[size],
-              animated && "animate-af-spin"
-            )}
-            viewBox="0 0 100 100" 
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ 
-              transformOrigin: 'center',
-              filter: 'drop-shadow(0 0 5px rgb(245, 122, 67)) drop-shadow(0 0 10px rgba(245, 122, 67, 0.8))'
-            }}
-          >
-            {/* Polished tech-style A */}
-            <path 
-              d="M 50 10 L 10 90 L 30 90 L 38 70 L 62 70 L 70 90 L 90 90 L 50 10 Z M 43 55 L 50 35 L 57 55 Z" 
-              fill="#F57A43"
-              className="transition-all duration-300"
-            />
-          </svg>
-
-          {/* "F" - appears when showF is true */}
-          {showF && (
-            <span
-              className={cn(
-                "absolute font-bold transition-all duration-500",
-                size === "sm" && "text-3xl translate-x-6",
-                size === "md" && "text-4xl translate-x-8",
-                size === "lg" && "text-5xl translate-x-12",
-                size === "xl" && "text-6xl translate-x-16",
-                size === "hero" && "text-8xl translate-x-24",
-                showF ? "opacity-100 scale-100" : "opacity-0 scale-50"
-              )}
-              style={{
-                color: '#00DFFF',
-                textShadow: '0 0 5px #00DFFF, 0 0 15px rgba(0, 223, 255, 0.8), 0 0 25px rgba(0, 223, 255, 0.3)',
-                fontFamily: 'Teko, sans-serif'
-              }}
-            >
-              F
-            </span>
+        {/* Lightning Bolt SVG */}
+        <svg 
+          className={cn(
+            "w-1/2 h-1/2",
+            animated && "animate-pulse"
           )}
+          viewBox="0 0 24 24" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path 
+            d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" 
+            fill="white"
+            stroke="white"
+            strokeWidth="1"
+            strokeLinejoin="round"
+          />
+        </svg>
+
+        {/* "AF" Text */}
+        <div 
+          className={cn(
+            "font-bold text-white",
+            textSizes[size]
+          )}
+          style={{
+            letterSpacing: '0.05em',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          AF
         </div>
       </div>
     );
@@ -124,7 +102,7 @@ export function AutoForceAFLogo({
         <span 
           className="text-2xl sm:text-3xl font-bold tracking-tight"
           style={{
-            background: 'linear-gradient(90deg, #00DFFF 0%, #9B5DE5 100%)',
+            background: 'linear-gradient(90deg, #059669 0%, #10b981 50%, #6ee7b7 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
@@ -154,7 +132,7 @@ export function AutoForceAFLogo({
           <span className="text-foreground">AUTO</span>
           <span 
             style={{
-              background: 'linear-gradient(90deg, #00DFFF 0%, #9B5DE5 100%)',
+              background: 'linear-gradient(90deg, #059669 0%, #10b981 50%, #6ee7b7 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
@@ -165,7 +143,7 @@ export function AutoForceAFLogo({
           <span className="text-xs align-super text-foreground">™</span>
         </div>
         <div className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide mt-0.5">
-          Autonomous Workforce Management
+          Autonomous Workforce Management Solutions
         </div>
       </div>
     </div>

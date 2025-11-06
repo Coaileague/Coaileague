@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FORTUNE 500 LIGHT MODE - Power & Authority (Charcoal + Platinum + Crimson) */
+/* EMERGENCY SERVICES LIGHT MODE - Trust & Reliability (Charcoal + Platinum + Emergency Green) */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -11,8 +11,8 @@
   --opaque-button-border-intensity: -8; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(31, 41, 55, .03);  /* Charcoal tint for elevation */
-  --elevate-2: rgba(31, 41, 55, .08);
+  --elevate-1: rgba(5, 150, 105, .03);  /* Emerald tint for elevation */
+  --elevate-2: rgba(5, 150, 105, .08);
 
   /* Fortune 500 Platinum Foundation */
   --background: 220 20% 98%;           /* Platinum 50 - Page background */
@@ -34,7 +34,7 @@
 
   --sidebar-border: 216 15% 25%;       /* Charcoal border */
 
-  --sidebar-primary: 0 84% 56%;        /* Crimson - Active items */
+  --sidebar-primary: 160 84% 39%;      /* Emergency Green - Active items */
 
   --sidebar-primary-foreground: 220 20% 98%;
 
@@ -42,7 +42,7 @@
 
   --sidebar-accent-foreground: 220 20% 98%;
 
-  --sidebar-ring: 0 84% 56%;           /* Crimson focus ring */
+  --sidebar-ring: 160 84% 39%;         /* Emergency Green focus ring */
 
   /* Popovers */
   --popover: 220 15% 95%;              /* Platinum 100 */
@@ -51,10 +51,10 @@
 
   --popover-border: 220 12% 88%;       /* Platinum 200 */
 
-  /* Primary - Crimson Authority */
-  --primary: 0 84% 56%;                /* Crimson - CTAs */
+  /* Primary - Emergency Green */
+  --primary: 160 84% 39%;              /* Emergency Green - CTAs */
 
-  --primary-foreground: 0 0% 100%;     /* White text on crimson */
+  --primary-foreground: 0 0% 100%;     /* White text on green */
 
   /* Secondary */
   --secondary: 220 12% 88%;            /* Platinum 200 */
@@ -67,9 +67,9 @@
   --muted-foreground: 220 10% 40%;     /* Platinum 700 */
 
   /* Accent */
-  --accent: 0 85% 94%;                 /* Light Crimson - Light accent */
+  --accent: 158 64% 92%;               /* Light Emerald - Light accent */
 
-  --accent-foreground: 0 77% 42%;      /* Dark Crimson */
+  --accent-foreground: 160 77% 25%;    /* Dark Emerald */
 
   /* Destructive */
   --destructive: 0 70% 50%;            /* Error red */
@@ -78,11 +78,11 @@
 
   /* Input & Ring */
   --input: 220 12% 88%;                /* Platinum 200 */
-  --ring: 0 84% 56%;                   /* Crimson focus ring */
+  --ring: 160 84% 39%;                 /* Emergency Green focus ring */
   
-  /* Charts - Professional palette */
+  /* Charts - Emergency Services palette */
   --chart-1: 216 19% 17%;              /* Charcoal */
-  --chart-2: 0 84% 56%;                /* Crimson */
+  --chart-2: 160 84% 39%;              /* Emergency Green */
   --chart-3: 38 95% 55%;               /* Warning */
   --chart-4: 210 85% 50%;              /* Info */
   --chart-5: 0 70% 50%;                /* Error */
@@ -160,8 +160,8 @@
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(220, 38, 38, 0.05);  /* Crimson tint for dark mode */
-  --elevate-2: rgba(220, 38, 38, 0.15);
+  --elevate-1: rgba(16, 185, 129, 0.05);  /* Emerald tint for dark mode */
+  --elevate-2: rgba(16, 185, 129, 0.15);
 
   /* Fortune 500 Dark Mode - Power & Authority (Deep Charcoal) */
   --background: 216 19% 10%;           /* Deep charcoal background */
@@ -177,19 +177,19 @@
   --sidebar: 216 19% 12%;              /* Slightly darker charcoal */
   --sidebar-foreground: 220 20% 98%;
   --sidebar-border: 216 15% 25%;
-  --sidebar-primary: 0 84% 60%;        /* Crimson (brighter for dark) */
+  --sidebar-primary: 160 84% 45%;      /* Emergency Green (brighter for dark) */
   --sidebar-primary-foreground: 220 20% 98%;
   --sidebar-accent: 216 19% 18%;       /* Hover state */
   --sidebar-accent-foreground: 220 20% 98%;
-  --sidebar-ring: 0 84% 60%;
+  --sidebar-ring: 160 84% 45%;
   
   /* Popovers */
   --popover: 216 19% 14%;
   --popover-foreground: 220 20% 98%;
   --popover-border: 216 15% 22%;
   
-  /* Primary - Crimson (slightly brighter in dark mode) */
-  --primary: 0 84% 60%;                /* Crimson - brighter for dark mode */
+  /* Primary - Emergency Green (slightly brighter in dark mode) */
+  --primary: 160 84% 45%;              /* Emergency Green - brighter for dark mode */
   --primary-foreground: 0 0% 100%;
   
   /* Secondary */
@@ -201,8 +201,8 @@
   --muted-foreground: 220 10% 65%;     /* Platinum 600 */
   
   /* Accent */
-  --accent: 0 75% 25%;                 /* Dark Crimson */
-  --accent-foreground: 0 75% 85%;      /* Light Crimson */
+  --accent: 160 75% 20%;               /* Dark Emerald */
+  --accent-foreground: 158 64% 72%;    /* Light Emerald */
   
   /* Destructive */
   --destructive: 0 70% 55%;
@@ -210,10 +210,10 @@
   
   /* Input & Ring */
   --input: 216 15% 25%;
-  --ring: 0 84% 60%;                   /* Crimson focus ring */
+  --ring: 160 84% 45%;                 /* Emergency Green focus ring */
   
-  /* Charts - Professional dark mode palette */
-  --chart-1: 0 84% 60%;                /* Crimson */
+  /* Charts - Emergency Services dark mode palette */
+  --chart-1: 160 84% 45%;              /* Emergency Green */
   --chart-2: 210 85% 55%;              /* Bright blue */
   --chart-3: 38 95% 60%;               /* Warning */
   --chart-4: 271 70% 60%;              /* Purple */

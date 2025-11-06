@@ -137,11 +137,11 @@ export default function EmployeeProfile() {
         </p>
       </div>
 
-      {/* Monopolistic Feature Alert */}
+      {/* Security & Compliance Notice */}
       <Alert className="mb-6">
         <Shield className="h-4 w-4" />
         <AlertDescription>
-          <strong>Monopolistic Feature:</strong> Update contact info anytime. Legal documents (I-9, W-4, signatures) are permanently locked for compliance.
+          <strong>Document Security:</strong> Update contact info anytime. Legal documents (I-9, W-4, signatures) are permanently locked for compliance and audit trail purposes.
         </AlertDescription>
       </Alert>
 
