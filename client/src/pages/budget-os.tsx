@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,52 +48,17 @@ export default function BudgetOS() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
 
-  // Mock budgets data
-  const [budgets] = useState<Budget[]>([
-    {
-      id: "1",
-      name: "2025 Q1 Operating Budget",
-      department: "Operations",
-      period: "Q1 2025",
-      totalAmount: 500000,
-      spent: 325000,
-      remaining: 175000,
-      status: "on_track",
-      owner: "John Doe",
-    },
-    {
-      id: "2",
-      name: "Marketing Campaign Budget",
-      department: "Marketing",
-      period: "Q1 2025",
-      totalAmount: 150000,
-      spent: 142000,
-      remaining: 8000,
-      status: "warning",
-      owner: "Sarah Smith",
-    },
-    {
-      id: "3",
-      name: "IT Infrastructure",
-      department: "Technology",
-      period: "FY 2025",
-      totalAmount: 300000,
-      spent: 315000,
-      remaining: -15000,
-      status: "over_budget",
-      owner: "Mike Johnson",
-    },
-  ]);
+  // Fetch budgets from real API
+  const { data: budgets = [], isLoading: budgetsLoading } = useQuery<Budget[]>({
+    queryKey: ['/api/budgets'],
+    enabled: !authLoading,
+  });
 
-  // Mock budget line items
-  const [budgetLines] = useState<BudgetLine[]>([
-    { id: "1", category: "Salaries & Wages", budgeted: 250000, actual: 248000, variance: 2000, variancePercent: 0.8 },
-    { id: "2", category: "Marketing & Advertising", budgeted: 50000, actual: 55000, variance: -5000, variancePercent: -10 },
-    { id: "3", category: "Office Supplies", budgeted: 15000, actual: 12000, variance: 3000, variancePercent: 20 },
-    { id: "4", category: "Software & Tools", budgeted: 40000, actual: 38000, variance: 2000, variancePercent: 5 },
-    { id: "5", category: "Travel & Entertainment", budgeted: 25000, actual: 28000, variance: -3000, variancePercent: -12 },
-    { id: "6", category: "Professional Services", budgeted: 60000, actual: 59000, variance: 1000, variancePercent: 1.7 },
-  ]);
+  // Fetch budget line items for selected budget
+  const { data: budgetLines = [], isLoading: linesLoading } = useQuery<BudgetLine[]>({
+    queryKey: ['/api/budgets', selectedBudget, 'line-items'],
+    enabled: !!selectedBudget,
+  });
 
   const [newBudget, setNewBudget] = useState({
     name: "",
@@ -100,16 +67,49 @@ export default function BudgetOS() {
     period: "Q1 2025",
   });
 
+  // Create budget mutation
+  const createBudgetMutation = useMutation({
+    mutationFn: async (data: typeof newBudget) => {
+      const response = await fetch('/api/budgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create budget');
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/budgets'] });
+      toast({
+        title: "Budget created",
+        description: "New budget has been created successfully",
+      });
+      setShowCreateDialog(false);
+      setNewBudget({ name: "", department: "", totalAmount: 0, period: "Q1 2025" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create budget",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateBudget = () => {
-    toast({
-      title: "Budget created",
-      description: "New budget has been created successfully",
-    });
-    setShowCreateDialog(false);
-    setNewBudget({ name: "", department: "", totalAmount: 0, period: "Q1 2025" });
+    if (!newBudget.name || !newBudget.department || newBudget.totalAmount <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill all fields with valid data",
+        variant: "destructive",
+      });
+      return;
+    }
+    createBudgetMutation.mutate(newBudget);
   };
 
-  if (authLoading) {
+  if (authLoading || budgetsLoading) {
     return <MobileLoading fullScreen message="Loading BudgetOS™..." />;
   }
 

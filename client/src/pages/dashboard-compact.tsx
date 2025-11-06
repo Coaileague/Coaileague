@@ -3,10 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Users, MapPin, Tag, Settings, DollarSign, Briefcase, Clock, CheckCircle, Square, Bell, FileText,
-  Calendar, BarChart3, GraduationCap, Receipt, UserPlus, TrendingUp, Grid3x3
+  Calendar, BarChart3, GraduationCap, Receipt, UserPlus, TrendingUp, Grid3x3, AlertTriangle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,9 +39,29 @@ export default function DashboardCompact() {
     enabled: isAuthenticated,
   });
 
-  const { data: timeEntries, isRefetching: timeEntriesRefetching } = useQuery<any[]>({
+  const { data: timeEntries, isRefetching: timeEntriesRefetching} = useQuery<any[]>({
     queryKey: ['/api/time-entries'],
     enabled: isAuthenticated,
+  });
+
+  const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
+  const workspaceRole = currentEmployee?.workspaceRole || 'employee';
+  const isManager = ['owner', 'manager'].includes(workspaceRole);
+
+  // Manager-only queries for approval widgets
+  const { data: pendingExpenses = [] } = useQuery<any[]>({
+    queryKey: ['/api/expenses'],
+    enabled: isAuthenticated && isManager,
+  });
+
+  const { data: expiringI9s = [] } = useQuery<any[]>({
+    queryKey: ['/api/i9-records/expiring'],
+    enabled: isAuthenticated && isManager,
+  });
+
+  const { data: policies = [] } = useQuery<any[]>({
+    queryKey: ['/api/policies'],
+    enabled: isAuthenticated && isManager,
   });
 
   // Show hex grid loader when any data is refetching
@@ -56,9 +76,6 @@ export default function DashboardCompact() {
       return () => clearTimeout(timer);
     }
   }, [statsRefetching, employeesRefetching, clientsRefetching, timeEntriesRefetching]);
-
-  const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
-  const workspaceRole = currentEmployee?.workspaceRole || 'employee';
 
   useEffect(() => {
     showTransition({
@@ -120,74 +137,6 @@ export default function DashboardCompact() {
   const activeTimeEntries = timeEntries?.filter((entry: any) => entry.status === 'active') || [];
   const clockedInCount = activeTimeEntries.length;
 
-  // Stat cards - Sling style
-  const statCards = [
-    {
-      icon: Users,
-      label: "EMPLOYEES",
-      value: totalEmployees,
-      color: "text-blue-500",
-      link: "/employees",
-      testid: "stat-employees"
-    },
-    {
-      icon: Briefcase,
-      label: "POSITIONS",
-      value: totalPositions,
-      color: "text-emerald-500",
-      link: "/employees",
-      testid: "stat-positions"
-    },
-    {
-      icon: MapPin,
-      label: "LOCATIONS",
-      value: totalLocations,
-      color: "text-purple-500",
-      link: "/clients",
-      testid: "stat-locations"
-    },
-    {
-      icon: Users,
-      label: "GROUPS",
-      value: totalGroups,
-      color: "text-orange-500",
-      link: "/clients",
-      testid: "stat-groups"
-    },
-    {
-      icon: Tag,
-      label: "TAGS",
-      value: totalTags,
-      color: "text-pink-500",
-      link: "/employees",
-      testid: "stat-tags"
-    },
-    {
-      icon: Bell,
-      label: "ANNOUNCEMENTS",
-      value: 0,
-      color: "text-yellow-500",
-      link: "/communication",
-      testid: "stat-announcements"
-    },
-    {
-      icon: DollarSign,
-      label: "LABOR COST",
-      value: `$${laborCost.toFixed(2)}`,
-      color: "text-green-500",
-      link: "/payroll",
-      testid: "stat-labor-cost"
-    },
-    {
-      icon: Settings,
-      label: "SETTINGS",
-      value: "",
-      color: "text-gray-500",
-      link: "/settings",
-      testid: "stat-settings"
-    }
-  ];
-
   // Sample notifications
   const notifications = [
     {
@@ -210,17 +159,28 @@ export default function DashboardCompact() {
     }))
   ];
 
-  // Quick Access Menu Items
-  const quickAccessFeatures = [
-    { icon: Calendar, label: "Schedule", link: "/schedule", color: "text-blue-500", testid: "quick-schedule" },
-    { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-emerald-500", testid: "quick-timeclock" },
-    { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-purple-500", testid: "quick-invoices" },
-    { icon: DollarSign, label: "Payroll", link: "/payroll-dashboard", color: "text-green-500", testid: "quick-payroll" },
-    { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-orange-500", testid: "quick-hiring" },
-    { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-indigo-500", testid: "quick-training" },
-    { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-pink-500", testid: "quick-analytics" },
-    { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-gray-500", testid: "quick-all" }
-  ];
+  // Role-based stat cards
+  const getStatCardsForRole = () => {
+    const isManager = ['owner', 'manager'].includes(workspaceRole);
+    
+    if (isManager) {
+      return [
+        { icon: Users, label: "EMPLOYEES", value: totalEmployees, color: "text-blue-500", link: "/employees", testid: "stat-employees" },
+        { icon: Briefcase, label: "CLIENTS", value: totalClients, color: "text-emerald-500", link: "/clients", testid: "stat-clients" },
+        { icon: DollarSign, label: "LABOR COST", value: `$${laborCost.toFixed(2)}`, color: "text-green-500", link: "/payroll", testid: "stat-labor-cost" },
+        { icon: Calendar, label: "CLOCKED IN", value: clockedInCount, color: "text-orange-500", link: "/time-tracking", testid: "stat-clocked-in" }
+      ];
+    } else {
+      return [
+        { icon: Calendar, label: "MY SHIFTS", value: (stats as any)?.upcomingShifts || 0, color: "text-blue-500", link: "/schedule", testid: "stat-my-shifts" },
+        { icon: Clock, label: "HOURS THIS WEEK", value: "0", color: "text-emerald-500", link: "/time-tracking", testid: "stat-hours" },
+        { icon: GraduationCap, label: "TRAINING", value: "0", color: "text-indigo-500", link: "/training", testid: "stat-training" },
+        { icon: Receipt, label: "EXPENSES", value: "0", color: "text-purple-500", link: "/expenses", testid: "stat-expenses" }
+      ];
+    }
+  };
+
+  const roleStatCards = getStatCardsForRole();
 
   const dashboardContent = (
     <div className="min-h-screen bg-background">
@@ -254,41 +214,17 @@ export default function DashboardCompact() {
         </div>
       )}
 
-      {/* Desktop: Quick Access Menu */}
-      <div className="hidden md:block border-b bg-muted/30 px-4 sm:px-6 py-4 sm:py-5">
-        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-          <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
-          <h2 className="text-sm sm:text-base font-semibold uppercase tracking-wide">Quick Access</h2>
-        </div>
-        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 mobile-scroll">
-          {quickAccessFeatures.map((feature) => (
-            <Button
-              key={feature.link}
-              variant="outline"
-              size="sm"
-              className="flex-col h-auto min-h-[72px] sm:min-h-[80px] min-w-[80px] sm:min-w-[90px] px-3 sm:px-4 py-3 sm:py-4 gap-2 hover-elevate whitespace-nowrap"
-              asChild
-            >
-              <Link href={feature.link} data-testid={feature.testid}>
-                <feature.icon className={`h-6 w-6 sm:h-7 sm:w-7 ${feature.color} shrink-0`} />
-                <span className="text-xs sm:text-sm font-medium leading-tight">{feature.label}</span>
-              </Link>
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Desktop Only: Stat Cards Grid */}
-      <div className="hidden md:grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 sm:gap-px bg-border p-1 sm:p-0">
-        {statCards.map((stat, index) => (
-          <Link key={index} href={stat.link} className="block touch-target" data-testid={`link-${stat.testid}`}>
-            <Card className="rounded-lg sm:rounded-none border sm:border-0 hover-elevate cursor-pointer h-full transition-all" data-testid={stat.testid}>
-              <CardContent className="p-5 sm:p-4 lg:p-6 text-center flex flex-col items-center justify-center h-full min-h-[120px] sm:min-h-[110px]">
-                <stat.icon className={`h-8 w-8 sm:h-8 sm:w-8 lg:h-10 lg:w-10 mb-2 sm:mb-2 ${stat.color} shrink-0`} />
-                <p className="text-xs sm:text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-1 break-anywhere">
+      {/* Role-Based Stats Grid - Cleaner, focused */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 sm:px-6 py-6">
+        {roleStatCards.map((stat, index) => (
+          <Link key={index} href={stat.link} className="block" data-testid={`link-${stat.testid}`}>
+            <Card className="hover-elevate cursor-pointer h-full transition-all">
+              <CardContent className="p-6 text-center flex flex-col items-center justify-center">
+                <stat.icon className={`h-10 w-10 mb-3 ${stat.color}`} />
+                <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wide mb-2">
                   {stat.label}
                 </p>
-                <p className="text-lg sm:text-lg lg:text-2xl font-bold break-anywhere">
+                <p className="text-2xl font-bold">
                   {stat.value}
                 </p>
               </CardContent>
@@ -310,6 +246,69 @@ export default function DashboardCompact() {
               <span className="text-xl">&gt;</span>
             </Link>
           </Button>
+        </div>
+      )}
+
+      {/* Manager Approval Widgets */}
+      {isManager && (pendingExpenses.filter((e: any) => e.status === 'pending').length > 0 || expiringI9s.length > 0) && (
+        <div className="px-4 sm:px-6 py-4">
+          <h2 className="text-lg font-semibold mb-4">Pending Approvals</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pendingExpenses.filter((e: any) => e.status === 'pending').length > 0 && (
+              <Link href="/expense-approvals">
+                <Card className="hover-elevate cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-purple-500" />
+                        Expense Approvals
+                      </span>
+                      <Badge variant="destructive">{pendingExpenses.filter((e: any) => e.status === 'pending').length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">Review and approve employee expenses</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
+            {expiringI9s.length > 0 && (
+              <Link href="/i9-compliance">
+                <Card className="hover-elevate cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-500" />
+                        I-9 Expiring
+                      </span>
+                      <Badge variant="destructive">{expiringI9s.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">Work authorizations expiring soon</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
+            {policies.filter((p: any) => p.status === 'draft').length > 0 && (
+              <Link href="/policies">
+                <Card className="hover-elevate cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-500" />
+                        Draft Policies
+                      </span>
+                      <Badge>{policies.filter((p: any) => p.status === 'draft').length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">Policies ready to publish</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
