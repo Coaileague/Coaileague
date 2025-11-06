@@ -7167,6 +7167,189 @@ export type InsertOrganizationOnboarding = z.infer<typeof insertOrganizationOnbo
 export type OrganizationOnboarding = typeof organizationOnboarding.$inferSelect;
 
 // ============================================================================
+// COMMOS - ORGANIZATION CHAT ROOMS & CHANNELS
+// ============================================================================
+
+// Room status enum
+export const roomStatusEnum = pgEnum('room_status', [
+  'active',      // Room is open and operational
+  'suspended',   // Room is frozen/locked by support staff
+  'closed',      // Room is permanently closed
+]);
+
+// Room member role enum
+export const roomMemberRoleEnum = pgEnum('room_member_role', [
+  'owner',       // Organization creator - full control
+  'admin',       // Leadership/management - can manage room
+  'member',      // Regular employee/user
+  'guest',       // End customer - limited access
+]);
+
+// Organization Chat Rooms - Main communication channels for organizations
+export const organizationChatRooms = pgTable("organization_chat_rooms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Room identification
+  roomName: varchar("room_name").notNull(), // "Customer Support", "Main Office", etc.
+  roomSlug: varchar("room_slug").notNull(), // URL-friendly: "customer-support", "main-office"
+  description: text("description"),
+  
+  // Room status
+  status: roomStatusEnum("status").default("active"),
+  suspendedReason: text("suspended_reason"),
+  suspendedAt: timestamp("suspended_at"),
+  suspendedBy: varchar("suspended_by").references(() => users.id), // Support staff who suspended
+  
+  // Associated chat conversation (links to existing chat system)
+  conversationId: varchar("conversation_id").references(() => chatConversations.id, { onDelete: 'set null' }),
+  
+  // Onboarding status
+  isOnboarded: boolean("is_onboarded").default(false),
+  onboardedAt: timestamp("onboarded_at"),
+  onboardedBy: varchar("onboarded_by").references(() => users.id),
+  
+  // Settings
+  allowGuests: boolean("allow_guests").default(true), // Allow end customers
+  requireApproval: boolean("require_approval").default(false), // Require approval to join
+  maxMembers: integer("max_members").default(100),
+  
+  // Metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("org_chat_rooms_workspace_idx").on(table.workspaceId),
+  statusIdx: index("org_chat_rooms_status_idx").on(table.status),
+  slugIdx: uniqueIndex("org_chat_rooms_slug_idx").on(table.workspaceId, table.roomSlug),
+}));
+
+export const insertOrganizationChatRoomSchema = createInsertSchema(organizationChatRooms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOrganizationChatRoom = z.infer<typeof insertOrganizationChatRoomSchema>;
+export type OrganizationChatRoom = typeof organizationChatRooms.$inferSelect;
+
+// Organization Chat Channels - Sub-channels for meetings, departments, etc.
+export const organizationChatChannels = pgTable("organization_chat_channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomId: varchar("room_id").notNull().references(() => organizationChatRooms.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Channel identification
+  channelName: varchar("channel_name").notNull(), // "Weekly Meetings", "IT Department", etc.
+  channelSlug: varchar("channel_slug").notNull(), // "weekly-meetings", "it-department"
+  description: text("description"),
+  channelType: varchar("channel_type").default("general"), // "general", "meeting", "department", "project"
+  
+  // Associated chat conversation
+  conversationId: varchar("conversation_id").references(() => chatConversations.id, { onDelete: 'set null' }),
+  
+  // Settings
+  isPrivate: boolean("is_private").default(false), // Private channels require invitation
+  allowGuests: boolean("allow_guests").default(false), // Override room setting
+  
+  // Metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  roomIdx: index("org_chat_channels_room_idx").on(table.roomId),
+  workspaceIdx: index("org_chat_channels_workspace_idx").on(table.workspaceId),
+  slugIdx: uniqueIndex("org_chat_channels_slug_idx").on(table.roomId, table.channelSlug),
+}));
+
+export const insertOrganizationChatChannelSchema = createInsertSchema(organizationChatChannels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOrganizationChatChannel = z.infer<typeof insertOrganizationChatChannelSchema>;
+export type OrganizationChatChannel = typeof organizationChatChannels.$inferSelect;
+
+// Organization Room Members - Access control for rooms and channels
+export const organizationRoomMembers = pgTable("organization_room_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomId: varchar("room_id").notNull().references(() => organizationChatRooms.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Role and permissions
+  role: roomMemberRoleEnum("role").default("member"),
+  canInvite: boolean("can_invite").default(false),
+  canManage: boolean("can_manage").default(false), // Can edit room settings
+  
+  // Join tracking
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastActiveAt: timestamp("last_active_at"),
+  
+  // Approval workflow
+  isApproved: boolean("is_approved").default(true), // Auto-approved unless room requires approval
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  roomIdx: index("org_room_members_room_idx").on(table.roomId),
+  userIdx: index("org_room_members_user_idx").on(table.userId),
+  workspaceIdx: index("org_room_members_workspace_idx").on(table.workspaceId),
+  uniqueMember: uniqueIndex("org_room_members_unique_idx").on(table.roomId, table.userId),
+}));
+
+export const insertOrganizationRoomMemberSchema = createInsertSchema(organizationRoomMembers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOrganizationRoomMember = z.infer<typeof insertOrganizationRoomMemberSchema>;
+export type OrganizationRoomMember = typeof organizationRoomMembers.$inferSelect;
+
+// Organization Room Onboarding - Tracks chat room onboarding flow
+export const organizationRoomOnboarding = pgTable("organization_room_onboarding", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Progress tracking
+  currentStep: integer("current_step").default(1),
+  totalSteps: integer("total_steps").default(4),
+  isCompleted: boolean("is_completed").default(false),
+  
+  // Step completion
+  step1RoomName: boolean("step1_room_name").default(false), // Name the room
+  step2Channels: boolean("step2_channels").default(false),  // Add sub-channels
+  step3Members: boolean("step3_members").default(false),    // Assign roles
+  step4Settings: boolean("step4_settings").default(false),  // Configure settings
+  
+  // Onboarding data (collected during flow)
+  roomNameInput: varchar("room_name_input"),
+  channelsInput: text("channels_input").array().default(sql`ARRAY[]::text[]`), // Array of channel names
+  guestAccessEnabled: boolean("guest_access_enabled").default(true),
+  
+  // Completion
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("org_room_onboarding_workspace_idx").on(table.workspaceId),
+  completedIdx: index("org_room_onboarding_completed_idx").on(table.isCompleted),
+}));
+
+export const insertOrganizationRoomOnboardingSchema = createInsertSchema(organizationRoomOnboarding).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOrganizationRoomOnboarding = z.infer<typeof insertOrganizationRoomOnboardingSchema>;
+export type OrganizationRoomOnboarding = typeof organizationRoomOnboarding.$inferSelect;
+
+// ============================================================================
 // CUSTOMER PAYMENT INFORMATION - END CUSTOMER BILLING
 // ============================================================================
 
