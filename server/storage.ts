@@ -35,6 +35,9 @@ import {
   platformRoles,
   chatConversations,
   chatMessages,
+  dmAuditRequests,
+  dmAccessLogs,
+  conversationEncryptionKeys,
   aiUsageLogs,
   customForms,
   customFormSubmissions,
@@ -4503,8 +4506,15 @@ export class DatabaseStorage implements IStorage {
     if (conversation.length === 0) {
       return [];
     }
+
+    const conv = conversation[0];
     
-    return await db
+    // Verify user is a participant
+    if (conv.customerId !== userId && conv.supportAgentId !== userId) {
+      throw new Error('Unauthorized: User is not a participant in this conversation');
+    }
+    
+    const messages = await db
       .select()
       .from(chatMessages)
       .where(
@@ -4514,6 +4524,110 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(chatMessages.createdAt);
+    
+    // Decrypt messages if conversation is encrypted
+    if (conv.isEncrypted && conv.encryptionKeyId) {
+      const { decryptMessage } = await import('./encryption.js');
+      
+      const decryptedMessages = await Promise.all(messages.map(async (msg) => {
+        if (msg.isEncrypted && msg.encryptionIv) {
+          try {
+            const decrypted = await decryptMessage(msg.message, msg.encryptionIv, conv.encryptionKeyId);
+            return { ...msg, message: decrypted };
+          } catch (error) {
+            console.error('Failed to decrypt message:', error);
+            return { ...msg, message: '[Decryption failed]' };
+          }
+        }
+        return msg;
+      }));
+      
+      return decryptedMessages;
+    }
+    
+    return messages;
+  }
+
+  // Audit access to DMs - requires approved audit request
+  async getPrivateMessagesWithAuditAccess(data: {
+    conversationId: string;
+    auditRequestId: string;
+    accessedBy: string;
+    accessedByName: string;
+    accessedByEmail: string;
+    accessedByRole: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<any[]> {
+    const conversation = await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.id, data.conversationId),
+          eq(chatConversations.subject, 'Private Message')
+        )
+      )
+      .limit(1);
+    
+    if (conversation.length === 0) {
+      throw new Error('Conversation not found');
+    }
+
+    const conv = conversation[0];
+    
+    // Check audit authorization
+    const authCheck = await this.checkDmAccessAuthorization(data.conversationId, data.accessedBy);
+    if (!authCheck.authorized) {
+      throw new Error(`Audit access denied: ${authCheck.reason}`);
+    }
+    
+    const messages = await db
+      .select()
+      .from(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.conversationId, data.conversationId),
+          eq(chatMessages.isPrivateMessage, true)
+        )
+      )
+      .orderBy(chatMessages.createdAt);
+    
+    // Log the audit access
+    await this.logDmAccess({
+      conversationId: data.conversationId,
+      auditRequestId: data.auditRequestId,
+      accessedBy: data.accessedBy,
+      accessedByName: data.accessedByName,
+      accessedByEmail: data.accessedByEmail,
+      accessedByRole: data.accessedByRole,
+      accessReason: authCheck.auditRequest?.investigationReason || 'Audit investigation',
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+      messagesViewed: messages.length,
+    });
+    
+    // Decrypt messages if encrypted
+    if (conv.isEncrypted && conv.encryptionKeyId) {
+      const { decryptMessage } = await import('./encryption.js');
+      
+      const decryptedMessages = await Promise.all(messages.map(async (msg) => {
+        if (msg.isEncrypted && msg.encryptionIv) {
+          try {
+            const decrypted = await decryptMessage(msg.message, msg.encryptionIv, conv.encryptionKeyId);
+            return { ...msg, message: decrypted };
+          } catch (error) {
+            console.error('Failed to decrypt message:', error);
+            return { ...msg, message: '[Decryption failed]' };
+          }
+        }
+        return msg;
+      }));
+      
+      return decryptedMessages;
+    }
+    
+    return messages;
   }
   
   async sendPrivateMessage(data: {
@@ -4524,12 +4638,34 @@ export class DatabaseStorage implements IStorage {
     recipientId: string;
     message: string;
   }): Promise<any> {
+    // Get conversation to check if encryption is enabled
+    const [conversation] = await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.id, data.conversationId))
+      .limit(1);
+    
+    let messageContent = data.message;
+    let encryptionIv: string | undefined;
+    let isEncrypted = false;
+    
+    // Encrypt message if conversation has encryption enabled
+    if (conversation?.isEncrypted && conversation?.encryptionKeyId) {
+      const { encryptMessage } = await import('./encryption.js');
+      const encrypted = await encryptMessage(data.message, conversation.encryptionKeyId);
+      messageContent = encrypted.encrypted;
+      encryptionIv = encrypted.iv;
+      isEncrypted = true;
+    }
+    
     const [result] = await db.insert(chatMessages).values({
       conversationId: data.conversationId,
       senderId: data.senderId,
       senderName: data.senderName,
       senderType: 'customer',
-      message: data.message,
+      message: messageContent,
+      isEncrypted,
+      encryptionIv,
       isPrivateMessage: true,
       recipientId: data.recipientId,
       isRead: false,
@@ -4572,6 +4708,7 @@ export class DatabaseStorage implements IStorage {
     const user1 = await this.getUser(user1Id);
     const user2 = await this.getUser(user2Id);
     
+    // Create conversation first, then generate encryption key
     const [conversation] = await db.insert(chatConversations).values({
       workspaceId,
       customerId: user1Id,
@@ -4581,9 +4718,24 @@ export class DatabaseStorage implements IStorage {
       subject: 'Private Message',
       status: 'active',
       isSilenced: false,
+      conversationType: 'dm_user', // Mark as user-to-user DM
+      isEncrypted: false, // Will be updated after key generation
     }).returning();
     
-    return conversation;
+    // Generate and persist encryption key for this private conversation
+    const { generateEncryptionKey } = await import('./encryption.js');
+    const encKey = await generateEncryptionKey(conversation.id, workspaceId, user1Id);
+    
+    // Update conversation with encryption key ID
+    await db
+      .update(chatConversations)
+      .set({
+        isEncrypted: true,
+        encryptionKeyId: encKey.id,
+      })
+      .where(eq(chatConversations.id, conversation.id));
+    
+    return { ...conversation, isEncrypted: true, encryptionKeyId: encKey.id };
   }
   
   async markPrivateMessagesAsRead(conversationId: string, userId: string): Promise<void> {
@@ -4647,6 +4799,163 @@ export class DatabaseStorage implements IStorage {
       .limit(20);
     
     return users;
+  }
+
+  // ============================================================================
+  // DM AUDIT & INVESTIGATION OPERATIONS
+  // ============================================================================
+
+  async createDmAuditRequest(data: {
+    workspaceId: string;
+    conversationId: string;
+    investigationReason: string;
+    caseNumber?: string;
+    requestedBy: string;
+    requestedByName: string;
+    requestedByEmail: string;
+  }): Promise<any> {
+    const result = await db
+      .insert(dmAuditRequests)
+      .values({
+        workspaceId: data.workspaceId,
+        conversationId: data.conversationId,
+        investigationReason: data.investigationReason,
+        caseNumber: data.caseNumber,
+        requestedBy: data.requestedBy,
+        requestedByName: data.requestedByName,
+        requestedByEmail: data.requestedByEmail,
+        status: 'pending',
+        isActive: true,
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async getDmAuditRequests(workspaceId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(dmAuditRequests)
+      .where(eq(dmAuditRequests.workspaceId, workspaceId))
+      .orderBy(desc(dmAuditRequests.createdAt));
+  }
+
+  async getDmAuditRequestById(requestId: string): Promise<any | null> {
+    const result = await db
+      .select()
+      .from(dmAuditRequests)
+      .where(eq(dmAuditRequests.id, requestId))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  async approveDmAuditRequest(data: {
+    requestId: string;
+    approvedBy: string;
+    approvedByName: string;
+    expiresAt?: Date;
+  }): Promise<any> {
+    const result = await db
+      .update(dmAuditRequests)
+      .set({
+        status: 'approved',
+        approvedBy: data.approvedBy,
+        approvedByName: data.approvedByName,
+        approvedAt: new Date(),
+        expiresAt: data.expiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(dmAuditRequests.id, data.requestId))
+      .returning();
+    
+    return result[0];
+  }
+
+  async denyDmAuditRequest(requestId: string, deniedReason: string): Promise<any> {
+    const result = await db
+      .update(dmAuditRequests)
+      .set({
+        status: 'denied',
+        deniedReason,
+        updatedAt: new Date(),
+      })
+      .where(eq(dmAuditRequests.id, requestId))
+      .returning();
+    
+    return result[0];
+  }
+
+  async logDmAccess(data: {
+    conversationId: string;
+    auditRequestId?: string;
+    accessedBy: string;
+    accessedByName: string;
+    accessedByEmail: string;
+    accessedByRole: string;
+    accessReason: string;
+    ipAddress?: string;
+    userAgent?: string;
+    messagesViewed?: number;
+    filesAccessed?: number;
+  }): Promise<any> {
+    const result = await db
+      .insert(dmAccessLogs)
+      .values({
+        conversationId: data.conversationId,
+        auditRequestId: data.auditRequestId,
+        accessedBy: data.accessedBy,
+        accessedByName: data.accessedByName,
+        accessedByEmail: data.accessedByEmail,
+        accessedByRole: data.accessedByRole,
+        accessReason: data.accessReason,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent,
+        messagesViewed: data.messagesViewed || 0,
+        filesAccessed: data.filesAccessed || 0,
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async getDmAccessLogs(conversationId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(dmAccessLogs)
+      .where(eq(dmAccessLogs.conversationId, conversationId))
+      .orderBy(desc(dmAccessLogs.accessedAt));
+  }
+
+  async checkDmAccessAuthorization(conversationId: string, userId: string): Promise<{
+    authorized: boolean;
+    auditRequest?: any;
+    reason?: string;
+  }> {
+    const activeRequest = await db
+      .select()
+      .from(dmAuditRequests)
+      .where(
+        and(
+          eq(dmAuditRequests.conversationId, conversationId),
+          eq(dmAuditRequests.status, 'approved'),
+          eq(dmAuditRequests.isActive, true)
+        )
+      )
+      .limit(1);
+    
+    if (activeRequest.length === 0) {
+      return { authorized: false, reason: 'No active audit approval found' };
+    }
+
+    const request = activeRequest[0];
+    
+    // Check if expired
+    if (request.expiresAt && new Date() > new Date(request.expiresAt)) {
+      return { authorized: false, reason: 'Audit approval has expired' };
+    }
+    
+    return { authorized: true, auditRequest: request };
   }
 }
 

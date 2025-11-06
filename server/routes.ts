@@ -17701,6 +17701,146 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
+  // ============================================================================
+  // DM AUDIT & INVESTIGATION ROUTES
+  // ============================================================================
+
+  // POST /api/dm-audit/request - Create audit request for DM access
+  app.post('/api/dm-audit/request', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      const { conversationId, investigationReason, caseNumber } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      if (!conversationId || !investigationReason) {
+        return res.status(400).json({ message: "Conversation ID and investigation reason are required" });
+      }
+
+      const request = await storage.createDmAuditRequest({
+        workspaceId,
+        conversationId,
+        investigationReason,
+        caseNumber,
+        requestedBy: userId,
+        requestedByName: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+        requestedByEmail: req.user!.email,
+      });
+
+      res.json(request);
+    } catch (error: any) {
+      console.error("Error creating audit request:", error);
+      res.status(500).json({ message: "Failed to create audit request" });
+    }
+  });
+
+  // GET /api/dm-audit/requests - List all audit requests for workspace
+  app.get('/api/dm-audit/requests', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      const requests = await storage.getDmAuditRequests(workspaceId);
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Error fetching audit requests:", error);
+      res.status(500).json({ message: "Failed to fetch audit requests" });
+    }
+  });
+
+  // POST /api/dm-audit/requests/:id/approve - Approve audit request
+  app.post('/api/dm-audit/requests/:id/approve', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const requestId = req.params.id;
+      const { expiresInHours } = req.body;
+
+      let expiresAt: Date | undefined;
+      if (expiresInHours && expiresInHours > 0) {
+        expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + expiresInHours);
+      }
+
+      const approved = await storage.approveDmAuditRequest({
+        requestId,
+        approvedBy: userId,
+        approvedByName: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+        expiresAt,
+      });
+
+      res.json(approved);
+    } catch (error: any) {
+      console.error("Error approving audit request:", error);
+      res.status(500).json({ message: "Failed to approve audit request" });
+    }
+  });
+
+  // POST /api/dm-audit/requests/:id/deny - Deny audit request
+  app.post('/api/dm-audit/requests/:id/deny', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const requestId = req.params.id;
+      const { deniedReason } = req.body;
+
+      if (!deniedReason) {
+        return res.status(400).json({ message: "Denial reason is required" });
+      }
+
+      const denied = await storage.denyDmAuditRequest(requestId, deniedReason);
+      res.json(denied);
+    } catch (error: any) {
+      console.error("Error denying audit request:", error);
+      res.status(500).json({ message: "Failed to deny audit request" });
+    }
+  });
+
+  // GET /api/dm-audit/messages/:conversationId - View DM messages with audit access
+  app.get('/api/dm-audit/messages/:conversationId', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const conversationId = req.params.conversationId;
+      const auditRequestId = req.query.auditRequestId as string;
+
+      if (!auditRequestId) {
+        return res.status(400).json({ message: "Audit request ID is required" });
+      }
+
+      const messages = await storage.getPrivateMessagesWithAuditAccess({
+        conversationId,
+        auditRequestId,
+        accessedBy: userId,
+        accessedByName: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+        accessedByEmail: req.user!.email,
+        accessedByRole: req.user!.role || 'owner',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error accessing DM messages:", error);
+      res.status(403).json({ message: error.message || "Audit access denied" });
+    }
+  });
+
+  // GET /api/dm-audit/access-logs/:conversationId - View access logs for a conversation
+  app.get('/api/dm-audit/access-logs/:conversationId', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = req.params.conversationId;
+
+      const logs = await storage.getDmAccessLogs(conversationId);
+      res.json(logs);
+    } catch (error: any) {
+      console.error("Error fetching access logs:", error);
+      res.status(500).json({ message: "Failed to fetch access logs" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }

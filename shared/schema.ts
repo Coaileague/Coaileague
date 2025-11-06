@@ -3402,6 +3402,14 @@ export const chatConversations = pgTable("chat_conversations", {
   subject: varchar("subject"),
   status: varchar("status").notNull().default("active"), // 'active', 'resolved', 'closed'
   priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
+  
+  // Conversation type for privacy/monitoring
+  conversationType: varchar("conversation_type").notNull().default("open_chat"), 
+  // Types: 'dm_user' (user-to-user), 'dm_support' (support-to-user), 'dm_bot' (bot-to-user), 'open_chat' (CommOS/monitored)
+  
+  // Encryption metadata for private DMs
+  isEncrypted: boolean("is_encrypted").default(false), // True if messages are encrypted at rest
+  encryptionKeyId: varchar("encryption_key_id"), // Reference to encryption key for this conversation
 
   // Voice/Silence permissions (IRC-style moderation)
   isSilenced: boolean("is_silenced").default(true), // Users start silenced until support grants voice
@@ -3432,9 +3440,13 @@ export const chatMessages = pgTable("chat_messages", {
   senderType: varchar("sender_type").notNull(), // 'customer', 'support', 'system', 'bot'
 
   // Content
-  message: text("message").notNull(),
+  message: text("message").notNull(), // Plain text for open chat, encrypted for private DMs
   messageType: varchar("message_type").default("text"), // 'text', 'file', 'system'
   isSystemMessage: boolean("is_system_message").default(false), // For breach notifications and system announcements (shown in gray)
+  
+  // Encryption metadata
+  isEncrypted: boolean("is_encrypted").default(false), // True if message content is encrypted
+  encryptionIv: varchar("encryption_iv"), // Initialization vector for encryption
 
   // Private messages (DMs/Whispers)
   isPrivateMessage: boolean("is_private_message").default(false), // True for private/whispered messages
@@ -3466,6 +3478,114 @@ export type InsertChatConversation = z.infer<typeof insertChatConversationSchema
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// ============================================================================
+// DM AUDIT & INVESTIGATION SYSTEM
+// ============================================================================
+
+// DM Audit Requests - Track formal requests to access encrypted DM conversations
+export const dmAuditRequests = pgTable("dm_audit_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Investigation details
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  investigationReason: text("investigation_reason").notNull(), // Legal/compliance reason for access
+  caseNumber: varchar("case_number"), // Optional case/ticket reference
+  
+  // Request details
+  requestedBy: varchar("requested_by").notNull().references(() => users.id, { onDelete: 'set null' }),
+  requestedByName: varchar("requested_by_name").notNull(),
+  requestedByEmail: varchar("requested_by_email").notNull(),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  
+  // Approval workflow
+  status: varchar("status").notNull().default("pending"), // 'pending', 'approved', 'denied'
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedByName: varchar("approved_by_name"),
+  approvedAt: timestamp("approved_at"),
+  deniedReason: text("denied_reason"),
+  
+  // Access control
+  expiresAt: timestamp("expires_at"), // When access expires
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// DM Access Logs - Immutable audit trail of who accessed encrypted DMs and when
+export const dmAccessLogs = pgTable("dm_access_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // What was accessed
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  auditRequestId: varchar("audit_request_id").references(() => dmAuditRequests.id, { onDelete: 'set null' }),
+  
+  // Who accessed
+  accessedBy: varchar("accessed_by").notNull().references(() => users.id, { onDelete: 'set null' }),
+  accessedByName: varchar("accessed_by_name").notNull(),
+  accessedByEmail: varchar("accessed_by_email").notNull(),
+  accessedByRole: varchar("accessed_by_role").notNull(), // 'owner', 'admin', 'compliance_officer'
+  
+  // When and why
+  accessedAt: timestamp("accessed_at").defaultNow().notNull(),
+  accessReason: text("access_reason").notNull(), // Copy of investigation reason
+  
+  // Context
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  
+  // Metadata
+  messagesViewed: integer("messages_viewed").default(0), // Count of messages decrypted
+  filesAccessed: integer("files_accessed").default(0), // Count of files accessed
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDmAuditRequestSchema = createInsertSchema(dmAuditRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDmAccessLogSchema = createInsertSchema(dmAccessLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDmAuditRequest = z.infer<typeof insertDmAuditRequestSchema>;
+export type DmAuditRequest = typeof dmAuditRequests.$inferSelect;
+export type InsertDmAccessLog = z.infer<typeof insertDmAccessLogSchema>;
+export type DmAccessLog = typeof dmAccessLogs.$inferSelect;
+
+// Encryption Keys - Persistent storage for conversation encryption keys
+export const conversationEncryptionKeys = pgTable("conversation_encryption_keys", {
+  id: varchar("id").primaryKey(), // Key ID (UUID)
+  conversationId: varchar("conversation_id").notNull().unique().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Encrypted key material (wrapped with master key in production)
+  keyMaterial: text("key_material").notNull(), // Base64-encoded encryption key
+  algorithm: varchar("algorithm").notNull().default("aes-256-gcm"),
+  
+  // Key metadata
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  
+  // Key rotation support
+  isActive: boolean("is_active").default(true),
+  rotatedAt: timestamp("rotated_at"),
+  replacedBy: varchar("replaced_by").references(() => conversationEncryptionKeys.id, { onDelete: 'set null' }),
+});
+
+export const insertConversationEncryptionKeySchema = createInsertSchema(conversationEncryptionKeys).omit({
+  createdAt: true,
+});
+
+export type InsertConversationEncryptionKey = z.infer<typeof insertConversationEncryptionKeySchema>;
+export type ConversationEncryptionKey = typeof conversationEncryptionKeys.$inferSelect;
 
 // Terms Acknowledgments - Legal compliance tracking for support chat access
 export const termsAcknowledgments = pgTable("terms_acknowledgments", {
