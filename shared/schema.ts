@@ -3405,7 +3405,11 @@ export const chatConversations = pgTable("chat_conversations", {
   
   // Conversation type for privacy/monitoring
   conversationType: varchar("conversation_type").notNull().default("open_chat"), 
-  // Types: 'dm_user' (user-to-user), 'dm_support' (support-to-user), 'dm_bot' (bot-to-user), 'open_chat' (CommOS/monitored)
+  // Types: 'dm_user' (user-to-user), 'dm_support' (support-to-user), 'dm_bot' (bot-to-user), 'open_chat' (CommOS/monitored), 'shift_chat' (temporary shift chatroom)
+  
+  // Shift-specific chatroom (auto-created on clock-in, auto-closed on clock-out)
+  shiftId: varchar("shift_id").references(() => shifts.id, { onDelete: 'set null' }),
+  timeEntryId: varchar("time_entry_id").references(() => timeEntries.id, { onDelete: 'set null' }),
   
   // Encryption metadata for private DMs
   isEncrypted: boolean("is_encrypted").default(false), // True if messages are encrypted at rest
