@@ -4957,6 +4957,132 @@ export class DatabaseStorage implements IStorage {
     
     return { authorized: true, auditRequest: request };
   }
+
+  // Chat Export Methods for Support Staff
+  async getSupportConversationForExport(conversationId: string): Promise<any | null> {
+    const conversation = await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.id, conversationId))
+      .limit(1);
+    
+    if (conversation.length === 0) {
+      return null;
+    }
+    
+    const messages = await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt);
+    
+    return {
+      conversation: conversation[0],
+      messages,
+      exportedAt: new Date(),
+    };
+  }
+
+  async getCommRoomForExport(roomId: string): Promise<any | null> {
+    const room = await db
+      .select()
+      .from(commRooms)
+      .where(eq(commRooms.id, roomId))
+      .limit(1);
+    
+    if (room.length === 0) {
+      return null;
+    }
+    
+    const messages = await db
+      .select()
+      .from(commRoomMessages)
+      .where(eq(commRoomMessages.roomId, roomId))
+      .orderBy(commRoomMessages.createdAt);
+    
+    const members = await db
+      .select()
+      .from(commRoomMembers)
+      .where(eq(commRoomMembers.roomId, roomId));
+    
+    return {
+      room: room[0],
+      messages,
+      members,
+      exportedAt: new Date(),
+    };
+  }
+
+  async getPrivateConversationForExport(conversationId: string, requestedBy: string): Promise<any | null> {
+    const conversation = await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.id, conversationId),
+          eq(chatConversations.conversationType, 'dm_user')
+        )
+      )
+      .limit(1);
+    
+    if (conversation.length === 0) {
+      return null;
+    }
+    
+    const conv = conversation[0];
+    
+    // Check if user has audit access
+    const authCheck = await this.checkDmAccessAuthorization(conversationId, requestedBy);
+    if (!authCheck.authorized) {
+      throw new Error('Not authorized to export this private conversation');
+    }
+    
+    // Get messages
+    const messages = await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt);
+    
+    // Decrypt if encrypted
+    let decryptedMessages = messages;
+    if (conv.isEncrypted && conv.encryptionKeyId) {
+      const { decryptMessage } = await import('./encryption.js');
+      decryptedMessages = await Promise.all(messages.map(async (msg) => {
+        if (msg.isEncrypted && msg.encryptionIv) {
+          try {
+            const decrypted = await decryptMessage(msg.message, msg.encryptionIv, conv.encryptionKeyId);
+            return { ...msg, message: decrypted };
+          } catch (error) {
+            return { ...msg, message: '[Decryption failed]' };
+          }
+        }
+        return msg;
+      }));
+    }
+    
+    // Log access
+    await this.logDmAccess({
+      conversationId,
+      auditRequestId: authCheck.auditRequest?.id,
+      accessedBy: requestedBy,
+      accessedByName: 'Support Staff',
+      accessedByEmail: 'support@autoforce.com',
+      accessedByRole: 'support',
+      accessReason: 'Chat export',
+      messagesViewed: messages.length,
+    });
+    
+    return {
+      conversation: conv,
+      messages: decryptedMessages,
+      exportedAt: new Date(),
+      auditInfo: {
+        exportedBy: requestedBy,
+        auditRequestId: authCheck.auditRequest?.id,
+      },
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();
