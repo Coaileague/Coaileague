@@ -11,6 +11,39 @@ All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
 ## Recent Changes (Nov 6, 2025)
+### Real-Time User Notification System - Instant Alerts & Updates ✅
+**Production-Ready Notification System** with instant user-specific delivery:
+- **Backend Infrastructure**:
+  - Notifications table in database schema with user/workspace scoping
+  - WebSocket broadcast infrastructure via `/ws/chat` endpoint with `join_notifications` message type
+  - Broadcast events: `notification_new`, `notification_read`, `notification_count_updated`
+  - Notification helper functions for all event types (shift assignment, PTO approval, profile updates, document changes, etc.)
+  - Real API endpoints: `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `POST /api/notifications/mark-all-read`
+  - Workspace membership validation before WebSocket subscription
+- **Frontend Real-Time Updates**:
+  - `useNotificationWebSocket` hook with exponential backoff reconnection (mirrors shift WebSocket pattern)
+  - Real-time unread count tracking displayed in NotificationsCenter badge
+  - Automatic cache invalidation via TanStack Query on all notification events
+  - Color-coded toast notifications (info variant) for new notifications
+  - Connection rate limiting to prevent excessive reconnects
+- **Security & Isolation**:
+  - User-specific notification delivery (only affected users see notifications)
+  - Workspace-scoped data isolation
+  - Full audit logging for every notification created (AuditOS™ integration)
+- **Notification Event Types**:
+  - Shift assigned/changed/removed
+  - PTO approved/denied
+  - Profile updated
+  - Document/form assigned
+  - Policy acknowledgment required
+  - System announcements
+- **User Experience**:
+  - Live badge updates without page refresh
+  - Toast notifications appear instantly when data changes
+  - Mark as read updates unread count in real-time across all devices
+  - Mark all as read broadcasts count update to all connected clients
+- **Production Status**: Architect-approved, fully functional end-to-end with WebSocket delivery
+
 ### Real-Time Shift Synchronization - Live Updates Across All Devices ✅
 **WebSocket-Based Live Sync** for instantaneous schedule updates:
 - **Backend WebSocket Infrastructure**: Extended `/ws/chat` endpoint with shift-specific message types (`shift_created`, `shift_updated`, `shift_deleted`)
