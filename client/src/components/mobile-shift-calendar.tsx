@@ -114,6 +114,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       toast({
         title: "Clocked In Successfully",
         description: "Your time tracking has started",
+        variant: "success" as any,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
@@ -139,6 +140,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       toast({
         title: "Clocked Out Successfully",
         description: "Your time entry has been saved",
+        variant: "success" as any,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
@@ -164,6 +166,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       toast({
         title: "Acknowledged",
         description: "Post orders acknowledged successfully",
+        variant: "success" as any,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
       setShowAcknowledgmentDialog(false);
@@ -472,7 +475,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                       toast({
                         title: "Acknowledgment Required",
                         description: "Please acknowledge all post orders before clocking in",
-                        variant: "destructive",
+                        variant: "warning" as any,
                       });
                       return;
                     }
@@ -482,6 +485,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                       toast({
                         title: "Manager Override",
                         description: `Clocking in employee: ${getEmployeeName(selectedShift.employeeId!)}`,
+                        variant: "info" as any,
                       });
                     }
                     
@@ -493,6 +497,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                           toast({
                             title: "Manager Override",
                             description: `Clocking out employee: ${getEmployeeName(selectedShift.employeeId!)}`,
+                            variant: "info" as any,
                           });
                         }
                         clockOutMutation.mutate(activeTimeEntry.id);
@@ -540,6 +545,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                     toast({
                       title: "Chat Created",
                       description: "Opening shift communication channel...",
+                      variant: "success" as any,
                     });
                     // Navigate to chat or open chat panel
                     window.location.href = `/team-communication?room=${response.id}`;
@@ -567,6 +573,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                     toast({
                       title: "Audit Trail",
                       description: `Found ${auditData.length || 0} audit entries for this shift`,
+                      variant: "info" as any,
                     });
                     // Could open a dialog or navigate to audit view
                   } catch (error: any) {
