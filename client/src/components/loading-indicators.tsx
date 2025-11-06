@@ -68,11 +68,14 @@ export function AFCoreScan({
 }) {
   const showF = progress >= 100;
   
-  const sizes = {
+  const sizes: Record<string, { container: string; svg: string; text: string }> = {
     sm: { container: "w-24 h-24", svg: "w-16 h-16", text: "text-2xl" },
     md: { container: "w-36 h-36", svg: "w-24 h-24", text: "text-4xl" },
     lg: { container: "w-48 h-48", svg: "w-32 h-32", text: "text-5xl" }
   };
+  
+  // Fallback to md if size is invalid
+  const sizeConfig = sizes[size] || sizes.md;
 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
@@ -80,7 +83,7 @@ export function AFCoreScan({
 
   return (
     <div 
-      className={cn("relative", sizes[size].container, className)}
+      className={cn("relative", sizeConfig.container, className)}
       data-testid="af-core-scan"
     >
       {/* Outer ring */}
@@ -126,7 +129,7 @@ export function AFCoreScan({
         {/* A */}
         <svg 
           className={cn(
-            sizes[size].svg,
+            sizeConfig.svg,
             progress < 100 && "animate-af-spin"
           )}
           viewBox="0 0 100 100"
@@ -146,7 +149,7 @@ export function AFCoreScan({
           <span
             className={cn(
               "absolute font-bold transition-all duration-500 translate-x-8",
-              sizes[size].text,
+              sizeConfig.text,
               "opacity-100 scale-100"
             )}
             style={{
