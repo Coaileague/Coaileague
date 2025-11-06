@@ -114,6 +114,19 @@ export default function LiveChatroomPage() {
   // Fetch AI status (staff only, requires workspaceId)
   const { data: aiStatus, refetch: refetchAiStatus } = useQuery<{ enabled: boolean; workspaceId: string; workspaceName: string }>({
     queryKey: ['/api/helpdesk/ai/status', helpDeskRoom?.workspaceId],
+    queryFn: async () => {
+      if (!helpDeskRoom?.workspaceId) {
+        throw new Error("Workspace ID not available");
+      }
+      const response = await fetch(`/api/helpdesk/ai/status?workspaceId=${helpDeskRoom.workspaceId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch AI status");
+      }
+      return response.json();
+    },
     enabled: isStaff && !!helpDeskRoom?.workspaceId,
     retry: false,
     staleTime: 10000,

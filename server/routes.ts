@@ -160,9 +160,11 @@ import {
   insertExpenseSchema,
   insertExpenseCategorySchema,
   insertExpenseReceiptSchema,
+  // HelpOS™ - Support Queue Management
+  helpOsQueue,
 } from "@shared/schema";
 import crypto from "crypto";
-import { sql, eq, and, or, isNull, lte, gte, desc, inArray, ne } from "drizzle-orm";
+import { sql, eq, and, or, isNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { format } from "date-fns";
 import { setupWebSocket } from "./websocket";
@@ -11285,8 +11287,31 @@ Keep it professional, actionable, and under 250 words.`;
   // Get HelpDesk queue data - All authenticated users can view
   app.get('/api/helpdesk/queue', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const queue = await queueManager.getQueueStatus();
-      res.json(queue);
+      // Get waiting queue entries with calculated positions
+      const waiting = await db.query.helpOsQueue.findMany({
+        where: eq(helpOsQueue.status, "waiting"),
+        orderBy: [desc(helpOsQueue.priorityScore), asc(helpOsQueue.joinedAt)],
+      });
+      
+      // Map to frontend-friendly format with calculated positions and wait times
+      const queueEntries = waiting.map((entry, index) => {
+        const waitTimeMinutes = Math.floor(
+          (Date.now() - new Date(entry.joinedAt).getTime()) / 60000
+        );
+        
+        return {
+          id: entry.id,
+          userId: entry.userId,
+          userName: entry.userName || 'User',
+          position: index + 1,
+          estimatedWaitMinutes: entry.estimatedWaitMinutes || 5,
+          priority: entry.priorityLevel || 'normal',
+          userType: entry.userType || 'guest',
+          waitTimeMinutes,
+        };
+      });
+      
+      res.json(queueEntries);
     } catch (error) {
       console.error("Error fetching HelpDesk queue:", error);
       res.status(500).json({ message: "Failed to fetch queue data" });
