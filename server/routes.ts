@@ -17867,15 +17867,19 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       await storage.createAuditLog({
         workspaceId: data.conversation.workspaceId || 'platform',
         userId: req.user!.id,
-        action: 'chat_export_support_conversation',
+        userEmail: req.user!.email,
+        userRole: req.user!.role || 'support_staff',
+        action: 'export_data',
+        actionDescription: `Exported support conversation ${conversationId} as ${format.toUpperCase()}`,
         targetType: 'conversation',
         targetId: conversationId,
-        details: {
+        metadata: {
+          exportType: 'support_conversation',
           format,
           messageCount: data.messages.length,
           exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
-          ipAddress: req.ip,
         },
+        ipAddress: req.ip,
       });
 
       const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
@@ -17944,16 +17948,21 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       await storage.createAuditLog({
         workspaceId: data.room.workspaceId || 'platform',
         userId: req.user!.id,
-        action: 'chat_export_comm_room',
+        userEmail: req.user!.email,
+        userRole: req.user!.role || 'support_staff',
+        action: 'export_data',
+        actionDescription: `Exported CommOS room ${data.room.name || roomId} as ${format.toUpperCase()}`,
         targetType: 'comm_room',
         targetId: roomId,
-        details: {
+        metadata: {
+          exportType: 'comm_room',
+          roomName: data.room.name,
           format,
           messageCount: data.messages.length,
           memberCount: data.members?.length || 0,
           exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
-          ipAddress: req.ip,
         },
+        ipAddress: req.ip,
       });
 
       const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
@@ -18024,17 +18033,23 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       await storage.createAuditLog({
         workspaceId: data.conversation.workspaceId || 'platform',
         userId: req.user!.id,
-        action: 'chat_export_private_dm',
+        userEmail: req.user!.email,
+        userRole: req.user!.role || 'support_staff',
+        action: 'export_data',
+        actionDescription: `Exported private DM conversation ${conversationId} as ${format.toUpperCase()} (Authorized Investigation)`,
         targetType: 'conversation',
         targetId: conversationId,
-        details: {
+        metadata: {
+          exportType: 'private_dm',
           format,
           messageCount: data.messages.length,
           exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
           auditRequestId: data.auditInfo?.auditRequestId,
-          ipAddress: req.ip,
           confidential: true,
         },
+        ipAddress: req.ip,
+        isSensitiveData: true,
+        complianceTag: 'confidential',
       });
 
       const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
