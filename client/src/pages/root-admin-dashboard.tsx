@@ -48,10 +48,9 @@ interface PlatformStats {
 
 export default function RootAdminDashboard() {
   const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading} = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     firstName: '',
@@ -223,12 +222,6 @@ export default function RootAdminDashboard() {
     refetchInterval: 10000,
   });
 
-  // Search organizations
-  const { data: organizations, isLoading: orgsLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/support/search", searchQuery],
-    enabled: searchQuery.length >= 2,
-  });
-
   // Format uptime
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -365,9 +358,9 @@ export default function RootAdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Access Menu - Desktop only (redundant on mobile with bottom nav) */}
-        <Card className="hidden md:block border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-indigo-950/30 to-slate-900/50 backdrop-blur-sm">
-          <CardContent className="p-4 sm:p-6">
+        {/* Quick Access Menu - Mobile & Desktop */}
+        <Card className="border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-indigo-950/30 to-slate-900/50 backdrop-blur-sm">
+          <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-400 shrink-0" />
               <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
@@ -387,7 +380,7 @@ export default function RootAdminDashboard() {
                   key={feature.link}
                   variant="outline"
                   size="sm"
-                  className="flex-col h-auto min-h-[64px] sm:min-h-[72px] min-w-[72px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-indigo-500/20 hover:border-indigo-400/40"
+                  className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-indigo-500/20 hover:border-indigo-400/40"
                   asChild
                 >
                   <Link href={feature.link} data-testid={feature.testid}>
@@ -939,96 +932,6 @@ export default function RootAdminDashboard() {
         </Card>
       </div>
 
-      {/* Organizations Browser - PRIMARY FOCUS */}
-      <Card className="border-l-4 border-l-blue-600">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Building2 className="h-6 w-6 text-blue-500" />
-            Organizations Worldwide
-          </CardTitle>
-          <CardDescription>Search and access customer organizations to provide assistance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by company name, email, or workspace name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-org-search"
-            />
-          </div>
-
-          <ScrollArea className="h-[400px]">
-            {orgsLoading ? (
-              <div className="flex items-center justify-center h-40 text-muted-foreground">
-                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                Searching...
-              </div>
-            ) : searchQuery.length < 2 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Enter at least 2 characters to search organizations</p>
-              </div>
-            ) : organizations && organizations.length > 0 ? (
-              <div className="space-y-3">
-                {organizations.map((org: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-lg border hover-elevate transition-all"
-                    data-testid={`org-${idx}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-bold text-lg">{org.workspace?.companyName || org.workspace?.name}</h3>
-                          {org.subscription?.tier && (
-                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600">
-                              {org.subscription.tier}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3" />
-                            <span>{org.owner?.email}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-3 w-3" />
-                            <span>Workspace: {org.workspace?.name}</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 mt-2">
-                            <div>Employees: <span className="font-semibold">{org.stats?.employeeCount || 0}</span></div>
-                            <div>Clients: <span className="font-semibold">{org.stats?.clientCount || 0}</span></div>
-                            <div>Invoices: <span className="font-semibold">{org.stats?.invoiceCount || 0}</span></div>
-                            <div>Tickets: <span className="font-semibold text-orange-600">{org.stats?.activeTickets || 0}</span></div>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => setLocation(`/admin/support?workspace=${org.workspace?.id}`)}
-                        data-testid={`button-view-org-${idx}`}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No organizations found</p>
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
       {/* System Health & Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* System Health Monitoring */}
@@ -1086,68 +989,6 @@ export default function RootAdminDashboard() {
                   {stats?.systemHealth?.uptime ? formatUptime(stats.systemHealth.uptime) : "0d 0h 0m"}
                 </span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Admin Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Zap className="h-5 w-5 text-amber-500" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start" 
-                onClick={() => setLocation('/admin/command')}
-                data-testid="button-customer-support"
-              >
-                <UserCheck className="h-4 w-4 mr-2" />
-                Customer Support Dashboard
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setLocation('/admin/usage')}
-                data-testid="button-usage-dashboard"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Usage Analytics
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setLocation('/support')}
-                data-testid="button-live-support"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Live Support Chat
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setLocation('/admin/support')}
-                data-testid="button-support-tickets"
-              >
-                <Ticket className="h-4 w-4 mr-2" />
-                Support Tickets
-                {(supportStats as any)?.openTickets > 0 && (
-                  <Badge variant="secondary" className="ml-auto bg-red-500/10 text-red-600">
-                    {(supportStats as any)?.openTickets}
-                  </Badge>
-                )}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setLocation('/settings')}
-                data-testid="button-platform-settings"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Platform Settings
-              </Button>
             </CardContent>
           </Card>
         </div>
