@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { db } from '@db';
+import { db } from './db';
 import { conversationEncryptionKeys } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
