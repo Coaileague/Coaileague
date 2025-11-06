@@ -127,10 +127,17 @@ function CreateChatDialog({
 }) {
   const [chatSubject, setChatSubject] = useState("");
   const [chatType, setChatType] = useState("employee_to_employee");
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const { toast } = useToast();
+
+  // Fetch workspace employees for participant selection
+  const { data: employees, isLoading: loadingEmployees, error: employeesError } = useQuery<any[]>({
+    queryKey: ["/api/employees"],
+    enabled: open,
+  });
 
   const createChatMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -160,12 +167,23 @@ function CreateChatDialog({
   const resetForm = () => {
     setChatSubject("");
     setChatType("employee_to_employee");
+    setSelectedParticipants([]);
     setGuestName("");
     setGuestEmail("");
     setGuestPhone("");
   };
 
   const handleCreateChat = () => {
+    // Validation: require at least one participant or guest
+    if (selectedParticipants.length === 0 && !guestEmail) {
+      toast({
+        title: "Participants Required",
+        description: "Please select at least one participant or add a guest invitation",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const guestInvitations = guestEmail
       ? [{ name: guestName, email: guestEmail, phone: guestPhone, expiresInDays: 7 }]
       : [];
@@ -174,14 +192,30 @@ function CreateChatDialog({
       subject: chatSubject || `Shift Chat - ${moment(shift.startTime).format("MMM DD, YYYY")}`,
       chatType,
       shiftId: shift.id,
-      participantIds: [], // Can be extended to select employees
+      participantIds: selectedParticipants,
       guestInvitations,
       conversationType: "shift_chat",
     });
   };
 
+  const toggleParticipant = (employeeId: string) => {
+    setSelectedParticipants(prev =>
+      prev.includes(employeeId)
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) resetForm();
+      onOpenChange(isOpen);
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Shift Chat</DialogTitle>
@@ -201,6 +235,68 @@ function CreateChatDialog({
               onChange={(e) => setChatSubject(e.target.value)}
               data-testid="input-chat-subject"
             />
+          </div>
+
+          {/* Participant Selection */}
+          <div className="space-y-2">
+            <Label>Select Participants</Label>
+            <p className="text-sm text-muted-foreground">
+              Choose team members to include in this chat
+            </p>
+            
+            {loadingEmployees ? (
+              <div className="p-4 text-center text-muted-foreground">
+                Loading employees...
+              </div>
+            ) : employeesError ? (
+              <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-md">
+                <p className="text-sm text-destructive font-medium mb-1">
+                  Failed to load employees
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {(employeesError as any)?.message || "Unable to fetch employee list. Please try again."}
+                </p>
+              </div>
+            ) : employees && employees.length > 0 ? (
+              <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                {employees.map((emp: any) => (
+                  <div
+                    key={emp.id}
+                    className="flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer"
+                    onClick={() => toggleParticipant(emp.id)}
+                    data-testid={`participant-option-${emp.id}`}
+                  >
+                    <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${
+                      selectedParticipants.includes(emp.id)
+                        ? 'bg-primary border-primary'
+                        : 'border-muted-foreground'
+                    }`}>
+                      {selectedParticipants.includes(emp.id) && (
+                        <div className="h-2 w-2 bg-white rounded-sm" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">
+                        {emp.firstName} {emp.lastName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{emp.email}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">
+                No employees available
+              </div>
+            )}
+            
+            {selectedParticipants.length > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="secondary" data-testid="participant-count">
+                  {selectedParticipants.length} selected
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Chat Type */}
@@ -266,7 +362,7 @@ function CreateChatDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={handleCancel} data-testid="button-cancel-chat">
             Cancel
           </Button>
           <Button
