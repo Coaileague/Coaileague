@@ -64,13 +64,7 @@ const platformFamilyItems = [
   { title: "🎛️ Platform Family", url: "/os-family/platform", icon: Sparkles, isFamily: true },
   { title: "IntegrationOS™", url: "/integrations", icon: Zap },
   { title: "Admin Dashboard", url: "/dashboard", icon: LayoutDashboard },
-];
-
-// Quick Access (non-OS features)
-const quickAccessItems = [
   { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Billing", url: "/billing", icon: CreditCard },
-  { title: "My Paychecks", url: "/my-paychecks", icon: Receipt },
 ];
 
 export function AppSidebar() {
@@ -129,7 +123,7 @@ export function AppSidebar() {
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
       <SidebarHeader className="p-4 border-b border-white/[0.08] bg-gradient-to-br from-background/80 to-muted/20">
         <Link href="/dashboard" className="flex items-center justify-center" data-testid="link-dashboard-logo">
-          <AnimatedAutoForceLogo variant="gear" size="md" animated={true} />
+          <AnimatedAutoForceLogo variant="icon" size="md" animated={true} />
         </Link>
       </SidebarHeader>
 
@@ -145,9 +139,6 @@ export function AppSidebar() {
 
         {/* OS Family 4: Platform */}
         {renderMenuSection("Platform", platformFamilyItems, true)}
-
-        {/* Quick Access */}
-        {renderMenuSection("Quick Access", quickAccessItems)}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-white/[0.08]">
