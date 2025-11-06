@@ -20,7 +20,7 @@ import {
   paymentRecords,
   invoiceReminders,
   clientPortalAccess,
-  expenseReports,
+  expenses,
   timeEntries,
   shifts,
   clients,
@@ -524,15 +524,15 @@ export async function getApprovedExpensesForPayroll(
 ): Promise<number> {
   const [result] = await db
     .select({
-      totalReimbursement: sql<string>`COALESCE(SUM(${expenseReports.amount}), 0)`,
+      totalReimbursement: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
     })
-    .from(expenseReports)
+    .from(expenses)
     .where(
       and(
-        eq(expenseReports.workspaceId, workspaceId),
-        eq(expenseReports.employeeId, employeeId),
-        eq(expenseReports.status, 'approved'),
-        isNull(expenseReports.reimbursedInPayrollId)
+        eq(expenses.workspaceId, workspaceId),
+        eq(expenses.employeeId, employeeId),
+        eq(expenses.status, 'approved'),
+        isNull(expenses.reimbursedAt)
       )
     );
   
@@ -548,17 +548,17 @@ export async function markExpensesReimbursed(
   payrollRunId: string
 ) {
   await db
-    .update(expenseReports)
+    .update(expenses)
     .set({
-      reimbursedInPayrollId: payrollRunId,
+      reimbursementReference: payrollRunId,
       reimbursedAt: new Date(),
       status: 'reimbursed',
     })
     .where(
       and(
-        eq(expenseReports.workspaceId, workspaceId),
-        eq(expenseReports.employeeId, employeeId),
-        eq(expenseReports.status, 'approved')
+        eq(expenses.workspaceId, workspaceId),
+        eq(expenses.employeeId, employeeId),
+        eq(expenses.status, 'approved')
       )
     );
 }
