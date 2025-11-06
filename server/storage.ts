@@ -62,6 +62,10 @@ import {
   employeeI9Records,
   companyPolicies,
   policyAcknowledgments,
+  organizationChatRooms,
+  organizationChatChannels,
+  organizationRoomMembers,
+  organizationRoomOnboarding,
   type User,
   type UpsertUser,
   type AbuseViolation,
@@ -580,6 +584,30 @@ export interface IStorage {
   getTimeEntryDiscrepancies(workspaceId: string, filters?: { employeeId?: string; startDate?: Date; endDate?: Date }): Promise<any[]>;
   getTurnoverPredictions(workspaceId: string, filters?: { employeeId?: string; limit?: number }): Promise<any[]>;
   getInvoices(workspaceId: string): Promise<any[]>;
+  
+  // ========================================================================
+  // COMMOS™ - ORGANIZATION CHAT ROOMS & CHANNELS
+  // ========================================================================
+  createOrganizationChatRoom(room: any): Promise<any>;
+  getOrganizationChatRoom(id: string): Promise<any | undefined>;
+  getOrganizationChatRoomsByWorkspace(workspaceId: string): Promise<any[]>;
+  getAllOrganizationChatRooms(): Promise<any[]>; // Support staff only
+  updateOrganizationChatRoom(id: string, data: any): Promise<any | undefined>;
+  suspendOrganizationChatRoom(id: string, suspendedBy: string, reason: string): Promise<any | undefined>;
+  liftOrganizationChatRoomSuspension(id: string): Promise<any | undefined>;
+  
+  // Channel operations
+  createOrganizationChatChannel(channel: any): Promise<any>;
+  getOrganizationChatChannelsByRoom(roomId: string): Promise<any[]>;
+  
+  // Room member operations
+  addOrganizationRoomMember(member: any): Promise<any>;
+  getOrganizationRoomMembers(roomId: string): Promise<any[]>;
+  removeOrganizationRoomMember(roomId: string, userId: string): Promise<boolean>;
+  
+  // Onboarding operations
+  getOrganizationRoomOnboarding(workspaceId: string): Promise<any | undefined>;
+  updateOrganizationRoomOnboarding(workspaceId: string, data: any): Promise<any | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4221,6 +4249,107 @@ export class DatabaseStorage implements IStorage {
       },
       generatedAt: new Date(),
     };
+  }
+  
+  // ============================================================================
+  // COMMOS™ - ORGANIZATION CHAT ROOMS & CHANNELS
+  // ============================================================================
+  
+  async createOrganizationChatRoom(room: any): Promise<any> {
+    const [result] = await db.insert(organizationChatRooms).values(room).returning();
+    return result;
+  }
+  
+  async getOrganizationChatRoom(id: string): Promise<any | undefined> {
+    const [room] = await db.select().from(organizationChatRooms).where(eq(organizationChatRooms.id, id));
+    return room;
+  }
+  
+  async getOrganizationChatRoomsByWorkspace(workspaceId: string): Promise<any[]> {
+    return await db.select().from(organizationChatRooms).where(eq(organizationChatRooms.workspaceId, workspaceId));
+  }
+  
+  async getAllOrganizationChatRooms(): Promise<any[]> {
+    return await db.select().from(organizationChatRooms);
+  }
+  
+  async updateOrganizationChatRoom(id: string, data: any): Promise<any | undefined> {
+    const [room] = await db
+      .update(organizationChatRooms)
+      .set(data)
+      .where(eq(organizationChatRooms.id, id))
+      .returning();
+    return room;
+  }
+  
+  async suspendOrganizationChatRoom(id: string, suspendedBy: string, reason: string): Promise<any | undefined> {
+    const [room] = await db
+      .update(organizationChatRooms)
+      .set({
+        status: 'suspended',
+        suspendedReason: reason,
+        suspendedAt: new Date(),
+        suspendedBy: suspendedBy,
+      })
+      .where(eq(organizationChatRooms.id, id))
+      .returning();
+    return room;
+  }
+  
+  async liftOrganizationChatRoomSuspension(id: string): Promise<any | undefined> {
+    const [room] = await db
+      .update(organizationChatRooms)
+      .set({
+        status: 'active',
+        suspendedReason: null,
+        suspendedAt: null,
+        suspendedBy: null,
+      })
+      .where(eq(organizationChatRooms.id, id))
+      .returning();
+    return room;
+  }
+  
+  async createOrganizationChatChannel(channel: any): Promise<any> {
+    const [result] = await db.insert(organizationChatChannels).values(channel).returning();
+    return result;
+  }
+  
+  async getOrganizationChatChannelsByRoom(roomId: string): Promise<any[]> {
+    return await db.select().from(organizationChatChannels).where(eq(organizationChatChannels.roomId, roomId));
+  }
+  
+  async addOrganizationRoomMember(member: any): Promise<any> {
+    const [result] = await db.insert(organizationRoomMembers).values(member).returning();
+    return result;
+  }
+  
+  async getOrganizationRoomMembers(roomId: string): Promise<any[]> {
+    return await db.select().from(organizationRoomMembers).where(eq(organizationRoomMembers.roomId, roomId));
+  }
+  
+  async removeOrganizationRoomMember(roomId: string, userId: string): Promise<boolean> {
+    await db.delete(organizationRoomMembers).where(
+      and(
+        eq(organizationRoomMembers.roomId, roomId),
+        eq(organizationRoomMembers.userId, userId)
+      )
+    );
+    return true;
+  }
+  
+  async getOrganizationRoomOnboarding(workspaceId: string): Promise<any | undefined> {
+    const [result] = await db.select().from(organizationRoomOnboarding).where(eq(organizationRoomOnboarding.workspaceId, workspaceId));
+    return result;
+  }
+  
+  async updateOrganizationRoomOnboarding(workspaceId: string, data: any): Promise<any | undefined> {
+    const [result] = await db
+      .update(organizationRoomOnboarding)
+      .set(data)
+      .where(eq(organizationRoomOnboarding.workspaceId, workspaceId))
+      .returning();
+    return result;
   }
 }
 
