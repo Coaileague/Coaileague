@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import autoforceLogoNew from "../../../attached_assets/autoforce-logo-new.png";
 
 interface AutoForceAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -9,9 +10,8 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * Simplified AutoForce™ AF Logo Component
- * Clean lightning bolt design for emergency services branding
- * Features circular badge with emerald green theme
+ * AutoForce™ Logo Component
+ * Uses the new logo image provided by the user
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -21,7 +21,7 @@ export function AutoForceAFLogo({
   className
 }: AutoForceAFLogoProps) {
   
-  // Size mappings for the circular badge
+  // Size mappings for the logo
   const containerSizes = {
     sm: "w-12 h-12",
     md: "w-20 h-20",
@@ -31,60 +31,32 @@ export function AutoForceAFLogo({
   };
 
   const textSizes = {
-    sm: "text-[8px]",
-    md: "text-xs",
+    sm: "text-xs",
+    md: "text-sm",
     lg: "text-base",
     xl: "text-xl",
     hero: "text-2xl"
   };
 
-  // Icon only - circular badge with lightning bolt
+  // Icon only - just the logo image
   if (variant === "icon") {
     return (
       <div 
         className={cn(
-          "relative flex flex-col items-center justify-center rounded-full shrink-0",
+          "flex items-center justify-center shrink-0",
           containerSizes[size],
           className
         )}
-        style={{
-          background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #6ee7b7 100%)',
-          boxShadow: animated ? '0 0 20px rgba(16, 185, 129, 0.4)' : '0 4px 10px rgba(0, 0, 0, 0.1)'
-        }}
         data-testid="autoforce-af-logo-icon"
       >
-        {/* Lightning Bolt SVG */}
-        <svg 
+        <img 
+          src={autoforceLogoNew}
+          alt="AutoForce Logo"
           className={cn(
-            "w-1/2 h-1/2",
-            animated && "animate-pulse"
+            "w-full h-full object-contain",
+            animated && "animate-pulse-slow"
           )}
-          viewBox="0 0 24 24" 
-          fill="none" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path 
-            d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" 
-            fill="white"
-            stroke="white"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
-
-        {/* "AF" Text */}
-        <div 
-          className={cn(
-            "font-bold text-white",
-            textSizes[size]
-          )}
-          style={{
-            letterSpacing: '0.05em',
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
-          }}
-        >
-          AF
-        </div>
+        />
       </div>
     );
   }
@@ -93,20 +65,14 @@ export function AutoForceAFLogo({
   if (variant === "wordmark") {
     return (
       <div 
-        className={cn("flex items-center gap-1", className)}
+        className={cn("flex items-center gap-1 flex-wrap", className)}
         data-testid="autoforce-af-logo-wordmark"
       >
         <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
           AUTO
         </span>
         <span 
-          className="text-2xl sm:text-3xl font-bold tracking-tight"
-          style={{
-            background: 'linear-gradient(90deg, #059669 0%, #10b981 50%, #6ee7b7 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}
+          className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400"
         >
           FORCE
         </span>
@@ -121,25 +87,20 @@ export function AutoForceAFLogo({
       className={cn("flex items-center gap-3", className)}
       data-testid="autoforce-af-logo-full"
     >
-      <AutoForceAFLogo 
-        variant="icon" 
-        size={size} 
-        animated={animated} 
-        showF={showF}
-      />
+      <div className={cn("shrink-0", containerSizes[size])}>
+        <img 
+          src={autoforceLogoNew}
+          alt="AutoForce Logo"
+          className={cn(
+            "w-full h-full object-contain",
+            animated && "animate-pulse-slow"
+          )}
+        />
+      </div>
       <div className="flex flex-col">
-        <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none">
+        <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
           <span className="text-foreground">AUTO</span>
-          <span 
-            style={{
-              background: 'linear-gradient(90deg, #059669 0%, #10b981 50%, #6ee7b7 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}
-          >
-            FORCE
-          </span>
+          <span className="text-emerald-600 dark:text-emerald-400">FORCE</span>
           <span className="text-xs align-super text-foreground">™</span>
         </div>
         <div className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide mt-0.5">
