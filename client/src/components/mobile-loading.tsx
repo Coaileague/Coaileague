@@ -1,33 +1,51 @@
-import { AnimatedAutoForceLogo } from "./animated-autoforce-logo";
-import { Loader2 } from "lucide-react";
+import { AFCoreScan } from "./loading-indicators";
+import { useEffect, useState } from "react";
 
 interface MobileLoadingProps {
   message?: string;
   fullScreen?: boolean;
+  progress?: number;
 }
 
 /**
- * Mobile-optimized loading screen with branded AutoForce™ logo
+ * Mobile-optimized loading screen with AF Core Scan
  * Shows during page transitions and data loading
  */
-export function MobileLoading({ message = "Loading AutoForce™...", fullScreen = false }: MobileLoadingProps) {
+export function MobileLoading({ message = "Loading AutoForce™...", fullScreen = false, progress }: MobileLoadingProps) {
+  const [animatedProgress, setAnimatedProgress] = useState(0);
+
+  useEffect(() => {
+    if (progress !== undefined) {
+      setAnimatedProgress(progress);
+    } else {
+      // Auto-animate to 90% if no progress provided
+      const interval = setInterval(() => {
+        setAnimatedProgress(prev => {
+          const next = prev + Math.random() * 3;
+          return next >= 90 ? 90 : next;
+        });
+      }, 150);
+      return () => clearInterval(interval);
+    }
+  }, [progress]);
+
   if (fullScreen) {
     return (
       <div 
         className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl px-4"
         data-testid="mobile-loading-fullscreen"
       >
-        <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
-          {/* New Animated AutoForce™ Gear Logo */}
-          <AnimatedAutoForceLogo 
-            variant="full" 
-            size="lg" 
-            animated={true} 
-          />
+        <div className="flex flex-col items-center gap-8 w-full max-w-md">
+          {/* AF Core Scan - Radial Progress with A→AF */}
+          <AFCoreScan progress={animatedProgress} size="xl" />
           
-          <div className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-white/70 font-medium">
-            <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-cyan-400 flex-shrink-0" />
-            <span className="text-center break-words">{message}</span>
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="text-2xl font-bold text-orange-500">
+              {Math.round(animatedProgress)}%
+            </div>
+            <div className="text-sm text-white/70 font-medium">
+              {message}
+            </div>
           </div>
         </div>
       </div>
@@ -35,18 +53,18 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 sm:p-8 min-h-[200px] w-full" data-testid="mobile-loading">
-      <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
-        {/* New Animated AutoForce™ Gear Logo */}
-        <AnimatedAutoForceLogo 
-          variant="gear" 
-          size="md" 
-          animated={true} 
-        />
+    <div className="flex flex-col items-center justify-center p-8 min-h-[200px] w-full" data-testid="mobile-loading">
+      <div className="flex flex-col items-center gap-6 w-full max-w-md">
+        {/* AF Core Scan */}
+        <AFCoreScan progress={animatedProgress} size="lg" />
         
-        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground w-full justify-center px-4">
-          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-cyan-500 flex-shrink-0" />
-          <span className="text-center break-words">{message}</span>
+        <div className="flex flex-col items-center gap-1 text-center">
+          <div className="text-xl font-bold text-orange-500">
+            {Math.round(animatedProgress)}%
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {message}
+          </div>
         </div>
       </div>
     </div>
