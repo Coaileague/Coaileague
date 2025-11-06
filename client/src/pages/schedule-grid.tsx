@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/tooltip";
 import { EnhancedEmptyState } from "@/components/enhanced-empty-state";
 import { SlingMobileSchedule } from "@/components/schedule-mobile-sling";
+import { MobileShiftCalendar } from "@/components/mobile-shift-calendar";
 import { ShiftActionsMenu } from "@/components/shift-actions-menu";
 import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
@@ -744,16 +745,10 @@ export default function ScheduleGrid() {
 
   return (
     <>
-      {/* Mobile View - Sling Style (shown on screens < md) */}
+      {/* Mobile View - Modern Shift Calendar (shown on screens < md) */}
       <div className="md:hidden h-screen">
-        <SlingMobileSchedule
-          shifts={shifts}
-          employees={employees}
-          clients={clients}
-          currentDate={currentDate}
-          currentEmployeeId={currentEmployee?.id}
-          onDateChange={setCurrentDate}
-          onShiftClick={handleShiftClick}
+        <MobileShiftCalendar
+          onCreateShift={() => setIsEditDialogOpen(true)}
         />
       </div>
 

@@ -23,6 +23,19 @@ FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monop
 - **Real Data Integration**: Connected BudgetOS™ to /api/budgets endpoints (previously mock data). TrainingOS™ already connected.
 - **Aesthetics**: Removed duplicate quick-action toolbars, simplified layout, consistent spacing, focused on role-relevant data.
 
+### Mobile Shift Calendar (ScheduleOS™) - Nov 6, 2025
+- **New MobileShiftCalendar Component**: Replaced old SlingMobileSchedule with modern mobile-optimized shift calendar based on provided design specs
+- **Features**:
+  - Weekly agenda view with day-by-day shift listings
+  - Week navigation with prev/next buttons
+  - Shift cards with color-coded status indicators (draft/scheduled/in_progress/completed/cancelled)
+  - Click-to-view shift details modal with Clock In/Out actions
+  - Integration with ShiftActionsMenu for Create Chat and Audit Trail
+  - FAB button for quick shift creation
+  - Real-time data from /api/shifts, /api/employees, /api/clients endpoints
+- **Mobile-First Design**: Clean, touch-friendly interface with Emergency Green accent colors matching AutoForce™ branding
+- **Desktop Compatibility**: Mobile calendar shown on screens < md (768px), desktop grid view on larger screens
+
 ## System Architecture
 AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, TrackOS™, TrainingOS™, HelpOS™), emphasizing extension over rebuilding, clean code, and a single source of truth for each feature domain. The revenue model combines subscription fees with usage-based AI pricing.
 
