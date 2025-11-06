@@ -17841,6 +17841,173 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
+  // Chat Export Routes for Support Staff
+  // POST /api/chat-export/support-conversation/:id - Export support conversation (PDF or HTML)
+  app.post('/api/chat-export/support-conversation/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = req.params.id;
+      const { format } = req.body;
+
+      if (!['pdf', 'html'].includes(format)) {
+        return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
+      }
+
+      const data = await storage.getSupportConversationForExport(conversationId);
+      if (!data) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
+
+      const exportData = {
+        title: data.conversation.subject || 'Support Conversation',
+        subtitle: `Conversation ID: ${conversationId}`,
+        messages: data.messages.map((m: any) => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          message: m.message,
+          createdAt: m.createdAt,
+        })),
+        metadata: {
+          exportedAt: new Date(),
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          totalMessages: data.messages.length,
+          dateRange: data.messages.length > 0 ? {
+            start: new Date(data.messages[0].createdAt),
+            end: new Date(data.messages[data.messages.length - 1].createdAt),
+          } : undefined,
+          participants: [data.conversation.customerName, data.conversation.supportAgentName].filter(Boolean),
+        },
+      };
+
+      if (format === 'pdf') {
+        const pdfBuffer = await generateChatPDF(exportData);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="conversation-${conversationId}.pdf"`);
+        res.send(pdfBuffer);
+      } else {
+        const html = generateChatHTML(exportData);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      }
+    } catch (error: any) {
+      console.error("Error exporting support conversation:", error);
+      res.status(500).json({ message: "Failed to export conversation" });
+    }
+  });
+
+  // POST /api/chat-export/comm-room/:id - Export CommOS room (PDF or HTML)
+  app.post('/api/chat-export/comm-room/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const roomId = req.params.id;
+      const { format } = req.body;
+
+      if (!['pdf', 'html'].includes(format)) {
+        return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
+      }
+
+      const data = await storage.getCommRoomForExport(roomId);
+      if (!data) {
+        return res.status(404).json({ message: "Chat room not found" });
+      }
+
+      const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
+
+      const exportData = {
+        title: data.room.name || 'Chat Room',
+        subtitle: `Room ID: ${roomId}`,
+        messages: data.messages.map((m: any) => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          message: m.message,
+          createdAt: m.createdAt,
+        })),
+        metadata: {
+          exportedAt: new Date(),
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim(),
+          totalMessages: data.messages.length,
+          dateRange: data.messages.length > 0 ? {
+            start: new Date(data.messages[0].createdAt),
+            end: new Date(data.messages[data.messages.length - 1].createdAt),
+          } : undefined,
+          participants: data.members.map((m: any) => m.memberName).filter(Boolean),
+        },
+      };
+
+      if (format === 'pdf') {
+        const pdfBuffer = await generateChatPDF(exportData);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="chatroom-${roomId}.pdf"`);
+        res.send(pdfBuffer);
+      } else {
+        const html = generateChatHTML(exportData);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      }
+    } catch (error: any) {
+      console.error("Error exporting chat room:", error);
+      res.status(500).json({ message: "Failed to export chat room" });
+    }
+  });
+
+  // POST /api/chat-export/private-conversation/:id - Export private DM conversation (requires audit approval)
+  app.post('/api/chat-export/private-conversation/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const conversationId = req.params.id;
+      const { format } = req.body;
+
+      if (!['pdf', 'html'].includes(format)) {
+        return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
+      }
+
+      const data = await storage.getPrivateConversationForExport(conversationId, userId);
+      if (!data) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      const { generateChatPDF, generateChatHTML } = await import('./chat-export.js');
+
+      const exportData = {
+        title: 'Private Conversation',
+        subtitle: `Conversation ID: ${conversationId} - CONFIDENTIAL`,
+        messages: data.messages.map((m: any) => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          message: m.message,
+          createdAt: m.createdAt,
+        })),
+        metadata: {
+          exportedAt: new Date(),
+          exportedBy: `${req.user!.firstName} ${req.user!.lastName}`.trim() + ' (Authorized Audit)',
+          totalMessages: data.messages.length,
+          dateRange: data.messages.length > 0 ? {
+            start: new Date(data.messages[0].createdAt),
+            end: new Date(data.messages[data.messages.length - 1].createdAt),
+          } : undefined,
+          participants: [data.conversation.customerName, data.conversation.supportAgentName].filter(Boolean),
+        },
+      };
+
+      if (format === 'pdf') {
+        const pdfBuffer = await generateChatPDF(exportData);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="private-dm-${conversationId}.pdf"`);
+        res.send(pdfBuffer);
+      } else {
+        const html = generateChatHTML(exportData);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      }
+    } catch (error: any) {
+      console.error("Error exporting private conversation:", error);
+      res.status(403).json({ message: error.message || "Failed to export conversation" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }
