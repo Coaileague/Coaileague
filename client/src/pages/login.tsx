@@ -174,15 +174,6 @@ export default function Login() {
               </span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={() => window.location.href = "/api/login"}
-            data-testid="button-login-replit"
-          >
-            <LogIn className="h-4 w-4" />
-            Login with Replit
-          </Button>
           <div className="grid grid-cols-3 gap-3">
             <Button
               variant="outline"

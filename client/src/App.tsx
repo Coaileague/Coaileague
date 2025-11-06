@@ -1,5 +1,4 @@
 // Multi-tenant SaaS Scheduling Platform
-// Reference: javascript_log_in_with_replit blueprint
 
 import { Switch, Route, useLocation } from "wouter";
 import { useState } from "react";

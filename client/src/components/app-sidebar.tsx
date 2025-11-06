@@ -34,7 +34,6 @@ const communicationFamilyItems = [
   { title: "CommOS™", url: "/comm-os", icon: MessageSquare },
   { title: "Private Messages", url: "/messages", icon: Lock },
   { title: "SupportOS™ HelpDesk", url: "/live-chat", icon: Headphones },
-  { title: "Mobile Chat", url: "/mobile-chat", icon: MessageSquare },
 ];
 
 // FAMILY 2: Workforce Operations OS

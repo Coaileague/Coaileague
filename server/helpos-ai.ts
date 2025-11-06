@@ -6,8 +6,7 @@
 
 import OpenAI from "openai";
 
-// This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+// Using AI Integrations service for OpenAI-compatible API access
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
@@ -15,7 +14,7 @@ const openai = new OpenAI({
 
 export interface HelpOSAIConfig {
   enabled: boolean;
-  model: 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4.1-mini'; // Using cost-effective models
+  model: 'gpt-3.5-turbo' | 'gpt-4o-mini'; // Using cost-effective models
   maxTokens: number;
   temperature: number;
 }
@@ -23,7 +22,7 @@ export interface HelpOSAIConfig {
 // Default configuration - using most cost-effective model
 const defaultConfig: HelpOSAIConfig = {
   enabled: false, // Disabled by default - staff must enable
-  model: 'gpt-5-nano', // Most cost-effective for chat support
+  model: 'gpt-3.5-turbo', // Cheapest model for basic chat support
   maxTokens: 500, // Keep responses concise to minimize costs
   temperature: 0.7 // Balanced creativity
 };
@@ -71,7 +70,7 @@ export class HelpOSAI {
     }
 
     try {
-      const prompt = `You are HelpOS™, a friendly AI support assistant for WorkforceOS.
+      const prompt = `You are HelpOS™, a friendly AI support assistant for AutoForce™.
 
 User just joined: ${userName} (${userType})
 ${context ? `Context: ${context}` : ''}
