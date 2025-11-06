@@ -31,8 +31,7 @@ import {
 
 // FAMILY 1: Communication & Collaboration OS
 const communicationFamilyItems = [
-  { title: "📡 Communication Family", url: "/os-family/communication", icon: Sparkles, isFamily: true },
-  { title: "CommunicationOS™", url: "/communication", icon: MessageSquare },
+  { title: "CommOS™", url: "/comm-os", icon: MessageSquare },
   { title: "Private Messages", url: "/messages", icon: Lock },
   { title: "SupportOS™ HelpDesk", url: "/live-chat", icon: Headphones },
   { title: "Mobile Chat", url: "/mobile-chat", icon: MessageSquare },
@@ -110,13 +109,11 @@ export function AppSidebar() {
                 asChild 
                 isActive={location === item.url}
                 data-testid={`link-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                className={`hover-elevate active-elevate-2 h-9 px-3 ${
-                  (item as any).isFamily ? 'border-l-4 border-[hsl(217,91%,20%)]' : ''
-                }`}
+                className="hover-elevate active-elevate-2 h-9 px-3"
               >
                 <Link href={item.url} className="flex items-center gap-3 w-full">
-                  <item.icon className={`h-4 w-4 shrink-0 ${(item as any).isFamily ? 'text-[hsl(217,91%,60%)]' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm leading-tight ${(item as any).isFamily ? "font-bold" : "font-medium"} text-foreground`}>
+                  <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm leading-tight font-medium text-foreground">
                     {item.title}
                   </span>
                 </Link>
