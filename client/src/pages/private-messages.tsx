@@ -18,7 +18,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { DataStreamIndicator } from "@/components/loading-indicators";
 import {
   MessageSquare, Send, Search, UserPlus, MoreVertical,
-  Eye, Sparkles, CheckCheck, Circle, Lock, Zap
+  Eye, Sparkles, CheckCheck, Circle, Lock, Zap,
+  Paperclip, X, FileText, Image as ImageIcon, Download
 } from "lucide-react";
 
 interface Conversation {
@@ -40,6 +41,8 @@ interface PrivateMessage {
   message: string;
   createdAt: string;
   isRead: boolean;
+  attachmentUrl?: string;
+  attachmentName?: string;
 }
 
 export default function PrivateMessages() {
@@ -50,7 +53,10 @@ export default function PrivateMessages() {
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all conversations (DM threads)
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
@@ -87,6 +93,8 @@ export default function PrivateMessages() {
         message: msg.message,
         createdAt: msg.createdAt,
         isRead: msg.isRead || false,
+        attachmentUrl: msg.attachmentUrl,
+        attachmentName: msg.attachmentName,
       }));
     },
   });
@@ -103,10 +111,17 @@ export default function PrivateMessages() {
 
   // Send private message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ recipientId, message }: { recipientId: string; message: string }) => {
+    mutationFn: async ({ recipientId, message, attachmentUrl, attachmentName }: { 
+      recipientId: string; 
+      message: string;
+      attachmentUrl?: string;
+      attachmentName?: string;
+    }) => {
       return await apiRequest('/api/private-messages/send', 'POST', {
         recipientId,
         message,
+        attachmentUrl,
+        attachmentName,
         senderName: `${user?.firstName} ${user?.lastName}`.trim() || user?.email,
       });
     },
@@ -114,6 +129,7 @@ export default function PrivateMessages() {
       queryClient.invalidateQueries({ queryKey: ['/api/private-messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/private-messages/conversations'] });
       setMessageText("");
+      setAttachedFile(null);
       scrollToBottom();
     },
     onError: () => {
@@ -155,16 +171,87 @@ export default function PrivateMessages() {
     },
   });
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAttachedFile(file);
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<{ url: string; name: string } | null> => {
+    try {
+      setUploadingFile(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/private-messages/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json();
+      return {
+        url: data.fileUrl,
+        name: data.fileName,
+      };
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Could not upload file",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim() || !selectedConversation) return;
+    if ((!messageText.trim() && !attachedFile) || !selectedConversation) return;
 
     const conversation = conversations.find((c) => c.id === selectedConversation);
     if (!conversation) return;
 
+    let attachmentUrl: string | undefined;
+    let attachmentName: string | undefined;
+
+    // Upload file if attached
+    if (attachedFile) {
+      const result = await uploadFile(attachedFile);
+      if (result) {
+        attachmentUrl = result.url;
+        attachmentName = result.name;
+      } else {
+        return; // Don't send message if file upload failed
+      }
+    }
+
     sendMessageMutation.mutate({
       recipientId: conversation.recipientId,
-      message: messageText.trim(),
+      message: messageText.trim() || '[File attached]',
+      attachmentUrl,
+      attachmentName,
     });
   };
 
@@ -405,7 +492,44 @@ export default function PrivateMessages() {
                                 : "bg-purple-100 dark:bg-purple-950/50 border border-purple-200/50 dark:border-purple-800/50"
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            {msg.attachmentUrl && (
+                              <div className="mb-2">
+                                {msg.attachmentName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                  <a 
+                                    href={msg.attachmentUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="block rounded-md overflow-hidden max-w-xs hover-elevate"
+                                    data-testid={`attachment-image-${msg.id}`}
+                                  >
+                                    <img 
+                                      src={msg.attachmentUrl} 
+                                      alt={msg.attachmentName}
+                                      className="w-full h-auto"
+                                    />
+                                  </a>
+                                ) : (
+                                  <a
+                                    href={msg.attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-2 p-2 rounded-md ${
+                                      isOwnMessage
+                                        ? "bg-purple-700/50 hover:bg-purple-700"
+                                        : "bg-purple-200/50 dark:bg-purple-900/50 hover-elevate"
+                                    }`}
+                                    data-testid={`attachment-file-${msg.id}`}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    <span className="text-xs truncate">{msg.attachmentName}</span>
+                                    <Download className="h-3 w-3 ml-auto" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {msg.message && msg.message !== '[File attached]' && (
+                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -418,28 +542,78 @@ export default function PrivateMessages() {
 
             {/* Message Input */}
             <div className="p-4 border-t bg-purple-500/5">
+              {/* Attachment Preview */}
+              {attachedFile && (
+                <div className="mb-3 flex items-center gap-2 p-2 bg-purple-100 dark:bg-purple-950/50 border border-purple-200/50 dark:border-purple-800/50 rounded-lg">
+                  {attachedFile.type.startsWith('image/') ? (
+                    <ImageIcon className="h-4 w-4 text-purple-600" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-purple-600" />
+                  )}
+                  <span className="text-sm flex-1 truncate">{attachedFile.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(attachedFile.size / 1024).toFixed(1)} KB
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleRemoveAttachment}
+                    className="h-6 w-6"
+                    data-testid="button-remove-attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
               <form onSubmit={handleSendMessage} className="flex gap-2">
-                <Textarea
-                  placeholder="Send a private message..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage(e);
-                    }
-                  }}
-                  className="flex-1 min-h-[60px] max-h-[120px] resize-none"
-                  data-testid="input-message"
-                />
-                <Button
-                  type="submit"
-                  disabled={!messageText.trim() || sendMessageMutation.isPending}
-                  data-testid="button-send-message"
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+                <div className="flex flex-col gap-2 flex-1">
+                  <Textarea
+                    placeholder="Send a private message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
+                    className="min-h-[60px] max-h-[120px] resize-none"
+                    data-testid="input-message"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept="image/*,application/pdf,.doc,.docx,.txt"
+                    data-testid="input-file"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    data-testid="button-attach-file"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={(!messageText.trim() && !attachedFile) || sendMessageMutation.isPending || uploadingFile}
+                    data-testid="button-send-message"
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {uploadingFile ? (
+                      <DataStreamIndicator progress={50} height="h-4" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </form>
               <div className="flex items-center gap-2 mt-2">
                 <Lock className="h-3 w-3 text-purple-500" />

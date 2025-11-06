@@ -17604,19 +17604,73 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
+  // POST /api/private-messages/upload - Upload file for private message
+  app.post('/api/private-messages/upload', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      const buffer = await getRawBody(req);
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ message: "No file provided" });
+      }
+
+      // Generate unique file ID
+      const fileId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
+      // Detect file type from content-type header
+      const contentType = req.headers['content-type'] || 'application/octet-stream';
+      const fileExt = contentType.split('/')[1] || 'bin';
+      
+      // Sanitize filename from header or use generated name
+      const disposition = req.headers['content-disposition'] || '';
+      const filenameMatch = disposition.match(/filename="?(.+?)"?$/);
+      const originalName = filenameMatch ? filenameMatch[1] : `file-${fileId}.${fileExt}`;
+      const sanitizedName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+      // Upload to object storage
+      await uploadFileToObjectStorage({
+        objectPath: `/objects/private-messages/${workspaceId}/${fileId}.${fileExt}`,
+        buffer,
+        metadata: {
+          contentType,
+          metadata: {
+            workspaceId,
+            uploadedBy: req.user!.id,
+            timestamp: new Date().toISOString(),
+            originalFileName: sanitizedName,
+          },
+        },
+      });
+
+      const fileUrl = `/objects/private-messages/${workspaceId}/${fileId}.${fileExt}`;
+
+      res.json({ 
+        fileUrl, 
+        fileName: sanitizedName,
+        fileSize: buffer.length 
+      });
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: error.message || "Failed to upload file" });
+    }
+  });
+
   // POST /api/private-messages/send - Send a private message
   app.post('/api/private-messages/send', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const workspaceId = req.workspaceId;
-      const { recipientId, message } = req.body;
+      const { recipientId, message, attachmentUrl, attachmentName } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
-      if (!recipientId || !message) {
-        return res.status(400).json({ message: "Recipient and message are required" });
+      if (!recipientId || (!message && !attachmentUrl)) {
+        return res.status(400).json({ message: "Recipient and message or attachment are required" });
       }
 
       const conversation = await storage.getOrCreatePrivateConversation(workspaceId, userId, recipientId);
@@ -17630,7 +17684,9 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         senderId: userId,
         senderName,
         recipientId,
-        message: message.trim(),
+        message: message?.trim() || '[File attached]',
+        attachmentUrl,
+        attachmentName,
       });
 
       res.json(sentMessage);

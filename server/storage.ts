@@ -4649,6 +4649,8 @@ export class DatabaseStorage implements IStorage {
     senderName: string;
     recipientId: string;
     message: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
   }): Promise<any> {
     // Get conversation to check if encryption is enabled
     const [conversation] = await db
@@ -4681,6 +4683,8 @@ export class DatabaseStorage implements IStorage {
       isPrivateMessage: true,
       recipientId: data.recipientId,
       isRead: false,
+      attachmentUrl: data.attachmentUrl,
+      attachmentName: data.attachmentName,
     }).returning();
     
     await db
