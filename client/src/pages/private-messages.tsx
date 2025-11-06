@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MobileLoading } from "@/components/mobile-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DataStreamIndicator } from "@/components/loading-indicators";
 import {
   MessageSquare, Send, Search, UserPlus, MoreVertical,
   Eye, Sparkles, CheckCheck, Circle, Lock, Zap
@@ -360,16 +361,9 @@ export default function PrivateMessages() {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4 bg-purple-500/[0.02]">
               {messagesLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex gap-3">
-                      <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 w-32 bg-muted rounded animate-pulse" />
-                        <div className="h-16 bg-muted rounded animate-pulse" />
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center justify-center h-full space-y-4">
+                  <DataStreamIndicator progress={75} height="h-32" />
+                  <p className="text-sm text-muted-foreground">Loading messages...</p>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
