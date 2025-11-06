@@ -11,6 +11,30 @@ All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
 ## Recent Changes (Nov 6, 2025)
+### SupportOS/HelpDesk - Complete Queue & AI Management System ✅
+**Added Missing API Endpoints and Staff Controls** for HelpOS queue and AI management:
+- **Problem**: HelpDesk UI referenced `/api/helpdesk/queue` and AI toggle APIs that didn't exist, causing crashes and broken features
+- **Solution**: Implemented complete queue API, AI toggle endpoints with workspace scoping, and integrated UI controls
+- **Backend Changes** (`server/routes.ts`):
+  - **Queue API**: `GET /api/helpdesk/queue` returns array of queue entries with `{id, userId, userName, position, estimatedWaitMinutes, priority, userType, waitTimeMinutes}`
+  - **AI Toggle**: `POST /api/helpdesk/ai/toggle` with body `{enabled, workspaceId}` - platform staff only
+  - **AI Status**: `GET /api/helpdesk/ai/status?workspaceId=<id>` returns `{enabled, workspaceId, workspaceName}`
+  - **Security**: All endpoints require platform staff roles (root, deputy_admin, deputy_assistant, sysop)
+  - **Workspace Scoping**: Each workspace maintains independent AI state with validation
+- **Frontend Changes** (`client/src/pages/HelpDesk5.tsx`):
+  - Added AI toggle Switch component in staff controls panel (data-testid="switch-ai-toggle")
+  - Purple-styled card with real-time status display
+  - Custom TanStack Query `queryFn` properly sends workspaceId as query parameter
+  - Toast notifications confirm toggle success/failure
+  - Proper state synchronization via `useEffect` and mutation invalidation
+- **Testing Support** (`client/src/pages/login.tsx`):
+  - Added "Login with Replit" button (data-testid="button-login-replit") for OIDC test bypass
+- **Bug Fixes**:
+  - Queue API now returns array instead of statistics object, preventing TypeError in frontend
+  - AI status query includes mandatory workspaceId parameter via custom queryFn
+  - Proper error handling for missing workspace IDs
+- **Production Status**: Architect-approved, all endpoints functional with proper workspace scoping and security
+
 ### Mobile Bottom Navigation Cleanup - Simplified Navigation ✅
 **Streamlined Mobile Bottom Nav** removing redundant communication option:
 - **Problem**: Mobile bottom nav had "Chat" option pointing to /messages, which was redundant since CommOS™ already handles all team chatrooms
