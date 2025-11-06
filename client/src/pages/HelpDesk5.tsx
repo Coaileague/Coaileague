@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
@@ -67,6 +68,7 @@ export default function LiveChatroomPage() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQueueDialog, setShowQueueDialog] = useState(false);
   const [confirmKick, setConfirmKick] = useState<{ userId: string; userName: string } | null>(null);
+  const [aiEnabled, setAiEnabled] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -95,7 +97,7 @@ export default function LiveChatroomPage() {
   const isAuthenticated = !!currentUser?.user;
   
   // Fetch HelpDesk room info (only if authenticated)
-  const { data: helpDeskRoom } = useQuery<{ status: string; statusMessage: string | null }>({
+  const { data: helpDeskRoom } = useQuery<{ status: string; statusMessage: string | null; workspaceId?: string }>({
     queryKey: ['/api/helpdesk/room/helpdesk'],
     enabled: !!userId && isAuthenticated,
     retry: false,
@@ -108,6 +110,21 @@ export default function LiveChatroomPage() {
     enabled: isAuthenticated,
     refetchInterval: 5000, // Refresh every 5s
   });
+  
+  // Fetch AI status (staff only, requires workspaceId)
+  const { data: aiStatus, refetch: refetchAiStatus } = useQuery<{ enabled: boolean; workspaceId: string; workspaceName: string }>({
+    queryKey: ['/api/helpdesk/ai/status', helpDeskRoom?.workspaceId],
+    enabled: isStaff && !!helpDeskRoom?.workspaceId,
+    retry: false,
+    staleTime: 10000,
+  });
+  
+  // Sync aiEnabled state with fetched status
+  useEffect(() => {
+    if (aiStatus?.enabled !== undefined) {
+      setAiEnabled(aiStatus.enabled);
+    }
+  }, [aiStatus]);
   
   // Calculate queue position - return actual position or null if not in queue
   const queuePosition = (() => {
@@ -250,6 +267,37 @@ export default function LiveChatroomPage() {
         description: error.message || "Failed to update room status",
         variant: "destructive",
       });
+    },
+  });
+  
+  // AI toggle mutation (staff only)
+  const toggleAiMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!helpDeskRoom?.workspaceId) {
+        throw new Error("Workspace ID not available");
+      }
+      const result = await apiRequest('POST', `/api/helpdesk/ai/toggle`, {
+        enabled,
+        workspaceId: helpDeskRoom.workspaceId,
+      });
+      return result;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/helpdesk/ai/status', helpDeskRoom?.workspaceId] });
+      setAiEnabled(data.enabled);
+      toast({
+        title: `HelpOS AI ${data.enabled ? 'Enabled' : 'Disabled'}`,
+        description: data.message || `AI assistant is now ${data.enabled ? 'active' : 'inactive'}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Toggle Failed",
+        description: error.message || "Failed to toggle AI",
+        variant: "destructive",
+      });
+      // Revert UI state on error
+      refetchAiStatus();
     },
   });
 
@@ -1359,6 +1407,30 @@ export default function LiveChatroomPage() {
                 <Sparkles className="w-4 h-4" />
                 Edit Chat Banners
               </Button>
+
+              <Separator />
+
+              {/* AI Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30">
+                <div className="flex items-center gap-2 flex-1">
+                  <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                  <div>
+                    <Label htmlFor="ai-toggle" className="text-sm font-medium text-slate-900 dark:text-slate-100 cursor-pointer">
+                      HelpOS AI Assistant
+                    </Label>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      GPT-4 powered support bot
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="ai-toggle"
+                  checked={aiEnabled}
+                  onCheckedChange={(checked) => toggleAiMutation.mutate(checked)}
+                  disabled={toggleAiMutation.isPending || !helpDeskRoom?.workspaceId}
+                  data-testid="switch-ai-toggle"
+                />
+              </div>
 
               <Separator />
 
