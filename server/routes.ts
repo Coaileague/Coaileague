@@ -33,6 +33,8 @@ import {
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
+import { queueManager } from './services/helpOsQueue';
+import { HelpOSAI } from './helpos-ai';
 import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
@@ -11277,6 +11279,97 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error updating HelpDesk room status:", error);
       res.status(500).json({ message: "Failed to update room status" });
+    }
+  });
+
+  // Get HelpDesk queue data - All authenticated users can view
+  app.get('/api/helpdesk/queue', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const queue = await queueManager.getQueueStatus();
+      res.json(queue);
+    } catch (error) {
+      console.error("Error fetching HelpDesk queue:", error);
+      res.status(500).json({ message: "Failed to fetch queue data" });
+    }
+  });
+
+  // Toggle HelpOS AI on/off - Staff only
+  app.post('/api/helpdesk/ai/toggle', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { enabled, workspaceId } = req.body;
+      const userId = req.user!.id;
+      
+      // SECURITY: Only platform staff can toggle AI
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Staff access required" });
+      }
+      
+      // Validate parameters
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "Invalid parameter. 'enabled' must be a boolean." });
+      }
+      
+      if (!workspaceId || typeof workspaceId !== 'string') {
+        return res.status(400).json({ message: "Invalid parameter. 'workspaceId' is required and must be a string." });
+      }
+      
+      // SECURITY: Verify workspace exists (platform staff can manage any workspace)
+      const workspace = await storage.getWorkspaceById(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      // Toggle AI for the specified workspace
+      const helposAI = new HelpOSAI(workspaceId);
+      const newState = helposAI.toggleAI(enabled);
+      
+      res.json({ 
+        enabled: newState, 
+        message: `HelpOS AI ${newState ? 'enabled' : 'disabled'} successfully for workspace ${workspace.name}`,
+        workspaceId
+      });
+    } catch (error) {
+      console.error("Error toggling HelpOS AI:", error);
+      res.status(500).json({ message: "Failed to toggle AI" });
+    }
+  });
+
+  // Get HelpOS AI status - Staff only
+  app.get('/api/helpdesk/ai/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { workspaceId } = req.query;
+      
+      // SECURITY: Only platform staff can view AI status
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Staff access required" });
+      }
+      
+      // Validate workspaceId parameter
+      if (!workspaceId || typeof workspaceId !== 'string') {
+        return res.status(400).json({ message: "Invalid parameter. 'workspaceId' query parameter is required." });
+      }
+      
+      // SECURITY: Verify workspace exists (platform staff can view any workspace)
+      const workspace = await storage.getWorkspaceById(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      // Get AI status for the specified workspace
+      const helposAI = new HelpOSAI(workspaceId);
+      const isEnabled = helposAI.isEnabled();
+      
+      res.json({ 
+        enabled: isEnabled, 
+        workspaceId,
+        workspaceName: workspace.name
+      });
+    } catch (error) {
+      console.error("Error fetching HelpOS AI status:", error);
+      res.status(500).json({ message: "Failed to fetch AI status" });
     }
   });
 
