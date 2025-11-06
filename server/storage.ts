@@ -4351,6 +4351,68 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return result;
   }
+  
+  async createOrganizationRoomOnboarding(data: any): Promise<any> {
+    const [result] = await db.insert(organizationRoomOnboarding).values(data).returning();
+    return result;
+  }
+  
+  async completeOrganizationOnboarding(workspaceId: string, userId: string, roomData: {
+    roomName: string;
+    roomDescription?: string;
+    channels: string[];
+    allowGuests: boolean;
+  }): Promise<any> {
+    const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const room = await this.createOrganizationChatRoom({
+      id: roomId,
+      workspaceId,
+      roomName: roomData.roomName,
+      roomDescription: roomData.roomDescription || null,
+      createdBy: userId,
+      status: 'active',
+      allowGuests: roomData.allowGuests,
+    });
+    
+    for (const channelName of roomData.channels) {
+      await this.createOrganizationChatChannel({
+        roomId,
+        workspaceId,
+        channelName,
+        channelType: 'public',
+        createdBy: userId,
+      });
+    }
+    
+    await this.addOrganizationRoomMember({
+      roomId,
+      userId,
+      workspaceId,
+      role: 'owner',
+      canInvite: true,
+      canManage: true,
+      isApproved: true,
+    });
+    
+    const onboarding = await this.getOrganizationRoomOnboarding(workspaceId);
+    if (onboarding) {
+      await this.updateOrganizationRoomOnboarding(workspaceId, {
+        isCompleted: true,
+        currentStep: 4,
+        completedAt: new Date(),
+      });
+    } else {
+      await this.createOrganizationRoomOnboarding({
+        workspaceId,
+        isCompleted: true,
+        currentStep: 4,
+        completedAt: new Date(),
+      });
+    }
+    
+    return room;
+  }
 }
 
 export const storage = new DatabaseStorage();

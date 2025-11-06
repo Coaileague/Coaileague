@@ -17331,6 +17331,243 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     };
   }
 
+  // ============================================================================
+  // COMMOS™ - ORGANIZATION CHAT ROOMS & CHANNELS
+  // ============================================================================
+
+  // GET /api/comm-os/rooms - List chat rooms (workspace-scoped for orgs, all for support)
+  app.get('/api/comm-os/rooms', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+
+      let rooms;
+      if (isSupportStaff) {
+        // Support staff see all organization rooms
+        rooms = await storage.getAllOrganizationChatRooms();
+      } else if (workspaceId) {
+        // Organization users see their own rooms
+        rooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
+      } else {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      res.json(rooms);
+    } catch (error: any) {
+      console.error("Error fetching chat rooms:", error);
+      res.status(500).json({ message: "Failed to fetch chat rooms" });
+    }
+  });
+
+  // GET /api/comm-os/onboarding-status - Check organization onboarding status
+  app.get('/api/comm-os/onboarding-status', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      const onboarding = await storage.getOrganizationRoomOnboarding(workspaceId);
+      if (!onboarding) {
+        return res.json({ isCompleted: false, currentStep: 0 });
+      }
+
+      res.json(onboarding);
+    } catch (error: any) {
+      console.error("Error fetching onboarding status:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding status" });
+    }
+  });
+
+  // POST /api/comm-os/complete-onboarding - Complete onboarding and create room
+  app.post('/api/comm-os/complete-onboarding', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      const { roomName, roomDescription, channels, allowGuests } = req.body;
+
+      if (!roomName || !roomName.trim()) {
+        return res.status(400).json({ message: "Room name is required" });
+      }
+
+      const room = await storage.completeOrganizationOnboarding(workspaceId, userId, {
+        roomName: roomName.trim(),
+        roomDescription: roomDescription?.trim(),
+        channels: channels || [],
+        allowGuests: allowGuests !== false,
+      });
+
+      // Create audit log
+      await db.insert(auditTrail).values({
+        workspaceId: workspaceId,
+        userId: userId,
+        action: 'room_created',
+        entityType: 'organization_chat_room',
+        entityId: room.id,
+        changes: {
+          roomName: room.roomName,
+          channelCount: (channels || []).length,
+          timestamp: new Date().toISOString(),
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      res.json({ message: "Onboarding completed successfully", room });
+    } catch (error: any) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  // POST /api/comm-os/rooms/:id/join - Support staff join room
+  app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const roomId = req.params.id;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Only support staff can join organization rooms" });
+      }
+
+      const room = await storage.getOrganizationChatRoom(roomId);
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+
+      // Check if already a member
+      const existingMembers = await storage.getOrganizationRoomMembers(roomId);
+      const alreadyMember = existingMembers.some(m => m.userId === userId);
+
+      if (alreadyMember) {
+        return res.json({ message: "Already a member of this room" });
+      }
+
+      // Add support staff as member
+      await storage.addOrganizationRoomMember({
+        roomId,
+        userId,
+        workspaceId: room.workspaceId,
+        role: 'admin', // Support staff join as admin
+        canInvite: true,
+        canManage: true,
+        isApproved: true,
+      });
+
+      // Create audit log
+      await db.insert(auditTrail).values({
+        workspaceId: room.workspaceId,
+        userId: userId,
+        action: 'support_staff_joined_room',
+        entityType: 'organization_chat_room',
+        entityId: roomId,
+        changes: {
+          joinedBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      res.json({ message: "Successfully joined room" });
+    } catch (error: any) {
+      console.error("Error joining room:", error);
+      res.status(500).json({ message: "Failed to join room" });
+    }
+  });
+
+  // POST /api/comm-os/rooms/:id/suspend - Suspend room (support staff only)
+  app.post('/api/comm-os/rooms/:id/suspend', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const roomId = req.params.id;
+      const { reason } = req.body;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Only support staff can suspend rooms" });
+      }
+
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: "Suspension reason is required" });
+      }
+
+      const room = await storage.getOrganizationChatRoom(roomId);
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+
+      await storage.suspendOrganizationChatRoom(roomId, userId, reason);
+
+      // Create audit log
+      await db.insert(auditTrail).values({
+        workspaceId: room.workspaceId,
+        userId: userId,
+        action: 'room_suspended',
+        entityType: 'organization_chat_room',
+        entityId: roomId,
+        changes: {
+          reason,
+          suspendedBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      res.json({ message: "Room suspended successfully" });
+    } catch (error: any) {
+      console.error("Error suspending room:", error);
+      res.status(500).json({ message: "Failed to suspend room" });
+    }
+  });
+
+  // POST /api/comm-os/rooms/:id/lift-suspension - Lift room suspension (support staff only)
+  app.post('/api/comm-os/rooms/:id/lift-suspension', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const roomId = req.params.id;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Only support staff can lift room suspensions" });
+      }
+
+      const room = await storage.getOrganizationChatRoom(roomId);
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+
+      await storage.liftOrganizationChatRoomSuspension(roomId);
+
+      // Create audit log
+      await db.insert(auditTrail).values({
+        workspaceId: room.workspaceId,
+        userId: userId,
+        action: 'room_suspension_lifted',
+        entityType: 'organization_chat_room',
+        entityId: roomId,
+        changes: {
+          liftedBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      res.json({ message: "Suspension lifted successfully" });
+    } catch (error: any) {
+      console.error("Error lifting suspension:", error);
+      res.status(500).json({ message: "Failed to lift suspension" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }
