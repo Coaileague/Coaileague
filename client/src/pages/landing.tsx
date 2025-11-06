@@ -130,20 +130,20 @@ export default function Landing() {
               <div className="space-y-6 fix-overflow w-full max-w-full min-w-0">
                 <Badge variant="outline" className="text-xs font-normal px-4 py-1.5">
                   <Building2 className="h-3 w-3 mr-1.5" />
-                  Enterprise Workforce Management
+                  For Emergency Services & Service Industries
                 </Badge>
                 
                 <h1 className="responsive-h1 max-w-full">
-                  <span className="text-wrap-auto break-words">Automate 5+ HR Functions </span>
-                  <span className="block text-primary mt-2 text-wrap-auto break-words">in One Integrated Platform</span>
+                  <span className="text-wrap-auto break-words">Workforce Management </span>
+                  <span className="block text-primary mt-2 text-wrap-auto break-words">Built for Rapid Response</span>
                 </h1>
                 
                 <p className="responsive-body text-muted-foreground text-wrap-auto">
-                  Complete workforce automation combining scheduling, time tracking, payroll, billing, hiring, reporting, analytics, and AI-powered support—designed to streamline operations and reduce administrative burden.*
+                  Streamline scheduling, time tracking, payroll, and compliance for emergency response teams and service organizations. Designed to reduce administrative tasks and improve operational efficiency.*
                 </p>
                 
                 <p className="responsive-small text-muted-foreground/80 text-wrap-auto">
-                  *Actual time and cost savings will vary based on your organization's size, current processes, and implementation. Platform features designed to automate manual tasks.
+                  *Actual time and cost savings will vary based on your organization's size, current processes, and implementation. Features designed to help automate manual administrative tasks.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 w-full max-w-full">

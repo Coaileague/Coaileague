@@ -1,77 +1,86 @@
-# AutoForce™ Enterprise Design System
-## Fortune 500 Workforce Management Platform
+# AutoForce™ Emergency Services Design System
+## Workforce Management for Rapid Response Teams
 
 ### Design Approach
-**System**: IBM Carbon Design + Enterprise SaaS (Salesforce, Workday, SAP SuccessFactors)
-**Principles**: Executive-grade polish, data authority, premium minimalism, strategic motion
-**Visual Reference**: Bloomberg Terminal clarity + Salesforce's refined professionalism
+**System**: Clean, modern interface optimized for emergency services and service industries
+**Principles**: Rapid response clarity, operational efficiency, trust-focused design
+**Visual Reference**: Emergency service professionalism + modern SaaS clarity
 
 ---
 
 ## Brand Identity
 
-### Logo Design (Updated November 2025)
-**Concept**: Human + AI Network (User-Requested Design)
-The AutoForce™ logo represents autonomous workforce management through a clean, modern human-centric design:
+### Logo Design (Updated November 2025 - Emergency Green Rebrand)
+**Concept**: AF Lightning Bolt - Rapid Response & Reliability
+The AutoForce™ logo represents emergency response speed through a simplified, trust-focused design:
 
 **Icon Elements**:
-- **Central Human Figure**: Simple, modern silhouette representing the workforce
-- **AI Network Nodes**: 8 nodes radiating outward representing AI-powered automation
-- **Connection Branches**: Network lines connecting human to AI nodes, showing intelligent workforce management
-- **Adaptive Colors**: Automatically switches between light and dark variants for perfect visibility
+- **Lightning Bolt**: Simplified bolt icon representing rapid response capability
+- **AF Badge**: Circular green gradient badge with "AF" text
+- **Emergency Green**: Trust-focused gradient (#059669 → #10b981 → #6ee7b7)
+- **Adaptive Colors**: Automatically switches between light and dark variants
 
 **Color Variants**:
-- **Light Mode** (for dark backgrounds): White/Light Crimson (#FFFFFF → #FCA5A5)
-- **Dark Mode** (for light backgrounds): Charcoal/Crimson (#1F2937 → #DC2626 → #EF4444)
-- Nodes pulse with animation for dynamic, modern feel
-- Clean, professional aesthetic - modern SaaS, not "IBM computer platform"
+- **Emergency Green Gradient**: Primary green (#059669 → #10b981 → #6ee7b7)
+- **Light Mode**: Full gradient visible on dark backgrounds
+- **Dark Mode**: Adjusted contrast for light backgrounds
+- Clean, professional aesthetic for emergency service operations
 
 **Animation States**:
-- **Static**: Clean, professional icon for navigation and static contexts
-- **Animated**: Smooth floating, pulsing, and orbital animations for loading screens and pop-ups
-  - Float animation: 6s ease-in-out (gentle vertical movement)
-  - Pulse slow: 4s subtle opacity fade
-  - Orbit: 30s rotation for network nodes
-  - Ring spin: 20s reverse rotation
+- **Static**: Clean, professional icon for navigation
+- **Animated**: Optional subtle pulse for loading states
+  - Pulse animation: 2s gentle opacity fade for loading contexts
 
 **Variants**:
-- **Icon**: Square logo mark, perfect for favicons and small spaces
-- **Nav**: Horizontal logo with brand name in pill container
-- **Full**: Vertical layout with icon, "AutoForce™" wordmark, and tagline
+- **Icon**: Circular badge only, perfect for favicons and small spaces
+- **Wordmark**: Badge + "AutoForce™" text
+- **Full**: Badge + full branding with tagline
 
 **Usage Guidelines**:
-- Loading screens: Use animated "full" variant with size "sm" or "md"
-- Pop-ups/modals: Animated "icon" variant
-- Navigation: Static "nav" variant
-- Error pages: Animated "full" variant
-- Headers: Static "nav" or "icon" variant
+- Loading screens: Use animated variant with subtle pulse
+- Navigation: Static variant
+- Headers: Static wordmark or icon variant
+- Transition overlays: Animated pulse variant
 
 ---
 
-## Core Color Palette - Power & Authority Theme
+## Core Color Palette - Emergency Services Theme
 
-### Primary - Deep Charcoal (Command Center)
-- **Charcoal**: hsl(216, 19%, 17%) - Primary brand, headers, sidebar, enterprise strength
-- **Charcoal Hover**: hsl(216, 19%, 22%) - Hover states, active elements
-- **Charcoal Border**: hsl(216, 15%, 25%) - Borders, dividers
-- **Charcoal Light**: hsl(216, 19%, 30%) - Subtle backgrounds
+### Primary - Emergency Green (Trust & Rapid Response)
+- **Primary**: hsl(160, 84%, 39%) - #10b981 - Primary CTAs, active states, brand color
+- **Primary Foreground**: hsl(0, 0%, 100%) - White text on primary
+- **Primary Hover**: hsl(160, 77%, 34%) - Hover states, active elements
+- **Primary Light**: hsl(160, 84%, 95%) - Subtle accent backgrounds
 
-### Neutral - Platinum Foundation
-- **Platinum 50**: hsl(220, 20%, 98%) - Page backgrounds
-- **Platinum 100**: hsl(220, 15%, 95%) - Card surfaces
-- **Platinum 200**: hsl(220, 12%, 88%) - Borders, dividers
-- **Platinum 700**: hsl(220, 10%, 40%) - Secondary text
-- **Platinum 900**: hsl(220, 15%, 15%) - Headings, primary text
+### Neutral - Professional Foundation
+- **Background**: hsl(0, 0%, 100%) - Page backgrounds (light mode)
+- **Foreground**: hsl(222.2, 84%, 4.9%) - Primary text (light mode)
+- **Card**: hsl(0, 0%, 100%) - Card surfaces (light mode)
+- **Muted**: hsl(210, 40%, 96.1%) - Secondary backgrounds
+- **Muted Foreground**: hsl(215.4, 16.3%, 46.9%) - Secondary text
+- **Border**: hsl(214.3, 31.8%, 91.4%) - Borders, dividers
 
-### Accent - Crimson Authority (Decisive Action)
-- **Crimson**: hsl(0, 84%, 56%) - Primary CTAs, active states, urgency
-- **Crimson Dark**: hsl(0, 77%, 42%) - CTA hover
-- **Crimson Light**: hsl(0, 85%, 94%) - Subtle accent backgrounds
+### Accent - Complementary Actions
+- **Accent**: hsl(210, 40%, 96.1%) - Secondary actions
+- **Accent Foreground**: hsl(222.2, 47.4%, 11.2%) - Text on accent
+
+### Sidebar - Navigation (Deep Charcoal)
+- **Sidebar Background**: hsl(222.2, 84%, 4.9%) - #1F2937
+- **Sidebar Foreground**: hsl(210, 40%, 98%) - Text on sidebar
+- **Sidebar Accent**: hsl(160, 84%, 39%) - Active item highlight (Emergency Green)
+- **Sidebar Accent Foreground**: hsl(0, 0%, 100%) - Text on accent
 
 ### System Status
+- **Success**: hsl(160, 84%, 39%) - Success states (Emergency Green)
 - **Warning**: hsl(38, 95%, 55%) - Pending, caution
-- **Error**: hsl(0, 70%, 50%) - Critical alerts  
+- **Destructive**: hsl(0, 70%, 50%) - Critical alerts, errors
 - **Info**: hsl(210, 85%, 50%) - Informational
+
+### Dark Mode
+- **Dark Background**: hsl(222.2, 84%, 4.9%)
+- **Dark Foreground**: hsl(210, 40%, 98%)
+- **Dark Card**: hsl(222.2, 84%, 4.9%)
+- **Dark Muted**: hsl(217.2, 32.6%, 17.5%)
 
 ---
 
@@ -82,12 +91,12 @@ The AutoForce™ logo represents autonomous workforce management through a clean
 **Data/Mono**: 'IBM Plex Mono', monospace
 
 ### Type Scale
-- **Hero Display**: 56px/700, -0.02em tracking - Marketing headlines
+- **Hero Display**: 56px/700, -0.02em tracking - Landing headlines
 - **Display**: 40px/700 - Dashboard page titles
 - **H1**: 32px/600 - Section headers
 - **H2**: 24px/600 - Card titles
 - **H3**: 18px/600 - Subsections
-- **Body Large**: 17px/500 - Marketing copy, key descriptions
+- **Body Large**: 17px/500 - Marketing copy, descriptions
 - **Body**: 15px/400 - Standard text, table data
 - **Small**: 13px/500 - Labels, captions
 - **Micro**: 11px/700 uppercase, 0.5px tracking - Badges, tags
@@ -106,7 +115,7 @@ The AutoForce™ logo represents autonomous workforce management through a clean
 - Hero sections: Single column, centered, max-w-5xl
 - Feature grids: 3 columns (desktop), 2 (tablet), 1 (mobile)
 - Dashboard stats: 4 columns → 2 → 1
-- Testimonials: 2 columns staggered
+- Service showcase: 2 columns staggered
 
 ---
 
@@ -114,144 +123,154 @@ The AutoForce™ logo represents autonomous workforce management through a clean
 
 ### Marketing Hero Section
 **Height**: 90vh with content centered
-**Background**: Gradient from Platinum-50 to white, or professional photography (executive team, modern office, data visualization screens)
+**Background**: Gradient from background to muted/20, clean and professional
 **Content Layout**: Centered text block (max-w-3xl), headline + subheadline + dual CTAs
-**Image Treatment**: If using photo - subtle overlay (Charcoal at 15% opacity), high-quality corporate imagery
-**CTA Buttons**: Primary (Crimson, backdrop-blur-md bg-opacity-95), Secondary (Charcoal, backdrop-blur-md bg-opacity-90) - both white text, no hover opacity changes
+**Emergency Services Focus**: "Workforce Management Built for Rapid Response"
+**CTA Buttons**: Primary (Emergency Green), Secondary (Outline) - both accessible
 
-### Premium Stat Cards
-**Base**: White background, 1px Platinum-200 border, 12px radius
-**Hover**: Lift -4px with subtle shadow (0 8px 24px rgba(0,0,0,0.08))
-**Number**: 44px/700 Charcoal, tabular-nums
-**Label**: 13px/600 uppercase Platinum-700, 0.5px tracking
-**Trend**: Crimson/Error color with arrow icon, 15px/600
-**Layout**: Number dominant, label below, trend indicator top-right
+### Stat Cards
+**Base**: White background, border, rounded-lg
+**Hover**: Subtle lift with shadow
+**Number**: Large, bold, primary color for emphasis
+**Label**: Small, muted foreground
+**Layout**: Number dominant, label below, clean spacing
 
-### Executive Dashboard Cards
-**Container**: White bg, 2px radius 16px, p-8, border Platinum-200
-**Header**: H2 title + action button aligned
+### Dashboard Cards
+**Container**: Card bg, rounded-xl, padding, subtle border
+**Header**: Title + action button aligned
 **Content**: Generous whitespace, clear hierarchy
-**Charts**: 4-color max (Charcoal, Crimson, Warning, Info)
+**Charts**: Emergency Green primary, with complementary status colors
 
 ### Navigation System
 **Top Bar**: 
-- Height 72px, white bg, 1px bottom border Platinum-200
-- Logo left, primary nav center (18px/500), CTA + user right
-- Sticky with blur backdrop on scroll
+- Clean white/dark background
+- Logo left, nav center, actions right
+- Sticky with smooth transitions
 
 **Sidebar** (Dashboard):
-- Width 280px, Platinum-50 bg, collapsible to 72px
-- Active: Charcoal bg, white text, 4px left Crimson accent
-- Hover: Platinum-100 bg with smooth transition
+- Deep charcoal background (#1F2937)
+- Emergency Green accent for active items
+- Smooth transitions on hover
 
-### Data Tables (Dashboard)
-**Header**: Platinum-100 bg, 13px/700 uppercase Charcoal, sticky top
-**Rows**: White bg, 1px bottom Platinum-200 border, hover Platinum-50
-**Cell Padding**: px-6 py-4
-**Sorting**: Arrow icons with smooth rotation
-**Actions**: Icon buttons right-aligned per row
+### Data Tables
+**Header**: Muted background, bold uppercase labels
+**Rows**: Clean backgrounds, subtle borders, hover state
+**Cell Padding**: Comfortable spacing for readability
+**Actions**: Icon buttons, Emergency Green on primary actions
 
 ### Button System
-**Primary CTA**: Crimson bg, white text, 600 weight, px-8 py-3.5, 8px radius, shadow-sm
-**Secondary**: Charcoal bg, white text, same padding
-**Outline**: 2px Charcoal border, Charcoal text, transparent bg
-**Ghost**: No border, Charcoal text, hover Platinum-100 bg
-**Icon**: 44px square, icon centered, hover Platinum-100
+**Primary CTA**: Emergency Green (#10b981), white text, medium weight
+**Secondary**: Outline with border, foreground text
+**Ghost**: Transparent, hover with muted background
+**Destructive**: Red for critical actions
 
 ### Form Inputs
-**Base**: White bg, 1px Platinum-200 border, 8px radius, 44px height
-**Focus**: 2px Charcoal border, no ring
-**Label**: 13px/600 Charcoal, mb-2
-**Error**: 1px Error border, error message below with icon
+**Base**: Clean background, subtle border, comfortable height
+**Focus**: Primary border (Emergency Green), clear focus state
+**Label**: Medium weight, comfortable spacing
+**Error**: Destructive border, clear error message
 
 ### Badges & Tags
-**Shape**: 20px radius (pill), px-4 py-1.5, 13px/600 text
-**Success**: Crimson Light bg, Crimson Dark text
-**Warning**: Warning at 15% opacity bg, Warning text
-**Inactive**: Platinum-200 bg, Platinum-700 text
+**Shape**: Rounded pill, comfortable padding
+**Success**: Emergency Green background and foreground
+**Warning**: Warning color for caution
+**Inactive**: Muted colors for disabled states
 
 ---
 
-## Marketing Page Sections
+## Emergency Services Marketing Pages
 
 ### 1. Hero Section
-Full viewport (90vh), centered content, professional photography or gradient background, large headline (Hero Display), compelling subheadline (Body Large), dual CTAs (Request Demo + Watch Overview), subtle floating animation on scroll
+Full viewport height, centered content, emergency services messaging, "Workforce Management Built for Rapid Response", dual CTAs, Emergency Green primary action
 
-### 2. Social Proof Bar
-Logo grid of Fortune 500 clients, Platinum-50 bg, "Trusted by industry leaders" headline, 6 logos in grayscale with hover color reveal
+### 2. Trust Indicators
+SOC 2 Compliant, 256-bit Encryption, 99.9% Uptime - professional badges with appropriate icons
 
 ### 3. Feature Showcase
-3-column grid, icon + headline + description cards, white bg with border, hover lift effect, alternating image-left/image-right on desktop, screenshots of dashboard features
+Platform preview sections showing ScheduleOS™, TimeOS™, AnalyticsOS™ with live product previews
 
-### 4. ROI Calculator / Interactive Demo
-2-column split: Left - input form (team size, hourly rate), Right - live calculation display, Crimson highlights for savings numbers, "See Your Savings" CTA
+### 4. Core OS Modules
+8 integrated modules: ScheduleOS™, TimeOS™, PayrollOS™, BillOS™, HireOS™, ReportOS™, AnalyticsOS™, SupportOS™
 
-### 5. Platform Capabilities
-4-column icon grid, Platinum-100 bg section, each capability: icon (32px), title (H3), 2-line description, "Learn More" links
+### 5. Competitive Advantage
+Comparison table showing integrated platform vs. point solutions, factual and FTC-compliant
 
-### 6. Testimonial Carousel
-2-column staggered cards, executive headshots (80px circular), quote in large text (24px/500), company logo, role/name, Platinum-50 card backgrounds
+### 6. Compliance & Disclaimers
+Clear disclaimers about time/cost savings varying by organization size and implementation
 
-### 7. Security & Compliance
-Trust badges grid (SOC 2, ISO 27001, GDPR), centered layout, Platinum-100 bg, "Enterprise-grade security" headline
+### 7. CTA Section
+Emergency Green primary action, "Start Free Trial" focus
 
-### 8. Pricing Tiers
-3-column cards (Starter, Professional, Enterprise), white cards with Charcoal border on "Popular" tier, feature checkmarks (Crimson), "Contact Sales" for Enterprise, annual/monthly toggle
-
-### 9. CTA Section
-Charcoal bg with subtle gradient, white text, centered headline + CTA, pattern background (subtle grid or dots)
-
-### 10. Footer
-Charcoal bg, 4-column layout (Product, Company, Resources, Legal), newsletter signup, social links, copyright
+### 8. Footer
+Professional layout with product, company, and legal links
 
 ---
 
 ## Animations & Micro-Interactions
 
-**Philosophy**: Refined, purposeful motion that conveys premium quality
+**Philosophy**: Purposeful, professional motion for emergency services context
 
-- **Page Transitions**: Fade + slight Y-axis shift (20px), 0.4s ease-out
-- **Hover States**: 0.25s ease transforms, lift -2px to -4px with shadow
-- **Card Reveals**: Stagger fade-in on scroll (0.1s intervals), intersection observer
-- **Number Counters**: Animate stat numbers on viewport entry, 1.5s duration
-- **Chart Animations**: Smooth draw-in (0.8s), delay sequential bars
-- **Button Interactions**: Scale 0.98 on press, 0.2s spring
-- **Loading States**: Charcoal spinner (40px), skeleton screens in Platinum-100
-- **Success Feedback**: Crimson checkmark scale-in (0.3s), brief toast notification
-- **Form Validation**: Instant inline, smooth height transitions for error messages
+- **Page Transitions**: Smooth fade transitions
+- **Hover States**: Subtle elevation with Emergency Green accents
+- **Loading States**: Emergency Green spinner/pulse, professional feedback
+- **Success Feedback**: Emergency Green checkmark, clear confirmation
+- **Emergency Green Glow**: Subtle for active states and primary actions
 
 ---
 
-## Images
+## FTC Compliance & Marketing
 
-**Hero Image**: YES - Executive-grade professional photography
-- Options: Modern office spaces, diverse professional team collaborating, sleek data visualization screens, boardroom settings
-- Treatment: 60% opacity Charcoal overlay for text contrast, high resolution (1920px+ width)
-- Placement: Full-width background, content overlay centered
+**Critical Requirements**:
+- All claims must be factual and verifiable
+- Avoid monopolistic language ("only solution", "exclusive feature")
+- Include disclaimers for time/cost savings ("actual results will vary")
+- Focus on emergency services and service industries target market
+- Use Emergency Green to convey trust and reliability
 
-**Feature Screenshots**:
-- Dashboard views, analytics reports, mobile app interface
-- Subtle shadow, 8px radius, Platinum-200 border
-- Placement: Alternating left/right in feature sections
+**Approved Language**:
+- "Designed to reduce administrative tasks"
+- "Features designed to help automate manual tasks"
+- "Streamline operations for emergency response teams"
+- "Built for rapid response and operational efficiency"
 
-**Team/Testimonial Photos**: Professional headshots, 80px circular, grayscale with color on hover
-
-**Trust & Security**: Logo badges for certifications, client company logos (grayscale treatment)
+**Avoid**:
+- Monopolistic claims
+- Unverifiable performance guarantees
+- Misleading comparison statements
 
 ---
 
 ## Responsive Breakpoints
 
-- **Desktop (1280px+)**: Full layouts, 3-4 column grids, sidebar visible
-- **Tablet (768-1279px)**: 2 columns, collapsible sidebar, adjusted spacing
-- **Mobile (<768px)**: Single column, bottom nav, stacked cards, reduced padding
+- **Desktop (1280px+)**: Full layouts, multi-column grids
+- **Tablet (768-1279px)**: 2 columns, adjusted spacing
+- **Mobile (<768px)**: Single column, stacked cards, touch-optimized
 
 ---
 
 ## Accessibility
 
-- **Contrast**: WCAG AAA compliance (Charcoal on white: 12:1)
-- **Focus Indicators**: 3px Charcoal ring, 2px offset
-- **Keyboard Nav**: Full support, logical tab order, skip links
-- **ARIA**: Comprehensive labels on interactive elements, live regions for dynamic content
-- **Motion**: Respect prefers-reduced-motion, remove animations when set
+- **Contrast**: WCAG AA minimum compliance
+- **Focus Indicators**: Clear Emergency Green focus rings
+- **Keyboard Nav**: Full support, logical tab order
+- **ARIA**: Comprehensive labels on interactive elements
+- **Motion**: Respect prefers-reduced-motion preferences
+
+---
+
+## Emergency Green Implementation Notes
+
+**Primary Use Cases**:
+- All CTAs and primary actions
+- Active navigation states
+- Success confirmations
+- Loading indicators
+- Focus states
+- Brand accents
+
+**Color Psychology**:
+Emergency Green (#10b981) chosen for:
+- Trust and reliability (medical/emergency context)
+- Visibility and clarity (high contrast)
+- Professional appearance (modern SaaS standard)
+- Positive action association (go/proceed)

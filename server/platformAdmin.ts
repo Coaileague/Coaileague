@@ -89,10 +89,18 @@ export async function getPlatformStats(req: Request, res: Response) {
         )
       );
 
-    // Chat activity - Real data would require WebSocket connection tracking
-    // For now, return 0 to indicate feature not yet implemented
-    const chatUsers = 0;
-    const chatStaff = 0;
+    // Chat activity - Get LIVE stats from WebSocket connections
+    let chatUsers = 0;
+    let chatStaff = 0;
+    try {
+      const { getLiveConnectionStats } = await import('./websocket');
+      const liveStats = getLiveConnectionStats();
+      chatUsers = liveStats.chatUsers;
+      chatStaff = liveStats.chatStaff;
+    } catch (error) {
+      console.error('Failed to get live connection stats:', error);
+      // Fallback to 0 if WebSocket server not running
+    }
 
     // Calculate average revenue per workspace
     const avgRevenue = workspaceCount?.count > 0

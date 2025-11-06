@@ -1,27 +1,27 @@
 # AutoForce™
 
 ## Overview
-AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive operating system designed to automate HR functions for businesses. It offers features such as time tracking, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform aims to provide significant cost savings by integrating various HR functions into a single system, providing complete employee lifecycle management, granular role-based access control, and platform-level troubleshooting.
+AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive workforce management platform currently focused on emergency services and service-related industries. The platform offers time tracking, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. Features are designed to streamline operations and reduce administrative burden for service-focused organizations.
 
 ## User Preferences
 I prefer detailed explanations.
 Do not make changes to the folder `Z`.
 Do not make changes to the file `Y`.
 All branding must be 100% AutoForce™ (not WorkforceOS).
+FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
 ## System Architecture
 AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, TrackOS™, TrainingOS™, HelpOS™), emphasizing extension over rebuilding, clean code, and a single source of truth for each feature domain. The revenue model combines subscription fees with usage-based AI pricing.
 
-**UI/UX Decisions:** The platform features a Fortune 500-caliber professional interface with Deep Charcoal (#1F2937), Platinum neutrals, and Crimson (#DC2626) accents. The animated logo features a geometric "A" with orbiting workforce network nodes, representing autonomous team management. Logos are 50% larger for better visibility. It prioritizes mobile-first design with responsive layouts, accessible touch targets, and optimized navigation patterns, including tab-based navigation, collapsible sections, and a Sling-style mobile dashboard.
+**UI/UX Decisions:** The platform features a professional interface with Deep Charcoal (#1F2937), Platinum neutrals, and Emergency Green (#10b981 emerald) accents. The logo features a simplified "AF" lightning bolt in a circular green gradient badge, representing rapid response and reliability for emergency services. The platform prioritizes mobile-first design with responsive layouts, accessible touch targets, and optimized navigation patterns.
 
 **Logo Implementation:**
-- **Component**: `AnimatedAutoForceLogo` with three variants (gear, wordmark, full)
-- **Asset Location**: `client/src/assets/autoforce-logo-full.png`
-- **Color Scheme**: Cyan-to-purple gradient (rgb(34,211,238) → rgb(168,85,247)) for "FORCE" text, cyan gear with glow effects
-- **Animations**: 12s rotation (spin-slow) + 2s intensity pulse (glow-pulse) + floating motion
+- **Component**: `AutoForceAFLogo` (via `AnimatedAutoForceLogo` wrapper for backward compatibility) with three variants (icon, wordmark, full)
+- **Color Scheme**: Emergency Green gradient (#059669 → #10b981 → #6ee7b7) for modern, trust-focused branding
+- **Design**: Simplified lightning bolt icon with "AF" text in circular badge
+- **Animations**: Optional pulse animation for loading states
 - **Sizing**: Responsive sizes (sm, md, lg, xl, hero) for different contexts
-- **Integration**: Landing page, login/register pages, sidebar header, loading screens
-- **Technical Approach**: PNG sprite image with CSS background-position extraction + gradient text overlay
+- **Integration**: Landing page, login/register pages, sidebar header, loading screens, transition overlays
 
 **Technical Implementations:**
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.

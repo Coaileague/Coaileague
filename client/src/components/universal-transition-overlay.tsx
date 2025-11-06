@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AutoForceLogo } from "./workforceos-logo";
+import { AutoForceAFLogo } from "./autoforce-af-logo";
 import { Loader2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 export type TransitionStatus = "loading" | "success" | "error" | "info";
@@ -32,9 +32,9 @@ export function UniversalTransitionOverlay({
 
   const statusConfig = {
     loading: {
-      icon: <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />,
-      color: "from-blue-500/20 to-indigo-500/20",
-      borderColor: "border-blue-500/30"
+      icon: <Loader2 className="w-12 h-12 text-emerald-400 animate-spin" />,
+      color: "from-emerald-500/20 to-green-500/20",
+      borderColor: "border-emerald-500/30"
     },
     success: {
       icon: <CheckCircle className="w-12 h-12 text-emerald-400" />,
@@ -47,9 +47,9 @@ export function UniversalTransitionOverlay({
       borderColor: "border-red-500/30"
     },
     info: {
-      icon: <AlertCircle className="w-12 h-12 text-cyan-400" />,
-      color: "from-cyan-500/20 to-blue-500/20",
-      borderColor: "border-cyan-500/30"
+      icon: <AlertCircle className="w-12 h-12 text-emerald-400" />,
+      color: "from-emerald-500/20 to-green-500/20",
+      borderColor: "border-emerald-500/30"
     }
   };
 
@@ -65,13 +65,13 @@ export function UniversalTransitionOverlay({
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
         >
-          {/* Animated gradient background - slower pulse */}
-          <div className="absolute inset-0 opacity-30">
+          {/* Animated gradient background - emergency green theme */}
+          <div className="absolute inset-0 opacity-20">
             <motion.div 
-              className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500 rounded-full filter blur-3xl"
+              className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500 rounded-full filter blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
-                opacity: [0.3, 0.5, 0.3]
+                opacity: [0.2, 0.4, 0.2]
               }}
               transition={{
                 duration: 3,
@@ -80,10 +80,10 @@ export function UniversalTransitionOverlay({
               }}
             />
             <motion.div 
-              className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl"
+              className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-600 rounded-full filter blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
-                opacity: [0.3, 0.5, 0.3]
+                opacity: [0.2, 0.4, 0.2]
               }}
               transition={{
                 duration: 3,
@@ -109,69 +109,34 @@ export function UniversalTransitionOverlay({
             {/* Logo with animation - responsive sizing */}
             <div className="flex justify-center mb-6 sm:mb-8">
               <motion.div
-                initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
-                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ 
-                  delay: 0.3, 
+                  delay: 0.2, 
                   type: "spring",
                   damping: 20,
                   stiffness: 150
                 }}
-                className="w-full max-w-[200px] sm:max-w-[240px]"
+                className="flex flex-col items-center gap-3 sm:gap-4"
               >
-                <div className="flex flex-col items-center gap-3 sm:gap-4">
-                  {/* Icon */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20">
-                    <svg 
-                      viewBox="0 0 100 100" 
-                      fill="none" 
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-full h-full"
-                    >
-                      <defs>
-                        <linearGradient id="autoforce-gradient-overlay" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#059669" />
-                          <stop offset="50%" stopColor="#10b981" />
-                          <stop offset="100%" stopColor="#6ee7b7" />
-                        </linearGradient>
-                        <filter id="glow-overlay">
-                          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                          <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                      </defs>
-                      <circle cx="50" cy="50" r="45" fill="url(#autoforce-gradient-overlay)" opacity="0.1" />
-                      <path 
-                        d="M55 20 L35 55 L45 55 L40 80 L65 45 L55 45 Z" 
-                        fill="url(#autoforce-gradient-overlay)"
-                        filter="url(#glow-overlay)"
-                        className="animate-pulse"
-                      />
-                      <text 
-                        x="50" y="90" fontSize="14" fontWeight="900" 
-                        fill="url(#autoforce-gradient-overlay)"
-                        textAnchor="middle"
-                        fontFamily="system-ui, -apple-system, sans-serif"
-                      >
-                        AF
-                      </text>
-                    </svg>
-                  </div>
-                  
-                  {/* Brand Name */}
-                  <div className="flex flex-col items-center gap-1 w-full">
-                    <div className="flex items-baseline gap-1 justify-center">
-                      <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent">
-                        AutoForce
-                      </span>
-                      <span className="text-[10px] font-black text-emerald-500 align-super">™</span>
-                    </div>
-                    <span className="text-[10px] sm:text-xs font-semibold text-slate-300 text-center leading-tight px-2 break-words">
-                      Autonomous Workforce<br className="sm:hidden" /> Management Solutions
+                {/* New simplified AF logo */}
+                <AutoForceAFLogo 
+                  variant="icon" 
+                  size="lg" 
+                  animated={status === "loading"}
+                />
+                
+                {/* Brand Name */}
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-baseline gap-1 justify-center">
+                    <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent">
+                      AutoForce
                     </span>
+                    <span className="text-[10px] font-black text-emerald-500 align-super">™</span>
                   </div>
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-300 text-center leading-tight px-2">
+                    Autonomous Workforce Management Solutions
+                  </span>
                 </div>
               </motion.div>
             </div>
@@ -204,7 +169,7 @@ export function UniversalTransitionOverlay({
               </motion.div>
             )}
 
-            {/* Loading dots animation - slower and more visible */}
+            {/* Loading dots animation - emergency green theme */}
             {status === "loading" && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -215,7 +180,7 @@ export function UniversalTransitionOverlay({
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-400 rounded-full"
+                    className="w-3 h-3 sm:w-4 sm:h-4 bg-emerald-400 rounded-full"
                     animate={{
                       scale: [1, 1.8, 1],
                       opacity: [0.4, 1, 0.4]
