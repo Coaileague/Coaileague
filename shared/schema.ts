@@ -3662,7 +3662,7 @@ export type InsertDmAccessLog = z.infer<typeof insertDmAccessLogSchema>;
 export type DmAccessLog = typeof dmAccessLogs.$inferSelect;
 
 // Encryption Keys - Persistent storage for conversation encryption keys
-export const conversationEncryptionKeys: ReturnType<typeof pgTable<"conversation_encryption_keys", any>> = pgTable("conversation_encryption_keys", {
+export const conversationEncryptionKeys = pgTable("conversation_encryption_keys", {
   id: varchar("id").primaryKey(), // Key ID (UUID)
   conversationId: varchar("conversation_id").notNull().unique().references(() => chatConversations.id, { onDelete: 'cascade' }),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
