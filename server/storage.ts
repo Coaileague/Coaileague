@@ -398,6 +398,12 @@ export interface IStorage {
   getClosedConversationsForReview(): Promise<ChatConversation[]>;
   getPositiveTestimonials(): Promise<ChatConversation[]>;
   
+  // Shift Chatroom operations (auto-create on clock-in, auto-close on clock-out)
+  createShiftChatroom(workspaceId: string, shiftId: string, timeEntryId: string, employeeId: string, employeeName: string): Promise<ChatConversation>;
+  getShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined>;
+  closeShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined>;
+  getActiveShiftChatrooms(workspaceId: string): Promise<ChatConversation[]>;
+  
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
@@ -2407,6 +2413,107 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(chatConversations.rating), desc(chatConversations.closedAt))
       .limit(50); // Top 50 testimonials
+  }
+
+  // ============================================================================
+  // SHIFT CHATROOM OPERATIONS (TimeOS Integration)
+  // Auto-create chatroom when employee clocks in, auto-close when they clock out
+  // ============================================================================
+
+  async createShiftChatroom(
+    workspaceId: string,
+    shiftId: string,
+    timeEntryId: string,
+    employeeId: string,
+    employeeName: string
+  ): Promise<ChatConversation> {
+    const [conversation] = await db
+      .insert(chatConversations)
+      .values({
+        workspaceId,
+        shiftId,
+        timeEntryId,
+        conversationType: 'shift_chat',
+        subject: `Shift Chat - ${employeeName}`,
+        status: 'active',
+        customerId: employeeId,
+        customerName: employeeName,
+        lastMessageAt: new Date(),
+      })
+      .returning();
+
+    // Send welcome system message
+    await this.createChatMessage({
+      conversationId: conversation.id,
+      senderId: null,
+      senderName: 'System',
+      senderType: 'system',
+      message: `Welcome ${employeeName}! This is your shift chatroom. Use it to communicate with your team during this shift.`,
+      isSystemMessage: true,
+    });
+
+    return conversation;
+  }
+
+  async getShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.shiftId, shiftId),
+          eq(chatConversations.timeEntryId, timeEntryId),
+          eq(chatConversations.conversationType, 'shift_chat')
+        )
+      )
+      .limit(1);
+    return conversation;
+  }
+
+  async closeShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined> {
+    const conversation = await this.getShiftChatroom(shiftId, timeEntryId);
+    
+    if (!conversation) {
+      return undefined;
+    }
+
+    // Close the conversation
+    const [closed] = await db
+      .update(chatConversations)
+      .set({ 
+        status: 'closed', 
+        closedAt: new Date(),
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(chatConversations.id, conversation.id))
+      .returning();
+
+    // Send closing system message
+    await this.createChatMessage({
+      conversationId: conversation.id,
+      senderId: null,
+      senderName: 'System',
+      senderType: 'system',
+      message: 'Shift ended. This chatroom is now closed. All messages are archived for your records.',
+      isSystemMessage: true,
+    });
+
+    return closed;
+  }
+
+  async getActiveShiftChatrooms(workspaceId: string): Promise<ChatConversation[]> {
+    return await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.workspaceId, workspaceId),
+          eq(chatConversations.conversationType, 'shift_chat'),
+          eq(chatConversations.status, 'active')
+        )
+      )
+      .orderBy(desc(chatConversations.lastMessageAt));
   }
 
   // ============================================================================

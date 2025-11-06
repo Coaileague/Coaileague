@@ -47,11 +47,14 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
     - **ExpenseOS™ - Expense Reimbursement (Implementation Status: 100% COMPLETE)**:
       - ✅ Schema: Complete (expenses, expenseCategories, expenseReceipts tables)
       - ✅ API: Complete (submit, approve, reject, mark-paid, receipt upload endpoints)
+      - ✅ Seed endpoint: POST /api/expense-categories/seed for existing workspaces (auto-seeded for new workspaces)
+      - ✅ Default categories: Mileage, Meals, Travel, Office Supplies, Training, Equipment, Uniforms, Other
       - ✅ Employee submission UI: Expense form with mileage calculator and file upload
       - ✅ Manager approval dashboard: Review, view receipts, approve/deny with notes
       - ✅ Receipt upload: Multi-file upload with object storage integration
       - ✅ Receipt display: Download/view receipts in approval dialog
       - Features: Category tracking, mileage IRS rate calculation, multi-receipt support, approval workflow
+      - **FIX**: Added manual seeding endpoint for workspaces created before auto-seeding was implemented
     - **I-9 Re-verification (Implementation Status: 100% COMPLETE)**:
       - ✅ Schema: Complete (employeeI9Records table with expiration tracking)
       - ✅ Storage methods: getI9RecordsByWorkspace, getI9RecordByEmployee, getExpiringI9Authorizations
@@ -81,8 +84,18 @@ AutoForce™ features a modular "OS" design (e.g., BillOS™, PayrollOS™, Trac
       - ✅ Audit Access System: dmAuditRequests, dmAccessLogs tables track all investigation workflows
       - ✅ Investigation API: POST /api/dm-audit/request, PATCH /approve/:id, PATCH /deny/:id, GET /access/:conversationId
       - ✅ Frontend integration: Complete UI with conversation list, message thread, user search, unread counts
+      - ✅ File sharing: Upload/download files with 10MB limit, image preview, document downloads
       - Features: 1-on-1 messaging, read receipts, unread indicators, workspace-scoped user search, end-to-end encryption with audit trail
       - **Differential Monitoring**: CommOS (open chat) always monitored for safety; Private Messages encrypted and only accessible with approved investigation request for legal compliance
+    - **Shift Chatrooms - TimeOS Integration (Implementation Status: 100% COMPLETE)**:
+      - ✅ Schema: shiftId and timeEntryId fields in chatConversations table with conversationType='shift_chat'
+      - ✅ Storage methods: createShiftChatroom, getShiftChatroom, closeShiftChatroom, getActiveShiftChatrooms
+      - ✅ Auto-creation: Chatroom automatically created when employee clocks in (integrated with TimeOS)
+      - ✅ Auto-closure: Chatroom automatically closed when employee clocks out with archival message
+      - ✅ API routes: GET /api/shift-chatrooms/active, GET /api/shift-chatrooms/:shiftId/:timeEntryId, POST /api/shift-chatrooms/:conversationId/messages
+      - ✅ System messages: Welcome message on clock-in, closure message on clock-out
+      - Features: Team communication during shifts, auto-managed lifecycle, archived for compliance, workspace-scoped access control
+      - **Use Case**: Emergency services teams can communicate during active shifts without separate chat app
     - **AssetOS™ (EXISTING - Verified)**:
       - Vehicle and equipment tracking
       - Billing rates and maintenance schedules

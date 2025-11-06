@@ -4245,6 +4245,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed default expense categories (Manager/Admin only) - For existing workspaces
+  app.post('/api/expense-categories/seed', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      
+      const defaultCategories = [
+        { name: 'Mileage', description: 'Vehicle mileage reimbursement (IRS standard rate)' },
+        { name: 'Meals', description: 'Business meals and entertainment' },
+        { name: 'Travel', description: 'Flights, hotels, and transportation' },
+        { name: 'Office Supplies', description: 'Office equipment and supplies' },
+        { name: 'Training', description: 'Professional development and training' },
+        { name: 'Equipment', description: 'Tools and equipment purchases' },
+        { name: 'Uniforms', description: 'Work uniforms and safety gear' },
+        { name: 'Other', description: 'Miscellaneous business expenses' },
+      ];
+      
+      const created = [];
+      for (const category of defaultCategories) {
+        try {
+          const newCategory = await storage.createExpenseCategory({
+            workspaceId,
+            name: category.name,
+            description: category.description,
+            isActive: true,
+          });
+          created.push(newCategory);
+        } catch (error) {
+          console.log(`Category ${category.name} may already exist`);
+        }
+      }
+      
+      res.json({ message: `Seeded ${created.length} default categories`, categories: created });
+    } catch (error: any) {
+      console.error("Error seeding expense categories:", error);
+      res.status(500).json({ message: error.message || "Failed to seed expense categories" });
+    }
+  });
+
   // Create expense category (Manager/Admin only)
   app.post('/api/expense-categories', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
@@ -4824,6 +4862,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const timeEntry = await storage.createTimeEntry(validated);
+      
+      // SHIFT CHATROOM: Auto-create chatroom when employee clocks in
+      if (timeEntry.shiftId && validated.employeeId) {
+        try {
+          const employee = await storage.getEmployeeById(validated.employeeId);
+          const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'Employee';
+          
+          await storage.createShiftChatroom(
+            workspace.id,
+            timeEntry.shiftId,
+            timeEntry.id,
+            validated.employeeId,
+            employeeName
+          );
+        } catch (chatError) {
+          console.error("Failed to create shift chatroom:", chatError);
+        }
+      }
+      
       res.json(timeEntry);
     } catch (error: any) {
       console.error("Error clocking in:", error);
@@ -4888,10 +4945,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
+      // SHIFT CHATROOM: Auto-close chatroom when employee clocks out
+      if (timeEntry.shiftId) {
+        try {
+          await storage.closeShiftChatroom(timeEntry.shiftId, req.params.id);
+        } catch (chatError) {
+          console.error("Failed to close shift chatroom:", chatError);
+        }
+      }
+
       res.json(updated);
     } catch (error: any) {
       console.error("Error clocking out:", error);
       res.status(400).json({ message: error.message || "Failed to clock out" });
+    }
+  });
+
+  // ============================================================================
+  // SHIFT CHATROOM API - Auto-created chatrooms for shift communication
+  // ============================================================================
+
+  app.get('/api/shift-chatrooms/active', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const activeChatrooms = await storage.getActiveShiftChatrooms(workspace.id);
+      res.json(activeChatrooms);
+    } catch (error: any) {
+      console.error("Error fetching active shift chatrooms:", error);
+      res.status(400).json({ message: error.message || "Failed to fetch shift chatrooms" });
+    }
+  });
+
+  app.get('/api/shift-chatrooms/:shiftId/:timeEntryId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const chatroom = await storage.getShiftChatroom(req.params.shiftId, req.params.timeEntryId);
+      
+      if (!chatroom) {
+        return res.status(404).json({ message: "Shift chatroom not found" });
+      }
+
+      if (chatroom.workspaceId !== workspace.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const messages = await storage.getChatMessagesByConversation(chatroom.id);
+      
+      res.json({ chatroom, messages });
+    } catch (error: any) {
+      console.error("Error fetching shift chatroom:", error);
+      res.status(400).json({ message: error.message || "Failed to fetch shift chatroom" });
+    }
+  });
+
+  app.post('/api/shift-chatrooms/:conversationId/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const employee = await storage.getEmployeeByUserId(userId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const conversation = await storage.getChatConversation(req.params.conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      if (conversation.conversationType !== 'shift_chat') {
+        return res.status(403).json({ message: "Not a shift chatroom" });
+      }
+
+      const message = await storage.createChatMessage({
+        conversationId: req.params.conversationId,
+        senderId: employee.id,
+        senderName: `${employee.firstName} ${employee.lastName}`,
+        senderType: 'employee',
+        message: req.body.message,
+        isSystemMessage: false,
+      });
+
+      res.json(message);
+    } catch (error: any) {
+      console.error("Error sending shift chat message:", error);
+      res.status(400).json({ message: error.message || "Failed to send message" });
     }
   });
 
