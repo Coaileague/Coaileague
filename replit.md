@@ -10,6 +10,17 @@ Do not make changes to the file `Y`.
 All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
+## Recent Changes (Nov 6, 2025)
+### Mobile Shift Calendar Enhancement - ScheduleOS™ ✅
+**Comprehensive Mobile Shift Management** with full operational workflow:
+- **Core Features**: Weekly agenda view, color-coded shifts, week navigation, FAB creation, real-time API data
+- **Shift Actions Panel** (Mobile-Optimized): Large Clock In/Out button, quick-action grid (Start Chat, Audit Trail, Post Orders, More)
+- **Post Orders Acknowledgment**: Automatic detection, amber alerts, enforcement workflow preventing clock-in until acknowledged
+- **Backend Integration**: Connected to `/api/time-entries/clock-in`, `/api/time-entries/:id/clock-out`, `/api/shifts/:shiftId/acknowledgments`, `/api/acknowledgments/:id/acknowledge`
+- **Management Access**: Ops/managers can help employees via same interface with RBAC enforcement and automatic audit logging
+- **Branding**: Emergency Green (#10b981) throughout, AutoForce™ styling, touch-optimized mobile-first design
+- **Desktop Compatibility**: Mobile view < 768px, desktop grid ≥ 768px
+
 ## System Architecture
 AutoForce™ is built on a modular "OS" design (e.g., BillOS™, PayrollOS™, TrackOS™), promoting clean code and extensibility.
 

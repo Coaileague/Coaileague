@@ -35,7 +35,7 @@ const getShiftColor = (status: string | null) => {
     case 'scheduled':
     case 'published':
     default:
-      return 'bg-green-600 border-green-600 text-green-600';
+      return 'bg-emerald-500 border-emerald-500 text-emerald-500'; // Emergency Green #10b981
   }
 };
 
@@ -67,6 +67,11 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
   const [showAcknowledgmentDialog, setShowAcknowledgmentDialog] = useState(false);
   const { toast } = useToast();
 
+  // Fetch current user for role-based features
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/me"],
+  });
+
   // Fetch data
   const { data: shifts = [] } = useQuery<Shift[]>({
     queryKey: ["/api/shifts"],
@@ -85,6 +90,17 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
     queryKey: selectedShift ? ["/api/shifts", selectedShift.id, "acknowledgments"] : [],
     enabled: !!selectedShift,
   });
+
+  // Fetch active time entries to find if user is clocked in for this shift
+  const { data: timeEntries = [] } = useQuery<any[]>({
+    queryKey: ["/api/time-entries"],
+    enabled: !!selectedShift,
+  });
+
+  // Find active time entry for this shift
+  const activeTimeEntry = selectedShift
+    ? timeEntries.find(entry => entry.shiftId === selectedShift.id && !entry.clockOut)
+    : null;
 
   // Clock In mutation
   const clockInMutation = useMutation({
@@ -250,7 +266,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                       </div>
                       <div className="text-right">
                         <span className={`block text-xs font-semibold uppercase ${
-                          shift.status === 'in_progress' ? 'text-red-500' : 'text-green-500'
+                          shift.status === 'in_progress' ? 'text-red-500' : 'text-emerald-500'
                         }`}>
                           {statusLabel}
                         </span>
@@ -283,7 +299,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       case 'draft':
         return {
           text: 'Clock In',
-          className: 'bg-green-600 hover:bg-green-700',
+          className: 'bg-emerald-500 hover:bg-emerald-600', // Emergency Green
         };
       case 'in_progress':
         return {
@@ -298,7 +314,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       default:
         return {
           text: 'Clock In',
-          className: 'bg-green-600 hover:bg-green-700',
+          className: 'bg-emerald-500 hover:bg-emerald-600', // Emergency Green
         };
     }
   };
@@ -380,6 +396,11 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                 <p className="text-emerald-600 font-semibold" data-testid="modal-shift-time">
                   {formatTime(new Date(selectedShift.startTime))} - {formatTime(new Date(selectedShift.endTime))}
                 </p>
+                {currentUser?.role && ['owner', 'manager', 'supervisor'].includes(currentUser.role) && selectedShift.employeeId && selectedShift.employeeId !== currentUser.id && (
+                  <Badge variant="outline" className="ml-2 text-xs border-emerald-500 text-emerald-600">
+                    Manager Override
+                  </Badge>
+                )}
               </div>
               <button
                 onClick={closeModal}
@@ -437,77 +458,139 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
 
             {/* Primary Action: Clock In/Out */}
             {clockButtonConfig && (
-              <Button
-                className={`w-full ${clockButtonConfig.className} text-white font-bold py-6 text-lg`}
-                onClick={() => {
-                  // Check for unacknowledged post orders before clocking in
-                  const hasUnacknowledged = shiftAcknowledgments.some(a => !a.acknowledgedAt);
-                  if (clockButtonConfig.text === "Clock In" && hasUnacknowledged) {
-                    setShowAcknowledgmentDialog(true);
-                    toast({
-                      title: "Acknowledgment Required",
-                      description: "Please acknowledge all post orders before clocking in",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  if (clockButtonConfig.text === "Clock In") {
-                    clockInMutation.mutate(selectedShift.id);
-                  } else if (clockButtonConfig.text === "Clock Out" && selectedShift.activeTimeEntryId) {
-                    clockOutMutation.mutate(selectedShift.activeTimeEntryId);
-                  }
-                }}
-                disabled={clockInMutation.isPending || clockOutMutation.isPending}
-                data-testid="button-clock-action"
-              >
-                <Clock className="h-6 w-6 mr-2" />
-                {clockInMutation.isPending || clockOutMutation.isPending ? "Processing..." : clockButtonConfig.text}
-              </Button>
+              <>
+                <Button
+                  className={`w-full ${clockButtonConfig.className} text-white font-bold py-6 text-lg`}
+                  onClick={() => {
+                    const isManager = currentUser?.role && ['owner', 'manager', 'supervisor'].includes(currentUser.role);
+                    const isManagingOthers = selectedShift.employeeId && selectedShift.employeeId !== currentUser?.id;
+                    
+                    // Manager override: Skip acknowledgment requirement when helping employees
+                    const hasUnacknowledged = shiftAcknowledgments.some(a => !a.acknowledgedAt);
+                    if (clockButtonConfig.text === "Clock In" && hasUnacknowledged && !isManagingOthers) {
+                      setShowAcknowledgmentDialog(true);
+                      toast({
+                        title: "Acknowledgment Required",
+                        description: "Please acknowledge all post orders before clocking in",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    // Manager override notification
+                    if (isManager && isManagingOthers && clockButtonConfig.text === "Clock In") {
+                      toast({
+                        title: "Manager Override",
+                        description: `Clocking in employee: ${getEmployeeName(selectedShift.employeeId!)}`,
+                      });
+                    }
+                    
+                    if (clockButtonConfig.text === "Clock In") {
+                      clockInMutation.mutate(selectedShift.id);
+                    } else if (clockButtonConfig.text === "Clock Out") {
+                      if (activeTimeEntry?.id) {
+                        if (isManager && isManagingOthers) {
+                          toast({
+                            title: "Manager Override",
+                            description: `Clocking out employee: ${getEmployeeName(selectedShift.employeeId!)}`,
+                          });
+                        }
+                        clockOutMutation.mutate(activeTimeEntry.id);
+                      } else {
+                        toast({
+                          title: "No Active Time Entry",
+                          description: "Could not find an active clock-in for this shift",
+                          variant: "destructive",
+                        });
+                      }
+                    }
+                  }}
+                  disabled={clockInMutation.isPending || clockOutMutation.isPending}
+                  data-testid="button-clock-action"
+                >
+                  <Clock className="h-6 w-6 mr-2" />
+                  {clockInMutation.isPending || clockOutMutation.isPending ? "Processing..." : clockButtonConfig.text}
+                </Button>
+                
+                {/* Manager Helper Note */}
+                {currentUser?.role && ['owner', 'manager', 'supervisor'].includes(currentUser.role) && selectedShift.employeeId && selectedShift.employeeId !== currentUser.id && (
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Managing shift for {getEmployeeName(selectedShift.employeeId)} • Post orders bypass enabled
+                  </p>
+                )}
+              </>
             )}
 
             {/* Quick Actions Grid */}
             <div className="grid grid-cols-2 gap-2 mt-4">
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
-                onClick={() => {
-                  // Create chat functionality
-                  toast({
-                    title: "Create Chat",
-                    description: "Opening shift communication...",
-                  });
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
+                onClick={async () => {
+                  try {
+                    // Create chat room for this shift
+                    const response = await apiRequest("/api/chat/rooms", {
+                      method: "POST",
+                      body: {
+                        name: `Shift: ${getClientName(selectedShift.clientId) || 'Assignment'}`,
+                        description: `Chat for shift on ${format(new Date(selectedShift.startTime), 'MMM d, yyyy')}`,
+                        isPublic: false,
+                      },
+                    });
+                    toast({
+                      title: "Chat Created",
+                      description: "Opening shift communication channel...",
+                    });
+                    // Navigate to chat or open chat panel
+                    window.location.href = `/team-communication?room=${response.id}`;
+                  } catch (error: any) {
+                    toast({
+                      title: "Failed to Create Chat",
+                      description: error.message || "Could not create communication channel",
+                      variant: "destructive",
+                    });
+                  }
                 }}
                 data-testid="button-create-chat"
               >
-                <MessageSquare className="h-5 w-5 text-emerald-600" />
+                <MessageSquare className="h-5 w-5 text-emerald-500" />
                 <span className="text-xs font-semibold">Start Chat</span>
               </Button>
 
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
-                onClick={() => {
-                  // View audit trail
-                  toast({
-                    title: "Audit Trail",
-                    description: "Loading shift audit data...",
-                  });
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
+                onClick={async () => {
+                  try {
+                    // Fetch audit trail for this shift
+                    const auditData = await apiRequest(`/api/audit/entity/shift/${selectedShift.id}`);
+                    toast({
+                      title: "Audit Trail",
+                      description: `Found ${auditData.length || 0} audit entries for this shift`,
+                    });
+                    // Could open a dialog or navigate to audit view
+                  } catch (error: any) {
+                    toast({
+                      title: "Audit Trail Unavailable",
+                      description: error.message || "Could not load audit data",
+                      variant: "destructive",
+                    });
+                  }
                 }}
                 data-testid="button-view-audit"
               >
-                <Eye className="h-5 w-5 text-emerald-600" />
+                <Eye className="h-5 w-5 text-emerald-500" />
                 <span className="text-xs font-semibold">Audit Trail</span>
               </Button>
               
               {shiftAcknowledgments.length > 0 && (
                 <Button
                   variant="outline"
-                  className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
+                  className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
                   onClick={() => setShowAcknowledgmentDialog(true)}
                   data-testid="button-post-orders"
                 >
-                  <FileText className="h-5 w-5 text-emerald-600" />
+                  <FileText className="h-5 w-5 text-emerald-500" />
                   <span className="text-xs font-semibold">Post Orders</span>
                   {shiftAcknowledgments.some(a => !a.acknowledgedAt) && (
                     <Badge variant="destructive" className="text-xs">
@@ -519,10 +602,10 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
 
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
                 data-testid="button-more-options"
               >
-                <ChevronRight className="h-5 w-5 text-emerald-600" />
+                <ChevronRight className="h-5 w-5 text-emerald-500" />
                 <span className="text-xs font-semibold">More</span>
               </Button>
             </div>
@@ -538,7 +621,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-emerald-600" />
+                  <FileText className="h-6 w-6 text-emerald-500" />
                   Post Orders & Acknowledgments
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Review and acknowledge before clocking in</p>
@@ -590,7 +673,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                     ) : (
                       <Button
                         size="sm"
-                        className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full"
+                        className="mt-2 bg-emerald-500 hover:bg-emerald-600 text-white w-full"
                         onClick={() => acknowledgeMutation.mutate(ack.id)}
                         disabled={acknowledgeMutation.isPending}
                         data-testid={`button-acknowledge-${ack.id}`}
