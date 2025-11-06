@@ -69,6 +69,7 @@ import {
   organizationChatChannels,
   organizationRoomMembers,
   organizationRoomOnboarding,
+  notifications,
   type User,
   type UpsertUser,
   type AbuseViolation,
@@ -168,6 +169,8 @@ import {
   type InsertCompanyPolicy,
   type PolicyAcknowledgment,
   type InsertPolicyAcknowledgment,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, isNull, or, like, sql, lte } from "drizzle-orm";
@@ -629,6 +632,16 @@ export interface IStorage {
   
   // Export private DM conversation with DECRYPTED messages (requires authorization)
   getPrivateConversationForExport(conversationId: string, userId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date; auditInfo: any } | null>;
+  
+  // ========================================================================
+  // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
+  // ========================================================================
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByUser(userId: string, workspaceId: string, limit?: number): Promise<Notification[]>;
+  getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number>;
+  markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number>;
+  deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5222,6 +5235,87 @@ export class DatabaseStorage implements IStorage {
         auditRequestId: authCheck.auditRequest?.id,
       },
     };
+  }
+
+  // ========================================================================
+  // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
+  // ========================================================================
+  
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(notificationData)
+      .returning();
+    return notification;
+  }
+
+  async getNotificationsByUser(userId: string, workspaceId: string, limit: number = 50): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.workspaceId, workspaceId)
+      ))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  }
+
+  async getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.workspaceId, workspaceId),
+        eq(notifications.isRead, false)
+      ));
+    return result?.count || 0;
+  }
+
+  async markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(notifications.id, id),
+        eq(notifications.userId, userId) // Ensure user can only mark their own notifications
+      ))
+      .returning();
+    return notification;
+  }
+
+  async markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number> {
+    const result = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.workspaceId, workspaceId),
+        eq(notifications.isRead, false)
+      ));
+    return result.rowCount || 0;
+  }
+
+  async deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    const result = await db
+      .delete(notifications)
+      .where(and(
+        eq(notifications.workspaceId, workspaceId),
+        sql`${notifications.createdAt} < ${cutoffDate}`
+      ));
+    return result.rowCount || 0;
   }
 }
 

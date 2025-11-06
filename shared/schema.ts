@@ -7567,6 +7567,76 @@ export type InsertOrganizationRoomOnboarding = z.infer<typeof insertOrganization
 export type OrganizationRoomOnboarding = typeof organizationRoomOnboarding.$inferSelect;
 
 // ============================================================================
+// NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
+// ============================================================================
+
+// Notification type enum
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'shift_assigned',      // New shift assigned to user
+  'shift_changed',       // Shift details changed (time, location, etc.)
+  'shift_cancelled',     // Shift was cancelled
+  'pto_approved',        // PTO request approved
+  'pto_denied',          // PTO request denied
+  'schedule_change',     // Schedule changed by manager
+  'document_uploaded',   // New document uploaded for user
+  'document_expiring',   // Document expiring soon
+  'profile_updated',     // Profile updated by admin
+  'form_assigned',       // New form/paperwork assigned
+  'timesheet_approved',  // Timesheet approved
+  'timesheet_rejected',  // Timesheet rejected
+  'payroll_processed',   // Payroll processed
+  'mention',             // User mentioned in chat/comment
+  'system',              // System notification
+]);
+
+// Notifications table - user-specific, organization-scoped
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Notification content
+  type: notificationTypeEnum("type").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  
+  // Status
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  
+  // Navigation
+  actionUrl: varchar("action_url", { length: 500 }), // Where to go when clicked
+  
+  // Related entities (for tracking what triggered the notification)
+  relatedEntityType: varchar("related_entity_type", { length: 100 }), // e.g., 'shift', 'employee', 'document'
+  relatedEntityId: varchar("related_entity_id"), // ID of the related entity
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional data (shift details, document name, etc.)
+  
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id), // Who triggered this notification
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("notifications_user_idx").on(table.userId),
+  workspaceIdx: index("notifications_workspace_idx").on(table.workspaceId),
+  isReadIdx: index("notifications_is_read_idx").on(table.isRead),
+  createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
+  typeIdx: index("notifications_type_idx").on(table.type),
+}));
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+// ============================================================================
 // CUSTOMER PAYMENT INFORMATION - END CUSTOMER BILLING
 // ============================================================================
 
