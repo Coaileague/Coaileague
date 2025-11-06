@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, startOfWeek, addDays, isSameDay, isToday, addWeeks } from "date-fns";
-import { Bell, Plus, X, MessageSquare, FileText, Clock } from "lucide-react";
+import { Bell, Plus, X, MessageSquare, FileText, Clock, Eye, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Shift, Employee, Client } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Shift, Employee, Client, ShiftAcknowledgment } from "@shared/schema";
 import { ShiftActionsMenu } from "@/components/shift-actions-menu";
 
 interface MobileShiftCalendarProps {
@@ -62,6 +64,8 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAcknowledgmentDialog, setShowAcknowledgmentDialog] = useState(false);
+  const { toast } = useToast();
 
   // Fetch data
   const { data: shifts = [] } = useQuery<Shift[]>({
@@ -74,6 +78,80 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+  });
+
+  // Fetch shift acknowledgments for selected shift
+  const { data: shiftAcknowledgments = [] } = useQuery<ShiftAcknowledgment[]>({
+    queryKey: selectedShift ? ["/api/shifts", selectedShift.id, "acknowledgments"] : [],
+    enabled: !!selectedShift,
+  });
+
+  // Clock In mutation
+  const clockInMutation = useMutation({
+    mutationFn: async (shiftId: string) => {
+      return await apiRequest(`/api/time-entries/clock-in`, {
+        method: "POST",
+        body: { shiftId },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Clocked In Successfully",
+        description: "Your time tracking has started",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      setIsModalOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Clock In Failed",
+        description: error.message || "Could not clock in",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Clock Out mutation
+  const clockOutMutation = useMutation({
+    mutationFn: async (timeEntryId: string) => {
+      return await apiRequest(`/api/time-entries/${timeEntryId}/clock-out`, {
+        method: "PATCH",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Clocked Out Successfully",
+        description: "Your time entry has been saved",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      setIsModalOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Clock Out Failed",
+        description: error.message || "Could not clock out",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Acknowledge shift acknowledgment
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (acknowledgmentId: string) => {
+      return await apiRequest(`/api/acknowledgments/${acknowledgmentId}/acknowledge`, {
+        method: "PATCH",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Acknowledged",
+        description: "Post orders acknowledged successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      setShowAcknowledgmentDialog(false);
+    },
   });
 
   const navigateWeek = (weeks: number) => {
@@ -333,21 +411,208 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              {clockButtonConfig && (
+            {/* Post Orders / Acknowledgments Alert */}
+            {shiftAcknowledgments.length > 0 && shiftAcknowledgments.some(a => !a.acknowledgedAt) && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-900">Post Orders Require Acknowledgment</p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      You must acknowledge {shiftAcknowledgments.filter(a => !a.acknowledgedAt).length} post order(s) before clocking in
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+                      onClick={() => setShowAcknowledgmentDialog(true)}
+                      data-testid="button-view-acknowledgments"
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      View Post Orders
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Primary Action: Clock In/Out */}
+            {clockButtonConfig && (
+              <Button
+                className={`w-full ${clockButtonConfig.className} text-white font-bold py-6 text-lg`}
+                onClick={() => {
+                  // Check for unacknowledged post orders before clocking in
+                  const hasUnacknowledged = shiftAcknowledgments.some(a => !a.acknowledgedAt);
+                  if (clockButtonConfig.text === "Clock In" && hasUnacknowledged) {
+                    setShowAcknowledgmentDialog(true);
+                    toast({
+                      title: "Acknowledgment Required",
+                      description: "Please acknowledge all post orders before clocking in",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (clockButtonConfig.text === "Clock In") {
+                    clockInMutation.mutate(selectedShift.id);
+                  } else if (clockButtonConfig.text === "Clock Out" && selectedShift.activeTimeEntryId) {
+                    clockOutMutation.mutate(selectedShift.activeTimeEntryId);
+                  }
+                }}
+                disabled={clockInMutation.isPending || clockOutMutation.isPending}
+                data-testid="button-clock-action"
+              >
+                <Clock className="h-6 w-6 mr-2" />
+                {clockInMutation.isPending || clockOutMutation.isPending ? "Processing..." : clockButtonConfig.text}
+              </Button>
+            )}
+
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
+                onClick={() => {
+                  // Create chat functionality
+                  toast({
+                    title: "Create Chat",
+                    description: "Opening shift communication...",
+                  });
+                }}
+                data-testid="button-create-chat"
+              >
+                <MessageSquare className="h-5 w-5 text-emerald-600" />
+                <span className="text-xs font-semibold">Start Chat</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
+                onClick={() => {
+                  // View audit trail
+                  toast({
+                    title: "Audit Trail",
+                    description: "Loading shift audit data...",
+                  });
+                }}
+                data-testid="button-view-audit"
+              >
+                <Eye className="h-5 w-5 text-emerald-600" />
+                <span className="text-xs font-semibold">Audit Trail</span>
+              </Button>
+              
+              {shiftAcknowledgments.length > 0 && (
                 <Button
-                  className={`w-full ${clockButtonConfig.className} text-white font-bold`}
-                  data-testid="button-clock-action"
+                  variant="outline"
+                  className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
+                  onClick={() => setShowAcknowledgmentDialog(true)}
+                  data-testid="button-post-orders"
                 >
-                  {clockButtonConfig.text}
+                  <FileText className="h-5 w-5 text-emerald-600" />
+                  <span className="text-xs font-semibold">Post Orders</span>
+                  {shiftAcknowledgments.some(a => !a.acknowledgedAt) && (
+                    <Badge variant="destructive" className="text-xs">
+                      {shiftAcknowledgments.filter(a => !a.acknowledgedAt).length}
+                    </Badge>
+                  )}
                 </Button>
               )}
 
-              {/* Shift Actions Menu Integration */}
-              <div className="w-full">
-                <ShiftActionsMenu shift={selectedShift} />
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-200"
+                data-testid="button-more-options"
+              >
+                <ChevronRight className="h-5 w-5 text-emerald-600" />
+                <span className="text-xs font-semibold">More</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post Orders Acknowledgment Dialog */}
+      {showAcknowledgmentDialog && selectedShift && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-[60] transition-opacity">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto transform transition-all">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
+                  <FileText className="h-6 w-6 text-emerald-600" />
+                  Post Orders & Acknowledgments
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">Review and acknowledge before clocking in</p>
               </div>
+              <button
+                onClick={() => setShowAcknowledgmentDialog(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full transition"
+                data-testid="button-close-acknowledgment"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Acknowledgments List */}
+            <div className="space-y-4">
+              {shiftAcknowledgments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <p>No post orders for this shift</p>
+                </div>
+              ) : (
+                shiftAcknowledgments.map((ack) => (
+                  <div
+                    key={ack.id}
+                    className={`p-4 rounded-lg border ${
+                      ack.acknowledgedAt
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-amber-50 border-amber-200'
+                    }`}
+                    data-testid={`acknowledgment-${ack.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-bold text-gray-900">{ack.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{ack.content}</p>
+                      </div>
+                      {ack.acknowledgedAt ? (
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                      )}
+                    </div>
+
+                    {ack.acknowledgedAt ? (
+                      <div className="text-xs text-green-700 mt-2 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Acknowledged on {format(new Date(ack.acknowledgedAt), 'MMM d, yyyy h:mm a')}
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full"
+                        onClick={() => acknowledgeMutation.mutate(ack.id)}
+                        disabled={acknowledgeMutation.isPending}
+                        data-testid={`button-acknowledge-${ack.id}`}
+                      >
+                        {acknowledgeMutation.isPending ? "Acknowledging..." : "✓ I Acknowledge"}
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowAcknowledgmentDialog(false)}
+                data-testid="button-done-acknowledgments"
+              >
+                {shiftAcknowledgments.some(a => !a.acknowledgedAt) ? "Close" : "Done"}
+              </Button>
             </div>
           </div>
         </div>
