@@ -15,32 +15,47 @@ import { MobileLoading } from "@/components/mobile-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { queryClient } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { HexGridLoader } from "@/components/loading-indicators";
 
 export default function DashboardCompact() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { showTransition, hideTransition } = useTransition();
   const isMobile = useIsMobile();
+  const [showBackgroundSync, setShowBackgroundSync] = useState(false);
 
-  const { data: stats } = useQuery({
+  const { data: stats, isRefetching: statsRefetching } = useQuery({
     queryKey: ['/api/analytics/stats'],
     enabled: isAuthenticated,
   });
 
-  const { data: allEmployees } = useQuery<any[]>({
+  const { data: allEmployees, isRefetching: employeesRefetching } = useQuery<any[]>({
     queryKey: ['/api/employees'],
     enabled: isAuthenticated,
   });
 
-  const { data: clients } = useQuery<any[]>({
+  const { data: clients, isRefetching: clientsRefetching } = useQuery<any[]>({
     queryKey: ['/api/clients'],
     enabled: isAuthenticated,
   });
 
-  const { data: timeEntries } = useQuery<any[]>({
+  const { data: timeEntries, isRefetching: timeEntriesRefetching } = useQuery<any[]>({
     queryKey: ['/api/time-entries'],
     enabled: isAuthenticated,
   });
+
+  // Show hex grid loader when any data is refetching
+  useEffect(() => {
+    const isRefetching = statsRefetching || employeesRefetching || clientsRefetching || timeEntriesRefetching;
+    
+    if (isRefetching) {
+      setShowBackgroundSync(true);
+    } else {
+      // Only hide after refetching completes (with small delay for smooth transition)
+      const timer = setTimeout(() => setShowBackgroundSync(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [statsRefetching, employeesRefetching, clientsRefetching, timeEntriesRefetching]);
 
   const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
   const workspaceRole = currentEmployee?.workspaceRole || 'employee';
@@ -386,11 +401,25 @@ export default function DashboardCompact() {
     </div>
   );
 
-  return isMobile ? (
-    <MobilePageWrapper>
-      {dashboardContent}
-    </MobilePageWrapper>
-  ) : (
-    dashboardContent
+  return (
+    <>
+      {/* Background Sync Indicator - Hex Grid */}
+      {showBackgroundSync && (
+        <div className="fixed bottom-4 right-4 z-50 pointer-events-none" data-testid="background-sync-indicator">
+          <div className="bg-background/95 backdrop-blur-sm border rounded-lg p-4 shadow-lg pointer-events-auto">
+            <HexGridLoader active={showBackgroundSync} />
+            <p className="text-xs text-muted-foreground mt-2 text-center">Syncing data...</p>
+          </div>
+        </div>
+      )}
+      
+      {isMobile ? (
+        <MobilePageWrapper>
+          {dashboardContent}
+        </MobilePageWrapper>
+      ) : (
+        dashboardContent
+      )}
+    </>
   );
 }
