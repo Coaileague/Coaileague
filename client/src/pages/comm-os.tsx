@@ -46,7 +46,8 @@ import {
   Play,
   Settings,
   Eye,
-  Ban
+  Ban,
+  Download
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
@@ -60,6 +61,8 @@ export default function CommOS() {
   const [selectedRoom, setSelectedRoom] = useState<OrganizationChatRoom | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
   const [newRoomDialogOpen, setNewRoomDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"pdf" | "html">("pdf");
 
   const isSupportStaff = user?.role === 'platform_admin' || user?.role === 'support_staff';
 
@@ -146,6 +149,66 @@ export default function CommOS() {
       suspendRoomMutation.mutate({
         roomId: selectedRoom.id,
         reason: suspendReason,
+      });
+    }
+  };
+
+  const handleExportRoom = (room: OrganizationChatRoom) => {
+    setSelectedRoom(room);
+    setExportDialogOpen(true);
+  };
+
+  const confirmExport = async () => {
+    if (!selectedRoom) return;
+
+    try {
+      const response = await fetch(`/api/chat-export/comm-room/${selectedRoom.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ format: exportFormat }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Export failed');
+      }
+
+      if (exportFormat === 'pdf') {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chatroom-${selectedRoom.roomName || selectedRoom.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: "Export Successful",
+          description: "Chat history PDF downloaded successfully",
+        });
+      } else {
+        const html = await response.text();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+
+        toast({
+          title: "Export Successful",
+          description: "Chat history HTML opened in new window",
+        });
+      }
+
+      setExportDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Export Failed",
+        description: error.message,
+        variant: "destructive",
       });
     }
   };
@@ -327,6 +390,15 @@ export default function CommOS() {
                                 <Eye className="w-4 h-4 mr-1" />
                                 Join
                               </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => handleExportRoom(room)}
+                                data-testid={`button-export-${room.id}`}
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Export
+                              </Button>
                               {room.status === 'active' ? (
                                 <Button 
                                   size="sm" 
@@ -419,6 +491,65 @@ export default function CommOS() {
               data-testid="button-confirm-suspend"
             >
               {suspendRoomMutation.isPending ? 'Suspending...' : 'Suspend Room'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Chat History Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent data-testid="dialog-export-chat">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5 text-emerald-600" />
+              Export Chat History
+            </DialogTitle>
+            <DialogDescription>
+              Download the complete chat history for this room
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Export Format</Label>
+              <div className="flex gap-4 mt-2">
+                <Button
+                  variant={exportFormat === "pdf" ? "default" : "outline"}
+                  onClick={() => setExportFormat("pdf")}
+                  className="flex-1"
+                  data-testid="button-format-pdf"
+                >
+                  PDF Document
+                </Button>
+                <Button
+                  variant={exportFormat === "html" ? "default" : "outline"}
+                  onClick={() => setExportFormat("html")}
+                  className="flex-1"
+                  data-testid="button-format-html"
+                >
+                  HTML Page
+                </Button>
+              </div>
+            </div>
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3">
+              <p className="text-sm text-amber-900 dark:text-amber-100">
+                This export will include all messages, timestamps, and participant information. It will be logged for compliance purposes.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setExportDialogOpen(false)}
+              data-testid="button-cancel-export"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmExport}
+              data-testid="button-confirm-export"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export as {exportFormat.toUpperCase()}
             </Button>
           </DialogFooter>
         </DialogContent>
