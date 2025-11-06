@@ -223,7 +223,7 @@ export function AutoForceLogo({
             <span 
               className={cn(
                 "font-black",
-                lightMode ? "text-white" : "text-foreground",
+                lightMode ? "text-white" : "text-gray-900 dark:text-gray-50",
                 titleSizes[size]
               )}
               data-testid="logo-text-auto"
@@ -232,8 +232,7 @@ export function AutoForceLogo({
             </span>
             <span 
               className={cn(
-                "font-black",
-                lightMode ? "text-red-300" : "text-destructive",
+                "font-black text-emerald-600 dark:text-emerald-400",
                 titleSizes[size]
               )}
               data-testid="logo-text-force"
@@ -243,7 +242,7 @@ export function AutoForceLogo({
             <span 
               className={cn(
                 "font-black text-xs align-super",
-                lightMode ? "text-white" : "text-foreground"
+                lightMode ? "text-white" : "text-gray-900 dark:text-gray-50"
               )}
               data-testid="logo-trademark"
             >
@@ -254,7 +253,7 @@ export function AutoForceLogo({
           <p 
             className={cn(
               "tracking-wide uppercase font-medium",
-              lightMode ? "text-gray-300" : "text-muted-foreground",
+              lightMode ? "text-gray-300" : "text-gray-600 dark:text-gray-400",
               taglineSizes[size]
             )}
             data-testid="logo-tagline"

@@ -1907,3 +1907,23 @@
     page-break-inside: avoid;
   }
 }
+
+/* AutoForce™ Logo Brand Colors - CSP-safe (no inline styles) */
+.autoforce-logo-auto { color: #1F2937 !important; }
+.autoforce-logo-force { color: #10b981 !important; }
+
+/* AutoForce™ Logo - Extra specificity to override all other styles */
+span[data-testid="logo-text-auto"].autoforce-logo-auto,
+.autoforce-logo-auto[data-testid="logo-text-auto"] {
+  color: #1F2937 !important;
+}
+
+span[data-testid="logo-trademark"].autoforce-logo-auto,
+.autoforce-logo-auto[data-testid="logo-trademark"] {
+  color: #1F2937 !important;
+}
+
+span[data-testid="logo-text-force"].autoforce-logo-force,
+.autoforce-logo-force[data-testid="logo-text-force"] {
+  color: #10b981 !important;
+}
