@@ -10,6 +10,7 @@ import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom au
 import authRoutes from "./authRoutes"; // Custom auth routes
 import { auditContextMiddleware } from "./middleware/audit";
 import { apiLimiter, authLimiter, mutationLimiter, readLimiter } from "./middleware/rateLimiter";
+import * as notificationHelpers from "./notifications";
 import Stripe from 'stripe';
 import PDFDocument from 'pdfkit';
 import { 
@@ -246,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // - Dual authentication paths: Ticket + email OR Work ID + email
   // - Session-based validation for all WebSocket connections
   // - Platform staff role verification for administrative controls
-  const { broadcastShiftUpdate } = setupWebSocket(server);
+  const { broadcastShiftUpdate, broadcastNotification } = setupWebSocket(server);
   
   // Setup custom auth (portable, session-based)
   setupCustomAuth(app);
@@ -269,28 +270,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       
-      // Mock notifications for now - replace with actual implementation
-      const notifications = [
-        {
-          id: '1',
-          type: 'shift_assigned',
-          title: 'New shift assigned',
-          message: 'You have been assigned to work on Monday, 9 AM - 5 PM',
-          isRead: false,
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          actionUrl: '/schedule',
-        },
-        {
-          id: '2',
-          type: 'pto_approved',
-          title: 'PTO request approved',
-          message: 'Your PTO request for Dec 25-26 has been approved',
-          isRead: true,
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-          actionUrl: '/hr/pto',
-        },
-      ];
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      if (!workspace) {
+        // If user is not an owner, check if they're a member
+        const member = await storage.getWorkspaceMemberByUserId(userId);
+        if (!member) {
+          return res.status(404).json({ message: 'Workspace not found' });
+        }
+        // Get notifications for member
+        const notifications = await storage.getNotificationsByUser(userId, member.workspaceId);
+        return res.json(notifications);
+      }
       
+      // Get notifications for workspace owner
+      const notifications = await storage.getNotificationsByUser(userId, workspace.id);
       res.json(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -301,9 +295,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark notification as read
   app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
-      // Implementation would mark notification as read in DB
-      res.json({ success: true });
+      
+      // Mark notification as read
+      const notification = await storage.markNotificationAsRead(id, userId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+      
+      // Broadcast updated unread count
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      if (workspace) {
+        const unreadCount = await storage.getUnreadNotificationCount(userId, workspace.id);
+        broadcastNotification(workspace.id, userId, 'notification_count_updated', undefined, unreadCount);
+      } else {
+        const member = await storage.getWorkspaceMemberByUserId(userId);
+        if (member) {
+          const unreadCount = await storage.getUnreadNotificationCount(userId, member.workspaceId);
+          broadcastNotification(member.workspaceId, userId, 'notification_count_updated', undefined, unreadCount);
+        }
+      }
+      
+      res.json({ success: true, notification });
     } catch (error) {
       console.error('Error marking notification as read:', error);
       res.status(500).json({ message: 'Failed to mark notification as read' });
@@ -314,7 +329,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      // Implementation would mark all notifications as read in DB
+      
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      let workspaceId: string;
+      
+      if (!workspace) {
+        const member = await storage.getWorkspaceMemberByUserId(userId);
+        if (!member) {
+          return res.status(404).json({ message: 'Workspace not found' });
+        }
+        workspaceId = member.workspaceId;
+      } else {
+        workspaceId = workspace.id;
+      }
+      
+      // Mark all notifications as read
+      await storage.markAllNotificationsAsRead(userId, workspaceId);
+      
+      // Broadcast updated unread count (should be 0)
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      
       res.json({ success: true });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -2658,6 +2693,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 📡 REAL-TIME: Broadcast shift creation ONLY after successful DB operation
       broadcastShiftUpdate(workspace.id, 'shift_created', shift);
       
+      // 🔔 NOTIFICATION: Create notification for assigned employee
+      if (shift.employeeId) {
+        const shiftDate = new Date(shift.startTime).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        await notificationHelpers.createShiftAssignedNotification(
+          { storage, broadcastNotification },
+          {
+            workspaceId: workspace.id,
+            userId: shift.employeeId,
+            shiftId: shift.id,
+            shiftTitle: shift.title || 'Shift',
+            shiftDate,
+            assignedBy: userId,
+          }
+        ).catch(err => console.error('Failed to create shift notification:', err));
+      }
+      
       res.json(shift);
     } catch (error: any) {
       console.error("Error creating shift:", error);
@@ -2686,6 +2742,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 📡 REAL-TIME: Broadcast shift update ONLY after successful DB operation
       broadcastShiftUpdate(workspace.id, 'shift_updated', shift);
       
+      // 🔔 NOTIFICATION: Notify assigned employee about changes
+      if (shift.employeeId) {
+        const changeDescriptions = [];
+        if (validated.startTime || validated.endTime) changeDescriptions.push('time');
+        if (validated.title) changeDescriptions.push('title');
+        if (validated.clientId !== undefined) changeDescriptions.push('location/client');
+        
+        const changes = changeDescriptions.length > 0 
+          ? changeDescriptions.join(', ')
+          : 'details updated';
+        
+        await notificationHelpers.createShiftChangedNotification(
+          { storage, broadcastNotification },
+          {
+            workspaceId: workspace.id,
+            userId: shift.employeeId,
+            shiftId: shift.id,
+            shiftTitle: shift.title || 'Shift',
+            changes,
+            changedBy: userId,
+          }
+        ).catch(err => console.error('Failed to create shift update notification:', err));
+      }
+      
       res.json(shift);
     } catch (error: any) {
       console.error("Error updating shift:", error);
@@ -2702,6 +2782,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
+      // Get shift details before deletion for notification
+      const shift = await storage.getShift(req.params.id, workspace.id);
+      
       const deleted = await storage.deleteShift(req.params.id, workspace.id);
       if (!deleted) {
         return res.status(404).json({ message: "Shift not found" });
@@ -2709,6 +2792,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 📡 REAL-TIME: Broadcast shift deletion ONLY after successful DB operation
       broadcastShiftUpdate(workspace.id, 'shift_deleted', undefined, req.params.id);
+      
+      // 🔔 NOTIFICATION: Notify employee about shift cancellation
+      if (shift && shift.employeeId) {
+        const shiftDate = new Date(shift.startTime).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        await notificationHelpers.createShiftCancelledNotification(
+          { storage, broadcastNotification },
+          {
+            workspaceId: workspace.id,
+            userId: shift.employeeId,
+            shiftId: shift.id,
+            shiftTitle: shift.title || 'Shift',
+            shiftDate,
+            cancelledBy: userId,
+          }
+        ).catch(err => console.error('Failed to create shift cancellation notification:', err));
+      }
       
       res.json({ success: true });
     } catch (error) {

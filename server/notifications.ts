@@ -11,12 +11,29 @@ interface NotificationHelperContext {
   ) => void;
 }
 
+type NotificationType = 
+  | 'shift_assigned'
+  | 'shift_changed'
+  | 'shift_cancelled'
+  | 'pto_approved'
+  | 'pto_denied'
+  | 'schedule_change'
+  | 'document_uploaded'
+  | 'document_expiring'
+  | 'profile_updated'
+  | 'form_assigned'
+  | 'timesheet_approved'
+  | 'timesheet_rejected'
+  | 'payroll_processed'
+  | 'mention'
+  | 'system';
+
 interface CreateNotificationParams {
   workspaceId: string;
   userId: string;
   title: string;
   message: string;
-  type: string;
+  type: NotificationType;
   actionUrl?: string;
   relatedEntityType?: string;
   relatedEntityId?: string;
@@ -49,7 +66,7 @@ async function createAndBroadcastNotification(
     userId: params.createdBy || 'system',
     userEmail: 'system',
     userRole: 'system',
-    action: 'notification_created',
+    action: 'other',
     actionDescription: `Notification created: ${params.title}`,
     entityType: 'notification',
     entityId: notification.id,
