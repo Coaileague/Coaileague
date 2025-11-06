@@ -640,7 +640,9 @@ export interface IStorage {
   getNotificationsByUser(userId: string, workspaceId: string, limit?: number): Promise<Notification[]>;
   getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number>;
   markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined>;
+  toggleNotificationReadStatus(id: string, userId: string): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number>;
+  deleteNotification(id: string, userId: string): Promise<boolean>;
   deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number>;
 }
 
@@ -5289,6 +5291,36 @@ export class DatabaseStorage implements IStorage {
     return notification;
   }
 
+  async toggleNotificationReadStatus(id: string, userId: string): Promise<Notification | undefined> {
+    // First, fetch the notification to get its current state
+    const [current] = await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.id, id),
+        eq(notifications.userId, userId)
+      ));
+    
+    if (!current) {
+      return undefined;
+    }
+
+    // Toggle the read status
+    const [notification] = await db
+      .update(notifications)
+      .set({ 
+        isRead: !current.isRead, 
+        readAt: !current.isRead ? new Date() : null,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(notifications.id, id),
+        eq(notifications.userId, userId)
+      ))
+      .returning();
+    return notification;
+  }
+
   async markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number> {
     const result = await db
       .update(notifications)
@@ -5303,6 +5335,16 @@ export class DatabaseStorage implements IStorage {
         eq(notifications.isRead, false)
       ));
     return result.rowCount || 0;
+  }
+
+  async deleteNotification(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(notifications)
+      .where(and(
+        eq(notifications.id, id),
+        eq(notifications.userId, userId) // Ensure user can only delete their own notifications
+      ));
+    return (result.rowCount || 0) > 0;
   }
 
   async deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number> {

@@ -292,14 +292,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mark notification as read
+  // Toggle notification read status (mark as read/unread)
   app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
       
-      // Mark notification as read
-      const notification = await storage.markNotificationAsRead(id, userId);
+      // Toggle notification read status
+      const notification = await storage.toggleNotificationReadStatus(id, userId);
       
       if (!notification) {
         return res.status(404).json({ message: 'Notification not found' });
@@ -320,8 +320,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ success: true, notification });
     } catch (error) {
-      console.error('Error marking notification as read:', error);
-      res.status(500).json({ message: 'Failed to mark notification as read' });
+      console.error('Error toggling notification read status:', error);
+      res.status(500).json({ message: 'Failed to toggle notification read status' });
     }
   });
 
@@ -354,6 +354,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       res.status(500).json({ message: 'Failed to mark all notifications as read' });
+    }
+  });
+
+  // Delete notification
+  app.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      // Delete notification (storage will verify ownership)
+      const deleted = await storage.deleteNotification(id, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Notification not found or unauthorized' });
+      }
+      
+      // Broadcast updated unread count
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      if (workspace) {
+        const unreadCount = await storage.getUnreadNotificationCount(userId, workspace.id);
+        broadcastNotification(workspace.id, userId, 'notification_count_updated', undefined, unreadCount);
+      } else {
+        const member = await storage.getWorkspaceMemberByUserId(userId);
+        if (member) {
+          const unreadCount = await storage.getUnreadNotificationCount(userId, member.workspaceId);
+          broadcastNotification(member.workspaceId, userId, 'notification_count_updated', undefined, unreadCount);
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({ message: 'Failed to delete notification' });
     }
   });
 

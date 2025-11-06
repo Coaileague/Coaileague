@@ -11,6 +11,26 @@ All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
 ## Recent Changes (Nov 6, 2025)
+### Dashboard with Notification Center - Login Landing Page ✅
+**Comprehensive Dashboard** appears immediately upon login for all users (including root):
+- **Notification Center Table**: Real-time table view with type badges, icons, messages, and timestamps
+  - Filter tabs: All / Unread / Read with live counts
+  - Toggle read/unread status with single click
+  - Delete individual notifications
+  - Mark all as read bulk action
+  - Live unread badge count (auto-updates via WebSocket)
+- **Quick Action Cards**: Direct links to Employees, Schedule, Time Tracking, and Invoices
+- **Metrics Dashboard**: Total employees, active today, and revenue cards
+- **WebSocket Integration**: Real-time updates using existing notification WebSocket infrastructure
+- **Visual Design**: Emergency Green (#10b981 / emerald-500) branding with animated gradient orbs
+- **Security**: Users can only view/modify/delete their own notifications (enforced at storage level)
+- **API Endpoints**: 
+  - `GET /api/notifications` - Fetch user notifications
+  - `PATCH /api/notifications/:id/read` - Toggle read/unread status
+  - `DELETE /api/notifications/:id` - Delete notification
+  - `POST /api/notifications/mark-all-read` - Mark all as read
+- **Production Status**: Architect-approved, fully functional with complete CRUD operations
+
 ### Real-Time User Notification System - Instant Alerts & Updates ✅
 **Production-Ready Notification System** with instant user-specific delivery:
 - **Backend Infrastructure**:
