@@ -37,7 +37,7 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
       >
         <div className="flex flex-col items-center gap-8 w-full max-w-md">
           {/* AF Core Scan - Radial Progress with A→AF */}
-          <AFCoreScan progress={animatedProgress} size="xl" />
+          <AFCoreScan progress={animatedProgress} size="lg" />
           
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="text-2xl font-bold text-orange-500">

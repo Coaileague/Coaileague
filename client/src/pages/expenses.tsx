@@ -15,6 +15,7 @@ import { Plus, Receipt, DollarSign, MapPin, Calendar, FileText, Upload, X } from
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { ForceFlowBar } from "@/components/loading-indicators";
 
 const expenseFormSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
@@ -39,6 +40,8 @@ export default function ExpensesPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ['/api/expense-categories'],
@@ -69,11 +72,19 @@ export default function ExpensesPage() {
 
   const createExpenseMutation = useMutation({
     mutationFn: async (values: ExpenseFormValues) => {
+      setIsUploading(true);
+      setUploadProgress(0);
+      
       const expense = await apiRequest('/api/expenses', 'POST', values);
+      setUploadProgress(20);
       
       // Upload receipts if any selected
       if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+        const progressPerFile = 70 / selectedFiles.length;
+        
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          
           // Upload to object storage
           const formData = new FormData();
           formData.append('file', file);
@@ -97,8 +108,13 @@ export default function ExpensesPage() {
             fileType: file.type,
             fileSize: file.size,
           });
+          
+          setUploadProgress(20 + progressPerFile * (i + 1));
         }
       }
+      
+      setUploadProgress(100);
+      setIsUploading(false);
       
       return expense;
     },
@@ -111,6 +127,8 @@ export default function ExpensesPage() {
       setShowForm(false);
       form.reset();
       setSelectedFiles([]);
+      setUploadProgress(0);
+      setIsUploading(false);
     },
     onError: (error: any) => {
       toast({
@@ -118,6 +136,8 @@ export default function ExpensesPage() {
         description: error.message || "Failed to submit expense",
         variant: "destructive",
       });
+      setIsUploading(false);
+      setUploadProgress(0);
     },
   });
 
@@ -432,6 +452,18 @@ export default function ExpensesPage() {
                   </div>
                 </div>
 
+                {/* Upload Progress Indicator */}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <ForceFlowBar progress={uploadProgress} />
+                    <div className="text-center text-sm text-muted-foreground">
+                      {uploadProgress < 20 && "Creating expense..."}
+                      {uploadProgress >= 20 && uploadProgress < 90 && `Uploading receipts... ${Math.round(uploadProgress)}%`}
+                      {uploadProgress >= 90 && "Finalizing..."}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2 justify-end">
                   <Button
                     type="button"
@@ -440,16 +472,17 @@ export default function ExpensesPage() {
                       setShowForm(false);
                       form.reset();
                     }}
+                    disabled={isUploading}
                     data-testid="button-cancel"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createExpenseMutation.isPending}
+                    disabled={createExpenseMutation.isPending || isUploading}
                     data-testid="button-submit-expense"
                   >
-                    {createExpenseMutation.isPending ? "Submitting..." : "Submit Expense"}
+                    {isUploading ? "Uploading..." : createExpenseMutation.isPending ? "Submitting..." : "Submit Expense"}
                   </Button>
                 </div>
               </form>
