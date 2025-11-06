@@ -32,8 +32,8 @@ export function NotificationsCenter() {
   const { data: currentUser } = useQuery({ queryKey: ['/api/auth/me'] });
   const userId = currentUser?.id;
   
-  // Get workspace info (owner or member)
-  const { data: workspace } = useQuery({ queryKey: ['/api/workspaces'] });
+  // Get current workspace
+  const { data: workspace } = useQuery({ queryKey: ['/api/workspace'] });
   const workspaceId = workspace?.id;
 
   // Connect to notification WebSocket
