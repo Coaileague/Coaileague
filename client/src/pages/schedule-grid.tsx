@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/tooltip";
 import { EnhancedEmptyState } from "@/components/enhanced-empty-state";
 import { SlingMobileSchedule } from "@/components/schedule-mobile-sling";
+import { ShiftActionsMenu } from "@/components/shift-actions-menu";
 import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
 
@@ -140,21 +141,8 @@ function DraggableShiftCard({ shift, employee, client, onAddAcknowledgment }: {
         </div>
       )}
 
-      {/* Add acknowledgment button - top right corner */}
-      {onAddAcknowledgment && (
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddAcknowledgment(shift);
-          }}
-          data-testid={`button-add-acknowledgment-${shift.id}`}
-        >
-          <Plus className="h-4 w-4 text-white" />
-        </Button>
-      )}
+      {/* Shift Actions Menu - top right corner */}
+      <ShiftActionsMenu shift={shift} />
 
       {/* Status badge - bottom right */}
       {isDraft && (
