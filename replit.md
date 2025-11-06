@@ -11,6 +11,35 @@ All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
 ## Recent Changes (Nov 6, 2025)
+### Header Redesign - Compact, Clean, and Personalized UI ✅
+**Streamlined Platform Headers** with reduced padding, personalized greetings, and responsive design:
+- **Problem**: Headers were too thick with excessive padding (p-6 sm:p-8), displayed impersonal timer/clock, and theme toggle overlapped with other controls on smaller screens
+- **Solution**: Reduced padding, replaced timer with personalized greeting, added notifications dropdown, and implemented responsive button hiding to prevent overlap
+- **Header Changes**:
+  - **Padding Reduction**: Changed from `p-6 sm:p-8` to `p-3 sm:p-4` across admin-command-center.tsx and root-admin-dashboard.tsx for thinner, cleaner appearance
+  - **Timer Removal**: Removed real-time clock/timer display and related state management from all admin dashboards
+  - **Personalized Greeting**: Created TimeGreeting component displaying "Good morning/afternoon/evening" with user's name and role
+  - **Logo Consistency**: Using AutoForceLogo with icon variant (white figure with AI branches) across all admin pages
+- **Notifications Integration**:
+  - **Desktop Dropdown**: Added Bell icon button with badge showing task counts in admin dashboard headers
+  - **Conditional Rendering**: Shows task list or "No new tasks" message
+  - **Safe Zero-Count Handling**: Menu opens successfully even with zero pending tasks
+- **Responsive Header** (`client/src/App.tsx`):
+  - **Flex-wrap Layout**: Prevents button overflow on smaller screens
+  - **Progressive Hiding**: Low-priority controls hide on smaller breakpoints to prevent overlap
+    - Hidden on lg: Status Indicators, Feedback Widget
+    - Hidden on md: Plan Badge, Help Dropdown
+    - Hidden on sm: What's New Badge, Tutorial Button
+    - Always visible: Search, Notifications, Theme Toggle
+  - **Fixed Button Sizing**: All icon buttons constrained to h-9 w-9 with shrink-0 to prevent squishing
+- **TimeGreeting Component** (`client/src/components/time-greeting.tsx`):
+  - **Time-based Salutation**: "Good morning" (5am-12pm), "Good afternoon" (12pm-5pm), "Good evening" (5pm-5am)
+  - **User Context**: Displays first name and role/title if available
+  - **Auto-update**: Updates every minute via setInterval
+  - **Data-testid**: "text-time-greeting" for e2e testing
+- **Testing**: E2e tests verified compact headers, personalized greetings, notifications dropdown, and responsive layout on both desktop (1200px) and mobile (375px) viewports
+- **Production Status**: Architect-approved, all changes tested with no functional regressions
+
 ### ScheduleOS™ - Complete SmartSchedule AI Features ✅
 **Implemented ALL Missing Features** for AI-powered scheduling system with usage-based billing:
 - **Problem**: SmartSchedule AI features were referenced in UI but backend APIs were missing; no AI toggle, generate schedule, request service coverage, or publish schedule functionality
