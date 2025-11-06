@@ -17568,6 +17568,139 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
+  // ============================================================================
+  // PRIVATE MESSAGES / DM SYSTEM
+  // ============================================================================
+
+  // GET /api/private-messages/conversations - Get all user conversations
+  app.get('/api/private-messages/conversations', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      const conversations = await storage.getPrivateMessageConversations(userId, workspaceId);
+      res.json(conversations);
+    } catch (error: any) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  // GET /api/private-messages/:conversationId - Get messages in a conversation
+  app.get('/api/private-messages/:conversationId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const conversationId = req.params.conversationId;
+
+      const messages = await storage.getPrivateMessages(userId, conversationId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // POST /api/private-messages/send - Send a private message
+  app.post('/api/private-messages/send', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      const { recipientId, message } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      if (!recipientId || !message) {
+        return res.status(400).json({ message: "Recipient and message are required" });
+      }
+
+      const conversation = await storage.getOrCreatePrivateConversation(workspaceId, userId, recipientId);
+
+      // Derive senderName from authenticated user on server (prevent spoofing)
+      const senderName = `${req.user!.firstName || ''} ${req.user!.lastName || ''}`.trim() || req.user!.email || 'User';
+
+      const sentMessage = await storage.sendPrivateMessage({
+        workspaceId,
+        conversationId: conversation.id,
+        senderId: userId,
+        senderName,
+        recipientId,
+        message: message.trim(),
+      });
+
+      res.json(sentMessage);
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // POST /api/private-messages/start - Start a new conversation
+  app.post('/api/private-messages/start', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      const { recipientId } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      if (!recipientId) {
+        return res.status(400).json({ message: "Recipient is required" });
+      }
+
+      const conversation = await storage.getOrCreatePrivateConversation(workspaceId, userId, recipientId);
+
+      res.json({ conversationId: conversation.id });
+    } catch (error: any) {
+      console.error("Error starting conversation:", error);
+      res.status(500).json({ message: "Failed to start conversation" });
+    }
+  });
+
+  // POST /api/private-messages/:conversationId/mark-read - Mark messages as read
+  app.post('/api/private-messages/:conversationId/mark-read', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const conversationId = req.params.conversationId;
+
+      await storage.markPrivateMessagesAsRead(conversationId, userId);
+
+      res.json({ message: "Messages marked as read" });
+    } catch (error: any) {
+      console.error("Error marking messages as read:", error);
+      res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // GET /api/users/search - Search users for new conversations
+  app.get('/api/users/search', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const query = req.query.q as string;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      if (!query || query.length < 3) {
+        return res.json([]);
+      }
+
+      const users = await storage.searchUsers(workspaceId, query);
+      res.json(users);
+    } catch (error: any) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }

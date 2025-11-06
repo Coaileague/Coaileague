@@ -4363,55 +4363,290 @@ export class DatabaseStorage implements IStorage {
     channels: string[];
     allowGuests: boolean;
   }): Promise<any> {
-    const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    const room = await this.createOrganizationChatRoom({
-      id: roomId,
-      workspaceId,
-      roomName: roomData.roomName,
-      roomDescription: roomData.roomDescription || null,
-      createdBy: userId,
-      status: 'active',
-      allowGuests: roomData.allowGuests,
-    });
-    
-    for (const channelName of roomData.channels) {
-      await this.createOrganizationChatChannel({
-        roomId,
+    return await db.transaction(async (tx) => {
+      const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const [room] = await tx.insert(organizationChatRooms).values({
+        id: roomId,
         workspaceId,
-        channelName,
-        channelType: 'public',
+        roomName: roomData.roomName,
+        roomDescription: roomData.roomDescription || null,
         createdBy: userId,
-      });
-    }
-    
-    await this.addOrganizationRoomMember({
-      roomId,
-      userId,
-      workspaceId,
-      role: 'owner',
-      canInvite: true,
-      canManage: true,
-      isApproved: true,
-    });
-    
-    const onboarding = await this.getOrganizationRoomOnboarding(workspaceId);
-    if (onboarding) {
-      await this.updateOrganizationRoomOnboarding(workspaceId, {
-        isCompleted: true,
-        currentStep: 4,
-        completedAt: new Date(),
-      });
-    } else {
-      await this.createOrganizationRoomOnboarding({
+        status: 'active',
+        allowGuests: roomData.allowGuests,
+      }).returning();
+      
+      for (const channelName of roomData.channels) {
+        await tx.insert(organizationChatChannels).values({
+          roomId,
+          workspaceId,
+          channelName,
+          channelType: 'public',
+          createdBy: userId,
+        });
+      }
+      
+      await tx.insert(organizationRoomMembers).values({
+        roomId,
+        userId,
         workspaceId,
-        isCompleted: true,
-        currentStep: 4,
-        completedAt: new Date(),
+        role: 'owner',
+        canInvite: true,
+        canManage: true,
+        isApproved: true,
       });
+      
+      const [existingOnboarding] = await tx.select().from(organizationRoomOnboarding).where(eq(organizationRoomOnboarding.workspaceId, workspaceId));
+      
+      if (existingOnboarding) {
+        await tx.update(organizationRoomOnboarding)
+          .set({
+            isCompleted: true,
+            currentStep: 4,
+            completedAt: new Date(),
+          })
+          .where(eq(organizationRoomOnboarding.workspaceId, workspaceId));
+      } else {
+        await tx.insert(organizationRoomOnboarding).values({
+          workspaceId,
+          isCompleted: true,
+          currentStep: 4,
+          completedAt: new Date(),
+        });
+      }
+      
+      return room;
+    });
+  }
+  
+  // ============================================================================
+  // PRIVATE MESSAGES / DM OPERATIONS
+  // ============================================================================
+  
+  async getPrivateMessageConversations(userId: string, workspaceId: string): Promise<any[]> {
+    const conversations = await db
+      .select({
+        conversationId: chatConversations.id,
+        customerId: chatConversations.customerId,
+        customerName: chatConversations.customerName,
+        supportAgentId: chatConversations.supportAgentId,
+        supportAgentName: chatConversations.supportAgentName,
+        lastMessageAt: chatConversations.lastMessageAt,
+        subject: chatConversations.subject,
+      })
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.workspaceId, workspaceId),
+          eq(chatConversations.subject, 'Private Message'), // Only DM conversations
+          or(
+            eq(chatConversations.customerId, userId),
+            eq(chatConversations.supportAgentId, userId)
+          )
+        )
+      )
+      .orderBy(desc(chatConversations.lastMessageAt));
+    
+    const formattedConversations = await Promise.all(conversations.map(async (conv) => {
+      const recipientId = conv.customerId === userId ? conv.supportAgentId : conv.customerId;
+      const recipientName = conv.customerId === userId ? conv.supportAgentName : conv.customerName;
+      
+      const [lastMessage] = await db
+        .select()
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.conversationId, conv.conversationId),
+            eq(chatMessages.isPrivateMessage, true)
+          )
+        )
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(1);
+      
+      const unreadMessages = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.conversationId, conv.conversationId),
+            eq(chatMessages.isPrivateMessage, true),
+            eq(chatMessages.recipientId, userId),
+            eq(chatMessages.isRead, false)
+          )
+        );
+      
+      return {
+        id: conv.conversationId,
+        recipientId,
+        recipientName,
+        lastMessage: lastMessage?.message || null,
+        lastMessageAt: lastMessage?.createdAt || conv.lastMessageAt,
+        unreadCount: unreadMessages[0]?.count || 0,
+      };
+    }));
+    
+    return formattedConversations;
+  }
+  
+  async getPrivateMessages(userId: string, conversationId: string): Promise<any[]> {
+    const conversation = await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.id, conversationId),
+          eq(chatConversations.subject, 'Private Message')
+        )
+      )
+      .limit(1);
+    
+    if (conversation.length === 0) {
+      return [];
     }
     
-    return room;
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.conversationId, conversationId),
+          eq(chatMessages.isPrivateMessage, true)
+        )
+      )
+      .orderBy(chatMessages.createdAt);
+  }
+  
+  async sendPrivateMessage(data: {
+    workspaceId: string;
+    conversationId: string;
+    senderId: string;
+    senderName: string;
+    recipientId: string;
+    message: string;
+  }): Promise<any> {
+    const [result] = await db.insert(chatMessages).values({
+      conversationId: data.conversationId,
+      senderId: data.senderId,
+      senderName: data.senderName,
+      senderType: 'customer',
+      message: data.message,
+      isPrivateMessage: true,
+      recipientId: data.recipientId,
+      isRead: false,
+    }).returning();
+    
+    await db
+      .update(chatConversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(chatConversations.id, data.conversationId));
+    
+    return result;
+  }
+  
+  async getOrCreatePrivateConversation(workspaceId: string, user1Id: string, user2Id: string): Promise<any> {
+    const existing = await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.workspaceId, workspaceId),
+          eq(chatConversations.subject, 'Private Message'), // Only DM conversations
+          or(
+            and(
+              eq(chatConversations.customerId, user1Id),
+              eq(chatConversations.supportAgentId, user2Id)
+            ),
+            and(
+              eq(chatConversations.customerId, user2Id),
+              eq(chatConversations.supportAgentId, user1Id)
+            )
+          )
+        )
+      )
+      .limit(1);
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    
+    const user1 = await this.getUser(user1Id);
+    const user2 = await this.getUser(user2Id);
+    
+    const [conversation] = await db.insert(chatConversations).values({
+      workspaceId,
+      customerId: user1Id,
+      customerName: `${user1?.firstName || ''} ${user1?.lastName || ''}`.trim() || user1?.email,
+      supportAgentId: user2Id,
+      supportAgentName: `${user2?.firstName || ''} ${user2?.lastName || ''}`.trim() || user2?.email,
+      subject: 'Private Message',
+      status: 'active',
+      isSilenced: false,
+    }).returning();
+    
+    return conversation;
+  }
+  
+  async markPrivateMessagesAsRead(conversationId: string, userId: string): Promise<void> {
+    const conversation = await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.id, conversationId),
+          eq(chatConversations.subject, 'Private Message')
+        )
+      )
+      .limit(1);
+    
+    if (conversation.length === 0) {
+      return;
+    }
+    
+    await db
+      .update(chatMessages)
+      .set({ 
+        isRead: true,
+        readAt: new Date(),
+      })
+      .where(
+        and(
+          eq(chatMessages.conversationId, conversationId),
+          eq(chatMessages.recipientId, userId),
+          eq(chatMessages.isPrivateMessage, true),
+          eq(chatMessages.isRead, false)
+        )
+      );
+  }
+  
+  async searchUsers(workspaceId: string, query: string): Promise<any[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    const users = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+      })
+      .from(users)
+      .leftJoin(employees, eq(users.id, employees.userId))
+      .where(
+        and(
+          or(
+            eq(employees.workspaceId, workspaceId),
+            eq(users.role, 'platform_admin'),
+            eq(users.role, 'support_staff')
+          ),
+          or(
+            sql`LOWER(${users.email}) LIKE ${searchTerm}`,
+            sql`LOWER(${users.firstName}) LIKE ${searchTerm}`,
+            sql`LOWER(${users.lastName}) LIKE ${searchTerm}`
+          )
+        )
+      )
+      .limit(20);
+    
+    return users;
   }
 }
 
