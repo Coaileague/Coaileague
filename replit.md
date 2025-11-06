@@ -11,6 +11,25 @@ All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
 ## Recent Changes (Nov 6, 2025)
+### HelpOS Cost Optimization & Branding Cleanup ✅
+**Optimized AI Costs and Removed External Branding** for HelpOS support bot:
+- **Problem**: HelpOS was using expensive AI model (gpt-5-nano) for basic support tasks; external platform branding (Replit) appeared in login page and code comments
+- **Solution**: Switched to cheaper AI model and removed all external branding references
+- **AI Model Changes** (`server/helpos-ai.ts`):
+  - **Cost Savings**: Changed from `gpt-5-nano` to `gpt-3.5-turbo` (~10x cheaper)
+  - **Model Options**: Now supports `'gpt-3.5-turbo' | 'gpt-4o-mini'` for basic chat support
+  - **Rationale**: HelpOS is just a support bot, not for deep technical work or coding
+  - **Branding**: Updated AI prompt from "WorkforceOS" to "AutoForce™"
+  - **Token Limits**: Maintained 500 max tokens for concise, cost-effective responses
+- **Navigation Cleanup** (`client/src/components/app-sidebar.tsx`):
+  - **Removed**: "Mobile Chat" option from sidebar (redundant with CommOS™)
+  - **Simplified**: Communication section now has 3 focused items instead of 4
+- **Branding Removal**:
+  - **Login Page**: Removed "Login with Replit" button from `client/src/pages/login.tsx`
+  - **Code Comments**: Removed blueprint reference comments from `client/src/App.tsx` and `client/src/lib/authUtils.ts`
+  - **AI Prompts**: Removed external service mentions from `server/helpos-ai.ts`
+- **Production Status**: Architect-approved, all changes tested with no functional regressions
+
 ### SupportOS/HelpDesk - Complete Queue & AI Management System ✅
 **Added Missing API Endpoints and Staff Controls** for HelpOS queue and AI management:
 - **Problem**: HelpDesk UI referenced `/api/helpdesk/queue` and AI toggle APIs that didn't exist, causing crashes and broken features
@@ -27,8 +46,6 @@ FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monop
   - Custom TanStack Query `queryFn` properly sends workspaceId as query parameter
   - Toast notifications confirm toggle success/failure
   - Proper state synchronization via `useEffect` and mutation invalidation
-- **Testing Support** (`client/src/pages/login.tsx`):
-  - Added "Login with Replit" button (data-testid="button-login-replit") for OIDC test bypass
 - **Bug Fixes**:
   - Queue API now returns array instead of statistics object, preventing TypeError in frontend
   - AI status query includes mandatory workspaceId parameter via custom queryFn
@@ -82,4 +99,4 @@ AutoForce™ is built upon a modular "OS" design philosophy (e.g., BillOS™, Pa
 - **ORM**: Drizzle ORM
 - **Payment Processing**: Stripe Connect
 - **Email**: Resend
-- **AI**: OpenAI GPT-4 (`gpt-4o-mini`)
+- **AI**: OpenAI GPT-3.5-turbo for HelpOS support bot (cost-effective), GPT-4o-mini for advanced features
