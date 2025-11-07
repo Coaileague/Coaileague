@@ -1,9 +1,9 @@
 /**
  * Image Lightbox Component
- * Full-screen image viewer with zoom and download
+ * Full-screen image viewer with zoom, download, and keyboard navigation
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Download, ZoomIn, ZoomOut } from "lucide-react";
@@ -34,6 +34,35 @@ export function ImageLightbox({ src, alt = "Image", isOpen, onClose }: ImageLigh
     setZoom(1);
     onClose();
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'Escape':
+          resetAndClose();
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          handleZoomIn();
+          break;
+        case '-':
+          e.preventDefault();
+          handleZoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          setZoom(1);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={resetAndClose}>

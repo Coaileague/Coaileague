@@ -41,6 +41,7 @@ export function MessageAttachment({ url, name, type, className = "" }: MessageAt
             alt={name || "Image attachment"}
             className="max-w-xs rounded-lg cursor-pointer hover-elevate transition-all"
             onClick={() => setLightboxOpen(true)}
+            loading="lazy"
             data-testid="img-message-attachment"
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg pointer-events-none" />
@@ -60,6 +61,7 @@ export function MessageAttachment({ url, name, type, className = "" }: MessageAt
     return (
       <video
         controls
+        preload="metadata"
         className={`max-w-md rounded-lg ${className}`}
         data-testid="video-message-attachment"
       >
