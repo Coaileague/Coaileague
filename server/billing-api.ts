@@ -64,6 +64,55 @@ billingRouter.post('/api/billing/usage', async (req, res) => {
 });
 
 /**
+ * Get usage summary (for dashboard)
+ */
+billingRouter.get('/api/billing/usage/summary', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get token balance
+    const balance = await creditLedgerService.getBalance(workspaceId);
+    
+    // Get current month usage metrics
+    const startDate = new Date();
+    startDate.setDate(1); // First day of current month
+    const endDate = new Date();
+    
+    const metrics = await usageMeteringService.getUsageMetrics(workspaceId, startDate, endDate);
+
+    // Aggregate usage by OS module
+    const summary = {
+      tokenBalance: balance.currentBalance,
+      recordOSTokens: 0,
+      insightOSTokens: 0,
+      scheduleOSTokens: 0,
+      totalTokens: metrics.totalUsage || 0,
+    };
+
+    // Parse metrics by feature key to categorize by OS module
+    if (metrics.byFeature) {
+      Object.entries(metrics.byFeature).forEach(([featureKey, usage]: [string, any]) => {
+        if (featureKey.includes('record')) {
+          summary.recordOSTokens += usage.totalAmount || 0;
+        } else if (featureKey.includes('insight')) {
+          summary.insightOSTokens += usage.totalAmount || 0;
+        } else if (featureKey.includes('schedule')) {
+          summary.scheduleOSTokens += usage.totalAmount || 0;
+        }
+      });
+    }
+
+    res.json(summary);
+  } catch (error: any) {
+    console.error('Failed to get usage summary:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Get usage metrics
  */
 billingRouter.get('/api/billing/usage/metrics', async (req, res) => {

@@ -8,6 +8,7 @@ import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom auth
 import authRoutes from "./authRoutes"; // Custom auth routes
+import { billingRouter } from "./billing-api"; // Billing API routes
 import { auditContextMiddleware } from "./middleware/audit";
 import { apiLimiter, authLimiter, mutationLimiter, readLimiter } from "./middleware/rateLimiter";
 import * as notificationHelpers from "./notifications";
@@ -565,6 +566,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register custom auth routes (AFTER rate limiters for security)
   app.use(authRoutes);
+  
+  // Register billing API routes (subscription, usage tracking, invoices, add-ons)
+  app.use(billingRouter);
 
   // ============================================================================
   // AUTH ROUTES

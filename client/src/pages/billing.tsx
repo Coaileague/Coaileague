@@ -1,359 +1,447 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, Check, TrendingUp, Crown, Zap } from "lucide-react";
+import { 
+  Loader2, 
+  CreditCard, 
+  TrendingUp, 
+  ShoppingCart, 
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Download,
+  Zap,
+  Brain,
+  Database,
+  Calendar
+} from "lucide-react";
+import { format } from "date-fns";
 import type { Workspace } from "@shared/schema";
 
 export default function Billing() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [selectedTab, setSelectedTab] = useState("overview");
 
-  const { data: workspace, isLoading } = useQuery<Workspace>({
+  // Fetch workspace details
+  const { data: workspace, isLoading: workspaceLoading } = useQuery<Workspace>({
     queryKey: ["/api/workspace"],
     enabled: !!user,
   });
 
-  const upgradeMutation = useMutation({
-    mutationFn: async (tier: string) => {
-      return await apiRequest(`/api/workspace/upgrade`, {
-        method: "POST",
-        body: JSON.stringify({ tier }),
-      });
+  // Fetch invoices
+  const { data: invoices, isLoading: invoicesLoading } = useQuery({
+    queryKey: ["/api/billing/invoices"],
+    enabled: !!user,
+  });
+
+  // Fetch usage data (summary)
+  const { data: usageData, isLoading: usageLoading } = useQuery({
+    queryKey: ["/api/billing/usage/summary"],
+    enabled: !!user,
+  });
+
+  // Fetch available add-ons (marketplace)
+  const { data: addons, isLoading: addonsLoading } = useQuery({
+    queryKey: ["/api/billing/addons/available"],
+    enabled: !!user,
+  });
+
+  // Fetch active workspace add-ons
+  const { data: activeAddons, isLoading: activeAddonsLoading } = useQuery({
+    queryKey: ["/api/billing/addons"],
+    enabled: !!user,
+  });
+
+  // Purchase add-on mutation
+  const purchaseAddonMutation = useMutation({
+    mutationFn: async (addonId: string) => {
+      return await apiRequest(`/api/billing/addons/${addonId}/purchase`, "POST");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/workspace"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/addons"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/addons/available"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/usage/summary"] });
       toast({
-        title: "Upgrade Successful!",
-        description: "Your workspace has been upgraded. Features are now unlocked.",
+        title: "Add-on Purchased!",
+        description: "The add-on has been added to your workspace.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Upgrade Failed",
+        title: "Purchase Failed",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  if (isLoading) {
+  if (workspaceLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" data-testid="loading-spinner" />
       </div>
     );
   }
 
-  const currentTier = workspace?.subscriptionTier || "professional";
-  const platformFee = workspace?.platformFeePercentage || 10;
+  const accountState = workspace?.accountState || "active";
+  const accountStateConfig = {
+    active: { icon: CheckCircle2, label: "Active", className: "text-emerald-500", bgClassName: "bg-emerald-500/10 border-emerald-500/20" },
+    payment_failed: { icon: AlertTriangle, label: "Payment Failed", className: "text-yellow-500", bgClassName: "bg-yellow-500/10 border-yellow-500/20" },
+    suspended: { icon: XCircle, label: "Suspended", className: "text-red-500", bgClassName: "bg-red-500/10 border-red-500/20" },
+    requires_support: { icon: Clock, label: "Requires Support", className: "text-orange-500", bgClassName: "bg-orange-500/10 border-orange-500/20" },
+  };
 
-  const tiers = [
-    {
-      id: "basic",
-      name: "Basic",
-      price: "$299",
-      pricePerMonth: 299,
-      platformFee: "10%",
-      platformFeeValue: 10,
-      description: "Manual workforce management tools",
-      features: [
-        "Up to 25 employees",
-        "Manual scheduling & time tracking",
-        "Basic invoicing (manual entry)",
-        "GPS clock-in/out verification",
-        "Photo verification",
-        "Basic reports (PDF export)",
-        "$20/employee/mo for additional staff",
-        "Email support (48hr)",
-      ],
-      savings: "$2k-$4k/month",
-    },
-    {
-      id: "starter",
-      name: "Starter",
-      price: "$599",
-      pricePerMonth: 599,
-      platformFee: "8%",
-      platformFeeValue: 8,
-      description: "Full automation for growing teams",
-      popular: true,
-      features: [
-        "Up to 50 employees",
-        "Smart scheduling & auto-assignment",
-        "Auto-billing & invoicing (weekly/bi-weekly)",
-        "Auto-payroll processing (weekly/bi-weekly)",
-        "GPS + photo verification",
-        "Advanced analytics & reporting",
-        "$15/employee/mo for additional staff",
-        "Priority email support (24hr)",
-      ],
-      savings: "$10k-$15k/month",
-    },
-    {
-      id: "professional",
-      name: "Professional",
-      price: "$999",
-      pricePerMonth: 999,
-      platformFee: "6%",
-      platformFeeValue: 6,
-      description: "AI-powered workforce intelligence",
-      features: [
-        "Everything in Starter",
-        "Up to 150 employees",
-        "RecordOS™ - Natural language search",
-        "InsightOS™ - AI analytics & predictions",
-        "$150/mo AI credits included",
-        "Predictive scheduling & cost optimization",
-        "Custom integrations (QuickBooks, Stripe, etc.)",
-        "$12/employee/mo for additional staff",
-        "Priority support (8hr response)",
-      ],
-      savings: "$25k-$40k/month",
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      price: "$2,999",
-      pricePerMonth: 2999,
-      platformFee: "4%",
-      platformFeeValue: 4,
-      description: "Complete workforce automation at scale",
-      features: [
-        "Everything in Professional",
-        "Unlimited employees",
-        "Premium AI features & insights",
-        "$500/mo AI credits included",
-        "SOC2-ready compliance & audit trails",
-        "White-label branding",
-        "API access & custom webhooks",
-        "$10/employee/mo for additional staff",
-        "Dedicated account manager",
-        "Priority support (2hr response)",
-      ],
-      savings: "$60k-$100k/month",
-    },
-  ];
+  const stateInfo = accountStateConfig[accountState as keyof typeof accountStateConfig] || accountStateConfig.active;
+  const StateIcon = stateInfo.icon;
 
   return (
-    <div className="container mx-auto p-6 space-y-8 max-w-7xl">
-      {/* Current Plan Header */}
+    <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+      {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Billing & Subscription</h1>
+        <h1 className="text-3xl font-bold" data-testid="text-page-title">Billing & Invoices</h1>
         <p className="text-muted-foreground">
-          Manage your workspace subscription and unlock advanced features
+          Manage your subscription, view invoices, and track AI usage
         </p>
       </div>
 
-      {/* Current Plan Card */}
-      <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Crown className="h-6 w-6 text-primary" />
-                Current Plan: {tiers.find(t => t.id === currentTier)?.name || "Professional"}
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Platform fee: <span className="text-lg font-semibold text-primary">{platformFee}%</span> on all transactions
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="text-lg px-4 py-2">
-              {tiers.find(t => t.id === currentTier)?.price || "$799"}/mo
-            </Badge>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Upgrade Options */}
-      <div>
-        <div className="flex items-center gap-2 mb-6">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Upgrade Your Plan</h2>
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {tiers.map((tier) => {
-            const isCurrent = tier.id === currentTier;
-            const isDowngrade = tiers.findIndex(t => t.id === tier.id) < tiers.findIndex(t => t.id === currentTier);
-
-            return (
-              <Card 
-                key={tier.id}
-                className={`relative ${
-                  tier.popular ? "border-2 border-primary shadow-lg shadow-primary/20" : ""
-                } ${isCurrent ? "opacity-60" : ""}`}
-              >
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground">
-                      <Zap className="h-3 w-3 mr-1" />
-                      Most Popular
-                    </Badge>
-                  </div>
-                )}
-
-                {isCurrent && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge variant="outline" className="bg-background">
-                      Current Plan
-                    </Badge>
-                  </div>
-                )}
-
-                <CardHeader>
-                  <CardTitle className="text-xl">{tier.name}</CardTitle>
-                  <CardDescription>{tier.description}</CardDescription>
-                  <div className="mt-4">
-                    <div className="text-3xl font-bold">{tier.price}</div>
-                    <div className="text-sm text-muted-foreground">per month</div>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    <div className="text-sm">
-                      Platform fee: <span className="font-semibold text-primary">{tier.platformFee}</span>
-                    </div>
-                    <div className="text-xs text-emerald-500 flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      Saves {tier.savings}
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-3">
-                  {tier.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </CardContent>
-
-                <CardFooter>
-                  <Button
-                    className="w-full"
-                    variant={tier.popular ? "default" : "outline"}
-                    disabled={isCurrent || isDowngrade || upgradeMutation.isPending}
-                    onClick={() => upgradeMutation.mutate(tier.id)}
-                    data-testid={`button-upgrade-${tier.id}`}
-                  >
-                    {upgradeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isCurrent ? "Current Plan" : isDowngrade ? "Contact Support" : "Upgrade Now"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* White-Label Call-to-Action */}
-      {currentTier !== "elite" && (
-        <Card className="border-2 border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
+      {/* Account State Alert */}
+      {accountState !== "active" && (
+        <Card className={`border-2 ${stateInfo.bgClassName}`}>
           <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Crown className="h-6 w-6 text-indigo-400" />
-              Unlock White-Label Capabilities
-            </CardTitle>
-            <CardDescription className="text-base">
-              Build your own branded workforce management platform with our Elite tier
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="font-semibold">White-Label Features:</h4>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    Custom branding & logo
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    Your own domain name
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    Remove WorkforceOS branding
-                  </li>
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold">Additional Benefits:</h4>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    Only 2% platform fee
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    Dedicated account manager
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    Custom integrations
-                  </li>
-                </ul>
+            <div className="flex items-center gap-3">
+              <StateIcon className={`h-6 w-6 ${stateInfo.className}`} />
+              <div>
+                <CardTitle className="text-lg">Account Status: {stateInfo.label}</CardTitle>
+                <CardDescription className="mt-1">
+                  {accountState === "payment_failed" && "Your last payment failed. Please update your payment method to restore access."}
+                  {accountState === "suspended" && "Your account has been suspended due to payment issues. Contact support to reactivate."}
+                  {accountState === "requires_support" && "Your account requires support intervention. Please contact our team."}
+                </CardDescription>
               </div>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-              size="lg"
-              onClick={() => upgradeMutation.mutate("elite")}
-              disabled={upgradeMutation.isPending}
-              data-testid="button-upgrade-whitelabel"
-            >
-              {upgradeMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Crown className="mr-2 h-4 w-4" />
-                  Upgrade to White-Label - $7,999/mo
-                </>
-              )}
-            </Button>
-          </CardFooter>
+          </CardHeader>
+          {accountState !== "suspended" && (
+            <CardContent>
+              <Button variant="default" data-testid="button-resolve-account">
+                {accountState === "payment_failed" ? "Update Payment Method" : "Contact Support"}
+              </Button>
+            </CardContent>
+          )}
         </Card>
       )}
 
-      {/* Cost Savings Calculator */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Cost Savings</CardTitle>
-          <CardDescription>
-            See how much you're saving vs. traditional staffing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">Traditional HR Cost</div>
-              <div className="text-2xl font-bold text-red-500">
-                ${tiers.find(t => t.id === currentTier)?.savings?.split('-')[1] || "$50k"}/mo
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">WorkforceOS Cost</div>
-              <div className="text-2xl font-bold text-emerald-500">
-                {tiers.find(t => t.id === currentTier)?.price || "$799"}/mo
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">Your Savings</div>
-              <div className="text-2xl font-bold text-primary">
-                {tiers.find(t => t.id === currentTier)?.savings || "$8k-$10k"}/mo
-              </div>
-            </div>
+      {/* Main Content Tabs */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="overview" data-testid="tab-overview">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="invoices" data-testid="tab-invoices">
+            <FileText className="h-4 w-4 mr-2" />
+            Invoices
+          </TabsTrigger>
+          <TabsTrigger value="usage" data-testid="tab-usage">
+            <TrendingUp className="h-4 w-4 mr-2" />
+            AI Usage
+          </TabsTrigger>
+          <TabsTrigger value="addons" data-testid="tab-addons">
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Add-ons
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Current Plan */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-current-plan">
+                  {workspace?.subscriptionTier || "Professional"}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Platform fee: {workspace?.platformFeePercentage || 6}%
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Account Balance */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">AI Token Balance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600" data-testid="text-token-balance">
+                  {(usageData as any)?.tokenBalance?.toLocaleString() || "0"}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Tokens remaining
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Next Invoice */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Next Invoice</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-next-invoice-date">
+                  {(workspace as any)?.nextBillingDate ? format(new Date((workspace as any).nextBillingDate), "MMM d, yyyy") : "Not scheduled"}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Billing cycle: Weekly
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Active Add-ons */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Add-ons</CardTitle>
+              <CardDescription>
+                OS modules currently enabled for your workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activeAddonsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : Array.isArray(activeAddons) && activeAddons.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {activeAddons.map((addon: any) => (
+                    <div key={addon.id} className="flex items-center gap-3 p-3 rounded-md border" data-testid={`addon-active-${addon.id}`}>
+                      <Zap className="h-5 w-5 text-emerald-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{addon.name}</div>
+                        <div className="text-sm text-muted-foreground">${addon.price}/mo</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No active add-ons. Visit the Add-ons tab to browse available modules.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Invoices Tab */}
+        <TabsContent value="invoices" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice History</CardTitle>
+              <CardDescription>
+                Weekly aggregated invoices for your workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {invoicesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : Array.isArray(invoices) && invoices.length > 0 ? (
+                <div className="space-y-3">
+                  {invoices.map((invoice: any) => (
+                    <div 
+                      key={invoice.id} 
+                      className="flex items-center justify-between p-4 rounded-md border hover-elevate"
+                      data-testid={`invoice-${invoice.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-md bg-muted">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            Invoice #{invoice.invoiceNumber}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {invoice.periodStart && invoice.periodEnd ? 
+                              `${format(new Date(invoice.periodStart), "MMM d")} - ${format(new Date(invoice.periodEnd), "MMM d, yyyy")}` :
+                              format(new Date(invoice.createdAt), "MMM d, yyyy")
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="font-bold">${invoice.totalAmount.toFixed(2)}</div>
+                          <Badge variant={invoice.status === "paid" ? "default" : invoice.status === "pending" ? "secondary" : "destructive"}>
+                            {invoice.status}
+                          </Badge>
+                        </div>
+                        <Button variant="ghost" size="icon" data-testid={`button-download-invoice-${invoice.id}`}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No invoices yet. Your first invoice will be generated weekly based on usage.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Usage Tab */}
+        <TabsContent value="usage" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Token Usage</CardTitle>
+              <CardDescription>
+                Track your AI-powered feature consumption across OS modules
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {usageLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Usage Summary */}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="p-4 rounded-md border">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <Brain className="h-4 w-4" />
+                        RecordOS™
+                      </div>
+                      <div className="text-2xl font-bold">{(usageData as any)?.recordOSTokens?.toLocaleString() || "0"}</div>
+                      <p className="text-xs text-muted-foreground mt-1">tokens used</p>
+                    </div>
+                    <div className="p-4 rounded-md border">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <TrendingUp className="h-4 w-4" />
+                        InsightOS™
+                      </div>
+                      <div className="text-2xl font-bold">{(usageData as any)?.insightOSTokens?.toLocaleString() || "0"}</div>
+                      <p className="text-xs text-muted-foreground mt-1">tokens used</p>
+                    </div>
+                    <div className="p-4 rounded-md border">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <Calendar className="h-4 w-4" />
+                        ScheduleOS™
+                      </div>
+                      <div className="text-2xl font-bold">{(usageData as any)?.scheduleOSTokens?.toLocaleString() || "0"}</div>
+                      <p className="text-xs text-muted-foreground mt-1">tokens used</p>
+                    </div>
+                    <div className="p-4 rounded-md border">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <Zap className="h-4 w-4" />
+                        Total
+                      </div>
+                      <div className="text-2xl font-bold text-primary">{(usageData as any)?.totalTokens?.toLocaleString() || "0"}</div>
+                      <p className="text-xs text-muted-foreground mt-1">tokens used</p>
+                    </div>
+                  </div>
+
+                  {/* Usage Chart Placeholder */}
+                  <div className="p-8 rounded-md border border-dashed text-center">
+                    <Database className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Usage charts coming soon
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Add-ons Tab */}
+        <TabsContent value="addons" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add-on Marketplace</CardTitle>
+              <CardDescription>
+                À la carte OS modules to enhance your workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {addonsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : Array.isArray(addons) && addons.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {addons.map((addon: any) => {
+                    const isActive = Array.isArray(activeAddons) && activeAddons.some((a: any) => a.addonId === addon.id);
+                    return (
+                      <Card key={addon.id} className={isActive ? "border-emerald-500 bg-emerald-500/5" : ""} data-testid={`addon-${addon.id}`}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-base">{addon.name}</CardTitle>
+                              <CardDescription className="mt-1 text-xs">
+                                {addon.description}
+                              </CardDescription>
+                            </div>
+                            {isActive && (
+                              <Badge variant="default" className="text-xs">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-bold">${addon.price}</span>
+                            <span className="text-sm text-muted-foreground">/month</span>
+                          </div>
+                          <Button
+                            className="w-full"
+                            variant={isActive ? "outline" : "default"}
+                            disabled={isActive || purchaseAddonMutation.isPending}
+                            onClick={() => purchaseAddonMutation.mutate(addon.id)}
+                            data-testid={`button-purchase-addon-${addon.id}`}
+                          >
+                            {purchaseAddonMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : isActive ? (
+                              "Installed"
+                            ) : (
+                              "Purchase Add-on"
+                            )}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No add-ons available. Check back soon for new OS modules.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
