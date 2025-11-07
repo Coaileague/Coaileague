@@ -21,6 +21,9 @@ import {
   Eye, Sparkles, CheckCheck, Circle, Lock, Zap,
   Paperclip, X, FileText, Image as ImageIcon, Download
 } from "lucide-react";
+import { MessageAttachment } from "@/components/message-attachment";
+import { CameraCapture } from "@/components/camera-capture";
+import { usePasteImageHandler, PasteImageHint } from "@/components/paste-image-handler";
 
 interface Conversation {
   id: string;
@@ -57,6 +60,18 @@ export default function PrivateMessages() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle pasted images
+  usePasteImageHandler({
+    onImagePaste: (file) => {
+      setAttachedFile(file);
+      toast({
+        title: "Image pasted",
+        description: `${file.name} ready to send`,
+      });
+    },
+    enabled: !!selectedConversation,
+  });
 
   // Fetch all conversations (DM threads)
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
@@ -494,37 +509,10 @@ export default function PrivateMessages() {
                           >
                             {msg.attachmentUrl && (
                               <div className="mb-2">
-                                {msg.attachmentName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                  <a 
-                                    href={msg.attachmentUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="block rounded-md overflow-hidden max-w-xs hover-elevate"
-                                    data-testid={`attachment-image-${msg.id}`}
-                                  >
-                                    <img 
-                                      src={msg.attachmentUrl} 
-                                      alt={msg.attachmentName}
-                                      className="w-full h-auto"
-                                    />
-                                  </a>
-                                ) : (
-                                  <a
-                                    href={msg.attachmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 p-2 rounded-md ${
-                                      isOwnMessage
-                                        ? "bg-purple-700/50 hover:bg-purple-700"
-                                        : "bg-purple-200/50 dark:bg-purple-900/50 hover-elevate"
-                                    }`}
-                                    data-testid={`attachment-file-${msg.id}`}
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                    <span className="text-xs truncate">{msg.attachmentName}</span>
-                                    <Download className="h-3 w-3 ml-auto" />
-                                  </a>
-                                )}
+                                <MessageAttachment
+                                  url={msg.attachmentUrl}
+                                  name={msg.attachmentName}
+                                />
                               </div>
                             )}
                             {msg.message && msg.message !== '[File attached]' && (
@@ -598,9 +586,19 @@ export default function PrivateMessages() {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile}
                     data-testid="button-attach-file"
+                    title="Attach file"
                   >
                     <Paperclip className="h-4 w-4" />
                   </Button>
+                  <CameraCapture
+                    onCapture={(file) => {
+                      setAttachedFile(file);
+                      toast({
+                        title: "Photo captured",
+                        description: `${file.name} ready to send`,
+                      });
+                    }}
+                  />
                   <Button
                     type="submit"
                     disabled={(!messageText.trim() && !attachedFile) || sendMessageMutation.isPending || uploadingFile}
@@ -615,11 +613,14 @@ export default function PrivateMessages() {
                   </Button>
                 </div>
               </form>
-              <div className="flex items-center gap-2 mt-2">
-                <Lock className="h-3 w-3 text-purple-500" />
-                <p className="text-xs text-muted-foreground">
-                  End-to-end encrypted · Only you and {currentConversation?.recipientName} can see these messages
-                </p>
+              <div className="flex items-center justify-between gap-2 mt-2">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-3 w-3 text-purple-500" />
+                  <p className="text-xs text-muted-foreground">
+                    End-to-end encrypted · Only you and {currentConversation?.recipientName} can see these messages
+                  </p>
+                </div>
+                <PasteImageHint show={!!selectedConversation} />
               </div>
             </div>
           </>
