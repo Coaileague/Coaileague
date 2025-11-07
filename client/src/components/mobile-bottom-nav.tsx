@@ -1,12 +1,12 @@
 /**
- * Mobile Bottom Navigation
- * Touch-optimized navigation bar for mobile devices
- * Supports swipe gestures and haptic feedback
+ * Mobile Bottom Navigation - Native App Style
+ * APK-Quality touch-optimized navigation bar
+ * Features: Gradient accents, haptic feedback, smooth animations
  */
 
 import { useLocation } from "wouter";
 import { 
-  Home, Calendar, Clock, BarChart3
+  LayoutDashboard, Calendar, Clock, BarChart3, MessageSquare, Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +21,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: Home, label: "Home", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: Clock, label: "Time", path: "/time-tracking" },
-  { icon: BarChart3, label: "Analytics", path: "/analytics" },
+  { icon: MessageSquare, label: "Chat", path: "/comm-os" },
+  { icon: Menu, label: "More", path: "/settings" },
 ];
 
 export function MobileBottomNav() {
@@ -37,13 +38,13 @@ export function MobileBottomNav() {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border safe-bottom md:hidden backdrop-blur-xl"
       data-testid="mobile-bottom-nav"
     >
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center justify-around h-20 px-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location === item.path;
+          const isActive = location === item.path || (item.path !== '/dashboard' && location.startsWith(item.path));
           
           return (
             <Button
@@ -52,34 +53,42 @@ export function MobileBottomNav() {
               size="icon"
               onClick={() => handleNavigation(item.path)}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 h-14 w-full rounded-lg transition-all",
-                isActive && "bg-accent text-accent-foreground"
+                "relative flex flex-col items-center justify-center gap-1.5 h-16 w-full rounded-2xl transition-all duration-300",
+                "hover-elevate active-elevate-2",
+                isActive && "scale-105"
               )}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
-              <div className="relative">
+              <div className={cn(
+                "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300",
+                isActive && "bg-success-gradient shadow-lg shadow-primary/30"
+              )}>
                 <Icon className={cn(
-                  "h-5 w-5 transition-transform",
-                  isActive && "scale-110"
+                  "h-6 w-6 transition-all duration-300",
+                  isActive ? "text-white dark:text-white scale-110" : "text-muted-foreground"
                 )} />
                 {item.badge && item.badge > 0 && (
                   <Badge 
                     variant="destructive" 
-                    className="absolute -top-2 -right-2 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center"
+                    className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-[10px] flex items-center justify-center rounded-full"
                   >
                     {item.badge > 99 ? "99+" : item.badge}
                   </Badge>
                 )}
               </div>
               <span className={cn(
-                "text-[10px] font-medium transition-all",
-                isActive ? "opacity-100" : "opacity-60"
+                "text-[11px] font-semibold transition-all duration-300",
+                isActive ? "text-foreground" : "text-muted-foreground"
               )}>
                 {item.label}
               </span>
             </Button>
           );
         })}
+      </div>
+      {/* iOS-style home indicator */}
+      <div className="flex justify-center pb-1">
+        <div className="w-32 h-1 bg-foreground/20 rounded-full" />
       </div>
     </nav>
   );

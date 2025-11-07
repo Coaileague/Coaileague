@@ -647,33 +647,74 @@
   }
 }
 /* ============================================================================
-   INDIGO/PURPLE GRADIENT THEME - ASMR Interactive Styles
+   AUTOFORCE™ v2.0 - MODERN SUCCESS GRADIENT SYSTEM
    ============================================================================ */
 
-/* Gradient Text Effect for Stats & Headlines */
+/* Default Gradient Text - Success (Emerald → Green → Teal) - KEEP FOR BACKWARD COMPATIBILITY */
 .gradient-text {
-  background: linear-gradient(135deg, #a5b4fc, #6366f1);
+  background: linear-gradient(135deg, #10b981, #4ade80, #2dd4bf);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Indigo Gradient Background for Cards */
-.bg-indigo-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+/* Success Gradient Text (Same as default) */
+.gradient-text-success {
+  background: linear-gradient(135deg, #10b981, #4ade80, #2dd4bf);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Dark Slate Gradient Background (Main Background) */
-.bg-slate-gradient {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+/* Energy Gradient Text (Blue → Cyan) */
+.gradient-text-energy {
+  background: linear-gradient(135deg, #2563eb, #06b6d4, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Semi-transparent Card Background */
-.bg-card-translucent {
-  background: rgba(15, 23, 42, 0.8);
+/* Success Gradient Background */
+.bg-success-gradient {
+  background: linear-gradient(135deg, #10b981 0%, #4ade80 50%, #2dd4bf 100%);
 }
 
-/* Pulse Animation for Status Indicators */
+/* Energy Gradient Background */
+.bg-energy-gradient {
+  background: linear-gradient(135deg, #2563eb 0%, #06b6d4 50%, #60a5fa 100%);
+}
+
+/* Premium Dark Gradient Background */
+.bg-premium-dark-gradient {
+  background: linear-gradient(135deg, hsl(222, 47%, 11%) 0%, hsl(217, 32%, 17%) 50%, hsl(222, 47%, 11%) 100%);
+}
+
+/* Animated Success Gradient (for CTAs) */
+@keyframes gradient-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.bg-success-gradient-animated {
+  background: linear-gradient(135deg, #10b981, #4ade80, #2dd4bf, #10b981);
+  background-size: 200% 200%;
+  animation: gradient-flow 3s ease infinite;
+}
+
+/* Glass Morphism Card (Modern) */
+.glass-card-modern {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Dark mode glass */
+.dark .glass-card-modern {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Modern Smooth Animations */
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 1;
@@ -687,6 +728,31 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth Card Hover Lift */
+.card-hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(16, 185, 129, 0.3);
+}
+
+/* Success Glow Effect */
+.success-glow {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Smooth Fade In */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
 }
 
 /* Pulse Slow Animation for Logo */
