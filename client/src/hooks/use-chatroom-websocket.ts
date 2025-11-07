@@ -128,7 +128,7 @@ export function useChatroomWebSocket(
 
     try {
       // Connect to WebSocket server
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
       // Fix: Use window.location.host for proper host/port resolution
       const wsHost = window.location.host;
       const wsUrl = `${protocol}://${wsHost}/ws/chat`;
