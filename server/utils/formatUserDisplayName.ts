@@ -26,6 +26,41 @@ export function formatUserDisplayName(user: UserInfo): string {
 }
 
 /**
+ * Format user display name for chat user lists and join/leave messages
+ * Support staff: "Title FirstName" (e.g., "Admin Brigido", "SysOp James")
+ * Regular users: "FirstName LastName" (e.g., "Sarah Martinez", "John Doe")
+ */
+export function formatUserDisplayNameForChat(user: UserInfo): string {
+  const firstName = user.firstName || extractFirstNameFromEmail(user.email);
+  const lastName = user.lastName || '';
+  
+  // Check if user is support staff with a platform role
+  const isStaff = user.platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(user.platformRole);
+  
+  if (isStaff && user.platformRole) {
+    // Format: "Title FirstName" for support staff
+    const title = getRoleTitlePrefix(user.platformRole);
+    return `${title} ${firstName}`;
+  } else {
+    // Format: "FirstName LastName" for regular users
+    return lastName ? `${firstName} ${lastName}` : firstName;
+  }
+}
+
+/**
+ * Get role title prefix for support staff
+ */
+function getRoleTitlePrefix(role: string): string {
+  switch(role) {
+    case 'root': return 'Admin';
+    case 'deputy_admin': return 'Deputy';
+    case 'deputy_assistant': return 'Assistant';
+    case 'sysop': return 'SysOp';
+    default: return '';
+  }
+}
+
+/**
  * Extract first name from email if first name not provided
  */
 function extractFirstNameFromEmail(email?: string): string {

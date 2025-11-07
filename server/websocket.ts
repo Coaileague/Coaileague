@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server, IncomingMessage } from 'http';
 import { storage } from './storage';
-import { formatUserDisplayName } from './utils/formatUserDisplayName';
+import { formatUserDisplayName, formatUserDisplayNameForChat } from './utils/formatUserDisplayName';
 import { generateGreeting, generateStaffIntroduction, getAiResponse, shouldBotRespond, generateQueueWelcome, generateStaffQueueAlert } from './services/aiBot';
 import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } from '@shared/commands';
 import { queueManager } from './services/helpOsQueue';
@@ -212,7 +212,7 @@ export function setupWebSocket(server: Server) {
 
             // Get user display info for formatted name
             const userInfo = await storage.getUserDisplayInfo(payload.userId);
-            const displayName = userInfo ? formatUserDisplayName({
+            const displayName = userInfo ? formatUserDisplayNameForChat({
               firstName: userInfo.firstName,
               lastName: userInfo.lastName,
               email: userInfo.email || undefined,
@@ -314,7 +314,7 @@ export function setupWebSocket(server: Server) {
                   if (!removedSimulatedUsers.has('sim-staff-1')) {
                     onlineUsers.push({
                       id: 'sim-staff-1',
-                      name: 'Sarah Martinez',
+                      name: 'Deputy Sarah',
                       role: 'deputy_admin',
                       status: 'online',
                       userType: 'staff'
@@ -323,7 +323,7 @@ export function setupWebSocket(server: Server) {
                   if (!removedSimulatedUsers.has('sim-staff-2')) {
                     onlineUsers.push({
                       id: 'sim-staff-2',
-                      name: 'Mike Chen',
+                      name: 'SysOp Mike',
                       role: 'sysop',
                       status: 'online',
                       userType: 'staff'
@@ -332,7 +332,7 @@ export function setupWebSocket(server: Server) {
                   if (!removedSimulatedUsers.has('sim-staff-3')) {
                     onlineUsers.push({
                       id: 'sim-staff-3',
-                      name: 'Emily Taylor',
+                      name: 'Assistant Emily',
                       role: 'deputy_assistant',
                       status: 'online',
                       userType: 'staff'
@@ -341,7 +341,7 @@ export function setupWebSocket(server: Server) {
                   if (!removedSimulatedUsers.has('sim-staff-4')) {
                     onlineUsers.push({
                       id: 'sim-staff-4',
-                      name: 'David Kim',
+                      name: 'SysOp David',
                       role: 'sysop',
                       status: 'busy',
                       userType: 'staff'
@@ -503,26 +503,14 @@ export function setupWebSocket(server: Server) {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
                 const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
                 
-                // Format role display for join message
-                const getRoleDisplayText = (role: string) => {
-                  switch(role) {
-                    case 'root': return '(Admin)';
-                    case 'deputy_admin': return '(Deputy)';
-                    case 'deputy_assistant': return '(Assistant)';
-                    case 'sysop': return '(Sysop)';
-                    default: return '';
-                  }
-                };
-                
-                const roleText = isStaff ? ` ${getRoleDisplayText(platformRole)}` : '';
-                
-                // 1. SYSTEM announcement (IRC-style): User joined with role badge for staff
+                // 1. SYSTEM announcement (IRC-style): User joined
+                // displayName already includes title for staff (e.g., "Admin Brigido", "SysOp James")
                 const systemJoinMessage = await storage.createChatMessage({
                   conversationId: payload.conversationId,
                   senderId: null,
                   senderName: 'Server',
                   senderType: 'system',
-                  message: `${displayName}${roleText} has joined the HelpDesk`,
+                  message: `${displayName} has joined the chatroom`,
                   messageType: 'text',
                   isSystemMessage: true,
                 });
@@ -637,23 +625,11 @@ export function setupWebSocket(server: Server) {
             // HelpOS greets everyone who joins (only send to the joining user, not the entire room, and only if first time joining)
             if (payload.conversationId === MAIN_ROOM_ID && !userAlreadyInRoom) {
               try {
-                // Format role display for welcome message
-                const getRoleDisplayText = (role: string) => {
-                  switch(role) {
-                    case 'root': return ' (Admin)';
-                    case 'deputy_admin': return ' (Deputy)';
-                    case 'deputy_assistant': return ' (Assistant)';
-                    case 'sysop': return ' (Sysop)';
-                    default: return '';
-                  }
-                };
-                
-                const roleText = isStaff ? getRoleDisplayText(platformRole) : '';
-                
                 // Determine greeting based on user type
+                // displayName already includes title for staff (e.g., "Admin Brigido")
                 let greeting = '';
                 if (isStaff) {
-                  greeting = `Welcome back, ${displayName}${roleText}! Support chat is active. Right-click users for quick actions.`;
+                  greeting = `Welcome back, ${displayName}! Support chat is active. Right-click users for quick actions.`;
                 } else {
                   greeting = `Welcome! Please wait to be helped. You cannot send messages right now - wait, gather your thoughts, evidence, and problem details. We will be with you shortly.`;
                 }
@@ -714,7 +690,7 @@ export function setupWebSocket(server: Server) {
 
             // Get user display info for formatted name (server-side formatting for security)
             const userInfo = await storage.getUserDisplayInfo(ws.userId);
-            const displayName = userInfo ? formatUserDisplayName({
+            const displayName = userInfo ? formatUserDisplayNameForChat({
               firstName: userInfo.firstName,
               lastName: userInfo.lastName,
               email: userInfo.email || undefined,
@@ -2920,7 +2896,7 @@ export function setupWebSocket(server: Server) {
         try {
           // Get user display info for leave announcement
           const userInfo = await storage.getUserDisplayInfo(ws.userId);
-          const displayName = userInfo ? formatUserDisplayName({
+          const displayName = userInfo ? formatUserDisplayNameForChat({
             firstName: userInfo.firstName,
             lastName: userInfo.lastName,
             email: userInfo.email || undefined,
@@ -2934,7 +2910,7 @@ export function setupWebSocket(server: Server) {
             senderId: ws.userId,
             senderName: 'Server',
             senderType: 'system',
-            message: `${displayName} has left the HelpDesk`,
+            message: `${displayName} has left the chatroom`,
             messageType: 'text',
             isSystemMessage: true,
           });
