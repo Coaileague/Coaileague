@@ -66,7 +66,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     roi: {
       costsSaved: 41412,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
   {
     id: 'white-label-branding',
@@ -114,7 +114,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
       timesSaved: 10,
       costsSaved: 25212,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
   {
     id: 'recruiting-ats',
@@ -138,7 +138,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     roi: {
       costsSaved: 26412,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
   {
     id: 'advanced-analytics',
@@ -161,7 +161,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     roi: {
       costsSaved: 50000,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
   {
     id: 'benefits-admin',
@@ -185,7 +185,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
       timesSaved: 5,
       costsSaved: 9412,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
   {
     id: 'multi-location',
@@ -208,7 +208,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     roi: {
       costsSaved: 120000,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
   {
     id: 'learning-management',
@@ -231,7 +231,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     roi: {
       costsSaved: 9812,
     },
-    status: 'coming_soon',
+    status: 'available',
   },
 ];
 
