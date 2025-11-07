@@ -220,6 +220,28 @@ export const workspaces = pgTable("workspaces", {
   last_admin_action_by: varchar("last_admin_action_by"), // ROOT user ID
   last_admin_action_at: timestamp("last_admin_action_at"),
 
+  // ============================================================================
+  // ADVANCED BILLING & ACCOUNT STATE MANAGEMENT
+  // ============================================================================
+  
+  // Account state (subscription enforcement)
+  accountState: varchar("account_state").default('active'), // Maps to accountStateEnum but stored as varchar for flexibility
+  accountSuspensionReason: text("account_suspension_reason"),
+  accountSuspendedAt: timestamp("account_suspended_at"),
+  supportTicketId: varchar("support_ticket_id"), // For support intervention tracking
+  
+  // Billing schedule
+  nextInvoiceAt: timestamp("next_invoice_at"), // When next invoice will be generated
+  lastInvoiceGeneratedAt: timestamp("last_invoice_generated_at"),
+  billingCycleDay: integer("billing_cycle_day").default(1), // Day of week for weekly billing (0=Sunday, 1=Monday, etc.)
+  
+  // Billing preferences
+  billingPreferences: jsonb("billing_preferences"), // { autoPayEnabled, paymentTerms, reminderDays, etc. }
+  
+  // Usage limits & overages
+  monthlyEmployeeOverages: integer("monthly_employee_overages").default(0), // Employees above plan limit
+  lastOverageCheckAt: timestamp("last_overage_check_at"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -7788,3 +7810,406 @@ export const insertClientPaymentInfoSchema = createInsertSchema(clientPaymentInf
 
 export type InsertClientPaymentInfo = z.infer<typeof insertClientPaymentInfoSchema>;
 export type ClientPaymentInfo = typeof clientPaymentInfo.$inferSelect;
+
+// ============================================================================
+// ADVANCED BILLING & USAGE-BASED PRICING SYSTEM
+// ============================================================================
+
+// Account state enum for subscription enforcement
+export const accountStateEnum = pgEnum('account_state', [
+  'active',           // Account in good standing
+  'trial',            // Free trial period
+  'payment_failed',   // Payment method declined
+  'suspended',        // Auto-suspended due to non-payment
+  'requires_support', // Requires support intervention to reactivate
+  'cancelled',        // Subscription cancelled by user
+  'terminated',       // Permanently terminated by platform
+]);
+
+// Billing add-ons catalog - available OS modules for à la carte purchase
+export const billingAddons = pgTable("billing_addons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Add-on identity
+  addonKey: varchar("addon_key").notNull().unique(), // e.g., 'scheduleos_ai', 'recordos', 'insightos'
+  name: varchar("name").notNull(), // e.g., 'ScheduleOS™ AI Auto-Scheduling'
+  description: text("description"),
+  category: varchar("category").notNull(), // 'ai_feature', 'os_module', 'integration', 'support'
+  
+  // Pricing model
+  pricingType: varchar("pricing_type").notNull(), // 'subscription', 'usage_based', 'hybrid', 'one_time'
+  basePrice: decimal("base_price", { precision: 10, scale: 2 }), // Monthly subscription fee
+  usagePrice: decimal("usage_price", { precision: 10, scale: 4 }), // Price per usage unit (e.g., per token, per session)
+  usageUnit: varchar("usage_unit"), // 'token', 'session', 'activity', 'api_call', 'hour'
+  
+  // Stripe integration
+  stripePriceId: varchar("stripe_price_id"), // Stripe price ID for subscription
+  stripeMeteredPriceId: varchar("stripe_metered_price_id"), // Stripe price ID for usage billing
+  
+  // Feature flags
+  requiresBaseTier: varchar("requires_base_tier"), // Minimum subscription tier required
+  isAIFeature: boolean("is_ai_feature").default(false), // Is this an AI/autonomous feature
+  isActive: boolean("is_active").default(true), // Can be purchased
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional configuration
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBillingAddonSchema = createInsertSchema(billingAddons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillingAddon = z.infer<typeof insertBillingAddonSchema>;
+export type BillingAddon = typeof billingAddons.$inferSelect;
+
+// Workspace add-on subscriptions - tracks which add-ons each org has purchased
+export const workspaceAddons = pgTable("workspace_addons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  addonId: varchar("addon_id").notNull().references(() => billingAddons.id, { onDelete: 'cascade' }),
+  
+  // Subscription status
+  status: varchar("status").notNull().default('active'), // 'active', 'suspended', 'cancelled'
+  
+  // Purchase info
+  purchasedBy: varchar("purchased_by").notNull().references(() => users.id), // User who activated
+  purchasedAt: timestamp("purchased_at").notNull().defaultNow(),
+  
+  // Billing
+  stripeSubscriptionItemId: varchar("stripe_subscription_item_id"), // Stripe subscription item ID
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  
+  // Cancellation
+  cancelledAt: timestamp("cancelled_at"),
+  cancelledBy: varchar("cancelled_by").references(() => users.id),
+  cancellationReason: text("cancellation_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("workspace_addons_workspace_idx").on(table.workspaceId),
+  addonIdx: index("workspace_addons_addon_idx").on(table.addonId),
+  statusIdx: index("workspace_addons_status_idx").on(table.status),
+  uniqueWorkspaceAddon: uniqueIndex("unique_workspace_addon").on(table.workspaceId, table.addonId),
+}));
+
+export const insertWorkspaceAddonSchema = createInsertSchema(workspaceAddons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWorkspaceAddon = z.infer<typeof insertWorkspaceAddonSchema>;
+export type WorkspaceAddon = typeof workspaceAddons.$inferSelect;
+
+// AI usage events - track every AI/autonomous feature usage
+export const aiUsageEvents = pgTable("ai_usage_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id), // User who triggered the usage
+  
+  // Feature identification
+  featureKey: varchar("feature_key").notNull(), // e.g., 'scheduleos_ai_generation', 'recordos_search', 'insightos_prediction'
+  addonId: varchar("addon_id").references(() => billingAddons.id), // Related add-on if applicable
+  
+  // Usage metrics
+  usageType: varchar("usage_type").notNull(), // 'token', 'session', 'activity', 'api_call'
+  usageAmount: decimal("usage_amount", { precision: 15, scale: 4 }).notNull(), // Quantity used
+  usageUnit: varchar("usage_unit").notNull(), // 'tokens', 'sessions', 'hours', etc.
+  
+  // Cost calculation
+  unitPrice: decimal("unit_price", { precision: 10, scale: 4 }), // Price per unit at time of usage
+  totalCost: decimal("total_cost", { precision: 10, scale: 4 }), // Total cost for this usage event
+  
+  // Context
+  sessionId: varchar("session_id"), // Session identifier for grouping
+  activityType: varchar("activity_type"), // 'schedule_generation', 'natural_language_search', 'predictive_analytics'
+  metadata: jsonb("metadata"), // Additional context (model used, prompt length, response time, etc.)
+  
+  // Audit trail
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("ai_usage_workspace_idx").on(table.workspaceId),
+  userIdx: index("ai_usage_user_idx").on(table.userId),
+  featureIdx: index("ai_usage_feature_idx").on(table.featureKey),
+  createdAtIdx: index("ai_usage_created_at_idx").on(table.createdAt),
+  sessionIdx: index("ai_usage_session_idx").on(table.sessionId),
+}));
+
+export const insertAiUsageEventSchema = createInsertSchema(aiUsageEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiUsageEvent = z.infer<typeof insertAiUsageEventSchema>;
+export type AiUsageEvent = typeof aiUsageEvents.$inferSelect;
+
+// Daily usage rollups - aggregated usage per workspace per day
+export const aiUsageDailyRollups = pgTable("ai_usage_daily_rollups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Time period
+  usageDate: timestamp("usage_date").notNull(), // Date of usage (midnight UTC)
+  
+  // Feature breakdown
+  featureKey: varchar("feature_key").notNull(),
+  
+  // Aggregated metrics
+  totalEvents: integer("total_events").notNull().default(0),
+  totalUsageAmount: decimal("total_usage_amount", { precision: 15, scale: 4 }).notNull().default("0"),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  
+  // Unique users
+  uniqueUsers: integer("unique_users").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("ai_rollups_workspace_idx").on(table.workspaceId),
+  dateIdx: index("ai_rollups_date_idx").on(table.usageDate),
+  featureIdx: index("ai_rollups_feature_idx").on(table.featureKey),
+  uniqueWorkspaceDateFeature: uniqueIndex("unique_workspace_date_feature").on(
+    table.workspaceId,
+    table.usageDate,
+    table.featureKey
+  ),
+}));
+
+export const insertAiUsageDailyRollupSchema = createInsertSchema(aiUsageDailyRollups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiUsageDailyRollup = z.infer<typeof insertAiUsageDailyRollupSchema>;
+export type AiUsageDailyRollup = typeof aiUsageDailyRollups.$inferSelect;
+
+// AI token wallets - prepaid credit balance for AI features
+export const aiTokenWallets = pgTable("ai_token_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Balance tracking
+  currentBalance: decimal("current_balance", { precision: 15, scale: 4 }).notNull().default("0.0000"), // Current credit balance
+  totalPurchased: decimal("total_purchased", { precision: 15, scale: 4 }).notNull().default("0.0000"), // Lifetime purchases
+  totalUsed: decimal("total_used", { precision: 15, scale: 4 }).notNull().default("0.0000"), // Lifetime usage
+  
+  // Monthly included credits (from subscription tier)
+  monthlyIncludedCredits: decimal("monthly_included_credits", { precision: 10, scale: 2 }).default("0.00"),
+  monthlyCreditsUsed: decimal("monthly_credits_used", { precision: 10, scale: 2 }).default("0.00"),
+  monthlyCreditsResetAt: timestamp("monthly_credits_reset_at"), // When monthly credits reset
+  
+  // Auto-recharge settings
+  autoRechargeEnabled: boolean("auto_recharge_enabled").default(false),
+  autoRechargeThreshold: decimal("auto_recharge_threshold", { precision: 10, scale: 2 }), // Recharge when below this
+  autoRechargeAmount: decimal("auto_recharge_amount", { precision: 10, scale: 2 }), // Amount to recharge
+  
+  // Low balance alerts
+  lowBalanceAlertEnabled: boolean("low_balance_alert_enabled").default(true),
+  lowBalanceAlertThreshold: decimal("low_balance_alert_threshold", { precision: 10, scale: 2 }).default("10.00"),
+  lastLowBalanceAlertAt: timestamp("last_low_balance_alert_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiTokenWalletSchema = createInsertSchema(aiTokenWallets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiTokenWallet = z.infer<typeof insertAiTokenWalletSchema>;
+export type AiTokenWallet = typeof aiTokenWallets.$inferSelect;
+
+// Invoices - weekly billing aggregation
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Invoice identity
+  invoiceNumber: varchar("invoice_number").notNull().unique(), // e.g., "INV-2024-W14-ORG-XXXX"
+  
+  // Billing period
+  billingPeriodStart: timestamp("billing_period_start").notNull(),
+  billingPeriodEnd: timestamp("billing_period_end").notNull(),
+  
+  // Amounts
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0.00"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0.00"),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Payment status
+  status: varchar("status").notNull().default('draft'), // 'draft', 'pending', 'paid', 'overdue', 'cancelled', 'void'
+  paidAt: timestamp("paid_at"),
+  dueDate: timestamp("due_date").notNull(),
+  
+  // Stripe integration
+  stripeInvoiceId: varchar("stripe_invoice_id"),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  
+  // Metadata
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("invoices_workspace_idx").on(table.workspaceId),
+  statusIdx: index("invoices_status_idx").on(table.status),
+  dueDateIdx: index("invoices_due_date_idx").on(table.dueDate),
+  createdAtIdx: index("invoices_created_at_idx").on(table.createdAt),
+  stripeIdx: index("invoices_stripe_idx").on(table.stripeInvoiceId),
+}));
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+// Invoice line items - breakdown of charges on each invoice
+export const invoiceLineItems = pgTable("invoice_line_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id, { onDelete: 'cascade' }),
+  
+  // Line item details
+  itemType: varchar("item_type").notNull(), // 'subscription', 'addon', 'usage', 'overage', 'credit', 'adjustment'
+  description: text("description").notNull(),
+  
+  // Quantity & pricing
+  quantity: decimal("quantity", { precision: 15, scale: 4 }).default("1.0000"),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 4 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Related entities
+  addonId: varchar("addon_id").references(() => billingAddons.id), // If this is an add-on charge
+  featureKey: varchar("feature_key"), // If this is a usage charge
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Usage details, date range, etc.
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  invoiceIdx: index("invoice_line_items_invoice_idx").on(table.invoiceId),
+  typeIdx: index("invoice_line_items_type_idx").on(table.itemType),
+  addonIdx: index("invoice_line_items_addon_idx").on(table.addonId),
+}));
+
+export const insertInvoiceLineItemSchema = createInsertSchema(invoiceLineItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
+export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
+
+// Payments - track all payment transactions
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  invoiceId: varchar("invoice_id").references(() => invoices.id, { onDelete: 'set null' }),
+  
+  // Payment details
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").notNull().default('usd'),
+  
+  // Payment status
+  status: varchar("status").notNull(), // 'pending', 'succeeded', 'failed', 'refunded'
+  failureReason: text("failure_reason"),
+  
+  // Payment method
+  paymentMethod: varchar("payment_method"), // 'card', 'ach', 'wire', 'credit'
+  paymentMethodLast4: varchar("payment_method_last4"),
+  
+  // Stripe integration
+  stripePaymentIntentId: varchar("stripe_payment_intent_id").unique(),
+  stripeChargeId: varchar("stripe_charge_id"),
+  
+  // Transaction info
+  paidAt: timestamp("paid_at"),
+  refundedAt: timestamp("refunded_at"),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("payments_workspace_idx").on(table.workspaceId),
+  invoiceIdx: index("payments_invoice_idx").on(table.invoiceId),
+  statusIdx: index("payments_status_idx").on(table.status),
+  stripeIdx: index("payments_stripe_idx").on(table.stripePaymentIntentId),
+  createdAtIdx: index("payments_created_at_idx").on(table.createdAt),
+}));
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
+// Billing audit log - comprehensive audit trail for all billing events
+export const billingAuditLog = pgTable("billing_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Event identification
+  eventType: varchar("event_type").notNull(), // 'addon_purchased', 'addon_cancelled', 'usage_recorded', 'invoice_generated', 'payment_succeeded', 'payment_failed', 'account_suspended', 'account_reactivated', 'credits_purchased', 'feature_toggled'
+  eventCategory: varchar("event_category").notNull(), // 'subscription', 'usage', 'payment', 'account', 'feature'
+  
+  // Actor
+  actorType: varchar("actor_type").notNull(), // 'user', 'system', 'admin', 'webhook'
+  actorId: varchar("actor_id"), // User ID if user action, null if system
+  actorEmail: varchar("actor_email"),
+  
+  // Event details
+  description: text("description").notNull(),
+  
+  // Related entities
+  relatedEntityType: varchar("related_entity_type"), // 'invoice', 'addon', 'payment', 'usage_event'
+  relatedEntityId: varchar("related_entity_id"),
+  
+  // Changes
+  previousState: jsonb("previous_state"), // State before change
+  newState: jsonb("new_state"), // State after change
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional context
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("billing_audit_workspace_idx").on(table.workspaceId),
+  eventTypeIdx: index("billing_audit_event_type_idx").on(table.eventType),
+  categoryIdx: index("billing_audit_category_idx").on(table.eventCategory),
+  actorIdx: index("billing_audit_actor_idx").on(table.actorId),
+  createdAtIdx: index("billing_audit_created_at_idx").on(table.createdAt),
+}));
+
+export const insertBillingAuditLogSchema = createInsertSchema(billingAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBillingAuditLog = z.infer<typeof insertBillingAuditLogSchema>;
+export type BillingAuditLog = typeof billingAuditLog.$inferSelect;
