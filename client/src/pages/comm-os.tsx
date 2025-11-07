@@ -53,7 +53,10 @@ import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { OrganizationChatRoom } from "@shared/schema";
+import { LiveRoomBrowser } from "@/components/live-room-browser";
 import { SupportChatroomList } from "@/components/support-chatroom-list";
+import { MessageSearch } from "@/components/message-search";
+import { WebRTCCall } from "@/components/webrtc-call";
 
 export default function CommOS() {
   const { user } = useAuth();
@@ -311,13 +314,19 @@ export default function CommOS() {
               : "Your organization's communication channels"}
           </p>
         </div>
-        {!isSupportStaff && (
-          <Button data-testid="button-create-room">
-            <PlusCircle className="w-4 h-4 mr-2" />
-            Create Room
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <MessageSearch />
+          {!isSupportStaff && (
+            <Button data-testid="button-create-room">
+              <PlusCircle className="w-4 h-4 mr-2" />
+              Create Room
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Live Room Browser with real-time connection data */}
+      <LiveRoomBrowser />
 
       <Card>
         <CardHeader>

@@ -18124,6 +18124,190 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       res.status(500).json({ message: "Failed to fetch chat rooms" });
     }
   });
+  
+  // GET /api/comm-os/rooms/live - Get live room data with WebSocket connections
+  app.get('/api/comm-os/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+
+      // Get base room data
+      let rooms;
+      if (isSupportStaff) {
+        rooms = await storage.getAllOrganizationChatRooms();
+      } else if (workspaceId) {
+        rooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
+      } else {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+
+      // Import getLiveRoomConnections from websocket module
+      const { getLiveRoomConnections } = await import('./websocket');
+      const liveConnections = getLiveRoomConnections();
+
+      // Enhance room data with live connection info
+      const liveRooms = rooms.map((room) => {
+        const connectionData = liveConnections.get(room.id) || { onlineUsers: [] };
+
+        return {
+          id: room.id,
+          roomName: room.roomName,
+          slug: room.slug,
+          workspaceId: room.workspaceId,
+          status: room.status || 'active',
+          maxMembers: room.maxMembers || 100,
+          currentMembers: connectionData.onlineUsers.length,
+          onlineMembers: connectionData.onlineUsers.map(u => ({
+            id: u.id,
+            name: u.name,
+            role: u.isStaff ? 'staff' : 'member',
+            status: u.status,
+            isStaff: u.isStaff,
+          })),
+          isJoined: connectionData.onlineUsers.some(u => u.id === userId),
+          unreadCount: 0, // TODO: Implement via separate lightweight endpoint or cached counters to avoid fetching full message histories
+          lastActivity: room.updatedAt || room.createdAt,
+        };
+      });
+
+      res.json(liveRooms);
+    } catch (error: any) {
+      console.error("Error fetching live rooms:", error);
+      res.status(500).json({ message: "Failed to fetch live rooms" });
+    }
+  });
+  
+  // POST /api/comm-os/rooms/:id/join - Join a chat room
+  app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const roomId = req.params.id;
+      const userId = req.user!.id;
+      
+      // Verify room exists
+      const room = await storage.getOrganizationChatRoom(roomId);
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+      
+      // Check access permissions
+      const workspaceId = req.workspaceId;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+      
+      if (!isSupportStaff && room.workspaceId !== workspaceId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Room join is handled by WebSocket connection
+      // This endpoint just validates access
+      res.json({ 
+        success: true,
+        message: "You can now connect to this room via WebSocket",
+        roomId: room.id,
+        conversationId: room.id,
+      });
+    } catch (error: any) {
+      console.error("Error joining room:", error);
+      res.status(500).json({ message: "Failed to join room" });
+    }
+  });
+  
+  // POST /api/comm-os/rooms/:id/leave - Leave a chat room
+  app.post('/api/comm-os/rooms/:id/leave', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const roomId = req.params.id;
+      
+      // Room leave is handled by WebSocket disconnection
+      // This endpoint just confirms the action
+      res.json({ 
+        success: true,
+        message: "Disconnected from room",
+        roomId,
+      });
+    } catch (error: any) {
+      console.error("Error leaving room:", error);
+      res.status(500).json({ message: "Failed to leave room" });
+    }
+  });
+  
+  // GET /api/comm-os/messages/search - Search messages across rooms
+  app.get('/api/comm-os/messages/search', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.workspaceId;
+      const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
+      
+      const { query, roomId, startDate, endDate, limit = 50 } = req.query;
+      
+      // Allow searches with query, roomId, or date filters
+      if (!query && !roomId && !startDate && !endDate) {
+        return res.status(400).json({ message: "Must provide at least one filter (query, roomId, or date range)" });
+      }
+      
+      // Get all accessible room IDs
+      let accessibleRooms;
+      if (isSupportStaff) {
+        accessibleRooms = await storage.getAllOrganizationChatRooms();
+      } else if (workspaceId) {
+        accessibleRooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
+      } else {
+        return res.status(400).json({ message: "No workspace found" });
+      }
+      
+      const roomIds = roomId ? [roomId as string] : accessibleRooms.map(r => r.id);
+      
+      // Search across all accessible rooms
+      const results = [];
+      for (const conversationId of roomIds) {
+        const messages = await storage.getChatMessagesByConversation(conversationId);
+        
+        let filteredMessages = messages;
+        
+        // Filter by search query
+        if (query) {
+          const searchTerm = (query as string).toLowerCase();
+          filteredMessages = filteredMessages.filter(m => 
+            m.messageContent?.toLowerCase().includes(searchTerm) ||
+            m.senderName?.toLowerCase().includes(searchTerm)
+          );
+        }
+        
+        // Filter by date range
+        if (startDate) {
+          const start = new Date(startDate as string);
+          filteredMessages = filteredMessages.filter(m => new Date(m.createdAt) >= start);
+        }
+        if (endDate) {
+          const end = new Date(endDate as string);
+          filteredMessages = filteredMessages.filter(m => new Date(m.createdAt) <= end);
+        }
+        
+        // Add room context to each message
+        const room = accessibleRooms.find(r => r.id === conversationId);
+        const messagesWithContext = filteredMessages.map(m => ({
+          ...m,
+          roomName: room?.roomName || 'Unknown Room',
+          roomId: conversationId,
+        }));
+        
+        results.push(...messagesWithContext);
+      }
+      
+      // Sort by most recent first and limit
+      const sortedResults = results
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, Number(limit));
+      
+      res.json({
+        results: sortedResults,
+        totalCount: results.length,
+        limit: Number(limit),
+      });
+    } catch (error: any) {
+      console.error("Error searching messages:", error);
+      res.status(500).json({ message: "Failed to search messages" });
+    }
+  });
 
   // GET /api/support/chatrooms - Get formatted chatroom list for support staff (with participant counts, activity, etc.)
   app.get('/api/support/chatrooms', requireAuth, async (req: AuthenticatedRequest, res) => {
