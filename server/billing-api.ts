@@ -15,8 +15,22 @@ import {
   insertBillingAddonSchema,
 } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { isAuthenticated } from './replitAuth';
+import { requireAuth } from './auth';
 
 export const billingRouter = Router();
+
+// Apply authentication to all billing routes (supports both Replit Auth and custom auth)
+// Use Replit Auth middleware for testing, falls back to custom auth
+billingRouter.use(async (req, res, next) => {
+  // Check if using Replit Auth (OIDC)
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  
+  // Fall back to custom session auth
+  return requireAuth(req, res, next);
+});
 
 // ============================================================================
 // USAGE METERING ENDPOINTS
