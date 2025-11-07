@@ -68,7 +68,7 @@ AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, Payr
       - Regular users see their own workspace's chat rooms
       - Support staff (platform_admin/support_staff) see polished table of ALL open chatrooms across all organizations
       - Support staff automatically granted owner role when joining any org room
-      - System announcement broadcasts when support joins: "🛡️ AutoForce™ Support Staff (email) has joined the room with admin access"
+      - System announcement broadcasts when support joins: "AutoForce™ Support Staff (email) has joined the room with admin access"
   - **WebSocket Protocol**: Fixed critical bug where protocol string `'wss:'` was causing invalid `wss:://` URLs; corrected to `'wss'` for proper `wss://` connections in all hooks
 - **Audit Logging**: Comprehensive audit trails provided by AuditOS™.
 - **Core Feature Areas**:

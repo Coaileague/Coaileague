@@ -18283,7 +18283,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         senderId: userId,
         senderName: userName,
         senderType: 'system',
-        message: `🛡️ AutoForce™ Support Staff (${userName}) has joined the room with admin access`,
+        message: `AutoForce™ Support Staff (${userName}) has joined the room with admin access`,
         messageType: 'system',
         isSystemMessage: true,
         isEncrypted: false,

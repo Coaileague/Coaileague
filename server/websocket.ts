@@ -198,8 +198,26 @@ export function setupWebSocket(server: Server) {
 
         switch (payload.type) {
           case 'join_conversation': {
-            // SECURITY: Verify conversation exists before allowing join
-            const conversation = await storage.getChatConversation(payload.conversationId);
+            const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+            
+            // Auto-create main room if it doesn't exist (for HelpDesk/LiveChat)
+            let conversation = await storage.getChatConversation(payload.conversationId);
+            if (!conversation && payload.conversationId === MAIN_ROOM_ID) {
+              conversation = await storage.createChatConversation({
+                id: MAIN_ROOM_ID,
+                workspaceId: 'platform-chatroom',
+                customerName: 'Main Chatroom',
+                customerEmail: 'chatroom@autoforce.com',
+                subject: 'AutoForce™ Live Support Chat',
+                conversationType: 'group',
+                status: 'open',
+                customerJoinedAt: new Date(),
+                isActive: true,
+                lastActivityAt: new Date(),
+              });
+            }
+            
+            // SECURITY: Verify conversation exists after auto-creation attempt
             if (!conversation) {
               ws.send(JSON.stringify({
                 type: 'error',
@@ -219,7 +237,6 @@ export function setupWebSocket(server: Server) {
             }) : 'User';
 
             // HELPDESK ACCESS CONTROL: For the main HelpDesk room (public IRC-style chatroom)
-            const MAIN_ROOM_ID = 'main-chatroom-workforceos';
             let userRoleInfo = '';
             if (payload.conversationId === MAIN_ROOM_ID) {
               // This is the main HelpDesk public chatroom - all authenticated users allowed
