@@ -92,9 +92,9 @@ export default function LiveChatroomPage() {
   
   const userId = currentUser?.user?.id;
   const userName = currentUser?.user?.email || 'Guest';
-  const isStaff = currentUser?.user?.platformRole && 
-    ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(currentUser.user.platformRole);
-  const isAuthenticated = !!currentUser?.user;
+  const isStaff = Boolean(currentUser?.user?.platformRole && 
+    ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(currentUser.user.platformRole));
+  const isAuthenticated = Boolean(currentUser?.user);
   
   // Fetch HelpDesk room info (only if authenticated)
   const { data: helpDeskRoom } = useQuery<{ status: string; statusMessage: string | null; workspaceId?: string }>({
