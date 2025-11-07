@@ -409,7 +409,7 @@ export default function RootAdminDashboard() {
                   { icon: Mail, label: "Support Email", link: "/contact", color: "text-emerald-500", testid: "quick-email" }
                 ].map((feature) => (
                   <Button
-                    key={feature.link}
+                    key={feature.testid}
                     variant="outline"
                     size="sm"
                     className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
@@ -437,7 +437,7 @@ export default function RootAdminDashboard() {
                   { icon: Flag, label: "Feature Flags", link: "/settings", color: "text-green-500", testid: "quick-flags" }
                 ].map((feature) => (
                   <Button
-                    key={feature.link}
+                    key={feature.testid}
                     variant="outline"
                     size="sm"
                     className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
@@ -478,7 +478,7 @@ export default function RootAdminDashboard() {
                   { icon: Code, label: "API Status", link: "#system-stats", color: "text-emerald-500", testid: "quick-api" }
                 ].map((feature) => (
                   <Button
-                    key={feature.link}
+                    key={feature.testid}
                     variant="outline"
                     size="sm"
                     className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
@@ -508,7 +508,7 @@ export default function RootAdminDashboard() {
                   { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-slate-400", testid: "quick-all" }
                 ].map((feature) => (
                   <Button
-                    key={feature.link}
+                    key={feature.testid}
                     variant="outline"
                     size="sm"
                     className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"

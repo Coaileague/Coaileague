@@ -5,13 +5,15 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive work
 
 ## Recent Updates (November 7, 2025)
 - **ROOT Admin Dashboard Enhancement**: Redesigned Quick Access toolbar with 23+ comprehensive support and platform maintenance tools organized into 4 categories:
-  - **Support & Helpdesk** (4 tools): Support Tickets, Live Chat, Help Desk, Support Email
-  - **Platform Management** (6 tools): Users, Workspaces (with scroll anchors), Audit Logs, DB Admin, API Keys, Feature Flags
-  - **Operations & Monitoring** (5 tools): System Health, Error Logs, Performance, Webhooks, API Status
+  - **Support & Helpdesk** (4 tools): Support Tickets (/admin-command-center), Live Chat (/mobile-chat), Help Desk (/helpdesk5), Support Email (/contact)
+  - **Platform Management** (6 tools): Users (#user-section), Workspaces (#workspace-section), Audit Logs (/audit-trail), DB Admin, API Keys, Feature Flags (/settings)
+  - **Operations & Monitoring** (5 tools): System Health (#system-stats), Error Logs (#recent-activity), Performance, Webhooks, API Status
   - **Core Features** (8 tools): Schedule, Time Clock, Invoices, Payroll, Hiring, Training, Analytics, All Features
-- **Database Fixes**: Added missing `billing_cycle_day` column to workspaces table and `starts_at` column to workspace_addons table
-- **Brand Consistency**: Applied Emergency Green (emerald) color standardization to ROOT admin dashboard (replaced all indigo colors)
+- **Scroll Navigation**: Added functional scroll anchors (user-section, workspace-section, system-stats, recent-activity) for seamless in-page navigation
+- **Database Fixes**: Added missing `billing_cycle_day`, `starts_at`, and `billing_preferences` columns to workspaces/workspace_addons tables
+- **Brand Consistency**: Complete Emergency Green (emerald) color standardization across ROOT admin dashboard - replaced ALL blue/cyan/indigo/purple/violet colors (verified 0 matches)
 - **WebSocket Chat**: Database schema issues resolved to enable proper chat functionality
+- **Code Quality**: Fixed React duplicate key warnings by using unique testid values instead of links
 
 ## User Preferences
 I prefer detailed explanations.
