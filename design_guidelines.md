@@ -1,276 +1,190 @@
-# AutoForce™ Emergency Services Design System
-## Workforce Management for Rapid Response Teams
-
-### Design Approach
-**System**: Clean, modern interface optimized for emergency services and service industries
-**Principles**: Rapid response clarity, operational efficiency, trust-focused design
-**Visual Reference**: Emergency service professionalism + modern SaaS clarity
+# AutoForce™ Design System v2.0
+## Premium Workforce Management Platform for Emergency Services
 
 ---
 
-## Brand Identity
+## Design Approach
 
-### Logo Design (Updated November 2025 - Emergency Green Rebrand)
-**Concept**: AF Lightning Bolt - Rapid Response & Reliability
-The AutoForce™ logo represents emergency response speed through a simplified, trust-focused design:
-
-**Icon Elements**:
-- **Lightning Bolt**: Simplified bolt icon representing rapid response capability
-- **AF Badge**: Circular green gradient badge with "AF" text
-- **Emergency Green**: Trust-focused gradient (#059669 → #10b981 → #6ee7b7)
-- **Adaptive Colors**: Automatically switches between light and dark variants
-
-**Color Variants**:
-- **Emergency Green Gradient**: Primary green (#059669 → #10b981 → #6ee7b7)
-- **Light Mode**: Full gradient visible on dark backgrounds
-- **Dark Mode**: Adjusted contrast for light backgrounds
-- Clean, professional aesthetic for emergency service operations
-
-**Animation States**:
-- **Static**: Clean, professional icon for navigation
-- **Animated**: Optional subtle pulse for loading states
-  - Pulse animation: 2s gentle opacity fade for loading contexts
-
-**Variants**:
-- **Icon**: Circular badge only, perfect for favicons and small spaces
-- **Wordmark**: Badge + "AutoForce™" text
-- **Full**: Badge + full branding with tagline
-
-**Usage Guidelines**:
-- Loading screens: Use animated variant with subtle pulse
-- Navigation: Static variant
-- Headers: Static wordmark or icon variant
-- Transition overlays: Animated pulse variant
+**System**: Modern premium SaaS with native mobile app polish
+**Philosophy**: "OS"-branded modules (ScheduleOS™, BillOS™, TimeOS™, etc.) delivering autonomous workforce intelligence
+**Visual Identity**: Success-driven gradients + professional emergency services trust
+**Mobile Strategy**: APK-quality native app experience with gesture-optimized controls
 
 ---
 
-## Core Color Palette - Emergency Services Theme
+## Brand Identity & Logo
 
-### Primary - Emergency Green (Trust & Rapid Response)
-- **Primary**: hsl(160, 84%, 39%) - #10b981 - Primary CTAs, active states, brand color
-- **Primary Foreground**: hsl(0, 0%, 100%) - White text on primary
-- **Primary Hover**: hsl(160, 77%, 34%) - Hover states, active elements
-- **Primary Light**: hsl(160, 84%, 95%) - Subtle accent backgrounds
-
-### Neutral - Professional Foundation
-- **Background**: hsl(0, 0%, 100%) - Page backgrounds (light mode)
-- **Foreground**: hsl(222.2, 84%, 4.9%) - Primary text (light mode)
-- **Card**: hsl(0, 0%, 100%) - Card surfaces (light mode)
-- **Muted**: hsl(210, 40%, 96.1%) - Secondary backgrounds
-- **Muted Foreground**: hsl(215.4, 16.3%, 46.9%) - Secondary text
-- **Border**: hsl(214.3, 31.8%, 91.4%) - Borders, dividers
-
-### Accent - Complementary Actions
-- **Accent**: hsl(210, 40%, 96.1%) - Secondary actions
-- **Accent Foreground**: hsl(222.2, 47.4%, 11.2%) - Text on accent
-
-### Sidebar - Navigation (Deep Charcoal)
-- **Sidebar Background**: hsl(222.2, 84%, 4.9%) - #1F2937
-- **Sidebar Foreground**: hsl(210, 40%, 98%) - Text on sidebar
-- **Sidebar Accent**: hsl(160, 84%, 39%) - Active item highlight (Emergency Green)
-- **Sidebar Accent Foreground**: hsl(0, 0%, 100%) - Text on accent
-
-### System Status
-- **Success**: hsl(160, 84%, 39%) - Success states (Emergency Green)
-- **Warning**: hsl(38, 95%, 55%) - Pending, caution
-- **Destructive**: hsl(0, 70%, 50%) - Critical alerts, errors
-- **Info**: hsl(210, 85%, 50%) - Informational
-
-### Dark Mode
-- **Dark Background**: hsl(222.2, 84%, 4.9%)
-- **Dark Foreground**: hsl(210, 40%, 98%)
-- **Dark Card**: hsl(222.2, 84%, 4.9%)
-- **Dark Muted**: hsl(217.2, 32.6%, 17.5%)
+**Lightning Bolt Icon**: Rapid response symbol in circular badge
+**Gradient Treatment**: Vibrant green-to-blue gradients (#10b981 → #3b82f6)
+**Variants**: Icon-only (32px-64px), Wordmark (Icon + "AutoForce™"), Full branding
+**Animation**: Subtle pulse (2s) for loading states, static for navigation
+**Dark Mode Adaptive**: Automatic contrast adjustment for accessibility
 
 ---
 
-## Typography System
+## Color System - Success & Energy
 
-### Font Stack
-**Primary**: 'Inter', -apple-system, system-ui, sans-serif (400, 500, 600, 700)
-**Data/Mono**: 'IBM Plex Mono', monospace
+### Primary Gradients
+- **Success Gradient**: `from-emerald-500 via-green-400 to-teal-400` (#10b981 → #4ade80 → #2dd4bf)
+- **Energy Gradient**: `from-blue-600 via-cyan-500 to-blue-400` (#2563eb → #06b6d4 → #60a5fa)
+- **Premium Dark**: `from-slate-900 via-slate-800 to-slate-900` (#0f172a → #1e293b → #0f172a)
 
-### Type Scale
-- **Hero Display**: 56px/700, -0.02em tracking - Landing headlines
-- **Display**: 40px/700 - Dashboard page titles
-- **H1**: 32px/600 - Section headers
-- **H2**: 24px/600 - Card titles
-- **H3**: 18px/600 - Subsections
-- **Body Large**: 17px/500 - Marketing copy, descriptions
-- **Body**: 15px/400 - Standard text, table data
-- **Small**: 13px/500 - Labels, captions
-- **Micro**: 11px/700 uppercase, 0.5px tracking - Badges, tags
+### Core Palette
+- **Primary Green**: hsl(160, 84%, 39%) #10b981 - Success, CTAs, active states
+- **Energy Blue**: hsl(210, 85%, 50%) #3b82f6 - Secondary actions, highlights
+- **Dark Background**: hsl(222, 47%, 11%) #1e293b - Desktop backgrounds, cards
+- **Vibrant Accent**: hsl(175, 84%, 55%) #2dd4bf - Notifications, badges
+- **Text Primary**: hsl(210, 40%, 98%) - Light mode text on dark
+- **Text Secondary**: hsl(215, 20%, 65%) - Muted text, descriptions
+
+### Status Colors
+- **Success**: Emerald gradient (#10b981 → #4ade80)
+- **Warning**: Amber (#f59e0b)
+- **Error**: Rose (#ef4444)
+- **Info**: Cyan (#06b6d4)
+
+---
+
+## Typography
+
+**Primary**: 'Inter', -apple-system, sans-serif (Variable weights: 400-700)
+**Monospace**: 'JetBrains Mono' for data/metrics
+
+### Scale
+- **Hero**: 64px/700, tight leading (-0.02em) - Marketing headlines
+- **Display**: 48px/700 - Dashboard titles, OS module headers
+- **H1**: 36px/600 - Page sections
+- **H2**: 28px/600 - Card headers
+- **Body Large**: 18px/500 - Marketing copy
+- **Body**: 16px/400 - Standard content
+- **Small**: 14px/500 - Labels, metadata
+- **Micro**: 12px/600 uppercase, 0.05em tracking - Badges, status
 
 ---
 
 ## Layout System
 
-**Spacing Scale**: Tailwind units of 4, 6, 8, 12, 16, 24
-- Section padding: py-16 (desktop), py-12 (tablet), py-8 (mobile)
+**Spacing Scale**: Tailwind units of 4, 6, 8, 12, 16, 20, 24, 32
+- Desktop sections: py-24
+- Mobile sections: py-16
 - Card padding: p-8 (desktop), p-6 (mobile)
 - Grid gaps: gap-8 (desktop), gap-6 (mobile)
-- Container: max-w-7xl with px-6
+- Container: max-w-7xl mx-auto px-6
 
 **Grid Patterns**:
-- Hero sections: Single column, centered, max-w-5xl
-- Feature grids: 3 columns (desktop), 2 (tablet), 1 (mobile)
-- Dashboard stats: 4 columns → 2 → 1
-- Service showcase: 2 columns staggered
+- Hero: Full-bleed with gradient overlay
+- Features: 3-column (desktop) → 2 (tablet) → 1 (mobile)
+- Dashboard: 4-column stats → 2 → 1
+- OS Modules: 2-column staggered showcase
 
 ---
 
-## Component Library
+## Component Architecture
 
-### Marketing Hero Section
-**Height**: 90vh with content centered
-**Background**: Gradient from background to muted/20, clean and professional
-**Content Layout**: Centered text block (max-w-3xl), headline + subheadline + dual CTAs
-**Emergency Services Focus**: "Workforce Management Built for Rapid Response"
-**CTA Buttons**: Primary (Emergency Green), Secondary (Outline) - both accessible
+### Marketing Hero
+**Layout**: Full viewport (90vh), centered content with gradient overlay
+**Background Image**: High-quality emergency services imagery (paramedics, response teams)
+**Gradient Overlay**: Success gradient with 60% opacity over image
+**Content**: max-w-4xl centered, headline + subheadline + dual CTAs
+**Buttons**: Blurred backdrop (backdrop-blur-md bg-white/20), white text, no hover states on transparent buttons
+**Image Description**: Professional emergency response team in action, modern equipment, sense of urgency and precision
 
-### Stat Cards
-**Base**: White background, border, rounded-lg
-**Hover**: Subtle lift with shadow
-**Number**: Large, bold, primary color for emphasis
-**Label**: Small, muted foreground
-**Layout**: Number dominant, label below, clean spacing
+### Desktop Navigation
+**Top Bar**: Sticky, dark gradient background (Premium Dark), glass morphism effect
+**Logo**: Left-aligned with gradient treatment
+**Nav Links**: Center-aligned, hover with gradient underline
+**Actions**: Right-aligned CTAs with Success gradient
 
-### Dashboard Cards
-**Container**: Card bg, rounded-xl, padding, subtle border
-**Header**: Title + action button aligned
-**Content**: Generous whitespace, clear hierarchy
-**Charts**: Emergency Green primary, with complementary status colors
+### Mobile Native App Experience
+**Bottom Tab Bar**: Fixed navigation (ScheduleOS, TimeOS, PayrollOS, AnalyticsOS, More)
+**Tab Icons**: Custom icons with active gradient fill
+**Gestures**: Swipe between modules, pull-to-refresh
+**Header**: Fixed app-style header with module name + action icons
+**Cards**: Edge-to-edge on mobile, rounded corners, subtle shadows
+**Touch Targets**: Minimum 48px height, generous padding
 
-### Navigation System
-**Top Bar**: 
-- Clean white/dark background
-- Logo left, nav center, actions right
-- Sticky with smooth transitions
+### OS Module Cards (ScheduleOS™, BillOS™, etc.)
+**Desktop**: Gradient border, dark background, hover lift with glow
+**Content**: Module icon (gradient fill), name, description, feature bullets
+**CTA**: "Launch Module" with gradient button
+**Mobile**: Full-width cards, stacked vertically, tap to expand details
 
-**Sidebar** (Dashboard):
-- Deep charcoal background (#1F2937)
-- Emergency Green accent for active items
-- Smooth transitions on hover
+### Dashboard Stats Cards
+**Layout**: Grid of metric cards with gradient accents
+**Number**: Large display font (48px), gradient text fill
+**Label**: Small caps, muted
+**Trend**: Mini sparkline chart with Success/Energy gradient fill
+**Background**: Dark card with subtle gradient border
 
 ### Data Tables
-**Header**: Muted background, bold uppercase labels
-**Rows**: Clean backgrounds, subtle borders, hover state
-**Cell Padding**: Comfortable spacing for readability
-**Actions**: Icon buttons, Emergency Green on primary actions
+**Header**: Dark background with gradient border-bottom
+**Rows**: Alternating subtle backgrounds, hover state with gradient left border
+**Actions**: Icon buttons with gradient hover states
+**Mobile**: Horizontal scroll or card-based layout
 
-### Button System
-**Primary CTA**: Emergency Green (#10b981), white text, medium weight
-**Secondary**: Outline with border, foreground text
-**Ghost**: Transparent, hover with muted background
-**Destructive**: Red for critical actions
+### Buttons & CTAs
+**Primary**: Success gradient background, white text, medium shadow
+**Secondary**: Energy gradient border, gradient text, transparent background
+**Ghost**: Transparent with gradient hover background
+**Icon Buttons**: Circular, gradient border on hover
 
 ### Form Inputs
-**Base**: Clean background, subtle border, comfortable height
-**Focus**: Primary border (Emergency Green), clear focus state
-**Label**: Medium weight, comfortable spacing
-**Error**: Destructive border, clear error message
-
-### Badges & Tags
-**Shape**: Rounded pill, comfortable padding
-**Success**: Emergency Green background and foreground
-**Warning**: Warning color for caution
-**Inactive**: Muted colors for disabled states
+**Base**: Dark background, gradient border on focus
+**Label**: Floating label animation, gradient on active
+**Validation**: Success/Error gradient border pulse
 
 ---
 
-## Emergency Services Marketing Pages
+## Images
 
-### 1. Hero Section
-Full viewport height, centered content, emergency services messaging, "Workforce Management Built for Rapid Response", dual CTAs, Emergency Green primary action
+**Hero Section**: Large background image required
+- Emergency services team in action (paramedics, firefighters, or dispatch center)
+- Modern, professional setting with equipment
+- High-energy, success-oriented composition
+- Overlay: Success gradient at 60% opacity
+- Buttons on image: backdrop-blur-md with bg-white/20
 
-### 2. Trust Indicators
-SOC 2 Compliant, 256-bit Encryption, 99.9% Uptime - professional badges with appropriate icons
-
-### 3. Feature Showcase
-Platform preview sections showing ScheduleOS™, TimeOS™, AnalyticsOS™ with live product previews
-
-### 4. Core OS Modules
-8 integrated modules: ScheduleOS™, TimeOS™, PayrollOS™, BillOS™, HireOS™, ReportOS™, AnalyticsOS™, SupportOS™
-
-### 5. Competitive Advantage
-Comparison table showing integrated platform vs. point solutions, factual and FTC-compliant
-
-### 6. Compliance & Disclaimers
-Clear disclaimers about time/cost savings varying by organization size and implementation
-
-### 7. CTA Section
-Emergency Green primary action, "Start Free Trial" focus
-
-### 8. Footer
-Professional layout with product, company, and legal links
+**Feature Sections**: Product screenshots showing OS modules
+**Trust Section**: Logo wall of emergency service organizations
+**Team Section**: Professional headshots with gradient borders
 
 ---
 
-## Animations & Micro-Interactions
+## Animations & Interactions
 
-**Philosophy**: Purposeful, professional motion for emergency services context
-
-- **Page Transitions**: Smooth fade transitions
-- **Hover States**: Subtle elevation with Emergency Green accents
-- **Loading States**: Emergency Green spinner/pulse, professional feedback
-- **Success Feedback**: Emergency Green checkmark, clear confirmation
-- **Emergency Green Glow**: Subtle for active states and primary actions
-
----
-
-## FTC Compliance & Marketing
-
-**Critical Requirements**:
-- All claims must be factual and verifiable
-- Avoid monopolistic language ("only solution", "exclusive feature")
-- Include disclaimers for time/cost savings ("actual results will vary")
-- Focus on emergency services and service industries target market
-- Use Emergency Green to convey trust and reliability
-
-**Approved Language**:
-- "Designed to reduce administrative tasks"
-- "Features designed to help automate manual tasks"
-- "Streamline operations for emergency response teams"
-- "Built for rapid response and operational efficiency"
-
-**Avoid**:
-- Monopolistic claims
-- Unverifiable performance guarantees
-- Misleading comparison statements
+**Page Transitions**: Smooth fade + slide up (0.3s ease-out)
+**Gradient Animations**: Subtle 3s gradient position shift on hover
+**Card Hovers**: Lift + gradient glow shadow
+**Loading**: Gradient spinner with pulse animation
+**Mobile Gestures**: Swipe animations (0.2s spring)
+**Success States**: Gradient checkmark with scale animation
 
 ---
 
-## Responsive Breakpoints
+## Mobile-First Native Experience
 
-- **Desktop (1280px+)**: Full layouts, multi-column grids
-- **Tablet (768-1279px)**: 2 columns, adjusted spacing
-- **Mobile (<768px)**: Single column, stacked cards, touch-optimized
+**Navigation**: Bottom tab bar (5 primary modules), hamburger for overflow
+**Gestures**: Swipe between tabs, pull-to-refresh on lists
+**Touch Optimization**: All interactive elements 48px+ height
+**Cards**: Full-width on mobile, rounded-lg corners
+**Modals**: Slide up from bottom with backdrop blur
+**Notifications**: Top toast with gradient accent
+**Scrolling**: Smooth scroll with momentum, sticky headers
+
+---
+
+## Responsive Strategy
+
+- **Desktop (1280px+)**: Multi-column layouts, generous whitespace, gradient accents
+- **Tablet (768-1279px)**: 2-column grids, adjusted spacing
+- **Mobile (<768px)**: Native app layout, bottom navigation, vertical stacking, touch-optimized
 
 ---
 
 ## Accessibility
 
-- **Contrast**: WCAG AA minimum compliance
-- **Focus Indicators**: Clear Emergency Green focus rings
-- **Keyboard Nav**: Full support, logical tab order
-- **ARIA**: Comprehensive labels on interactive elements
-- **Motion**: Respect prefers-reduced-motion preferences
-
----
-
-## Emergency Green Implementation Notes
-
-**Primary Use Cases**:
-- All CTAs and primary actions
-- Active navigation states
-- Success confirmations
-- Loading indicators
-- Focus states
-- Brand accents
-
-**Color Psychology**:
-Emergency Green (#10b981) chosen for:
-- Trust and reliability (medical/emergency context)
-- Visibility and clarity (high contrast)
-- Professional appearance (modern SaaS standard)
-- Positive action association (go/proceed)
+- **Contrast**: WCAG AA on all gradients (tested against dark backgrounds)
+- **Focus**: Clear gradient outline rings
+- **Keyboard**: Full navigation support
+- **Motion**: Respect prefers-reduced-motion
+- **Touch**: Minimum 48px targets, clear active states

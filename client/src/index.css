@@ -5,7 +5,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* EMERGENCY SERVICES LIGHT MODE - Trust & Reliability (Charcoal + Platinum + Emergency Green) */
+/* AUTOFORCE™ v2.0 - MODERN SUCCESS-ORIENTED DESIGN (Vibrant Gradients + Premium Dark) */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -13,82 +13,82 @@
   /* Automatic computation of border around primary / danger buttons */
   --opaque-button-border-intensity: -8; /* In terms of percentages */
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(5, 150, 105, .03);  /* Emerald tint for elevation */
-  --elevate-2: rgba(5, 150, 105, .08);
+  /* Backgrounds applied on top of other backgrounds when hovered/active - Emerald energy */
+  --elevate-1: rgba(16, 185, 129, .06);  /* Success gradient tint */
+  --elevate-2: rgba(16, 185, 129, .12);
 
-  /* Fortune 500 Platinum Foundation */
-  --background: 220 20% 98%;           /* Platinum 50 - Page background */
+  /* Modern Light Mode - Clean Professional */
+  --background: 0 0% 100%;             /* Pure white - Clean canvas */
 
-  --foreground: 220 15% 15%;           /* Platinum 900 - Primary text */
+  --foreground: 222 47% 11%;           /* Deep charcoal - Strong text */
 
-  --border: 220 12% 88%;               /* Platinum 200 - Borders */
+  --border: 214 32% 91%;               /* Soft blue-gray - Subtle borders */
 
-  --card: 220 15% 95%;                 /* Platinum 100 - Card surfaces */
+  --card: 0 0% 100%;                   /* White cards - Clean surfaces */
 
-  --card-foreground: 220 15% 15%;      /* Platinum 900 - Card text */
+  --card-foreground: 222 47% 11%;      /* Deep charcoal - Card text */
 
-  --card-border: 220 12% 88%;          /* Platinum 200 - Card borders */
+  --card-border: 214 32% 91%;          /* Soft borders */
 
-  /* Sidebar - Professional Charcoal */
-  --sidebar: 216 19% 17%;              /* Charcoal - Sidebar background */
+  /* Sidebar - Premium Dark with Gradient Accents */
+  --sidebar: 222 47% 11%;              /* Deep charcoal - Premium feel */
 
-  --sidebar-foreground: 220 20% 98%;   /* Platinum 50 - Sidebar text */
+  --sidebar-foreground: 210 40% 98%;   /* Near white - Clear text */
 
-  --sidebar-border: 216 15% 25%;       /* Charcoal border */
+  --sidebar-border: 215 25% 27%;       /* Subtle dark border */
 
-  --sidebar-primary: 160 84% 39%;      /* Emergency Green - Active items */
+  --sidebar-primary: 160 84% 39%;      /* Success green - Active items */
 
-  --sidebar-primary-foreground: 220 20% 98%;
+  --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 216 19% 22%;       /* Charcoal hover - Hover state */
+  --sidebar-accent: 217 32% 17%;       /* Slightly lighter charcoal - Hover */
 
-  --sidebar-accent-foreground: 220 20% 98%;
+  --sidebar-accent-foreground: 210 40% 98%;
 
-  --sidebar-ring: 160 84% 39%;         /* Emergency Green focus ring */
+  --sidebar-ring: 160 84% 39%;         /* Success green focus ring */
 
   /* Popovers */
-  --popover: 220 15% 95%;              /* Platinum 100 */
+  --popover: 0 0% 100%;                /* White */
 
-  --popover-foreground: 220 15% 15%;   /* Platinum 900 */
+  --popover-foreground: 222 47% 11%;   /* Deep charcoal */
 
-  --popover-border: 220 12% 88%;       /* Platinum 200 */
+  --popover-border: 214 32% 91%;       /* Soft border */
 
-  /* Primary - Emergency Green */
-  --primary: 160 84% 39%;              /* Emergency Green - CTAs */
+  /* Primary - Success Gradient (Emerald to Green) */
+  --primary: 160 84% 39%;              /* Emerald green - Primary CTAs */
 
-  --primary-foreground: 0 0% 100%;     /* White text on green */
+  --primary-foreground: 0 0% 100%;     /* White text */
 
-  /* Secondary */
-  --secondary: 220 12% 88%;            /* Platinum 200 */
+  /* Secondary - Energy Blue */
+  --secondary: 210 85% 50%;            /* Vibrant blue - Secondary actions */
 
-  --secondary-foreground: 220 15% 15%; /* Platinum 900 */
+  --secondary-foreground: 0 0% 100%;   /* White text */
 
   /* Muted */
-  --muted: 220 15% 95%;                /* Platinum 100 */
+  --muted: 210 40% 96%;                /* Very light blue-gray */
 
-  --muted-foreground: 220 10% 40%;     /* Platinum 700 */
+  --muted-foreground: 215 16% 47%;     /* Medium gray */
 
-  /* Accent */
-  --accent: 158 64% 92%;               /* Light Emerald - Light accent */
+  /* Accent - Vibrant Teal */
+  --accent: 175 84% 55%;               /* Cyan-teal - Notifications, badges */
 
-  --accent-foreground: 160 77% 25%;    /* Dark Emerald */
+  --accent-foreground: 0 0% 100%;      /* White text */
 
   /* Destructive */
-  --destructive: 0 70% 50%;            /* Error red */
+  --destructive: 0 84% 60%;            /* Rose red */
 
   --destructive-foreground: 0 0% 100%;
 
   /* Input & Ring */
-  --input: 220 12% 88%;                /* Platinum 200 */
-  --ring: 160 84% 39%;                 /* Emergency Green focus ring */
+  --input: 214 32% 91%;                /* Soft border */
+  --ring: 160 84% 39%;                 /* Success green focus ring */
   
-  /* Charts - Emergency Services palette */
-  --chart-1: 216 19% 17%;              /* Charcoal */
-  --chart-2: 160 84% 39%;              /* Emergency Green */
-  --chart-3: 38 95% 55%;               /* Warning */
-  --chart-4: 210 85% 50%;              /* Info */
-  --chart-5: 0 70% 50%;                /* Error */
+  /* Charts - Modern Success Palette */
+  --chart-1: 160 84% 39%;              /* Success Green */
+  --chart-2: 210 85% 50%;              /* Energy Blue */
+  --chart-3: 38 92% 50%;               /* Warning Amber */
+  --chart-4: 175 84% 55%;              /* Info Cyan */
+  --chart-5: 0 84% 60%;                /* Error Rose */
 
   --font-sans: Inter, Open Sans, sans-serif;
   --font-serif: Georgia, serif;
@@ -163,64 +163,64 @@
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(16, 185, 129, 0.05);  /* Emerald tint for dark mode */
-  --elevate-2: rgba(16, 185, 129, 0.15);
+  --elevate-1: rgba(16, 185, 129, 0.08);  /* Success gradient glow */
+  --elevate-2: rgba(16, 185, 129, 0.18);
 
-  /* Fortune 500 Dark Mode - Power & Authority (Deep Charcoal) */
-  --background: 216 19% 10%;           /* Deep charcoal background */
-  --foreground: 220 20% 98%;           /* Platinum 50 text */
+  /* AUTOFORCE™ DARK MODE - Premium Power (Deep Slate + Vibrant Accents) */
+  --background: 222 47% 11%;           /* Deep charcoal - Premium dark */
+  --foreground: 210 40% 98%;           /* Near white - Clear text */
   
-  --border: 216 15% 22%;               /* Charcoal borders */
+  --border: 215 25% 27%;               /* Subtle dark border */
   
-  --card: 216 19% 14%;                 /* Charcoal cards */
-  --card-foreground: 220 20% 98%;
-  --card-border: 216 15% 22%;
+  --card: 217 32% 17%;                 /* Dark slate - Card surfaces */
+  --card-foreground: 210 40% 98%;
+  --card-border: 215 25% 27%;
   
-  /* Sidebar - Darker charcoal */
-  --sidebar: 216 19% 12%;              /* Slightly darker charcoal */
-  --sidebar-foreground: 220 20% 98%;
-  --sidebar-border: 216 15% 25%;
-  --sidebar-primary: 160 84% 45%;      /* Emergency Green (brighter for dark) */
-  --sidebar-primary-foreground: 220 20% 98%;
-  --sidebar-accent: 216 19% 18%;       /* Hover state */
-  --sidebar-accent-foreground: 220 20% 98%;
-  --sidebar-ring: 160 84% 45%;
+  /* Sidebar - Deepest Premium Dark */
+  --sidebar: 222 47% 8%;               /* Extra deep charcoal */
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 215 25% 27%;
+  --sidebar-primary: 160 84% 39%;      /* Success Green - Vibrant */
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 217 32% 17%;       /* Hover state */
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-ring: 160 84% 39%;
   
   /* Popovers */
-  --popover: 216 19% 14%;
-  --popover-foreground: 220 20% 98%;
-  --popover-border: 216 15% 22%;
+  --popover: 217 32% 17%;
+  --popover-foreground: 210 40% 98%;
+  --popover-border: 215 25% 27%;
   
-  /* Primary - Emergency Green (slightly brighter in dark mode) */
-  --primary: 160 84% 45%;              /* Emergency Green - brighter for dark mode */
+  /* Primary - Success Green (Vibrant in dark mode) */
+  --primary: 160 84% 39%;              /* Emerald green - Pops on dark */
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary */
-  --secondary: 216 15% 22%;            /* Charcoal tone */
-  --secondary-foreground: 220 20% 98%;
+  /* Secondary - Energy Blue */
+  --secondary: 210 85% 50%;            /* Vibrant blue */
+  --secondary-foreground: 0 0% 100%;
   
   /* Muted */
-  --muted: 216 19% 18%;
-  --muted-foreground: 220 10% 65%;     /* Platinum 600 */
+  --muted: 215 28% 17%;
+  --muted-foreground: 215 20% 65%;     /* Medium gray */
   
-  /* Accent */
-  --accent: 160 75% 20%;               /* Dark Emerald */
-  --accent-foreground: 158 64% 72%;    /* Light Emerald */
+  /* Accent - Vibrant Cyan */
+  --accent: 175 84% 55%;               /* Cyan-teal - Bright accent */
+  --accent-foreground: 222 47% 11%;    /* Dark text on bright */
   
   /* Destructive */
-  --destructive: 0 70% 55%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
   /* Input & Ring */
-  --input: 216 15% 25%;
-  --ring: 160 84% 45%;                 /* Emergency Green focus ring */
+  --input: 215 25% 27%;
+  --ring: 160 84% 39%;                 /* Success green focus ring */
   
-  /* Charts - Emergency Services dark mode palette */
-  --chart-1: 160 84% 45%;              /* Emergency Green */
-  --chart-2: 210 85% 55%;              /* Bright blue */
-  --chart-3: 38 95% 60%;               /* Warning */
-  --chart-4: 271 70% 60%;              /* Purple */
-  --chart-5: 0 70% 60%;                /* Error */
+  /* Charts - Modern Dark Mode Palette */
+  --chart-1: 160 84% 39%;              /* Success Green */
+  --chart-2: 210 85% 50%;              /* Energy Blue */
+  --chart-3: 38 92% 50%;               /* Warning Amber */
+  --chart-4: 175 84% 55%;              /* Info Cyan */
+  --chart-5: 0 84% 60%;                /* Error Rose */
 
   --shadow-2xs: 0px 1px 2px 0px hsl(218 85% 5% / 0.30);
   --shadow-xs: 0px 1px 3px 0px hsl(218 85% 5% / 0.40);
