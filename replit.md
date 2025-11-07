@@ -33,8 +33,8 @@ AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, Payr
 - Primary brand: emerald-500, emerald-600 (Emergency Green)
 - Secondary accents: teal-500, green-500
 - Supporting colors: amber (warnings), rose (costs), slate (neutrals)
-- "Auto" text: dark gray-900 (light mode), foreground (dark mode)
-- "FORCE" text: emerald-600 (light mode), emerald-400 (dark mode)
+- Logo "AUTO" text: slate-900 (light mode), white (dark mode) - high contrast for maximum visibility
+- Logo "FORCE" text: emerald-600 (light mode), emerald-400 (dark mode)
 
 **Technical Implementations:**
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
