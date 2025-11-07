@@ -39,7 +39,7 @@ billingRouter.use(async (req, res, next) => {
 /**
  * Record usage event
  */
-billingRouter.post('/api/billing/usage', async (req, res) => {
+billingRouter.post('/usage', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -80,7 +80,7 @@ billingRouter.post('/api/billing/usage', async (req, res) => {
 /**
  * Get usage summary (for dashboard)
  */
-billingRouter.get('/api/billing/usage/summary', async (req, res) => {
+billingRouter.get('/usage/summary', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -129,7 +129,7 @@ billingRouter.get('/api/billing/usage/summary', async (req, res) => {
 /**
  * Get usage metrics
  */
-billingRouter.get('/api/billing/usage/metrics', async (req, res) => {
+billingRouter.get('/usage/metrics', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -153,7 +153,7 @@ billingRouter.get('/api/billing/usage/metrics', async (req, res) => {
 /**
  * Estimate cost for planned usage
  */
-billingRouter.post('/api/billing/usage/estimate', async (req, res) => {
+billingRouter.post('/usage/estimate', async (req, res) => {
   try {
     const input = z.object({
       featureKey: z.string(),
@@ -181,7 +181,7 @@ billingRouter.post('/api/billing/usage/estimate', async (req, res) => {
 /**
  * Get wallet balance
  */
-billingRouter.get('/api/billing/credits/balance', async (req, res) => {
+billingRouter.get('/credits/balance', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -200,7 +200,7 @@ billingRouter.get('/api/billing/credits/balance', async (req, res) => {
 /**
  * Purchase credits
  */
-billingRouter.post('/api/billing/credits/purchase', async (req, res) => {
+billingRouter.post('/credits/purchase', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     const userId = req.user?.id;
@@ -233,7 +233,7 @@ billingRouter.post('/api/billing/credits/purchase', async (req, res) => {
 /**
  * Configure auto-recharge
  */
-billingRouter.post('/api/billing/credits/auto-recharge', async (req, res) => {
+billingRouter.post('/credits/auto-recharge', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -267,7 +267,7 @@ billingRouter.post('/api/billing/credits/auto-recharge', async (req, res) => {
 /**
  * Get invoices for workspace
  */
-billingRouter.get('/api/billing/invoices', async (req, res) => {
+billingRouter.get('/invoices', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -286,7 +286,7 @@ billingRouter.get('/api/billing/invoices', async (req, res) => {
 /**
  * Get invoice details with line items
  */
-billingRouter.get('/api/billing/invoices/:id', async (req, res) => {
+billingRouter.get('/invoices/:id', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -314,7 +314,7 @@ billingRouter.get('/api/billing/invoices/:id', async (req, res) => {
 /**
  * Check feature access
  */
-billingRouter.get('/api/billing/features/:featureKey', async (req, res) => {
+billingRouter.get('/features/:featureKey', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -334,7 +334,7 @@ billingRouter.get('/api/billing/features/:featureKey', async (req, res) => {
 /**
  * Get all enabled features
  */
-billingRouter.get('/api/billing/features', async (req, res) => {
+billingRouter.get('/features', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -353,7 +353,7 @@ billingRouter.get('/api/billing/features', async (req, res) => {
 /**
  * Toggle feature on/off
  */
-billingRouter.post('/api/billing/features/:addonId/toggle', async (req, res) => {
+billingRouter.post('/features/:addonId/toggle', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     const userId = req.user?.id;
@@ -382,7 +382,7 @@ billingRouter.post('/api/billing/features/:addonId/toggle', async (req, res) => 
 /**
  * Get available add-ons (marketplace)
  */
-billingRouter.get('/api/billing/addons/available', async (req, res) => {
+billingRouter.get('/addons/available', async (req, res) => {
   try {
     const addons = await featureToggleService.getAvailableAddons();
 
@@ -396,7 +396,7 @@ billingRouter.get('/api/billing/addons/available', async (req, res) => {
 /**
  * Get workspace's add-ons
  */
-billingRouter.get('/api/billing/addons', async (req, res) => {
+billingRouter.get('/addons', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -415,7 +415,7 @@ billingRouter.get('/api/billing/addons', async (req, res) => {
 /**
  * Purchase add-on
  */
-billingRouter.post('/api/billing/addons/:addonId/purchase', async (req, res) => {
+billingRouter.post('/addons/:addonId/purchase', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     const userId = req.user?.id;
@@ -437,7 +437,7 @@ billingRouter.post('/api/billing/addons/:addonId/purchase', async (req, res) => 
 /**
  * Cancel add-on
  */
-billingRouter.post('/api/billing/addons/:addonId/cancel', async (req, res) => {
+billingRouter.post('/addons/:addonId/cancel', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     const userId = req.user?.id;
@@ -466,7 +466,7 @@ billingRouter.post('/api/billing/addons/:addonId/cancel', async (req, res) => {
 /**
  * Get account status
  */
-billingRouter.get('/api/billing/account/status', async (req, res) => {
+billingRouter.get('/account/status', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     if (!workspaceId) {
@@ -485,7 +485,7 @@ billingRouter.get('/api/billing/account/status', async (req, res) => {
 /**
  * Reactivate account (requires support intervention if in requires_support state)
  */
-billingRouter.post('/api/billing/account/reactivate', async (req, res) => {
+billingRouter.post('/account/reactivate', async (req, res) => {
   try {
     const workspaceId = req.user?.workspaceId;
     const userId = req.user?.id;
