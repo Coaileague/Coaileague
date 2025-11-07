@@ -492,7 +492,7 @@ export default function LiveChatroomPage() {
       return (
         <>
           {name}
-          <sup className="text-[10px] ml-0.5 font-semibold text-blue-400 opacity-90">
+          <sup className="text-[10px] ml-0.5 font-semibold text-emerald-400 opacity-90">
             ({role})
           </sup>
         </>
@@ -520,10 +520,10 @@ export default function LiveChatroomPage() {
     // Standard type-based icons
     switch (senderType) {
       case 'support':
-        return <Headphones className="w-3.5 h-3.5 text-indigo-400" />;
+        return <Headphones className="w-3.5 h-3.5 text-green-400" />;
       case 'bot':
       case 'system':
-        return <Bot className="w-3.5 h-3.5 text-purple-400" />;
+        return <Bot className="w-3.5 h-3.5 text-emerald-400" />;
       default:
         return <User className="w-3.5 h-3.5 text-slate-400" />;
     }
@@ -592,8 +592,8 @@ export default function LiveChatroomPage() {
                 <h1 className="text-xs sm:text-lg font-bold truncate text-white">
                   Help Desk
                 </h1>
-                <p className="text-xs text-indigo-100 hidden sm:block flex items-center gap-2">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
+                <p className="text-xs text-green-100 hidden sm:block flex items-center gap-2">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   {helpDeskRoom?.statusMessage || "Instant Support · Real-Time Messaging"}
                 </p>
               </div>
@@ -609,7 +609,7 @@ export default function LiveChatroomPage() {
             >
               {helpDeskRoom?.status === 'open' ? (
                 <>
-                  <Circle className="w-2 h-2 fill-blue-400 text-blue-400 animate-pulse" />
+                  <Circle className="w-2 h-2 fill-emerald-400 text-emerald-400 animate-pulse" />
                   <span className="hidden sm:inline">Open</span>
                 </>
               ) : helpDeskRoom?.status === 'closed' ? (
@@ -673,9 +673,9 @@ export default function LiveChatroomPage() {
                     <span className="ml-1">{onlineUsers.length}</span>
                   </Button>
                 </SheetTrigger>
-              <SheetContent side="right" className="w-72 bg-slate-900 border-indigo-500/20">
+              <SheetContent side="right" className="w-72 bg-slate-900 border-green-500/20">
                 <SheetHeader className="flex flex-row items-center justify-between">
-                  <SheetTitle className="flex items-center gap-2 text-indigo-100">
+                  <SheetTitle className="flex items-center gap-2 text-green-100">
                     <Users className="w-4 h-4" />
                     Online ({onlineUsers.length})
                   </SheetTitle>
@@ -701,18 +701,18 @@ export default function LiveChatroomPage() {
                             setShowUserActions(true);
                           }
                         }}
-                        className={`flex items-center gap-2 p-2.5 rounded-lg bg-slate-800/40 border border-indigo-500/20 ${
+                        className={`flex items-center gap-2 p-2.5 rounded-lg bg-slate-800/40 border border-green-500/20 ${
                           isActionable
                             ? 'hover-elevate active-elevate-2 cursor-pointer' 
                             : ''
                         }`}
                         data-testid={`user-${user.id}`}
                       >
-                        <Circle className="w-2 h-2 fill-blue-400 text-blue-400 flex-shrink-0 animate-pulse" />
+                        <Circle className="w-2 h-2 fill-emerald-400 text-emerald-400 flex-shrink-0 animate-pulse" />
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           {user.role === 'admin' && <Shield className="w-3 h-3 text-red-400 flex-shrink-0" />}
-                          {user.role === 'support' && <Headphones className="w-3 h-3 text-indigo-400 flex-shrink-0" />}
-                          {user.role === 'bot' && <Bot className="w-3 h-3 text-purple-400 flex-shrink-0" />}
+                          {user.role === 'support' && <Headphones className="w-3 h-3 text-green-400 flex-shrink-0" />}
+                          {user.role === 'bot' && <Bot className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
                           <span className="text-sm font-medium break-words text-slate-200">{user.name}</span>
                         </div>
                         {isActionable && (
@@ -733,7 +733,7 @@ export default function LiveChatroomPage() {
                         setShowStaffControls(true);
                       }}
                       data-testid="button-staff-controls-mobile"
-                      className="w-full gap-2 bg-indigo-500/10 border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/20"
+                      className="w-full gap-2 bg-green-500/10 border-green-500/30 text-green-200 hover:bg-green-500/20"
                     >
                       <Settings className="w-4 h-4" />
                       Staff Controls
@@ -742,7 +742,7 @@ export default function LiveChatroomPage() {
                 )}
                 
                 {/* Back to Chat Button */}
-                <div className="mt-4 pt-4 border-t border-indigo-500/20">
+                <div className="mt-4 pt-4 border-t border-green-500/20">
                   <Button
                     variant="outline"
                     size="sm"
@@ -773,9 +773,9 @@ export default function LiveChatroomPage() {
       {/* Mobile User Actions Sheet - Smart Context Menu */}
       {selectedUser && (
         <Sheet open={showUserActions} onOpenChange={setShowUserActions}>
-          <SheetContent side="bottom" className="bg-slate-900 border-indigo-500/20 rounded-t-2xl">
+          <SheetContent side="bottom" className="bg-slate-900 border-green-500/20 rounded-t-2xl">
             <SheetHeader>
-              <SheetTitle className="flex items-center gap-2 text-indigo-100">
+              <SheetTitle className="flex items-center gap-2 text-green-100">
                 <User className="w-4 h-4" />
                 Support Actions → {selectedUser.name}
               </SheetTitle>
@@ -814,7 +814,7 @@ export default function LiveChatroomPage() {
                   setShowUserActions(false);
                 }}
                 variant="outline"
-                className="w-full justify-start gap-3 h-12 bg-indigo-500/10 border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/20"
+                className="w-full justify-start gap-3 h-12 bg-green-500/10 border-green-500/30 text-green-200 hover:bg-green-500/20"
                 data-testid="button-request-auth"
               >
                 <Lock className="w-4 h-4" />
@@ -906,7 +906,7 @@ export default function LiveChatroomPage() {
                   toast({ title: `Transferred ${selectedUser.name} to senior support` });
                 }}
                 variant="outline"
-                className="w-full justify-start gap-3 h-auto py-3 bg-blue-500/10 border-blue-500/30 text-blue-200"
+                className="w-full justify-start gap-3 h-auto py-3 bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
                 data-testid="button-transfer-user"
               >
                 🔄 Transfer to Senior Support
@@ -974,7 +974,7 @@ export default function LiveChatroomPage() {
         {/* Chat Area */}
         <div className="flex-1 flex flex-col min-w-0 relative">
           {/* Subtle animated mesh background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-950/10 via-slate-900/60 to-slate-800/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/10 via-slate-900/60 to-slate-800/40 pointer-events-none" />
           
           {/* Mobile users can just swipe to scroll - button removed to avoid blocking input */}
           
@@ -986,8 +986,8 @@ export default function LiveChatroomPage() {
               {messages.length === 0 ? (
                 <Card className="border-dashed border-slate-600/30 bg-slate-800/40 backdrop-blur-sm">
                   <CardContent className="p-8 text-center">
-                    <div className="p-4 bg-blue-500/10 rounded-full w-fit mx-auto mb-4">
-                      <MessageSquare className="w-12 h-12 text-blue-400" />
+                    <div className="p-4 bg-emerald-500/10 rounded-full w-fit mx-auto mb-4">
+                      <MessageSquare className="w-12 h-12 text-emerald-400" />
                     </div>
                     <h3 className="font-semibold mb-2 text-slate-200">Welcome to HelpDesk</h3>
                     <p className="text-sm text-slate-400">
@@ -1053,8 +1053,8 @@ export default function LiveChatroomPage() {
                           </p>
                           {isBot && !isSystemMsg && (
                             <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-300">
-                              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                              <span className="text-xs text-blue-600 font-medium">HelpOS™ AI Assistant</span>
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-xs text-emerald-600 font-medium">HelpOS™ AI Assistant</span>
                             </div>
                           )}
                         </div>
@@ -1072,9 +1072,9 @@ export default function LiveChatroomPage() {
             <div className="px-4 py-2 border-t border-slate-700/30">
               <div className="max-w-full md:max-w-5xl mx-auto flex items-center gap-2 text-xs text-slate-400">
                 <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
                 <span className="text-slate-300">
                   {typingUsers.size === 1 ? 'Someone is typing...' : `${typingUsers.size} people are typing...`}
@@ -1091,7 +1091,7 @@ export default function LiveChatroomPage() {
                   value={messageText}
                   onChange={handleInputChange}
                   placeholder={isConnected ? "Type your message..." : "Connecting..."}
-                  className="flex-1 bg-slate-800/60 border-slate-600/40 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/30"
+                  className="flex-1 bg-slate-800/60 border-slate-600/40 text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/30"
                   data-testid="input-chat-message"
                   autoFocus
                   disabled={!isConnected}
@@ -1100,14 +1100,14 @@ export default function LiveChatroomPage() {
                   type="submit" 
                   disabled={!messageText.trim() || !isConnected}
                   data-testid="button-send-message"
-                  className="gap-2 flex-shrink-0 bg-blue-600 hover:bg-blue-500 text-white shadow-lg"
+                  className="gap-2 flex-shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg"
                 >
                   <Send className="w-4 h-4" />
                   <span className="hidden sm:inline">Send</span>
                 </Button>
               </form>
               <p className="text-xs text-slate-500 text-center mt-2 hidden sm:flex items-center justify-center gap-1">
-                <Wifi className="w-3 h-3 text-blue-400 inline" />
+                <Wifi className="w-3 h-3 text-emerald-400 inline" />
                 <span>Instant delivery via WebSocket · Real-Time Messaging</span>
               </p>
             </div>
@@ -1115,41 +1115,41 @@ export default function LiveChatroomPage() {
         </div>
 
         {/* Desktop Online Users Sidebar - Professional Style - Compact width */}
-        <div className="min-w-[180px] max-w-[280px] w-auto border-l border-indigo-500/20 bg-slate-900/60 backdrop-blur-sm p-4 hidden md:block flex-shrink-0">
+        <div className="min-w-[180px] max-w-[280px] w-auto border-l border-green-500/20 bg-slate-900/60 backdrop-blur-sm p-4 hidden md:block flex-shrink-0">
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2 text-indigo-100">
-                <Users className="w-4 h-4 text-indigo-400" />
+              <h3 className="font-semibold mb-3 flex items-center gap-2 text-green-100">
+                <Users className="w-4 h-4 text-green-400" />
                 Online ({onlineUsers.length})
               </h3>
               <div className="space-y-2">
                 {onlineUsers.map((user) => (
                   <div 
                     key={user.id}
-                    className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-800/40 border border-indigo-500/20 hover-elevate transition-all duration-200"
+                    className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-800/40 border border-green-500/20 hover-elevate transition-all duration-200"
                     data-testid={`user-${user.id}`}
                   >
-                    <Circle className="w-2 h-2 fill-blue-400 text-blue-400 flex-shrink-0 animate-pulse" />
+                    <Circle className="w-2 h-2 fill-emerald-400 text-emerald-400 flex-shrink-0 animate-pulse" />
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       {user.role === 'admin' && <Shield className="w-3 h-3 text-red-400 flex-shrink-0" />}
-                      {user.role === 'support' && <Headphones className="w-3 h-3 text-indigo-400 flex-shrink-0" />}
-                      {user.role === 'bot' && <Bot className="w-3 h-3 text-purple-400 flex-shrink-0" />}
+                      {user.role === 'support' && <Headphones className="w-3 h-3 text-green-400 flex-shrink-0" />}
+                      {user.role === 'bot' && <Bot className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
                       <span className="text-sm font-medium break-words text-slate-200">{user.name}</span>
                     </div>
                     {user.role === 'bot' && (
-                      <Sparkles className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                      <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
                     )}
                   </div>
                 ))}
               </div>
             </div>
 
-            <Separator className="bg-indigo-500/20" />
+            <Separator className="bg-green-500/20" />
 
-            <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 backdrop-blur-sm shadow-lg shadow-purple-500/10">
+            <Card className="border-emerald-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm shadow-lg shadow-green-500/10">
               <CardHeader className="p-3">
-                <CardTitle className="text-xs flex items-center gap-2 text-purple-200">
-                  <Sparkles className="w-3 h-3 text-purple-300" />
+                <CardTitle className="text-xs flex items-center gap-2 text-emerald-200">
+                  <Sparkles className="w-3 h-3 text-emerald-300" />
                   GPT-4 AI Assistant
                 </CardTitle>
               </CardHeader>
@@ -1170,10 +1170,10 @@ export default function LiveChatroomPage() {
           window.location.href = '/';
         }
       }}>
-        <DialogContent data-testid="dialog-ticket-verification" className="w-[95vw] max-w-md max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 via-slate-900/95 to-indigo-950/40 border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+        <DialogContent data-testid="dialog-ticket-verification" className="w-[95vw] max-w-md max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 via-slate-900/95 to-emerald-950/40 border-green-500/30 shadow-2xl shadow-emerald-500/20">
           <div className="p-4 sm:p-6 pb-0 relative">
             {/* Subtle animated gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 pointer-events-none rounded-t-lg" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-green-500/5 pointer-events-none rounded-t-lg" />
             
             {/* WorkforceOS Branding at top */}
             <div className="relative z-10 flex justify-center mb-4">
@@ -1181,11 +1181,11 @@ export default function LiveChatroomPage() {
             </div>
             
             <DialogHeader className="relative z-10">
-              <DialogTitle className="flex items-center justify-center gap-2 text-base sm:text-lg text-indigo-100">
-                <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg border border-indigo-400/30">
-                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 flex-shrink-0" />
+              <DialogTitle className="flex items-center justify-center gap-2 text-base sm:text-lg text-green-100">
+                <div className="p-2 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-lg border border-green-400/30">
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-green-300 flex-shrink-0" />
                 </div>
-                <span className="line-clamp-1 bg-gradient-to-r from-indigo-200 to-purple-200 bg-clip-text text-transparent font-semibold">
+                <span className="line-clamp-1 bg-gradient-to-r from-emerald-200 to-green-200 bg-clip-text text-transparent font-semibold">
                   HelpDesk Authentication
                 </span>
               </DialogTitle>
@@ -1197,11 +1197,11 @@ export default function LiveChatroomPage() {
           
           <div className="overflow-y-auto flex-1 px-4 sm:px-6">
             <Tabs value={authMode} onValueChange={(v: any) => setAuthMode(v)} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-auto sticky top-0 z-10 bg-gradient-to-r from-slate-800/80 to-slate-900/80 backdrop-blur-sm border border-indigo-500/20 p-1">
+              <TabsList className="grid w-full grid-cols-2 h-auto sticky top-0 z-10 bg-gradient-to-r from-slate-800/80 to-slate-900/80 backdrop-blur-sm border border-green-500/20 p-1">
                 <TabsTrigger 
                   value="customer" 
                   data-testid="tab-customer" 
-                  className="text-xs sm:text-sm py-2 sm:py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/30 transition-all duration-200"
+                  className="text-xs sm:text-sm py-2 sm:py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-500/30 transition-all duration-200"
                 >
                   <User className="w-3 h-3 mr-1.5" />
                   Customer
@@ -1209,7 +1209,7 @@ export default function LiveChatroomPage() {
                 <TabsTrigger 
                   value="staff" 
                   data-testid="tab-staff" 
-                  className="text-xs sm:text-sm py-2 sm:py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/30 transition-all duration-200"
+                  className="text-xs sm:text-sm py-2 sm:py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-500/30 transition-all duration-200"
                 >
                   <Shield className="w-3 h-3 mr-1.5" />
                   Staff
@@ -1218,24 +1218,24 @@ export default function LiveChatroomPage() {
             
             {/* Customer Ticket Authentication */}
             <TabsContent value="customer" className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
-              <Card className="border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 backdrop-blur-sm">
+              <Card className="border-green-500/20 bg-gradient-to-br from-emerald-500/5 to-green-500/5 backdrop-blur-sm">
                 <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="ticket-number" className="text-xs sm:text-sm text-indigo-200 font-medium">Ticket Number</Label>
+                    <Label htmlFor="ticket-number" className="text-xs sm:text-sm text-green-200 font-medium">Ticket Number</Label>
                     <Input
                       id="ticket-number"
                       placeholder="TKT-ABCD1234"
                       value={ticketNumber}
                       onChange={(e) => setTicketNumber(e.target.value)}
                       data-testid="input-ticket-number"
-                      className="text-sm sm:text-base bg-slate-800/50 border-indigo-500/30 focus:border-indigo-400 text-slate-100 placeholder:text-slate-500"
+                      className="text-sm sm:text-base bg-slate-800/50 border-green-500/30 focus:border-green-400 text-slate-100 placeholder:text-slate-500"
                     />
                     <p className="text-[10px] sm:text-xs text-slate-400 leading-tight">
                       From your support request confirmation
                     </p>
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="ticket-email" className="text-xs sm:text-sm text-indigo-200 font-medium">Email Address</Label>
+                    <Label htmlFor="ticket-email" className="text-xs sm:text-sm text-green-200 font-medium">Email Address</Label>
                     <Input
                       id="ticket-email"
                       type="email"
@@ -1243,7 +1243,7 @@ export default function LiveChatroomPage() {
                       value={ticketEmail}
                       onChange={(e) => setTicketEmail(e.target.value)}
                       data-testid="input-ticket-email"
-                      className="text-sm sm:text-base bg-slate-800/50 border-indigo-500/30 focus:border-indigo-400 text-slate-100 placeholder:text-slate-500"
+                      className="text-sm sm:text-base bg-slate-800/50 border-green-500/30 focus:border-green-400 text-slate-100 placeholder:text-slate-500"
                     />
                     <p className="text-[10px] sm:text-xs text-slate-400 leading-tight">
                       Email used when creating the ticket
@@ -1258,7 +1258,7 @@ export default function LiveChatroomPage() {
                   onClick={() => window.location.href = "/contact"}
                   data-testid="button-create-ticket"
                   size="sm"
-                  className="w-full sm:w-auto text-xs sm:text-sm bg-slate-800/40 border-slate-600/40 text-slate-200 hover:bg-slate-700/40 hover:border-indigo-500/40"
+                  className="w-full sm:w-auto text-xs sm:text-sm bg-slate-800/40 border-slate-600/40 text-slate-200 hover:bg-slate-700/40 hover:border-green-500/40"
                 >
                   Create Ticket
                 </Button>
@@ -1267,7 +1267,7 @@ export default function LiveChatroomPage() {
                   disabled={!ticketNumber.trim() || !ticketEmail.trim() || authenticateTicketMutation.isPending}
                   data-testid="button-verify-ticket"
                   size="sm"
-                  className="gap-2 w-full sm:w-auto text-xs sm:text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/30 border-none"
+                  className="gap-2 w-full sm:w-auto text-xs sm:text-sm bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 shadow-lg shadow-emerald-500/30 border-none"
                 >
                   {authenticateTicketMutation.isPending ? (
                     <span className="text-xs sm:text-sm">Authenticating...</span>
@@ -1312,10 +1312,10 @@ export default function LiveChatroomPage() {
                   Your work email address
                 </p>
               </div>
-              <Card className="border-blue-500/30 bg-blue-500/5">
+              <Card className="border-emerald-500/30 bg-emerald-500/5">
                 <CardContent className="p-2 sm:p-3">
                   <div className="flex items-start gap-2">
-                    <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
                     <div className="text-[10px] sm:text-xs space-y-0.5 sm:space-y-1 min-w-0">
                       <p className="font-semibold">Staff Access</p>
                       <p className="text-muted-foreground leading-tight">
@@ -1387,7 +1387,7 @@ export default function LiveChatroomPage() {
             {/* Header with Close Button */}
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Settings className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Staff Controls</h2>
               </div>
               <Button
@@ -1424,9 +1424,9 @@ export default function LiveChatroomPage() {
               <Separator />
 
               {/* AI Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30">
                 <div className="flex items-center gap-2 flex-1">
-                  <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                  <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <div>
                     <Label htmlFor="ai-toggle" className="text-sm font-medium text-slate-900 dark:text-slate-100 cursor-pointer">
                       HelpOS AI Assistant
@@ -1492,10 +1492,10 @@ export default function LiveChatroomPage() {
                 />
               </div>
 
-              <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+              <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30">
                 <CardContent className="p-3">
                   <div className="flex items-start gap-2">
-                    <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs">
                       <p className="font-semibold text-slate-900 dark:text-slate-100">Staff Bypass</p>
                       <p className="text-slate-600 dark:text-slate-400">Platform staff can always access the HelpDesk.</p>
@@ -1522,7 +1522,7 @@ export default function LiveChatroomPage() {
                   })}
                   disabled={toggleRoomStatusMutation.isPending}
                   data-testid="button-apply-controls"
-                  className="gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
                 >
                   {toggleRoomStatusMutation.isPending ? (
                     <>Applying...</>

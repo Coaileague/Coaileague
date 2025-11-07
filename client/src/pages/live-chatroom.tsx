@@ -77,8 +77,8 @@ export default function LiveChatroom() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950">
+        <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -86,29 +86,29 @@ export default function LiveChatroom() {
   // Show COOL animated mobile redirect screen with 5-second countdown
   if (isMobile && showRedirectInfo) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-3 sm:p-6 overflow-hidden relative">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950 p-3 sm:p-6 overflow-hidden relative">
         {/* Animated Background Particles - Smaller on mobile */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-32 sm:w-64 h-32 sm:h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/4 left-1/4 w-32 sm:w-64 h-32 sm:h-64 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
 
-        {/* WorkForceOS™ Neon Logo - Compact for mobile */}
+        {/* AutoForce™ Neon Logo - Compact for mobile */}
         <div className={`mb-4 sm:mb-8 transition-all duration-1000 ${stage >= 1 ? 'scale-110' : 'scale-100'} w-full max-w-[200px] sm:max-w-xs`}>
           <div className="relative px-2 sm:px-4 flex items-center justify-center">
             <AutoForceLogo className="relative z-10" size="sm" variant="full" />
             {/* Pulsing glow ring */}
             <div className="absolute inset-0 animate-ping opacity-20">
-              <div className="w-full h-full rounded-full bg-blue-500 blur-xl" />
+              <div className="w-full h-full rounded-full bg-emerald-500 blur-xl" />
             </div>
           </div>
         </div>
 
         {/* Redirect Message Card - Ultra Compact Mobile */}
-        <div className="max-w-[340px] sm:max-w-sm w-full bg-slate-900/60 backdrop-blur-xl border border-blue-500/30 rounded-lg p-3 sm:p-6 space-y-3 sm:space-y-6 relative z-10 transition-all duration-500">
+        <div className="max-w-[340px] sm:max-w-sm w-full bg-slate-900/60 backdrop-blur-xl border border-emerald-500/30 rounded-lg p-3 sm:p-6 space-y-3 sm:space-y-6 relative z-10 transition-all duration-500">
           {/* Title - Compact Mobile Size */}
           <div className="text-center space-y-1 sm:space-y-2">
-            <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-pulse leading-tight">
+            <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent animate-pulse leading-tight">
               Mobile Device<br className="sm:hidden" /> Detected
             </h2>
             <p className={`text-[10px] sm:text-sm text-slate-300 leading-snug px-2 transition-opacity duration-500 ${stage >= 1 ? 'opacity-100' : 'opacity-0'}`}>
@@ -117,7 +117,7 @@ export default function LiveChatroom() {
           </div>
 
           {/* Version Transition - Compact */}
-          <div className="bg-slate-950/50 rounded-lg p-2 sm:p-4 border border-blue-500/20 space-y-2 sm:space-y-3">
+          <div className="bg-slate-950/50 rounded-lg p-2 sm:p-4 border border-emerald-500/20 space-y-2 sm:space-y-3">
             <div className={`flex items-center justify-between transition-all duration-500 ${stage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
               <span className="text-[10px] sm:text-xs text-slate-400">Desktop:</span>
               <span className="text-xs sm:text-sm font-semibold text-slate-300">DC360</span>
@@ -125,9 +125,9 @@ export default function LiveChatroom() {
             
             {/* Animated Arrow */}
             <div className="flex items-center justify-center py-1">
-              <div className="relative w-full h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent">
+              <div className="relative w-full h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent">
                 <div 
-                  className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full transition-all duration-5000 ease-linear"
+                  className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full transition-all duration-5000 ease-linear"
                   style={{ left: `${progress}%` }}
                 />
               </div>
@@ -135,7 +135,7 @@ export default function LiveChatroom() {
             
             <div className={`flex items-center justify-between transition-all duration-500 ${stage >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
               <span className="text-[10px] sm:text-xs text-slate-400">Mobile:</span>
-              <span className="text-xs sm:text-sm font-semibold text-blue-400">DC360.5</span>
+              <span className="text-xs sm:text-sm font-semibold text-emerald-400">DC360.5</span>
             </div>
           </div>
 
@@ -143,11 +143,11 @@ export default function LiveChatroom() {
           <div className="space-y-1 sm:space-y-2">
             <div className="flex items-center justify-between text-[10px] sm:text-xs">
               <span className="text-slate-400">Loading...</span>
-              <span className="text-blue-400 font-mono font-bold">{Math.round(progress)}%</span>
+              <span className="text-emerald-400 font-mono font-bold">{Math.round(progress)}%</span>
             </div>
-            <div className="w-full h-1.5 sm:h-2 bg-slate-950 rounded-full overflow-hidden border border-blue-500/20">
+            <div className="w-full h-1.5 sm:h-2 bg-slate-950 rounded-full overflow-hidden border border-emerald-500/20">
               <div 
-                className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 transition-all duration-300 ease-out relative"
+                className="h-full bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 transition-all duration-300 ease-out relative"
                 style={{ width: `${progress}%` }}
               >
                 {/* Shimmer effect */}
@@ -164,7 +164,7 @@ export default function LiveChatroom() {
               </p>
             )}
             {stage === 1 && (
-              <p className="text-center text-[10px] sm:text-xs text-blue-400 animate-pulse leading-snug">
+              <p className="text-center text-[10px] sm:text-xs text-emerald-400 animate-pulse leading-snug">
                 ⚡ Optimizing interface...
               </p>
             )}
@@ -182,9 +182,9 @@ export default function LiveChatroom() {
 
           {/* Animated Dots - Smaller */}
           <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
         </div>
 

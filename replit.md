@@ -29,7 +29,7 @@ AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, Payr
 
 **UI/UX Decisions:** The platform features a professional aesthetic with Deep Charcoal, Platinum neutrals, and Emergency Green accents. It prioritizes a mobile-first approach with responsive layouts and accessible touch targets. The branding uses an "AF" lightning bolt logo within a circular green gradient badge, symbolizing rapid response and reliability.
 
-**Brand Color Standardization (November 2025):** All user-facing pages (dashboard, landing, pricing, login, register, contact, support, etc.) now use consistent emerald/green/teal colors exclusively for the Emergency Green brand identity. Purple/indigo/violet colors have been completely replaced to ensure professional, polished consistency throughout the platform. All pages feature a uniform dark gradient background (`bg-slate-gradient`) with emerald accents for brand cohesion. The color palette includes:
+**Brand Color Standardization (November 2025):** All user-facing pages (dashboard, landing, pricing, login, register, contact, support, chat, etc.) now use consistent emerald/green/teal colors exclusively for the Emergency Green brand identity. Purple/indigo/violet colors have been completely replaced to ensure professional, polished consistency throughout the platform. All pages feature a uniform dark gradient background (`bg-slate-gradient` or `bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950`) with emerald accents for brand cohesion. The color palette includes:
 - Primary brand: emerald-500, emerald-600 (Emergency Green)
 - Secondary accents: teal-500, green-500
 - Supporting colors: amber (warnings), rose (costs), slate (neutrals)
