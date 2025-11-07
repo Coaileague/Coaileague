@@ -42,8 +42,9 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
         - **@Mentions**: Tag users with autocomplete and notification system
         - **Read Receipts**: Track who has read each message with timestamps
         - **Rich Text Formatting**: WYSIWYG editor for bold, italic, lists, code blocks
-        - **Message Search**: Search through chat history with filters and advanced queries
-        - **Voice/Video Calling**: WebRTC-powered real-time audio/video communication
+        - **Live Room Browser**: Real-time room activity tracking with WebSocket-powered online user counts, status indicators, and join/leave functionality
+        - **Message Search**: Full-text search with flexible filtering supporting query text, room selection, and date ranges (any combination)
+        - **Voice/Video Calling**: WebRTC-powered real-time audio/video communication with signaling security (room membership verification) and full call controls (mute, video toggle, end call)
     - **Expense Management**: ExpenseOS™ for reimbursement, tracking, mileage calculation.
     - **Scheduling**: ScheduleOS™ with mobile-optimized shift calendars and AI-powered generation.
     - **Asset Management**: AssetOS™ for tracking vehicles and equipment.
