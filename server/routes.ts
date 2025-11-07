@@ -18121,6 +18121,61 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
+  // GET /api/support/chatrooms - Get formatted chatroom list for support staff (with participant counts, activity, etc.)
+  app.get('/api/support/chatrooms', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const isSupportStaff = req.user!.platformRole && ['root', 'sysop', 'deputy_admin', 'deputy_assistant'].includes(req.user!.platformRole);
+      
+      if (!isSupportStaff) {
+        return res.status(403).json({ message: "Only support staff can access this endpoint" });
+      }
+
+      // Fetch all conversations across all workspaces
+      const conversations = await db.select().from(chatConversations).execute();
+
+      // Format data for the support chatroom list table
+      const formattedRooms = await Promise.all(conversations.map(async (conv) => {
+        // Get participant count
+        const participants = await db.select().from(chatParticipants)
+          .where(eq(chatParticipants.conversationId, conv.id)).execute();
+        
+        // Get unread message count (this could be optimized)
+        const messages = await db.select().from(chatMessages)
+          .where(eq(chatMessages.conversationId, conv.id))
+          .orderBy(desc(chatMessages.createdAt))
+          .limit(1)
+          .execute();
+        
+        // Get workspace name
+        const workspace = await db.select().from(workspaces)
+          .where(eq(workspaces.id, conv.workspaceId))
+          .limit(1)
+          .execute();
+
+        return {
+          id: conv.id,
+          name: conv.subject || `Chat ${conv.id.substring(0, 8)}`,
+          workspaceId: conv.workspaceId,
+          workspaceName: workspace[0]?.name || 'Unknown Organization',
+          conversationType: conv.conversationType || 'group',
+          participantCount: participants.length,
+          unreadCount: 0, // Could be calculated based on last read timestamp
+          lastMessageAt: messages[0]?.createdAt || conv.createdAt,
+          createdAt: conv.createdAt,
+          status: conv.status,
+        };
+      }));
+
+      // Filter only active/open rooms
+      const activeRooms = formattedRooms.filter(room => room.status === 'active' || room.status === 'open');
+
+      res.json(activeRooms);
+    } catch (error: any) {
+      console.error("Error fetching support chatrooms:", error);
+      res.status(500).json({ message: "Failed to fetch support chatrooms" });
+    }
+  });
+
   // GET /api/comm-os/onboarding-status - Check organization onboarding status
   app.get('/api/comm-os/onboarding-status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -18210,15 +18265,28 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         return res.json({ message: "Already a member of this room" });
       }
 
-      // Add support staff as member
+      // Add support staff as member with admin/owner role
       await storage.addOrganizationRoomMember({
         roomId,
         userId,
         workspaceId: room.workspaceId,
-        role: 'admin', // Support staff join as admin
+        role: 'owner', // Support staff join as owner for full access
         canInvite: true,
         canManage: true,
         isApproved: true,
+      });
+
+      // Send entrance announcement system message
+      const userName = req.user!.email || 'Support Staff';
+      await db.insert(chatMessages).values({
+        conversationId: roomId,
+        senderId: userId,
+        senderName: userName,
+        senderType: 'system',
+        message: `🛡️ AutoForce™ Support Staff (${userName}) has joined the room with admin access`,
+        messageType: 'system',
+        isSystemMessage: true,
+        isEncrypted: false,
       });
 
       // Create audit log
