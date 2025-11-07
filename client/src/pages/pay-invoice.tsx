@@ -302,8 +302,8 @@ export default function PayInvoice() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* AutoForce™ Branding */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">AutoForce™</h1>
-          <p className="text-sm text-muted-foreground">Autonomous Workforce Management Solutions</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-foreground">AutoForce™</h1>
+          <p className="text-sm text-gray-700 dark:text-gray-400">Autonomous Workforce Management Solutions</p>
         </div>
 
         {/* Invoice Details Card */}

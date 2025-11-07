@@ -62,7 +62,7 @@ export function AutoForceAFLogo({
         className={cn("flex items-center gap-1 flex-wrap", className)}
         data-testid="autoforce-af-logo-wordmark"
       >
-        <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+        <span className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-foreground">
           AUTO
         </span>
         <span 
@@ -70,7 +70,7 @@ export function AutoForceAFLogo({
         >
           FORCE
         </span>
-        <span className="text-sm align-super text-foreground">™</span>
+        <span className="text-sm align-super text-gray-900 dark:text-foreground">™</span>
       </div>
     );
   }
@@ -92,11 +92,11 @@ export function AutoForceAFLogo({
       </div>
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
-          <span className="text-foreground">AUTO</span>
+          <span className="text-gray-900 dark:text-foreground">AUTO</span>
           <span className="text-emerald-600 dark:text-emerald-400">FORCE</span>
-          <span className="text-xs align-super text-foreground">™</span>
+          <span className="text-xs align-super text-gray-900 dark:text-foreground">™</span>
         </div>
-        <div className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide mt-0.5">
+        <div className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-400 font-medium tracking-wide mt-0.5">
           Autonomous Workforce Management Solutions
         </div>
       </div>

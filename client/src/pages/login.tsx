@@ -76,11 +76,11 @@ export default function Login() {
               </div>
               <div>
                 <div className="text-xl font-bold flex items-baseline gap-1">
-                  <span className="text-foreground">AUTO</span>
+                  <span className="text-gray-900 dark:text-foreground">AUTO</span>
                   <span className="text-emerald-600 dark:text-emerald-400">FORCE</span>
-                  <span className="text-xs align-super">™</span>
+                  <span className="text-xs align-super text-gray-900 dark:text-foreground">™</span>
                 </div>
-                <div className="text-[10px] text-muted-foreground font-medium">Autonomous Workforce Management Solutions</div>
+                <div className="text-[10px] text-gray-700 dark:text-gray-400 font-medium">Autonomous Workforce Management Solutions</div>
               </div>
             </div>
           </div>

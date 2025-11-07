@@ -62,7 +62,7 @@ export function AutoForceLogo({
           <div className="flex items-baseline gap-1 justify-center flex-wrap">
             <span 
               className={cn(
-                "font-black text-foreground",
+                "font-black text-gray-900 dark:text-foreground",
                 titleSizes[size]
               )}
               data-testid="logo-text-auto"
@@ -80,7 +80,7 @@ export function AutoForceLogo({
             </span>
             <span 
               className={cn(
-                "font-black text-xs align-super text-foreground"
+                "font-black text-xs align-super text-gray-900 dark:text-foreground"
               )}
               data-testid="logo-trademark"
             >
@@ -90,7 +90,7 @@ export function AutoForceLogo({
           
           <p 
             className={cn(
-              "tracking-wide uppercase font-medium text-center text-muted-foreground",
+              "tracking-wide uppercase font-medium text-center text-gray-700 dark:text-gray-400",
               taglineSizes[size]
             )}
             data-testid="logo-tagline"
