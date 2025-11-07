@@ -1678,7 +1678,17 @@ export function setupWebSocket(server: Server) {
                   if (botResult.shouldEscalate) {
                     await escalateBotTicket(ws.conversationId, 'Bot unable to resolve - escalating to human support');
                     
-                    // Notify support team in main room
+                    // Get ticket details for notification
+                    const ticket = await storage.getSupportTicketById(ws.conversationId);
+                    const ticketTitle = ticket?.subject || 'Support Request';
+                    const userQuery = ticket?.description || conversation?.userQuery || 'No details available';
+                    
+                    // NOTIFICATION SYSTEM: Notify all support staff via database notifications
+                    // This ensures agents get notified even if they're not in the HelpDesk chat
+                    const { notifySupportStaffOfEscalation } = await import('./helpos-bot');
+                    await notifySupportStaffOfEscalation(ws.conversationId, ticketTitle, userQuery);
+                    
+                    // CHAT ANNOUNCEMENT: Notify support team in main room (inline chat notification)
                     const escalationAnnouncement = await storage.createChatMessage({
                       conversationId: MAIN_ROOM_ID,
                       senderId: null,

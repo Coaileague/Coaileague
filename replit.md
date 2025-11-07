@@ -50,11 +50,15 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
         - **Publish Status Control**: Unpublished FAQs only visible to platform staff for quality assurance
     - **HelpOS™ Autonomous Bot**: Intelligent support agent that provides bot-first assistance with human escalation:
         - **State Machine**: greeting → searching → answering → clarifying → escalating/resolved flow
-        - **FAQ-Powered Responses**: Uses semantic search to find relevant answers with confidence scoring
-        - **Sentiment Detection**: Recognizes user satisfaction vs. escalation needs from conversation signals
+        - **FAQ-Powered Responses**: Uses semantic search to find relevant answers with confidence scoring (>85% high, >70% medium, <70% escalates)
+        - **Sentiment Detection**: Recognizes user satisfaction vs. escalation needs from conversation signals (2+ signals required)
         - **Auto-Resolution**: Closes satisfied tickets, generates FAQ suggestions, notifies staff of success
         - **Smart Escalation**: Hands off complex issues to human staff with context preservation
-        - **Staff Announcements**: Server messages visible only to platform staff for bot wins and escalations
+        - **Dual Notification System**: 
+            - **Chat Announcements**: Staff-only inline messages in HelpDesk room for real-time awareness
+            - **Database Notifications**: System notifications sent to all support staff (ROOT, DEPUTY_ADMIN, DEPUTY_ASSISTANT, SYSOP) ensuring agents are notified even when not in chat/dashboard
+        - **Bot Workflow Tools**: searchKnowledgeBase, detectUserSentiment, checkTicketStatus, formatFaqAnswer
+        - **Decision Logic**: Multi-factor analysis determines search/present/clarify/escalate/close actions with confidence scoring
         - **Continuous Learning**: Successful bot conversations become FAQ entries after staff review
         - **Graceful Degradation**: Automatically disabled when OpenAI API key unavailable
 - **Security**: Features Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.

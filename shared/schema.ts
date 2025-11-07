@@ -7755,6 +7755,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'timesheet_rejected',  // Timesheet rejected
   'payroll_processed',   // Payroll processed
   'mention',             // User mentioned in chat/comment
+  'support_escalation',  // HelpOS bot escalated ticket to human support
   'system',              // System notification
 ]);
 

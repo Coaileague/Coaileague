@@ -176,6 +176,55 @@ function generateFaqResponse(faqs: Array<{ question: string; answer: string; sco
 }
 
 /**
+ * Bot workflow tools - commands bot can use to assist users
+ */
+export const BOT_TOOLS = {
+  searchKnowledgeBase: async (query: string) => await searchFaqsForBot(query, 3),
+  detectUserSentiment: (message: string) => detectSentiment(message),
+  checkTicketStatus: async (ticketId: string) => {
+    const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, ticketId)).limit(1);
+    return ticket[0] || null;
+  },
+  formatFaqAnswer: (faqs: Array<{ question: string; answer: string; score: number }>) => generateFaqResponse(faqs),
+};
+
+/**
+ * Bot decision logic - determines next action based on context
+ */
+function determineBotAction(
+  conversation: BotConversation,
+  userMessage: string
+): { action: 'search' | 'present_answer' | 'clarify' | 'escalate' | 'close'; confidence: number } {
+  
+  // Check if user is satisfied (2+ satisfaction signals)
+  if (conversation.satisfactionSignals >= 2) {
+    return { action: 'close', confidence: 0.9 };
+  }
+  
+  // Check if user wants escalation (2+ escalation signals)
+  if (conversation.escalationSignals >= 2) {
+    return { action: 'escalate', confidence: 0.9 };
+  }
+  
+  // If we have FAQs and user is asking follow-up question
+  if (conversation.suggestedFaqs.length > 0 && conversation.state === BotState.ANSWERING) {
+    const topScore = conversation.suggestedFaqs[0]?.score || 0;
+    if (topScore < 0.7) {
+      return { action: 'escalate', confidence: 0.8 }; // Low confidence FAQs = escalate
+    }
+    return { action: 'clarify', confidence: 0.75 };
+  }
+  
+  // If greeting state, search for answers
+  if (conversation.state === BotState.GREETING || conversation.state === BotState.SEARCHING) {
+    return { action: 'search', confidence: 0.95 };
+  }
+  
+  // Default: search for new answer
+  return { action: 'search', confidence: 0.7 };
+}
+
+/**
  * Process user message and generate bot response
  */
 export async function processBotMessage(
@@ -397,6 +446,55 @@ export async function escalateBotTicket(
       assignedTo: null, // Will be picked up by next available agent
     })
     .where(eq(supportTickets.id, ticketId));
+}
+
+/**
+ * Notify all support staff of escalation via notification system
+ * This ensures agents get notified even if they're not in the HelpDesk chat
+ */
+export async function notifySupportStaffOfEscalation(
+  ticketId: string,
+  ticketTitle: string,
+  userQuery: string
+): Promise<void> {
+  try {
+    // Import storage dynamically to avoid circular dependencies
+    const { storage } = await import('./storage');
+    const { notifications } = await import('@shared/schema');
+    
+    // Get all platform support staff (ROOT, DEPUTY_ADMIN, DEPUTY_ASSISTANT)
+    const supportStaff = await db.execute(sql`
+      SELECT u.id, u.current_workspace_id
+      FROM users u
+      INNER JOIN platform_roles pr ON pr.user_id = u.id
+      WHERE pr.role IN ('root', 'deputy_admin', 'deputy_assistant', 'sysop')
+      AND pr.is_active = true
+    `);
+    
+    // Create notification for each support staff member
+    for (const staff of supportStaff.rows as any[]) {
+      await storage.createNotification({
+        workspaceId: staff.current_workspace_id || 'platform-external',
+        userId: staff.id,
+        type: 'support_escalation',
+        title: `Support Ticket Escalated: ${ticketTitle}`,
+        message: `HelpOS bot escalated ticket to human support.\n\n**User Query:** ${userQuery}\n\n**Ticket ID:** ${ticketId}\n\nPlease review and assist the user.`,
+        actionUrl: `/helpdesk?ticket=${ticketId}`,
+        relatedEntityType: 'support_ticket',
+        relatedEntityId: ticketId,
+        metadata: {
+          ticketId,
+          escalationReason: 'Bot unable to resolve',
+          botAttempted: true,
+        },
+      });
+    }
+    
+    console.log(`✅ Notified ${supportStaff.rows.length} support staff members of escalation for ticket ${ticketId}`);
+  } catch (error) {
+    console.error('Error notifying support staff of escalation:', error);
+    // Don't throw - escalation should still work even if notifications fail
+  }
 }
 
 /**
