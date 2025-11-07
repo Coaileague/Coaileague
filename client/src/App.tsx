@@ -108,6 +108,7 @@ import RoleManagement from "@/pages/role-management";
 import ManagerDashboard from "@/pages/manager-dashboard";
 import ChatExport from "@/pages/chat-export";
 import { FloatingChatButton } from "@/components/floating-chat-button";
+import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Sparkles, Search } from "lucide-react";
 import { WelcomeMessage } from "@/components/welcome-message";
@@ -394,6 +395,7 @@ export default function App() {
               <TooltipProvider>
                 <AppContent />
                 <FloatingChatButton />
+                <ReenableChatButton />
                 <Toaster />
               </TooltipProvider>
             </TransitionProvider>
