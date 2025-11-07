@@ -2846,7 +2846,13 @@ export function setupWebSocket(server: Server) {
           }
         }
       } catch (error) {
-        console.error('WebSocket message error:', error);
+        console.error('❌ WebSocket message processing error:', error);
+        console.error('Error details:', {
+          name: error instanceof Error ? error.name : 'Unknown',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          rawMessage: JSON.stringify(message).substring(0, 500) // First 500 chars of message
+        });
         ws.send(JSON.stringify({
           type: 'error',
           message: 'Failed to process message',
