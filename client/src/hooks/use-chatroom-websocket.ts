@@ -132,7 +132,9 @@ export function useChatroomWebSocket(
       // Fix: Use window.location.host for proper host/port resolution
       const wsHost = window.location.host;
       const wsUrl = `${protocol}://${wsHost}/ws/chat`;
+      console.log('🔗 Attempting WebSocket connection to:', wsUrl);
       const ws = new WebSocket(wsUrl);
+      console.log('✅ WebSocket object created, state:', ws.readyState);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -424,7 +426,8 @@ export function useChatroomWebSocket(
       };
     } catch (err) {
       console.error('Failed to create WebSocket:', err);
-      setError('Failed to connect');
+      console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      setError(err instanceof Error ? err.message : 'Failed to connect');
       isConnectingRef.current = false; // Reset on error
     }
   }, [userId]);
