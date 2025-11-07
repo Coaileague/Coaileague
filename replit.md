@@ -12,6 +12,7 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive work
 - **Scroll Navigation**: Added functional scroll anchors (user-section, workspace-section, system-stats, recent-activity) for seamless in-page navigation
 - **Database Fixes**: Added missing `billing_cycle_day`, `starts_at`, and `billing_preferences` columns to workspaces/workspace_addons tables
 - **Brand Consistency**: Complete Emergency Green (emerald) color standardization across ROOT admin dashboard - replaced ALL blue/cyan/indigo/purple/violet colors (verified 0 matches)
+- **Toast/Notification Styling**: Updated all toast notifications to use dark slate backgrounds (bg-slate-900) instead of white, matching the platform's dark theme. Changed info variant from blue to teal for Emergency Green brand consistency.
 - **WebSocket Chat**: Database schema issues resolved to enable proper chat functionality
 - **Code Quality**: Fixed React duplicate key warnings by using unique testid values instead of links
 
