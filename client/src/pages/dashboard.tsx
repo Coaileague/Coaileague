@@ -148,13 +148,13 @@ export default function Dashboard() {
       case 'pto_denied':
         return <XCircle className="h-5 w-5 text-red-400" />;
       case 'profile_updated':
-        return <Users className="h-5 w-5 text-purple-400" />;
+        return <Users className="h-5 w-5 text-teal-400" />;
       case 'document_assigned':
-        return <FileText className="h-5 w-5 text-cyan-400" />;
+        return <FileText className="h-5 w-5 text-emerald-400" />;
       case 'policy_acknowledgment':
         return <AlertCircle className="h-5 w-5 text-amber-400" />;
       case 'system':
-        return <Bell className="h-5 w-5 text-indigo-400" />;
+        return <Bell className="h-5 w-5 text-green-400" />;
       default:
         return <Mail className="h-5 w-5 text-gray-400" />;
     }
@@ -167,22 +167,22 @@ export default function Dashboard() {
       shift_removed: { label: 'Shift', className: 'bg-red-500/20 text-red-300 border-red-500/30' },
       pto_approved: { label: 'PTO', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
       pto_denied: { label: 'PTO', className: 'bg-red-500/20 text-red-300 border-red-500/30' },
-      profile_updated: { label: 'Profile', className: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-      document_assigned: { label: 'Document', className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+      profile_updated: { label: 'Profile', className: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+      document_assigned: { label: 'Document', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
       policy_acknowledgment: { label: 'Policy', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-      system: { label: 'System', className: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+      system: { label: 'System', className: 'bg-green-500/20 text-green-300 border-green-500/30' },
     };
     const badge = badges[type] || { label: 'Info', className: 'bg-gray-500/20 text-gray-300 border-gray-500/30' };
     return <Badge variant="outline" className={`text-xs ${badge.className}`}>{badge.label}</Badge>;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950 relative overflow-hidden">
       {/* Animated background gradient orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-green-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-teal-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
@@ -194,7 +194,7 @@ export default function Dashboard() {
                 <AutoForceLogo variant="full" size="md" />
               </div>
               <div className="flex-1">
-                <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-1 break-words" data-testid="text-welcome">
+                <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-emerald-100 to-green-200 bg-clip-text text-transparent mb-1 break-words" data-testid="text-welcome">
                   Welcome back, {firstName}
                 </h2>
                 <p className="text-slate-300 text-sm sm:text-base">
@@ -210,24 +210,24 @@ export default function Dashboard() {
         {/* Metrics Grid - Animated Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {/* Total Employees Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20 animate-in fade-in slide-in-from-bottom-4" data-testid="card-employees">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 animate-in fade-in slide-in-from-bottom-4" data-testid="card-employees">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6 text-indigo-400" />
+              <div className="p-3 bg-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                <Users className="w-6 h-6 text-emerald-400" />
               </div>
-              <div className="h-2 w-2 bg-indigo-400 rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></div>
             </div>
             <p className="text-slate-300 text-sm mb-2">Total Employees</p>
             <p className="text-4xl font-bold text-white">{totalEmployees}</p>
           </div>
 
           {/* Active Today Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-purple-500/10 to-violet-500/5 border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '0.1s' }} data-testid="card-active">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/5 border border-teal-500/20 rounded-2xl p-6 hover:border-teal-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/20 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '0.1s' }} data-testid="card-active">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <Activity className="w-6 h-6 text-purple-400 animate-pulse" />
+              <div className="p-3 bg-teal-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                <Activity className="w-6 h-6 text-teal-400 animate-pulse" />
               </div>
-              <div className="h-2 w-2 bg-purple-400 rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-teal-400 rounded-full animate-pulse"></div>
             </div>
             <p className="text-slate-300 text-sm mb-2">Active Today</p>
             <p className="text-4xl font-bold text-white">{activeToday}</p>
@@ -249,52 +249,52 @@ export default function Dashboard() {
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Link href="/employees">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-indigo-500/30 transition-all duration-300 group" data-testid="button-manage-employees">
-              <div className="p-3 bg-indigo-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <Users className="w-8 h-8 text-indigo-400" />
+            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-emerald-500/30 transition-all duration-300 group" data-testid="button-manage-employees">
+              <div className="p-3 bg-emerald-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+                <Users className="w-8 h-8 text-emerald-400" />
               </div>
               <h4 className="font-bold text-white mb-2 text-lg">Manage Employees</h4>
               <p className="text-sm text-slate-400 mb-3">View and edit employee records</p>
-              <div className="flex items-center text-indigo-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <div className="flex items-center text-emerald-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
                 View all <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
 
           <Link href="/schedule">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-blue-500/30 transition-all duration-300 group" data-testid="button-schedule">
-              <div className="p-3 bg-blue-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <Calendar className="w-8 h-8 text-blue-400" />
+            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-green-500/30 transition-all duration-300 group" data-testid="button-schedule">
+              <div className="p-3 bg-green-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+                <Calendar className="w-8 h-8 text-green-400" />
               </div>
               <h4 className="font-bold text-white mb-2 text-lg">Schedule</h4>
               <p className="text-sm text-slate-400 mb-3">Manage shifts and assignments</p>
-              <div className="flex items-center text-blue-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <div className="flex items-center text-green-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
                 Open <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
 
           <Link href="/time-tracking">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all duration-300 group" data-testid="button-time-tracking">
-              <div className="p-3 bg-violet-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <Clock className="w-8 h-8 text-violet-400" />
+            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-teal-500/30 transition-all duration-300 group" data-testid="button-time-tracking">
+              <div className="p-3 bg-teal-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+                <Clock className="w-8 h-8 text-teal-400" />
               </div>
               <h4 className="font-bold text-white mb-2 text-lg">Time Tracking</h4>
               <p className="text-sm text-slate-400 mb-3">Review and approve time entries</p>
-              <div className="flex items-center text-violet-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <div className="flex items-center text-teal-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
                 Review <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
 
           <Link href="/invoices">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 group" data-testid="button-invoices">
-              <div className="p-3 bg-cyan-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <FileText className="w-8 h-8 text-cyan-400" />
+            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-emerald-500/30 transition-all duration-300 group" data-testid="button-invoices">
+              <div className="p-3 bg-emerald-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+                <FileText className="w-8 h-8 text-emerald-400" />
               </div>
               <h4 className="font-bold text-white mb-2 text-lg">Invoices</h4>
               <p className="text-sm text-slate-400 mb-3">Generate and send invoices</p>
-              <div className="flex items-center text-cyan-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <div className="flex items-center text-emerald-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
                 Create <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
