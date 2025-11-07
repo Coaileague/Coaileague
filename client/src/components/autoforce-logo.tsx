@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import autoforceLogoNew from "../../../attached_assets/autoforce-logo-new.png";
 
 interface AutoForceLogoProps {
   variant?: "nav" | "icon" | "full";
@@ -17,24 +16,16 @@ export function AutoForceLogo({
   lightMode = false
 }: AutoForceLogoProps) {
   
-  // Size mappings for new logo image
-  const iconSizeClasses = {
-    sm: "w-12 h-12",
-    md: "w-16 h-16",
-    lg: "w-20 h-20",
-    xl: "w-24 h-24",
-    hero: "w-32 h-32"
+  // Size mappings for AF circular badge
+  const badgeSizeClasses = {
+    sm: "w-10 h-10 text-sm",
+    md: "w-14 h-14 text-lg",
+    lg: "w-16 h-16 text-xl",
+    xl: "w-20 h-20 text-2xl",
+    hero: "w-28 h-28 text-4xl"
   };
   
-  const fullSizeClasses = {
-    sm: "w-20 h-20",
-    md: "w-28 h-28",
-    lg: "w-36 h-36",
-    xl: "w-44 h-44",
-    hero: "w-56 h-56"
-  };
-  
-  // Full variant with tagline
+  // Full variant with AF badge and tagline
   if (variant === "full") {
     const titleSizes = {
       sm: "text-2xl",
@@ -57,14 +48,15 @@ export function AutoForceLogo({
         className={cn("flex flex-col items-center justify-center gap-4", className)} 
         data-testid="logo-full"
       >
-        <img 
-          src={autoforceLogoNew}
-          alt="AutoForce Logo"
+        <div 
           className={cn(
-            fullSizeClasses[size],
+            "flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+            badgeSizeClasses[size],
             animated && "animate-pulse-slow"
           )}
-        />
+        >
+          <span className="text-white font-black">AF</span>
+        </div>
         
         <div className="flex flex-col items-center gap-2">
           <div className="flex items-baseline gap-1 justify-center flex-wrap">
@@ -110,20 +102,18 @@ export function AutoForceLogo({
     );
   }
   
-  // Icon variant (default for nav/icon)
+  // Icon variant (AF circular badge)
   return (
     <div 
-      className={cn("flex items-center justify-center", iconSizeClasses[size], className)} 
+      className={cn(
+        "flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+        badgeSizeClasses[size],
+        animated && "animate-pulse-slow",
+        className
+      )} 
       data-testid={`logo-${variant}`}
     >
-      <img 
-        src={autoforceLogoNew}
-        alt="AutoForce Logo"
-        className={cn(
-          "w-full h-full object-contain",
-          animated && "animate-pulse-slow"
-        )}
-      />
+      <span className="text-white font-black">AF</span>
     </div>
   );
 }

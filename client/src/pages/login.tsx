@@ -66,15 +66,27 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <AutoForceLogo variant="full" size="sm" />
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+                <span className="text-white font-black text-lg">AF</span>
+              </div>
+              <div>
+                <div className="text-xl font-bold flex items-baseline gap-1">
+                  <span className="text-foreground">AUTO</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">FORCE</span>
+                  <span className="text-xs align-super">™</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground font-medium">Autonomous Workforce Management Solutions</div>
+              </div>
+            </div>
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+            <CardDescription>
               Sign in to your AutoForce™ account
             </CardDescription>
           </div>
