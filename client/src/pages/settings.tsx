@@ -28,6 +28,7 @@ import {
 import { MobileLoading } from "@/components/mobile-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -42,6 +43,10 @@ export default function Settings() {
   const [phone, setPhone] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [website, setWebsite] = useState<string>("");
+  
+  // Track original values to detect changes
+  const [originalValues, setOriginalValues] = useState<any>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Fetch workspace data
   const { data: workspace } = useQuery({
@@ -69,6 +74,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      setHasUnsavedChanges(false); // Clear unsaved changes flag after successful save
       toast({
         title: "Success",
         description: "Workspace updated successfully",
@@ -113,15 +119,47 @@ export default function Settings() {
   useEffect(() => {
     if (workspace) {
       const ws = workspace as any;
-      setSelectedCategory(ws.businessCategory || "");
-      setWorkspaceName(ws.name || "");
-      setCompanyName(ws.companyName || "");
-      setTaxId(ws.taxId || "");
-      setPhone(ws.phone || "");
-      setAddress(ws.address || "");
-      setWebsite(ws.website || "");
+      const values = {
+        businessCategory: ws.businessCategory || "",
+        name: ws.name || "",
+        companyName: ws.companyName || "",
+        taxId: ws.taxId || "",
+        phone: ws.phone || "",
+        address: ws.address || "",
+        website: ws.website || "",
+      };
+      setSelectedCategory(values.businessCategory);
+      setWorkspaceName(values.name);
+      setCompanyName(values.companyName);
+      setTaxId(values.taxId);
+      setPhone(values.phone);
+      setAddress(values.address);
+      setWebsite(values.website);
+      setOriginalValues(values);
+      setHasUnsavedChanges(false);
     }
   }, [workspace]);
+  
+  // Check for unsaved changes whenever form values change
+  useEffect(() => {
+    if (Object.keys(originalValues).length > 0) {
+      const hasChanges =
+        selectedCategory !== originalValues.businessCategory ||
+        workspaceName !== originalValues.name ||
+        companyName !== originalValues.companyName ||
+        taxId !== originalValues.taxId ||
+        phone !== originalValues.phone ||
+        address !== originalValues.address ||
+        website !== originalValues.website;
+      setHasUnsavedChanges(hasChanges);
+    }
+  }, [selectedCategory, workspaceName, companyName, taxId, phone, address, website, originalValues]);
+  
+  // Protect against accidental navigation with unsaved changes
+  // NOTE: Currently protects against browser navigation (refresh, close tab, back button)
+  // Sidebar/header link navigation is not yet blocked - user can still navigate away via sidebar
+  // Future enhancement: Global navigation guard or custom Link wrapper
+  useUnsavedChangesWarning(hasUnsavedChanges, "You have unsaved changes to your workspace settings. Are you sure you want to leave?");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

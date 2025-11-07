@@ -113,7 +113,7 @@ import { FloatingChatButton } from "@/components/floating-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Sparkles } from "lucide-react";
-import { WelcomeMessage } from "@/components/welcome-message";
+import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { HelpDropdown } from "@/components/help-dropdown";
@@ -207,8 +207,8 @@ function AppContent() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Polished Welcome Message for logged-in users */}
-                  <WelcomeMessage />
+                  {/* Dynamic Billboard - Greetings, Announcements, Birthday Celebrations */}
+                  <HeaderBillboard />
 
                   {/* Plan Badge - Hidden on small screens */}
                   <div className="hidden md:block">

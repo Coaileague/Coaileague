@@ -181,16 +181,6 @@ export default function AdminCommandCenter() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setRefreshKey(prev => prev + 1)}
-                  className="bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20 text-white"
-                  data-testid="button-refresh-command"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>

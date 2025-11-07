@@ -288,15 +288,6 @@ export default function RootAdminDashboard() {
                   </p>
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setRefreshKey(prev => prev + 1)}
-                className="bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-white shrink-0"
-                data-testid="button-refresh"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
             </div>
           </div>
 
@@ -366,16 +357,6 @@ export default function RootAdminDashboard() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setRefreshKey(prev => prev + 1)}
-                  className="bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-white"
-                  data-testid="button-refresh"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
