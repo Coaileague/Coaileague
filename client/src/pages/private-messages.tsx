@@ -118,6 +118,13 @@ export default function PrivateMessages() {
   // Search users for new conversation
   const { data: searchResults = [], isLoading: searchLoading } = useQuery({
     queryKey: ['/api/users/search', searchQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Search failed');
+      return res.json();
+    },
     enabled: searchQuery.length > 2,
     select: (data: any[]) => {
       if (!Array.isArray(data)) return [];
