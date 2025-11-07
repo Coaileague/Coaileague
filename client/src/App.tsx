@@ -63,6 +63,7 @@ import HRPTO from "@/pages/hr-pto";
 import HRTerminations from "@/pages/hr-terminations";
 import HelpdeskChat from "@/pages/helpdesk-chat";
 import LiveChatroom from "@/pages/live-chatroom";
+import HelpDesk5 from "@/pages/HelpDesk5";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
 import DesignComparison from "@/pages/design-comparison";
@@ -120,10 +121,10 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Check if on mobile chat OR desktop live-chat - use window.location instead of useLocation() hook
+  // Check if on mobile chat, HelpDesk5, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
-  const isMobileChat = window.location.pathname === '/mobile-chat';
-  const isHelpDesk = window.location.pathname === '/live-chat' || window.location.pathname.startsWith('/live-chat');
+  const isMobileChat = window.location.pathname === '/mobile-chat' || window.location.pathname === '/helpdesk5';
+  const isHelpDesk = window.location.pathname === '/live-chat' || window.location.pathname.startsWith('/live-chat') || window.location.pathname === '/helpdesk5';
 
   // Custom sidebar width for better workspace layout (increased for longer menu text)
   const style = {
@@ -145,6 +146,7 @@ function AppContent() {
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
         <Route path="/live-chat" component={LiveChatroom} />
+        <Route path="/helpdesk5" component={HelpDesk5} />
         {/* Removed /mobile-chat from here - FIXED: Duplicate route was causing double WebSocket connections */}
         <Route path="/design-comparison" component={DesignComparison} />
         <Route path="/logo-showcase" component={LogoShowcase} />
@@ -358,6 +360,7 @@ function AppContent() {
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/support/chat" component={HelpdeskChat} />
                 <Route path="/live-chat" component={LiveChatroom} />
+                <Route path="/helpdesk5" component={HelpDesk5} />
                 <Route path="/mobile-chat" component={MobileChatPage} />
                 <Route path="/design-comparison" component={DesignComparison} />
                 <Route path="/logo-showcase" component={LogoShowcase} />
