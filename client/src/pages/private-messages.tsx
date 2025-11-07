@@ -61,9 +61,10 @@ export default function PrivateMessages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle pasted images
+  // Handle pasted images with validation
   usePasteImageHandler({
     onImagePaste: (file) => {
+      if (!validateFile(file)) return;
       setAttachedFile(file);
       toast({
         title: "Image pasted",
@@ -186,10 +187,8 @@ export default function PrivateMessages() {
     },
   });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Centralized file validation (max 10MB, allowed types)
+  const validateFile = (file: File): boolean => {
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
@@ -197,9 +196,36 @@ export default function PrivateMessages() {
         description: "Maximum file size is 10MB",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
+    // Check file type (including camera formats like HEIC/HEIF)
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence',
+      'image/bmp', 'image/svg+xml',
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Supported: images, PDF, Word documents, text files",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!validateFile(file)) return;
     setAttachedFile(file);
   };
 
@@ -592,6 +618,7 @@ export default function PrivateMessages() {
                   </Button>
                   <CameraCapture
                     onCapture={(file) => {
+                      if (!validateFile(file)) return;
                       setAttachedFile(file);
                       toast({
                         title: "Photo captured",
