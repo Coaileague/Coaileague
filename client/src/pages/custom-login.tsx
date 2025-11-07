@@ -84,7 +84,7 @@ export default function CustomLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--cad-background))] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-gradient p-4">
       <div className="w-full max-w-md space-y-8">
         {/* Logo and Branding */}
         <div className="flex flex-col items-center gap-4">

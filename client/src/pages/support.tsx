@@ -137,9 +137,9 @@ export default function Support() {
   ];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--cad-background))] text-[hsl(var(--cad-text-primary))]">
-      {/* CAD-Style Top Bar */}
-      <div className="h-12 bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border-strong))] flex items-center justify-between px-6">
+    <div className="min-h-screen bg-slate-gradient text-white">
+      {/* Top Bar */}
+      <div className="h-16 bg-card-translucent border-b border-emerald-500/20 backdrop-blur-sm flex items-center justify-between px-6">
         <AutoForceLogo size="sm" variant="full" />
         <div className="flex items-center gap-4">
           <Button
