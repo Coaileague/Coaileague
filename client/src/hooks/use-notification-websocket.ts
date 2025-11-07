@@ -57,7 +57,7 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
     }
 
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
       const wsHost = window.location.host;
       const wsUrl = `${protocol}://${wsHost}/ws/chat`;
       const ws = new WebSocket(wsUrl);
