@@ -1,5 +1,5 @@
 // Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Clock, BarChart3, Activity, Headphones, CreditCard, MessageSquare, Shield, UserCog, DollarSign, Receipt, Briefcase, TrendingUp, Zap, Package, Lock, Sparkles, Brain, Target, Layers, ChevronUp, Building2, Bell, HelpCircle, Download, MessagesSquare, LockKeyhole, HeadphonesIcon, CalendarClock, Timer, Banknote, FileText as FileInvoice, GraduationCap, UsersRound, UserCheck, Rocket, Medal, LineChart, FileBarChart } from "lucide-react";
+import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Clock, BarChart3, Activity, Headphones, CreditCard, MessageSquare, Shield, UserCog, DollarSign, Receipt, Briefcase, TrendingUp, Zap, Package, Lock, Sparkles, Brain, Target, Layers, ChevronUp, Building2, Bell, HelpCircle, Download, MessagesSquare, LockKeyhole, HeadphonesIcon, CalendarClock, Timer, Banknote, FileText as FileInvoice, GraduationCap, UsersRound, UserCheck, Rocket, Medal, LineChart, FileBarChart, Wallet, CalendarDays, BadgeDollarSign, Coins, FileCheck2, BookUser, UserSquare2, Award, PieChart, TrendingUpDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -33,27 +33,27 @@ import {
 const communicationFamilyItems = [
   { title: "CommOS™", url: "/comm-os", icon: MessagesSquare },
   { title: "Private Messages", url: "/messages", icon: LockKeyhole },
-  { title: "SupportOS™ HelpDesk", url: "/live-chat", icon: HeadphonesIcon },
+  { title: "SupportOS™ HelpDesk", url: "/live-chat", icon: Headphones },
 ];
 
 // FAMILY 2: Workforce Operations OS
 const operationsFamilyItems = [
-  { title: "ScheduleOS™", url: "/schedule", icon: CalendarClock },
-  { title: "TimeOS™", url: "/time-tracking", icon: Timer },
-  { title: "PayrollOS™", url: "/payroll", icon: Banknote },
-  { title: "BillOS™", url: "/invoices", icon: Receipt },
+  { title: "ScheduleOS™", url: "/schedule", icon: CalendarDays },
+  { title: "TimeOS™", url: "/time-tracking", icon: Clock },
+  { title: "PayrollOS™", url: "/payroll", icon: Wallet },
+  { title: "BillOS™", url: "/invoices", icon: FileCheck2 },
   { title: "TrainingOS™", url: "/training", icon: GraduationCap },
   { title: "Employees", url: "/employees", icon: UsersRound },
-  { title: "Clients", url: "/clients", icon: UserCheck },
+  { title: "Clients", url: "/clients", icon: BookUser },
 ];
 
 // FAMILY 3: Growth & Intelligence OS
 const growthFamilyItems = [
   { title: "🚀 Growth Family", url: "/os-family/growth", icon: Rocket, isFamily: true },
-  { title: "DealOS™ Sales", url: "/sales", icon: Target },
-  { title: "TalentOS™", url: "/leaders-hub", icon: Medal },
-  { title: "EngagementOS™", url: "/engagement/dashboard", icon: Activity },
-  { title: "AnalyticsOS™", url: "/analytics", icon: LineChart },
+  { title: "DealOS™ Sales", url: "/sales", icon: BadgeDollarSign },
+  { title: "TalentOS™", url: "/leaders-hub", icon: Award },
+  { title: "EngagementOS™", url: "/engagement/dashboard", icon: TrendingUp },
+  { title: "AnalyticsOS™", url: "/analytics", icon: PieChart },
   { title: "ReportOS™", url: "/reports", icon: FileBarChart },
 ];
 
