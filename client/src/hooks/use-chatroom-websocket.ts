@@ -233,7 +233,8 @@ export function useChatroomWebSocket(
             case 'system_message':
               // Handle system messages (e.g., help command response)
               if (data.message && typeof data.message === 'string') {
-                setMessages((prev) => [...prev, createSystemMessage(data.message)]);
+                const msgText: string = data.message;
+                setMessages((prev) => [...prev, createSystemMessage(msgText)]);
               }
               break;
 
@@ -570,6 +571,41 @@ export function useChatroomWebSocket(
     setTemporaryError(false);
   }, []);
 
+  // Reconnect function for manual resets (IRC /hop-style)
+  const reconnect = useCallback(async () => {
+    console.log('🔄 Manual reconnect triggered');
+    
+    // Clear existing connection
+    if (wsRef.current) {
+      const state = wsRef.current.readyState;
+      if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) {
+        console.log('Closing existing connection for reconnect');
+        wsRef.current.close(1000, 'Manual reconnect');
+      }
+    }
+    
+    // Clear reconnect timer
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    
+    // Reset flags
+    isConnectingRef.current = false;
+    setIsConnected(false);
+    setError(null);
+    
+    // Wait a moment for cleanup
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Reconnect
+    connect();
+    
+    toast({
+      title: "Chat reconnecting...",
+      description: "Re-establishing connection to chat server",
+    });
+  }, [connect, toast]);
+
   return {
     messages,
     sendMessage,
@@ -587,7 +623,7 @@ export function useChatroomWebSocket(
     isSilenced,
     justGotVoice,
     error,
-    reconnect: connect,
+    reconnect, // Enhanced reconnect with feedback
     // HelpDesk access control
     requiresTicket,
     roomStatus,

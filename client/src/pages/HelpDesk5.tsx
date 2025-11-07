@@ -30,7 +30,7 @@ import {
   MessageSquare, Send, Users, Circle, Shield, 
   Headphones, User, Bot, Sparkles, Wifi, WifiOff,
   Lock, Settings, AlertCircle, CheckCircle, Menu, X,
-  ArrowLeft, MoreVertical, ArrowDown, Smile, Reply
+  ArrowLeft, MoreVertical, ArrowDown, Smile, Reply, RefreshCw
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
 
@@ -642,6 +642,21 @@ export default function LiveChatroomPage() {
                 </>
               )}
             </Badge>
+
+            {/* Reconnect Chat Button (Staff Only) - IRC /hop style */}
+            {isStaff && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={reconnect}
+                data-testid="button-reconnect-chat"
+                className="gap-2 hidden sm:flex bg-white/10 border-white/30 text-white hover:bg-white/20 hover:border-white/40"
+                title="Reset chat connection (IRC /hop)"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden lg:inline">Reset</span>
+              </Button>
+            )}
 
             {/* Universal Support Menu - Staff Queue & Commands (Mobile Only) */}
             {isStaff && <SupportMobileMenu onExecuteCommand={(cmd) => sendMessage(cmd, userName, 'support')} />}
