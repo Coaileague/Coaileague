@@ -41,6 +41,13 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
     - **Asset Management**: AssetOS™ for tracking vehicles and equipment.
     - **AI & Analytics**: RecordOS™ and InsightOS™ for natural language search, autonomous analytics, and predictive insights.
     - **Platform Administration**: ROOT Admin Dashboard, organization onboarding, and HelpDesk queue management.
+    - **HelpOS™ FAQ System**: AI-powered knowledge base with semantic search and continuous learning from support interactions:
+        - **Semantic Search**: OpenAI embedding-based search finds answers even when exact keywords don't match
+        - **Auto-Generation from Tickets**: Converts resolved support tickets into reusable FAQ entries using GPT-3.5
+        - **Conversation Refinement**: Refines raw Q&A from live support chats into professional FAQ entries
+        - **Bulk Import**: Imports multiple FAQs for new feature releases with automatic embedding generation
+        - **Draft-First Workflow**: All AI-generated FAQs start as drafts requiring staff review before publication
+        - **Publish Status Control**: Unpublished FAQs only visible to platform staff for quality assurance
 - **Security**: Features Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 
 ## External Dependencies
