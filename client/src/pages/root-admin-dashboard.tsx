@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getActionsByCategory } from "@/data/quickActions";
+import { useAdaptiveRoute, useDevicePlatform } from "@/hooks/use-adaptive-route";
+import type { PlatformRole } from "@/data/quickActions";
 
 interface PlatformStats {
   totalWorkspaces: number;
@@ -63,6 +66,32 @@ export default function RootAdminDashboard() {
     firstName: '',
     lastName: '',
   });
+  
+  // Adaptive routing and platform detection
+  const { navigate, scrollToAnchor } = useAdaptiveRoute();
+  const platform = useDevicePlatform();
+  const platformRole = (user as any)?.platformRole as PlatformRole;
+  
+  // Get quick actions from registry
+  const supportActions = useMemo(() => 
+    getActionsByCategory('support', platformRole, undefined, !!user, platform),
+    [platformRole, user, platform]
+  );
+  
+  const platformActions = useMemo(() => 
+    getActionsByCategory('platform', platformRole, undefined, !!user, platform),
+    [platformRole, user, platform]
+  );
+  
+  const operationsActions = useMemo(() => 
+    getActionsByCategory('operations', platformRole, undefined, !!user, platform),
+    [platformRole, user, platform]
+  );
+  
+  const coreActions = useMemo(() => 
+    getActionsByCategory('core', platformRole, undefined, !!user, platform),
+    [platformRole, user, platform]
+  );
   
   // Admin Controls State
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -390,7 +419,7 @@ export default function RootAdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Access Menu - Organized by Categories */}
+        {/* Quick Access Menu - Organized by Categories (Registry-Based) */}
         <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-emerald-950/30 to-slate-900/50 backdrop-blur-sm">
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -399,129 +428,132 @@ export default function RootAdminDashboard() {
             </div>
 
             {/* Support & Helpdesk Tools */}
-            <div className="mb-4">
-              <h3 className="text-[10px] sm:text-xs font-semibold text-emerald-400/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
-              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                {[
-                  { icon: Ticket, label: "Support Tickets", link: "/admin-command-center", color: "text-emerald-400", testid: "quick-tickets" },
-                  { icon: MessageSquare, label: "Live Chat", link: "/mobile-chat", color: "text-teal-400", testid: "quick-chat" },
-                  { icon: HelpCircle, label: "Help Desk", link: "/helpdesk5", color: "text-green-400", testid: "quick-helpdesk" },
-                  { icon: Mail, label: "Support Email", link: "/contact", color: "text-emerald-500", testid: "quick-email" }
-                ].map((feature) => (
-                  <Button
-                    key={feature.testid}
-                    variant="outline"
-                    size="sm"
-                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
-                    asChild
-                  >
-                    <Link href={feature.link} data-testid={feature.testid}>
-                      <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                      <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
-                    </Link>
-                  </Button>
-                ))}
+            {supportActions.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-[10px] sm:text-xs font-semibold text-emerald-400/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                  {supportActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Button
+                        key={action.id}
+                        variant="outline"
+                        size="sm"
+                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
+                        onClick={(e) => {
+                          if (action.isHashAnchor) {
+                            e.preventDefault();
+                            scrollToAnchor(action.resolvedPath);
+                          } else {
+                            setLocation(action.resolvedPath);
+                          }
+                        }}
+                        data-testid={action.testId}
+                      >
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
+                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Platform Management Tools */}
-            <div className="mb-4">
-              <h3 className="text-[10px] sm:text-xs font-semibold text-teal-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
-              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                {[
-                  { icon: Users, label: "Users", link: "#user-section", color: "text-emerald-400", testid: "quick-users" },
-                  { icon: Building2, label: "Workspaces", link: "#workspace-section", color: "text-teal-400", testid: "quick-workspaces" },
-                  { icon: ScrollText, label: "Audit Logs", link: "/audit-trail", color: "text-green-400", testid: "quick-audit" },
-                  { icon: Database, label: "DB Admin", link: "#workspace-section", color: "text-emerald-500", testid: "quick-database" },
-                  { icon: Key, label: "API Keys", link: "#user-section", color: "text-teal-500", testid: "quick-apikeys" },
-                  { icon: Flag, label: "Feature Flags", link: "/settings", color: "text-green-500", testid: "quick-flags" }
-                ].map((feature) => (
-                  <Button
-                    key={feature.testid}
-                    variant="outline"
-                    size="sm"
-                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
-                    asChild
-                    onClick={(e) => {
-                      if (feature.link.startsWith('#')) {
-                        e.preventDefault();
-                        const element = document.querySelector(feature.link);
-                        element?.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
-                  >
-                    {feature.link.startsWith('#') ? (
-                      <a href={feature.link} data-testid={feature.testid}>
-                        <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
-                      </a>
-                    ) : (
-                      <Link href={feature.link} data-testid={feature.testid}>
-                        <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
-                      </Link>
-                    )}
-                  </Button>
-                ))}
+            {platformActions.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-[10px] sm:text-xs font-semibold text-teal-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                  {platformActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Button
+                        key={action.id}
+                        variant="outline"
+                        size="sm"
+                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
+                        onClick={(e) => {
+                          if (action.isHashAnchor) {
+                            e.preventDefault();
+                            scrollToAnchor(action.resolvedPath);
+                          } else {
+                            setLocation(action.resolvedPath);
+                          }
+                        }}
+                        data-testid={action.testId}
+                      >
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
+                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Operations & Monitoring */}
-            <div className="mb-4">
-              <h3 className="text-[10px] sm:text-xs font-semibold text-green-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
-              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                {[
-                  { icon: Gauge, label: "System Health", link: "#system-stats", color: "text-emerald-400", testid: "quick-health" },
-                  { icon: AlertCircle, label: "Error Logs", link: "#recent-activity", color: "text-amber-400", testid: "quick-errors" },
-                  { icon: ActivityIcon, label: "Performance", link: "#system-stats", color: "text-teal-400", testid: "quick-performance" },
-                  { icon: Webhook, label: "Webhooks", link: "/settings", color: "text-green-400", testid: "quick-webhooks" },
-                  { icon: Code, label: "API Status", link: "#system-stats", color: "text-emerald-500", testid: "quick-api" }
-                ].map((feature) => (
-                  <Button
-                    key={feature.testid}
-                    variant="outline"
-                    size="sm"
-                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
-                    asChild
-                  >
-                    <Link href={feature.link} data-testid={feature.testid}>
-                      <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                      <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
-                    </Link>
-                  </Button>
-                ))}
+            {operationsActions.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-[10px] sm:text-xs font-semibold text-green-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                  {operationsActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Button
+                        key={action.id}
+                        variant="outline"
+                        size="sm"
+                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
+                        onClick={(e) => {
+                          if (action.isHashAnchor) {
+                            e.preventDefault();
+                            scrollToAnchor(action.resolvedPath);
+                          } else {
+                            setLocation(action.resolvedPath);
+                          }
+                        }}
+                        data-testid={action.testId}
+                      >
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
+                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Core Features */}
-            <div>
-              <h3 className="text-[10px] sm:text-xs font-semibold text-slate-400/70 mb-2 uppercase tracking-wider">Core Features</h3>
-              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                {[
-                  { icon: Calendar, label: "Schedule", link: "/schedule", color: "text-emerald-400", testid: "quick-schedule" },
-                  { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-teal-400", testid: "quick-timeclock" },
-                  { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-green-400", testid: "quick-invoices" },
-                  { icon: DollarSign, label: "Payroll", link: "/payroll-dashboard", color: "text-emerald-500", testid: "quick-payroll" },
-                  { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-teal-500", testid: "quick-hiring" },
-                  { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-green-500", testid: "quick-training" },
-                  { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-emerald-600", testid: "quick-analytics" },
-                  { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-slate-400", testid: "quick-all" }
-                ].map((feature) => (
-                  <Button
-                    key={feature.testid}
-                    variant="outline"
-                    size="sm"
-                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"
-                    asChild
-                  >
-                    <Link href={feature.link} data-testid={feature.testid}>
-                      <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                      <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
-                    </Link>
-                  </Button>
-                ))}
+            {coreActions.length > 0 && (
+              <div>
+                <h3 className="text-[10px] sm:text-xs font-semibold text-slate-400/70 mb-2 uppercase tracking-wider">Core Features</h3>
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                  {coreActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Button
+                        key={action.id}
+                        variant="outline"
+                        size="sm"
+                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"
+                        onClick={(e) => {
+                          if (action.isHashAnchor) {
+                            e.preventDefault();
+                            scrollToAnchor(action.resolvedPath);
+                          } else {
+                            setLocation(action.resolvedPath);
+                          }
+                        }}
+                        data-testid={action.testId}
+                      >
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
+                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
