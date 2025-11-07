@@ -234,6 +234,17 @@ export async function getUserPlatformRole(userId: string): Promise<PlatformRole>
   return (platformRole?.role as PlatformRole) || 'none';
 }
 
+// Helper function to check if user has platform staff role
+// (root, deputy_admin, deputy_assistant, sysop, or support)
+export function isPlatformStaff(user?: { platformRole?: PlatformRole | string }): boolean {
+  if (!user || !user.platformRole) {
+    return false;
+  }
+  
+  const staffRoles: PlatformRole[] = ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'];
+  return staffRoles.includes(user.platformRole as PlatformRole);
+}
+
 export function requirePlatformRole(allowedRoles: PlatformRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // Check session-based authentication first
