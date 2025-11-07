@@ -9,6 +9,41 @@ function generateCommandId(): string {
   return `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Helper to create properly typed system messages
+function createSystemMessage(message: string, conversationId: string = MAIN_ROOM_ID): ChatMessage {
+  return {
+    id: `system-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date(),
+    isEncrypted: false,
+    encryptionIv: null,
+    conversationId,
+    senderId: null,
+    senderName: 'System',
+    senderType: 'system',
+    message,
+    messageType: 'text',
+    isSystemMessage: true,
+    isPrivateMessage: false,
+    recipientId: null,
+    parentMessageId: null,
+    threadId: null,
+    replyCount: 0,
+    attachmentUrl: null,
+    attachmentName: null,
+    attachmentType: null,
+    attachmentSize: null,
+    attachmentThumbnail: null,
+    isFormatted: false,
+    formattedContent: null,
+    mentions: [],
+    visibleToStaffOnly: false,
+    isRead: false,
+    readAt: null,
+    isEdited: false,
+    editedAt: null,
+  };
+}
+
 interface OnlineUser {
   id: string;
   name: string;
@@ -198,22 +233,7 @@ export function useChatroomWebSocket(
             case 'system_message':
               // Handle system messages (e.g., help command response)
               if (data.message && typeof data.message === 'string') {
-                const systemMsg: ChatMessage = {
-                  id: `system-${Date.now()}`,
-                  createdAt: new Date(),
-                  conversationId: 'main-chatroom-workforceos',
-                  senderId: null,
-                  senderName: 'System',
-                  senderType: 'system',
-                  message: data.message,
-                  messageType: 'text',
-                  isSystemMessage: true,
-                  attachmentUrl: null,
-                  attachmentName: null,
-                  isRead: null,
-                  readAt: null,
-                };
-                setMessages((prev) => [...prev, systemMsg]);
+                setMessages((prev) => [...prev, createSystemMessage(data.message)]);
               }
               break;
 
@@ -336,22 +356,9 @@ export function useChatroomWebSocket(
 
             case 'spectator_released':
               // User was released from hold/spectator mode
-              const releaseMsg: ChatMessage = {
-                id: `system-${Date.now()}`,
-                createdAt: new Date(),
-                conversationId: 'main-chatroom-workforceos',
-                senderId: null,
-                senderName: 'System',
-                senderType: 'system',
-                message: `${(data as any).releasedBy} has released you from hold. You can now chat.`,
-                messageType: 'text',
-                isSystemMessage: true,
-                attachmentUrl: null,
-                attachmentName: null,
-                isRead: null,
-                readAt: null,
-              };
-              setMessages((prev) => [...prev, releaseMsg]);
+              setMessages((prev) => [...prev, createSystemMessage(
+                `${(data as any).releasedBy} has released you from hold. You can now chat.`
+              )]);
               break;
 
             case 'secure_data_received':
@@ -370,22 +377,10 @@ export function useChatroomWebSocket(
               if (secureData.description) secureDataSummary += `📝 Description: ${secureData.description}\n`;
               if (secureData.file) secureDataSummary += `📎 File uploaded: ${secureData.file.name || 'document'}\n`;
 
-              const secureDataMsg: ChatMessage = {
-                id: `system-${Date.now()}`,
-                createdAt: new Date(),
-                conversationId: 'main-chatroom-workforceos',
-                senderId: null,
-                senderName: 'SecureChannel',
-                senderType: 'system',
-                message: secureDataSummary.trim(),
-                messageType: 'text',
-                isSystemMessage: true,
-                attachmentUrl: null,
-                attachmentName: null,
-                isRead: null,
-                readAt: null,
-              };
-              setMessages((prev) => [...prev, secureDataMsg]);
+              setMessages((prev) => [...prev, {
+                ...createSystemMessage(secureDataSummary.trim()),
+                senderName: 'SecureChannel' // Override for secure data messages
+              }]);
               break;
 
             case 'banner_update':
