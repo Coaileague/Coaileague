@@ -41,7 +41,7 @@ export function WhatsNewBadge() {
   ).length;
 
   const markAsViewed = async () => {
-    await apiRequest('/api/feature-updates/mark-viewed', 'POST');
+    await apiRequest('POST', '/api/feature-updates/mark-viewed');
   };
 
   const getCategoryColor = (category: string) => {

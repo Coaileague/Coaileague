@@ -381,207 +381,208 @@ export default function RootAdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Access Menu - Organized by Categories (Registry-Based) */}
-        <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-emerald-950/30 to-slate-900/50 backdrop-blur-sm">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex items-center gap-2 mb-3 sm:mb-4">
-              <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 shrink-0" />
-              <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
-            </div>
-
-            {/* Support & Helpdesk Tools */}
-            {supportActions.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-[10px] sm:text-xs font-semibold text-emerald-400/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
-                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                  {supportActions.map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="outline"
-                        size="sm"
-                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
-                        onClick={(e) => {
-                          if (action.isHashAnchor) {
-                            e.preventDefault();
-                            scrollToAnchor(action.resolvedPath);
-                          } else {
-                            setLocation(action.resolvedPath);
-                          }
-                        }}
-                        data-testid={action.testId}
-                      >
-                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
-                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Platform Management Tools */}
-            {platformActions.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-[10px] sm:text-xs font-semibold text-teal-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
-                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                  {platformActions.map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="outline"
-                        size="sm"
-                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
-                        onClick={(e) => {
-                          if (action.isHashAnchor) {
-                            e.preventDefault();
-                            scrollToAnchor(action.resolvedPath);
-                          } else {
-                            setLocation(action.resolvedPath);
-                          }
-                        }}
-                        data-testid={action.testId}
-                      >
-                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
-                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Operations & Monitoring */}
-            {operationsActions.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-[10px] sm:text-xs font-semibold text-green-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
-                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                  {operationsActions.map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="outline"
-                        size="sm"
-                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
-                        onClick={(e) => {
-                          if (action.isHashAnchor) {
-                            e.preventDefault();
-                            scrollToAnchor(action.resolvedPath);
-                          } else {
-                            setLocation(action.resolvedPath);
-                          }
-                        }}
-                        data-testid={action.testId}
-                      >
-                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
-                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Core Features */}
-            {coreActions.length > 0 && (
-              <div>
-                <h3 className="text-[10px] sm:text-xs font-semibold text-slate-400/70 mb-2 uppercase tracking-wider">Core Features</h3>
-                <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-                  {coreActions.map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="outline"
-                        size="sm"
-                        className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"
-                        onClick={(e) => {
-                          if (action.isHashAnchor) {
-                            e.preventDefault();
-                            scrollToAnchor(action.resolvedPath);
-                          } else {
-                            setLocation(action.resolvedPath);
-                          }
-                        }}
-                        data-testid={action.testId}
-                      >
-                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} shrink-0`} />
-                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{action.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 🔐 ADMIN CONTROLS - User & Workspace Management */}
-        <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-red-400" />
-              Platform Administration Controls
-            </CardTitle>
-            <CardDescription>Search and manage users, workspaces, and permissions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* User Search & Management */}
-            <div className="space-y-4" id="user-section">
+        {/* Desktop: 2-Column Grid | Mobile: Stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          {/* Quick Access Menu - Organized by Categories (Registry-Based) */}
+          <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-emerald-950/30 to-slate-900/50 backdrop-blur-sm">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-3">
-                <UserCog className="h-4 w-4 text-emerald-400" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-400">User Management</h3>
-              </div>
-              
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users by ID, email, or name (min 3 chars)..."
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  className="pl-10 bg-slate-800/50 border-emerald-500/30"
-                  data-testid="input-user-search"
-                />
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 shrink-0" />
+                <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
               </div>
 
-              {userSearchResults && (userSearchResults as any[]).length > 0 && (
-                <ScrollArea className="h-[200px] border border-emerald-500/20 rounded-lg bg-slate-800/30 p-2">
-                  <div className="space-y-2">
-                    {(userSearchResults as any[]).map((user: any) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between p-3 rounded-lg hover-elevate border border-slate-700 bg-slate-800/50"
-                        data-testid={`user-result-${user.id}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-white truncate">
-                              {user.firstName} {user.lastName}
-                            </p>
-                            <Badge variant="secondary" className="text-xs">
-                              {user.platformRole || 'guest'}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                          <p className="text-xs text-muted-foreground/70 font-mono">{user.id}</p>
-                        </div>
+              {/* Support & Helpdesk Tools */}
+              {supportActions.length > 0 && (
+                <div className="mb-3">
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-emerald-400/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {supportActions.map((action) => {
+                      const Icon = action.icon;
+                      return (
                         <Button
-                          size="sm"
+                          key={action.id}
                           variant="outline"
-                          onClick={() => setSelectedUser(user)}
-                          className="ml-2"
-                          data-testid={`button-select-user-${user.id}`}
+                          size="sm"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
+                          onClick={(e) => {
+                            if (action.isHashAnchor) {
+                              e.preventDefault();
+                              scrollToAnchor(action.resolvedPath);
+                            } else {
+                              setLocation(action.resolvedPath);
+                            }
+                          }}
+                          data-testid={action.testId}
                         >
-                          Manage
+                          <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
+                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
                         </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                </ScrollArea>
+                </div>
               )}
+
+              {/* Platform Management Tools */}
+              {platformActions.length > 0 && (
+                <div className="mb-3">
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-teal-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {platformActions.map((action) => {
+                      const Icon = action.icon;
+                      return (
+                        <Button
+                          key={action.id}
+                          variant="outline"
+                          size="sm"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
+                          onClick={(e) => {
+                            if (action.isHashAnchor) {
+                              e.preventDefault();
+                              scrollToAnchor(action.resolvedPath);
+                            } else {
+                              setLocation(action.resolvedPath);
+                            }
+                          }}
+                          data-testid={action.testId}
+                        >
+                          <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
+                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Operations & Monitoring */}
+              {operationsActions.length > 0 && (
+                <div className="mb-3">
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-green-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {operationsActions.map((action) => {
+                      const Icon = action.icon;
+                      return (
+                        <Button
+                          key={action.id}
+                          variant="outline"
+                          size="sm"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
+                          onClick={(e) => {
+                            if (action.isHashAnchor) {
+                              e.preventDefault();
+                              scrollToAnchor(action.resolvedPath);
+                            } else {
+                              setLocation(action.resolvedPath);
+                            }
+                          }}
+                          data-testid={action.testId}
+                        >
+                          <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
+                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Core Features */}
+              {coreActions.length > 0 && (
+                <div>
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-slate-400/70 mb-2 uppercase tracking-wider">Core Features</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {coreActions.map((action) => {
+                      const Icon = action.icon;
+                      return (
+                        <Button
+                          key={action.id}
+                          variant="outline"
+                          size="sm"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"
+                          onClick={(e) => {
+                            if (action.isHashAnchor) {
+                              e.preventDefault();
+                              scrollToAnchor(action.resolvedPath);
+                            } else {
+                              setLocation(action.resolvedPath);
+                            }
+                          }}
+                          data-testid={action.testId}
+                        >
+                          <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
+                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 🔐 ADMIN CONTROLS - User & Workspace Management */}
+          <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
+            <CardHeader className="pb-3 pt-3 px-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldAlert className="h-4 w-4 text-red-400" />
+                Platform Administration
+              </CardTitle>
+              <CardDescription className="text-xs">Search and manage users, workspaces, and permissions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 px-4 pb-4">
+              {/* User Search & Management */}
+              <div className="space-y-3" id="user-section">
+                <div className="flex items-center gap-2">
+                  <UserCog className="h-3.5 w-3.5 text-emerald-400" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-400">User Management</h3>
+                </div>
+                
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users (min 3 chars)..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="pl-10 bg-slate-800/50 border-emerald-500/30 h-8 text-sm"
+                    data-testid="input-user-search"
+                  />
+                </div>
+
+                {userSearchResults && (userSearchResults as any[]).length > 0 && (
+                  <ScrollArea className="h-[160px] border border-emerald-500/20 rounded-lg bg-slate-800/30 p-2">
+                    <div className="space-y-1.5">
+                      {(userSearchResults as any[]).map((user: any) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between p-2 rounded-lg hover-elevate border border-slate-700 bg-slate-800/50"
+                          data-testid={`user-result-${user.id}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-medium text-white truncate">
+                                {user.firstName} {user.lastName}
+                              </p>
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                {user.platformRole || 'guest'}
+                              </Badge>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedUser(user)}
+                            className="ml-2 h-6 text-[10px] px-2"
+                            data-testid={`button-select-user-${user.id}`}
+                          >
+                            Manage
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
 
               {selectedUser && (
                 <div className="border border-emerald-500/30 rounded-lg p-4 bg-emerald-950/20">
@@ -629,64 +630,64 @@ export default function RootAdminDashboard() {
               )}
             </div>
 
-            <div className="border-t border-slate-700 pt-4" />
+              <div className="border-t border-slate-700 pt-3" />
 
-            {/* Workspace Search & Management */}
-            <div className="space-y-4" id="workspace-section">
-              <div className="flex items-center gap-2 mb-3">
-                <Building2 className="h-4 w-4 text-teal-400" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-teal-400">Workspace Management</h3>
-              </div>
-              
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search workspaces by name or ID (min 3 chars)..."
-                  value={workspaceSearchQuery}
-                  onChange={(e) => setWorkspaceSearchQuery(e.target.value)}
-                  className="pl-10 bg-slate-800/50 border-orange-500/30"
-                  data-testid="input-workspace-search"
-                />
-              </div>
+              {/* Workspace Search & Management */}
+              <div className="space-y-3" id="workspace-section">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-teal-400" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-teal-400">Workspace Management</h3>
+                </div>
+                
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search workspaces (min 3 chars)..."
+                    value={workspaceSearchQuery}
+                    onChange={(e) => setWorkspaceSearchQuery(e.target.value)}
+                    className="pl-10 bg-slate-800/50 border-orange-500/30 h-8 text-sm"
+                    data-testid="input-workspace-search"
+                  />
+                </div>
 
-              {workspaceSearchResults && (workspaceSearchResults as any[]).length > 0 && (
-                <ScrollArea className="h-[200px] border border-orange-500/20 rounded-lg bg-slate-800/30 p-2">
-                  <div className="space-y-2">
-                    {(workspaceSearchResults as any[]).map((workspace: any) => (
-                      <div
-                        key={workspace.id}
-                        className="flex items-center justify-between p-3 rounded-lg hover-elevate border border-slate-700 bg-slate-800/50"
-                        data-testid={`workspace-result-${workspace.id}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-white truncate">{workspace.name}</p>
-                            {workspace.isSuspended && (
-                              <Badge variant="destructive" className="text-xs">Suspended</Badge>
-                            )}
-                            {workspace.isLocked && (
-                              <Badge variant="destructive" className="text-xs">Locked</Badge>
-                            )}
-                            {workspace.isFrozen && (
-                              <Badge variant="destructive" className="text-xs">Frozen</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground font-mono">{workspace.id}</p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedWorkspace(workspace)}
-                          className="ml-2"
-                          data-testid={`button-select-workspace-${workspace.id}`}
+                {workspaceSearchResults && (workspaceSearchResults as any[]).length > 0 && (
+                  <ScrollArea className="h-[160px] border border-orange-500/20 rounded-lg bg-slate-800/30 p-2">
+                    <div className="space-y-1.5">
+                      {(workspaceSearchResults as any[]).map((workspace: any) => (
+                        <div
+                          key={workspace.id}
+                          className="flex items-center justify-between p-2 rounded-lg hover-elevate border border-slate-700 bg-slate-800/50"
+                          data-testid={`workspace-result-${workspace.id}`}
                         >
-                          Manage
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-medium text-white truncate">{workspace.name}</p>
+                              {workspace.isSuspended && (
+                                <Badge variant="destructive" className="text-[10px] px-1 py-0">Suspended</Badge>
+                              )}
+                              {workspace.isLocked && (
+                                <Badge variant="destructive" className="text-[10px] px-1 py-0">Locked</Badge>
+                              )}
+                              {workspace.isFrozen && (
+                                <Badge variant="destructive" className="text-[10px] px-1 py-0">Frozen</Badge>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground font-mono">{workspace.id}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedWorkspace(workspace)}
+                            className="ml-2 h-6 text-[10px] px-2"
+                            data-testid={`button-select-workspace-${workspace.id}`}
+                          >
+                            Manage
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
 
               {selectedWorkspace && (
                 <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-950/20">
@@ -794,9 +795,10 @@ export default function RootAdminDashboard() {
                   </div>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Platform Business Metrics - COMPACT */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
