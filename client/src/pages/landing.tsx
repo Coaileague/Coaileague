@@ -123,44 +123,44 @@ export default function Landing() {
 
       {/* Hero Section - SALES FOCUSED */}
       <section className="relative overflow-x-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
-        <div className="responsive-container responsive-spacing-y overflow-x-hidden">
-          <div className="max-w-6xl mx-auto w-full overflow-x-hidden px-0">
-            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-center w-full overflow-x-hidden">
+        <div className="responsive-container responsive-spacing-y">
+          <div className="max-w-6xl mx-auto w-full">
+            <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
               {/* Left: Sales Copy */}
-              <div className="space-y-6 fix-overflow w-full max-w-full min-w-0">
-                <Badge variant="outline" className="text-xs font-normal px-4 py-1.5">
-                  <Building2 className="h-3 w-3 mr-1.5" />
-                  For Emergency Services & Service Industries
+              <div className="space-y-4 sm:space-y-6 w-full max-w-full min-w-0">
+                <Badge variant="outline" className="text-xs font-normal px-3 sm:px-4 py-1.5 inline-flex">
+                  <Building2 className="h-3 w-3 mr-1.5 shrink-0" />
+                  <span className="truncate">Emergency Services & Service Industries</span>
                 </Badge>
                 
-                <h1 className="responsive-h1 max-w-full">
-                  <span className="text-wrap-auto break-words">Workforce Management </span>
-                  <span className="block text-primary mt-2 text-wrap-auto break-words">Built for Rapid Response</span>
+                <h1 className="responsive-h1 max-w-full text-balance">
+                  <span className="block">Workforce Management</span>
+                  <span className="block text-primary mt-1 sm:mt-2">Built for Rapid Response</span>
                 </h1>
                 
-                <p className="responsive-body text-muted-foreground text-wrap-auto">
+                <p className="responsive-body text-muted-foreground max-w-full">
                   Streamline scheduling, time tracking, payroll, and compliance for emergency response teams and service organizations. Designed to reduce administrative tasks and improve operational efficiency.*
                 </p>
                 
-                <p className="responsive-small text-muted-foreground/80 text-wrap-auto">
+                <p className="responsive-small text-muted-foreground/80 max-w-full">
                   *Actual time and cost savings will vary based on your organization's size, current processes, and implementation. Features designed to help automate manual administrative tasks.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 w-full max-w-full">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4 w-full">
                   <Button
                     size="lg"
                     onClick={() => setLocation("/register")}
-                    className="text-base sm:text-lg px-4 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
+                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[52px] sm:min-h-[56px] w-full sm:w-auto font-semibold"
                     data-testid="button-start-trial"
                   >
                     Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-4 sm:h-5 w-4 sm:w-5 shrink-0" />
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
                     onClick={() => window.location.href = "/api/demo-login"}
-                    className="text-base sm:text-lg px-4 sm:px-8 min-h-[56px] sm:h-14 w-full sm:w-auto font-semibold"
+                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[52px] sm:min-h-[56px] w-full sm:w-auto font-semibold"
                     data-testid="button-view-demo"
                   >
                     View Live Demo
@@ -168,32 +168,32 @@ export default function Landing() {
                 </div>
 
                 {/* Trust Indicators */}
-                <div className="flex flex-wrap gap-6 pt-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-green-500" />
-                    <span>SOC 2 Compliant</span>
+                <div className="flex flex-wrap gap-4 sm:gap-6 pt-2 sm:pt-4 text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Shield className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-green-500 shrink-0" />
+                    <span className="truncate">SOC 2 Compliant</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-blue-500" />
-                    <span>256-bit Encryption</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Lock className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-blue-500 shrink-0" />
+                    <span className="truncate">256-bit Encryption</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Award className="h-4 w-4 text-amber-500" />
-                    <span>99.9% Uptime</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Award className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-amber-500 shrink-0" />
+                    <span className="truncate">99.9% Uptime</span>
                   </div>
                 </div>
               </div>
 
               {/* Right: REAL Product Preview - ScheduleOS */}
-              <div className="relative">
-                <div className="aspect-video rounded-xl border-2 bg-card/50 backdrop-blur-sm overflow-hidden shadow-2xl">
+              <div className="relative w-full max-w-full">
+                <div className="aspect-video rounded-lg sm:rounded-xl border-2 bg-card/50 backdrop-blur-sm overflow-hidden shadow-2xl w-full">
                   {/* REAL AutoForce™ Schedule Interface - NOT a placeholder! */}
                   <SchedulePreview />
                 </div>
                 {/* Product badge */}
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
-                  <Badge className="px-4 py-2 text-sm font-semibold shadow-lg">
-                    <Sparkles className="h-4 w-4 mr-1.5" />
+                <div className="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 px-2">
+                  <Badge className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold shadow-lg whitespace-nowrap">
+                    <Sparkles className="h-3 sm:h-4 w-3 sm:w-4 mr-1 sm:mr-1.5 shrink-0" />
                     Live Product Preview
                   </Badge>
                 </div>
@@ -224,83 +224,83 @@ export default function Landing() {
       </section>
 
       {/* Product Showcase - Visual Demonstrations */}
-      <section className="border-b bg-gradient-to-b from-muted/30 to-background responsive-spacing-y">
+      <section className="border-b bg-gradient-to-b from-muted/30 to-background responsive-spacing-y overflow-x-hidden">
         <div className="responsive-container">
-          <div className="text-center mb-16">
-            <Badge variant="outline" className="mb-4">
-              <Sparkles className="h-3 w-3 mr-1" />
+          <div className="text-center mb-12 sm:mb-16 max-w-full">
+            <Badge variant="outline" className="mb-4 inline-flex">
+              <Sparkles className="h-3 w-3 mr-1 shrink-0" />
               Platform Preview
             </Badge>
-            <h2 className="responsive-h2 mb-4 text-wrap-auto">
+            <h2 className="responsive-h2 mb-4 max-w-full">
               See the Platform in Action
             </h2>
-            <p className="responsive-body text-muted-foreground max-w-2xl mx-auto text-wrap-auto">
+            <p className="responsive-body text-muted-foreground max-w-2xl mx-auto px-4">
               Every module designed for enterprise-grade performance and ease of use
             </p>
           </div>
 
-          <div className="space-y-20 max-w-6xl mx-auto">
+          <div className="space-y-12 sm:space-y-16 lg:space-y-20 max-w-6xl mx-auto w-full">
             {/* TimeOS Visual */}
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-4">
-                <Badge variant="outline">
-                  <Clock className="h-3 w-3 mr-1" />
+            <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
+              <div className="space-y-3 sm:space-y-4 max-w-full">
+                <Badge variant="outline" className="inline-flex">
+                  <Clock className="h-3 w-3 mr-1 shrink-0" />
                   TimeOS™
                 </Badge>
-                <h3 className="text-2xl sm:text-3xl font-bold">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold max-w-full">
                   GPS-Verified Time Tracking
                 </h3>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-muted-foreground text-base sm:text-lg max-w-full">
                   Eliminate time theft with photo verification and GPS tracking. Employees clock in/out from their phones, managers get real-time visibility.
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-2 max-w-full">
                   {["GPS geofencing", "Photo proof required", "Real-time notifications", "Automatic overtime calculations"].map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span>{feature}</span>
+                    <li key={feature} className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
+                      <span className="text-sm sm:text-base">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Button
                   size="lg"
                   onClick={() => window.location.href = "/api/demo-login"}
-                  className="min-h-[44px] w-full sm:w-auto"
+                  className="min-h-[48px] w-full sm:w-auto"
                   data-testid="button-demo-timeos"
                 >
                   Try Live Demo
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                 </Button>
               </div>
-              <div className="relative">
-                <div className="aspect-[4/3] rounded-xl border-2 bg-card overflow-hidden shadow-2xl">
+              <div className="relative w-full max-w-full">
+                <div className="aspect-[4/3] rounded-lg sm:rounded-xl border-2 bg-card overflow-hidden shadow-2xl w-full">
                   {/* REAL Time Tracking Interface */}
                   <TimeTrackingPreview />
                 </div>
-                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2">
+                  <CheckCircle2 className="h-3 w-3 mr-1 shrink-0" />
                   Live Product Preview
                 </Badge>
               </div>
             </div>
 
             {/* ScheduleOS Visual */}
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="lg:order-2 space-y-4">
-                <Badge variant="outline">
-                  <CalendarClock className="h-3 w-3 mr-1" />
+            <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
+              <div className="lg:order-2 space-y-3 sm:space-y-4 max-w-full">
+                <Badge variant="outline" className="inline-flex">
+                  <CalendarClock className="h-3 w-3 mr-1 shrink-0" />
                   ScheduleOS™
                 </Badge>
-                <h3 className="text-2xl sm:text-3xl font-bold">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold max-w-full">
                   Smart Scheduling
                 </h3>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-muted-foreground text-base sm:text-lg max-w-full">
                   Create schedules with drag-and-drop interface. Conflict detection prevents double-booking.
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-2 max-w-full">
                   {["Drag-and-drop interface", "Conflict detection", "Mobile shift swaps", "AI optimization (beta)"].map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span>{feature}</span>
+                    <li key={feature} className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
+                      <span className="text-sm sm:text-base">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -308,62 +308,63 @@ export default function Landing() {
                   size="lg"
                   variant="outline"
                   onClick={() => setLocation("/register")}
-                  className="min-h-[44px] w-full sm:w-auto"
+                  className="min-h-[48px] w-full sm:w-auto"
                   data-testid="button-trial-scheduleos"
                 >
                   Start Free Trial
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                  <ChevronRight className="ml-2 h-4 w-4 shrink-0" />
                 </Button>
               </div>
-              <div className="lg:order-1 relative">
-                <div className="aspect-[4/3] rounded-xl border-2 bg-card overflow-hidden shadow-2xl">
+              <div className="lg:order-1 relative w-full max-w-full">
+                <div className="aspect-[4/3] rounded-lg sm:rounded-xl border-2 bg-card overflow-hidden shadow-2xl w-full">
                   {/* REAL Schedule Interface */}
                   <SchedulePreview />
                 </div>
-                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg">
-                  <Sparkles className="h-3 w-3 mr-1" />
+                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2">
+                  <Sparkles className="h-3 w-3 mr-1 shrink-0" />
                   Live Product Preview
                 </Badge>
               </div>
             </div>
 
             {/* Analytics Visual */}
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-4">
-                <Badge variant="outline">
-                  <BarChart3 className="h-3 w-3 mr-1" />
+            <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
+              <div className="space-y-3 sm:space-y-4 max-w-full">
+                <Badge variant="outline" className="inline-flex">
+                  <BarChart3 className="h-3 w-3 mr-1 shrink-0" />
                   AnalyticsOS™
                 </Badge>
-                <h3 className="text-2xl sm:text-3xl font-bold">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold max-w-full">
                   Real-Time Business Intelligence
                 </h3>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-muted-foreground text-base sm:text-lg max-w-full">
                   Track labor costs, revenue, performance metrics, and ROI in real-time dashboards. Make data-driven decisions instantly.
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-2 max-w-full">
                   {["Live dashboards", "Cost forecasting", "Performance metrics", "Custom reports"].map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span>{feature}</span>
+                    <li key={feature} className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
+                      <span className="text-sm sm:text-base">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Button
                   size="lg"
                   onClick={() => setLocation("/pricing")}
+                  className="min-h-[48px] w-full sm:w-auto"
                   data-testid="button-pricing-analyticsos"
                 >
                   View Pricing
-                  <DollarSign className="ml-2 h-4 w-4" />
+                  <DollarSign className="ml-2 h-4 w-4 shrink-0" />
                 </Button>
               </div>
-              <div className="relative">
-                <div className="aspect-[4/3] rounded-xl border-2 bg-card overflow-hidden shadow-2xl">
+              <div className="relative w-full max-w-full">
+                <div className="aspect-[4/3] rounded-lg sm:rounded-xl border-2 bg-card overflow-hidden shadow-2xl w-full">
                   {/* REAL Analytics Dashboard */}
                   <DashboardPreview />
                 </div>
-                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg">
-                  <TrendingUp className="h-3 w-3 mr-1" />
+                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2">
+                  <TrendingUp className="h-3 w-3 mr-1 shrink-0" />
                   Live Product Preview
                 </Badge>
               </div>
