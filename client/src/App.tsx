@@ -132,8 +132,16 @@ function AppContent() {
     "--sidebar-width-icon": "4rem",
   };
 
+  // Show minimal loading state during auth check to prevent routing issues
   if (isLoading) {
-    return <MobileLoading fullScreen message="Authenticating..." />;
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="h-8 w-8 mx-auto border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {

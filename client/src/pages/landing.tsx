@@ -89,7 +89,7 @@ export default function Landing() {
                 Login
               </Button>
               <Button
-                className="min-h-[44px]"
+                className="min-h-[44px] whitespace-normal"
                 onClick={() => setLocation("/register")}
                 data-testid="button-get-started"
               >
@@ -97,12 +97,12 @@ export default function Landing() {
               </Button>
             </div>
 
-            {/* Mobile Menu - Improved touch targets */}
+            {/* Mobile Menu - Improved touch targets with better visibility */}
             <div className="flex md:hidden items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="min-h-[44px]"
+                className="min-h-[44px] px-4"
                 onClick={() => setLocation("/login")}
                 data-testid="button-login-mobile"
               >
@@ -110,7 +110,7 @@ export default function Landing() {
               </Button>
               <Button
                 size="sm"
-                className="min-h-[44px] whitespace-nowrap"
+                className="min-h-[44px] px-4 bg-primary"
                 onClick={() => setLocation("/register")}
                 data-testid="button-signup-mobile"
               >
@@ -150,7 +150,7 @@ export default function Landing() {
                   <Button
                     size="lg"
                     onClick={() => setLocation("/register")}
-                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[52px] sm:min-h-[56px] w-full sm:w-auto font-semibold"
+                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[52px] sm:min-h-[56px] w-full sm:w-auto font-semibold whitespace-normal text-center"
                     data-testid="button-start-trial"
                   >
                     Start Free Trial
@@ -160,7 +160,7 @@ export default function Landing() {
                     size="lg"
                     variant="outline"
                     onClick={() => window.location.href = "/api/demo-login"}
-                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[52px] sm:min-h-[56px] w-full sm:w-auto font-semibold"
+                    className="text-base sm:text-lg px-6 sm:px-8 min-h-[52px] sm:min-h-[56px] w-full sm:w-auto font-semibold whitespace-normal text-center"
                     data-testid="button-view-demo"
                   >
                     View Live Demo

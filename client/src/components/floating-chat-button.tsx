@@ -181,11 +181,11 @@ export function FloatingChatButton() {
         </div>
       </button>
 
-      {/* Close button - appears on hover (separate from main button to avoid nesting) */}
+      {/* Close button - always visible on mobile, hover on desktop */}
       <button
         onClick={handleClose}
         data-testid="button-close-chat-bubble"
-        className="absolute -top-2 -right-2 w-6 h-6 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+        className="absolute -top-2 -right-2 w-6 h-6 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
         aria-label="Close chat bubble"
         title="Close chat bubble"
       >
