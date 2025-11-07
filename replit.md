@@ -12,6 +12,20 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive work
 - **Chat Bubble X Button**: Made close button always visible on mobile (`md:opacity-0 md:group-hover:opacity-100`) so users can close without hovering
 - **Mobile Auth Buttons**: Changed login to `variant="outline"` and signup to explicit `bg-primary` for better visibility and separation on landing page
 
+### CommOS Support Staff View (Fixed)
+- **Platform Role Detection**: Fixed CommOS to properly detect support staff using `platformRole` field instead of workspace `role`
+  - Support staff roles: `root`, `deputy_admin`, `deputy_assistant`, `sysop`, `support`
+  - Added `platformRole` to `AuthUser` type in useAuth hook
+- **Support Command Center**: Support staff now see dedicated platform-wide chatroom table showing:
+  - All open public rooms across all organizations
+  - Org-specific rooms with ownership badges
+  - System rooms (HelpDesk, platform channels)
+  - Live stats: Active Rooms, Total Participants, Unread Messages
+  - Search & filter tools with auto-refresh every 5 seconds
+  - Join/Export actions for each room
+  - **Create Room** button for creating new platform/org chatrooms
+- **Regular Users**: Continue to see org-specific chatroom view with max 10 active rooms
+
 ### HelpOS Enhancement (In Progress)
 - **Database Schema Updates** (Ready to push - needs confirmation):
   - Added `helpos_faqs` table for FAQ knowledge base (category, question, answer, tags, embedding, view/helpful counts)
