@@ -7,6 +7,72 @@ import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } fro
 import { queueManager } from './services/helpOsQueue';
 import type { ChatMessage } from '@shared/schema';
 
+/**
+ * Helper function to create system messages with all required ChatMessage fields
+ * @param conversationId - The conversation ID where the message will be sent
+ * @param message - The message content
+ * @param options - Optional overrides for specific fields
+ */
+function createSystemMessage(
+  conversationId: string,
+  message: string,
+  options?: {
+    senderId?: string | null;
+    senderName?: string;
+    recipientId?: string | null;
+    isPrivateMessage?: boolean;
+    visibleToStaffOnly?: boolean;
+  }
+): ChatMessage {
+  return {
+    id: Date.now().toString(),
+    conversationId,
+    senderId: options?.senderId ?? null,
+    senderName: options?.senderName ?? 'System',
+    message,
+    senderType: 'system',
+    messageType: 'text',
+    isSystemMessage: true,
+    isPrivateMessage: options?.isPrivateMessage ?? false,
+    recipientId: options?.recipientId ?? null,
+    
+    // Encryption fields
+    isEncrypted: null,
+    encryptionIv: null,
+    
+    // Threading fields
+    parentMessageId: null,
+    threadId: null,
+    replyCount: null,
+    
+    // Attachment fields
+    attachmentUrl: null,
+    attachmentName: null,
+    attachmentType: null,
+    attachmentSize: null,
+    attachmentThumbnail: null,
+    
+    // Rich text fields
+    isFormatted: null,
+    formattedContent: null,
+    
+    // Mentions
+    mentions: [],
+    
+    // Visibility
+    visibleToStaffOnly: options?.visibleToStaffOnly ?? null,
+    
+    // Status fields
+    isRead: false,
+    readAt: null,
+    isEdited: null,
+    editedAt: null,
+    
+    // Timestamps
+    createdAt: new Date(),
+  };
+}
+
 interface WebSocketClient extends WebSocket {
   userId?: string;
   userName?: string;
@@ -1778,23 +1844,10 @@ export function setupWebSocket(server: Server) {
             ws.userStatus = payload.status;
 
             // Create system message for status change
-            const statusMessage: ChatMessage = {
-              id: Date.now().toString(),
-              conversationId: ws.conversationId,
-              senderId: null,
-              senderName: 'System',
-              message: `${ws.userName} is now ${payload.status === 'online' ? 'Available' : payload.status === 'away' ? 'Away' : 'Busy'}`,
-              senderType: 'system',
-              messageType: 'text',
-              isSystemMessage: true,
-              isPrivateMessage: false,
-              recipientId: null,
-              attachmentUrl: null,
-              attachmentName: null,
-              createdAt: new Date(),
-              isRead: false,
-              readAt: null,
-            };
+            const statusMessage = createSystemMessage(
+              ws.conversationId,
+              `${ws.userName} is now ${payload.status === 'online' ? 'Available' : payload.status === 'away' ? 'Away' : 'Busy'}`
+            );
 
             // Save status change message
             try {
@@ -1864,23 +1917,10 @@ export function setupWebSocket(server: Server) {
             // Only root can kick root
             if (targetRole === 'root' && kickerRole !== 'root') {
               // Send public error message visible to all in chat
-              const errorMessage: ChatMessage = {
-                id: Date.now().toString(),
-                conversationId: ws.conversationId,
-                senderId: null,
-                senderName: 'System',
-                message: `❌ DENIED: Cannot remove ${targetDisplayName}. Root administrators cannot be removed by non-root users.`,
-                senderType: 'system',
-                messageType: 'text',
-                isSystemMessage: true,
-                isPrivateMessage: false,
-                recipientId: null,
-                attachmentUrl: null,
-                attachmentName: null,
-                createdAt: new Date(),
-                isRead: false,
-                readAt: null,
-              };
+              const errorMessage = createSystemMessage(
+                ws.conversationId,
+                `❌ DENIED: Cannot remove ${targetDisplayName}. Root administrators cannot be removed by non-root users.`
+              );
               
               // Broadcast error to all clients
               const clients = conversationClients.get(ws.conversationId);
@@ -1923,23 +1963,10 @@ export function setupWebSocket(server: Server) {
             
             // Deputy admins can only kick non-staff users
             if (targetRole && ['deputy_admin', 'deputy_assistant', 'sysop'].includes(targetRole) && kickerRole === 'deputy_admin') {
-              const errorMessage: ChatMessage = {
-                id: Date.now().toString(),
-                conversationId: ws.conversationId,
-                senderId: null,
-                senderName: 'System',
-                message: `❌ DENIED: Cannot remove ${targetDisplayName}. Staff members cannot remove other staff members.`,
-                senderType: 'system',
-                messageType: 'text',
-                isSystemMessage: true,
-                isPrivateMessage: false,
-                recipientId: null,
-                attachmentUrl: null,
-                attachmentName: null,
-                createdAt: new Date(),
-                isRead: false,
-                readAt: null,
-              };
+              const errorMessage = createSystemMessage(
+                ws.conversationId,
+                `❌ DENIED: Cannot remove ${targetDisplayName}. Staff members cannot remove other staff members.`
+              );
               
               // Broadcast error to all clients
               const clients = conversationClients.get(ws.conversationId);
@@ -2033,23 +2060,10 @@ export function setupWebSocket(server: Server) {
 
             // Create kick message
             const reason = payload.reason || 'violation of chat rules';
-            const kickMessage: ChatMessage = {
-              id: Date.now().toString(),
-              conversationId: ws.conversationId,
-              senderId: null,
-              senderName: 'System',
-              message: `${targetUserName} has been removed from the chat (Reason: ${reason})`,
-              senderType: 'system',
-              messageType: 'text',
-              isSystemMessage: true,
-              isPrivateMessage: false,
-              recipientId: null,
-              attachmentUrl: null,
-              attachmentName: null,
-              createdAt: new Date(),
-              isRead: false,
-              readAt: null,
-            };
+            const kickMessage = createSystemMessage(
+              ws.conversationId,
+              `${targetUserName} has been removed from the chat (Reason: ${reason})`
+            );
 
             // Save kick message
             try {
@@ -2308,23 +2322,10 @@ export function setupWebSocket(server: Server) {
             // Create system announcement message
             const duration = payload.duration || 5;
             const reason = payload.reason || 'Chat violation';
-            const silenceMessage: ChatMessage = {
-              id: Date.now().toString(),
-              conversationId: ws.conversationId,
-              senderId: null,
-              senderName: 'System',
-              message: `🔇 ${targetUserName} has been silenced for ${duration} minutes by ${ws.userName}. Reason: ${reason}`,
-              senderType: 'system',
-              messageType: 'text',
-              isSystemMessage: true,
-              isPrivateMessage: false,
-              recipientId: null,
-              attachmentUrl: null,
-              attachmentName: null,
-              createdAt: new Date(),
-              isRead: false,
-              readAt: null,
-            };
+            const silenceMessage = createSystemMessage(
+              ws.conversationId,
+              `🔇 ${targetUserName} has been silenced for ${duration} minutes by ${ws.userName}. Reason: ${reason}`
+            );
 
             // Save and broadcast the silence message FIRST
             try {
@@ -2498,23 +2499,10 @@ export function setupWebSocket(server: Server) {
             }
 
             // Create system announcement message
-            const unmuteMessage: ChatMessage = {
-              id: Date.now().toString(),
-              conversationId: ws.conversationId,
-              senderId: null,
-              senderName: 'System',
-              message: `🔊 ${targetUserName} has been unmuted by ${ws.userName} and can now speak.`,
-              senderType: 'system',
-              messageType: 'text',
-              isSystemMessage: true,
-              isPrivateMessage: false,
-              recipientId: null,
-              attachmentUrl: null,
-              attachmentName: null,
-              createdAt: new Date(),
-              isRead: false,
-              readAt: null,
-            };
+            const unmuteMessage = createSystemMessage(
+              ws.conversationId,
+              `🔊 ${targetUserName} has been unmuted by ${ws.userName} and can now speak.`
+            );
 
             // Save and broadcast the unmute message FIRST
             try {
@@ -2939,23 +2927,10 @@ export function setupWebSocket(server: Server) {
             }
 
             // Create transfer announcement
-            const transferMessage: ChatMessage = {
-              id: Date.now().toString(),
-              conversationId: ws.conversationId,
-              senderId: null,
-              senderName: 'System',
-              message: `${ws.userName} has transferred the customer to the next available agent`,
-              senderType: 'system',
-              messageType: 'text',
-              isSystemMessage: true,
-              isPrivateMessage: false,
-              recipientId: null,
-              attachmentUrl: null,
-              attachmentName: null,
-              createdAt: new Date(),
-              isRead: false,
-              readAt: null,
-            };
+            const transferMessage = createSystemMessage(
+              ws.conversationId,
+              `${ws.userName} has transferred the customer to the next available agent`
+            );
 
             // Save and broadcast
             try {
