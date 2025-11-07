@@ -3,6 +3,16 @@
 ## Overview
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive workforce management platform for emergency services and other service-related industries. It aims to streamline operations and reduce administrative burden through features like time tracking, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform utilizes an "OS" design philosophy for extensibility and serves as a single source of truth for workforce management, aspiring to revolutionize the industry with a subscription and usage-based AI revenue model.
 
+## Recent Updates (November 7, 2025)
+- **ROOT Admin Dashboard Enhancement**: Redesigned Quick Access toolbar with 23+ comprehensive support and platform maintenance tools organized into 4 categories:
+  - **Support & Helpdesk** (4 tools): Support Tickets, Live Chat, Help Desk, Support Email
+  - **Platform Management** (6 tools): Users, Workspaces (with scroll anchors), Audit Logs, DB Admin, API Keys, Feature Flags
+  - **Operations & Monitoring** (5 tools): System Health, Error Logs, Performance, Webhooks, API Status
+  - **Core Features** (8 tools): Schedule, Time Clock, Invoices, Payroll, Hiring, Training, Analytics, All Features
+- **Database Fixes**: Added missing `billing_cycle_day` column to workspaces table and `starts_at` column to workspace_addons table
+- **Brand Consistency**: Applied Emergency Green (emerald) color standardization to ROOT admin dashboard (replaced all indigo colors)
+- **WebSocket Chat**: Database schema issues resolved to enable proper chat functionality
+
 ## User Preferences
 I prefer detailed explanations.
 Do not make changes to the folder `Z`.
