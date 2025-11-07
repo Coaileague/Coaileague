@@ -136,7 +136,7 @@ export const quickActionsRegistry: QuickAction[] = [
     icon: Ticket,
     color: 'text-emerald-400',
     category: 'support',
-    desktopPath: '/admin-command-center',
+    desktopPath: '/dashboard', // Consolidated admin dashboard
     requiresPlatformRoles: ['root', 'sysop', 'deputy_admin', 'deputy_assistant'],
     requiresAuth: true,
     testId: 'quick-tickets',

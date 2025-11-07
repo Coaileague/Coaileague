@@ -291,7 +291,9 @@ function AppContent() {
                 <Route path="/register">
                   <Redirect to="/dashboard" />
                 </Route>
-                <Route path="/dashboard" component={Dashboard} />
+                <Route path="/dashboard">
+                  {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
+                </Route>
                 <Route path="/schedule" component={SmartScheduleOS} />
                 <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
@@ -350,10 +352,18 @@ function AppContent() {
                 <Route path="/updates" component={Updates} />
                 <Route path="/help" component={Help} />
 
-                <Route path="/root-admin-portal" component={RootAdminDashboard} />
+                {/* Legacy routes - redirect to consolidated /dashboard */}
+                <Route path="/root-admin-portal">
+                  <Redirect to="/dashboard" />
+                </Route>
+                <Route path="/admin-command-center">
+                  <Redirect to="/dashboard" />
+                </Route>
+                <Route path="/admin/command">
+                  <Redirect to="/dashboard" />
+                </Route>
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
-                <Route path="/admin/command" component={AdminCommandCenter} />
                 <Route path="/admin/custom-forms" component={AdminCustomForms} />
                 <Route path="/owner/hireos/workflow-builder" component={HireOSWorkflowBuilder} />
                 <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
