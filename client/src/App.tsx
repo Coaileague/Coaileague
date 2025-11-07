@@ -399,7 +399,10 @@ function AppContent() {
                 <Route path="/owner/hireos/workflow-builder" component={HireOSWorkflowBuilder} />
                 <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
                 <Route path="/support/dashboard" component={SupportDashboard} />
-                <Route path="/platform/admin" component={PlatformAdmin} />
+                <Route path="/platform-admin" component={PlatformAdmin} />
+                <Route path="/platform/admin">
+                  <Redirect to="/platform-admin" />
+                </Route>
                 <Route path="/platform/users" component={PlatformUsers} />
                 <Route path="/company-reports" component={CompanyReports} />
                 <Route path="/platform/sales" component={SalesPortal} />
