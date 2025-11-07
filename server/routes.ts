@@ -18211,6 +18211,15 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         return res.status(400).json({ message: "Room name is required" });
       }
 
+      // Check room limit (max 10 active rooms per organization)
+      const existingRooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
+      const activeRooms = existingRooms.filter(r => r.status === 'active');
+      if (activeRooms.length >= 10) {
+        return res.status(400).json({ 
+          message: "Organization has reached maximum of 10 active rooms. Please close an existing room before creating a new one." 
+        });
+      }
+
       const room = await storage.completeOrganizationOnboarding(workspaceId, userId, {
         roomName: roomName.trim(),
         roomDescription: roomDescription?.trim(),

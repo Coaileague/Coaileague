@@ -63,13 +63,20 @@ AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, Payr
 - **Communication**: Utilizes an IRC-style WebSocket command/response architecture for real-time interactions, including server-side validation and permissions.
   - **Chat System Architecture**: Three distinct chat implementations serve different use cases:
     - **HelpDesk5** (`/helpdesk5`): Mobile-optimized support chat for organizations to get help from AutoForce™ support team
+      - Platform-owned channel belonging to WFMS Support workspace
+      - IRC-style chatroom (`main-chatroom-workforceos`)
     - **LiveChat** (`/live-chat`): Desktop support chat interface for organizations seeking assistance
+      - Same platform-owned HelpDesk channel as HelpDesk5
     - **CommOS™** (`/comm-os`): Organization chatrooms with role-based access:
-      - Regular users see their own workspace's chat rooms
-      - Support staff (platform_admin/support_staff) see polished table of ALL open chatrooms across all organizations
-      - Support staff automatically granted owner role when joining any org room
-      - System announcement broadcasts when support joins: "AutoForce™ Support Staff (email) has joined the room with admin access"
+      - **Regular users**: See rooms in their own workspace (max 10 active rooms per organization)
+      - **Organization leaders**: Can create/close/reopen rooms within 10-room limit
+      - **Support staff**: See polished table of ALL open chatrooms across all organizations
+        - Automatically granted owner role when joining any org room
+        - Can suspend/close rooms platform-wide
+        - System announcement broadcasts when support joins: "AutoForce™ Support Staff (email) has joined the room with admin access"
+      - **Auto-cleanup**: Inactive rooms (no activity for 1 week) automatically archived with audit logs
   - **WebSocket Protocol**: Fixed critical bug where protocol string `'wss:'` was causing invalid `wss:://` URLs; corrected to `'wss'` for proper `wss://` connections in all hooks
+  - **WFMS Support Workspace**: Platform-owned workspace (`wfms-support`) for root and support team; all HelpDesk channels and support staff-created channels are owned by this workspace
 - **Audit Logging**: Comprehensive audit trails provided by AuditOS™.
 - **Core Feature Areas**:
     - **Financials**: Client Management, Billing & Payroll (BillOS™, PayrollOS™), automated invoice generation, payment processing.

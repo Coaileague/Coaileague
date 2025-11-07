@@ -225,74 +225,87 @@ export function SupportChatroomList() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Status</TableHead>
                     <TableHead>Room Name</TableHead>
-                    <TableHead>Organization</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-center">Participants</TableHead>
-                    <TableHead className="text-center">Unread</TableHead>
+                    <TableHead>Ownership</TableHead>
+                    <TableHead className="text-center">Users</TableHead>
                     <TableHead>Last Activity</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedChatrooms.map((room) => (
-                    <TableRow 
-                      key={room.id} 
-                      className="hover-elevate cursor-pointer"
-                      onClick={() => handleJoinRoom(room.id)}
-                      data-testid={`row-chatroom-${room.id}`}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-emerald-500" />
-                          {room.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {room.workspaceName}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {room.conversationType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                          <span>{room.participantCount}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {room.unreadCount > 0 ? (
-                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
-                            {room.unreadCount}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(room.lastMessageAt || room.createdAt)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleJoinRoom(room.id);
-                          }}
-                          data-testid={`button-join-${room.id}`}
-                        >
-                          Join
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {sortedChatrooms.map((room) => {
+                    const isOpen = room.status === 'active' || room.status === 'open';
+                    const isPlatformOwned = room.workspaceId === 'wfms-support';
+                    
+                    return (
+                      <TableRow 
+                        key={room.id} 
+                        className="hover-elevate cursor-pointer"
+                        onClick={() => handleJoinRoom(room.id)}
+                        data-testid={`row-chatroom-${room.id}`}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className={`h-2.5 w-2.5 rounded-full ${
+                                isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                              }`}
+                              title={isOpen ? 'Open' : 'Closed'}
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {isOpen ? 'Open' : 'Closed'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-emerald-500" />
+                            {room.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {isPlatformOwned ? (
+                            <Badge variant="outline" className="border-emerald-500/50 text-emerald-400">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Platform
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {room.workspaceName}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="font-medium">{room.participantCount}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span className="text-sm">{formatTime(room.lastMessageAt || room.createdAt)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleJoinRoom(room.id);
+                            }}
+                            data-testid={`button-join-${room.id}`}
+                          >
+                            Join
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
