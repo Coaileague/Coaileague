@@ -56,7 +56,7 @@ export function useShiftWebSocket(userId: string | undefined, workspaceId: strin
     }
 
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
       const wsHost = window.location.host;
       const wsUrl = `${protocol}://${wsHost}/ws/chat`; // Using same path as chat for now
       const ws = new WebSocket(wsUrl);

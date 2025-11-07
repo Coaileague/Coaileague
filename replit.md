@@ -13,7 +13,11 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive work
 - **Database Fixes**: Added missing `billing_cycle_day`, `starts_at`, `billing_preferences`, `monthly_employee_overages`, and `last_overage_check_at` columns to workspaces/workspace_addons tables
 - **Brand Consistency**: Complete Emergency Green (emerald) color standardization across ROOT admin dashboard - replaced ALL blue/cyan/indigo/purple/violet colors (verified 0 matches)
 - **Toast/Notification Styling**: Updated all toast notifications to use dark slate backgrounds (bg-slate-900) instead of white, matching the platform's dark theme. Changed info variant from blue to teal for Emergency Green brand consistency.
-- **WebSocket Chat Fix**: Fixed critical WebSocket connection bug - corrected double colon typo in protocol string (`wss:://` → `wss://`) by changing protocol variable from `'wss:'` to `'wss'` in use-chatroom-websocket.ts. Chat WebSocket now connects properly.
+- **WebSocket Chat Fix**: Fixed critical WebSocket connection bug - corrected double colon typo in protocol string (`wss:://` → `wss://`) by changing protocol variable from `'wss:'` to `'wss'` (and `'ws:'` to `'ws'`) in ALL three WebSocket hooks:
+  - `use-chatroom-websocket.ts` (main chat)
+  - `use-notification-websocket.ts` (notifications)
+  - `use-shift-websocket.ts` (shift updates)
+  - Chat WebSocket now connects properly to `wss://{host}/ws/chat`
 - **Code Quality**: Fixed React duplicate key warnings by using unique testid values instead of links
 
 ## User Preferences
