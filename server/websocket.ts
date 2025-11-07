@@ -159,6 +159,13 @@ interface GiveVoicePayload {
   commandId?: string; // IRC-style command tracking
 }
 
+interface BanUserPayload {
+  type: 'ban_user';
+  targetUserId: string;
+  reason?: string;
+  commandId?: string; // IRC-style command tracking
+}
+
 interface JoinShiftUpdatesPayload {
   type: 'join_shift_updates';
   userId: string;
@@ -183,7 +190,47 @@ interface NotificationUpdatePayload {
   unreadCount?: number;
 }
 
-type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload;
+interface CallInitiatedPayload {
+  type: 'call_initiated';
+  roomId: string;
+  callerId: string;
+  callerName: string;
+}
+
+interface CallAcceptedPayload {
+  type: 'call_accepted';
+  roomId: string;
+}
+
+interface CallRejectedPayload {
+  type: 'call_rejected';
+  roomId: string;
+}
+
+interface CallEndedPayload {
+  type: 'call_ended';
+  roomId: string;
+}
+
+interface WebRTCOfferPayload {
+  type: 'webrtc_offer';
+  roomId: string;
+  offer: RTCSessionDescriptionInit;
+}
+
+interface WebRTCAnswerPayload {
+  type: 'webrtc_answer';
+  roomId: string;
+  answer: RTCSessionDescriptionInit;
+}
+
+interface WebRTCIceCandidatePayload {
+  type: 'webrtc_ice_candidate';
+  roomId: string;
+  candidate: RTCIceCandidateInit;
+}
+
+type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | BanUserPayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload | CallInitiatedPayload | CallAcceptedPayload | CallRejectedPayload | CallEndedPayload | WebRTCOfferPayload | WebRTCAnswerPayload | WebRTCIceCandidatePayload;
 
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to WorkforceOS HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
@@ -206,6 +253,45 @@ export function getLiveConnectionStats() {
   };
 }
 
+// Track active connections by conversation ID (module-level for export access)
+const conversationClients = new Map<string, Set<WebSocketClient>>();
+
+// Export function to get live room data for API
+export function getLiveRoomConnections() {
+  const roomData = new Map<string, {
+    conversationId: string;
+    onlineUsers: Array<{
+      id: string;
+      name: string;
+      status: 'online' | 'away' | 'busy';
+      isStaff: boolean;
+      workspaceId?: string;
+    }>;
+  }>();
+  
+  conversationClients.forEach((clients, conversationId) => {
+    const onlineUsers: Array<any> = [];
+    clients.forEach((client) => {
+      if (client.userId && client.userName) {
+        onlineUsers.push({
+          id: client.userId,
+          name: client.userName,
+          status: client.userStatus || 'online',
+          isStaff: client.userType === 'staff',
+          workspaceId: client.workspaceId,
+        });
+      }
+    });
+    
+    roomData.set(conversationId, {
+      conversationId,
+      onlineUsers,
+    });
+  });
+  
+  return roomData;
+}
+
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
     server,
@@ -213,9 +299,6 @@ export function setupWebSocket(server: Server) {
     clientTracking: true,
     maxPayload: 10 * 1024 * 1024, // 10MB max payload
   });
-
-  // Track active connections by conversation ID
-  const conversationClients = new Map<string, Set<WebSocketClient>>();
   
   // Track connections subscribed to shift updates by workspace ID
   const shiftUpdateClients = new Map<string, Set<WebSocketClient>>();
@@ -1764,10 +1847,10 @@ export function setupWebSocket(server: Server) {
                   if (botResult.shouldEscalate) {
                     await escalateBotTicket(ws.conversationId, 'Bot unable to resolve - escalating to human support');
                     
-                    // Get ticket details for notification
-                    const ticket = await storage.getSupportTicketById(ws.conversationId);
-                    const ticketTitle = ticket?.subject || 'Support Request';
-                    const userQuery = ticket?.description || conversation?.userQuery || 'No details available';
+                    // Get conversation details for notification
+                    const conversation = await storage.getChatConversation(ws.conversationId);
+                    const ticketTitle = conversation?.title || 'Support Request';
+                    const userQuery = 'Bot escalation - requires human support';
                     
                     // NOTIFICATION SYSTEM: Notify all support staff via database notifications
                     // This ensures agents get notified even if they're not in the HelpDesk chat
@@ -2602,10 +2685,10 @@ export function setupWebSocket(server: Server) {
             // SECURITY: Verify user belongs to the workspace they're trying to subscribe to
             try {
               const userWorkspace = await storage.getWorkspaceByOwnerId(payload.userId);
-              const workspaceMember = await storage.getWorkspaceMemberByUserId(payload.userId, payload.workspaceId);
+              const workspaceMember = await storage.getEmployeeByUserId(payload.userId);
               
-              // User must either own the workspace or be a member
-              const hasAccess = (userWorkspace && userWorkspace.id === payload.workspaceId) || workspaceMember;
+              // User must either own the workspace or be a member of the workspace
+              const hasAccess = (userWorkspace && userWorkspace.id === payload.workspaceId) || (workspaceMember && workspaceMember.workspaceId === payload.workspaceId);
               
               if (!hasAccess) {
                 ws.send(JSON.stringify({
@@ -2656,10 +2739,10 @@ export function setupWebSocket(server: Server) {
             // SECURITY: Verify user belongs to the workspace they're trying to subscribe to
             try {
               const userWorkspace = await storage.getWorkspaceByOwnerId(payload.userId);
-              const workspaceMember = await storage.getWorkspaceMemberByUserId(payload.userId, payload.workspaceId);
+              const workspaceMember = await storage.getEmployeeByUserId(payload.userId);
               
-              // User must either own the workspace or be a member
-              const hasAccess = (userWorkspace && userWorkspace.id === payload.workspaceId) || workspaceMember;
+              // User must either own the workspace or be a member of the workspace
+              const hasAccess = (userWorkspace && userWorkspace.id === payload.workspaceId) || (workspaceMember && workspaceMember.workspaceId === payload.workspaceId);
               
               if (!hasAccess) {
                 ws.send(JSON.stringify({
@@ -2708,7 +2791,7 @@ export function setupWebSocket(server: Server) {
             }
 
             // Check if user has staff permissions
-            const staffInfo = await storage.getUserById(ws.userId);
+            const staffInfo = await storage.getUserDisplayInfo(ws.userId);
             const isStaff = staffInfo?.platformRole && ['root', 'admin', 'deputy', 'assistant', 'sysop'].includes(staffInfo.platformRole);
             
             if (!isStaff) {
@@ -2720,7 +2803,7 @@ export function setupWebSocket(server: Server) {
             }
 
             // Get target user info
-            const targetUser = await storage.getUserById(payload.targetUserId);
+            const targetUser = await storage.getUserDisplayInfo(payload.targetUserId);
             const targetUserName = targetUser ? `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Unknown' : 'Unknown';
             
             // Get staff display name
@@ -2793,11 +2876,29 @@ export function setupWebSocket(server: Server) {
 
             // Broadcast ban announcement to room
             const reason = payload.reason ? ` (Reason: ${payload.reason})` : '';
-            broadcastToConversation(ws.conversationId, {
-              type: 'system_message',
+            const banMessage = await storage.createChatMessage({
+              conversationId: ws.conversationId,
+              senderId: null,
+              senderName: 'System',
+              senderType: 'system',
               message: `🚫 ${targetUserName} has been permanently banned by ${staffDisplayName}${reason}`,
-              timestamp: new Date().toISOString(),
-            }, ws.userId);
+              messageType: 'text',
+              isSystemMessage: true,
+            });
+
+            // Broadcast to all clients in the conversation
+            const conversationClients_ = conversationClients.get(ws.conversationId);
+            if (conversationClients_) {
+              const banPayload = JSON.stringify({
+                type: 'new_message',
+                message: banMessage,
+              });
+              conversationClients_.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN && client.userId !== ws.userId) {
+                  client.send(banPayload);
+                }
+              });
+            }
 
             // Send success acknowledgment
             if (ws.readyState === WebSocket.OPEN) {
@@ -2958,6 +3059,222 @@ export function setupWebSocket(server: Server) {
             }
 
             console.log(`🔄 ${ws.userName} transferred user ${payload.targetUserId}`);
+            break;
+          }
+
+          case 'call_initiated': {
+            // WebRTC voice/video call initiated
+            if (!ws.conversationId || !ws.userId) return;
+
+            // SECURITY: Verify caller is actually in the conversation's client set
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients || !clients.has(ws)) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You are not a member of this conversation',
+              }));
+              return;
+            }
+
+            // SECURITY: Verify roomId matches conversation
+            if (ws.conversationId !== payload.roomId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Cannot initiate call in a different room',
+              }));
+              return;
+            }
+
+            // Broadcast to all other clients in the room
+            clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'call_initiated',
+                  callerId: payload.callerId,
+                  callerName: payload.callerName,
+                  roomId: payload.roomId,
+                }));
+              }
+            });
+
+            console.log(`📞 Call initiated by ${payload.callerName} in room ${payload.roomId}`);
+            break;
+          }
+
+          case 'call_accepted': {
+            // WebRTC call accepted
+            if (!ws.conversationId) return;
+
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients) return;
+
+            // Broadcast to all clients in the room
+            clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'call_accepted',
+                  roomId: payload.roomId,
+                }));
+              }
+            });
+
+            console.log(`✅ Call accepted in room ${payload.roomId}`);
+            break;
+          }
+
+          case 'call_rejected': {
+            // WebRTC call rejected
+            if (!ws.conversationId) return;
+
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients) return;
+
+            // Broadcast to all clients in the room
+            clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'call_rejected',
+                  roomId: payload.roomId,
+                }));
+              }
+            });
+
+            console.log(`❌ Call rejected in room ${payload.roomId}`);
+            break;
+          }
+
+          case 'call_ended': {
+            // WebRTC call ended
+            if (!ws.conversationId) return;
+
+            const clients = conversationClients.get(ws.conversationId);
+            if (!clients) return;
+
+            // Broadcast to all clients in the room
+            clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'call_ended',
+                  roomId: payload.roomId,
+                }));
+              }
+            });
+
+            console.log(`📴 Call ended in room ${payload.roomId}`);
+            break;
+          }
+
+          case 'webrtc_offer': {
+            // WebRTC SDP offer
+            if (!ws.conversationId || !ws.userId) return;
+
+            // SECURITY: Verify caller is actually in the conversation's client set
+            const offerClients = conversationClients.get(ws.conversationId);
+            if (!offerClients || !offerClients.has(ws)) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You are not a member of this conversation',
+              }));
+              return;
+            }
+
+            // SECURITY: Verify roomId matches conversation
+            if (ws.conversationId !== payload.roomId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Cannot send WebRTC offer to a different room',
+              }));
+              return;
+            }
+
+            // Broadcast offer to all other clients
+            offerClients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'webrtc_offer',
+                  roomId: payload.roomId,
+                  offer: payload.offer,
+                }));
+              }
+            });
+
+            console.log(`📡 WebRTC offer sent for room ${payload.roomId}`);
+            break;
+          }
+
+          case 'webrtc_answer': {
+            // WebRTC SDP answer
+            if (!ws.conversationId || !ws.userId) return;
+
+            // SECURITY: Verify caller is actually in the conversation's client set
+            const answerClients = conversationClients.get(ws.conversationId);
+            if (!answerClients || !answerClients.has(ws)) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You are not a member of this conversation',
+              }));
+              return;
+            }
+
+            // SECURITY: Verify roomId matches conversation
+            if (ws.conversationId !== payload.roomId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Cannot send WebRTC answer to a different room',
+              }));
+              return;
+            }
+
+            // Broadcast answer to all other clients
+            answerClients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'webrtc_answer',
+                  roomId: payload.roomId,
+                  answer: payload.answer,
+                }));
+              }
+            });
+
+            console.log(`📡 WebRTC answer sent for room ${payload.roomId}`);
+            break;
+          }
+
+          case 'webrtc_ice_candidate': {
+            // WebRTC ICE candidate
+            if (!ws.conversationId || !ws.userId) return;
+
+            // SECURITY: Verify caller is actually in the conversation's client set
+            const iceClients = conversationClients.get(ws.conversationId);
+            if (!iceClients || !iceClients.has(ws)) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'You are not a member of this conversation',
+              }));
+              return;
+            }
+
+            // SECURITY: Verify roomId matches conversation
+            if (ws.conversationId !== payload.roomId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Cannot send ICE candidate to a different room',
+              }));
+              return;
+            }
+
+            // Broadcast ICE candidate to all other clients
+            iceClients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'webrtc_ice_candidate',
+                  roomId: payload.roomId,
+                  candidate: payload.candidate,
+                }));
+              }
+            });
+
+            console.log(`🧊 WebRTC ICE candidate sent for room ${payload.roomId}`);
             break;
           }
         }
