@@ -87,18 +87,28 @@ export function SupportChatroomList() {
     <div className="container max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-            <Shield className="h-6 w-6 text-emerald-500" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <Shield className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                Support Command Center
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Live chatroom monitoring across all organizations
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-              Support Command Center
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Live chatroom monitoring across all organizations
-            </p>
-          </div>
+          <Button
+            onClick={() => setLocation('/comm-os/create')}
+            className="bg-emerald-600 hover:bg-emerald-700"
+            data-testid="button-create-room"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Create Room
+          </Button>
         </div>
       </div>
 

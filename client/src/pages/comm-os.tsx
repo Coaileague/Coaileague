@@ -65,7 +65,8 @@ export default function CommOS() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<"pdf" | "html">("pdf");
 
-  const isSupportStaff = user?.role === 'platform_admin' || user?.role === 'support_staff';
+  // Check if user has any support/admin platform role
+  const isSupportStaff = user?.platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(user.platformRole);
 
   // Fetch chat rooms
   const { data: rooms, isLoading } = useQuery<OrganizationChatRoom[]>({
