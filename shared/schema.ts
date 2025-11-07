@@ -3619,16 +3619,62 @@ export const chatMessages = pgTable("chat_messages", {
   isPrivateMessage: boolean("is_private_message").default(false), // True for private/whispered messages
   recipientId: varchar("recipient_id").references(() => users.id, { onDelete: 'set null' }), // For direct messages to specific user
 
-  // File attachments
+  // Threading support (Slack/Discord-style)
+  parentMessageId: varchar("parent_message_id"), // References parent message if this is a reply
+  threadId: varchar("thread_id"), // Groups messages in same thread
+  replyCount: integer("reply_count").default(0), // Number of replies to this message
+
+  // File attachments (enhanced)
   attachmentUrl: varchar("attachment_url"),
   attachmentName: varchar("attachment_name"),
+  attachmentType: varchar("attachment_type"), // 'image', 'pdf', 'document', 'video'
+  attachmentSize: integer("attachment_size"), // File size in bytes
+  attachmentThumbnail: varchar("attachment_thumbnail"), // Thumbnail URL for images/videos
+
+  // Rich text formatting
+  isFormatted: boolean("is_formatted").default(false), // True if contains markdown/HTML
+  formattedContent: text("formatted_content"), // Rendered HTML content
+
+  // Mentions
+  mentions: text("mentions").array().default(sql`ARRAY[]::text[]`), // Array of user IDs mentioned in message
+  
+  // Staff-only visibility (for internal announcements)
+  visibleToStaffOnly: boolean("visible_to_staff_only").default(false),
 
   // Status
   isRead: boolean("is_read").default(false),
   readAt: timestamp("read_at"),
+  isEdited: boolean("is_edited").default(false),
+  editedAt: timestamp("edited_at"),
 
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  conversationIdx: index("chat_messages_conversation_idx").on(table.conversationId),
+  threadIdx: index("chat_messages_thread_idx").on(table.threadId),
+  parentMessageFk: index("chat_messages_parent_idx").on(table.parentMessageId), // For thread lookups
+}));
+
+// Message Reactions - Slack/Discord-style emoji reactions
+export const messageReactions = pgTable("message_reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull().references(() => chatMessages.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  emoji: varchar("emoji", { length: 50 }).notNull(), // Unicode emoji or custom emoji code
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  messageUserIdx: index("message_reactions_message_user_idx").on(table.messageId, table.userId),
+  uniqueReaction: uniqueIndex("message_reactions_unique").on(table.messageId, table.userId, table.emoji),
+}));
+
+// Message Read Receipts - Track who has read which messages
+export const messageReadReceipts = pgTable("message_read_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull().references(() => chatMessages.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  readAt: timestamp("read_at").defaultNow(),
+}, (table) => ({
+  messageUserIdx: uniqueIndex("message_read_receipts_unique").on(table.messageId, table.userId),
+}));
 
 export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
   id: true,
@@ -3641,10 +3687,24 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+export const insertMessageReactionSchema = createInsertSchema(messageReactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMessageReadReceiptSchema = createInsertSchema(messageReadReceipts).omit({
+  id: true,
+  readAt: true,
+});
+
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertMessageReaction = z.infer<typeof insertMessageReactionSchema>;
+export type MessageReaction = typeof messageReactions.$inferSelect;
+export type InsertMessageReadReceipt = z.infer<typeof insertMessageReadReceiptSchema>;
+export type MessageReadReceipt = typeof messageReadReceipts.$inferSelect;
 
 // ============================================================================
 // DM AUDIT & INVESTIGATION SYSTEM
