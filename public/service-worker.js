@@ -3,10 +3,10 @@
  * Provides offline support and caching for PWA functionality
  */
 
-const CACHE_NAME = 'autoforce-v1';
-const RUNTIME_CACHE = 'autoforce-runtime-v1';
+const CACHE_NAME = 'autoforce-v1.0.1';
+const RUNTIME_CACHE = 'autoforce-runtime-v1.0.1';
 
-// Assets to cache on install
+// Assets to precache on install (app shell)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -17,27 +17,43 @@ const STATIC_ASSETS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
+  console.log('[AutoForce™ SW] Installing service worker...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+      .then(cache => {
+        console.log('[AutoForce™ SW] Caching app shell');
+        return cache.addAll(STATIC_ASSETS);
+      })
+      .then(() => {
+        console.log('[AutoForce™ SW] Installed successfully');
+        return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('[AutoForce™ SW] Install failed:', error);
+      })
   );
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('[AutoForce™ SW] Activating service worker...');
   event.waitUntil(
     caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames
-          .filter(name => name !== CACHE_NAME && name !== RUNTIME_CACHE)
-          .map(name => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+      const deletePromises = cacheNames
+        .filter(name => name !== CACHE_NAME && name !== RUNTIME_CACHE)
+        .map(name => {
+          console.log('[AutoForce™ SW] Deleting old cache:', name);
+          return caches.delete(name);
+        });
+      return Promise.all(deletePromises);
+    }).then(() => {
+      console.log('[AutoForce™ SW] Activated, claiming clients');
+      return self.clients.claim();
+    })
   );
 });
 
-// Fetch event - network first, fall back to cache
+// Fetch event - caching strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -45,46 +61,91 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip chrome extension requests
-  if (url.protocol === 'chrome-extension:') return;
+  // Skip cross-origin requests
+  if (url.origin !== location.origin) return;
 
-  // API requests - network only (don't cache)
+  // Skip chrome extension and special protocols
+  if (url.protocol === 'chrome-extension:' || url.protocol === 'ws:' || url.protocol === 'wss:') {
+    return;
+  }
+
+  // API requests - network first, no caching
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(request));
+    event.respondWith(
+      fetch(request).catch(() => {
+        return new Response(JSON.stringify({ error: 'Offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
     return;
   }
 
-  // WebSocket connections - network only
-  if (url.protocol === 'ws:' || url.protocol === 'wss:') {
-    return;
-  }
-
-  // For all other requests: Network first, fallback to cache
-  event.respondWith(
-    caches.open(RUNTIME_CACHE).then(cache => {
-      return fetch(request)
-        .then(response => {
-          // Cache successful responses
+  // App shell (HTML, JS, CSS) - cache first, update in background
+  if (
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname === '/'
+  ) {
+    event.respondWith(
+      caches.match(request).then(cached => {
+        const fetchPromise = fetch(request).then(response => {
           if (response.ok) {
-            cache.put(request, response.clone());
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, response.clone());
+            });
           }
           return response;
-        })
-        .catch(() => {
-          // Network failed, try cache
-          return caches.match(request).then(cached => {
-            if (cached) {
-              return cached;
-            }
-            // If not in cache and offline, return offline page
-            if (request.destination === 'document') {
-              return caches.match('/index.html');
-            }
-            // For other resources, just fail gracefully
-            return new Response('Offline', { status: 503 });
-          });
         });
-    })
+        return cached || fetchPromise;
+      }).catch(() => {
+        // Fallback to index.html for navigation requests
+        if (request.destination === 'document') {
+          return caches.match('/index.html');
+        }
+        return new Response('Offline', { status: 503 });
+      })
+    );
+    return;
+  }
+
+  // Static assets (images, fonts, icons) - cache first
+  if (
+    url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp|ico|woff|woff2|ttf|eot)$/)
+  ) {
+    event.respondWith(
+      caches.match(request).then(cached => {
+        return cached || fetch(request).then(response => {
+          if (response.ok) {
+            caches.open(RUNTIME_CACHE).then(cache => {
+              cache.put(request, response.clone());
+            });
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // All other requests - network first, fallback to cache
+  event.respondWith(
+    fetch(request)
+      .then(response => {
+        if (response.ok) {
+          caches.open(RUNTIME_CACHE).then(cache => {
+            cache.put(request, response.clone());
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        return caches.match(request).then(cached => {
+          return cached || new Response('Offline', { status: 503 });
+        });
+      })
   );
 });
 

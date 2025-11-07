@@ -19,6 +19,13 @@ The platform utilizes a hybrid pricing model for AI-powered OS modules, combinin
 ### UI/UX Decisions
 The platform features a professional aesthetic with Deep Charcoal, Platinum neutrals, and Emergency Green accents. It prioritizes a mobile-first approach with responsive layouts and accessible touch targets. The branding uses an "AF" lightning bolt logo within a circular green gradient badge. All user-facing pages consistently use emerald/green/teal colors for brand identity, with a uniform dark gradient background and emerald accents.
 
+**Mobile-First PWA Transformation (November 2025)**:
+- **Design Tokens**: Added comprehensive mobile-first CSS variables for breakpoints (sm/md/lg/xl), touch targets (48px minimum), mobile spacing scales, typography scales, navigation heights, safe areas (iOS notch), and z-index layering
+- **PWA Infrastructure**: Complete Progressive Web App setup with manifest.json (AutoForce™ branding, Emergency Green theme), service worker for offline support and caching, and installability support
+- **Responsive Context**: Created ResponsiveAppFrame provider and useMobile() hook for device detection (mobile/tablet/desktop), touch capabilities, platform detection (iOS/Android), orientation tracking, and PWA install prompts
+- **Native App Utilities**: CSS utility classes for mobile-touch-target (48px min), mobile-safe-area (iOS notch padding), mobile-bottom-nav, mobile-header, pull-to-refresh animations, swipeable gestures, smooth scrolling, active states, and mobile sheets
+- **Next Steps**: Adaptive navigation (sidebar → bottom nav on mobile), mobile layout primitives, touch gestures, performance optimization
+
 ### Technical Implementations
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for validation.
