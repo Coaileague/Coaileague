@@ -19,6 +19,13 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive work
   - `use-shift-websocket.ts` (shift updates)
   - Chat WebSocket now connects properly to `wss://{host}/ws/chat`
 - **Code Quality**: Fixed React duplicate key warnings by using unique testid values instead of links
+- **User Display Name Formatting**: Implemented user-friendly display name system for all chatrooms:
+  - **Support Staff**: Show "Title FirstName" format (e.g., "Admin Brigido", "Deputy Sarah", "SysOp Mike", "Assistant Emily")
+    - Titles derived from platform roles: root→Admin, deputy_admin→Deputy, deputy_assistant→Assistant, sysop→SysOp
+  - **Regular Users**: Show "FirstName LastName" format (e.g., "Jennifer Lopez", "Test User")
+  - Applied across user lists, join/leave messages, and chat interface
+  - Server-side formatting via `formatUserDisplayNameForChat()` utility in `server/utils/formatUserDisplayName.ts`
+  - Fixed boolean conversion bug in HelpDesk5.tsx (`isStaff` and `isAuthenticated` now explicitly Boolean)
 
 ## User Preferences
 I prefer detailed explanations.
