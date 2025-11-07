@@ -16,7 +16,8 @@ import {
   AlertTriangle, CheckCircle, TrendingUp, Shield, RefreshCw, Settings,
   Zap, Bell, Clock, UserCheck, Ticket, MessageSquare, BarChart3, Search, ExternalLink,
   MapPin, Calendar, Mail, Phone, User, Save, Receipt, UserPlus, GraduationCap, Grid3x3,
-  Lock, Unlock, Ban, XCircle, ShieldAlert, UserCog
+  Lock, Unlock, Ban, XCircle, ShieldAlert, UserCog, FileText, AlertCircle, Key,
+  Flag, Code, Activity as ActivityIcon, HelpCircle, Gauge, Webhook, ScrollText
 } from "lucide-react";
 import { AutoForceLogo } from "@/components/autoforce-logo";
 import { TimeGreeting } from "@/components/time-greeting";
@@ -235,7 +236,7 @@ export default function RootAdminDashboard() {
     switch (type) {
       case "login": return <UserCheck className="h-4 w-4 text-emerald-500" />;
       case "invoice": return <DollarSign className="h-4 w-4 text-amber-500" />;
-      case "subscription": return <Users className="h-4 w-4 text-blue-500" />;
+      case "subscription": return <Users className="h-4 w-4 text-emerald-500" />;
       case "error": return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default: return <Activity className="h-4 w-4 text-slate-500" />;
     }
@@ -271,12 +272,12 @@ export default function RootAdminDashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900">
       {/* Animated background gradient orbs - Hidden on mobile for performance */}
       <div className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-teal-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       {/* Main Content - More compact on mobile */}
@@ -284,14 +285,14 @@ export default function RootAdminDashboard() {
         {/* Branded Header - Compact on mobile, full on desktop */}
         <div className="sm:mb-6">
           {/* Mobile Header - Very compact */}
-          <div className="sm:hidden relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-3 border border-indigo-500/20">
+          <div className="sm:hidden relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-3 border border-emerald-500/20">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-bold text-white truncate">
                   Platform Command
                 </h1>
                 {personalData && (
-                  <p className="text-xs text-indigo-300 truncate">
+                  <p className="text-xs text-emerald-300 truncate">
                     {personalData.userName} · {personalData.assignedTickets + personalData.newSupportTickets} tasks
                   </p>
                 )}
@@ -300,7 +301,7 @@ export default function RootAdminDashboard() {
                 variant="outline"
                 size="icon"
                 onClick={() => setRefreshKey(prev => prev + 1)}
-                className="bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20 text-white shrink-0"
+                className="bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-white shrink-0"
                 data-testid="button-refresh"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -309,7 +310,7 @@ export default function RootAdminDashboard() {
           </div>
 
           {/* Desktop Header - Reduced Padding */}
-          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-3 sm:p-4 border border-indigo-500/20 backdrop-blur-xl bg-white/5">
+          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-3 sm:p-4 border border-emerald-500/20 backdrop-blur-xl bg-white/5">
             {/* Logo and Title */}
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -317,7 +318,7 @@ export default function RootAdminDashboard() {
                   <AutoForceLogo size="lg" variant="icon" lightMode={true} />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent">
                     Platform Command Center
                   </h1>
                   <p className="text-slate-400 text-xs sm:text-sm">
@@ -326,7 +327,7 @@ export default function RootAdminDashboard() {
                   <TimeGreeting 
                     userName={personalData?.userName}
                     role=""
-                    className="text-indigo-300 text-xs mt-0.5"
+                    className="text-emerald-300 text-xs mt-0.5"
                   />
                 </div>
               </div>
@@ -379,7 +380,7 @@ export default function RootAdminDashboard() {
                   variant="outline"
                   size="icon"
                   onClick={() => setRefreshKey(prev => prev + 1)}
-                  className="bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20 text-white"
+                  className="bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-white"
                   data-testid="button-refresh"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -389,43 +390,143 @@ export default function RootAdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Access Menu - Mobile & Desktop */}
-        <Card className="border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-indigo-950/30 to-slate-900/50 backdrop-blur-sm">
+        {/* Quick Access Menu - Organized by Categories */}
+        <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-emerald-950/30 to-slate-900/50 backdrop-blur-sm">
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-400 shrink-0" />
+              <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 shrink-0" />
               <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
             </div>
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
-              {[
-                { icon: Calendar, label: "Schedule", link: "/schedule", color: "text-blue-500", testid: "quick-schedule" },
-                { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-emerald-500", testid: "quick-timeclock" },
-                { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-purple-500", testid: "quick-invoices" },
-                { icon: DollarSign, label: "Payroll", link: "/payroll-dashboard", color: "text-green-500", testid: "quick-payroll" },
-                { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-orange-500", testid: "quick-hiring" },
-                { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-indigo-500", testid: "quick-training" },
-                { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-pink-500", testid: "quick-analytics" },
-                { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-gray-400", testid: "quick-all" }
-              ].map((feature) => (
-                <Button
-                  key={feature.link}
-                  variant="outline"
-                  size="sm"
-                  className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-indigo-500/20 hover:border-indigo-400/40"
-                  asChild
-                >
-                  <Link href={feature.link} data-testid={feature.testid}>
-                    <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
-                    <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
-                  </Link>
-                </Button>
-              ))}
+
+            {/* Support & Helpdesk Tools */}
+            <div className="mb-4">
+              <h3 className="text-[10px] sm:text-xs font-semibold text-emerald-400/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                {[
+                  { icon: Ticket, label: "Support Tickets", link: "/admin-command-center", color: "text-emerald-400", testid: "quick-tickets" },
+                  { icon: MessageSquare, label: "Live Chat", link: "/mobile-chat", color: "text-teal-400", testid: "quick-chat" },
+                  { icon: HelpCircle, label: "Help Desk", link: "/helpdesk5", color: "text-green-400", testid: "quick-helpdesk" },
+                  { icon: Mail, label: "Support Email", link: "/contact", color: "text-emerald-500", testid: "quick-email" }
+                ].map((feature) => (
+                  <Button
+                    key={feature.link}
+                    variant="outline"
+                    size="sm"
+                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
+                    asChild
+                  >
+                    <Link href={feature.link} data-testid={feature.testid}>
+                      <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                      <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Platform Management Tools */}
+            <div className="mb-4">
+              <h3 className="text-[10px] sm:text-xs font-semibold text-teal-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                {[
+                  { icon: Users, label: "Users", link: "#user-section", color: "text-emerald-400", testid: "quick-users" },
+                  { icon: Building2, label: "Workspaces", link: "#workspace-section", color: "text-teal-400", testid: "quick-workspaces" },
+                  { icon: ScrollText, label: "Audit Logs", link: "/audit-trail", color: "text-green-400", testid: "quick-audit" },
+                  { icon: Database, label: "DB Admin", link: "#workspace-section", color: "text-emerald-500", testid: "quick-database" },
+                  { icon: Key, label: "API Keys", link: "#user-section", color: "text-teal-500", testid: "quick-apikeys" },
+                  { icon: Flag, label: "Feature Flags", link: "/settings", color: "text-green-500", testid: "quick-flags" }
+                ].map((feature) => (
+                  <Button
+                    key={feature.link}
+                    variant="outline"
+                    size="sm"
+                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
+                    asChild
+                    onClick={(e) => {
+                      if (feature.link.startsWith('#')) {
+                        e.preventDefault();
+                        const element = document.querySelector(feature.link);
+                        element?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                  >
+                    {feature.link.startsWith('#') ? (
+                      <a href={feature.link} data-testid={feature.testid}>
+                        <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
+                      </a>
+                    ) : (
+                      <Link href={feature.link} data-testid={feature.testid}>
+                        <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                        <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
+                      </Link>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Operations & Monitoring */}
+            <div className="mb-4">
+              <h3 className="text-[10px] sm:text-xs font-semibold text-green-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                {[
+                  { icon: Gauge, label: "System Health", link: "#system-stats", color: "text-emerald-400", testid: "quick-health" },
+                  { icon: AlertCircle, label: "Error Logs", link: "#recent-activity", color: "text-amber-400", testid: "quick-errors" },
+                  { icon: ActivityIcon, label: "Performance", link: "#system-stats", color: "text-teal-400", testid: "quick-performance" },
+                  { icon: Webhook, label: "Webhooks", link: "/settings", color: "text-green-400", testid: "quick-webhooks" },
+                  { icon: Code, label: "API Status", link: "#system-stats", color: "text-emerald-500", testid: "quick-api" }
+                ].map((feature) => (
+                  <Button
+                    key={feature.link}
+                    variant="outline"
+                    size="sm"
+                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
+                    asChild
+                  >
+                    <Link href={feature.link} data-testid={feature.testid}>
+                      <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                      <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Core Features */}
+            <div>
+              <h3 className="text-[10px] sm:text-xs font-semibold text-slate-400/70 mb-2 uppercase tracking-wider">Core Features</h3>
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 mobile-scroll">
+                {[
+                  { icon: Calendar, label: "Schedule", link: "/schedule", color: "text-emerald-400", testid: "quick-schedule" },
+                  { icon: Clock, label: "Time Clock", link: "/time-tracking", color: "text-teal-400", testid: "quick-timeclock" },
+                  { icon: Receipt, label: "Invoices", link: "/invoices", color: "text-green-400", testid: "quick-invoices" },
+                  { icon: DollarSign, label: "Payroll", link: "/payroll-dashboard", color: "text-emerald-500", testid: "quick-payroll" },
+                  { icon: UserPlus, label: "Hiring", link: "/employees", color: "text-teal-500", testid: "quick-hiring" },
+                  { icon: GraduationCap, label: "Training", link: "/training-os", color: "text-green-500", testid: "quick-training" },
+                  { icon: BarChart3, label: "Analytics", link: "/analytics", color: "text-emerald-600", testid: "quick-analytics" },
+                  { icon: Grid3x3, label: "All Features", link: "/os-family-platform", color: "text-slate-400", testid: "quick-all" }
+                ].map((feature) => (
+                  <Button
+                    key={feature.link}
+                    variant="outline"
+                    size="sm"
+                    className="flex-col h-auto min-h-[60px] sm:min-h-[72px] min-w-[68px] sm:min-w-[80px] px-2 sm:px-3 py-2 sm:py-3 gap-1 sm:gap-2 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"
+                    asChild
+                  >
+                    <Link href={feature.link} data-testid={feature.testid}>
+                      <feature.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color} shrink-0`} />
+                      <span className="text-[10px] sm:text-xs font-medium leading-tight text-white">{feature.label}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 🔐 ADMIN CONTROLS - User & Workspace Management */}
-        <Card className="border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
+        <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-red-400" />
@@ -435,10 +536,10 @@ export default function RootAdminDashboard() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* User Search & Management */}
-            <div className="space-y-4">
+            <div className="space-y-4" id="user-section">
               <div className="flex items-center gap-2 mb-3">
-                <UserCog className="h-4 w-4 text-blue-400" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-400">User Management</h3>
+                <UserCog className="h-4 w-4 text-emerald-400" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-400">User Management</h3>
               </div>
               
               <div className="relative">
@@ -447,13 +548,13 @@ export default function RootAdminDashboard() {
                   placeholder="Search users by ID, email, or name (min 3 chars)..."
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
-                  className="pl-10 bg-slate-800/50 border-blue-500/30"
+                  className="pl-10 bg-slate-800/50 border-emerald-500/30"
                   data-testid="input-user-search"
                 />
               </div>
 
               {userSearchResults && (userSearchResults as any[]).length > 0 && (
-                <ScrollArea className="h-[200px] border border-blue-500/20 rounded-lg bg-slate-800/30 p-2">
+                <ScrollArea className="h-[200px] border border-emerald-500/20 rounded-lg bg-slate-800/30 p-2">
                   <div className="space-y-2">
                     {(userSearchResults as any[]).map((user: any) => (
                       <div
@@ -489,9 +590,9 @@ export default function RootAdminDashboard() {
               )}
 
               {selectedUser && (
-                <div className="border border-blue-500/30 rounded-lg p-4 bg-blue-950/20">
+                <div className="border border-emerald-500/30 rounded-lg p-4 bg-emerald-950/20">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-blue-300">Managing: {selectedUser.firstName} {selectedUser.lastName}</h4>
+                    <h4 className="text-sm font-semibold text-emerald-300">Managing: {selectedUser.firstName} {selectedUser.lastName}</h4>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -537,10 +638,10 @@ export default function RootAdminDashboard() {
             <div className="border-t border-slate-700 pt-4" />
 
             {/* Workspace Search & Management */}
-            <div className="space-y-4">
+            <div className="space-y-4" id="workspace-section">
               <div className="flex items-center gap-2 mb-3">
-                <Building2 className="h-4 w-4 text-orange-400" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-orange-400">Workspace Management</h3>
+                <Building2 className="h-4 w-4 text-teal-400" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-teal-400">Workspace Management</h3>
               </div>
               
               <div className="relative">
@@ -665,7 +766,7 @@ export default function RootAdminDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-full bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+                          className="w-full bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
                           onClick={() => {
                             if (confirm('Unlock this account?')) {
                               unlockAccountMutation.mutate({ workspaceId: selectedWorkspace.id });
@@ -704,10 +805,10 @@ export default function RootAdminDashboard() {
         </Card>
 
         {/* My Profile Section - Desktop only, moved to settings on mobile */}
-        <Card className="hidden md:block border-indigo-500/20 bg-gradient-to-br from-slate-900/50 via-indigo-950/30 to-slate-900/50 backdrop-blur-sm">
+        <Card className="hidden md:block border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-emerald-950/30 to-slate-900/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-indigo-400" />
+              <User className="h-5 w-5 text-emerald-400" />
               My Profile
             </CardTitle>
             <CardDescription>Manage your account information</CardDescription>
@@ -743,7 +844,7 @@ export default function RootAdminDashboard() {
                   value={editingProfile ? profileForm.firstName : ((user as any)?.firstName || '')}
                   onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
                   disabled={!editingProfile}
-                  className={editingProfile ? "bg-slate-800/50 border-indigo-500/50" : "bg-slate-800/50 border-slate-700 text-slate-300"}
+                  className={editingProfile ? "bg-slate-800/50 border-emerald-500/50" : "bg-slate-800/50 border-slate-700 text-slate-300"}
                   data-testid="input-profile-firstName"
                 />
               </div>
@@ -755,7 +856,7 @@ export default function RootAdminDashboard() {
                   value={editingProfile ? profileForm.lastName : ((user as any)?.lastName || '')}
                   onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
                   disabled={!editingProfile}
-                  className={editingProfile ? "bg-slate-800/50 border-indigo-500/50" : "bg-slate-800/50 border-slate-700 text-slate-300"}
+                  className={editingProfile ? "bg-slate-800/50 border-emerald-500/50" : "bg-slate-800/50 border-slate-700 text-slate-300"}
                   data-testid="input-profile-lastName"
                 />
               </div>
@@ -793,7 +894,7 @@ export default function RootAdminDashboard() {
                     });
                     setEditingProfile(true);
                   }}
-                  className="bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-white"
+                  className="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-white"
                   data-testid="button-edit-profile"
                 >
                   <Settings className="h-4 w-4 mr-2" />
@@ -832,10 +933,10 @@ export default function RootAdminDashboard() {
 
       {/* Platform Business Metrics - COMPACT */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <Building2 className="h-3.5 w-3.5 text-blue-500" />
+              <Building2 className="h-3.5 w-3.5 text-emerald-500" />
               New Customers
             </CardDescription>
           </CardHeader>
@@ -883,10 +984,10 @@ export default function RootAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-violet-500">
+        <Card className="border-l-4 border-l-teal-500">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <Ticket className="h-3.5 w-3.5 text-violet-500" />
+              <Ticket className="h-3.5 w-3.5 text-teal-500" />
               Live Support
             </CardDescription>
           </CardHeader>
@@ -937,10 +1038,10 @@ export default function RootAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="border-l-4 border-l-teal-500">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <Users className="h-3.5 w-3.5 text-cyan-500" />
+              <Users className="h-3.5 w-3.5 text-teal-500" />
               Platform Totals
             </CardDescription>
           </CardHeader>
@@ -956,7 +1057,7 @@ export default function RootAdminDashboard() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs">Subscriptions</span>
-                <span className="text-lg font-bold text-violet-600">{stats?.activeSubscriptions || 0}</span>
+                <span className="text-lg font-bold text-teal-600">{stats?.activeSubscriptions || 0}</span>
               </div>
             </div>
           </CardContent>
@@ -964,13 +1065,13 @@ export default function RootAdminDashboard() {
       </div>
 
       {/* System Health & Activity Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="system-stats">
         {/* System Health Monitoring */}
         <div className="lg:col-span-1 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Server className="h-5 w-5 text-blue-500" />
+                <Server className="h-5 w-5 text-emerald-500" />
                 System Health
               </CardTitle>
               <CardDescription>Real-time server metrics</CardDescription>
@@ -1001,7 +1102,7 @@ export default function RootAdminDashboard() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <Database className="h-4 w-4 text-blue-500" />
+                    <Database className="h-4 w-4 text-emerald-500" />
                     <span>Database</span>
                   </div>
                   <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
@@ -1025,12 +1126,12 @@ export default function RootAdminDashboard() {
         </div>
 
         {/* Live Activity Feed */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2" id="recent-activity">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Activity className="h-5 w-5 text-indigo-500 animate-pulse" />
+                  <Activity className="h-5 w-5 text-emerald-500 animate-pulse" />
                   Live Platform Activity & Metrics
                 </CardTitle>
                 <CardDescription>Real-time events and comprehensive data analysis</CardDescription>
@@ -1046,21 +1147,21 @@ export default function RootAdminDashboard() {
             <div className="mb-6 space-y-4">
               {/* Business Metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-blue-400 mb-2">Workspaces</div>
+                <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-emerald-400 mb-2">Workspaces</div>
                   <div className="text-2xl font-bold text-white">{stats?.totalWorkspaces || 0}</div>
                 </div>
-                <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-cyan-400 mb-2">Users</div>
+                <div className="bg-gradient-to-br from-teal-500/10 to-emerald-500/10 border border-teal-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-teal-400 mb-2">Users</div>
                   <div className="text-2xl font-bold text-white">{stats?.totalUsers || 0}</div>
                 </div>
-                <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-violet-400 mb-2">Subscriptions</div>
-                  <div className="text-2xl font-bold text-violet-400">{stats?.activeSubscriptions || 0}</div>
+                <div className="bg-gradient-to-br from-teal-500/10 to-green-500/10 border border-teal-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-teal-400 mb-2">Subscriptions</div>
+                  <div className="text-2xl font-bold text-teal-400">{stats?.activeSubscriptions || 0}</div>
                 </div>
-                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-blue-400 mb-2">New (Month)</div>
-                  <div className="text-2xl font-bold text-blue-400">{stats?.newSignups || 0}</div>
+                <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-emerald-400 mb-2">New (Month)</div>
+                  <div className="text-2xl font-bold text-emerald-400">{stats?.newSignups || 0}</div>
                 </div>
               </div>
 
@@ -1074,11 +1175,11 @@ export default function RootAdminDashboard() {
                   <div className="text-xs font-medium text-amber-400 mb-2">Platform Fees</div>
                   <div className="text-lg font-bold text-amber-400">${parseFloat(stats?.platformFees || "0").toLocaleString()}</div>
                 </div>
-                <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-indigo-400 mb-2">Invoices</div>
+                <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-emerald-400 mb-2">Invoices</div>
                   <div className="text-2xl font-bold text-white">{stats?.invoiceCount || 0}</div>
                 </div>
-                <div className="bg-gradient-to-br from-teal-500/10 to-cyan-500/10 border border-teal-500/20 rounded-xl p-4">
+                <div className="bg-gradient-to-br from-teal-500/10 to-teal-500/10 border border-teal-500/20 rounded-xl p-4">
                   <div className="text-xs font-medium text-teal-400 mb-2">Avg Revenue</div>
                   <div className="text-lg font-bold text-white">${parseFloat(stats?.avgRevenue || "0").toFixed(0)}</div>
                 </div>
@@ -1086,13 +1187,13 @@ export default function RootAdminDashboard() {
 
               {/* Support Metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-purple-400 mb-2">Chat Users</div>
-                  <div className="text-2xl font-bold text-purple-400">{stats?.chatUsers || 0}</div>
+                <div className="bg-gradient-to-br from-green-500/10 to-rose-500/10 border border-green-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-green-400 mb-2">Chat Users</div>
+                  <div className="text-2xl font-bold text-green-400">{stats?.chatUsers || 0}</div>
                 </div>
-                <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-blue-400 mb-2">Chat Staff</div>
-                  <div className="text-2xl font-bold text-blue-400">{stats?.chatStaff || 0}</div>
+                <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-emerald-400 mb-2">Chat Staff</div>
+                  <div className="text-2xl font-bold text-emerald-400">{stats?.chatStaff || 0}</div>
                 </div>
                 <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-4">
                   <div className="text-xs font-medium text-orange-400 mb-2">Open Tickets</div>
@@ -1110,7 +1211,7 @@ export default function RootAdminDashboard() {
                   <div className="text-xs font-medium text-slate-400 mb-2">CPU Usage</div>
                   <div className="text-2xl font-bold text-white">{stats?.systemHealth?.cpu || 0}%</div>
                 </div>
-                <div className="bg-gradient-to-br from-sky-500/10 to-blue-500/10 border border-sky-500/20 rounded-xl p-4">
+                <div className="bg-gradient-to-br from-sky-500/10 to-emerald-500/10 border border-sky-500/20 rounded-xl p-4">
                   <div className="text-xs font-medium text-sky-400 mb-2">Memory</div>
                   <div className="text-2xl font-bold text-white">{stats?.systemHealth?.memory || 0}%</div>
                 </div>
@@ -1118,8 +1219,8 @@ export default function RootAdminDashboard() {
                   <div className="text-xs font-medium text-emerald-400 mb-2">Database</div>
                   <div className="text-base font-bold text-emerald-400 capitalize">{stats?.systemHealth?.database || "healthy"}</div>
                 </div>
-                <div className="bg-gradient-to-br from-cyan-500/10 to-teal-500/10 border border-cyan-500/20 rounded-xl p-4">
-                  <div className="text-xs font-medium text-cyan-400 mb-2">Uptime</div>
+                <div className="bg-gradient-to-br from-teal-500/10 to-teal-500/10 border border-teal-500/20 rounded-xl p-4">
+                  <div className="text-xs font-medium text-teal-400 mb-2">Uptime</div>
                   <div className="text-base font-mono font-bold text-white">{stats?.systemHealth?.uptime ? formatUptime(stats.systemHealth.uptime) : "0d 0h"}</div>
                 </div>
               </div>
