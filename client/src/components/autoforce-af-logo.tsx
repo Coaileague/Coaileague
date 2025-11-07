@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import autoforceLogoNew from "../../../attached_assets/autoforce-logo-new.png";
+import { Zap } from "lucide-react";
 
 interface AutoForceAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -11,7 +11,7 @@ interface AutoForceAFLogoProps {
 
 /**
  * AutoForce™ Logo Component
- * Uses the new logo image provided by the user
+ * AF lightning bolt in circular Emergency Green gradient badge
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -21,13 +21,13 @@ export function AutoForceAFLogo({
   className
 }: AutoForceAFLogoProps) {
   
-  // Size mappings for the logo
-  const containerSizes = {
-    sm: "w-12 h-12",
-    md: "w-20 h-20",
-    lg: "w-28 h-28",
-    xl: "w-36 h-36",
-    hero: "w-48 h-48"
+  // Size mappings for the circular badge
+  const badgeSizes = {
+    sm: "w-10 h-10 text-sm",
+    md: "w-14 h-14 text-lg",
+    lg: "w-20 h-20 text-2xl",
+    xl: "w-28 h-28 text-4xl",
+    hero: "w-40 h-40 text-6xl"
   };
 
   const textSizes = {
@@ -38,25 +38,19 @@ export function AutoForceAFLogo({
     hero: "text-2xl"
   };
 
-  // Icon only - just the logo image
+  // Icon only - AF circular badge
   if (variant === "icon") {
     return (
       <div 
         className={cn(
-          "flex items-center justify-center shrink-0",
-          containerSizes[size],
+          "flex items-center justify-center shrink-0 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+          badgeSizes[size],
+          animated && "animate-pulse-slow",
           className
         )}
         data-testid="autoforce-af-logo-icon"
       >
-        <img 
-          src={autoforceLogoNew}
-          alt="AutoForce Logo"
-          className={cn(
-            "w-full h-full object-contain",
-            animated && "animate-pulse-slow"
-          )}
-        />
+        <span className="text-white font-black">AF</span>
       </div>
     );
   }
@@ -81,21 +75,20 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Full - icon + text
+  // Full - AF badge + text
   return (
     <div 
       className={cn("flex items-center gap-3", className)}
       data-testid="autoforce-af-logo-full"
     >
-      <div className={cn("shrink-0", containerSizes[size])}>
-        <img 
-          src={autoforceLogoNew}
-          alt="AutoForce Logo"
-          className={cn(
-            "w-full h-full object-contain",
-            animated && "animate-pulse-slow"
-          )}
-        />
+      <div 
+        className={cn(
+          "shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+          badgeSizes[size],
+          animated && "animate-pulse-slow"
+        )}
+      >
+        <span className="text-white font-black">AF</span>
       </div>
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
