@@ -13,17 +13,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { MobileLoading } from "@/components/mobile-loading";
-import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePageWrapper, MobilePageHeader } from "@/components/mobile-page-wrapper";
+import { MobileBottomSheet } from "@/components/mobile-bottom-sheet";
+import { useIsMobile, useMobile } from "@/hooks/use-mobile";
 import { DataStreamIndicator } from "@/components/loading-indicators";
 import {
   MessageSquare, Send, Search, UserPlus, MoreVertical,
   Eye, Sparkles, CheckCheck, Circle, Lock, Zap,
-  Paperclip, X, FileText, Image as ImageIcon, Download
+  Paperclip, X, FileText, Image as ImageIcon, Download, ArrowLeft
 } from "lucide-react";
 import { MessageAttachment } from "@/components/message-attachment";
 import { CameraCapture } from "@/components/camera-capture";
 import { usePasteImageHandler, PasteImageHint } from "@/components/paste-image-handler";
+import { cn } from "@/lib/utils";
 
 interface Conversation {
   id: string;
@@ -52,10 +54,12 @@ export default function PrivateMessages() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { isMobile: isMobileDevice, isIOS } = useMobile();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [showNewChatSheet, setShowNewChatSheet] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -335,10 +339,18 @@ export default function PrivateMessages() {
 
   const currentConversation = conversations.find((c) => c.id === selectedConversation);
 
+  // Mobile: show conversation list OR chat, Desktop: show both
+  const showConversationsList = !isMobileDevice || !selectedConversation;
+  const showChatArea = !isMobileDevice || selectedConversation;
+
   const pageContent = (
     <div className="flex h-[calc(100vh-4rem)] gap-0">
       {/* Conversations Sidebar */}
-      <div className="w-80 border-r flex flex-col bg-card">
+      <div className={cn(
+        "flex flex-col bg-card border-r",
+        isMobileDevice ? "w-full" : "w-80",
+        !showConversationsList && "hidden"
+      )}>
         {/* Sidebar Header */}
         <div className="p-4 border-b space-y-3">
           <div className="flex items-center justify-between">
@@ -351,7 +363,8 @@ export default function PrivateMessages() {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setShowNewChatDialog(true)}
+              onClick={() => isMobileDevice ? setShowNewChatSheet(true) : setShowNewChatDialog(true)}
+              className="mobile-touch-target"
               data-testid="button-new-chat"
             >
               <UserPlus className="h-4 w-4" />
@@ -451,7 +464,10 @@ export default function PrivateMessages() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-background">
+      <div className={cn(
+        "flex-1 flex flex-col bg-background",
+        !showChatArea && "hidden"
+      )}>
         {!selectedConversation ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground px-4">
             <Lock className="h-12 sm:h-16 w-12 sm:w-16 mb-4 opacity-50" />
@@ -461,8 +477,21 @@ export default function PrivateMessages() {
         ) : (
           <>
             {/* Chat Header */}
-            <div className="h-16 border-b px-4 flex items-center justify-between bg-purple-500/5">
+            <div className={cn(
+              "h-16 border-b px-4 flex items-center justify-between bg-purple-500/5",
+              isIOS && "mobile-safe-area-top"
+            )}>
               <div className="flex items-center gap-3">
+                {/* Mobile Back Button */}
+                {isMobileDevice && (
+                  <button
+                    onClick={() => setSelectedConversation(null)}
+                    className="mobile-touch-target p-2 -ml-2 hover-elevate active-elevate-2 rounded-lg mr-1"
+                    data-testid="button-back-to-list"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
                 <div className="relative">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-pink-600 text-white">
@@ -661,8 +690,8 @@ export default function PrivateMessages() {
         )}
       </div>
 
-      {/* New Chat Dialog */}
-      <Dialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
+      {/* New Chat Dialog (Desktop) */}
+      <Dialog open={showNewChatDialog && !isMobileDevice} onOpenChange={setShowNewChatDialog}>
         <DialogContent data-testid="dialog-new-chat">
           <DialogHeader>
             <DialogTitle>Start New Private Chat</DialogTitle>
@@ -736,6 +765,81 @@ export default function PrivateMessages() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* New Chat Bottom Sheet (Mobile) */}
+      <MobileBottomSheet 
+        isOpen={showNewChatSheet} 
+        onClose={() => setShowNewChatSheet(false)}
+        title="Start New Private Chat"
+      >
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 mobile-touch-target"
+              data-testid="input-search-users-mobile"
+            />
+          </div>
+
+          {searchQuery.length > 2 && (
+            <div className="max-h-[400px] overflow-y-auto smooth-scroll">
+              {searchLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Eye className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No users found</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {searchResults.map((result: any) => (
+                    <button
+                      key={result.id}
+                      onClick={() => {
+                        startConversationMutation.mutate(result.id);
+                        setShowNewChatSheet(false);
+                      }}
+                      disabled={startConversationMutation.isPending}
+                      className="mobile-touch-target w-full p-3 rounded-lg hover-elevate active-elevate-2 text-left"
+                      data-testid={`user-${result.id}-mobile`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="text-xs">
+                            {result.firstName?.[0]}{result.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">
+                            {result.firstName} {result.lastName}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {result.email}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {searchQuery.length <= 2 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Type 3+ characters to search</p>
+            </div>
+          )}
+        </div>
+      </MobileBottomSheet>
     </div>
   );
 

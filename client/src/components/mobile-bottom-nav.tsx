@@ -1,7 +1,7 @@
 /**
  * Mobile Bottom Navigation - Native App Style
  * APK-Quality touch-optimized navigation bar
- * Features: Gradient accents, haptic feedback, smooth animations
+ * Features: Gradient accents, haptic feedback, smooth animations, iOS safe area support
  */
 
 import { useLocation } from "wouter";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { triggerHaptic } from "@/hooks/use-touch-swipe";
 import { cn } from "@/lib/utils";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface NavItem {
   icon: React.ElementType;
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
 
 export function MobileBottomNav() {
   const [location, setLocation] = useLocation();
+  const { isIOS } = useMobile();
 
   const handleNavigation = (path: string) => {
     triggerHaptic('light');
@@ -38,10 +40,14 @@ export function MobileBottomNav() {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border safe-bottom md:hidden backdrop-blur-xl"
+      className={cn(
+        "mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-card/95 border-t border-border backdrop-blur-xl",
+        "md:hidden z-50",
+        isIOS && "mobile-safe-area-bottom"
+      )}
       data-testid="mobile-bottom-nav"
     >
-      <div className="flex items-center justify-around h-20 px-1">
+      <div className="flex items-center justify-around h-16 px-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location === item.path || (item.path !== '/dashboard' && location.startsWith(item.path));
@@ -53,18 +59,18 @@ export function MobileBottomNav() {
               size="icon"
               onClick={() => handleNavigation(item.path)}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1.5 h-16 w-full rounded-2xl transition-all duration-300",
-                "hover-elevate active-elevate-2",
+                "mobile-touch-target relative flex flex-col items-center justify-center gap-1 w-full rounded-xl transition-all duration-300",
+                "hover-elevate active-elevate-2 mobile-active-state",
                 isActive && "scale-105"
               )}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
               <div className={cn(
-                "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300",
-                isActive && "bg-success-gradient shadow-lg shadow-primary/30"
+                "relative flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300",
+                isActive && "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30"
               )}>
                 <Icon className={cn(
-                  "h-6 w-6 transition-all duration-300",
+                  "h-5 w-5 transition-all duration-300",
                   isActive ? "text-white dark:text-white scale-110" : "text-muted-foreground"
                 )} />
                 {item.badge && item.badge > 0 && (
@@ -77,8 +83,8 @@ export function MobileBottomNav() {
                 )}
               </div>
               <span className={cn(
-                "text-[11px] font-semibold transition-all duration-300",
-                isActive ? "text-foreground" : "text-muted-foreground"
+                "text-[10px] font-medium transition-all duration-300",
+                isActive ? "text-foreground font-bold" : "text-muted-foreground"
               )}>
                 {item.label}
               </span>
@@ -86,10 +92,12 @@ export function MobileBottomNav() {
           );
         })}
       </div>
-      {/* iOS-style home indicator */}
-      <div className="flex justify-center pb-1">
-        <div className="w-32 h-1 bg-foreground/20 rounded-full" />
-      </div>
+      {/* iOS-style home indicator (only on iOS) */}
+      {isIOS && (
+        <div className="flex justify-center pb-1.5">
+          <div className="w-28 h-1 bg-foreground/20 rounded-full" />
+        </div>
+      )}
     </nav>
   );
 }
