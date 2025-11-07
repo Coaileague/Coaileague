@@ -5,8 +5,9 @@ import type { Express } from 'express';
 import { db } from './db';
 import { helposFaqs, insertHelposFaqSchema } from '@shared/schema';
 import { requireAuth } from './auth';
-import { requirePlatformStaff, type AuthenticatedRequest } from './rbac';
-import { eq, desc, sql, like, or } from 'drizzle-orm';
+import { requirePlatformStaff, isPlatformStaff, type AuthenticatedRequest } from './rbac';
+import { readLimiter } from './middleware/rateLimiter';
+import { eq, desc, sql, like, or, and } from 'drizzle-orm';
 import { z } from 'zod';
 import OpenAI from 'openai';
 
@@ -29,31 +30,46 @@ export function registerFaqRoutes(app: Express) {
   // FAQ CRUD Operations
   // ============================================================================
 
-  // Get all FAQs (public - accessible to all authenticated users)
+  // Get all FAQs (filtered by publish status for non-staff users)
   app.get('/api/helpos/faqs', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const { category, search, limit = 50 } = req.query;
+    const { category, search, limit = 50, includeUnpublished } = req.query;
+    
+    // Use canonical staff detection from rbac.ts
+    const showUnpublished = isPlatformStaff(req.user) && includeUnpublished === 'true';
 
-    let query = db.select().from(helposFaqs).orderBy(desc(helposFaqs.viewCount));
+    // Build base query with all records
+    let query = db.select().from(helposFaqs);
+
+    // Build where conditions using Drizzle's and() function
+    const conditions: any[] = [];
+    
+    // Filter by published status (unless staff requesting unpublished)
+    if (!showUnpublished) {
+      conditions.push(eq(helposFaqs.isPublished, true));
+    }
 
     // Filter by category if provided
     if (category && typeof category === 'string') {
-      const faqs = await query.where(eq(helposFaqs.category, category)).limit(Number(limit));
-      return res.json(faqs);
+      conditions.push(eq(helposFaqs.category, category));
     }
 
     // Search by question or answer text
     if (search && typeof search === 'string') {
-      const faqs = await query.where(
+      conditions.push(
         or(
           like(helposFaqs.question, `%${search}%`),
           like(helposFaqs.answer, `%${search}%`)
         )
-      ).limit(Number(limit));
-      return res.json(faqs);
+      );
     }
 
-    const faqs = await query.limit(Number(limit));
+    // Apply all conditions together using Drizzle's and() combinator
+    if (conditions.length > 0) {
+      query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+    }
+
+    const faqs = await query.orderBy(desc(helposFaqs.viewCount)).limit(Number(limit));
     res.json(faqs);
   } catch (error: any) {
     console.error('Error fetching FAQs:', error);
@@ -72,6 +88,11 @@ app.get('/api/helpos/faqs/:id', requireAuth, async (req: AuthenticatedRequest, r
       .limit(1);
 
     if (!faq || faq.length === 0) {
+      return res.status(404).json({ message: 'FAQ not found' });
+    }
+
+    // Block access to unpublished FAQs for non-staff users (use canonical staff check)
+    if (!faq[0].isPublished && !isPlatformStaff(req.user)) {
       return res.status(404).json({ message: 'FAQ not found' });
     }
 
@@ -245,7 +266,7 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 }
 
 // Search FAQs using OpenAI semantic search
-app.post('/api/helpos/faqs/search/semantic', requireAuth, async (req: AuthenticatedRequest, res) => {
+app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { query, limit = 5 } = req.body;
 
@@ -257,6 +278,9 @@ app.post('/api/helpos/faqs/search/semantic', requireAuth, async (req: Authentica
       return res.status(503).json({ message: 'Semantic search not available - OpenAI API key not configured' });
     }
 
+    // Use canonical staff detection from rbac.ts
+    const canSearchUnpublished = isPlatformStaff(req.user);
+
     // Generate embedding for the user's query
     const queryEmbedding = await getOpenAIClient().embeddings.create({
       model: 'text-embedding-3-small',
@@ -265,10 +289,14 @@ app.post('/api/helpos/faqs/search/semantic', requireAuth, async (req: Authentica
 
     const queryVector = queryEmbedding.data[0].embedding;
 
-    // Fetch all FAQs with embeddings
+    // Fetch all FAQs with embeddings (filter by publish status for non-staff)
     const allFaqs = await db.select()
       .from(helposFaqs)
-      .where(sql`${helposFaqs.embeddingVector} IS NOT NULL`);
+      .where(
+        canSearchUnpublished 
+          ? sql`${helposFaqs.embeddingVector} IS NOT NULL`
+          : sql`${helposFaqs.embeddingVector} IS NOT NULL AND ${helposFaqs.isPublished} = true`
+      );
 
     // Calculate cosine similarity for each FAQ
     const faqsWithSimilarity = allFaqs.map(faq => {
