@@ -4,7 +4,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom auth
 import authRoutes from "./authRoutes"; // Custom auth routes
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Health check database error:', error);
       health.status = 'degraded';
       health.dependencies.database = 'error';
-      const dbFeature = health.features.find(f => f.feature === 'DATABASE');
+      const dbFeature = health.features.find((f: any) => f.feature === 'DATABASE');
       if (dbFeature) {
         dbFeature.status = 'error';
         dbFeature.enabled = false;
@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Health check Stripe error:', error);
         health.status = 'degraded';
         health.dependencies.stripe = 'error';
-        const stripeFeature = health.features.find(f => f.feature === 'STRIPE_PAYMENTS');
+        const stripeFeature = health.features.find((f: any) => f.feature === 'STRIPE_PAYMENTS');
         if (stripeFeature) {
           stripeFeature.status = 'error';
         }
@@ -568,7 +568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(authRoutes);
   
   // Register billing API routes (subscription, usage tracking, invoices, add-ons)
-  app.use(billingRouter);
+  // IMPORTANT: Mount at /api/billing to avoid intercepting root path
+  app.use('/api/billing', billingRouter);
 
   // ============================================================================
   // AUTH ROUTES
