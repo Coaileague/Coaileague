@@ -3315,8 +3315,11 @@ export const supportTickets = pgTable("support_tickets", {
 
   // Resolution
   resolution: text("resolution"),
+  resolutionSummary: text("resolution_summary"), // Brief summary for ticket updates
   resolvedAt: timestamp("resolved_at"),
   resolvedBy: varchar("resolved_by").references(() => users.id),
+  closedAt: timestamp("closed_at"), // Final closure timestamp (may differ from resolvedAt)
+  closedBy: varchar("closed_by").references(() => users.id), // Who officially closed the ticket
 
   // Verification for chatroom access (gatekeeper MOMJJ)
   verifiedAt: timestamp("verified_at"),
@@ -3335,6 +3338,43 @@ export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit
 
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type SupportTicket = typeof supportTickets.$inferSelect;
+
+// HelpOS FAQ Knowledge Base - FAQ articles for AI-powered bot assistance
+export const helposFaqs = pgTable("helpos_faqs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // FAQ details
+  category: varchar("category").notNull(), // 'billing', 'technical', 'account', 'features', 'general'
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`), // Searchable keywords
+  
+  // AI/Search optimization
+  embeddingVector: text("embedding_vector"), // Optional: for semantic search
+  searchKeywords: text("search_keywords"), // Additional keywords for matching
+  
+  // Metadata
+  viewCount: integer("view_count").default(0), // Track popular FAQs
+  helpfulCount: integer("helpful_count").default(0), // User feedback
+  notHelpfulCount: integer("not_helpful_count").default(0),
+  
+  // Publishing
+  isPublished: boolean("is_published").default(true),
+  publishedAt: timestamp("published_at").defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertHelposFaqSchema = createInsertSchema(helposFaqs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHelposFaq = z.infer<typeof insertHelposFaqSchema>;
+export type HelposFaq = typeof helposFaqs.$inferSelect;
 
 // ============================================================================
 // CUSTOM FORMS SYSTEM (Organization-Specific)
@@ -3522,6 +3562,9 @@ export const chatConversations = pgTable("chat_conversations", {
   subject: varchar("subject"),
   status: varchar("status").notNull().default("active"), // 'active', 'resolved', 'closed'
   priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
+  
+  // Support ticket link (for automated ticket closure)
+  associatedTicketId: varchar("associated_ticket_id").references(() => supportTickets.id, { onDelete: 'set null' }),
   
   // Conversation type for privacy/monitoring
   conversationType: varchar("conversation_type").notNull().default("open_chat"), 
@@ -3736,6 +3779,12 @@ export const chatParticipants = pgTable("chat_participants", {
   invitedAt: timestamp("invited_at").defaultNow(),
   joinedAt: timestamp("joined_at"),
   leftAt: timestamp("left_at"),
+  
+  // UI state (for multi-bubble chat interface)
+  isMinimized: boolean("is_minimized").default(false), // Is chat minimized to a bubble?
+  bubblePosition: integer("bubble_position"), // Order in bubble tray
+  lastReadAt: timestamp("last_read_at"), // Last message read timestamp
+  isMuted: boolean("is_muted").default(false), // Has muted notifications?
   
   // Status
   isActive: boolean("is_active").default(true),

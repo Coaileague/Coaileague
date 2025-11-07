@@ -4,6 +4,28 @@
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive workforce management platform for emergency services and other service-related industries. It aims to streamline operations and reduce administrative burden through features like time tracking, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform utilizes an "OS" design philosophy for extensibility and serves as a single source of truth for workforce management, aspiring to revolutionize the industry with a subscription and usage-based AI revenue model.
 
 ## Recent Updates (November 7, 2025)
+
+### UI/UX Improvements
+- **Button Text Overflow Fix**: Added `whitespace-normal text-center` to specific marketing CTA buttons on landing page to allow wrapping on mobile without affecting other buttons globally
+- **Table Responsiveness**: Updated table component with `border border-border rounded-md` wrapper and `min-w-full border-collapse` for visible borders and horizontal scroll on mobile
+- **Loading Screen**: Replaced green lightning bolt `MobileLoading` with minimal spinner (spinning border + "Loading..." text) during authentication
+- **Chat Bubble X Button**: Made close button always visible on mobile (`md:opacity-0 md:group-hover:opacity-100`) so users can close without hovering
+- **Mobile Auth Buttons**: Changed login to `variant="outline"` and signup to explicit `bg-primary` for better visibility and separation on landing page
+
+### HelpOS Enhancement (In Progress)
+- **Database Schema Updates** (Ready to push - needs confirmation):
+  - Added `helpos_faqs` table for FAQ knowledge base (category, question, answer, tags, embedding, view/helpful counts)
+  - Updated `supportTickets` with `resolutionSummary`, `closedAt`, and `closedBy` columns for better ticket closure tracking
+  - Added `associatedTicketId` to `chatConversations` to link conversations to support tickets for automated updates
+  - Enhanced `chatParticipants` with bubble UI state fields: `isMinimized`, `bubblePosition`, `lastReadAt`, `isMuted`
+
+**Next Steps for HelpOS**:
+1. Confirm database migration (`npm run db:push` - select "create column" for any prompts)
+2. Enhance HelpOS AI with FAQ retrieval and OpenAI integration
+3. Build multi-bubble chat interface components (ChatBubbleTray, DMChatWindow)
+4. Implement ticket closure workflow (user vs support close logic)
+
+### Previous Updates
 - **ROOT Admin Dashboard Enhancement**: Redesigned Quick Access toolbar with 23+ comprehensive support and platform maintenance tools organized into 4 categories:
   - **Support & Helpdesk** (4 tools): Support Tickets (/admin-command-center), Live Chat (/mobile-chat), Help Desk (/helpdesk5), Support Email (/contact)
   - **Platform Management** (6 tools): Users (#user-section), Workspaces (#workspace-section), Audit Logs (/audit-trail), DB Admin, API Keys, Feature Flags (/settings)
