@@ -48,6 +48,15 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
         - **Bulk Import**: Imports multiple FAQs for new feature releases with automatic embedding generation
         - **Draft-First Workflow**: All AI-generated FAQs start as drafts requiring staff review before publication
         - **Publish Status Control**: Unpublished FAQs only visible to platform staff for quality assurance
+    - **HelpOS™ Autonomous Bot**: Intelligent support agent that provides bot-first assistance with human escalation:
+        - **State Machine**: greeting → searching → answering → clarifying → escalating/resolved flow
+        - **FAQ-Powered Responses**: Uses semantic search to find relevant answers with confidence scoring
+        - **Sentiment Detection**: Recognizes user satisfaction vs. escalation needs from conversation signals
+        - **Auto-Resolution**: Closes satisfied tickets, generates FAQ suggestions, notifies staff of success
+        - **Smart Escalation**: Hands off complex issues to human staff with context preservation
+        - **Staff Announcements**: Server messages visible only to platform staff for bot wins and escalations
+        - **Continuous Learning**: Successful bot conversations become FAQ entries after staff review
+        - **Graceful Degradation**: Automatically disabled when OpenAI API key unavailable
 - **Security**: Features Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 
 ## External Dependencies

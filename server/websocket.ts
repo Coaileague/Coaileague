@@ -1599,6 +1599,117 @@ export function setupWebSocket(server: Server) {
                 console.error('AI Bot Q&A error:', aiError);
               }
             }
+
+            // HELPOS AUTONOMOUS BOT: Auto-assist in support ticket conversations
+            // Only activate for conversations that are NOT the main room and appear to be support tickets
+            if (ws.conversationId !== MAIN_ROOM_ID && ws.conversationId.startsWith('ticket-')) {
+              try {
+                // Check if HelpOS bot is enabled
+                const { isBotEnabled, processBotMessage, closeBotTicketSuccess, escalateBotTicket } = await import('./helpos-bot');
+                
+                if (isBotEnabled()) {
+                  // Process user message through autonomous bot
+                  const botResult = await processBotMessage(ws.conversationId, payload.message);
+                  
+                  // Send bot response
+                  if (botResult.response) {
+                    const botMessage = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'helpos-bot',
+                      senderName: 'HelpOS™',
+                      senderType: 'bot',
+                      message: botResult.response,
+                      messageType: 'text',
+                    });
+                    
+                    // Broadcast bot response to all clients
+                    if (clients) {
+                      const botPayload = JSON.stringify({
+                        type: 'new_message',
+                        message: botMessage,
+                      });
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(botPayload);
+                        }
+                      });
+                    }
+                  }
+                  
+                  // Handle ticket closure (bot successfully resolved)
+                  if (botResult.shouldClose) {
+                    const closeResult = await closeBotTicketSuccess(ws.conversationId, ws.userId);
+                    
+                    // Send success announcement to support team (staff only)
+                    const staffAnnouncement = await storage.createChatMessage({
+                      conversationId: MAIN_ROOM_ID, // Post to main HelpDesk room
+                      senderId: null,
+                      senderName: 'Server',
+                      senderType: 'system',
+                      message: `✅ **HelpOS Bot Success** - Ticket ${ws.conversationId} resolved autonomously\n\n${closeResult.conversationSummary}`,
+                      messageType: 'text',
+                      isSystemMessage: true,
+                      visibleToStaffOnly: true, // Only support team sees this
+                    });
+                    
+                    // Broadcast to main room (staff will see it, users won't)
+                    const mainRoomClients = conversationClients.get(MAIN_ROOM_ID);
+                    if (mainRoomClients) {
+                      const announcementPayload = JSON.stringify({
+                        type: 'new_message',
+                        message: staffAnnouncement,
+                      });
+                      mainRoomClients.forEach((client) => {
+                        // Only send to staff members
+                        if (client.readyState === WebSocket.OPEN && client.userType === 'staff') {
+                          client.send(announcementPayload);
+                        }
+                      });
+                    }
+                    
+                    // Auto-generate FAQ suggestion if conversation was valuable
+                    if (closeResult.faqSuggestion) {
+                      // Notify staff about FAQ suggestion (could be implemented as a queue/dashboard item)
+                      console.log('✅ HelpOS Bot generated FAQ suggestion:', closeResult.faqSuggestion);
+                    }
+                  }
+                  
+                  // Handle escalation to human support
+                  if (botResult.shouldEscalate) {
+                    await escalateBotTicket(ws.conversationId, 'Bot unable to resolve - escalating to human support');
+                    
+                    // Notify support team in main room
+                    const escalationAnnouncement = await storage.createChatMessage({
+                      conversationId: MAIN_ROOM_ID,
+                      senderId: null,
+                      senderName: 'Server',
+                      senderType: 'system',
+                      message: `🚨 **Escalation Required** - Ticket ${ws.conversationId} needs human assistance\n\nBot state: ${botResult.state}\nUser needs personalized support.`,
+                      messageType: 'text',
+                      isSystemMessage: true,
+                      visibleToStaffOnly: true,
+                    });
+                    
+                    // Broadcast to staff in main room
+                    const mainRoomClients = conversationClients.get(MAIN_ROOM_ID);
+                    if (mainRoomClients) {
+                      const escalationPayload = JSON.stringify({
+                        type: 'new_message',
+                        message: escalationAnnouncement,
+                      });
+                      mainRoomClients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN && client.userType === 'staff') {
+                          client.send(escalationPayload);
+                        }
+                      });
+                    }
+                  }
+                }
+              } catch (helposError) {
+                console.error('HelpOS autonomous bot error:', helposError);
+                // Fail gracefully - don't block user messages
+              }
+            }
             break;
           }
 
