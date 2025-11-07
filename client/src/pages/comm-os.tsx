@@ -53,6 +53,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { OrganizationChatRoom } from "@shared/schema";
+import { SupportChatroomList } from "@/components/support-chatroom-list";
 
 export default function CommOS() {
   const { user } = useAuth();
@@ -235,6 +236,11 @@ export default function CommOS() {
         </div>
       </div>
     );
+  }
+
+  // Support staff see the dedicated support chatroom list
+  if (isSupportStaff) {
+    return <SupportChatroomList />;
   }
 
   // Check if organization needs onboarding
