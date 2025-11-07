@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(authRoutes);
   
   // Register billing API routes (subscription, usage tracking, invoices, add-ons)
-  app.use(billingRouter);
+  app.use(requireAuth, billingRouter);
 
   // ============================================================================
   // AUTH ROUTES

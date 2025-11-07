@@ -64,7 +64,7 @@ export default function Billing() {
   // Purchase add-on mutation
   const purchaseAddonMutation = useMutation({
     mutationFn: async (addonId: string) => {
-      return await apiRequest(`/api/billing/addons/${addonId}/purchase`, "POST");
+      return await apiRequest("POST", `/api/billing/addons/${addonId}/purchase`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/billing/addons"] });
