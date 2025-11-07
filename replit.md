@@ -29,6 +29,13 @@ AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, Payr
 
 **UI/UX Decisions:** The platform features a professional aesthetic with Deep Charcoal, Platinum neutrals, and Emergency Green accents. It prioritizes a mobile-first approach with responsive layouts and accessible touch targets. The branding uses an "AF" lightning bolt logo within a circular green gradient badge, symbolizing rapid response and reliability.
 
+**Brand Color Standardization (November 2025):** All user-facing pages (dashboard, landing, pricing, etc.) now use consistent emerald/green/teal colors exclusively for the Emergency Green brand identity. Purple/indigo/violet colors have been completely replaced to ensure professional, polished consistency throughout the platform. The color palette includes:
+- Primary brand: emerald-500, emerald-600 (Emergency Green)
+- Secondary accents: teal-500, green-500
+- Supporting colors: amber (warnings), rose (costs), slate (neutrals)
+- "Auto" text: dark gray-900 (light mode), foreground (dark mode)
+- "FORCE" text: emerald-600 (light mode), emerald-400 (dark mode)
+
 **Technical Implementations:**
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for validation.

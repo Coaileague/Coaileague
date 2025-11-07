@@ -396,7 +396,7 @@ export default function Landing() {
                 description: "Smart scheduling with shift management. AI auto-scheduling coming soon.",
                 features: ["Smart scheduling", "Conflict detection", "Mobile access", "Shift swaps"],
                 badge: "Live + AI Soon",
-                color: "text-purple-500",
+                color: "text-emerald-500",
               },
               {
                 icon: Clock,
@@ -404,7 +404,7 @@ export default function Landing() {
                 description: "GPS-verified time tracking with photo proof. Eliminate buddy punching.",
                 features: ["GPS clock-in", "Photo verification", "Geofencing", "Real-time tracking"],
                 badge: "Live",
-                color: "text-blue-500",
+                color: "text-teal-500",
               },
               {
                 icon: DollarSign,
@@ -420,7 +420,7 @@ export default function Landing() {
                 description: "Automatic invoice generation from time entries. Get paid faster.",
                 features: ["Auto-invoicing", "Client billing", "Stripe integration", "Payment tracking"],
                 badge: "Live",
-                color: "text-cyan-500",
+                color: "text-emerald-500",
               },
               {
                 icon: UserPlus,
@@ -428,7 +428,7 @@ export default function Landing() {
                 description: "Smart hiring and digital onboarding. From applicant to employee in hours.",
                 features: ["ATS system", "E-signatures", "Compliance docs", "Onboarding flow"],
                 badge: "Live",
-                color: "text-orange-500",
+                color: "text-green-500",
               },
               {
                 icon: FileText,
@@ -436,7 +436,7 @@ export default function Landing() {
                 description: "Industry-specific compliance reports with photo requirements.",
                 features: ["Templates", "Photo capture", "Approvals", "Client delivery"],
                 badge: "Live",
-                color: "text-indigo-500",
+                color: "text-teal-500",
               },
               {
                 icon: BarChart3,
