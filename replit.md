@@ -35,7 +35,15 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
     - **Financials**: Client Management, Billing & Payroll (BillOS™, PayrollOS™), automated invoice generation, payment processing.
     - **Employee Lifecycle**: Onboarding, contract management, shift management, timesheet and time-off requests.
     - **Compliance & Policy**: I-9 re-verification tracking, Policy Management (PolicIOS™) with version control.
-    - **Communication**: Team Communication (CommOS™) with multi-room chat and AES-256-GCM encrypted private messages.
+    - **Communication**: Team Communication (CommOS™) with multi-room chat, AES-256-GCM encrypted private messages, and advanced features:
+        - **Message Reactions**: Slack/Discord-style emoji reactions on any message
+        - **Message Threading**: Reply to specific messages creating organized conversation threads
+        - **File Uploads**: Share images, PDFs, documents with preview and thumbnails
+        - **@Mentions**: Tag users with autocomplete and notification system
+        - **Read Receipts**: Track who has read each message with timestamps
+        - **Rich Text Formatting**: WYSIWYG editor for bold, italic, lists, code blocks
+        - **Message Search**: Search through chat history with filters and advanced queries
+        - **Voice/Video Calling**: WebRTC-powered real-time audio/video communication
     - **Expense Management**: ExpenseOS™ for reimbursement, tracking, mileage calculation.
     - **Scheduling**: ScheduleOS™ with mobile-optimized shift calendars and AI-powered generation.
     - **Asset Management**: AssetOS™ for tracking vehicles and equipment.
