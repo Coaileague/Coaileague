@@ -10,6 +10,15 @@ Do not make changes to the file `Y`.
 All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
 
+### Navigation & UX Preferences (Added November 2025)
+- **No Refresh Buttons**: Platform should NOT have refresh buttons in headers/toolbars
+- **Role-Aware Settings Gear**: Settings gear icon in header routes based on user role:
+  - Regular users → Organization settings (`/settings`)
+  - Support roles (leaders, deputy admins) → Admin tools (`/admin-command-center`)
+  - ROOT/SYSOP admins → Platform management (`/platform-admin` - maintenance mode, services control)
+- **Universal Back Navigation**: Every page, modal, dialog needs clear exit/cancel/back buttons to prevent users from getting stuck and losing work
+- **Unsaved Changes Protection**: Forms and pages with editable content must warn users before navigation/close to prevent accidental data loss
+
 ## System Architecture
 AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, PayrollOS™, TrackOS™) to ensure clean code and extensibility.
 

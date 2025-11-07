@@ -122,6 +122,7 @@ import { FeedbackWidget } from "@/components/feedback-widget";
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Check if on mobile chat, HelpDesk5, or desktop live-chat - use window.location instead of useLocation() hook
@@ -382,11 +383,11 @@ function AppContent() {
                 <Route path="/updates" component={Updates} />
                 <Route path="/help" component={Help} />
 
+                {/* Admin routes */}
+                <Route path="/admin-command-center" component={AdminCommandCenter} />
+                
                 {/* Legacy routes - redirect to consolidated /dashboard */}
                 <Route path="/root-admin-portal">
-                  <Redirect to="/dashboard" />
-                </Route>
-                <Route path="/admin-command-center">
                   <Redirect to="/dashboard" />
                 </Route>
                 <Route path="/admin/command">
