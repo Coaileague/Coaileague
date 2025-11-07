@@ -15,15 +15,15 @@ export function Toaster() {
   const getToastIcon = (variant?: string) => {
     switch (variant) {
       case "success":
-        return <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+        return <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
       case "destructive":
-        return <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+        return <XCircle className="h-5 w-5 text-red-400 shrink-0" />
       case "warning":
-        return <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+        return <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
       case "info":
-        return <Info className="h-5 w-5 text-blue-600 shrink-0" />
+        return <Info className="h-5 w-5 text-teal-400 shrink-0" />
       default:
-        return <Zap className="h-5 w-5 text-emerald-500 shrink-0" />
+        return <Zap className="h-5 w-5 text-emerald-400 shrink-0" />
     }
   }
 
