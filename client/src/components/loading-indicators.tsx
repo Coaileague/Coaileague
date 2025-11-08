@@ -32,8 +32,8 @@ export function ForceFlowBar({
           className="h-full rounded-full relative transition-all duration-300 ease-out"
           style={{
             width: `${progress}%`,
-            background: 'linear-gradient(90deg, #059669, #10b981, #6ee7b7)',
-            boxShadow: '0 0 10px rgba(16, 185, 129, 0.7)'
+            background: 'linear-gradient(90deg, #059669, hsl(158, 34%, 32%), #6ee7b7)',
+            boxShadow: 'none'
           }}
         >
           {/* Segmentation effect */}
@@ -46,7 +46,7 @@ export function ForceFlowBar({
         </div>
       </div>
       {showPercent && (
-        <div className="text-right text-2xl font-bold" style={{ color: '#10b981' }}>
+        <div className="text-right text-2xl font-bold" style={{ color: 'hsl(158, 34%, 32%)' }}>
           {Math.round(progress)}%
         </div>
       )}
@@ -89,20 +89,20 @@ export function AFCoreScan({
       {/* Outer ring */}
       <div 
         className="absolute inset-1 rounded-full border-2 border-transparent border-t-emerald-500/80 border-r-emerald-500/80 animate-spin-slow"
-        style={{ filter: 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.5))' }}
+        style={{ filter: 'none' }}
       />
 
       {/* Progress circle */}
       <svg 
         className="w-full h-full -rotate-90"
-        style={{ filter: 'drop-shadow(0 0 2px #10b981)' }}
+        style={{ filter: 'none' }}
       >
         {/* Track */}
         <circle
           cx="50%"
           cy="50%"
           r={radius}
-          stroke="rgba(16, 185, 129, 0.15)"
+          stroke="rgba(47, 111, 94, 0.15)"
           strokeWidth="6"
           fill="none"
         />
@@ -111,7 +111,7 @@ export function AFCoreScan({
           cx="50%"
           cy="50%"
           r={radius}
-          stroke="#10b981"
+          stroke="hsl(158, 34%, 32%)"
           strokeWidth="6"
           fill="none"
           strokeLinecap="round"
@@ -119,7 +119,7 @@ export function AFCoreScan({
           strokeDashoffset={offset}
           className="transition-all duration-100"
           style={{ 
-            filter: 'drop-shadow(0 0 8px #10b981) drop-shadow(0 0 15px rgba(16, 185, 129, 0.6))'
+            filter: 'none'
           }}
         />
       </svg>
@@ -135,13 +135,13 @@ export function AFCoreScan({
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           style={{ 
-            filter: 'drop-shadow(0 0 5px rgb(16, 185, 129)) drop-shadow(0 0 10px rgba(16, 185, 129, 0.8))'
+            filter: 'none'
           }}
         >
           <path 
             d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" 
-            fill="#10b981"
-            stroke="#10b981"
+            fill="hsl(158, 34%, 32%)"
+            stroke="hsl(158, 34%, 32%)"
             strokeWidth="1"
           />
         </svg>
@@ -158,12 +158,12 @@ export function AFCoreScan({
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             style={{
-              filter: 'drop-shadow(0 0 5px #10b981) drop-shadow(0 0 15px rgba(16, 185, 129, 0.8))'
+              filter: 'none'
             }}
           >
             <path 
               d="M20 6L9 17l-5-5" 
-              stroke="#10b981" 
+              stroke="hsl(158, 34%, 32%)" 
               strokeWidth="3" 
               strokeLinecap="round" 
               strokeLinejoin="round"
@@ -197,8 +197,8 @@ export function DataStreamIndicator({
       )}
       style={{
         backgroundColor: 'rgba(14, 20, 35, 0.8)',
-        borderColor: '#10b981',
-        boxShadow: '0 0 15px rgba(16, 185, 129, 0.6)'
+        borderColor: 'hsl(158, 34%, 32%)',
+        boxShadow: 'none'
       }}
       data-testid="data-stream-indicator"
     >
@@ -207,8 +207,8 @@ export function DataStreamIndicator({
         className="absolute bottom-0 left-0 right-0 transition-all duration-300"
         style={{
           height: `${progress}%`,
-          background: 'linear-gradient(to top, #10b981 0%, #6ee7b7 100%)',
-          boxShadow: '0 0 10px #10b981',
+          background: 'linear-gradient(to top, hsl(158, 34%, 32%) 0%, #6ee7b7 100%)',
+          boxShadow: '0 0 10px hsl(158, 34%, 32%)',
           zIndex: 10
         }}
       >
@@ -219,7 +219,7 @@ export function DataStreamIndicator({
             backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%2310b981' d='M0,15 C25,5 75,25 100,15 L100,20 L0,20 Z' /%3E%3C/svg%3E")`,
             backgroundRepeat: 'repeat-x',
             backgroundSize: '100px 20px',
-            filter: 'drop-shadow(0 0 8px #10b981)'
+            filter: 'none'
           }}
         />
       </div>
@@ -285,18 +285,18 @@ export function HexGridLoader({
             )}
             style={{
               backgroundColor: active && i === activeIndex 
-                ? '#10b981'
+                ? 'hsl(158, 34%, 32%)'
                 : i === (activeIndex - 1 + hexCount) % hexCount
-                ? 'rgba(16, 185, 129, 0.4)'
+                ? 'rgba(47, 111, 94, 0.4)'
                 : 'rgba(255, 255, 255, 0.05)',
               clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
               transform: active && i === activeIndex 
                 ? 'scale(1.1) rotateZ(5deg)' 
                 : 'scale(0.95)',
               boxShadow: active && i === activeIndex
-                ? '0 0 8px #10b981, 0 0 20px rgba(16, 185, 129, 0.8)'
+                ? '0 0 8px hsl(158, 34%, 32%), 0 0 20px rgba(47, 111, 94, 0.8)'
                 : i === (activeIndex - 1 + hexCount) % hexCount
-                ? '0 0 5px rgba(16, 185, 129, 0.5)'
+                ? '0 0 5px rgba(47, 111, 94, 0.5)'
                 : 'none'
             }}
           />

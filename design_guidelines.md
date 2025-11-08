@@ -1,47 +1,54 @@
-# AutoForce™ Design System v2.0
-## Premium Workforce Management Platform for Emergency Services
+# AutoForce™ Design System v3.0 - Fortune 500 Professional
+## Enterprise Workforce Management Platform for Emergency Services
 
 ---
 
 ## Design Approach
 
-**System**: Modern premium SaaS with native mobile app polish
+**System**: Fortune 500 professional SaaS with enterprise-grade polish
 **Philosophy**: "OS"-branded modules (ScheduleOS™, BillOS™, TimeOS™, etc.) delivering autonomous workforce intelligence
-**Visual Identity**: Success-driven gradients + professional emergency services trust
-**Mobile Strategy**: APK-quality native app experience with gesture-optimized controls
+**Visual Identity**: Professional muted tones + trusted enterprise aesthetics (inspired by MSN, Google, Yahoo)
+**Mobile Strategy**: Native app experience with professional controls and refined interactions
 
 ---
 
 ## Brand Identity & Logo
 
 **Lightning Bolt Icon**: Rapid response symbol in circular badge
-**Gradient Treatment**: Vibrant green-to-blue gradients (#10b981 → #3b82f6)
+**Gradient Treatment**: Subdued evergreen gradient (minimal, reserved for hero/CTA only)
 **Variants**: Icon-only (32px-64px), Wordmark (Icon + "AutoForce™"), Full branding
-**Animation**: Subtle pulse (2s) for loading states, static for navigation
+**Animation**: Subtle loading indicators (no glow effects), professional and understated
 **Dark Mode Adaptive**: Automatic contrast adjustment for accessibility
 
 ---
 
-## Color System - Success & Energy
+## Color System - Professional Fortune 500 Palette
 
-### Primary Gradients
-- **Success Gradient**: `from-emerald-500 via-green-400 to-teal-400` (#10b981 → #4ade80 → #2dd4bf)
-- **Energy Gradient**: `from-blue-600 via-cyan-500 to-blue-400` (#2563eb → #06b6d4 → #60a5fa)
-- **Premium Dark**: `from-slate-900 via-slate-800 to-slate-900` (#0f172a → #1e293b → #0f172a)
+### Professional Tones (NO Bright/Glowy Colors)
+- **Muted Evergreen**: hsl(158, 34%, 32%) #2F6F5E - Primary actions, professional accents
+- **Steel Blue**: hsl(210, 32%, 42%) - Secondary actions, supporting elements
+- **Professional Teal**: hsl(162, 29%, 45%) #4E9F87 - Accents, highlights, data points
+- **Neutral Gray**: hsl(213, 16%, 86%) - Borders, dividers, subtle elements
 
-### Core Palette
-- **Primary Green**: hsl(160, 84%, 39%) #10b981 - Success, CTAs, active states
-- **Energy Blue**: hsl(210, 85%, 50%) #3b82f6 - Secondary actions, highlights
-- **Dark Background**: hsl(222, 47%, 11%) #1e293b - Desktop backgrounds, cards
-- **Vibrant Accent**: hsl(175, 84%, 55%) #2dd4bf - Notifications, badges
-- **Text Primary**: hsl(210, 40%, 98%) - Light mode text on dark
-- **Text Secondary**: hsl(215, 20%, 65%) - Muted text, descriptions
+### Light Mode - Clean & Professional
+- **Background**: hsl(210, 20%, 98%) #F3F5F7 - Professional canvas (not pure white)
+- **Card Surface**: hsl(210, 12%, 96%) #E8ECEF - Elevated panels
+- **Border**: hsl(213, 16%, 86%) #CFD5DD - Subtle borders
+- **Text Primary**: hsl(217, 33%, 12%) #151D26 - Strong readable text
+- **Text Secondary**: hsl(215, 16%, 47%) - Muted descriptions
 
-### Status Colors
-- **Success**: Emerald gradient (#10b981 → #4ade80)
-- **Warning**: Amber (#f59e0b)
-- **Error**: Rose (#ef4444)
-- **Info**: Cyan (#06b6d4)
+### Dark Mode - Professional Graphite
+- **Background**: hsl(217, 28%, 14%) - Professional dark
+- **Card Surface**: hsl(215, 24%, 18%) - Elevated panels
+- **Sidebar**: hsl(217, 28%, 12%) - Deep graphite sidebar
+- **Border**: hsl(215, 20%, 25%) - Subtle dark borders
+- **Text Primary**: hsl(210, 20%, 96%) - Clean light text
+
+### Status Colors (Subdued, Professional)
+- **Success**: Muted evergreen hsl(158, 34%, 32%)
+- **Warning**: Subdued amber hsl(38, 72%, 48%)
+- **Error**: Professional red hsl(0, 65%, 52%)
+- **Info**: Professional teal hsl(162, 29%, 45%)
 
 ---
 
@@ -82,12 +89,12 @@
 ## Component Architecture
 
 ### Marketing Hero
-**Layout**: Full viewport (90vh), centered content with gradient overlay
+**Layout**: Full viewport (90vh), centered content with subtle overlay
 **Background Image**: High-quality emergency services imagery (paramedics, response teams)
-**Gradient Overlay**: Success gradient with 60% opacity over image
+**Gradient Overlay**: SUBTLE dark gradient (30% opacity, NO bright colors) for text readability
 **Content**: max-w-4xl centered, headline + subheadline + dual CTAs
-**Buttons**: Blurred backdrop (backdrop-blur-md bg-white/20), white text, no hover states on transparent buttons
-**Image Description**: Professional emergency response team in action, modern equipment, sense of urgency and precision
+**Buttons**: Professional solid buttons with muted colors (NO transparency, NO glow)
+**Image Description**: Professional emergency response team in action, modern equipment, sense of precision and trust
 
 ### Desktop Navigation
 **Top Bar**: Sticky, dark gradient background (Premium Dark), glass morphism effect
@@ -110,28 +117,30 @@
 **Mobile**: Full-width cards, stacked vertically, tap to expand details
 
 ### Dashboard Stats Cards
-**Layout**: Grid of metric cards with gradient accents
-**Number**: Large display font (48px), gradient text fill
-**Label**: Small caps, muted
-**Trend**: Mini sparkline chart with Success/Energy gradient fill
-**Background**: Dark card with subtle gradient border
+**Layout**: Grid of metric cards with NEUTRAL backgrounds
+**Number**: Large display font (48px), professional text color (NO gradients)
+**Label**: Small caps, muted gray
+**Trend**: Mini sparkline chart with muted evergreen or steel blue (NO bright colors)
+**Background**: Neutral card surface with subtle border (NO green tint, NO glow)
 
 ### Data Tables
-**Header**: Dark background with gradient border-bottom
-**Rows**: Alternating subtle backgrounds, hover state with gradient left border
-**Actions**: Icon buttons with gradient hover states
+**Header**: Neutral gray background (NO green tint)
+**Rows**: Alternating subtle neutral backgrounds, hover with MUTED accent (NO bright colors)
+**Actions**: Icon buttons with subtle hover states (NO glow, NO bright gradients)
 **Mobile**: Horizontal scroll or card-based layout
+**Key Rule**: Tables use NEUTRAL backgrounds - green/teal only for data badges or status indicators
 
 ### Buttons & CTAs
-**Primary**: Success gradient background, white text, medium shadow
-**Secondary**: Energy gradient border, gradient text, transparent background
-**Ghost**: Transparent with gradient hover background
-**Icon Buttons**: Circular, gradient border on hover
+**Primary**: Muted evergreen solid background (NO gradients, NO glow), white text, subtle shadow
+**Secondary**: Steel blue solid or outline, professional styling
+**Ghost**: Transparent with SUBTLE muted hover (NO bright colors)
+**Icon Buttons**: Circular, subtle hover state (NO glow effects)
+**Key Rule**: NO bright glowing buttons - professional Fortune 500 style only
 
 ### Form Inputs
-**Base**: Dark background, gradient border on focus
-**Label**: Floating label animation, gradient on active
-**Validation**: Success/Error gradient border pulse
+**Base**: Neutral background, muted border on focus (NO bright colors)
+**Label**: Floating label animation, professional styling
+**Validation**: Success/Error with MUTED color border (NO glow, NO pulse effects)
 
 ---
 
@@ -150,14 +159,15 @@
 
 ---
 
-## Animations & Interactions
+## Animations & Interactions - Professional & Subtle
 
-**Page Transitions**: Smooth fade + slide up (0.3s ease-out)
-**Gradient Animations**: Subtle 3s gradient position shift on hover
-**Card Hovers**: Lift + gradient glow shadow
-**Loading**: Gradient spinner with pulse animation
-**Mobile Gestures**: Swipe animations (0.2s spring)
-**Success States**: Gradient checkmark with scale animation
+**Page Transitions**: Smooth fade (0.2s ease-out) - minimal, professional
+**Hover States**: Subtle background change (NO glow, NO bright effects)
+**Card Hovers**: Minimal lift with SUBTLE shadow (NO glow)
+**Loading**: Simple spinner or progress bar in MUTED evergreen (NO bright glow, NO pulse)
+**Mobile Gestures**: Smooth swipe animations (0.2s spring)
+**Success States**: Simple checkmark with minimal animation (NO gradient glow)
+**Key Rule**: ALL animations must be SUBTLE and professional - NO flashy effects, NO bright glows
 
 ---
 

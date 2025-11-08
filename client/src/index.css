@@ -13,9 +13,9 @@
   /* Automatic computation of border around primary / danger buttons */
   --opaque-button-border-intensity: -8; /* In terms of percentages */
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active - Emerald energy */
-  --elevate-1: rgba(16, 185, 129, .06);  /* Success gradient tint */
-  --elevate-2: rgba(16, 185, 129, .12);
+  /* Backgrounds applied on top of other backgrounds when hovered/active - Subdued professional tint */
+  --elevate-1: rgba(47, 111, 94, .04);  /* Muted evergreen tint */
+  --elevate-2: rgba(47, 111, 94, .08);
 
   /* ========================================================================
      MOBILE-FIRST RESPONSIVE DESIGN TOKENS
@@ -68,60 +68,60 @@
   --z-index-modal: 1060;
   --z-index-toast: 1070;
 
-  /* Modern Light Mode - Clean Professional */
-  --background: 0 0% 100%;             /* Pure white - Clean canvas */
+  /* Modern Light Mode - Fortune 500 Professional */
+  --background: 210 20% 98%;           /* Light gray - Professional canvas */
 
-  --foreground: 222 47% 11%;           /* Deep charcoal - Strong text */
+  --foreground: 217 33% 12%;           /* Deep charcoal - Strong text */
 
-  --border: 214 32% 91%;               /* Soft blue-gray - Subtle borders */
+  --border: 213 16% 86%;               /* Neutral gray - Subtle borders */
 
-  --card: 0 0% 100%;                   /* White cards - Clean surfaces */
+  --card: 210 12% 96%;                 /* Light card surface - Professional */
 
-  --card-foreground: 222 47% 11%;      /* Deep charcoal - Card text */
+  --card-foreground: 217 33% 12%;      /* Deep charcoal - Card text */
 
-  --card-border: 214 32% 91%;          /* Soft borders */
+  --card-border: 213 16% 86%;          /* Neutral borders */
 
-  /* Sidebar - Premium Dark with Gradient Accents */
-  --sidebar: 222 47% 11%;              /* Deep charcoal - Premium feel */
+  /* Sidebar - Professional Dark */
+  --sidebar: 215 24% 18%;              /* Graphite - Professional sidebar */
 
-  --sidebar-foreground: 210 40% 98%;   /* Near white - Clear text */
+  --sidebar-foreground: 210 20% 96%;   /* Light gray text */
 
-  --sidebar-border: 215 25% 27%;       /* Subtle dark border */
+  --sidebar-border: 215 20% 25%;       /* Subtle dark border */
 
-  --sidebar-primary: 160 84% 39%;      /* Success green - Active items */
+  --sidebar-primary: 158 34% 32%;      /* Muted evergreen - Active items */
 
   --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 217 32% 17%;       /* Slightly lighter charcoal - Hover */
+  --sidebar-accent: 215 22% 22%;       /* Slightly lighter graphite - Hover */
 
-  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-accent-foreground: 210 20% 96%;
 
-  --sidebar-ring: 160 84% 39%;         /* Success green focus ring */
+  --sidebar-ring: 158 34% 32%;         /* Muted evergreen focus ring */
 
   /* Popovers */
-  --popover: 0 0% 100%;                /* White */
+  --popover: 210 12% 96%;              /* Light gray */
 
-  --popover-foreground: 222 47% 11%;   /* Deep charcoal */
+  --popover-foreground: 217 33% 12%;   /* Deep charcoal */
 
-  --popover-border: 214 32% 91%;       /* Soft border */
+  --popover-border: 213 16% 86%;       /* Neutral border */
 
-  /* Primary - Success Gradient (Emerald to Green) */
-  --primary: 160 84% 39%;              /* Emerald green - Primary CTAs */
+  /* Primary - Professional Muted Evergreen */
+  --primary: 158 34% 32%;              /* Muted evergreen - Professional CTAs */
 
   --primary-foreground: 0 0% 100%;     /* White text */
 
-  /* Secondary - Energy Blue */
-  --secondary: 210 85% 50%;            /* Vibrant blue - Secondary actions */
+  /* Secondary - Professional Steel Blue */
+  --secondary: 210 32% 42%;            /* Steel blue - Secondary actions */
 
   --secondary-foreground: 0 0% 100%;   /* White text */
 
   /* Muted */
-  --muted: 210 40% 96%;                /* Very light blue-gray */
+  --muted: 210 18% 92%;                /* Light neutral gray */
 
   --muted-foreground: 215 16% 47%;     /* Medium gray */
 
-  /* Accent - Vibrant Teal */
-  --accent: 175 84% 55%;               /* Cyan-teal - Notifications, badges */
+  /* Accent - Professional Teal */
+  --accent: 162 29% 45%;               /* Muted teal - Accents, highlights */
 
   --accent-foreground: 0 0% 100%;      /* White text */
 
@@ -131,15 +131,15 @@
   --destructive-foreground: 0 0% 100%;
 
   /* Input & Ring */
-  --input: 214 32% 91%;                /* Soft border */
-  --ring: 160 84% 39%;                 /* Success green focus ring */
+  --input: 213 16% 86%;                /* Neutral border */
+  --ring: 158 34% 32%;                 /* Muted evergreen focus ring */
   
-  /* Charts - Modern Success Palette */
-  --chart-1: 160 84% 39%;              /* Success Green */
-  --chart-2: 210 85% 50%;              /* Energy Blue */
-  --chart-3: 38 92% 50%;               /* Warning Amber */
-  --chart-4: 175 84% 55%;              /* Info Cyan */
-  --chart-5: 0 84% 60%;                /* Error Rose */
+  /* Charts - Professional Palette */
+  --chart-1: 158 34% 32%;              /* Muted Evergreen */
+  --chart-2: 210 32% 42%;              /* Steel Blue */
+  --chart-3: 38 72% 48%;               /* Subdued Amber */
+  --chart-4: 162 29% 45%;              /* Professional Teal */
+  --chart-5: 0 65% 52%;                /* Subdued Red */
 
   --font-sans: Inter, Open Sans, sans-serif;
   --font-serif: Georgia, serif;
@@ -214,64 +214,64 @@
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(16, 185, 129, 0.08);  /* Success gradient glow */
-  --elevate-2: rgba(16, 185, 129, 0.18);
+  --elevate-1: rgba(78, 159, 135, 0.06);  /* Muted teal tint */
+  --elevate-2: rgba(78, 159, 135, 0.12);
 
-  /* AUTOFORCE™ DARK MODE - Premium Power (Deep Slate + Vibrant Accents) */
-  --background: 222 47% 11%;           /* Deep charcoal - Premium dark */
-  --foreground: 210 40% 98%;           /* Near white - Clear text */
+  /* AUTOFORCE™ DARK MODE - Professional Fortune 500 Style */
+  --background: 217 28% 14%;           /* Dark graphite - Professional dark */
+  --foreground: 210 20% 96%;           /* Light gray - Clear text */
   
-  --border: 215 25% 27%;               /* Subtle dark border */
+  --border: 215 20% 25%;               /* Subtle dark border */
   
-  --card: 217 32% 17%;                 /* Dark slate - Card surfaces */
-  --card-foreground: 210 40% 98%;
-  --card-border: 215 25% 27%;
+  --card: 215 24% 18%;                 /* Dark card surface */
+  --card-foreground: 210 20% 96%;
+  --card-border: 215 20% 25%;
   
-  /* Sidebar - Deepest Premium Dark */
-  --sidebar: 222 47% 8%;               /* Extra deep charcoal */
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 215 25% 27%;
-  --sidebar-primary: 160 84% 39%;      /* Success Green - Vibrant */
+  /* Sidebar - Professional Dark */
+  --sidebar: 217 28% 12%;              /* Deep graphite */
+  --sidebar-foreground: 210 20% 96%;
+  --sidebar-border: 215 20% 25%;
+  --sidebar-primary: 158 34% 38%;      /* Muted evergreen - Slightly brighter for dark mode */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 32% 17%;       /* Hover state */
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 160 84% 39%;
+  --sidebar-accent: 215 24% 18%;       /* Hover state */
+  --sidebar-accent-foreground: 210 20% 96%;
+  --sidebar-ring: 158 34% 38%;
   
   /* Popovers */
-  --popover: 217 32% 17%;
-  --popover-foreground: 210 40% 98%;
-  --popover-border: 215 25% 27%;
+  --popover: 215 24% 18%;
+  --popover-foreground: 210 20% 96%;
+  --popover-border: 215 20% 25%;
   
-  /* Primary - Success Green (Vibrant in dark mode) */
-  --primary: 160 84% 39%;              /* Emerald green - Pops on dark */
+  /* Primary - Professional Muted Evergreen */
+  --primary: 158 34% 38%;              /* Muted evergreen - Professional */
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary - Energy Blue */
-  --secondary: 210 85% 50%;            /* Vibrant blue */
+  /* Secondary - Professional Steel Blue */
+  --secondary: 210 32% 48%;            /* Steel blue - Secondary actions */
   --secondary-foreground: 0 0% 100%;
   
   /* Muted */
-  --muted: 215 28% 17%;
-  --muted-foreground: 215 20% 65%;     /* Medium gray */
+  --muted: 215 22% 22%;
+  --muted-foreground: 215 16% 65%;     /* Medium gray */
   
-  /* Accent - Vibrant Cyan */
-  --accent: 175 84% 55%;               /* Cyan-teal - Bright accent */
-  --accent-foreground: 222 47% 11%;    /* Dark text on bright */
+  /* Accent - Professional Teal */
+  --accent: 162 29% 50%;               /* Muted teal - Accent */
+  --accent-foreground: 217 28% 14%;    /* Dark text on accent */
   
   /* Destructive */
-  --destructive: 0 84% 60%;
+  --destructive: 0 65% 52%;
   --destructive-foreground: 0 0% 100%;
   
   /* Input & Ring */
-  --input: 215 25% 27%;
-  --ring: 160 84% 39%;                 /* Success green focus ring */
+  --input: 215 20% 25%;
+  --ring: 158 34% 38%;                 /* Muted evergreen focus ring */
   
-  /* Charts - Modern Dark Mode Palette */
-  --chart-1: 160 84% 39%;              /* Success Green */
-  --chart-2: 210 85% 50%;              /* Energy Blue */
-  --chart-3: 38 92% 50%;               /* Warning Amber */
-  --chart-4: 175 84% 55%;              /* Info Cyan */
-  --chart-5: 0 84% 60%;                /* Error Rose */
+  /* Charts - Professional Dark Mode Palette */
+  --chart-1: 158 34% 38%;              /* Muted Evergreen */
+  --chart-2: 210 32% 48%;              /* Steel Blue */
+  --chart-3: 38 72% 52%;               /* Subdued Amber */
+  --chart-4: 162 29% 50%;              /* Professional Teal */
+  --chart-5: 0 65% 52%;                /* Subdued Red */
 
   --shadow-2xs: 0px 1px 2px 0px hsl(218 85% 5% / 0.30);
   --shadow-xs: 0px 1px 3px 0px hsl(218 85% 5% / 0.40);
