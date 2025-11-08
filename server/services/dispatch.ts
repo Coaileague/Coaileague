@@ -23,27 +23,25 @@ export interface GPSLocationUpdate {
   latitude: number;
   longitude: number;
   accuracy?: number;
-  incidentId?: number | null;
-  unitStatus?: string | null;
 }
 
 export interface CreateIncidentData {
   workspaceId: string;
   incidentNumber: string;
   priority: 'emergency' | 'urgent' | 'routine';
-  incidentType: string;
+  type: string;
   locationAddress: string;
-  locationLat?: number;
-  locationLng?: number;
+  locationLatitude?: number;
+  locationLongitude?: number;
   clientId?: string;
   callerName?: string;
   callerPhone?: string;
-  callNotes?: string;
+  notes?: string;
 }
 
 export interface AssignUnitData {
-  incidentId: number;
-  unitId: string;
+  incidentId: string;
+  employeeId: string;
   notes?: string;
 }
 
@@ -52,14 +50,13 @@ export class DispatchService {
    * Record GPS location for mobile unit
    */
   async recordGPSLocation(data: GPSLocationUpdate) {
+    // Record GPS location for both time tracking AND dispatch unit tracking
     const [location] = await db.insert(gpsLocations).values({
       employeeId: data.employeeId,
       workspaceId: data.workspaceId,
       latitude: data.latitude,
       longitude: data.longitude,
       accuracy: data.accuracy || 10,
-      incidentId: data.incidentId,
-      unitStatus: data.unitStatus,
       timestamp: new Date(),
     }).returning();
 
@@ -84,15 +81,14 @@ export class DispatchService {
           phone: employees.phone,
         },
         status: unitStatuses.status,
-        lastKnownLat: unitStatuses.lastKnownLat,
-        lastKnownLng: unitStatuses.lastKnownLng,
+        lastKnownLatitude: unitStatuses.lastKnownLatitude,
+        lastKnownLongitude: unitStatuses.lastKnownLongitude,
         lastLocationUpdate: unitStatuses.lastLocationUpdate,
         currentIncidentId: unitStatuses.currentIncidentId,
         capabilities: unitStatuses.capabilities,
-        certifications: unitStatuses.certifications,
         assignedZone: unitStatuses.assignedZone,
         equipmentAssigned: unitStatuses.equipmentAssigned,
-        shiftId: unitStatuses.shiftId,
+        currentShiftId: unitStatuses.currentShiftId,
       })
       .from(unitStatuses)
       .leftJoin(employees, eq(unitStatuses.employeeId, employees.id))
@@ -136,8 +132,8 @@ export class DispatchService {
       const [updated] = await db
         .update(unitStatuses)
         .set({
-          lastKnownLat: lat,
-          lastKnownLng: lng,
+          lastKnownLatitude: lat,
+          lastKnownLongitude: lng,
           lastLocationUpdate: new Date(),
           updatedAt: new Date(),
         })
@@ -150,12 +146,13 @@ export class DispatchService {
     const [created] = await db.insert(unitStatuses).values({
       workspaceId,
       employeeId,
+      unitNumber: `UNIT-${employeeId.slice(-6)}`,
       status: 'offline',
-      lastKnownLat: lat,
-      lastKnownLng: lng,
+      statusChangedAt: new Date(),
+      lastKnownLatitude: lat,
+      lastKnownLongitude: lng,
       lastLocationUpdate: new Date(),
       capabilities: [],
-      certifications: [],
       equipmentAssigned: [],
     }).returning();
 
@@ -165,7 +162,7 @@ export class DispatchService {
   /**
    * Change unit status (available/en route/on scene/offline)
    */
-  async updateUnitStatus(employeeId: string, workspaceId: string, newStatus: string, incidentId?: number) {
+  async updateUnitStatus(employeeId: string, workspaceId: string, newStatus: string, incidentId?: string) {
     const [existing] = await db
       .select()
       .from(unitStatuses)
@@ -200,14 +197,14 @@ export class DispatchService {
       workspaceId: data.workspaceId,
       incidentNumber: data.incidentNumber,
       priority: data.priority,
-      incidentType: data.incidentType,
+      type: data.type,
       locationAddress: data.locationAddress,
-      locationLat: data.locationLat,
-      locationLng: data.locationLng,
+      locationLatitude: data.locationLatitude,
+      locationLongitude: data.locationLongitude,
       clientId: data.clientId,
       callerName: data.callerName,
       callerPhone: data.callerPhone,
-      callNotes: data.callNotes,
+      notes: data.notes,
       callReceivedAt: new Date(),
       status: 'pending',
     }).returning();
@@ -216,7 +213,7 @@ export class DispatchService {
     await this.logDispatchAction(data.workspaceId, incident.id, null, 'incident_created', {
       incidentNumber: incident.incidentNumber,
       priority: incident.priority,
-      type: incident.incidentType,
+      type: incident.type,
     });
 
     return incident;
@@ -231,10 +228,10 @@ export class DispatchService {
         id: dispatchIncidents.id,
         incidentNumber: dispatchIncidents.incidentNumber,
         priority: dispatchIncidents.priority,
-        incidentType: dispatchIncidents.incidentType,
+        type: dispatchIncidents.type,
         locationAddress: dispatchIncidents.locationAddress,
-        locationLat: dispatchIncidents.locationLat,
-        locationLng: dispatchIncidents.locationLng,
+        locationLatitude: dispatchIncidents.locationLatitude,
+        locationLongitude: dispatchIncidents.locationLongitude,
         client: {
           id: clients.id,
           firstName: clients.firstName,
@@ -242,7 +239,7 @@ export class DispatchService {
         },
         callerName: dispatchIncidents.callerName,
         callerPhone: dispatchIncidents.callerPhone,
-        callNotes: dispatchIncidents.callNotes,
+        notes: dispatchIncidents.notes,
         callReceivedAt: dispatchIncidents.callReceivedAt,
         dispatchedAt: dispatchIncidents.dispatchedAt,
         enRouteAt: dispatchIncidents.enRouteAt,
@@ -275,11 +272,34 @@ export class DispatchService {
    * Assign unit to incident
    */
   async assignUnit(data: AssignUnitData, dispatcherId?: string) {
+    // Get incident first to retrieve workspaceId
+    const [incident] = await db
+      .select()
+      .from(dispatchIncidents)
+      .where(eq(dispatchIncidents.id, data.incidentId))
+      .limit(1);
+
+    if (!incident) {
+      throw new Error("Incident not found");
+    }
+
+    // Get unit info for unitNumber
+    const [unit] = await db
+      .select()
+      .from(unitStatuses)
+      .where(and(
+        eq(unitStatuses.employeeId, data.employeeId),
+        eq(unitStatuses.workspaceId, incident.workspaceId)
+      ))
+      .limit(1);
+
     const [assignment] = await db.insert(dispatchAssignments).values({
+      workspaceId: incident.workspaceId,
       incidentId: data.incidentId,
-      unitId: data.unitId,
+      employeeId: data.employeeId,
+      unitNumber: unit?.unitNumber || `UNIT-${data.employeeId.slice(-6)}`,
       assignedAt: new Date(),
-      assignmentStatus: 'assigned',
+      status: 'assigned',
       notes: data.notes,
     }).returning();
 
@@ -293,22 +313,13 @@ export class DispatchService {
       })
       .where(eq(dispatchIncidents.id, data.incidentId));
 
-    // Update unit status
-    const [incident] = await db
-      .select()
-      .from(dispatchIncidents)
-      .where(eq(dispatchIncidents.id, data.incidentId))
-      .limit(1);
+    await this.updateUnitStatus(data.employeeId, incident.workspaceId, 'dispatched', data.incidentId);
 
-    if (incident) {
-      await this.updateUnitStatus(data.unitId, incident.workspaceId, 'dispatched', data.incidentId);
-
-      // Log assignment
-      await this.logDispatchAction(incident.workspaceId, data.incidentId, dispatcherId, 'unit_assigned', {
-        unitId: data.unitId,
-        incidentNumber: incident.incidentNumber,
-      });
-    }
+    // Log assignment
+    await this.logDispatchAction(incident.workspaceId, data.incidentId, dispatcherId, 'unit_assigned', {
+      employeeId: data.employeeId,
+      incidentNumber: incident.incidentNumber,
+    });
 
     return assignment;
   }
@@ -316,13 +327,13 @@ export class DispatchService {
   /**
    * Unit accepts/rejects assignment
    */
-  async respondToAssignment(incidentId: number, unitId: string, response: 'accepted' | 'rejected', reason?: string) {
+  async respondToAssignment(incidentId: string, employeeId: string, response: 'accepted' | 'rejected', reason?: string) {
     const [assignment] = await db
       .select()
       .from(dispatchAssignments)
       .where(and(
         eq(dispatchAssignments.incidentId, incidentId),
-        eq(dispatchAssignments.unitId, unitId)
+        eq(dispatchAssignments.employeeId, employeeId)
       ))
       .limit(1);
 
@@ -334,8 +345,7 @@ export class DispatchService {
     const [updated] = await db
       .update(dispatchAssignments)
       .set({
-        assignmentStatus: response,
-        acknowledgedAt: now,
+        status: response,
         acceptedAt: response === 'accepted' ? now : null,
         rejectedAt: response === 'rejected' ? now : null,
         rejectionReason: reason,
@@ -352,7 +362,7 @@ export class DispatchService {
         .limit(1);
 
       if (incident) {
-        await this.updateUnitStatus(unitId, incident.workspaceId, 'dispatched', incidentId);
+        await this.updateUnitStatus(employeeId, incident.workspaceId, 'dispatched', incidentId);
       }
     }
 
@@ -362,7 +372,7 @@ export class DispatchService {
   /**
    * Update incident status with timeline tracking
    */
-  async updateIncidentStatus(incidentId: number, newStatus: string, dispatcherId?: string) {
+  async updateIncidentStatus(incidentId: string, newStatus: string, dispatcherId?: string) {
     const [incident] = await db
       .select()
       .from(dispatchIncidents)
@@ -422,16 +432,18 @@ export class DispatchService {
    */
   async logDispatchAction(
     workspaceId: string, 
-    incidentId: number | null, 
-    dispatcherId: string | null, 
+    incidentId: string | null, 
+    dispatcherId: string | null | undefined, 
     action: string, 
     details: any
   ) {
     await db.insert(dispatchLogs).values({
       workspaceId,
       incidentId,
-      dispatcherId,
+      userId: dispatcherId || null,
       action,
+      actionCategory: 'incident',
+      description: `${action}: ${JSON.stringify(details)}`,
       details,
     });
   }
@@ -470,14 +482,13 @@ export class DispatchService {
           phone: employees.phone,
         },
         status: unitStatuses.status,
-        lastKnownLat: unitStatuses.lastKnownLat,
-        lastKnownLng: unitStatuses.lastKnownLng,
+        lastKnownLatitude: unitStatuses.lastKnownLatitude,
+        lastKnownLongitude: unitStatuses.lastKnownLongitude,
         lastLocationUpdate: unitStatuses.lastLocationUpdate,
         currentIncidentId: unitStatuses.currentIncidentId,
         capabilities: unitStatuses.capabilities,
-        certifications: unitStatuses.certifications,
         assignedZone: unitStatuses.assignedZone,
-        shiftId: unitStatuses.shiftId,
+        currentShiftId: unitStatuses.currentShiftId,
       })
       .from(unitStatuses)
       .leftJoin(employees, eq(unitStatuses.employeeId, employees.id))

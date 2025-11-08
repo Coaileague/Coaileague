@@ -13,6 +13,7 @@ import {
   text,
   integer,
   decimal,
+  doublePrecision,
   boolean,
   pgEnum,
 } from "drizzle-orm/pg-core";
@@ -2551,8 +2552,8 @@ export const gpsLocations = pgTable("gps_locations", {
   employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }), // DispatchOS tracking
 
   // Location data
-  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
-  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
   accuracy: decimal("accuracy", { precision: 10, scale: 2 }), // meters
   altitude: decimal("altitude", { precision: 10, scale: 2 }), // meters
 
@@ -8386,10 +8387,10 @@ export const dispatchIncidents = pgTable("dispatch_incidents", {
   status: varchar("status").notNull().default('queued'), // queued, dispatched, en_route, on_scene, cleared, cancelled
   
   // Location
-  clientId: integer("client_id").references(() => clients.id),
+  clientId: varchar("client_id").references(() => clients.id), // FIXED: VARCHAR to match clients.id
   locationAddress: text("location_address").notNull(),
-  locationLatitude: decimal("location_latitude", { precision: 10, scale: 7 }),
-  locationLongitude: decimal("location_longitude", { precision: 10, scale: 7 }),
+  locationLatitude: doublePrecision("location_latitude"),
+  locationLongitude: doublePrecision("location_longitude"),
   locationZone: varchar("location_zone"), // "North Sector", "Downtown", etc.
   
   // Caller information
@@ -8453,7 +8454,7 @@ export const dispatchAssignments = pgTable("dispatch_assignments", {
   
   // Assignment details
   incidentId: varchar("incident_id").notNull().references(() => dispatchIncidents.id, { onDelete: 'cascade' }),
-  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }), // FIXED: VARCHAR to match employees.id
   unitNumber: varchar("unit_number").notNull(), // "U-12", "AMB-3", "ENG-7"
   
   // Status tracking
@@ -8500,7 +8501,7 @@ export type DispatchAssignment = typeof dispatchAssignments.$inferSelect;
 export const unitStatuses = pgTable("unit_statuses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }).unique(),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }).unique(), // FIXED: VARCHAR to match employees.id
   
   // Unit identification
   unitNumber: varchar("unit_number").notNull(), // "U-12", "AMB-3", "ENG-7"
@@ -8515,8 +8516,8 @@ export const unitStatuses = pgTable("unit_statuses", {
   currentIncidentId: varchar("current_incident_id").references(() => dispatchIncidents.id),
   
   // Last known location
-  lastKnownLatitude: decimal("last_known_latitude", { precision: 10, scale: 7 }),
-  lastKnownLongitude: decimal("last_known_longitude", { precision: 10, scale: 7 }),
+  lastKnownLatitude: doublePrecision("last_known_latitude"),
+  lastKnownLongitude: doublePrecision("last_known_longitude"),
   lastLocationUpdate: timestamp("last_location_update"),
   
   // Zone assignment
@@ -8527,7 +8528,7 @@ export const unitStatuses = pgTable("unit_statuses", {
   equipmentAssigned: text("equipment_assigned").array(), // ["Radio-123", "Vehicle-456"]
   
   // Shift tracking
-  currentShiftId: integer("current_shift_id").references(() => shifts.id),
+  currentShiftId: varchar("current_shift_id").references(() => shifts.id), // FIXED: VARCHAR to match shifts.id
   clockedInAt: timestamp("clocked_in_at"),
   
   // Device info
@@ -8562,7 +8563,7 @@ export const dispatchLogs = pgTable("dispatch_logs", {
   
   // Event details
   incidentId: varchar("incident_id").references(() => dispatchIncidents.id, { onDelete: 'cascade' }),
-  employeeId: integer("employee_id").references(() => employees.id),
+  employeeId: varchar("employee_id").references(() => employees.id), // FIXED: VARCHAR to match employees.id
   
   // Action tracking
   action: varchar("action").notNull(), // created_incident, assigned_unit, changed_status, sent_message, cancelled_incident, etc.

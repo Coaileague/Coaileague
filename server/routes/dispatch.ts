@@ -26,8 +26,6 @@ router.post('/gps', async (req: Request, res: Response) => {
       latitude: z.number().min(-90).max(90),
       longitude: z.number().min(-180).max(180),
       accuracy: z.number().optional(),
-      incidentId: z.number().nullable().optional(),
-      unitStatus: z.string().nullable().optional(),
     });
 
     const data = schema.parse(req.body);
@@ -128,7 +126,7 @@ router.post('/units/status', async (req: Request, res: Response) => {
       employeeId: z.string(),
       workspaceId: z.string(),
       status: z.enum(['available', 'dispatched', 'en_route', 'on_scene', 'offline']),
-      incidentId: z.number().optional(),
+      incidentId: z.string().optional(),
     });
 
     const data = schema.parse(req.body);
@@ -162,14 +160,14 @@ router.post('/incidents', async (req: Request, res: Response) => {
       workspaceId: z.string(),
       incidentNumber: z.string(),
       priority: z.enum(['emergency', 'urgent', 'routine']),
-      incidentType: z.string(),
+      type: z.string(),
       locationAddress: z.string(),
-      locationLat: z.number().optional(),
-      locationLng: z.number().optional(),
+      locationLatitude: z.number().optional(),
+      locationLongitude: z.number().optional(),
       clientId: z.string().optional(),
       callerName: z.string().optional(),
       callerPhone: z.string().optional(),
-      callNotes: z.string().optional(),
+      notes: z.string().optional(),
     });
 
     const data = schema.parse(req.body);
@@ -212,7 +210,7 @@ router.get('/incidents', async (req: Request, res: Response) => {
  */
 router.patch('/incidents/:id/status', async (req: Request, res: Response) => {
   try {
-    const incidentId = parseInt(req.params.id);
+    const incidentId = req.params.id;
     const schema = z.object({
       status: z.enum(['pending', 'assigned', 'en_route', 'on_scene', 'cleared']),
       dispatcherId: z.string().optional(),
@@ -245,8 +243,8 @@ router.patch('/incidents/:id/status', async (req: Request, res: Response) => {
 router.post('/assignments', async (req: Request, res: Response) => {
   try {
     const schema = z.object({
-      incidentId: z.number(),
-      unitId: z.string(),
+      incidentId: z.string(),
+      employeeId: z.string(),
       notes: z.string().optional(),
       dispatcherId: z.string().optional(),
     });
@@ -255,7 +253,7 @@ router.post('/assignments', async (req: Request, res: Response) => {
     const assignment = await dispatchService.assignUnit(
       {
         incidentId: data.incidentId,
-        unitId: data.unitId,
+        employeeId: data.employeeId,
         notes: data.notes,
       },
       data.dispatcherId
@@ -277,8 +275,8 @@ router.post('/assignments', async (req: Request, res: Response) => {
 router.post('/assignments/respond', async (req: Request, res: Response) => {
   try {
     const schema = z.object({
-      incidentId: z.number(),
-      unitId: z.string(),
+      incidentId: z.string(),
+      employeeId: z.string(),
       response: z.enum(['accepted', 'rejected']),
       reason: z.string().optional(),
     });
@@ -286,7 +284,7 @@ router.post('/assignments/respond', async (req: Request, res: Response) => {
     const data = schema.parse(req.body);
     const assignment = await dispatchService.respondToAssignment(
       data.incidentId,
-      data.unitId,
+      data.employeeId,
       data.response,
       data.reason
     );
