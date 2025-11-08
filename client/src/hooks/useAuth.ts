@@ -4,7 +4,7 @@ import type { User } from "@shared/schema";
 
 // Extended user type including platform role
 interface AuthUser extends Omit<User, 'passwordHash' | 'resetToken' | 'resetTokenExpiry' | 'verificationToken' | 'verificationTokenExpiry'> {
-  platformRole?: 'root' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'support' | 'none' | null;
+  platformRole?: 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none' | null;
 }
 
 interface AuthResponse {

@@ -171,7 +171,7 @@ function AppContent() {
   }
 
   // Check if user is Root Admin (platform-level access)
-  const isRootAdmin = (user as any)?.platformRole === 'root' || (user as any)?.platformRole === 'sysop';
+  const isRootAdmin = (user as any)?.platformRole === 'root_admin' || (user as any)?.platformRole === 'sysop';
 
   return (
     <ProtectedRoute>
@@ -286,8 +286,9 @@ function AppContent() {
                             setLocation('/platform-admin');
                           } else if (
                             (user as any)?.platformRole === 'deputy_admin' ||
-                            (user as any)?.platformRole === 'deputy_assistant' ||
-                            (user as any)?.platformRole === 'support'
+                            (user as any)?.platformRole === 'support_manager' ||
+                            (user as any)?.platformRole === 'support_agent' ||
+                            (user as any)?.platformRole === 'compliance_officer'
                           ) {
                             // Support roles → Their tools/admin area
                             setLocation('/admin-command-center');

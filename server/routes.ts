@@ -1000,7 +1000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Security helper: Redact sensitive admin fields from workspace for non-root users
   function redactSensitiveWorkspaceFields(workspace: any, platformRole?: string): any {
     // ROOT users can see everything
-    if (platformRole === 'root') {
+    if (platformRole === 'root_admin') {
       return workspace;
     }
 
@@ -1275,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Platform admins can see all employees or get demo workspace
-      if (user.platformRole === 'root' || user.platformRole === 'sysop') {
+      if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const employees = await storage.getEmployeesByWorkspace(allWorkspaces[0].id);
@@ -2535,7 +2535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      if (user.platformRole === 'root' || user.platformRole === 'sysop') {
+      if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const clients = await storage.getClientsByWorkspace(allWorkspaces[0].id);
@@ -2672,7 +2672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      if (user.platformRole === 'root' || user.platformRole === 'sysop') {
+      if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const shifts = await storage.getShiftsByWorkspace(allWorkspaces[0].id);
@@ -3435,7 +3435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      if (user.platformRole === 'root' || user.platformRole === 'sysop') {
+      if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const workspace = allWorkspaces[0];

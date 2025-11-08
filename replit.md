@@ -45,7 +45,11 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Authentication**: Custom session-based authentication supporting Replit Auth (OIDC) and Custom Auth, including bcrypt, account locking, and password reset.
 - **Multi-Tenancy**: Data isolation is managed on a workspace basis.
-- **Role-Based Access Control (RBAC)**: Implements hierarchical roles and API protection.
+- **Role-Based Access Control (RBAC)**: Implements comprehensive two-tier hierarchical role system with clear separation between platform support and organization/tenant management:
+  - **Platform Support Roles** (AutoForce™ Internal Team): root_admin, deputy_admin, sysop, support_manager, support_agent, compliance_officer, none
+  - **Organization/Tenant Roles** (Subscriber Companies): org_owner, org_admin, department_manager, supervisor, staff, auditor, contractor
+  - Platform roles managed via separate `platform_roles` table for flexible multi-role assignments
+  - Workspace roles assigned per-employee via `employees` table for tenant-scoped permissions
 - **Communication**: Utilizes an IRC-style WebSocket command/response architecture for real-time interactions. The chat system includes:
     - **HelpDesk5/LiveChat**: Mobile and desktop optimized support chat for organizations to interact with AutoForce™ support.
     - **CommOS™**: Organization-specific chatrooms with role-based access, supporting regular users, organization leaders, and platform support staff with specialized functionalities. Inactive rooms are automatically archived.

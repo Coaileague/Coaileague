@@ -306,25 +306,30 @@ export type WorkspaceTheme = typeof workspaceThemes.$inferSelect;
 // ROLE HIERARCHY ENUMS
 // ============================================================================
 
-// Platform Support Staff Roles (WFOS Organization - Platform Level)
-// Root Admin → Deputy Admin → Deputy Assistant → Sysop → Support
+// Platform Support Staff Roles (AutoForce™ Internal Team - Platform Level)
+// Root Admin → Deputy Admin → SysOp / Support Manager → Support Agent / Compliance Officer
+// These roles manage the PLATFORM ITSELF, not individual client organizations
 export const platformRoleEnum = pgEnum('platform_role', [
-  'root',               // Creator - Highest authority (formerly 'platform_admin')
-  'deputy_admin',       // Assistant to creator  
-  'deputy_assistant',   // Deputy assistant
-  'sysop',             // System operators
-  'support',           // Support agents - Frontline help desk staff
+  'root_admin',         // Creator - Highest authority, full destructive access
+  'deputy_admin',       // Ops Chief - Full ops control (no destructive), day-to-day platform management
+  'sysop',             // System Administrator - Backend, deployment, diagnostics, service restarts
+  'support_manager',    // Support Lead - Manages support team, ticket assignment, client escalations
+  'support_agent',      // Support Staff - Handles client tickets, assists organizations
+  'compliance_officer', // Compliance & AI Oversight - Audits, documentation, AI governance
   'none'               // Regular subscriber user (not platform staff)
 ]);
 
-// Subscriber/Workspace Roles (Customer Organizations - Subscriber Level)
-// Owner (Client) → Manager → HR Manager → Supervisor → Employee
+// Organization/Tenant Roles (Subscriber Companies - Tenant Level)
+// Org Owner → Org Admin → Department Manager → Supervisor → Staff
+// These roles manage THEIR OWN BUSINESS OPERATIONS within their tenant sandbox
 export const workspaceRoleEnum = pgEnum('workspace_role', [
-  'owner',              // Client/Subscriber - Organization owner
-  'manager',            // Manager - Mid-level authority
-  'hr_manager',         // HR Manager - Designated HR staff with document access control
-  'supervisor',         // Supervisor - Oversees employees
-  'employee'            // Employee - Frontline worker
+  'org_owner',          // Organization Owner - Top authority within tenant, full tenant control
+  'org_admin',          // Organization Admin - Day-to-day operations, user management, AI approvals
+  'department_manager', // Department Manager - Manages department tasks, staff, and reports
+  'supervisor',         // Supervisor - Team-level oversight, approves tasks and schedules
+  'staff',              // Staff/Employee - Frontline worker, executes tasks
+  'auditor',            // Auditor - Read-only access to finances, HR, and compliance
+  'contractor'          // Contractor - Limited access to specific tasks/projects only
 ]);
 
 // ============================================================================
@@ -518,7 +523,7 @@ export const employees = pgTable("employees", {
 
   // Employment details
   role: varchar("role"), // e.g., "Technician", "Consultant", "Driver" - job title
-  workspaceRole: workspaceRoleEnum("workspace_role").default("employee"), // Permission level
+  workspaceRole: workspaceRoleEnum("workspace_role").default("staff"), // Permission level (formerly 'employee')
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   color: varchar("color").default("#3b82f6"), // For calendar display
 
