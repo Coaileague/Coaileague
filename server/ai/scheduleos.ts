@@ -219,7 +219,7 @@ CRITICAL RULES:
         workspaceId: request.workspaceId,
         userId: request.userId,
         featureKey: 'scheduleos_ai_generation',
-        quantity: tokenUsage.total_tokens,
+        units: tokenUsage.total_tokens,
         metadata: {
           model: 'gpt-4',
           promptTokens: tokenUsage.prompt_tokens,
