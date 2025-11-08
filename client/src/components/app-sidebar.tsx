@@ -126,7 +126,7 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass">
+    <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass z-50">
       <SidebarHeader className="p-4 border-b border-white/[0.08] bg-gradient-to-br from-background/80 to-muted/20">
         <Link href="/dashboard" className="flex items-center justify-center" data-testid="link-dashboard-logo">
           <AnimatedAutoForceLogo variant="icon" size="md" animated={true} />

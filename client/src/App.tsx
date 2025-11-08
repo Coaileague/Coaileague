@@ -195,7 +195,7 @@ function AppContent() {
         <div className="flex h-screen w-full overflow-x-hidden max-w-full relative">
           {/* Hide global sidebar for mobile chat - it has its own support menu */}
           {!isMobileChat && <AppSidebar />}
-          <div className="flex flex-col absolute inset-0 min-h-0 w-full max-w-full overflow-x-hidden">
+          <div className="flex flex-col absolute inset-0 min-h-0 w-full max-w-full overflow-x-hidden z-0">
             {/* Demo Banner - positioned to account for fixed header */}
             <DemoBanner />
 
