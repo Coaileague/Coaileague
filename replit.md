@@ -17,6 +17,11 @@ Role-Aware Settings Gear:
 Universal Back Navigation: Every page, modal, dialog needs clear exit/cancel/back buttons.
 Unsaved Changes Protection: Forms and pages with editable content must warn users before navigation/close.
 
+## Test Credentials
+Root Admin Account:
+- Email: root@getdc360.com
+- Password: admin123@*
+
 ## System Architecture
 AutoForce™ is built on a modular "OS" design philosophy (e.g., BillOS™, PayrollOS™, TrackOS™) for clean code and extensibility.
 
