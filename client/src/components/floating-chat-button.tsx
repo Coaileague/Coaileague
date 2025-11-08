@@ -98,7 +98,7 @@ export function FloatingChatButton() {
   // Handle click - only navigate if button wasn't dragged
   const handleClick = () => {
     if (!hasMoved.current) {
-      setLocation("/live-chat");
+      setLocation("/chat");
     }
   };
 
@@ -128,7 +128,7 @@ export function FloatingChatButton() {
   };
 
   // Don't show on chat pages - user is already in the chat!
-  if (location === "/live-chat" || location === "/mobile-chat" || location === "/modern-mobile-chat") {
+  if (location === "/chat" || location === "/mobile-chat") {
     return null;
   }
 

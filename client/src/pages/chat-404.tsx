@@ -47,7 +47,7 @@ export default function Chat404() {
   };
 
   const handleRefreshChat = () => {
-    window.location.href = "/live-chat";
+    window.location.href = "/chat";
     window.location.reload();
   };
 

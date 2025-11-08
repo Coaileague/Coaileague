@@ -33,7 +33,7 @@ import {
 const communicationFamilyItems = [
   { title: "CommOS™", url: "/comm-os", icon: MessagesSquare },
   { title: "Private Messages", url: "/messages", icon: LockKeyhole },
-  { title: "SupportOS™ HelpDesk", url: "/live-chat", icon: Headphones },
+  { title: "SupportOS™ HelpDesk", url: "/chat", icon: Headphones },
 ];
 
 // FAMILY 2: Workforce Operations OS

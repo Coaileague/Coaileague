@@ -132,8 +132,8 @@ function AppContent() {
 
   // Check if on mobile chat, HelpDesk5, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
-  const isMobileChat = window.location.pathname === '/mobile-chat' || window.location.pathname === '/helpdesk5';
-  const isHelpDesk = window.location.pathname === '/live-chat' || window.location.pathname.startsWith('/live-chat') || window.location.pathname === '/helpdesk5';
+  const isMobileChat = window.location.pathname === '/mobile-chat';
+  const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
 
   // Custom sidebar width for better workspace layout (increased for longer menu text)
   const style = {
@@ -162,8 +162,11 @@ function AppContent() {
         <Route path="/pricing" component={Pricing} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
-        <Route path="/live-chat" component={LiveChatroom} />
-        <Route path="/helpdesk5" component={HelpDesk5} />
+        {/* Consolidated chat routes - redirect to main chat */}
+        <Route path="/chat" component={HelpDesk5} />
+        <Route path="/live-chat"><Redirect to="/chat" /></Route>
+        <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
+        <Route path="/support/chat"><Redirect to="/chat" /></Route>
         {/* Removed /mobile-chat from here - FIXED: Duplicate route was causing double WebSocket connections */}
         <Route path="/design-comparison" component={DesignComparison} />
         <Route path="/logo-showcase" component={LogoShowcase} />
@@ -435,10 +438,14 @@ function AppContent() {
                 <Route path="/pricing" component={Pricing} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
-                <Route path="/support/chat" component={HelpdeskChat} />
-                <Route path="/live-chat" component={LiveChatroom} />
-                <Route path="/helpdesk5" component={HelpDesk5} />
-                <Route path="/mobile-chat" component={MobileChatPage} />
+                {/* Consolidated Chat Routes - ONLY 2 versions */}
+                <Route path="/chat" component={HelpDesk5} /> {/* Desktop chat with Gemini AI */}
+                <Route path="/mobile-chat" component={MobileChatPage} /> {/* Mobile optimized */}
+                
+                {/* Redirect legacy chat routes to unified /chat */}
+                <Route path="/support/chat"><Redirect to="/chat" /></Route>
+                <Route path="/live-chat"><Redirect to="/chat" /></Route>
+                <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
                 <Route path="/design-comparison" component={DesignComparison} />
                 <Route path="/logo-showcase" component={LogoShowcase} />
                 <Route path="/support" component={Support} />

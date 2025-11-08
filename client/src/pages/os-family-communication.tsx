@@ -27,7 +27,7 @@ export default function CommunicationFamilyPage() {
       icon: Headphones,
       description: "Live customer support with mobile-optimized chat interface and ticket management",
       features: ["Live Chat", "Ticket System", "Mobile Interface", "Support Analytics"],
-      url: "/live-chat",
+      url: "/chat",
       color: "from-primary to-teal-500"
     }
   ];

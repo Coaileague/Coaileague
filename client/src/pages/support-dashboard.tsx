@@ -184,7 +184,7 @@ export default function SupportDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Link href="/support/chat">
+          <Link href="/chat">
             <Button className="bg-indigo-600 hover:bg-indigo-700" data-testid="button-live-chat">
               <MessageSquare className="w-4 h-4 mr-2" />
               Open Live Chat
@@ -288,7 +288,7 @@ export default function SupportDashboard() {
                               Grant Voice
                             </Button>
                           )}
-                          <Link href="/support/chat">
+                          <Link href="/chat">
                             <Button size="sm" variant="outline" data-testid={`button-open-chat-${conv.id}`}>
                               <ExternalLink className="w-3 h-3 mr-1" />
                               Open Chat

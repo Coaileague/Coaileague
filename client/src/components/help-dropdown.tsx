@@ -32,7 +32,7 @@ export function HelpDropdown() {
           <Book className="mr-2 h-4 w-4" />
           <span>Documentation</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => window.location.href = '/live-chat'}>
+        <DropdownMenuItem onClick={() => window.location.href = '/chat'}>
           <MessageSquare className="mr-2 h-4 w-4" />
           <span>Live Chat Support</span>
         </DropdownMenuItem>

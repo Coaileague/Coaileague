@@ -190,7 +190,7 @@ export default function Contact() {
                 Instant answers from our team
               </p>
               <div className="pt-2">
-                <Link href="/live-chat">
+                <Link href="/chat">
                   <Button
                     size="sm"
                     className="bg-[hsl(var(--cad-purple))] hover:bg-[hsl(var(--cad-purple))]/90 text-white h-9"
@@ -476,7 +476,7 @@ export default function Contact() {
 
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => setLocation("/live-chat")}
+                    onClick={() => setLocation("/chat")}
                     className="flex-1 bg-[hsl(var(--cad-purple))] hover:bg-[hsl(var(--cad-purple))]/90 text-white"
                     data-testid="button-goto-chat"
                   >

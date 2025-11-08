@@ -97,7 +97,7 @@ export default function Help() {
           <h2 className="text-xl font-bold">Quick Access</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="hover-elevate cursor-pointer">
-              <Link href="/live-chat">
+              <Link href="/chat">
                 <CardHeader>
                   <MessageSquare className="h-8 w-8 text-primary mb-2" />
                   <CardTitle className="text-lg">Live Chat Support</CardTitle>

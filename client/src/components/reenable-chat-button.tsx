@@ -52,7 +52,7 @@ export function ReenableChatButton() {
   };
 
   // Don't show on chat pages
-  if (location === "/live-chat" || location === "/mobile-chat" || location === "/modern-mobile-chat" || location === "/helpdesk5") {
+  if (location === "/chat" || location === "/mobile-chat") {
     return null;
   }
 

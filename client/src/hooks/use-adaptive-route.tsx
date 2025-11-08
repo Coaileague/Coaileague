@@ -122,9 +122,9 @@ export const FEATURE_ROUTES = {
     tablet: '/comm-os'
   },
   helpdesk: {
-    desktop: '/helpdesk5',
-    mobile: '/helpdesk5', // Already responsive
-    tablet: '/helpdesk5'
+    desktop: '/chat',
+    mobile: '/chat', // Already responsive
+    tablet: '/chat'
   },
   dashboard: {
     desktop: '/dashboard',

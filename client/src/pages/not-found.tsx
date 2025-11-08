@@ -66,7 +66,7 @@ export default function NotFound() {
 
           <div className="bg-muted border rounded-lg p-3">
             <Button 
-              onClick={() => setLocation("/live-chat")} 
+              onClick={() => setLocation("/chat")} 
               variant="secondary"
               className="w-full gap-2"
               data-testid="button-live-support"
