@@ -35,7 +35,7 @@ export class PredictionOSEngine {
    * Analyze employee turnover risk using AI
    * Returns 0-100% probability of turnover in next 90 days
    */
-  static async analyzeTurnoverRisk(employeeId: string, workspaceId: string): Promise<{
+  static async analyzeTurnoverRisk(employeeId: string, workspaceId: string, userId?: string): Promise<{
     riskScore: number;
     riskLevel: string;
     totalTurnoverCost: number;
@@ -192,6 +192,27 @@ RESPOND IN THIS EXACT JSON FORMAT:
         response_format: { type: "json_object" },
         max_tokens: 1000, // Limit token usage for cost control
       });
+
+      // USAGE-BASED BILLING: Track AI token usage for customer billing
+      const tokenUsage = completion.usage;
+      if (tokenUsage && workspaceId) {
+        const { usageMeteringService } = await import('./billing/usageMetering');
+        await usageMeteringService.recordUsage({
+          workspaceId,
+          userId,
+          featureKey: 'predictionos_turnover_analysis',
+          usageType: 'token',
+          usageAmount: tokenUsage.total_tokens,
+          usageUnit: 'tokens',
+          metadata: {
+            model: 'gpt-4o',
+            promptTokens: tokenUsage.prompt_tokens,
+            completionTokens: tokenUsage.completion_tokens,
+            employeeId,
+          },
+        });
+        console.log(`[PredictionOS™] Billed ${tokenUsage.total_tokens} tokens to workspace ${workspaceId}`);
+      }
       
       const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
       
@@ -232,7 +253,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
   static async analyzeCostVariance(
     workspaceId: string,
     scheduleDate: Date,
-    proposedShifts: any[]
+    proposedShifts: any[],
+    userId?: string
   ): Promise<{
     budgetedCost: number;
     predictedCost: number;
@@ -336,6 +358,27 @@ RESPOND IN THIS EXACT JSON FORMAT:
         temperature: 0.3,
         response_format: { type: "json_object" }
       });
+
+      // USAGE-BASED BILLING: Track AI token usage for customer billing
+      const tokenUsage = completion.usage;
+      if (tokenUsage && workspaceId) {
+        const { usageMeteringService } = await import('./billing/usageMetering');
+        await usageMeteringService.recordUsage({
+          workspaceId,
+          userId,
+          featureKey: 'predictionos_cost_variance',
+          usageType: 'token',
+          usageAmount: tokenUsage.total_tokens,
+          usageUnit: 'tokens',
+          metadata: {
+            model: 'gpt-4o',
+            promptTokens: tokenUsage.prompt_tokens,
+            completionTokens: tokenUsage.completion_tokens,
+            shiftsAnalyzed: proposedShifts.length,
+          },
+        });
+        console.log(`[PredictionOS™] Billed ${tokenUsage.total_tokens} tokens to workspace ${workspaceId}`);
+      }
       
       const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
       
