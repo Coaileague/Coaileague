@@ -72,6 +72,9 @@ export default function LiveChatroomPage() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [showConnectionError, setShowConnectionError] = useState(false);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const [geminiEnabled, setGeminiEnabled] = useState(false);
+  const [isGeminiAvailable, setIsGeminiAvailable] = useState(false);
+  const [geminiLoading, setGeminiLoading] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -197,6 +200,93 @@ export default function LiveChatroomPage() {
       sendMessage(message, userName, 'support');
     }
   };
+
+  // Check Gemini AI availability on mount
+  useEffect(() => {
+    const checkGeminiStatus = async () => {
+      try {
+        const response = await fetch('/api/chat/gemini/status', {
+          credentials: 'include',
+        });
+        const data = await response.json();
+        setIsGeminiAvailable(data.available || false);
+      } catch (error) {
+        console.error('Failed to check Gemini status:', error);
+        setIsGeminiAvailable(false);
+      }
+    };
+    
+    if (isAuthenticated) {
+      checkGeminiStatus();
+    }
+  }, [isAuthenticated]);
+
+  // Handle Gemini AI assistant request
+  const handleGeminiAssist = useCallback(async () => {
+    // Triple-guard: should never trigger without these conditions, but defensive check
+    if (!geminiEnabled || !isGeminiAvailable || geminiLoading) {
+      toast({
+        title: "Gemini AI Not Available",
+        description: "Please enable Gemini AI first using the toggle button",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const lastUserMessage = messages.filter(m => m.senderType !== 'bot' && m.senderType !== 'system').slice(-1)[0];
+    
+    if (!lastUserMessage) {
+      toast({
+        title: "No message to assist with",
+        description: "Send a message first, then use Gemini AI for assistance",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeminiLoading(true);
+    
+    try {
+      const conversationHistory = messages.slice(-10).map(m => ({
+        role: m.senderType === 'bot' ? 'assistant' : 'user',
+        content: m.message
+      }));
+
+      const response = await fetch('/api/chat/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: lastUserMessage.message,
+          conversationHistory,
+          systemPrompt: `You are a helpful AI assistant for AutoForce™ HelpDesk. Provide concise, helpful responses to support questions. Be professional and friendly.`
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.available) {
+        throw new Error(data.message || 'Gemini AI unavailable');
+      }
+
+      // Send Gemini response as a message
+      sendMessage(`🤖 Gemini AI: ${data.response}`, 'Gemini AI', 'system');
+      
+      toast({
+        title: "AI Response Generated",
+        description: "Gemini AI has provided assistance",
+      });
+    } catch (error: any) {
+      console.error('Gemini error:', error);
+      toast({
+        title: "AI Assistant Error",
+        description: error.message || "Failed to get AI response",
+        variant: "destructive",
+      });
+    } finally {
+      setGeminiLoading(false);
+    }
+  }, [geminiEnabled, isGeminiAvailable, geminiLoading, messages, sendMessage, toast]);
   
   // Mobile detection (touch device check)
   const isMobileDevice = () => {
@@ -679,6 +769,58 @@ export default function LiveChatroomPage() {
                 </>
               )}
             </Badge>
+
+            {/* Gemini AI Toggle - Available to all authenticated users */}
+            {isGeminiAvailable && (
+              <Button
+                variant={geminiEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setGeminiEnabled(!geminiEnabled);
+                  toast({
+                    title: geminiEnabled ? "Gemini AI Disabled" : "Gemini AI Enabled",
+                    description: geminiEnabled 
+                      ? "AI assistance turned off" 
+                      : "Ask AI for help after sending a message",
+                  });
+                }}
+                data-testid="button-toggle-gemini"
+                className={`gap-2 hidden sm:flex ${
+                  geminiEnabled 
+                    ? 'bg-gradient-to-r from-primary to-green-600 border-none text-white shadow-lg shadow-primary/30' 
+                    : 'bg-white/10 border-white/30 text-white hover:bg-white/20 hover:border-white/40'
+                }`}
+                title="Toggle Gemini AI assistant"
+              >
+                <Bot className="w-4 h-4" />
+                <span className="hidden lg:inline">Gemini AI</span>
+              </Button>
+            )}
+
+            {/* Ask Gemini Button - Only show when enabled, available, and has messages */}
+            {geminiEnabled && isGeminiAvailable && messages.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGeminiAssist}
+                disabled={geminiLoading}
+                data-testid="button-ask-gemini"
+                className="gap-2 hidden sm:flex bg-gradient-to-r from-purple-600 to-blue-600 border-none text-white hover:from-purple-500 hover:to-blue-500 shadow-lg disabled:opacity-50"
+                title="Ask Gemini AI about your last message"
+              >
+                {geminiLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span className="hidden lg:inline">Thinking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span className="hidden lg:inline">Ask AI</span>
+                  </>
+                )}
+              </Button>
+            )}
 
             {/* Reconnect Chat Button (Staff Only) - IRC /hop style */}
             {isStaff && (

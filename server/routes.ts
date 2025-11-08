@@ -11506,6 +11506,63 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // Gemini AI: Generate chat response
+  app.post('/api/chat/gemini', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { message, conversationHistory, systemPrompt } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const { generateGeminiResponse, isGeminiAvailable } = await import('./gemini');
+      
+      if (!isGeminiAvailable()) {
+        return res.status(503).json({ 
+          message: "Gemini AI is not configured. Please contact support.",
+          available: false 
+        });
+      }
+
+      const response = await generateGeminiResponse({
+        message,
+        conversationHistory: conversationHistory || [],
+        systemPrompt,
+      });
+
+      res.json({ 
+        response,
+        available: true 
+      });
+    } catch (error: any) {
+      console.error("Error generating Gemini response:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to generate AI response",
+        available: false 
+      });
+    }
+  });
+
+  // Check Gemini AI availability
+  app.get('/api/chat/gemini/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { isGeminiAvailable } = await import('./gemini');
+      const available = isGeminiAvailable();
+      
+      res.json({ 
+        available,
+        model: available ? "gemini-2.0-flash-exp" : null,
+        message: available ? "Gemini AI is ready" : "Gemini AI is not configured"
+      });
+    } catch (error: any) {
+      console.error("Error checking Gemini status:", error);
+      res.status(500).json({ 
+        available: false,
+        message: "Failed to check AI status" 
+      });
+    }
+  });
+
   // ============================================================================
   // HELPDESK SYSTEM API ROUTES (Professional Support Chat Rooms)
   // ============================================================================
