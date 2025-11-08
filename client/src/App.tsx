@@ -188,10 +188,10 @@ function AppContent() {
     <ProtectedRoute>
       <SidebarProvider defaultOpen={false} style={style as React.CSSProperties}>
         <CommandPalette />
-        <div className="flex h-screen w-full">
+        <div className="flex h-screen w-full overflow-x-hidden max-w-full">
           {/* Hide global sidebar for mobile chat - it has its own support menu */}
           {!isMobileChat && <AppSidebar />}
-          <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
             <DemoBanner />
 
             {/* Global Header with Sidebar Toggle - Hidden for mobile chat AND HelpDesk */}
@@ -327,7 +327,7 @@ function AppContent() {
               </header>
             )}
 
-            <main className="flex-1 overflow-auto scrollbar-hide bg-transparent min-h-0">
+            <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-transparent min-h-0 w-full max-w-full">
               <Switch>
                 <Route path="/">
                   {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}

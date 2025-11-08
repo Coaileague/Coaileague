@@ -2172,3 +2172,103 @@ span[data-testid="logo-text-force"].autoforce-logo-force,
 .autoforce-logo-force[data-testid="logo-text-force"] {
   color: #10b981 !important;
 }
+
+/* ============================================================================
+   MOBILE RESPONSIVE UTILITIES - Fix cut-off borders and text overflow
+   ============================================================================ */
+
+/* Mobile-Safe Container - Prevents content from going off-screen */
+.mobile-safe-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  padding-left: 1rem; /* 16px */
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-safe-container {
+    padding-left: 1.5rem; /* 24px */
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-safe-container {
+    padding-left: 2rem; /* 32px */
+    padding-right: 2rem;
+  }
+}
+
+/* Mobile-Safe Page - Full page wrapper with safe padding */
+.mobile-safe-page {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-safe-page {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-safe-page {
+    padding: 2rem;
+  }
+}
+
+/* Mobile Text Wrap - Prevents text overflow */
+.mobile-text-wrap {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Ensure all main containers don't exceed viewport */
+.container, [class*="max-w-"] {
+  max-width: 100vw;
+}
+
+/* Fix Card borders on mobile */
+@media (max-width: 640px) {
+  .card, [class*="rounded"] {
+    border-radius: 0.5rem;
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
+  }
+}
+
+/* Responsive Grid - Auto-stack on mobile */
+.mobile-grid-responsive {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .mobile-grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .mobile-grid-responsive {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
