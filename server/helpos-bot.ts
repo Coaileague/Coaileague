@@ -26,6 +26,8 @@ export interface BotConversation {
   satisfactionSignals: number; // Positive signals counter
   escalationSignals: number; // Negative signals counter
   lastInteraction: Date;
+  workspaceId?: string; // For billing tracking
+  userId?: string; // For billing tracking
 }
 
 // In-memory bot conversation store (could be moved to database for persistence)
@@ -85,7 +87,12 @@ function detectSentiment(message: string): { satisfaction: number; escalation: n
 /**
  * Initialize a new bot conversation
  */
-export async function initializeBotConversation(ticketId: string, userQuery: string): Promise<BotConversation> {
+export async function initializeBotConversation(
+  ticketId: string, 
+  userQuery: string,
+  workspaceId?: string,
+  userId?: string
+): Promise<BotConversation> {
   const conversation: BotConversation = {
     ticketId,
     state: BotState.GREETING,
@@ -95,6 +102,8 @@ export async function initializeBotConversation(ticketId: string, userQuery: str
     satisfactionSignals: 0,
     escalationSignals: 0,
     lastInteraction: new Date(),
+    workspaceId,
+    userId,
   };
   
   activeBotConversations.set(ticketId, conversation);
@@ -102,9 +111,14 @@ export async function initializeBotConversation(ticketId: string, userQuery: str
 }
 
 /**
- * Search FAQs using semantic search
+ * Search FAQs using semantic search with usage tracking
  */
-async function searchFaqsForBot(query: string, limit: number = 3): Promise<Array<{ id: string; question: string; answer: string; score: number }>> {
+async function searchFaqsForBot(
+  query: string, 
+  limit: number = 3, 
+  workspaceId?: string, 
+  userId?: string
+): Promise<Array<{ id: string; question: string; answer: string; score: number }>> {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return [];
@@ -117,6 +131,25 @@ async function searchFaqsForBot(query: string, limit: number = 3): Promise<Array
       model: 'text-embedding-3-small',
       input: query,
     });
+    
+    // CRITICAL: Track embedding token usage for billing
+    const tokensUsed = embeddingResponse.usage?.total_tokens || 0;
+    if (tokensUsed > 0 && workspaceId) {
+      await usageMeteringService.recordUsage({
+        workspaceId,
+        userId,
+        featureKey: 'helpdesk_ai_embedding',
+        usageType: 'token',
+        usageAmount: tokensUsed,
+        usageUnit: 'tokens',
+        activityType: 'faq_semantic_search',
+        metadata: {
+          model: 'text-embedding-3-small',
+          queryLength: query.length,
+        }
+      });
+      console.log(`💰 HelpOS FAQ Search - Embedding generated (${tokensUsed} tokens) - Billed to workspace: ${workspaceId}`);
+    }
     
     const queryEmbedding = embeddingResponse.data[0].embedding;
     
@@ -180,7 +213,8 @@ function generateFaqResponse(faqs: Array<{ question: string; answer: string; sco
  * Bot workflow tools - commands bot can use to assist users
  */
 export const BOT_TOOLS = {
-  searchKnowledgeBase: async (query: string) => await searchFaqsForBot(query, 3),
+  searchKnowledgeBase: async (query: string, workspaceId?: string, userId?: string) => 
+    await searchFaqsForBot(query, 3, workspaceId, userId),
   detectUserSentiment: (message: string) => detectSentiment(message),
   checkTicketStatus: async (ticketId: string) => {
     const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, ticketId)).limit(1);
@@ -230,14 +264,24 @@ function determineBotAction(
  */
 export async function processBotMessage(
   ticketId: string,
-  userMessage: string
+  userMessage: string,
+  workspaceId?: string,
+  userId?: string
 ): Promise<{ response: string; shouldEscalate: boolean; shouldClose: boolean; state: BotState }> {
   
   let conversation = activeBotConversations.get(ticketId);
   
   // Initialize if doesn't exist
   if (!conversation) {
-    conversation = await initializeBotConversation(ticketId, userMessage);
+    conversation = await initializeBotConversation(ticketId, userMessage, workspaceId, userId);
+  } else {
+    // Update workspace/user context if provided
+    if (workspaceId && !conversation.workspaceId) {
+      conversation.workspaceId = workspaceId;
+    }
+    if (userId && !conversation.userId) {
+      conversation.userId = userId;
+    }
   }
   
   // Update conversation history
@@ -263,7 +307,7 @@ export async function processBotMessage(
     case BotState.SEARCHING:
       // Search FAQs
       conversation.state = BotState.SEARCHING;
-      const faqs = await searchFaqsForBot(userMessage);
+      const faqs = await searchFaqsForBot(userMessage, 3, conversation.workspaceId, conversation.userId);
       conversation.suggestedFaqs = faqs;
       
       if (faqs.length > 0 && faqs[0].score > 0.7) {

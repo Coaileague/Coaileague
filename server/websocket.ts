@@ -1777,8 +1777,13 @@ export function setupWebSocket(server: Server) {
                 const { isBotEnabled, processBotMessage, closeBotTicketSuccess, escalateBotTicket } = await import('./helpos-bot');
                 
                 if (isBotEnabled()) {
-                  // Process user message through autonomous bot
-                  const botResult = await processBotMessage(ws.conversationId, payload.message);
+                  // Process user message through autonomous bot with billing context
+                  const botResult = await processBotMessage(
+                    ws.conversationId, 
+                    payload.message, 
+                    ws.workspaceId, // For billing tracking
+                    ws.userId // For billing tracking
+                  );
                   
                   // Send bot response
                   if (botResult.response) {

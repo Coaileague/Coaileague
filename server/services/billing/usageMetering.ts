@@ -397,6 +397,7 @@ export class UsageMeteringService {
       'helpdesk_ai_response': 0.90, // $0.90 per 1000 tokens (GPT-4o-mini responses with margin)
       'helpdesk_ai_analysis': 0.50, // $0.50 per 1000 tokens (sentiment analysis with margin)
       'helpdesk_ai_question': 0.90, // $0.90 per 1000 tokens (GPT-4o-mini Q&A with margin)
+      'helpdesk_ai_embedding': 0.10, // $0.10 per 1000 tokens (text-embedding-3-small with margin)
       
       // ScheduleOS
       'scheduleos_ai_generation': 0.05, // $0.05 per generation
