@@ -9632,6 +9632,196 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // Escalate support ticket to platform support (org leaders only)
+  app.post('/api/support/tickets/:id/escalate', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const userId = req.user!.claims.sub;
+
+      if (!reason) {
+        return res.status(400).json({ message: "Escalation reason required" });
+      }
+
+      // Get the ticket to verify ownership
+      const ticket = await db.query.supportTickets.findFirst({
+        where: eq(supportTickets.id, id),
+      });
+
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Verify ticket belongs to user's workspace
+      const user = await storage.getUser(userId);
+      if (ticket.workspaceId !== user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Check if already escalated
+      if (ticket.isEscalated) {
+        return res.status(400).json({ message: "Ticket already escalated" });
+      }
+
+      // Escalate the ticket
+      const [updatedTicket] = await db.update(supportTickets)
+        .set({
+          isEscalated: true,
+          escalatedAt: new Date(),
+          escalatedBy: userId,
+          escalatedReason: reason,
+          priority: 'high', // Auto-elevate priority
+          updatedAt: new Date(),
+        })
+        .where(eq(supportTickets.id, id))
+        .returning();
+
+      // Send notification to platform support staff
+      const platformStaff = await db.query.platformRoles.findMany({
+        where: inArray(platformRoles.role, ['root_admin', 'deputy_admin', 'support_manager', 'support_agent', 'sysop']),
+      });
+
+      for (const staff of platformStaff) {
+        await db.insert(notifications).values({
+          userId: staff.userId,
+          type: 'support_escalation',
+          title: 'Support Ticket Escalated',
+          message: `Ticket #${ticket.ticketNumber} escalated: ${ticket.subject}`,
+          link: `/platform-admin/support`,
+          priority: 'high',
+        });
+      }
+
+      res.json(updatedTicket);
+    } catch (error) {
+      console.error("Error escalating support ticket:", error);
+      res.status(500).json({ message: "Failed to escalate support ticket" });
+    }
+  });
+
+  // Get escalated tickets (platform support only)
+  app.get('/api/support/escalated', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const tickets = await db.query.supportTickets.findMany({
+        where: eq(supportTickets.isEscalated, true),
+        with: {
+          workspace: true,
+        },
+        orderBy: (tickets, { desc }) => [desc(tickets.escalatedAt)],
+      });
+
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching escalated tickets:", error);
+      res.status(500).json({ message: "Failed to fetch escalated tickets" });
+    }
+  });
+
+  // Assign escalated ticket to platform staff
+  app.patch('/api/support/escalated/:id/assign', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { staffId } = req.body;
+      const userId = req.user!.claims.sub;
+
+      // Verify ticket exists and is escalated
+      const ticket = await db.query.supportTickets.findFirst({
+        where: eq(supportTickets.id, id),
+      });
+
+      if (!ticket || !ticket.isEscalated) {
+        return res.status(404).json({ message: "Escalated ticket not found" });
+      }
+
+      // Assign ticket
+      const [updatedTicket] = await db.update(supportTickets)
+        .set({
+          platformAssignedTo: staffId || userId,
+          status: 'in_progress',
+          updatedAt: new Date(),
+        })
+        .where(eq(supportTickets.id, id))
+        .returning();
+
+      res.json(updatedTicket);
+    } catch (error) {
+      console.error("Error assigning escalated ticket:", error);
+      res.status(500).json({ message: "Failed to assign escalated ticket" });
+    }
+  });
+
+  // Add platform notes to escalated ticket
+  app.patch('/api/support/escalated/:id/notes', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+
+      const [updatedTicket] = await db.update(supportTickets)
+        .set({
+          platformNotes: notes,
+          updatedAt: new Date(),
+        })
+        .where(eq(supportTickets.id, id))
+        .returning();
+
+      res.json(updatedTicket);
+    } catch (error) {
+      console.error("Error updating platform notes:", error);
+      res.status(500).json({ message: "Failed to update platform notes" });
+    }
+  });
+
+  // Resolve escalated ticket
+  app.patch('/api/support/escalated/:id/resolve', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { resolution } = req.body;
+      const userId = req.user!.claims.sub;
+
+      if (!resolution) {
+        return res.status(400).json({ message: "Resolution required" });
+      }
+
+      // Verify ticket exists and is escalated
+      const ticket = await db.query.supportTickets.findFirst({
+        where: eq(supportTickets.id, id),
+      });
+
+      if (!ticket || !ticket.isEscalated) {
+        return res.status(404).json({ message: "Escalated ticket not found" });
+      }
+
+      // Resolve ticket
+      const [updatedTicket] = await db.update(supportTickets)
+        .set({
+          resolution,
+          status: 'resolved',
+          resolvedAt: new Date(),
+          resolvedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(supportTickets.id, id))
+        .returning();
+
+      // Notify the organization that escalated the ticket
+      if (ticket.escalatedBy) {
+        await db.insert(notifications).values({
+          userId: ticket.escalatedBy,
+          type: 'support_resolved',
+          title: 'Escalated Ticket Resolved',
+          message: `Your escalated ticket #${ticket.ticketNumber} has been resolved by platform support.`,
+          link: `/org-support`,
+          priority: 'normal',
+        });
+      }
+
+      res.json(updatedTicket);
+    } catch (error) {
+      console.error("Error resolving escalated ticket:", error);
+      res.status(500).json({ message: "Failed to resolve escalated ticket" });
+    }
+  });
+
   // ============================================================================
   // ADMIN SUPPORT ROUTES - Platform Administration
   // ============================================================================
