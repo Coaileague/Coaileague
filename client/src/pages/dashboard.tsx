@@ -177,10 +177,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-x-hidden w-full max-w-full">
       {/* Professional subtle background - NO bright glowing orbs */}
 
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="relative z-10 mobile-safe-container max-w-7xl mx-auto">
         {/* Branded Header with Logo */}
         <div className="mb-8">
           <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
