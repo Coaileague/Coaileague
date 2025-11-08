@@ -1854,7 +1854,7 @@ export function setupWebSocket(server: Server) {
                     
                     // Get conversation details for notification
                     const conversation = await storage.getChatConversation(ws.conversationId);
-                    const ticketTitle = conversation?.title || 'Support Request';
+                    const ticketTitle = conversation?.customerName ? `Support for ${conversation.customerName}` : 'Support Request';
                     const userQuery = 'Bot escalation - requires human support';
                     
                     // NOTIFICATION SYSTEM: Notify all support staff via database notifications
