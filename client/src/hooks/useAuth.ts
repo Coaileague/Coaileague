@@ -12,7 +12,7 @@ interface AuthResponse {
 }
 
 export function useAuth() {
-  const { data, isLoading } = useQuery<AuthResponse>({
+  const { data, isLoading, error } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
     retry: false,
     retryOnMount: false,
@@ -21,6 +21,22 @@ export function useAuth() {
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchInterval: false,
+    // Return null on 401 instead of throwing error
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me", {
+        credentials: "include",
+      });
+      
+      if (res.status === 401) {
+        return null;
+      }
+      
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${res.statusText}`);
+      }
+      
+      return await res.json();
+    },
   });
 
   return {
