@@ -284,7 +284,11 @@ function AppContent() {
                           if (isRootAdmin) {
                             // ROOT/SYSOP → Platform management (maintenance mode, services control)
                             setLocation('/platform-admin');
-                          } else if ((user as any)?.workspaceRole === 'leader' || (user as any)?.platformRole === 'deputy_admin' || (user as any)?.platformRole === 'deputy_assistant') {
+                          } else if (
+                            (user as any)?.platformRole === 'deputy_admin' ||
+                            (user as any)?.platformRole === 'deputy_assistant' ||
+                            (user as any)?.platformRole === 'support'
+                          ) {
                             // Support roles → Their tools/admin area
                             setLocation('/admin-command-center');
                           } else {
