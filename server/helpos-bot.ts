@@ -2,6 +2,7 @@ import { db } from './db';
 import { supportTickets, helposFaqs, users } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import OpenAI from 'openai';
+import { usageMeteringService } from './services/billing/usageMetering';
 
 // Bot conversation states
 export enum BotState {
