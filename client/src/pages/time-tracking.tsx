@@ -95,11 +95,11 @@ export default function TimeTracking() {
 
   // Get current user's employee record to determine role
   const currentEmployee = employees.find(emp => emp.userId === user?.id);
-  const workspaceRole = currentEmployee?.workspaceRole || 'employee';
+  const workspaceRole = currentEmployee?.workspaceRole || 'staff';
 
   // Role-based filtering: employees see only their own entries
   const timeEntries = useMemo(() => {
-    if (workspaceRole === 'employee') {
+    if (workspaceRole === 'staff') {
       // Employees see only their own time entries
       return allTimeEntries.filter(entry => entry.employeeId === currentEmployee?.id);
     }
@@ -321,7 +321,7 @@ export default function TimeTracking() {
         showBackButton={true}
         backHref="/dashboard"
       >
-        {(workspaceRole === 'owner' || workspaceRole === 'manager') && (
+        {(workspaceRole === 'org_owner' || workspaceRole === 'department_manager') && (
               <Dialog open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="min-h-[44px]" data-testid="button-clock-in">

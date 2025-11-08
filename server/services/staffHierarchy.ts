@@ -5,11 +5,12 @@
 
 // Platform role hierarchy (higher number = higher authority)
 const ROLE_HIERARCHY = {
-  'root': 100,                    // Highest authority - can do anything
+  'root_admin': 100,              // Highest authority - can do anything
   'deputy_admin': 80,             // Second highest - can manage all below
-  'deputy_assistant': 60,         // Can manage sysops and regular staff
+  'support_manager': 60,          // Can manage sysops and regular staff
+  'compliance_officer': 50,       // Compliance and audit oversight
   'sysop': 40,                    // Can manage regular staff
-  'platform_staff': 20,           // Basic support staff
+  'support_agent': 20,            // Basic support staff
   'customer': 0,                  // Regular users
   'guest': 0,                     // Temporary access
 } as const;
@@ -42,7 +43,7 @@ export function canActOnStaff(actorRole: string | null | undefined, targetRole: 
 export function isStaffRole(role: string | null | undefined): boolean {
   if (!role) return false;
   const level = getRoleLevel(role);
-  return level >= ROLE_HIERARCHY.platform_staff;
+  return level >= ROLE_HIERARCHY.support_agent;
 }
 
 /**
@@ -62,7 +63,7 @@ export function canUseModerationCommands(role: string | null | undefined): boole
   if (!role) return false;
   const level = getRoleLevel(role);
   // Staff level and above can use basic moderation
-  return level >= ROLE_HIERARCHY.platform_staff;
+  return level >= ROLE_HIERARCHY.support_agent;
 }
 
 /**
@@ -72,15 +73,17 @@ export function getRoleDescription(role: string | null | undefined): string {
   if (!role) return 'Guest';
   
   switch (role) {
-    case 'root':
+    case 'root_admin':
       return 'Root Administrator';
     case 'deputy_admin':
       return 'Deputy Administrator';
-    case 'deputy_assistant':
-      return 'Deputy Assistant';
+    case 'support_manager':
+      return 'Support Manager';
+    case 'compliance_officer':
+      return 'Compliance Officer';
     case 'sysop':
       return 'System Operator';
-    case 'platform_staff':
+    case 'support_agent':
       return 'Support Staff';
     default:
       return 'User';

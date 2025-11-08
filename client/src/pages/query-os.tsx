@@ -72,7 +72,7 @@ export default function QueryOS() {
 
   // GATEKEEPER: Microsoft-style access control
   const platformRole = (user as any)?.platformRole;
-  const isAuthorized = platformRole === 'root' || platformRole === 'sysop' || platformRole === 'deputy_admin';
+  const isAuthorized = platformRole === 'root_admin' || platformRole === 'sysop' || platformRole === 'deputy_admin';
 
   // Search users
   const { data: searchResults = [], isLoading: searchLoading } = useQuery<UserDiagnostics[]>({

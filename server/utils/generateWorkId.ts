@@ -35,17 +35,17 @@ export function getDepartmentCode(
   workspaceRole?: string | null
 ): number {
   // Platform staff codes (01-09)
-  if (platformRole === 'root') return 1;
+  if (platformRole === 'root_admin') return 1;
   if (platformRole === 'deputy_admin') return 2;
-  if (platformRole === 'deputy_assistant') return 3;
+  if (platformRole === 'support_manager') return 3;
   if (platformRole === 'sysop') return 4;
   
   // Organization leadership codes (10-19)
-  if (workspaceRole === 'owner') return 10;
-  if (workspaceRole === 'manager') return 11;
+  if (workspaceRole === 'org_owner') return 10;
+  if (workspaceRole === 'department_manager') return 11;
   
   // Regular organization users (20+)
-  if (workspaceRole === 'employee') return 20;
+  if (workspaceRole === 'staff') return 20;
   
   // Default fallback
   return 99;

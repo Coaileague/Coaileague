@@ -399,10 +399,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const sortedUsers = [...onlineUsers].sort((a, b) => {
     // Role priority (lower number = higher priority)
     const rolePriority: Record<string, number> = {
-      'root': 0,              // Root admin at absolute top (you)
+      'root_admin': 0,        // Root admin at absolute top (you)
       'bot': 1,               // HelpOS AI bot
       'deputy_admin': 2,      // Deputy administrators
-      'deputy_assistant': 3,  // Deputy assistants
+      'support_manager': 3,   // Support managers
       'sysop': 4,             // System operators
       'subscriber': 5,        // Paid subscribers
       'org_user': 6,          // Organization users
@@ -559,7 +559,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   // Get user type icon - WorkforceOS logo ONLY for staff, avatars for users
   const getUserTypeIcon = (userType: string, role: string, userName: string = 'User') => {
     // ROOT ADMIN - Detailed WorkforceOS logo (COMPACT SIZE)
-    if (role === 'root') {
+    if (role === 'root_admin') {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
           <AutoForceLogo size="sm" variant="icon" />
@@ -576,8 +576,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       );
     }
     
-    // ALL STAFF (deputy_admin, deputy_assistant, sysop) - WorkforceOS logo (COMPACT SIZE)
-    if (['deputy_admin', 'deputy_assistant', 'sysop'].includes(role)) {
+    // ALL STAFF (deputy_admin, support_manager, sysop) - WorkforceOS logo (COMPACT SIZE)
+    if (['deputy_admin', 'support_manager', 'sysop'].includes(role)) {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
           <AutoForceLogo size="sm" variant="icon" />
@@ -633,11 +633,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const getRoleDisplay = (role?: string) => {
     if (!role) return null;
     switch(role) {
-      case 'root': return 'Admin';
+      case 'root_admin': return 'Admin';
       case 'deputy_admin': return 'Deputy';
-      case 'deputy_assistant': return 'Assistant';
+      case 'support_manager': return 'Manager';
       case 'sysop': return 'Sysop';
-      case 'auditor': return 'Auditor';
+      case 'compliance_officer': return 'Compliance';
       case 'bot': return 'BOT AI';
       default: return null;
     }
@@ -652,7 +652,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
      */
     // Inline superscript role badge - ONLY for staff and bot roles
     // Regular users and subscribers should NOT show role badges
-    const staffRoles = ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'auditor', 'bot'];
+    const staffRoles = ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'compliance_officer', 'bot'];
     
     if (!staffRoles.includes(role)) {
       return null; // No badge for regular users/subscribers
@@ -715,10 +715,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'root': return 'text-green-600 font-bold';  // Root admin
+      case 'root_admin': return 'text-green-600 font-bold';  // Root admin
       case 'bot': return 'text-amber-600 font-bold';  // Bot
       case 'deputy_admin': return 'text-green-600 font-bold';
-      case 'deputy_assistant': return 'text-emerald-600 font-bold';
+      case 'support_manager': return 'text-emerald-600 font-bold';
       case 'sysop': return 'text-emerald-600 font-bold';
       default: return 'text-slate-700 font-semibold';  // Regular users
     }
@@ -737,7 +737,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     }
     
     // Staff messages - soft indigo/blue background (lighter than own messages)
-    if (role === 'root' || role === 'deputy_admin' || role === 'deputy_assistant' || role === 'sysop') {
+    if (role === 'root_admin' || role === 'deputy_admin' || role === 'support_manager' || role === 'sysop') {
       return 'bg-gradient-to-br from-emerald-50 to-emerald-50 border border-emerald-200 shadow-sm';
     }
     
@@ -745,7 +745,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     return 'bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 shadow-sm';
   };
 
-  const isStaff = user && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes((user as any).platformRole);
+  const isStaff = user && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((user as any).platformRole);
   const userPlatformRole = (user as any)?.platformRole;
   const queueLength = queueData?.length || 0;
 
@@ -756,11 +756,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   };
 
   // Role constants
-  const ALL_STAFF = ['root', 'deputy_admin', 'deputy_assistant', 'sysop'];
-  const DEPUTY_ASSISTANT_PLUS = ['root', 'deputy_admin', 'deputy_assistant'];
-  const DEPUTY_ADMIN_PLUS = ['root', 'deputy_admin'];
-  const ADMIN_ONLY = ['root', 'deputy_admin'];
-  const SYSTEM_ONLY = ['root', 'sysop'];
+  const ALL_STAFF = ['root_admin', 'deputy_admin', 'support_manager', 'sysop'];
+  const DEPUTY_ASSISTANT_PLUS = ['root_admin', 'deputy_admin', 'support_manager'];
+  const DEPUTY_ADMIN_PLUS = ['root_admin', 'deputy_admin'];
+  const ADMIN_ONLY = ['root_admin', 'deputy_admin'];
+  const SYSTEM_ONLY = ['root_admin', 'sysop'];
 
   // Support command handlers (27 comprehensive commands)
   const handleQuickReply = (targetUser: any) => {
@@ -982,7 +982,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           <ChatAnnouncementBanner
             queuePosition={queueLength || 1}
             queueWaitTime="2-3 minutes"
-            onlineStaff={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
+            onlineStaff={uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length}
             seasonalAnimationsEnabled={seasonalAnimationsEnabled}
             customMessages={customBannerMessage ? [{
               id: 'custom-1',
@@ -1192,7 +1192,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                       </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="bg-white border-slate-300 w-64">
-                      {isStaff && u.role !== 'bot' && (userPlatformRole === 'root' || u.role !== 'root') ? (
+                      {isStaff && u.role !== 'bot' && (userPlatformRole === 'root_admin' || u.role !== 'root_admin') ? (
                         <>
                           <div className="px-2 py-1.5 text-xs font-bold text-slate-700 border-b border-slate-200">
                             {u.name}
@@ -1770,7 +1770,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 handleStatusChange(status);
               }}
               queueLength={queueLength}
-              onlineStaffCount={uniqueUsers.filter(u => ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(u.role)).length}
+              onlineStaffCount={uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length}
               showCoffeeCup={showCoffeeCup}
               onShowHelp={() => {
                 setShowHelpPanel(true);

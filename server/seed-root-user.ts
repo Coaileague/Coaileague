@@ -58,7 +58,7 @@ export async function seedRootUser() {
   if (!existingRole.length) {
     await db.insert(platformRoles).values({
       userId: ROOT_USER_ID,
-      role: 'root',
+      role: 'root_admin',
       grantedReason: 'System initialization - Primary root administrator',
     });
     console.log('✅ Root platform role granted');
@@ -78,7 +78,7 @@ export async function seedRootUser() {
       firstName: 'Root',
       lastName: 'Administrator',
       email: 'root@getdc360.com',
-      workspaceRole: 'owner',
+      workspaceRole: 'org_owner',
       hourlyRate: '0.00',
       onboardingStatus: 'completed',
     });

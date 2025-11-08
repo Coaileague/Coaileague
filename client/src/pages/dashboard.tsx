@@ -66,7 +66,7 @@ export default function Dashboard() {
 
   // Determine current user's workspace role
   const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
-  const workspaceRole = currentEmployee?.workspaceRole || 'employee';
+  const workspaceRole = currentEmployee?.workspaceRole || 'staff';
 
   // Mark notification as read
   const markAsReadMutation = useMutation({
@@ -198,8 +198,8 @@ export default function Dashboard() {
                   Welcome back, {firstName}
                 </h2>
                 <p className="text-slate-300 text-sm sm:text-base">
-                  {workspaceRole === 'owner' ? '🎯 Manage your entire workforce with AutoForce™' : 
-                   workspaceRole === 'manager' ? '📊 Oversee your team performance' :
+                  {workspaceRole === 'org_owner' ? '🎯 Manage your entire workforce with AutoForce™' : 
+                   workspaceRole === 'department_manager' ? '📊 Oversee your team performance' :
                    '⏰ Track your time and tasks'}
                 </p>
               </div>

@@ -3,8 +3,8 @@ import { db } from './db';
 import { employees, workspaces, platformRoles, users } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
-export type WorkspaceRole = 'owner' | 'manager' | 'hr_manager' | 'supervisor' | 'employee';
-export type PlatformRole = 'root' | 'deputy_admin' | 'deputy_assistant' | 'sysop' | 'support' | 'none';
+export type WorkspaceRole = 'org_owner' | 'org_admin' | 'department_manager' | 'supervisor' | 'staff' | 'auditor' | 'contractor';
+export type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -35,7 +35,7 @@ export async function getUserWorkspaceRole(
   }
 
   return {
-    role: (employee.workspaceRole as WorkspaceRole) || 'employee',
+    role: (employee.workspaceRole as WorkspaceRole) || 'staff',
     employeeId: employee.id,
   };
 }
@@ -68,7 +68,7 @@ export async function resolveWorkspaceForUser(userId: string, requestedWorkspace
       });
       return {
         workspaceId: requestedWorkspaceId,
-        role: 'owner',
+        role: 'org_owner',
         employeeId: employee?.id || null,
       };
     }
@@ -110,7 +110,7 @@ export async function resolveWorkspaceForUser(userId: string, requestedWorkspace
     const employee = userEmployees.find(e => e.workspaceId === workspace.id);
     return {
       workspaceId: workspace.id,
-      role: 'owner',
+      role: 'org_owner',
       employeeId: employee?.id || null,
     };
   }
@@ -129,7 +129,7 @@ export async function resolveWorkspaceForUser(userId: string, requestedWorkspace
     const emp = userEmployees[0];
     return {
       workspaceId: emp.workspaceId,
-      role: (emp.workspaceRole as WorkspaceRole) || 'employee',
+      role: (emp.workspaceRole as WorkspaceRole) || 'staff',
       employeeId: emp.id,
     };
   }
@@ -173,14 +173,14 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
   };
 }
 
-export const requireOwner = requireWorkspaceRole(['owner']);
-export const requireManager = requireWorkspaceRole(['owner', 'manager']);
-export const requireHRManager = requireWorkspaceRole(['owner', 'manager', 'hr_manager']);
-export const requireSupervisor = requireWorkspaceRole(['owner', 'manager', 'supervisor']);
-export const requireEmployee = requireWorkspaceRole(['owner', 'manager', 'hr_manager', 'supervisor', 'employee']);
+export const requireOwner = requireWorkspaceRole(['org_owner']);
+export const requireManager = requireWorkspaceRole(['org_owner', 'department_manager']);
+export const requireHRManager = requireWorkspaceRole(['org_owner', 'department_manager', 'org_admin']);
+export const requireSupervisor = requireWorkspaceRole(['org_owner', 'department_manager', 'supervisor']);
+export const requireEmployee = requireWorkspaceRole(['org_owner', 'department_manager', 'org_admin', 'supervisor', 'staff']);
 
 // Leaders Hub - Organization Leaders (Owner/Manager only) for self-service admin
-export const requireLeader = requireWorkspaceRole(['owner', 'manager']);
+export const requireLeader = requireWorkspaceRole(['org_owner', 'department_manager']);
 
 export async function validateManagerAssignment(
   managerId: string,
@@ -208,8 +208,8 @@ export async function validateManagerAssignment(
     return { valid: false, error: 'Manager and employee must belong to the same workspace' };
   }
 
-  if (manager.workspaceRole !== 'manager' && manager.workspaceRole !== 'owner' && manager.workspaceRole !== 'supervisor') {
-    return { valid: false, error: 'Manager must have manager, owner, or supervisor role' };
+  if (manager.workspaceRole !== 'department_manager' && manager.workspaceRole !== 'org_owner' && manager.workspaceRole !== 'supervisor') {
+    return { valid: false, error: 'Manager must have department_manager, org_owner, or supervisor role' };
   }
 
   if (manager.id === employee.id) {
@@ -235,13 +235,13 @@ export async function getUserPlatformRole(userId: string): Promise<PlatformRole>
 }
 
 // Helper function to check if user has platform staff role
-// (root, deputy_admin, deputy_assistant, sysop, or support)
+// (root_admin, deputy_admin, support_manager, sysop, or support_agent)
 export function isPlatformStaff(user?: { platformRole?: PlatformRole | string }): boolean {
   if (!user || !user.platformRole) {
     return false;
   }
   
-  const staffRoles: PlatformRole[] = ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'];
+  const staffRoles: PlatformRole[] = ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'compliance_officer'];
   return staffRoles.includes(user.platformRole as PlatformRole);
 }
 
@@ -293,14 +293,15 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
   };
 }
 
-// Require platform admin role (highest level - root only)
-export const requirePlatformAdmin = requirePlatformRole(['root']);
+// Require platform admin role (highest level - root_admin only)
+export const requirePlatformAdmin = requirePlatformRole(['root_admin']);
 
-// Require any platform staff role (root, deputy admin, deputy assistant, sysop, or support)
+// Require any platform staff role (root_admin, deputy_admin, support_manager, sysop, or support_agent)
 export const requirePlatformStaff = requirePlatformRole([
-  'root',
+  'root_admin',
   'deputy_admin',
-  'deputy_assistant',
+  'support_manager',
   'sysop',
-  'support'  // FIXED: Support agents need access to view user profiles for help tickets
+  'support_agent',
+  'compliance_officer'
 ]);

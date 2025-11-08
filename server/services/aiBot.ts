@@ -116,7 +116,7 @@ export async function getAiResponse(
 - Owner: Full system access, can approve payroll
 - Manager: Team management, scheduling
 - Employee: Time tracking, view schedule, paychecks
-- Platform Roles: root, deputy_admin, deputy_assistant, sysop
+- Platform Roles: root_admin, deputy_admin, support_manager, sysop
 
 💡 CAPABILITIES:
 - Answer platform questions

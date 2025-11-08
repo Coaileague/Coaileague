@@ -16,7 +16,7 @@ export function LeaderRoute({ children }: { children: React.ReactNode }) {
   }
 
   // Check if user is a leader (Owner or Manager)
-  const isLeader = (user as any)?.workspaceRole === 'owner' || (user as any)?.workspaceRole === 'manager';
+  const isLeader = (user as any)?.workspaceRole === 'org_owner' || (user as any)?.workspaceRole === 'department_manager';
 
   if (!isLeader) {
     return (

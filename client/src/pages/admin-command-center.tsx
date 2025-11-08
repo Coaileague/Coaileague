@@ -53,7 +53,7 @@ export default function AdminCommandCenter() {
       const platformRole = (user as any)?.platformRole;
       
       // Only root and sysop can access admin command center
-      if (platformRole !== 'root' && platformRole !== 'sysop') {
+      if (platformRole !== 'root_admin' && platformRole !== 'sysop') {
         // Unauthorized - redirect to appropriate portal
         if (!user) {
           // Not logged in - send to login
@@ -89,13 +89,13 @@ export default function AdminCommandCenter() {
   const getRoleTitle = () => {
     const platformRole = (user as any)?.platformRole;
     switch (platformRole) {
-      case 'root':
+      case 'root_admin':
         return 'System Platform Administrator';
       case 'sysop':
         return 'System Operations';
       case 'deputy_admin':
         return 'Deputy Administrator';
-      case 'deputy_assistant':
+      case 'support_manager':
         return 'Deputy Assistant';
       case 'bot':
         return 'Bot Operations';
@@ -205,7 +205,7 @@ export default function AdminCommandCenter() {
               <Wrench className="h-4 w-4 mr-2" />
               Platform Tools
             </TabsTrigger>
-            {(user as any)?.platformRole === 'root' && (
+            {(user as any)?.platformRole === 'root_admin' && (
               <>
                 <TabsTrigger 
                   value="users" 
@@ -386,14 +386,14 @@ export default function AdminCommandCenter() {
           </TabsContent>
 
           {/* USER MANAGEMENT TAB - ROOT ONLY */}
-          {(user as any)?.platformRole === 'root' && (
+          {(user as any)?.platformRole === 'root_admin' && (
             <TabsContent value="users">
               <UserManagementPanel />
             </TabsContent>
           )}
 
           {/* ORGANIZATIONS TAB - ROOT ONLY */}
-          {(user as any)?.platformRole === 'root' && (
+          {(user as any)?.platformRole === 'root_admin' && (
             <TabsContent value="organizations">
               <MasterKeysPanel />
             </TabsContent>

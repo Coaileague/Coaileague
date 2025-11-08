@@ -165,7 +165,7 @@ router.post("/api/auth/login", async (req, res) => {
     // Record successful login
     await recordSuccessfulLogin(user.id);
 
-    // Check for platform role (root, sysop, auditor)
+    // Check for platform role (root_admin, sysop, compliance_officer)
     const userPlatformRoles = await db
       .select()
       .from(platformRoles)
@@ -221,7 +221,7 @@ router.post("/api/auth/logout", (req, res) => {
 router.get("/api/auth/me", requireAuth, async (req, res) => {
   const user = req.user!; // requireAuth ensures user exists
   
-  // GATEKEEPER: Check for platform role (root, sysop, auditor)
+  // GATEKEEPER: Check for platform role (root_admin, sysop, compliance_officer)
   const userPlatformRoles = await db
     .select()
     .from(platformRoles)
