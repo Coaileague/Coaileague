@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { usageMeteringService } from './services/billing/usageMetering';
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -12,6 +13,8 @@ export interface GeminiChatOptions {
   message: string;
   conversationHistory?: Array<{ role: string; content: string }>;
   systemPrompt?: string;
+  workspaceId?: string; // For billing tracking
+  userId?: string; // For billing tracking
 }
 
 export async function generateGeminiResponse(options: GeminiChatOptions): Promise<string> {
@@ -49,6 +52,30 @@ Be concise, professional, and helpful. If you don't know something specific to t
 
     const result = await chat.sendMessage(options.message);
     const response = result.response;
+    
+    // Record token usage for billing (Gemini provides usage metadata)
+    const usage = response.usageMetadata;
+    if (usage && options.workspaceId) {
+      const totalTokens = (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0);
+      if (totalTokens > 0) {
+        await usageMeteringService.recordUsage({
+          workspaceId: options.workspaceId,
+          userId: options.userId,
+          featureKey: 'helpdesk_gemini_chat',
+          usageType: 'token',
+          usageAmount: totalTokens,
+          usageUnit: 'tokens',
+          activityType: 'gemini_chat_response',
+          metadata: {
+            model: 'gemini-2.0-flash-exp',
+            promptTokens: usage.promptTokenCount,
+            completionTokens: usage.candidatesTokenCount,
+          }
+        });
+        console.log(`💰 Gemini AI - Chat response (${totalTokens} tokens) - Billed to workspace: ${options.workspaceId}`);
+      }
+    }
+    
     return response.text();
   } catch (error: any) {
     console.error("Gemini API error:", error);

@@ -44,7 +44,13 @@ Key mobile-first PWA features include:
 - **Multi-Tenancy**: Data isolation is managed on a workspace basis.
 - **Role-Based Access Control (RBAC)**: A comprehensive two-tier hierarchical role system separates platform support (e.g., `root_admin`, `support_agent`) from organization/tenant management (e.g., `org_owner`, `staff`). Platform roles are managed centrally, while workspace roles are assigned per-employee. Type safety is enforced via TypeScript, and authorization uses guard middleware with new role names.
 - **Communication**: Utilizes an IRC-style WebSocket command/response architecture.
-    - **HelpDesk (Consolidated Chat System)**: Features a unified `/chat` experience with Gemini AI integration, context-aware responses, and robust connection error handling. Mobile access is optimized via `/mobile-chat`.
+    - **HelpDesk (Consolidated Chat System)**: **UPDATED November 2025** - Features a unified `/chat` experience with AI integration and usage-based billing:
+        - **Desktop/Tablet**: `/chat` → HelpDesk5 with Gemini AI, connection error handling, professional UI
+        - **Mobile**: `/mobile-chat` → Mobile-optimized experience
+        - **Legacy Redirects**: `/live-chat`, `/helpdesk5`, `/support/chat` redirect to `/chat`
+        - **Gemini AI Integration**: User-provided API key (gemini-2.0-flash-exp), context-aware responses, toggle + "Ask AI" button, graceful degradation
+        - **Connection Error Handling**: MAX_RETRIES=5 with exponential backoff, error dialog with Report Bug/Retry/Go Home options
+        - **Usage-Based Billing** (**CRITICAL**): All AI token usage (Gemini + HelpOS bot) is automatically tracked and billed to customers via `usageMeteringService`. Feature keys: `helpdesk_gemini_chat`, `helpdesk_ai_greeting`, `helpdesk_ai_response`, `helpdesk_ai_analysis`. This ensures platform profitability on AI features.
     - **CommOS™**: Organization-specific chatrooms with role-based access, supporting private messages (AES-256-GCM encrypted), message reactions, threading, file uploads, @mentions, read receipts, rich text formatting, live room browser, and full-text search. Also includes WebRTC-powered voice/video calling.
 - **Audit Logging**: Comprehensive audit trails provided by AuditOS™.
 - **Core Feature Areas**:
@@ -58,7 +64,7 @@ Key mobile-first PWA features include:
     - **Platform Administration**: ROOT Admin Dashboard, organization onboarding, and HelpDesk queue management.
     - **Organization Support System**: Internal support ticket escalation workflow from organization leaders to platform support staff, including ticket creation, escalation, platform queue management, assignment, and resolution.
     - **HelpOS™ FAQ System**: AI-powered knowledge base with semantic search (OpenAI embedding-based), auto-generation from resolved tickets (GPT-3.5), conversation refinement, bulk import, and a draft-first workflow.
-    - **HelpOS™ Autonomous Bot**: An intelligent support agent providing bot-first assistance with human escalation. It uses a state machine, FAQ-powered responses with confidence scoring, sentiment detection, auto-resolution, and smart escalation with context preservation. It includes dual notification systems (chat announcements and database notifications) and continuously learns from successful conversations.
+    - **HelpOS™ Autonomous Bot**: **UPDATED November 2025** - An intelligent support agent with usage-based billing. Provides bot-first assistance with human escalation via state machine, FAQ-powered responses with confidence scoring, sentiment detection, auto-resolution, and smart escalation with context preservation. Dual notification systems (chat announcements and database notifications). **All AI token usage (greetings, responses, sentiment analysis) is automatically tracked and billed to customer workspaces** via `usageMeteringService` to ensure platform profitability.
 - **Security**: Features Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 
 ## External Dependencies
@@ -66,4 +72,4 @@ Key mobile-first PWA features include:
 - **ORM**: Drizzle ORM
 - **Payment Processing**: Stripe Connect
 - **Email**: Resend
-- **AI**: OpenAI GPT-3.5-turbo (for HelpOS support bot), GPT-4o-mini (for advanced features)
+- **AI**: OpenAI GPT-3.5-turbo (for HelpOS support bot with usage tracking), Gemini 2.0 Flash Exp (for HelpDesk chat with usage tracking) - all AI usage is billed to customer workspaces

@@ -11506,7 +11506,7 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
-  // Gemini AI: Generate chat response
+  // Gemini AI: Generate chat response (with usage-based billing)
   app.post('/api/chat/gemini', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { message, conversationHistory, systemPrompt } = req.body;
@@ -11524,10 +11524,16 @@ Keep it professional, actionable, and under 250 words.`;
         });
       }
 
+      // Get workspace ID for billing tracking
+      const workspaceId = req.user?.workspaceId || 'default';
+      const userId = req.user?.id;
+
       const response = await generateGeminiResponse({
         message,
         conversationHistory: conversationHistory || [],
         systemPrompt,
+        workspaceId, // Track usage per workspace for billing
+        userId, // Track which user initiated the request
       });
 
       res.json({ 

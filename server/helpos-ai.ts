@@ -5,6 +5,7 @@
  */
 
 import OpenAI from "openai";
+import { usageMeteringService } from './services/billing/usageMetering';
 
 // Using AI Integrations service for OpenAI-compatible API access
 const openai = new OpenAI({
@@ -92,9 +93,24 @@ Return ONLY the greeting text, no extra formatting.`;
 
       const greeting = completion.choices[0]?.message?.content?.trim();
       
-      // Log token usage for billing tracking
+      // Record token usage for billing
       const tokensUsed = completion.usage?.total_tokens || 0;
-      console.log(`💰 HelpOS AI - Greeting generated (${tokensUsed} tokens) - Workspace: ${this.workspaceId}`);
+      if (tokensUsed > 0) {
+        await usageMeteringService.recordUsage({
+          workspaceId: this.workspaceId,
+          featureKey: 'helpdesk_ai_greeting',
+          usageType: 'token',
+          usageAmount: tokensUsed,
+          usageUnit: 'tokens',
+          activityType: 'ai_greeting',
+          metadata: {
+            model: this.config.model,
+            userName,
+            userType,
+          }
+        });
+        console.log(`💰 HelpOS AI - Greeting generated (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+      }
 
       return greeting || null;
     } catch (error) {
@@ -147,9 +163,23 @@ Return ONLY the suggested response text.`;
 
       const response = completion.choices[0]?.message?.content?.trim();
       
-      // Log token usage for billing
+      // Record token usage for billing
       const tokensUsed = completion.usage?.total_tokens || 0;
-      console.log(`💰 HelpOS AI - Response suggested (${tokensUsed} tokens) - Workspace: ${this.workspaceId}`);
+      if (tokensUsed > 0) {
+        await usageMeteringService.recordUsage({
+          workspaceId: this.workspaceId,
+          featureKey: 'helpdesk_ai_response',
+          usageType: 'token',
+          usageAmount: tokensUsed,
+          usageUnit: 'tokens',
+          activityType: 'ai_response_suggestion',
+          metadata: {
+            model: this.config.model,
+            messageLength: userMessage.length,
+          }
+        });
+        console.log(`💰 HelpOS AI - Response suggested (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+      }
 
       return response || null;
     } catch (error) {
@@ -193,9 +223,23 @@ Low: general question, feature request`;
 
       const result = JSON.parse(completion.choices[0]?.message?.content || '{}');
       
-      // Log token usage
+      // Record token usage for billing
       const tokensUsed = completion.usage?.total_tokens || 0;
-      console.log(`💰 HelpOS AI - Urgency analyzed (${tokensUsed} tokens) - Workspace: ${this.workspaceId}`);
+      if (tokensUsed > 0) {
+        await usageMeteringService.recordUsage({
+          workspaceId: this.workspaceId,
+          featureKey: 'helpdesk_ai_analysis',
+          usageType: 'token',
+          usageAmount: tokensUsed,
+          usageUnit: 'tokens',
+          activityType: 'urgency_analysis',
+          metadata: {
+            model: this.config.model,
+            urgency: result.urgency,
+          }
+        });
+        console.log(`💰 HelpOS AI - Urgency analyzed (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+      }
 
       return result.urgency ? result : null;
     } catch (error) {
