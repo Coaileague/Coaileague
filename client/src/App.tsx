@@ -110,6 +110,7 @@ import RoleManagement from "@/pages/role-management";
 import ManagerDashboard from "@/pages/manager-dashboard";
 import ChatExport from "@/pages/chat-export";
 import RichTextDemo from "@/pages/RichTextDemo";
+import OrgSupport from "@/pages/org-support";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -389,7 +390,8 @@ function AppContent() {
                 <Route path="/updates" component={Updates} />
                 <Route path="/help" component={Help} />
 
-                {/* Admin routes */}
+                {/* Support & Admin routes */}
+                <Route path="/org-support" component={OrgSupport} />
                 <Route path="/admin-command-center" component={AdminCommandCenter} />
                 
                 {/* Legacy routes - redirect to consolidated /dashboard */}
