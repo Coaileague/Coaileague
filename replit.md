@@ -48,9 +48,11 @@ Key mobile-first PWA features include:
         - **Desktop/Tablet**: `/chat` → HelpDesk5 with Gemini AI, connection error handling, professional UI
         - **Mobile**: `/mobile-chat` → Mobile-optimized experience
         - **Legacy Redirects**: `/live-chat`, `/helpdesk5`, `/support/chat` redirect to `/chat`
+        - **Public Access**: Open to all users including guests (no authentication required). Guests can chat for support but AI features are disabled. Ticket holders prioritized.
         - **Gemini AI Integration**: User-provided API key (gemini-2.0-flash-exp), context-aware responses, toggle + "Ask AI" button, graceful degradation
+        - **AI Access Control**: AI features (Gemini, Help Bot) require workspace membership for billing. Guests get human support only with friendly "AI unavailable" messages.
         - **Connection Error Handling**: MAX_RETRIES=5 with exponential backoff, error dialog with Report Bug/Retry/Go Home options
-        - **Usage-Based Billing** (**CRITICAL**): All AI token usage (Gemini + HelpOS bot) is automatically tracked and billed to customers via `usageMeteringService`. Feature keys: `helpdesk_gemini_chat`, `helpdesk_ai_greeting`, `helpdesk_ai_response`, `helpdesk_ai_analysis`. This ensures platform profitability on AI features.
+        - **Usage-Based Billing** (**CRITICAL**): All AI token usage (Gemini + HelpOS bot) is automatically tracked and billed to workspace customers via `usageMeteringService`. Feature keys: `helpdesk_gemini_chat`, `helpdesk_ai_greeting`, `helpdesk_ai_response`, `helpdesk_ai_analysis`. Zero-cost AI for guests (disabled), full billing for workspace users. This ensures platform profitability on AI features.
     - **CommOS™**: Organization-specific chatrooms with role-based access, supporting private messages (AES-256-GCM encrypted), message reactions, threading, file uploads, @mentions, read receipts, rich text formatting, live room browser, and full-text search. Also includes WebRTC-powered voice/video calling.
 - **Audit Logging**: Comprehensive audit trails provided by AuditOS™.
 - **Core Feature Areas**:

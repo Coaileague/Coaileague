@@ -265,6 +265,17 @@ export default function LiveChatroomPage() {
 
       const data = await response.json();
       
+      // Handle guest mode (no workspace = no AI features)
+      if (data.guestMode) {
+        toast({
+          title: "AI Features Unavailable",
+          description: data.message || "AI assistance is available to workspace members only. A human support agent will assist you shortly.",
+          variant: "default",
+        });
+        setGeminiEnabled(false); // Auto-disable AI toggle for guests
+        return;
+      }
+      
       if (!response.ok || !data.available) {
         throw new Error(data.message || 'Gemini AI unavailable');
       }

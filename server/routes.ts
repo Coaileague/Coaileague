@@ -11526,18 +11526,21 @@ Keep it professional, actionable, and under 250 words.`;
         });
       }
 
-      // CRITICAL: Require valid workspace ID for billing tracking
-      // Do NOT allow fallback to 'default' - all AI usage must be billed to a real workspace
+      // PUBLIC ACCESS: Guests can access chat but AI features require workspace for billing
+      // Workspace users get AI assistance (billed), guests get human support only
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
-        return res.status(400).json({ 
-          message: "Workspace ID is required for AI features. Please ensure you are properly authenticated.",
-          available: false 
+        // Gracefully disable AI for guests instead of blocking chat access
+        return res.status(200).json({ 
+          message: "AI features are available to workspace members only. A human support agent will assist you shortly.",
+          available: false,
+          guestMode: true
         });
       }
 
       const userId = req.user?.id;
 
+      // Generate AI response with billing (workspace users only)
       const response = await generateGeminiResponse({
         message,
         conversationHistory: conversationHistory || [],
