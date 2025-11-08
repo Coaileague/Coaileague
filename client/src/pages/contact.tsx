@@ -29,6 +29,7 @@ import {
   Briefcase,
   Zap,
   CheckCircle2,
+  Globe,
 } from "lucide-react";
 
 export default function Contact() {
@@ -132,30 +133,7 @@ export default function Contact() {
         </div>
 
         {/* Support Channels Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
-          <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6 space-y-4" data-testid="card-phone-support">
-            <div className="h-12 w-12 rounded-md bg-[hsl(var(--cad-blue))]/10 flex items-center justify-center">
-              <Phone className="h-6 w-6 text-[hsl(var(--cad-blue))]" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Phone Support</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
-                Speak with our support engineers
-              </p>
-              <div className="space-y-1 pt-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge className="bg-[hsl(var(--cad-green))]/10 text-[hsl(var(--cad-green))] border-none text-xs">
-                    24/7
-                  </Badge>
-                  <span className="font-mono text-[hsl(var(--cad-text-primary))]">1-800-WORKFORCE</span>
-                </div>
-                <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
-                  Average wait time: &lt;2 minutes
-                </p>
-              </div>
-            </div>
-          </Card>
-
+        <div className="grid md:grid-cols-2 gap-6 mb-16">
           <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6 space-y-4" data-testid="card-email-support">
             <div className="h-12 w-12 rounded-md bg-[hsl(var(--cad-cyan))]/10 flex items-center justify-center">
               <Mail className="h-6 w-6 text-[hsl(var(--cad-cyan))]" />
@@ -167,14 +145,14 @@ export default function Contact() {
               </p>
               <div className="space-y-1 pt-2">
                 <a
-                  href="mailto:support@workforceos.com"
+                  href="mailto:support@getdc360.com"
                   className="text-sm font-mono text-[hsl(var(--cad-blue))] hover:underline block"
-                  data-testid="link-email"
+                  data-testid="link-email-support"
                 >
-                  support@workforceos.com
+                  support@getdc360.com
                 </a>
                 <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
-                  Response time: &lt;1 hour
+                  Response time: &lt;24 hours
                 </p>
               </div>
             </div>
@@ -533,30 +511,22 @@ export default function Contact() {
 
             <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-[hsl(var(--cad-cyan))]" />
-                <h3 className="font-semibold">Office Locations</h3>
+                <Globe className="h-5 w-5 text-[hsl(var(--cad-cyan))]" />
+                <h3 className="font-semibold">Online Business</h3>
               </div>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="font-semibold text-[hsl(var(--cad-text-primary))]">Headquarters</p>
-                  <p className="text-[hsl(var(--cad-text-secondary))]">
-                    123 Enterprise Way, Suite 500<br />
-                    San Francisco, CA 94105
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[hsl(var(--cad-text-primary))]">East Coast Office</p>
-                  <p className="text-[hsl(var(--cad-text-secondary))]">
-                    456 Business Blvd, Floor 12<br />
-                    New York, NY 10001
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[hsl(var(--cad-text-primary))]">European Office</p>
-                  <p className="text-[hsl(var(--cad-text-secondary))]">
-                    789 Tech Park, Building A<br />
-                    London, UK EC2A 4BX
-                  </p>
+              <div className="space-y-2 text-sm">
+                <p className="text-[hsl(var(--cad-text-secondary))]">
+                  AutoForce™ is a fully online platform. All support and communications are handled digitally for maximum efficiency.
+                </p>
+                <div className="pt-2 space-y-1">
+                  <p className="text-xs font-semibold text-[hsl(var(--cad-text-primary))]">General Inquiries:</p>
+                  <a
+                    href="mailto:info@getdc360.com"
+                    className="text-sm font-mono text-[hsl(var(--cad-blue))] hover:underline block"
+                    data-testid="link-email-info"
+                  >
+                    info@getdc360.com
+                  </a>
                 </div>
               </div>
             </Card>
@@ -564,15 +534,15 @@ export default function Contact() {
             <Card className="bg-[hsl(var(--cad-blue))]/10 border-[hsl(var(--cad-blue))]/20 p-6 space-y-2">
               <h3 className="font-semibold text-[hsl(var(--cad-text-primary))]">Enterprise Inquiries</h3>
               <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
-                Managing 100+ employees? Contact our enterprise sales team for custom pricing and dedicated onboarding.
+                Managing 100+ employees? Contact our team for custom pricing and dedicated onboarding.
               </p>
               <Button
                 variant="outline"
                 className="border-[hsl(var(--cad-blue))] text-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/10"
-                onClick={() => window.location.href = "mailto:enterprise@workforceos.com"}
+                onClick={() => window.location.href = "mailto:info@getdc360.com"}
                 data-testid="button-enterprise-contact"
               >
-                Contact Enterprise Sales
+                Contact Us
               </Button>
             </Card>
           </div>
@@ -585,7 +555,7 @@ export default function Contact() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
               <AutoForceLogo size="sm" variant="icon" />
-              <span>© 2025 WorkforceOS. Elite-grade workforce automation.</span>
+              <span>© 2025 AutoForce™. Elite-grade workforce automation.</span>
             </div>
             <div className="flex items-center gap-6">
               <ReenableChatButton />
