@@ -399,9 +399,16 @@ export class UsageMeteringService {
       'helpdesk_ai_question': 0.90, // $0.90 per 1000 tokens (GPT-4o-mini Q&A with margin)
       'helpdesk_ai_embedding': 0.10, // $0.10 per 1000 tokens (text-embedding-3-small with margin)
       
-      // ScheduleOS
-      'scheduleos_ai_generation': 0.05, // $0.05 per generation
+      // ScheduleOS AI (GPT-4 with 100%+ margin for complex scheduling)
+      'scheduleos_ai_generation': 3.00, // $3.00 per 1000 tokens (GPT-4 @ ~$0.045/1K + 6500% margin for value)
       'scheduleos_optimization': 0.03,
+      
+      // DisputeAI (GPT-4-turbo with 100%+ margin for HR compliance analysis)
+      'disputeai_analysis': 1.50, // $1.50 per 1000 tokens (GPT-4-turbo @ ~$0.02/1K + 7400% margin for value)
+      
+      // PredictionOS™ AI (GPT-4o with 100%+ margin for workforce predictions)
+      'predictionos_turnover_analysis': 1.00, // $1.00 per 1000 tokens (GPT-4o @ ~$0.00625/1K + 15900% margin for value)
+      'predictionos_cost_variance': 1.00, // $1.00 per 1000 tokens (GPT-4o @ ~$0.00625/1K + 15900% margin for value)
       
       // RecordOS
       'recordos_search': 0.001, // $0.001 per search
