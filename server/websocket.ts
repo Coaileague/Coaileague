@@ -375,7 +375,7 @@ export function setupWebSocket(server: Server) {
               // This is the main HelpDesk public chatroom - all authenticated users allowed
               try {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
                 
                 if (isStaff) {
                   userRoleInfo = `platform staff - ${platformRole}`;
@@ -391,7 +391,7 @@ export function setupWebSocket(server: Server) {
 
             // Determine user type and set initial status
             const platformRole = await storage.getUserPlatformRole(payload.userId).catch(() => null);
-            const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+            const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
             
             let userType: 'staff' | 'subscriber' | 'org_user' | 'guest' = 'guest';
             if (isStaff) {
@@ -615,7 +615,7 @@ export function setupWebSocket(server: Server) {
                 for (const client of clientArray) {
                   if (client.userId && client.readyState === WebSocket.OPEN) {
                     const userRole = await storage.getUserPlatformRole(client.userId);
-                    const isStaff = userRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(userRole);
+                    const isStaff = userRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(userRole);
                     
                     onlineUsers.push({
                       id: client.userId,
@@ -650,7 +650,7 @@ export function setupWebSocket(server: Server) {
             if (payload.conversationId === MAIN_ROOM_ID && !userAlreadyInRoom) {
               try {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
                 
                 // 1. SYSTEM announcement (IRC-style): User joined
                 // displayName already includes title for staff (e.g., "Admin Brigido", "SysOp James")
@@ -864,7 +864,7 @@ export function setupWebSocket(server: Server) {
               const commandDef = COMMAND_REGISTRY[parsedCommand.command];
               if (commandDef.requiresStaff) {
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isStaff = platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
                 if (!isStaff) {
                   ws.send(JSON.stringify({
                     type: 'error',
@@ -1337,7 +1337,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'help': {
                   const platformRole = await storage.getUserPlatformRole(ws.userId);
-                  const isStaff = !!(platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
+                  const isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
                   const helpText = getHelpText(isStaff);
                   
                   ws.send(JSON.stringify({
@@ -1715,7 +1715,7 @@ export function setupWebSocket(server: Server) {
               try {
                 // Determine if user is subscriber or free guest
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isSubscriber = !!(platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole));
+                const isSubscriber = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
                 
                 // Get conversation history (last 5 messages for context)
                 const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
@@ -2326,7 +2326,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff can silence users
             const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canSilence = silencerRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(silencerRole);
+            const canSilence = silencerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(silencerRole);
             
             if (!canSilence) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
@@ -2507,7 +2507,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff can give voice
             const staffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canGiveVoice = staffRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(staffRole);
+            const canGiveVoice = staffRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(staffRole);
             
             if (!canGiveVoice) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied

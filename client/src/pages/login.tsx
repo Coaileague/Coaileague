@@ -44,11 +44,11 @@ export default function Login() {
       // Check if user has platform role (root, sysop, auditor)
       const platformRole = data.user?.platformRole;
       
-      if (platformRole === 'root' || platformRole === 'sysop') {
+      if (platformRole === 'root_admin' || platformRole === 'sysop') {
         // Root/System administrators → Dashboard (shows Root Admin view)
         setLocation("/dashboard");
-      } else if (platformRole === 'auditor') {
-        // Auditors → Auditor Portal
+      } else if (platformRole === 'compliance_officer') {
+        // Compliance Officers → Auditor Portal
         setLocation("/auditor-portal");
       } else {
         // Regular users → Dashboard (creates workspace automatically if first login)

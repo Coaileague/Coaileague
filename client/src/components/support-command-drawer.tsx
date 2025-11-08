@@ -114,8 +114,8 @@ const CUSTOMER_COMMAND_GROUPS = [
 ];
 
 function getRoleIcon(role: string, platformRole?: string) {
-  if (platformRole === 'root') return <Crown className="w-3 h-3 text-yellow-500" />;
-  if (platformRole && ['platform_admin', 'deputy_admin'].includes(platformRole)) {
+  if (platformRole === 'root_admin') return <Crown className="w-3 h-3 text-yellow-500" />;
+  if (platformRole && ['deputy_admin'].includes(platformRole)) {
     return <Shield className="w-3 h-3 text-blue-500" />;
   }
   if (role === 'staff') return <Shield className="w-3 h-3 text-blue-500" />;

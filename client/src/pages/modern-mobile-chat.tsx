@@ -69,18 +69,18 @@ export default function ModernMobileChat() {
   const userName = currentUser?.user?.email || 'Guest';
   const userPlatformRole = currentUser?.user?.platformRole;
   const isStaff = userPlatformRole && 
-    ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(userPlatformRole);
+    ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes(userPlatformRole);
   const isAuthenticated = !!currentUser?.user;
   
   // Get role display text
   const getRoleDisplay = (role?: string) => {
     if (!role) return null;
     switch(role) {
-      case 'root': return 'Admin';
+      case 'root_admin': return 'Admin';
       case 'deputy_admin': return 'Deputy';
-      case 'deputy_assistant': return 'Assistant';
+      case 'support_manager': return 'Manager';
       case 'sysop': return 'Sysop';
-      case 'auditor': return 'Auditor';
+      case 'compliance_officer': return 'Compliance';
       case 'bot': return 'BOT AI';
       default: return null;
     }
@@ -215,12 +215,12 @@ export default function ModernMobileChat() {
     return requiredRoles.includes(userPlatformRole);
   };
 
-  // All staff roles - INCLUDES 'support' for frontline agents
-  const ALL_STAFF = ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'];
-  const DEPUTY_ASSISTANT_PLUS = ['root', 'deputy_admin', 'deputy_assistant'];
-  const DEPUTY_ADMIN_PLUS = ['root', 'deputy_admin'];
-  const ADMIN_ONLY = ['root', 'deputy_admin'];
-  const SYSTEM_ONLY = ['root', 'sysop'];
+  // All staff roles - INCLUDES 'support_agent' for frontline agents
+  const ALL_STAFF = ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'];
+  const DEPUTY_ASSISTANT_PLUS = ['root_admin', 'deputy_admin', 'support_manager'];
+  const DEPUTY_ADMIN_PLUS = ['root_admin', 'deputy_admin'];
+  const ADMIN_ONLY = ['root_admin', 'deputy_admin'];
+  const SYSTEM_ONLY = ['root_admin', 'sysop'];
 
   // Quick Responses for staff - Personalized with selected user's name
   const getQuickResponses = () => {
@@ -1055,7 +1055,7 @@ export default function ModernMobileChat() {
               )}
             </div>
             {/* WF Logo for STAFF ONLY */}
-            {['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(msgRole) && (
+            {['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(msgRole) && (
               <div className="flex-shrink-0">
                 <WFLogoCompact size={16} />
               </div>

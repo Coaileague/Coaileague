@@ -17192,7 +17192,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         const ownerEmployee = await db.query.employees.findFirst({
           where: (employees, { and, eq }) => and(
             eq(employees.workspaceId, notifyWorkspaceId),
-            eq(employees.role, 'owner')
+            eq(employees.role, 'org_owner')
           ),
         });
 
@@ -17251,7 +17251,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         const ownerEmployee = await db.query.employees.findFirst({
           where: (employees, { and, eq }) => and(
             eq(employees.workspaceId, notifyWorkspaceId),
-            eq(employees.role, 'owner')
+            eq(employees.role, 'org_owner')
           ),
         });
 
@@ -17343,7 +17343,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       
       // Check if user is authorized (HR/Manager/Owner can view reputation data)
       const employee = await storage.getEmployeeByUserId(userId);
-      const isAuthorized = employee && ['owner', 'manager', 'hr_manager'].includes(employee.role || '');
+      const isAuthorized = employee && ['org_owner', 'department_manager', 'hr_manager'].includes(employee.role || '');
       
       if (!isAuthorized) {
         return res.status(403).json({ message: "Only HR/Managers can view employee reputation data" });

@@ -35,7 +35,7 @@ export function formatUserDisplayNameForChat(user: UserInfo): string {
   const lastName = user.lastName || '';
   
   // Check if user is support staff with a platform role
-  const isStaff = user.platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(user.platformRole);
+  const isStaff = user.platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(user.platformRole);
   
   if (isStaff && user.platformRole) {
     // Format: "Title FirstName" for support staff
@@ -52,9 +52,9 @@ export function formatUserDisplayNameForChat(user: UserInfo): string {
  */
 function getRoleTitlePrefix(role: string): string {
   switch(role) {
-    case 'root': return 'Admin';
+    case 'root_admin': return 'Admin';
     case 'deputy_admin': return 'Deputy';
-    case 'deputy_assistant': return 'Assistant';
+    case 'support_manager': return 'Assistant';
     case 'sysop': return 'SysOp';
     default: return '';
   }
