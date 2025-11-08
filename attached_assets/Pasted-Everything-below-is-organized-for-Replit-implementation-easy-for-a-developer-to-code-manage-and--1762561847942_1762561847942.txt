@@ -1,0 +1,125 @@
+Everything below is organized for Replit implementation — easy for a developer to code, manage, and maintain.
+
+🧭 1. PLATFORM SUPPORT ROLES (Internal / You & Team)
+🎯 Purpose
+Oversee, maintain, and troubleshoot the autonomous platform itself — not the client organizations.
+Keep hierarchy lean and affordable, with human oversight for AI actions.
+
+⚙️ Support Structure
+Root (Owner)
+└─ Deputy Admin (Ops Chief)
+   ├─ SysOp (Tech Admin)
+   │  ├─ Tech Support Lead
+   │  └─ Tech Support Agent
+   ├─ Support Manager
+   │  ├─ Support Specialist
+   │  └─ Support Assistant
+   └─ Compliance Officer
+      ├─ AI Oversight Analyst
+      └─ Documentation Lead
+
+
+🔐 Access & Duties
+RoleAuthorityKey Access / PermissionsNotesRoot Admin🔒 Full (destructive)Everything including destroy / purge.Only used for emergencies or resets.Deputy Admin🧠 Full ops (no destructive)Manage all support teams, approve updates, assign roles, tenant management.Day-to-day control.SysOp⚙️ System adminBackend, deployment, diagnostics, service restarts.Technical health of platform.Support Manager🧭 Client & ticket controlHandle user tickets, assign support staff, audit platform responses.Human layer for AI interaction.Support Agent🧩 Limited support accessRespond to tickets, report AI or user issues, view helpdesk.Frontline helpdesk.Compliance Officer🧾 Read-only auditReview AI decisions, generate reports, ensure transparency.Accountability role.AI Oversight Analyst🔍 Limited analytics accessValidate AI outputs, flag calculation errors.Works under Compliance.Documentation Lead📘 Edit knowledge baseUpdate SOPs, help docs, AI process notes.Keeps humans synced with AI.
+
+🧰 Developer Notes
+
+
+6 core roles to code:
+root_admin, deputy_admin, sysop, support_manager, support_agent, compliance_officer
+
+
+Optional subroles (can inherit permissions):
+ai_oversight_analyst, documentation_lead
+
+
+Hierarchy:
+Root → Deputy → SysOp / Support Manager → Agents & Compliance
+
+
+Destructive actions (delete/purge) = Root only.
+
+
+Deputy handles 95% of all ops, Root rarely engaged.
+
+
+
+🔑 Core Platform Permissions
+ModuleRootDeputySysOpSupportMgrAgentComplianceSystem Deploy / Restart✅✅ (approve)✅ (execute)➖➖➖Tenant Management✅✅➖➖➖➖Support Tickets✅✅🔎✅✅🔎Audit Logs✅✅🔎🔎➖✅AI Config / Oversight✅✅🔎🔎➖✅Documentation✅✅➖➖➖✅Destroy / Purge✅❌❌❌❌❌
+
+🏢 2. ORGANIZATION (TENANT) ROLES
+🎯 Purpose
+These roles belong to subscriber organizations using your platform.
+Their job is to oversee AI-assisted operations, validate calculations, and manage internal workflows — not to run code or access other tenants.
+
+⚙️ Organizational Structure
+Org Owner
+└─ Org Admin
+   ├─ Department Manager
+   │  └─ Supervisor
+   │     └─ Staff (Employee)
+   ├─ Auditor
+   └─ Contractor (Limited)
+
+
+🔐 Access & Duties
+RoleAuthorityKey Access / PermissionsNotesOrg Owner🔒 Tenant-wide controlAll HR, Finance, Ops, AI approval, reports.Top of tenant; no platform access.Org Admin🧠 Day-to-day controlManage users, tasks, budgets, and AI approvals within org.Most used executive role.Department Manager⚙️ Mid-levelManage department tasks, staff, and reports.Scoped to department.Supervisor🧩 Team-levelApprove tasks, schedules, and oversee daily AI-human operations.Scoped to team.Staff (Employee)👷 BasicExecute assigned tasks, log time, submit tickets.AI-assisted workforce role.Auditor🔍 Read-onlyView all HR, finance, ops, AI logs.External or compliance role.Contractor🪣 SandboxPerform limited project-based work.No internal data access.
+
+🧰 Developer Notes
+
+
+7 org roles total:
+org_owner, org_admin, department_manager, supervisor, staff, auditor, contractor
+
+
+Hierarchy is simple:
+Org Owner → Org Admin → Manager → Supervisor → Staff
+
+
+Each tenant is sandboxed (no cross-org access).
+
+
+AI automation does the work; humans validate and approve results.
+
+
+
+🔑 Core Tenant Permissions
+ModuleOrgOwnerOrgAdminDeptMgrSupervisorStaffAuditorContractorHR✅ Manage✅ Manage🔎 Dept🔎 TeamSelf🔎➖Finance✅ Manage✅ Manage🔎 Dept➖➖🔎➖Ops (Tasks)✅ Full✅ Full✅ Dept✅ TeamSelf🔎LimitedAI Center✅ Approve✅ ApproveReview DeptReview TeamExecute🔎➖Reports✅ All✅ ExportDeptTeamSelf✅➖Support (Internal)✅ All✅ AllDept AssignTeam ReplyCreateViewCreateIntegrations✅ Manage✅ Manage➖➖➖➖➖Roles / Permissions✅ FullLimited➖➖➖➖➖
+
+🧩 RBAC Implementation Blueprint (Both Combined)
+Role Groups to Code
+CategoryRole KeysPlatform Supportroot_admin, deputy_admin, sysop, support_manager, support_agent, compliance_officerTenant Orgorg_owner, org_admin, department_manager, supervisor, staff, auditor, contractor
+
+Access Logic
+if (user.role === "root_admin") allowAll();
+if (user.role === "deputy_admin") allowAllExceptDestroy();
+if (user.role === "sysop") allowSystemOps();
+if (user.role.startsWith("support_")) allowSupportModules();
+
+if (user.role.startsWith("org_") || tenantScope) {
+  limitToTenant(tenantId);
+  applyRolePermissions(user.role);
+}
+
+
+Tenant Sandbox Policy
+
+
+Each tenant_id is isolated; roles and data are scoped.
+
+
+Root/Deputy can “impersonate” tenant users for audits.
+
+
+AI automations run under system accounts tied to each tenant.
+
+
+Human oversight only requires access to logs, tasks, and approvals.
+
+
+
+✅ Final Summary
+SystemTotal RolesPurposeWho It’s ForCoded ModulesPlatform Support6 coreMaintain & supervise autonomous OSYou + core ops teamSystem, Deploy, Tickets, Audit, AI ConfigOrganization (Tenant)7 coreRun and oversee AI-driven business opsClient companiesHR, Finance, Ops, AI, Reports, Support
+
+Would you like me to generate both as .json + .sql seed files (so you can upload directly to Replit or your backend)?
+It would include both role systems, ready for your developer to import in one command.
