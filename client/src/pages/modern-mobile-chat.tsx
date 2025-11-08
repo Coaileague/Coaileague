@@ -232,13 +232,13 @@ export default function ModernMobileChat() {
         icon: CheckCircle,
         label: 'Welcome & Introduction',
         text: `Hi ${firstName}! Welcome to WorkforceOS Support! I'm here to assist you. How can I help you today?`,
-        color: 'text-emerald-400'
+        color: 'text-primary'
       },
       {
         icon: Clock,
         label: 'Please Wait',
         text: `Thank you for your patience, ${firstName}. I'm looking into this for you right now and will have an answer shortly.`,
-        color: 'text-emerald-400'
+        color: 'text-primary'
       },
       {
         icon: HelpCircle,
@@ -250,13 +250,13 @@ export default function ModernMobileChat() {
         icon: FileSearch,
         label: 'Investigating Issue',
         text: `${firstName}, I'm investigating this issue now. I'll check our system logs and get back to you with a solution.`,
-        color: 'text-emerald-400'
+        color: 'text-primary'
       },
       {
         icon: PackageCheck,
         label: 'Issue Resolved',
         text: `Great news, ${firstName}! I've resolved the issue. Please let me know if you need any further assistance.`,
-        color: 'text-emerald-400'
+        color: 'text-primary'
       },
       {
         icon: RefreshCw,
@@ -289,7 +289,7 @@ export default function ModernMobileChat() {
         icon: UserCheck, 
         label: 'Release Hold & Welcome', 
         action: () => handleReleaseHold(),
-        color: 'text-emerald-400',
+        color: 'text-primary',
         description: 'Remove spectator mode + send greeting',
         roles: ALL_STAFF,
         tier: 'Basic Support'
@@ -347,7 +347,7 @@ export default function ModernMobileChat() {
         icon: FileText, 
         label: 'Request Document', 
         action: () => handleRequestDocument(),
-        color: 'text-emerald-400',
+        color: 'text-primary',
         description: 'Request file upload from user',
         roles: ALL_STAFF,
         tier: 'Documents'
@@ -365,7 +365,7 @@ export default function ModernMobileChat() {
         icon: PenTool, 
         label: 'Request Signature', 
         action: () => handleRequestSignature(),
-        color: 'text-emerald-400',
+        color: 'text-primary',
         description: 'Request e-signature',
         roles: DEPUTY_ASSISTANT_PLUS,
         tier: 'Documents'
@@ -432,7 +432,7 @@ export default function ModernMobileChat() {
         icon: Mail, 
         label: 'Email Summary', 
         action: () => handleEmailSummary(),
-        color: 'text-emerald-400',
+        color: 'text-primary',
         description: 'Send conversation summary via email',
         roles: DEPUTY_ADMIN_PLUS,
         tier: 'Advanced'
@@ -499,7 +499,7 @@ export default function ModernMobileChat() {
         icon: TrendingUp, 
         label: 'Analytics', 
         action: () => handleAnalytics(),
-        color: 'text-emerald-400',
+        color: 'text-primary',
         description: 'View system analytics dashboard',
         roles: SYSTEM_ONLY,
         tier: 'System'
@@ -517,7 +517,7 @@ export default function ModernMobileChat() {
         icon: Zap, 
         label: 'Test Message', 
         action: () => handleTestMessage(),
-        color: 'text-emerald-400',
+        color: 'text-primary',
         description: 'Send system test message',
         roles: SYSTEM_ONLY,
         tier: 'System'
@@ -951,11 +951,11 @@ export default function ModernMobileChat() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex flex-col max-w-md mx-auto relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 flex flex-col max-w-md mx-auto relative overflow-hidden">
       {/* Animated background effect */}
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-green-500 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-emerald-500 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-muted/30 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-muted/30 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
       {/* Header with User Profile Card - Reduced height for more chat space */}
@@ -963,7 +963,7 @@ export default function ModernMobileChat() {
         {selectedUser && isStaff ? (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-base">{selectedUser.name.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -984,8 +984,8 @@ export default function ModernMobileChat() {
                 <span>Session: {Math.floor((Date.now() - new Date().getTime()) / 60000) || 5}:23</span>
               </div>
               <div className="flex items-center gap-1">
-                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
-                <span className={isConnected ? 'text-emerald-400' : 'text-red-400'}>
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-primary text-primary' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <span className={isConnected ? 'text-primary' : 'text-red-400'}>
                   {isConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
@@ -994,13 +994,13 @@ export default function ModernMobileChat() {
         ) : (
           <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-500 p-[2px]">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent p-[2px]">
                 <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center">
                   <WFLogoCompact size={16} />
                 </div>
               </div>
               <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
-                helpDeskRoom?.status === 'open' ? 'bg-emerald-500' : 'bg-red-500'
+                helpDeskRoom?.status === 'open' ? 'bg-muted/30' : 'bg-red-500'
               }`}></div>
             </div>
             <div className="flex-1 min-w-0">
@@ -1008,7 +1008,7 @@ export default function ModernMobileChat() {
               <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
                 <Users size={10} />
                 <span>{onlineUsers.length} online</span>
-                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-primary text-primary' : 'fill-red-500 text-red-500'} animate-pulse`} />
               </div>
             </div>
           </div>
@@ -1045,7 +1045,7 @@ export default function ModernMobileChat() {
             {/* WorkforceOS Logo Avatar - Bigger and Bolder */}
             <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ring-2 ${
               msg.senderType === 'bot' ? 'bg-gradient-to-br from-amber-500 to-yellow-600 ring-amber-500/50' :
-              msg.senderType === 'support' ? 'bg-gradient-to-br from-emerald-600 to-emerald-600 ring-emerald-500/50' :
+              msg.senderType === 'support' ? 'bg-gradient-to-br from-primary to-accent ring-primary/50' :
               'bg-gradient-to-br from-slate-600 to-slate-700 ring-slate-500/50'
             }`}>
               {msg.senderType === 'bot' ? (
@@ -1083,7 +1083,7 @@ export default function ModernMobileChat() {
                 </span>
                 {/* Private Message Indicator with Glow Effect */}
                 {isPrivate && (
-                  <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 animate-pulse-glow" data-testid="badge-private-message">
+                  <span className="text-[10px] font-bold text-primary px-2 py-0.5 rounded-full bg-muted/30/20 border border-primary/80/30 animate-pulse-glow" data-testid="badge-private-message">
                     whispered
                   </span>
                 )}
@@ -1125,7 +1125,7 @@ export default function ModernMobileChat() {
       
       {/* Quick Responses Section - Staff Only */}
       {isStaff && selectedUser && (
-        <div className="relative z-10 border-t border-white/10 bg-gradient-to-b from-emerald-900/30 to-green-900/30 backdrop-blur-sm">
+        <div className="relative z-10 border-t border-white/10 bg-gradient-to-b from-slate-900/30 to-green-900/30 backdrop-blur-sm">
           <button
             onClick={() => setShowQuickResponses(!showQuickResponses)}
             className="w-full flex items-center justify-between px-4 py-2 text-white hover-elevate transition-all"
@@ -1135,7 +1135,7 @@ export default function ModernMobileChat() {
               <Zap className="w-4 h-4 text-amber-400" />
               <div className="flex flex-col items-start">
                 <span className="text-sm font-semibold">Quick Responses</span>
-                <span className="text-[10px] text-emerald-400 font-medium">
+                <span className="text-[10px] text-primary font-medium">
                   → {selectedUser.name.split(' ')[0]}
                 </span>
               </div>
@@ -1181,7 +1181,7 @@ export default function ModernMobileChat() {
           <Sheet open={showUserList} onOpenChange={setShowUserList}>
             <SheetTrigger asChild>
               <button
-                className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-600 text-white shadow-lg hover:shadow-emerald-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
+                className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-lg hover:shadow-primary/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
                 data-testid="button-float-users"
               >
                 <Users size={24} />
@@ -1207,7 +1207,7 @@ export default function ModernMobileChat() {
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
                         selectedUser?.id === user.id
-                          ? 'bg-green-500/20 border-green-500/50'
+                          ? 'bg-muted/30/20 border-primary/50'
                           : 'bg-white/5 border-white/10 hover-elevate active-elevate-2'
                       }`}
                       data-testid={`user-${user.id}`}
@@ -1215,7 +1215,7 @@ export default function ModernMobileChat() {
                       {isBot ? (
                         <Bot className="w-4 h-4 text-amber-400 flex-shrink-0" />
                       ) : (
-                        <div className={`w-3 h-3 rounded-full ${user.status === 'online' ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                        <div className={`w-3 h-3 rounded-full ${user.status === 'online' ? 'bg-muted/30' : 'bg-slate-500'}`} />
                       )}
                       <div className="flex-1 text-left">
                         <div className={`font-medium text-sm ${isBot ? 'text-amber-400' : 'text-white'}`}>
@@ -1267,11 +1267,11 @@ export default function ModernMobileChat() {
             <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 h-[80vh] flex flex-col">
               <SheetHeader className="flex-shrink-0">
                 <SheetTitle className="text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-emerald-400" />
+                  <Settings className="w-5 h-5 text-primary" />
                   <div className="flex flex-col items-start">
                     <span>Support Tools</span>
                     {selectedUser && (
-                      <span className="text-xs text-emerald-400 font-normal">
+                      <span className="text-xs text-primary font-normal">
                         Active User: {selectedUser.name}
                       </span>
                     )}
@@ -1335,7 +1335,7 @@ export default function ModernMobileChat() {
                 }
               }}
               placeholder={selectedUser ? `Message to ${selectedUser.name}...` : "Type a message..."}
-              className="w-full bg-white/10 backdrop-blur-sm text-white placeholder-slate-400 px-4 py-3 rounded-full border border-white/10 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              className="w-full bg-white/10 backdrop-blur-sm text-white placeholder-slate-400 px-4 py-3 rounded-full border border-white/10 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               data-testid="input-message"
             />
           </div>
@@ -1345,7 +1345,7 @@ export default function ModernMobileChat() {
             disabled={!isConnected || !messageText.trim()}
             className={`p-3 rounded-full text-white transition-all ${
               isConnected && messageText.trim()
-                ? 'bg-gradient-to-r from-emerald-500 to-emerald-500 hover:shadow-lg hover:shadow-emerald-500/50 active:scale-95'
+                ? 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/50 active:scale-95'
                 : 'bg-slate-600 cursor-not-allowed opacity-50'
             }`}
             data-testid="button-send"

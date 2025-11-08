@@ -18,7 +18,7 @@ export default function LogoShowcase() {
           <h2 className="text-2xl font-bold text-white mb-6">Marketing Logo (Vertical)</h2>
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-12 flex flex-col items-center">
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 border border-emerald-500/20">
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 border border-primary/20">
                 <AutoForceLogo 
                   size="hero" 
                   variant="full"
@@ -41,7 +41,7 @@ export default function LogoShowcase() {
           <h2 className="text-2xl font-bold text-white mb-6">Header Logo (Horizontal)</h2>
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-12">
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-emerald-500/20 flex justify-center">
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 flex justify-center">
                 <AutoForceLogo 
                   size="xl" 
                   variant="full"
@@ -108,10 +108,10 @@ export default function LogoShowcase() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-emerald-950 to-emerald-900 border-emerald-800">
+            <Card className="bg-gradient-to-br from-slate-950 to-slate-900 border-primary">
               <CardContent className="p-8 flex flex-col items-center">
                 <AutoForceLogo size="lg" />
-                <span className="text-xs text-emerald-300 mt-4">Emerald Background</span>
+                <span className="text-xs text-primary mt-4">Emerald Background</span>
               </CardContent>
             </Card>
           </div>
@@ -123,17 +123,17 @@ export default function LogoShowcase() {
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-8 space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-emerald-400 mb-2">The Icon</h3>
+                <h3 className="text-lg font-semibold text-primary mb-2">The Icon</h3>
                 <p className="text-slate-300">
                   A clock face with a person silhouette rotating as the clock hand. This represents 
                   <strong className="text-white"> time tracking your workforce</strong> - the core value proposition.
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-emerald-400 mb-2">Brand Colors</h3>
+                <h3 className="text-lg font-semibold text-primary mb-2">Brand Colors</h3>
                 <div className="flex gap-4 mt-3">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-16 h-16 rounded-lg bg-emerald-600 border-2 border-white/20" />
+                    <div className="w-16 h-16 rounded-lg bg-primary border-2 border-white/20" />
                     <span className="text-xs text-slate-400">#059669</span>
                   </div>
                   <div className="flex flex-col items-center gap-2">
@@ -147,9 +147,9 @@ export default function LogoShowcase() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-emerald-400 mb-2">Typography</h3>
+                <h3 className="text-lg font-semibold text-primary mb-2">Typography</h3>
                 <p className="text-slate-300">
-                  <strong className="font-black text-2xl bg-gradient-to-br from-emerald-500 to-emerald-400 bg-clip-text text-transparent">
+                  <strong className="font-black text-2xl bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
                     WorkforceOS
                   </strong>
                   <br />

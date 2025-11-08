@@ -29,7 +29,7 @@ export default function DesignComparison() {
       colors: {
         primary: "#059669", // Emerald green
         secondary: "#64748b", // Cool gray
-        accent: "#10b981", // Lighter emerald
+        accent: "hsl(162, 29%, 45%)", // Lighter emerald
         bg: "#0f172a", // Dark charcoal
         card: "#1e293b",
         text: "#f1f5f9"

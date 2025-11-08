@@ -139,7 +139,7 @@ export default function Support() {
   return (
     <div className="min-h-screen bg-slate-gradient text-white">
       {/* Top Bar */}
-      <div className="h-16 bg-card-translucent border-b border-emerald-500/20 backdrop-blur-sm flex items-center justify-between px-6">
+      <div className="h-16 bg-card-translucent border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-6">
         <AutoForceLogo size="sm" variant="full" />
         <div className="flex items-center gap-4">
           <Button

@@ -29,7 +29,7 @@ export default function PlatformFamilyPage() {
       description: "Budget planning and control with variance analysis, forecasting, and approval workflows",
       features: ["Budget Planning", "Variance Analysis", "Forecasting", "Approvals"],
       url: "/budget",
-      color: "from-emerald-500 to-green-500"
+      color: "from-primary to-green-500"
     },
     {
       name: "Command Center",

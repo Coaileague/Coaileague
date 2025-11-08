@@ -32,7 +32,7 @@ const categoryIcons = {
 
 // Category colors for visual distinction
 const categoryColors = {
-  accounting: "bg-green-500/10 text-green-700 dark:text-green-400",
+  accounting: "bg-muted/30/10 text-green-700 dark:text-green-400",
   erp: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   crm: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   hris: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
@@ -379,7 +379,7 @@ export default function IntegrationMarketplace() {
                       </div>
 
                       {connected && connectionStatus && (
-                        <div className="flex items-center gap-2 p-2 rounded-md bg-green-500/10 border border-green-500/20">
+                        <div className="flex items-center gap-2 p-2 rounded-md bg-muted/30/10 border border-primary/20">
                           <Check className="w-4 h-4 text-green-600" />
                           <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                             Connected {connectionStatus.healthy ? '✓' : '⚠'}

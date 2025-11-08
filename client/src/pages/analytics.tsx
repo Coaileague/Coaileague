@@ -83,12 +83,12 @@ export default function Analytics() {
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Total Revenue */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20" data-testid="card-revenue">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-primary/10 to-green-500/5 border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20" data-testid="card-revenue">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <DollarSign className="w-6 h-6 text-emerald-400" />
+              <div className="p-3 bg-muted/30/20 rounded-xl group-hover:scale-110 transition-transform">
+                <DollarSign className="w-6 h-6 text-primary" />
               </div>
-              <div className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-primary rounded-full animate-pulse"></div>
             </div>
             <p className="text-slate-300 text-sm mb-2">Total Revenue</p>
             <div className="text-3xl font-bold text-white mb-1" data-testid="text-total-revenue">
@@ -221,7 +221,7 @@ export default function Analytics() {
                   </p>
                   <p className="text-xs text-slate-400">Total Invoices</p>
                 </div>
-                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="p-4 rounded-lg bg-muted/30/10 border border-primary/20">
                   <p className="text-3xl font-bold text-white mb-1" data-testid="text-paid-invoices">
                     {analytics.paidInvoices}
                   </p>
@@ -233,13 +233,13 @@ export default function Analytics() {
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-sm font-medium text-slate-300">Payment Rate</span>
-                  <span className="text-sm text-emerald-400 font-bold">
+                  <span className="text-sm text-primary font-bold">
                     {paidInvoiceRate}%
                   </span>
                 </div>
                 <div className="w-full bg-slate-800/50 rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-emerald-500 to-green-500 h-3 rounded-full transition-all duration-500 shadow-lg shadow-emerald-500/30"
+                    className="bg-gradient-to-r from-primary to-green-500 h-3 rounded-full transition-all duration-500 shadow-lg shadow-primary/30"
                     style={{ width: `${paidInvoiceRate}%` }}
                     data-testid="progress-payment-rate"
                   />

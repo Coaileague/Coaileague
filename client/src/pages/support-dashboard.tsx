@@ -85,7 +85,7 @@ export default function SupportDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'active': return 'bg-muted/30/10 text-green-500 border-primary/20';
       case 'resolved': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'closed': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
       default: return 'bg-gray-500/10 text-gray-500 border-gray-500/20';

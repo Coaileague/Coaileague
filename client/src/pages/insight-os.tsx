@@ -197,7 +197,7 @@ export default function InsightOS() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-lg">
+            <div className="p-2 bg-muted/30/10 rounded-lg">
               <DollarSign className="h-5 w-5 text-green-500" />
             </div>
             <div>
@@ -294,7 +294,7 @@ export default function InsightOS() {
                         <p className="text-sm">{insight.details}</p>
                       )}
                       {insight.estimatedImpact && (
-                        <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 p-3 bg-muted/30/10 border border-primary/20 rounded-lg">
                           <TrendingUp className="h-5 w-5 text-green-500" />
                           <span className="font-semibold text-green-500">
                             Estimated Impact: {insight.estimatedImpact}

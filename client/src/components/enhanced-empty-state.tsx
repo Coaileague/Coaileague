@@ -9,7 +9,7 @@ interface EnhancedEmptyStateProps {
   actionLabel?: string;
   onAction?: () => void;
   testId?: string;
-  variant?: "default" | "purple" | "emerald" | "blue";
+  variant?: "default" | "purple" | "professional" | "blue";
   showLogo?: boolean;
 }
 
@@ -20,7 +20,7 @@ export function EnhancedEmptyState({
   actionLabel,
   onAction,
   testId,
-  variant = "emerald",
+  variant = "professional",
   showLogo = true
 }: EnhancedEmptyStateProps) {
   const variantStyles = {
@@ -36,11 +36,11 @@ export function EnhancedEmptyState({
       iconColor: "text-purple-400",
       glow: "shadow-purple-500/30",
     },
-    emerald: {
-      gradient: "from-emerald-500/20 via-emerald-400/10 to-transparent",
-      iconBg: "bg-emerald-500/20",
-      iconColor: "text-emerald-400",
-      glow: "shadow-emerald-500/30",
+    professional: {
+      gradient: "from-primary/20 via-accent/10 to-transparent",
+      iconBg: "bg-muted/30/20",
+      iconColor: "text-primary",
+      glow: "shadow-primary/30",
     },
     blue: {
       gradient: "from-blue-500/20 via-blue-400/10 to-transparent",

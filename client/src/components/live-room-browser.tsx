@@ -121,7 +121,7 @@ export function LiveRoomBrowser() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-emerald-500';
+      case 'active': return 'bg-muted/30';
       case 'suspended': return 'bg-yellow-500';
       case 'archived': return 'bg-gray-500';
       default: return 'bg-gray-500';
@@ -130,7 +130,7 @@ export function LiveRoomBrowser() {
 
   const getUserStatusColor = (status: 'online' | 'away' | 'busy') => {
     switch (status) {
-      case 'online': return 'bg-emerald-500';
+      case 'online': return 'bg-muted/30';
       case 'away': return 'bg-yellow-500';
       case 'busy': return 'bg-red-500';
       default: return 'bg-gray-500';
@@ -150,7 +150,7 @@ export function LiveRoomBrowser() {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center space-y-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-sm text-muted-foreground">Loading rooms...</p>
         </div>
       </div>
@@ -178,7 +178,7 @@ export function LiveRoomBrowser() {
           </p>
         </div>
         <Badge variant="outline" className="gap-1">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="h-2 w-2 rounded-full bg-muted/30 animate-pulse" />
           Live
         </Badge>
       </div>
@@ -188,7 +188,7 @@ export function LiveRoomBrowser() {
           <Card
             key={room.id}
             className={`hover-elevate cursor-pointer transition-all ${
-              selectedRoom === room.id ? 'ring-2 ring-emerald-500' : ''
+              selectedRoom === room.id ? 'ring-2 ring-primary' : ''
             }`}
             onClick={() => setSelectedRoom(room.id === selectedRoom ? null : room.id)}
             data-testid={`room-card-${room.slug}`}
@@ -228,7 +228,7 @@ export function LiveRoomBrowser() {
                   {room.currentMembers} / {room.maxMembers} members
                 </span>
                 {room.onlineMembers.length > 0 && (
-                  <span className="text-emerald-500">
+                  <span className="text-primary">
                     • {room.onlineMembers.length} online
                   </span>
                 )}

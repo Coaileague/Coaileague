@@ -137,10 +137,10 @@ export default function EmployeePortal() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="border-l-4 border-l-primary">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                  <DollarSign className="h-5 w-5 text-primary" />
                   <Badge variant="secondary">Total</Badge>
                 </div>
                 <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
@@ -163,7 +163,7 @@ export default function EmployeePortal() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
                   <Award className="h-5 w-5 text-violet-500" />
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                  <Badge variant="secondary" className="bg-muted/30/10 text-primary">
                     Active
                   </Badge>
                 </div>
@@ -233,7 +233,7 @@ export default function EmployeePortal() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                    <TrendingUp className="h-5 w-5 text-primary" />
                     Performance Summary
                   </CardTitle>
                 </CardHeader>
@@ -252,7 +252,7 @@ export default function EmployeePortal() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Status</span>
-                    <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+                    <Badge className="bg-muted/30/10 text-primary border-0">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Active
                     </Badge>
@@ -374,7 +374,7 @@ export default function EmployeePortal() {
 
                   <div className="flex items-center justify-between p-4 rounded-lg border border-border">
                     <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-emerald-500" />
+                      <FileText className="h-5 w-5 text-primary" />
                       <div>
                         <p className="font-medium">Tax Documents (W-4/W-9)</p>
                         <p className="text-sm text-muted-foreground">On file</p>

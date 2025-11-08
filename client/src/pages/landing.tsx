@@ -397,7 +397,7 @@ export default function Landing() {
                 description: "Smart scheduling with shift management. AI auto-scheduling coming soon.",
                 features: ["Smart scheduling", "Conflict detection", "Mobile access", "Shift swaps"],
                 badge: "Live + AI Soon",
-                color: "text-emerald-500",
+                color: "text-primary",
               },
               {
                 icon: Clock,
@@ -421,7 +421,7 @@ export default function Landing() {
                 description: "Automatic invoice generation from time entries. Get paid faster.",
                 features: ["Auto-invoicing", "Client billing", "Stripe integration", "Payment tracking"],
                 badge: "Live",
-                color: "text-emerald-500",
+                color: "text-primary",
               },
               {
                 icon: UserPlus,
@@ -453,7 +453,7 @@ export default function Landing() {
                 description: "Live help desk with AI knowledge base. Get answers fast.",
                 features: ["Live chat", "AI assistant", "Knowledge base", "Support available"],
                 badge: "AI Powered",
-                color: "text-emerald-500",
+                color: "text-primary",
               },
             ].map((module) => (
               <Card
@@ -535,7 +535,7 @@ export default function Landing() {
                         <td className="p-4 text-center">
                           {row.us === true ? (
                             <div className="flex justify-center">
-                              <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                              <div className="h-6 w-6 rounded-full bg-muted/30/20 flex items-center justify-center">
                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                               </div>
                             </div>

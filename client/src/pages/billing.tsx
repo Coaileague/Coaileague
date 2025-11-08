@@ -95,7 +95,7 @@ export default function Billing() {
 
   const accountState = workspace?.accountState || "active";
   const accountStateConfig = {
-    active: { icon: CheckCircle2, label: "Active", className: "text-emerald-500", bgClassName: "bg-emerald-500/10 border-emerald-500/20" },
+    active: { icon: CheckCircle2, label: "Active", className: "text-primary", bgClassName: "bg-muted/30/10 border-primary/20" },
     payment_failed: { icon: AlertTriangle, label: "Payment Failed", className: "text-yellow-500", bgClassName: "bg-yellow-500/10 border-yellow-500/20" },
     suspended: { icon: XCircle, label: "Suspended", className: "text-red-500", bgClassName: "bg-red-500/10 border-red-500/20" },
     requires_support: { icon: Clock, label: "Requires Support", className: "text-orange-500", bgClassName: "bg-orange-500/10 border-orange-500/20" },
@@ -185,7 +185,7 @@ export default function Billing() {
                 <CardTitle className="text-sm font-medium">AI Token Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600" data-testid="text-token-balance">
+                <div className="text-2xl font-bold text-primary" data-testid="text-token-balance">
                   {(usageData as any)?.tokenBalance?.toLocaleString() || "0"}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -227,7 +227,7 @@ export default function Billing() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {activeAddons.map((addon: any) => (
                     <div key={addon.id} className="flex items-center gap-3 p-3 rounded-md border" data-testid={`addon-active-${addon.id}`}>
-                      <Zap className="h-5 w-5 text-emerald-500" />
+                      <Zap className="h-5 w-5 text-primary" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{addon.name}</div>
                         <div className="text-sm text-muted-foreground">${addon.price}/mo</div>
@@ -389,7 +389,7 @@ export default function Billing() {
                   {addons.map((addon: any) => {
                     const isActive = Array.isArray(activeAddons) && activeAddons.some((a: any) => a.addonId === addon.id);
                     return (
-                      <Card key={addon.id} className={isActive ? "border-emerald-500 bg-emerald-500/5" : ""} data-testid={`addon-${addon.id}`}>
+                      <Card key={addon.id} className={isActive ? "border-primary bg-muted/30/5" : ""} data-testid={`addon-${addon.id}`}>
                         <CardHeader>
                           <div className="flex items-start justify-between">
                             <div>

@@ -77,7 +77,7 @@ export default function NotFound() {
           <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
             <Button 
               onClick={() => setLocation("/live-chat")} 
-              className="w-full justify-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 border-0"
+              className="w-full justify-center gap-2 bg-gradient-to-r from-primary to-green-600 hover:from-primary hover:to-green-500 border-0"
               data-testid="button-live-support"
             >
               <MessageSquare className="h-4 w-4" />

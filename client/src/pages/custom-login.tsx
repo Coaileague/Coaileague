@@ -180,7 +180,7 @@ export default function CustomLogin() {
             <div className="text-sm text-center w-full">
               <button
                 onClick={() => setLocation("/reset-password")}
-                className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline"
+                className="text-primary hover:text-primary dark:text-primary dark:hover:text-primary hover:underline"
                 data-testid="link-reset-password"
               >
                 Forgot your password?
@@ -190,7 +190,7 @@ export default function CustomLogin() {
               Don't have an account?{" "}
               <button
                 onClick={() => setLocation("/register")}
-                className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline font-medium"
+                className="text-primary hover:text-primary dark:text-primary dark:hover:text-primary hover:underline font-medium"
                 data-testid="link-register"
               >
                 Sign up
@@ -210,7 +210,7 @@ export default function CustomLogin() {
         </Card>
 
         {/* Demo Access */}
-        <Card className="bg-card border-emerald-600/20">
+        <Card className="bg-card border-primary/20">
           <CardContent className="pt-6">
             <div className="text-center space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -218,7 +218,7 @@ export default function CustomLogin() {
               </p>
               <Button
                 variant="outline"
-                className="w-full border-emerald-600/50 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                className="w-full border-primary/50 hover:bg-muted/30 dark:hover:bg-primary"
                 onClick={() => window.location.href = "/api/demo-login"}
                 data-testid="button-demo"
               >

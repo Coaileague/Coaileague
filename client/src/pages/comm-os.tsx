@@ -221,7 +221,7 @@ export default function CommOS() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="w-3 h-3 mr-1" />Active</Badge>;
+        return <Badge variant="default" className="bg-primary hover:bg-primary"><CheckCircle2 className="w-3 h-3 mr-1" />Active</Badge>;
       case 'suspended':
         return <Badge variant="destructive"><Lock className="w-3 h-3 mr-1" />Suspended</Badge>;
       case 'closed':
@@ -254,7 +254,7 @@ export default function CommOS() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-emerald-600" />
+              <MessageSquare className="w-6 h-6 text-primary" />
               Welcome to CommOS™
             </CardTitle>
             <CardDescription>
@@ -269,19 +269,19 @@ export default function CommOS() {
               <h4 className="font-semibold text-sm">What you'll get:</h4>
               <ul className="text-sm space-y-1 ml-4">
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                   <span>Main chat room for your organization</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                   <span>Sub-channels for meetings, departments, and projects</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                   <span>Role-based access for owners, admins, members, and guests</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                   <span>Guest access for end customers</span>
                 </li>
               </ul>
@@ -305,7 +305,7 @@ export default function CommOS() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
-            <MessageSquare className="w-8 h-8 text-emerald-600" />
+            <MessageSquare className="w-8 h-8 text-primary" />
             CommOS™
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -517,7 +517,7 @@ export default function CommOS() {
         <DialogContent data-testid="dialog-export-chat">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Download className="w-5 h-5 text-emerald-600" />
+              <Download className="w-5 h-5 text-primary" />
               Export Chat History
             </DialogTitle>
             <DialogDescription>

@@ -246,10 +246,10 @@ export default function AdminCommandCenter() {
                     </div>
                     <div className="text-2xl font-bold text-white">{(stats as any)?.totalEmployees || 0}</div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover-elevate">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30/10 border border-primary/20 hover-elevate">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-emerald-500/20">
-                        <DollarSign className="h-5 w-5 text-emerald-400" />
+                      <div className="p-2 rounded-lg bg-muted/30/20">
+                        <DollarSign className="h-5 w-5 text-primary" />
                       </div>
                       <span className="text-sm font-medium text-slate-300">Monthly Revenue</span>
                     </div>
@@ -279,7 +279,7 @@ export default function AdminCommandCenter() {
                       <Cpu className="h-4 w-4 text-slate-400" />
                       <span className="text-sm text-slate-300">Database</span>
                     </div>
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    <Badge className="bg-muted/30/20 text-primary border-primary/30">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Healthy
                     </Badge>
@@ -289,7 +289,7 @@ export default function AdminCommandCenter() {
                       <Server className="h-4 w-4 text-slate-400" />
                       <span className="text-sm text-slate-300">API Status</span>
                     </div>
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    <Badge className="bg-muted/30/20 text-primary border-primary/30">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Online
                     </Badge>
@@ -348,7 +348,7 @@ export default function AdminCommandCenter() {
               </Button>
 
               <Button 
-                className="h-auto py-6 px-6 flex-col gap-3 bg-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/30 text-white" 
+                className="h-auto py-6 px-6 flex-col gap-3 bg-muted/30/20 border-primary/30 hover:bg-muted/30/30 text-white" 
                 onClick={() => window.location.href = '/dashboard'}
                 data-testid="button-workspace-tool"
               >

@@ -147,14 +147,14 @@ export default function ChatExport() {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="pdf" id="format-pdf" data-testid="radio-format-pdf" />
                 <Label htmlFor="format-pdf" className="flex items-center gap-2 font-normal cursor-pointer">
-                  <FileText className="w-4 h-4 text-emerald-600" />
+                  <FileText className="w-4 h-4 text-primary" />
                   <span>PDF Document (Download)</span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="html" id="format-html" data-testid="radio-format-html" />
                 <Label htmlFor="format-html" className="flex items-center gap-2 font-normal cursor-pointer">
-                  <Code className="w-4 h-4 text-emerald-600" />
+                  <Code className="w-4 h-4 text-primary" />
                   <span>HTML Page (Open in Browser)</span>
                 </Label>
               </div>

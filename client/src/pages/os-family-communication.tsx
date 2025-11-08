@@ -28,7 +28,7 @@ export default function CommunicationFamilyPage() {
       description: "Live customer support with mobile-optimized chat interface and ticket management",
       features: ["Live Chat", "Ticket System", "Mobile Interface", "Support Analytics"],
       url: "/live-chat",
-      color: "from-emerald-500 to-teal-500"
+      color: "from-primary to-teal-500"
     }
   ];
 

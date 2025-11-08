@@ -226,7 +226,7 @@ export function DesktopChatLayout({
                       data-testid={`user-list-item-${user.id}`}
                     >
                       <div className={`w-2 h-2 rounded-full ${
-                        user.role === 'staff' ? 'bg-blue-500' : 'bg-green-500'
+                        user.role === 'staff' ? 'bg-blue-500' : 'bg-muted/30'
                       }`} />
                       <span className="text-sm flex-1 truncate">{user.name}</span>
                       {user.isTyping && (

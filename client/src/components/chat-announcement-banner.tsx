@@ -258,7 +258,7 @@ export function ChatAnnouncementBanner({
   const colorSchemes = {
     info: 'bg-transparent text-white',
     warning: 'bg-transparent text-amber-200',
-    success: 'bg-transparent text-emerald-200',
+    success: 'bg-transparent text-primary',
     promo: 'bg-transparent text-white',
     queue: 'bg-transparent text-cyan-200'
   };
@@ -356,7 +356,7 @@ export function ChatAnnouncementBanner({
                   </div>
                 </PulseGlow>
               ) : currentMessage.type === 'success' ? (
-                <div className="text-base sm:text-lg font-bold text-emerald-300">
+                <div className="text-base sm:text-lg font-bold text-primary">
                   <WaveText text={currentMessage.text} delay={80} />
                 </div>
               ) : (
@@ -382,7 +382,7 @@ export function ChatAnnouncementBanner({
                   {currentMessage.text}
                 </div>
               ) : currentMessage.type === 'success' ? (
-                <div className="text-base sm:text-lg font-bold text-emerald-300">
+                <div className="text-base sm:text-lg font-bold text-primary">
                   {currentMessage.text}
                 </div>
               ) : (

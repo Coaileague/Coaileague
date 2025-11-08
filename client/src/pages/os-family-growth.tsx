@@ -44,7 +44,7 @@ export default function GrowthFamilyPage() {
       description: "Automated report generation with compliance tracking and executive summaries",
       features: ["Auto Reports", "Compliance Tracking", "Executive Summaries", "Export Options"],
       url: "/reports",
-      color: "from-emerald-500 to-teal-500"
+      color: "from-primary to-teal-500"
     }
   ];
 

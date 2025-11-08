@@ -191,7 +191,7 @@ export default function OrgSupport() {
             <CardTitle className="text-sm font-medium">Resolved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{resolvedTickets.length}</div>
+            <div className="text-2xl font-bold text-primary">{resolvedTickets.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -296,7 +296,7 @@ export default function OrgSupport() {
                         #{ticket.ticketNumber} • Resolved {ticket.resolution && formatDistanceToNow(new Date(ticket.updatedAt), { addSuffix: true })}
                       </CardDescription>
                     </div>
-                    <Badge variant="outline" className="gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
+                    <Badge variant="outline" className="gap-1 bg-muted/30 text-primary border-primary">
                       <CheckCircle2 className="w-3 h-3" />
                       {ticket.status}
                     </Badge>

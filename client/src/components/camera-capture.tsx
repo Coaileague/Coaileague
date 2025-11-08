@@ -171,7 +171,7 @@ export function CameraCapture({ onCapture, onCancel }: CameraCaptureProps) {
                   <Button
                     size="lg"
                     onClick={capturePhoto}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-primary hover:bg-primary"
                     data-testid="button-capture-photo"
                   >
                     <Camera className="h-5 w-5 mr-2" />
@@ -200,7 +200,7 @@ export function CameraCapture({ onCapture, onCancel }: CameraCaptureProps) {
                   
                   <Button
                     onClick={confirmPhoto}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-primary hover:bg-primary"
                     data-testid="button-use-photo"
                   >
                     <ImagePlus className="h-4 w-4 mr-2" />

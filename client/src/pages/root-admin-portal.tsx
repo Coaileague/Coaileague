@@ -353,7 +353,7 @@ export default function RootAdminPortal() {
   // Helper functions
   const getActivityIcon = (type: LiveActivity["type"]) => {
     switch (type) {
-      case "login": return <UserCheck className="h-4 w-4 text-emerald-500" />;
+      case "login": return <UserCheck className="h-4 w-4 text-primary" />;
       case "shift_created": return <Clock className="h-4 w-4 text-blue-500" />;
       case "invoice_generated": return <DollarSign className="h-4 w-4 text-amber-500" />;
       case "employee_added": return <Users className="h-4 w-4 text-violet-500" />;
@@ -455,7 +455,7 @@ export default function RootAdminPortal() {
           <TabsContent value="overview" className="space-y-6">
             {/* System Health Overview */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="border-l-4 border-l-emerald-500">
+              <Card className="border-l-4 border-l-primary">
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-2">
                     <Cpu className="h-4 w-4" />
@@ -521,8 +521,8 @@ export default function RootAdminPortal() {
                       </CardTitle>
                       <CardDescription>Real-time platform events</CardDescription>
                     </div>
-                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
-                      <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse mr-2" />
+                    <Badge variant="secondary" className="bg-muted/30/10 text-primary">
+                      <div className="h-2 w-2 bg-muted/30 rounded-full animate-pulse mr-2" />
                       Live
                     </Badge>
                   </div>
@@ -572,7 +572,7 @@ export default function RootAdminPortal() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-emerald-500" />
+                        <DollarSign className="h-4 w-4 text-primary" />
                         <span className="text-sm">Monthly Revenue</span>
                       </div>
                       <div className="font-bold" data-testid="text-monthly-revenue">${(supportStats as any)?.totalRevenue || "0"}</div>
@@ -601,20 +601,20 @@ export default function RootAdminPortal() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Uptime</span>
-                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                      <Badge variant="secondary" className="bg-muted/30/10 text-primary">
                         {systemHealth.uptime}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Database</span>
-                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                      <Badge variant="secondary" className="bg-muted/30/10 text-primary">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Healthy
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">API Status</span>
-                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                      <Badge variant="secondary" className="bg-muted/30/10 text-primary">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Online
                       </Badge>

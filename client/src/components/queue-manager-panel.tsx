@@ -114,7 +114,7 @@ export function QueueManagerPanel({
     const tierColors = {
       elite: 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black',
       enterprise: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white',
-      professional: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white',
+      professional: 'bg-gradient-to-r from-green-500 to-accent text-white',
       free: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
     };
     return tierColors[tier as keyof typeof tierColors] || tierColors.free;

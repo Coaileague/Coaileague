@@ -15,7 +15,7 @@ export function TypingIndicator({ userName, userType = "user" }: TypingIndicator
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 5 }}
         className={`flex items-center gap-2 text-xs ${
-          isStaff ? "text-emerald-600" : "text-blue-600"
+          isStaff ? "text-primary" : "text-blue-600"
         }`}
         data-testid="typing-indicator"
       >
@@ -24,21 +24,21 @@ export function TypingIndicator({ userName, userType = "user" }: TypingIndicator
         <div className="flex gap-1">
           <motion.div
             className={`w-1.5 h-1.5 rounded-full ${
-              isStaff ? "bg-emerald-500" : "bg-blue-500"
+              isStaff ? "bg-muted/30" : "bg-blue-500"
             }`}
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
           />
           <motion.div
             className={`w-1.5 h-1.5 rounded-full ${
-              isStaff ? "bg-emerald-500" : "bg-blue-500"
+              isStaff ? "bg-muted/30" : "bg-blue-500"
             }`}
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
           />
           <motion.div
             className={`w-1.5 h-1.5 rounded-full ${
-              isStaff ? "bg-emerald-500" : "bg-blue-500"
+              isStaff ? "bg-muted/30" : "bg-blue-500"
             }`}
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}

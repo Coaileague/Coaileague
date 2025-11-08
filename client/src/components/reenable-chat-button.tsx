@@ -66,7 +66,7 @@ export function ReenableChatButton() {
     return (
       <button
         onClick={handleExpand}
-        className="fixed bottom-20 md:bottom-6 right-4 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-lg hover:shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center border-2 border-emerald-400/30 animate-in slide-in-from-right-5 fade-in"
+        className="fixed bottom-20 md:bottom-6 right-4 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-lg hover:shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center border-2 border-primary/80/30 animate-in slide-in-from-right-5 fade-in"
         data-testid="button-expand-chat"
         aria-label="Expand live support"
       >
@@ -81,11 +81,11 @@ export function ReenableChatButton() {
       className="fixed bottom-20 md:bottom-6 right-4 z-50 animate-in slide-in-from-right-5 fade-in duration-500"
       data-testid="container-reenable-chat"
     >
-      <div className="relative bg-gradient-to-br from-slate-900/95 to-emerald-950/95 backdrop-blur-sm border border-emerald-500/30 rounded-2xl shadow-2xl p-4 max-w-[280px] md:max-w-sm">
+      <div className="relative bg-gradient-to-br from-slate-900/95 to-slate-950/95 backdrop-blur-sm border border-primary/30 rounded-2xl shadow-2xl p-4 max-w-[280px] md:max-w-sm">
         {/* Close/Minimize button - Larger touch target for accessibility */}
         <button
           onClick={handleMinimize}
-          className="absolute -top-3 -right-3 h-10 w-10 rounded-full bg-slate-800 border-2 border-emerald-500/30 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-lg mobile-touch-target"
+          className="absolute -top-3 -right-3 h-10 w-10 rounded-full bg-slate-800 border-2 border-primary/30 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-lg mobile-touch-target"
           data-testid="button-minimize-chat"
           aria-label="Minimize"
         >
@@ -94,7 +94,7 @@ export function ReenableChatButton() {
 
         {/* Content */}
         <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center flex-shrink-0">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
             <MessageSquare className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -103,7 +103,7 @@ export function ReenableChatButton() {
             <Button
               onClick={handleReenableChat}
               size="sm"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/30 shadow-md"
+              className="w-full bg-primary hover:bg-muted/30 text-white border-primary/30 shadow-md"
               data-testid="button-reenable-chat"
             >
               <MessageSquare className="h-3 w-3 mr-2" />

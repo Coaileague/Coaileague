@@ -99,7 +99,7 @@ export default function RootAdminPortalCompact() {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-3">
         {[
           { icon: Building2, label: "Workspaces", value: (supportStats as any)?.totalWorkspaces || 0, color: "text-blue-600", testid: "stat-workspaces" },
-          { icon: DollarSign, label: "Revenue", value: `$${(supportStats as any)?.totalRevenue || "0"}`, color: "text-emerald-600", testid: "stat-revenue" },
+          { icon: DollarSign, label: "Revenue", value: `$${(supportStats as any)?.totalRevenue || "0"}`, color: "text-primary", testid: "stat-revenue" },
           { icon: Users, label: "Active Users", value: (platformStats as any)?.activeSubscriptions || 156, color: "text-violet-600", testid: "stat-users" },
           { icon: Headphones, label: "Support", value: (supportStats as any)?.openTickets || 0, color: "text-amber-600", testid: "stat-support" },
           { icon: Zap, label: "API Requests", value: "1.2K", color: "text-cyan-600", testid: "stat-api" },
@@ -148,7 +148,7 @@ export default function RootAdminPortalCompact() {
                 </h3>
                 <div className="space-y-1.5 text-xs">
                   {[
-                    { label: "CPU", value: "42%", color: "bg-emerald-500" },
+                    { label: "CPU", value: "42%", color: "bg-muted/30" },
                     { label: "Memory", value: "67%", color: "bg-amber-500" },
                     { label: "Database", value: "45%", color: "bg-blue-500" },
                   ].map((metric) => (
@@ -176,8 +176,8 @@ export default function RootAdminPortalCompact() {
                 <h3 className="text-xs font-semibold mb-2 flex items-center gap-1">
                   <Activity className="h-3 w-3" />
                   Live Activity Feed
-                  <Badge variant="secondary" className="ml-auto h-4 text-[9px] bg-emerald-500/10 text-emerald-600">
-                    <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" />
+                  <Badge variant="secondary" className="ml-auto h-4 text-[9px] bg-muted/30/10 text-primary">
+                    <div className="h-1.5 w-1.5 bg-muted/30 rounded-full animate-pulse mr-1" />
                     Live
                   </Badge>
                 </h3>
@@ -185,7 +185,7 @@ export default function RootAdminPortalCompact() {
                   <div className="space-y-1">
                     {[
                       { action: "Created shift for Emily Chen", workspace: "SecureGuard Inc", time: "2s ago", icon: CheckCircle, color: "text-blue-500" },
-                      { action: "Generated invoice #INV-2024-047", workspace: "Healthcare Plus", time: "30s ago", icon: DollarSign, color: "text-emerald-500" },
+                      { action: "Generated invoice #INV-2024-047", workspace: "Healthcare Plus", time: "30s ago", icon: DollarSign, color: "text-primary" },
                       { action: "Added employee: Mike Rodriguez", workspace: "BuildCo", time: "1m ago", icon: Users, color: "text-violet-500" },
                       { action: "User login from new device", workspace: "TechStart", time: "2m ago", icon: Lock, color: "text-amber-500" },
                       { action: "Subscription upgraded to Pro", workspace: "MarketingHub", time: "5m ago", icon: TrendingUp, color: "text-blue-500" },
@@ -266,7 +266,7 @@ export default function RootAdminPortalCompact() {
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
-                    <Badge variant="secondary" className="h-4 text-[10px] bg-emerald-500/10 text-emerald-600">Connected</Badge>
+                    <Badge variant="secondary" className="h-4 text-[10px] bg-muted/30/10 text-primary">Connected</Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pool Size</span>

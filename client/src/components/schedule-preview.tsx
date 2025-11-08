@@ -15,7 +15,7 @@ export function SchedulePreview() {
   // Employees with shifts
   const employees = [
     { id: "e1", name: "Sarah M.", initials: "SM", color: "bg-blue-500" },
-    { id: "e2", name: "John D.", initials: "JD", color: "bg-green-500" },
+    { id: "e2", name: "John D.", initials: "JD", color: "bg-muted/30" },
     { id: "e3", name: "Maria G.", initials: "MG", color: "bg-purple-500" },
   ];
 

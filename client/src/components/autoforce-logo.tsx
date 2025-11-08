@@ -50,7 +50,7 @@ export function AutoForceLogo({
       >
         <div 
           className={cn(
-            "flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+            "flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
             badgeSizeClasses[size],
             animated && "animate-pulse-slow"
           )}
@@ -71,7 +71,7 @@ export function AutoForceLogo({
             </span>
             <span 
               className={cn(
-                "font-black text-emerald-600 dark:text-emerald-400",
+                "font-black text-primary",
                 titleSizes[size]
               )}
               data-testid="logo-text-force"
@@ -106,7 +106,7 @@ export function AutoForceLogo({
   return (
     <div 
       className={cn(
-        "flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+        "flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
         badgeSizeClasses[size],
         animated && "animate-pulse-slow",
         className

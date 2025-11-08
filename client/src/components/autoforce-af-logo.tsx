@@ -43,7 +43,7 @@ export function AutoForceAFLogo({
     return (
       <div 
         className={cn(
-          "flex items-center justify-center shrink-0 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+          "flex items-center justify-center shrink-0 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
           badgeSizes[size],
           animated && "animate-pulse-slow",
           className
@@ -66,7 +66,7 @@ export function AutoForceAFLogo({
           AUTO
         </span>
         <span 
-          className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400"
+          className="text-2xl sm:text-3xl font-bold tracking-tight text-primary"
         >
           FORCE
         </span>
@@ -83,7 +83,7 @@ export function AutoForceAFLogo({
     >
       <div 
         className={cn(
-          "shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg",
+          "shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
           badgeSizes[size],
           animated && "animate-pulse-slow"
         )}
@@ -93,7 +93,7 @@ export function AutoForceAFLogo({
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
           <span className="text-slate-900 dark:text-white">AUTO</span>
-          <span className="text-emerald-600 dark:text-emerald-400">FORCE</span>
+          <span className="text-primary">FORCE</span>
           <span className="text-xs align-super text-slate-900 dark:text-white">™</span>
         </div>
         <div className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-400 font-medium tracking-wide mt-0.5">

@@ -32,14 +32,14 @@ export function UniversalTransitionOverlay({
 
   const statusConfig = {
     loading: {
-      icon: <Loader2 className="w-12 h-12 text-emerald-400 animate-spin" />,
-      color: "from-emerald-500/20 to-green-500/20",
-      borderColor: "border-emerald-500/30"
+      icon: <Loader2 className="w-12 h-12 text-primary animate-spin" />,
+      color: "from-primary/20 to-green-500/20",
+      borderColor: "border-primary/30"
     },
     success: {
-      icon: <CheckCircle className="w-12 h-12 text-emerald-400" />,
-      color: "from-emerald-500/20 to-green-500/20",
-      borderColor: "border-emerald-500/30"
+      icon: <CheckCircle className="w-12 h-12 text-primary" />,
+      color: "from-primary/20 to-green-500/20",
+      borderColor: "border-primary/30"
     },
     error: {
       icon: <XCircle className="w-12 h-12 text-red-400" />,
@@ -47,9 +47,9 @@ export function UniversalTransitionOverlay({
       borderColor: "border-red-500/30"
     },
     info: {
-      icon: <AlertCircle className="w-12 h-12 text-emerald-400" />,
-      color: "from-emerald-500/20 to-green-500/20",
-      borderColor: "border-emerald-500/30"
+      icon: <AlertCircle className="w-12 h-12 text-primary" />,
+      color: "from-primary/20 to-green-500/20",
+      borderColor: "border-primary/30"
     }
   };
 
@@ -68,7 +68,7 @@ export function UniversalTransitionOverlay({
           {/* Animated gradient background - emergency green theme */}
           <div className="absolute inset-0 opacity-20">
             <motion.div 
-              className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500 rounded-full filter blur-3xl"
+              className="absolute top-1/4 left-1/4 w-96 h-96 bg-muted/30 rounded-full filter blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
                 opacity: [0.2, 0.4, 0.2]
@@ -129,10 +129,10 @@ export function UniversalTransitionOverlay({
                 {/* Brand Name */}
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex items-baseline gap-1 justify-center">
-                    <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-300 bg-clip-text text-transparent">
+                    <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
                       AutoForce
                     </span>
-                    <span className="text-[10px] font-black text-emerald-500 align-super">™</span>
+                    <span className="text-[10px] font-black text-primary align-super">™</span>
                   </div>
                   <span className="text-[10px] sm:text-xs font-semibold text-slate-300 text-center leading-tight px-2">
                     Autonomous Workforce Management Solutions
@@ -180,7 +180,7 @@ export function UniversalTransitionOverlay({
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-3 h-3 sm:w-4 sm:h-4 bg-emerald-400 rounded-full"
+                    className="w-3 h-3 sm:w-4 sm:h-4 bg-primary rounded-full"
                     animate={{
                       scale: [1, 1.8, 1],
                       opacity: [0.4, 1, 0.4]

@@ -58,7 +58,7 @@ export default function SalesDashboard() {
       rfp_identified: 'bg-purple-500',
       proposal_sent: 'bg-amber-500',
       negotiation: 'bg-orange-500',
-      awarded: 'bg-green-500',
+      awarded: 'bg-muted/30',
       lost: 'bg-red-500'
     };
     return colors[stage] || 'bg-gray-500';

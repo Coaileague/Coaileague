@@ -161,7 +161,7 @@ export function FloatingChatButton() {
         >
           {/* Icon - always visible */}
           <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <MessageSquare className="h-5 w-5 text-white" />
             </div>
           </div>
@@ -177,7 +177,7 @@ export function FloatingChatButton() {
           </div>
           
           {/* Online indicator */}
-          <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+          <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-muted/30 rounded-full animate-pulse" />
         </div>
       </button>
 

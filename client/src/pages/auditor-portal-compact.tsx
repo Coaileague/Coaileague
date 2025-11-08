@@ -66,7 +66,7 @@ export default function AuditorPortalCompact() {
       {/* COMPACT STATS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         {[
-          { icon: DollarSign, label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, color: "text-emerald-600", testid: "stat-revenue" },
+          { icon: DollarSign, label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, color: "text-primary", testid: "stat-revenue" },
           { icon: FileText, label: "Total Invoices", value: invoices.length, color: "text-blue-600", testid: "stat-invoices" },
           { icon: Users, label: "Total Employees", value: employees.length, color: "text-violet-600", testid: "stat-employees" },
           { icon: TrendingUp, label: "Total Hours", value: `${totalHours.toFixed(1)}h`, color: "text-cyan-600", testid: "stat-hours" },

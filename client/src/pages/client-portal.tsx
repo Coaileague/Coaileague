@@ -100,7 +100,7 @@ export default function ClientPortal() {
     switch (status) {
       case 'paid':
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+          <Badge className="bg-muted/30/10 text-primary border-0">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Paid
           </Badge>
@@ -188,11 +188,11 @@ export default function ClientPortal() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="border-l-4 border-l-primary">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <Badge className="bg-muted/30/10 text-primary border-0">
                     {clientInvoices.filter(i => i.status === 'paid').length}
                   </Badge>
                 </div>
@@ -256,7 +256,7 @@ export default function ClientPortal() {
                 <CardContent>
                   {dueThisWeek.length === 0 ? (
                     <div className="text-center py-8">
-                      <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+                      <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-3" />
                       <p className="text-muted-foreground">No payments due this week</p>
                     </div>
                   ) : (
@@ -293,7 +293,7 @@ export default function ClientPortal() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                    <TrendingUp className="h-5 w-5 text-primary" />
                     Account Summary
                   </CardTitle>
                 </CardHeader>
@@ -304,7 +304,7 @@ export default function ClientPortal() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Paid Invoices</span>
-                    <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+                    <Badge className="bg-muted/30/10 text-primary border-0">
                       {clientInvoices.filter(i => i.status === 'paid').length}
                     </Badge>
                   </div>
@@ -410,7 +410,7 @@ export default function ClientPortal() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-emerald-500" />
+                  <CreditCard className="h-5 w-5 text-primary" />
                   Payment History
                 </CardTitle>
                 <CardDescription>All paid invoices</CardDescription>
@@ -437,8 +437,8 @@ export default function ClientPortal() {
                             className="flex items-center justify-between p-4 rounded-lg border border-border"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                              <div className="h-10 w-10 rounded-lg bg-muted/30/10 flex items-center justify-center">
+                                <CheckCircle2 className="h-5 w-5 text-primary" />
                               </div>
                               <div>
                                 <p className="font-semibold">{invoice.invoiceNumber}</p>
@@ -448,7 +448,7 @@ export default function ClientPortal() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-emerald-600">
+                              <p className="font-bold text-primary">
                                 ${Number(invoice.total || 0).toFixed(2)}
                               </p>
                               <Button size="sm" variant="ghost" className="mt-1">

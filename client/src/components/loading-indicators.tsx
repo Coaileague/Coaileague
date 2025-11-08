@@ -29,11 +29,9 @@ export function ForceFlowBar({
         data-testid="force-flow-bar"
       >
         <div 
-          className="h-full rounded-full relative transition-all duration-300 ease-out"
+          className="h-full rounded-full relative transition-all duration-300 ease-out bg-primary"
           style={{
-            width: `${progress}%`,
-            background: 'linear-gradient(90deg, #059669, hsl(158, 34%, 32%), #6ee7b7)',
-            boxShadow: 'none'
+            width: `${progress}%`
           }}
         >
           {/* Segmentation effect */}
@@ -88,8 +86,7 @@ export function AFCoreScan({
     >
       {/* Outer ring */}
       <div 
-        className="absolute inset-1 rounded-full border-2 border-transparent border-t-emerald-500/80 border-r-emerald-500/80 animate-spin-slow"
-        style={{ filter: 'none' }}
+        className="absolute inset-1 rounded-full border-2 border-transparent border-t-primary/80 border-r-primary/80 animate-spin-slow"
       />
 
       {/* Progress circle */}
@@ -207,8 +204,7 @@ export function DataStreamIndicator({
         className="absolute bottom-0 left-0 right-0 transition-all duration-300"
         style={{
           height: `${progress}%`,
-          background: 'linear-gradient(to top, hsl(158, 34%, 32%) 0%, #6ee7b7 100%)',
-          boxShadow: '0 0 10px hsl(158, 34%, 32%)',
+          background: 'linear-gradient(to top, hsl(158, 34%, 32%) 0%, hsl(162, 29%, 45%) 100%)',
           zIndex: 10
         }}
       >
@@ -216,7 +212,7 @@ export function DataStreamIndicator({
         <div 
           className="absolute w-full h-5 -top-5 animate-liquid-wave opacity-100"
           style={{
-            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%2310b981' d='M0,15 C25,5 75,25 100,15 L100,20 L0,20 Z' /%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='hsl(158, 34%25, 32%25)' d='M0,15 C25,5 75,25 100,15 L100,20 L0,20 Z' /%3E%3C/svg%3E")`,
             backgroundRepeat: 'repeat-x',
             backgroundSize: '100px 20px',
             filter: 'none'

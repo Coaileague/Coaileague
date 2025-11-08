@@ -302,7 +302,7 @@ function AppContent() {
                         data-testid="button-settings-gear"
                         className="shrink-0 h-10 w-10 rounded-xl hover-elevate active-elevate-2"
                       >
-                        <Settings2 className="h-5 w-5 text-emerald-400" />
+                        <Settings2 className="h-5 w-5 text-primary" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>

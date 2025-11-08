@@ -37,7 +37,7 @@ const getShiftColor = (status: string | null) => {
     case 'scheduled':
     case 'published':
     default:
-      return 'bg-emerald-500 border-emerald-500 text-emerald-500'; // Emergency Green #10b981
+      return 'bg-muted/30 border-primary text-primary'; // Professional Muted Evergreen
   }
 };
 
@@ -243,9 +243,9 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
 
       agendaHtml.push(
         <div key={i} className="space-y-3">
-          <h2 className={`text-lg font-extrabold pt-2 ${isDayToday ? 'text-emerald-600' : 'text-gray-800'}`}>
+          <h2 className={`text-lg font-extrabold pt-2 ${isDayToday ? 'text-primary' : 'text-gray-800'}`}>
             {dayString}
-            {isDayToday && <span className="text-sm font-semibold ml-2 text-emerald-500">(Today)</span>}
+            {isDayToday && <span className="text-sm font-semibold ml-2 text-primary">(Today)</span>}
           </h2>
 
           {shiftsForDay.length === 0 ? (
@@ -278,7 +278,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                       </div>
                       <div className="text-right">
                         <span className={`block text-xs font-semibold uppercase ${
-                          shift.status === 'in_progress' ? 'text-red-500' : 'text-emerald-500'
+                          shift.status === 'in_progress' ? 'text-red-500' : 'text-primary'
                         }`}>
                           {statusLabel}
                         </span>
@@ -311,7 +311,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       case 'draft':
         return {
           text: 'Clock In',
-          className: 'bg-emerald-500 hover:bg-emerald-600', // Emergency Green
+          className: 'bg-muted/30 ', // Emergency Green
         };
       case 'in_progress':
         return {
@@ -326,7 +326,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       default:
         return {
           text: 'Clock In',
-          className: 'bg-emerald-500 hover:bg-emerald-600', // Emergency Green
+          className: 'bg-muted/30 ', // Emergency Green
         };
     }
   };
@@ -336,11 +336,11 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
   return (
     <div className="w-full bg-white shadow-2xl overflow-hidden">
       {/* Header */}
-      <header className="p-4 bg-white border-b border-emerald-100 sticky top-0 z-20">
+      <header className="p-4 bg-white border-b border-primary sticky top-0 z-20">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-extrabold text-gray-900">My Shift Schedule</h1>
           <button 
-            className="p-2 rounded-full text-emerald-600 hover:bg-emerald-50 transition"
+            className="p-2 rounded-full text-primary hover:bg-muted/30 transition"
             data-testid="button-notifications"
           >
             <Bell className="h-6 w-6" />
@@ -358,7 +358,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="font-bold text-lg text-emerald-700" data-testid="text-week-range">
+          <span className="font-bold text-lg text-primary" data-testid="text-week-range">
             {weekRangeText}
           </span>
           <button
@@ -377,7 +377,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       <div className="pb-20">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
           </div>
         ) : (
           renderDayAgenda()
@@ -388,7 +388,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
       {onCreateShift && (
         <button
           onClick={onCreateShift}
-          className="fixed bottom-6 right-6 z-30 flex items-center justify-center p-4 rounded-full text-white bg-emerald-600 hover:bg-emerald-700 transition duration-300 shadow-lg"
+          className="fixed bottom-6 right-6 z-30 flex items-center justify-center p-4 rounded-full text-white bg-primary hover:bg-primary transition duration-300 shadow-lg"
           data-testid="button-add-shift"
         >
           <Plus className="h-7 w-7" strokeWidth={3} />
@@ -405,11 +405,11 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                 <h3 className="text-2xl font-extrabold text-gray-900" data-testid="modal-shift-title">
                   {selectedShift.title || getClientName(selectedShift.clientId) || 'Shift'}
                 </h3>
-                <p className="text-emerald-600 font-semibold" data-testid="modal-shift-time">
+                <p className="text-primary font-semibold" data-testid="modal-shift-time">
                   {formatTime(new Date(selectedShift.startTime))} - {formatTime(new Date(selectedShift.endTime))}
                 </p>
                 {currentUser?.role && ['owner', 'manager', 'supervisor'].includes(currentUser.role) && selectedShift.employeeId && selectedShift.employeeId !== currentUser.id && (
-                  <Badge variant="outline" className="ml-2 text-xs border-emerald-500 text-emerald-600">
+                  <Badge variant="outline" className="ml-2 text-xs border-primary text-primary">
                     Manager Override
                   </Badge>
                 )}
@@ -539,7 +539,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
             <div className="grid grid-cols-2 gap-2 mt-4">
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-primary"
                 onClick={async () => {
                   try {
                     // Create chat room for this shift
@@ -568,13 +568,13 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                 }}
                 data-testid="button-create-chat"
               >
-                <MessageSquare className="h-5 w-5 text-emerald-500" />
+                <MessageSquare className="h-5 w-5 text-primary" />
                 <span className="text-xs font-semibold">Start Chat</span>
               </Button>
 
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-primary"
                 onClick={async () => {
                   try {
                     // Fetch audit trail for this shift
@@ -595,18 +595,18 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                 }}
                 data-testid="button-view-audit"
               >
-                <Eye className="h-5 w-5 text-emerald-500" />
+                <Eye className="h-5 w-5 text-primary" />
                 <span className="text-xs font-semibold">Audit Trail</span>
               </Button>
               
               {shiftAcknowledgments.length > 0 && (
                 <Button
                   variant="outline"
-                  className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
+                  className="flex flex-col items-center gap-2 py-4 hover-elevate border-primary"
                   onClick={() => setShowAcknowledgmentDialog(true)}
                   data-testid="button-post-orders"
                 >
-                  <FileText className="h-5 w-5 text-emerald-500" />
+                  <FileText className="h-5 w-5 text-primary" />
                   <span className="text-xs font-semibold">Post Orders</span>
                   {shiftAcknowledgments.some(a => !a.acknowledgedAt) && (
                     <Badge variant="destructive" className="text-xs">
@@ -618,10 +618,10 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
 
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-2 py-4 hover-elevate border-emerald-500"
+                className="flex flex-col items-center gap-2 py-4 hover-elevate border-primary"
                 data-testid="button-more-options"
               >
-                <ChevronRight className="h-5 w-5 text-emerald-500" />
+                <ChevronRight className="h-5 w-5 text-primary" />
                 <span className="text-xs font-semibold">More</span>
               </Button>
             </div>
@@ -637,7 +637,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-emerald-500" />
+                  <FileText className="h-6 w-6 text-primary" />
                   Post Orders & Acknowledgments
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Review and acknowledge before clocking in</p>
@@ -664,7 +664,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                     key={ack.id}
                     className={`p-4 rounded-lg border ${
                       ack.acknowledgedAt
-                        ? 'bg-green-50 border-green-200'
+                        ? 'bg-muted/30 border-green-200'
                         : 'bg-amber-50 border-amber-200'
                     }`}
                     data-testid={`acknowledgment-${ack.id}`}
@@ -689,7 +689,7 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                     ) : (
                       <Button
                         size="sm"
-                        className="mt-2 bg-emerald-500 hover:bg-emerald-600 text-white w-full"
+                        className="mt-2 bg-muted/30  text-white w-full"
                         onClick={() => acknowledgeMutation.mutate(ack.id)}
                         disabled={acknowledgeMutation.isPending}
                         data-testid={`button-acknowledge-${ack.id}`}

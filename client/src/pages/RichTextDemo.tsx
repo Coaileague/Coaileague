@@ -68,7 +68,7 @@ export default function RichTextDemo() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-emerald-900/20 to-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900/20 to-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -257,9 +257,9 @@ export default function RichTextDemo() {
         </Tabs>
 
         {/* Features List */}
-        <Card className="bg-emerald-500/10 border-emerald-500/20">
+        <Card className="bg-muted/30/10 border-primary/20">
           <CardHeader>
-            <CardTitle className="text-emerald-400">Available Formatting Features</CardTitle>
+            <CardTitle className="text-primary">Available Formatting Features</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4 text-gray-300">

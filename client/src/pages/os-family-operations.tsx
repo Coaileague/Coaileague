@@ -28,7 +28,7 @@ export default function OperationsFamilyPage() {
       description: "Automated payroll processing with tax calculations, direct deposit, and compliance",
       features: ["Auto Processing", "Tax Calculations", "Direct Deposit", "Pay Stubs"],
       url: "/payroll",
-      color: "from-emerald-500 to-green-500"
+      color: "from-primary to-green-500"
     },
     {
       name: "BillOS™",

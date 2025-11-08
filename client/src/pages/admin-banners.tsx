@@ -250,7 +250,7 @@ export default function AdminBannersPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <p className="font-medium text-sm break-words">{banner.message}</p>
                       {banner.isActive && (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        <Badge className="bg-muted/30/20 text-green-400 border-primary/30">
                           Active
                         </Badge>
                       )}

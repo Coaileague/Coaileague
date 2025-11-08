@@ -81,7 +81,7 @@ export function HeaderBillboard() {
           <span className="font-bold bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             Happy Birthday, {firstName}!
           </span>
-          <Gift className="h-4 w-4 text-emerald-400 animate-pulse" />
+          <Gift className="h-4 w-4 text-primary animate-pulse" />
         </div>
       ),
     });
@@ -103,7 +103,7 @@ export function HeaderBillboard() {
             <Icon className={`h-4 w-4 ${
               announcement.type === 'celebration' ? 'text-pink-400 animate-bounce' :
               announcement.type === 'alert' ? 'text-yellow-400 animate-pulse' :
-              announcement.type === 'update' ? 'text-emerald-400' :
+              announcement.type === 'update' ? 'text-primary' :
               'text-blue-400'
             }`} />
             <span className="text-sm font-medium">{announcement.message}</span>
@@ -119,7 +119,7 @@ export function HeaderBillboard() {
     type: 'info' as const,
     content: (
       <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-emerald-400" />
+        <Sparkles className="h-4 w-4 text-primary" />
         <div className="flex flex-col">
           <span className="text-sm font-semibold leading-tight">{greeting}, {firstName}</span>
           <span className="text-[10px] text-muted-foreground leading-tight">{workspaceName}</span>
@@ -140,7 +140,7 @@ export function HeaderBillboard() {
 
   const currentSlideData = slides[currentSlide] || slides[0];
   
-  let bgClass = 'bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-emerald-500/20';
+  let bgClass = 'bg-gradient-to-r from-primary/10 to-green-500/10 border-primary/20';
   if (currentSlideData.type === 'celebration') {
     bgClass = 'bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-yellow-500/10 border-pink-500/20';
   } else if (currentSlideData.type === 'alert') {
@@ -162,7 +162,7 @@ export function HeaderBillboard() {
               key={i}
               className="absolute w-2 h-2 rounded-full"
               style={{
-                background: ['#fbbf24', '#ec4899', '#8b5cf6', '#10b981'][i % 4],
+                background: ['#fbbf24', '#ec4899', '#8b5cf6', 'hsl(158, 34%, 32%)'][i % 4],
                 left: `${Math.random() * 100}%`,
                 top: -10,
               }}
@@ -205,7 +205,7 @@ export function HeaderBillboard() {
               onClick={() => setCurrentSlide(index)}
               className={`w-1.5 h-1.5 rounded-full transition-all ${
                 index === currentSlide 
-                  ? 'bg-emerald-400 w-4' 
+                  ? 'bg-primary w-4' 
                   : 'bg-muted-foreground/30'
               }`}
               data-testid={`billboard-indicator-${index}`}

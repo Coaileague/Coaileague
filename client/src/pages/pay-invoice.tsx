@@ -395,7 +395,7 @@ export default function PayInvoice() {
           <>
             {/* Success Message */}
             {localPaymentStatus === 'succeeded' ? (
-              <Alert className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800" data-testid="alert-payment-success">
+              <Alert className="border-green-200 bg-muted/30 dark:bg-green-950 dark:border-green-800" data-testid="alert-payment-success">
                 <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                 <AlertTitle className="text-green-900 dark:text-green-100">Payment Successful!</AlertTitle>
                 <AlertDescription className="text-green-800 dark:text-green-200">
@@ -495,7 +495,7 @@ export default function PayInvoice() {
 
         {/* Already Paid Message */}
         {isPaid && (
-          <Alert className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800" data-testid="alert-already-paid">
+          <Alert className="border-green-200 bg-muted/30 dark:bg-green-950 dark:border-green-800" data-testid="alert-already-paid">
             <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
             <AlertTitle className="text-green-900 dark:text-green-100">Invoice Paid</AlertTitle>
             <AlertDescription className="text-green-800 dark:text-green-200">

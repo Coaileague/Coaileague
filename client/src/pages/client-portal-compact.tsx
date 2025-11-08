@@ -384,7 +384,7 @@ export default function ClientPortalCompact() {
       <div className="grid grid-cols-3 gap-2 mb-3">
         {[
           { icon: DollarSign, label: "Total Billed", value: `$${totalBilled.toFixed(2)}`, color: "text-blue-600", testid: "stat-billed" },
-          { icon: CheckCircle2, label: "Total Paid", value: `$${totalPaid.toFixed(2)}`, color: "text-emerald-600", testid: "stat-paid" },
+          { icon: CheckCircle2, label: "Total Paid", value: `$${totalPaid.toFixed(2)}`, color: "text-primary", testid: "stat-paid" },
           { icon: AlertCircle, label: "Outstanding", value: `$${outstandingBalance.toFixed(2)}`, color: "text-amber-600", testid: "stat-outstanding" },
         ].map((stat, i) => (
           <Card key={i} className="hover-elevate">

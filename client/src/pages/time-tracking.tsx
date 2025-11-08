@@ -514,7 +514,7 @@ export default function TimeTracking() {
             {/* Export Button */}
             <Button 
               variant="default" 
-              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto min-h-[44px]"
+              className="bg-primary hover:bg-primary w-full sm:w-auto min-h-[44px]"
               onClick={handleExportTimesheet}
               data-testid="button-export-timesheet"
             >

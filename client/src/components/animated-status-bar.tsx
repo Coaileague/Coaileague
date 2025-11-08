@@ -13,7 +13,7 @@ const SILENCED_MESSAGES = [
   { text: "You are silenced - Please wait until support staff helps you", icon: AlertCircle, color: "text-amber-600" },
   { text: "Please wait... A support representative will be with you shortly", icon: Clock, color: "text-blue-600" },
   { text: "We appreciate your patience - You'll be able to speak soon", icon: MessageSquare, color: "text-purple-600" },
-  { text: "Support staff is reviewing your request", icon: Shield, color: "text-emerald-600" },
+  { text: "Support staff is reviewing your request", icon: Shield, color: "text-primary" },
   { text: "Thank you for waiting - Help is on the way!", icon: CheckCircle, color: "text-indigo-600" },
 ];
 
@@ -67,7 +67,7 @@ export function AnimatedStatusBar({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 3 }}
         className={`flex items-center gap-2 text-sm ${
-          typingUser.isStaff ? "text-emerald-600 font-semibold" : "text-blue-600"
+          typingUser.isStaff ? "text-primary font-semibold" : "text-blue-600"
         }`}
         data-testid="typing-status"
       >
@@ -77,21 +77,21 @@ export function AnimatedStatusBar({
         <div className="flex gap-1">
           <motion.div
             className={`w-1.5 h-1.5 rounded-full ${
-              typingUser.isStaff ? "bg-emerald-500" : "bg-blue-500"
+              typingUser.isStaff ? "bg-muted/30" : "bg-blue-500"
             }`}
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
           />
           <motion.div
             className={`w-1.5 h-1.5 rounded-full ${
-              typingUser.isStaff ? "bg-emerald-500" : "bg-blue-500"
+              typingUser.isStaff ? "bg-muted/30" : "bg-blue-500"
             }`}
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
           />
           <motion.div
             className={`w-1.5 h-1.5 rounded-full ${
-              typingUser.isStaff ? "bg-emerald-500" : "bg-blue-500"
+              typingUser.isStaff ? "bg-muted/30" : "bg-blue-500"
             }`}
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}

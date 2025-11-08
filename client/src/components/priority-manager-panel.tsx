@@ -116,7 +116,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
         sla: '< 5 min'
       },
       professional: {
-        color: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white',
+        color: 'bg-gradient-to-r from-green-500 to-accent text-white',
         icon: TrendingUp,
         priority: 'MEDIUM',
         sla: '< 15 min'

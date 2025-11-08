@@ -110,9 +110,9 @@ export default function EmployeePortalCompact() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         {[
           { icon: Clock, label: "Hours This Week", value: `${totalHoursThisWeek.toFixed(1)}h`, color: "text-indigo-600", testid: "stat-hours" },
-          { icon: DollarSign, label: "Total Earnings", value: `$${totalEarnings.toFixed(2)}`, color: "text-emerald-600", testid: "stat-earnings" },
+          { icon: DollarSign, label: "Total Earnings", value: `$${totalEarnings.toFixed(2)}`, color: "text-primary", testid: "stat-earnings" },
           { icon: Calendar, label: "Shifts This Week", value: myShifts.length, color: "text-blue-600", testid: "stat-shifts" },
-          { icon: Award, label: "Status", value: currentEmployee.onboardingStatus === 'completed' ? 'Active' : 'Pending', color: currentEmployee.onboardingStatus === 'completed' ? "text-emerald-600" : "text-amber-600", testid: "stat-status" },
+          { icon: Award, label: "Status", value: currentEmployee.onboardingStatus === 'completed' ? 'Active' : 'Pending', color: currentEmployee.onboardingStatus === 'completed' ? "text-primary" : "text-amber-600", testid: "stat-status" },
         ].map((stat, i) => (
           <Card key={i} className="hover-elevate">
             <CardContent className="p-3">
@@ -183,7 +183,7 @@ export default function EmployeePortalCompact() {
                     <div key={entry.id} className="p-2 rounded bg-muted/50 hover:bg-muted text-xs">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium">{new Date(entry.clockIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                        <span className="text-[10px] font-bold text-emerald-600">${Number(entry.totalAmount || 0).toFixed(2)}</span>
+                        <span className="text-[10px] font-bold text-primary">${Number(entry.totalAmount || 0).toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                         <span>{entry.totalHours ? `${Number(entry.totalHours).toFixed(1)}h` : 'In progress'}</span>

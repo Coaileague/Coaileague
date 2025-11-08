@@ -71,13 +71,13 @@ export default function Login() {
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center shadow-lg">
                 <span className="text-white font-black text-lg">AF</span>
               </div>
               <div>
                 <div className="text-xl font-bold flex items-baseline gap-1">
                   <span className="text-gray-900 dark:text-foreground">AUTO</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">FORCE</span>
+                  <span className="text-primary dark:text-primary">FORCE</span>
                   <span className="text-xs align-super text-gray-900 dark:text-foreground">™</span>
                 </div>
                 <div className="text-[10px] text-gray-700 dark:text-gray-400 font-medium">Autonomous Workforce Management Solutions</div>
@@ -146,7 +146,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full bg-primary hover:bg-primary text-white"
               disabled={isLoading}
               data-testid="button-login"
             >
@@ -169,7 +169,7 @@ export default function Login() {
             Don't have an account?{" "}
             <Button
               variant="ghost"
-              className="h-auto p-0 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+              className="h-auto p-0 text-primary hover:text-primary dark:text-primary dark:hover:text-primary"
               onClick={() => setLocation("/register")}
               data-testid="link-register"
             >

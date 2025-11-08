@@ -231,7 +231,7 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
 
   const getDifficultyColor = (difficulty: Tutorial['difficulty']) => {
     const colors = {
-      easy: 'text-emerald-600 dark:text-emerald-400',
+      easy: 'text-primary dark:text-primary',
       medium: 'text-amber-600 dark:text-amber-400',
       hard: 'text-red-600 dark:text-red-400'
     };

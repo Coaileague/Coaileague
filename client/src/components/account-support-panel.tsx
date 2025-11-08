@@ -67,7 +67,7 @@ export function AccountSupportPanel({
 
   const getStatusColor = (status: AccountInfo['status']) => {
     switch (status) {
-      case 'active': return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30';
+      case 'active': return 'bg-muted/50 text-foreground dark:bg-slate-900/30';
       case 'locked': return 'bg-amber-100 text-amber-900 dark:bg-amber-900/30';
       case 'suspended': return 'bg-rose-100 text-rose-900 dark:bg-rose-900/30';
       case 'pending': return 'bg-blue-100 text-blue-900 dark:bg-blue-900/30';
@@ -233,7 +233,7 @@ export function AccountSupportPanel({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-emerald-600" />
+                      <Shield className="w-5 h-5 text-primary" />
                       Security & Account Actions
                     </CardTitle>
                   </CardHeader>
@@ -286,7 +286,7 @@ export function AccountSupportPanel({
                       {/* Verify Account */}
                       <Button 
                         variant="outline" 
-                        className="justify-start text-emerald-700 border-emerald-300"
+                        className="justify-start text-primary border-primary"
                         onClick={() => handleAction('verify_account')}
                         data-testid="button-verify-account"
                       >

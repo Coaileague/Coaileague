@@ -124,7 +124,7 @@ export default function HelpdeskChatPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
-        return 'bg-green-500';
+        return 'bg-muted/30';
       case 'away':
         return 'bg-yellow-500';
       case 'busy':
@@ -190,7 +190,7 @@ export default function HelpdeskChatPage() {
                 <div className="relative">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     conv.status === 'active' 
-                      ? 'bg-gradient-to-br from-green-600 to-emerald-600' 
+                      ? 'bg-gradient-to-br from-green-600 to-accent' 
                       : conv.status === 'resolved'
                       ? 'bg-gradient-to-br from-blue-600 to-cyan-600'
                       : 'bg-gradient-to-br from-gray-600 to-gray-700'
@@ -198,7 +198,7 @@ export default function HelpdeskChatPage() {
                     <MessageSquare className="w-5 h-5 text-white" />
                   </div>
                   <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#1e1e1e] ${
-                    conv.status === 'active' ? 'bg-green-500' : 
+                    conv.status === 'active' ? 'bg-muted/30' : 
                     conv.status === 'resolved' ? 'bg-blue-500' : 'bg-gray-500'
                   }`} />
                 </div>
@@ -218,7 +218,7 @@ export default function HelpdeskChatPage() {
                       {conv.priority}
                     </Badge>
                     <Badge className={`text-[10px] h-4 px-1.5 ${
-                      conv.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                      conv.status === 'active' ? 'bg-muted/30/10 text-green-500 border-primary/20' :
                       conv.status === 'resolved' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                       'bg-gray-500/10 text-gray-500 border-gray-500/20'
                     }`}>
@@ -292,7 +292,7 @@ export default function HelpdeskChatPage() {
             <div>
               <p className="text-gray-400 mb-2">Status</p>
               <Badge variant="outline" className={
-                selectedConv.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                selectedConv.status === 'active' ? 'bg-muted/30/10 text-green-500 border-primary/20' :
                 selectedConv.status === 'resolved' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                 'bg-gray-500/10 text-gray-500 border-gray-500/20'
               }>
@@ -336,7 +336,7 @@ export default function HelpdeskChatPage() {
                     </Button>
                   </>
                 ) : (
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                  <Badge variant="outline" className="bg-muted/30/10 text-green-500 border-primary/20">
                     <Mic className="w-3 h-3 mr-1" />
                     Has Voice
                   </Badge>
@@ -545,7 +545,7 @@ export default function HelpdeskChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 hidden sm:flex">
+            <Badge variant="outline" className="bg-muted/30/10 text-green-500 border-primary/20 hidden sm:flex">
               <Circle className="w-2 h-2 fill-green-500 mr-1" />
               {onlineUsers.filter(u => u.status === 'online').length} Online
             </Badge>

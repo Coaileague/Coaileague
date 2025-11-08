@@ -72,7 +72,7 @@ export function MobileBottomNav() {
             >
               <div className={cn(
                 "relative flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300",
-                isActive && "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30"
+                isActive && "bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30"
               )}>
                 <Icon className={cn(
                   "h-5 w-5 transition-all duration-300",

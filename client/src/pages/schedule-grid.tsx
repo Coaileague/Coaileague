@@ -195,7 +195,7 @@ function DroppableDayCell({ employeeId, date, shifts, employees, clients, onShif
       className={`
         min-h-[120px] flex-1 min-w-[140px] border-r border-b p-2 relative group cursor-pointer transition-all
         ${isOver ? 'bg-primary/10 ring-2 ring-primary' : 'bg-background'}
-        ${isToday ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}
+        ${isToday ? 'bg-muted/30/5 border-l-2 border-l-primary' : ''}
         hover-elevate
       `}
       data-testid={`drop-zone-${dropId}`}
@@ -306,16 +306,16 @@ function PlaceholderEmployeeRow({ weekDays, onCreateShift, onAddEmployee }: {
         <div
           key={moment(day).format('YYYY-MM-DD')}
           onClick={() => onCreateShift && onCreateShift('open', day)}
-          className="min-h-[120px] flex-1 min-w-[140px] border-r border-b p-2 relative group cursor-pointer transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30"
+          className="min-h-[120px] flex-1 min-w-[140px] border-r border-b p-2 relative group cursor-pointer transition-all hover:bg-muted/30/5 hover:border-primary/30"
           data-testid={`placeholder-slot-${moment(day).format('YYYY-MM-DD')}`}
         >
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-            <div className="bg-gradient-to-r from-emerald-500/20 to-primary/20 backdrop-blur-sm border border-emerald-500/40 rounded-xl px-4 py-3 flex items-center gap-2 shadow-lg transform scale-95 group-hover:scale-100 transition-transform">
-              <div className="p-1 bg-emerald-500/30 rounded-lg">
-                <Plus className="h-4 w-4 text-emerald-400" strokeWidth={2.5} />
+            <div className="bg-gradient-to-r from-primary/20 to-primary/20 backdrop-blur-sm border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-2 shadow-lg transform scale-95 group-hover:scale-100 transition-transform">
+              <div className="p-1 bg-muted/30/30 rounded-lg">
+                <Plus className="h-4 w-4 text-primary" strokeWidth={2.5} />
               </div>
-              <span className="text-sm font-semibold text-emerald-400">Add Open Shift</span>
-              <Sparkles className="h-3 w-3 text-emerald-300 animate-pulse" />
+              <span className="text-sm font-semibold text-primary">Add Open Shift</span>
+              <Sparkles className="h-3 w-3 text-primary animate-pulse" />
             </div>
           </div>
         </div>
@@ -1027,7 +1027,7 @@ export default function ScheduleGrid() {
               <TooltipTrigger asChild>
                 <Button 
                   size="sm" 
-                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700" 
+                  className="h-8 text-xs bg-primary hover:bg-primary" 
                   onClick={() => handleCreateShift('open', new Date())}
                   data-testid="button-add-shift"
                 >
@@ -1082,13 +1082,13 @@ export default function ScheduleGrid() {
                     key={moment(day).format('YYYY-MM-DD')}
                     className={`
                       flex-1 min-w-[140px] border-r p-3 text-center flex flex-col justify-center h-[60px]
-                      ${isToday ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : 'bg-muted/10'}
+                      ${isToday ? 'bg-muted/30/10 border-l-2 border-l-primary' : 'bg-muted/10'}
                     `}
                   >
-                    <div className={`text-[10px] font-semibold uppercase ${isToday ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                    <div className={`text-[10px] font-semibold uppercase ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
                       {moment(day).format('ddd')}
                     </div>
-                    <div className={`text-base font-bold ${isToday ? 'text-emerald-400' : ''}`}>
+                    <div className={`text-base font-bold ${isToday ? 'text-primary' : ''}`}>
                       {moment(day).format('D')}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
@@ -1377,10 +1377,10 @@ export default function ScheduleGrid() {
                 </div>
               </div>
 
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+              <div className="p-4 bg-muted/30/10 border border-primary/30 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-emerald-500/20 rounded-lg">
-                    <Clock className="h-5 w-5 text-emerald-400" />
+                  <div className="p-2 bg-muted/30/20 rounded-lg">
+                    <Clock className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-semibold">Shift Details</div>

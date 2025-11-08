@@ -381,7 +381,7 @@ export default function LeadersHub() {
                 </div>
                 <div className="flex gap-4 text-xs text-muted-foreground mt-2">
                   <div>
-                    <span className="font-medium text-emerald-600">{stats?.headcount.active || 0}</span> active
+                    <span className="font-medium text-primary">{stats?.headcount.active || 0}</span> active
                   </div>
                   <div>
                     <span className="font-medium text-amber-600">{stats?.headcount.onLeave || 0}</span> on leave
@@ -390,7 +390,7 @@ export default function LeadersHub() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="border-l-4 border-l-primary">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Compliance</CardTitle>
                 <Shield className="h-4 w-4 text-muted-foreground" />
@@ -476,7 +476,7 @@ export default function LeadersHub() {
                   </div>
                 ) : pendingTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                    <CheckCircle2 className="h-12 w-12 mb-2 text-emerald-500" />
+                    <CheckCircle2 className="h-12 w-12 mb-2 text-primary" />
                     <p>All caught up! No pending tasks.</p>
                   </div>
                 ) : (
@@ -775,7 +775,7 @@ export default function LeadersHub() {
                         data-testid={`action-item-${action.id}`}
                       >
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                          action.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' :
+                          action.status === 'completed' ? 'bg-muted/30/10 text-primary' :
                           action.status === 'pending' ? 'bg-amber-500/10 text-amber-600' :
                           'bg-destructive/10 text-destructive'
                         }`}>

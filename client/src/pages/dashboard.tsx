@@ -140,64 +140,59 @@ export default function Dashboard() {
     switch (type) {
       case 'shift_assigned':
       case 'shift_changed':
-        return <Calendar className="h-5 w-5 text-blue-400" />;
+        return <Calendar className="h-5 w-5 text-accent" />;
       case 'shift_removed':
-        return <XCircle className="h-5 w-5 text-red-400" />;
+        return <XCircle className="h-5 w-5 text-destructive" />;
       case 'pto_approved':
-        return <CheckCircle className="h-5 w-5 text-emerald-400" />;
+        return <CheckCircle className="h-5 w-5 text-primary" />;
       case 'pto_denied':
-        return <XCircle className="h-5 w-5 text-red-400" />;
+        return <XCircle className="h-5 w-5 text-destructive" />;
       case 'profile_updated':
-        return <Users className="h-5 w-5 text-teal-400" />;
+        return <Users className="h-5 w-5 text-accent" />;
       case 'document_assigned':
-        return <FileText className="h-5 w-5 text-emerald-400" />;
+        return <FileText className="h-5 w-5 text-primary" />;
       case 'policy_acknowledgment':
-        return <AlertCircle className="h-5 w-5 text-amber-400" />;
+        return <AlertCircle className="h-5 w-5 text-amber-500" />;
       case 'system':
-        return <Bell className="h-5 w-5 text-green-400" />;
+        return <Bell className="h-5 w-5 text-primary" />;
       default:
-        return <Mail className="h-5 w-5 text-gray-400" />;
+        return <Mail className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
   const getNotificationTypeBadge = (type: string) => {
     const badges: Record<string, { label: string; className: string }> = {
-      shift_assigned: { label: 'Shift', className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-      shift_changed: { label: 'Schedule', className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-      shift_removed: { label: 'Shift', className: 'bg-red-500/20 text-red-300 border-red-500/30' },
-      pto_approved: { label: 'PTO', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-      pto_denied: { label: 'PTO', className: 'bg-red-500/20 text-red-300 border-red-500/30' },
-      profile_updated: { label: 'Profile', className: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
-      document_assigned: { label: 'Document', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-      policy_acknowledgment: { label: 'Policy', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-      system: { label: 'System', className: 'bg-green-500/20 text-green-300 border-green-500/30' },
+      shift_assigned: { label: 'Shift', className: 'bg-accent/20 text-accent border-accent/30' },
+      shift_changed: { label: 'Schedule', className: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+      shift_removed: { label: 'Shift', className: 'bg-destructive/20 text-destructive border-destructive/30' },
+      pto_approved: { label: 'PTO', className: 'bg-primary/20 text-primary border-primary/30' },
+      pto_denied: { label: 'PTO', className: 'bg-destructive/20 text-destructive border-destructive/30' },
+      profile_updated: { label: 'Profile', className: 'bg-accent/20 text-accent border-accent/30' },
+      document_assigned: { label: 'Document', className: 'bg-primary/20 text-primary border-primary/30' },
+      policy_acknowledgment: { label: 'Policy', className: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+      system: { label: 'System', className: 'bg-primary/20 text-primary border-primary/30' },
     };
-    const badge = badges[type] || { label: 'Info', className: 'bg-gray-500/20 text-gray-300 border-gray-500/30' };
+    const badge = badges[type] || { label: 'Info', className: 'bg-muted/20 text-muted-foreground border-muted/30' };
     return <Badge variant="outline" className={`text-xs ${badge.className}`}>{badge.label}</Badge>;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950 relative overflow-hidden">
-      {/* Animated background gradient orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-green-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-teal-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Professional subtle background - NO bright glowing orbs */}
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Branded Header with Logo */}
         <div className="mb-8">
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+          <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
             <div className="flex items-center gap-4 mb-4">
               <div className="transform hover:scale-105 transition-transform duration-300">
                 <AutoForceLogo variant="full" size="md" />
               </div>
               <div className="flex-1">
-                <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-emerald-100 to-green-200 bg-clip-text text-transparent mb-1 break-words" data-testid="text-welcome">
+                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-1 break-words" data-testid="text-welcome">
                   Welcome back, {firstName}
                 </h2>
-                <p className="text-slate-300 text-sm sm:text-base">
+                <p className="text-muted-foreground text-sm sm:text-base">
                   {workspaceRole === 'org_owner' ? '🎯 Manage your entire workforce with AutoForce™' : 
                    workspaceRole === 'department_manager' ? '📊 Oversee your team performance' :
                    '⏰ Track your time and tasks'}
@@ -207,123 +202,120 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Metrics Grid - Animated Cards */}
+        {/* Metrics Grid - Professional Cards (NO glow effects) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {/* Total Employees Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 animate-in fade-in slide-in-from-bottom-4" data-testid="card-employees">
+          <div className="group bg-card border border-border rounded-lg p-6 hover-elevate active-elevate-2 transition-all duration-200" data-testid="card-employees">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6 text-emerald-400" />
+              <div className="p-3 bg-muted rounded-lg">
+                <Users className="w-6 h-6 text-primary" />
               </div>
-              <div className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></div>
             </div>
-            <p className="text-slate-300 text-sm mb-2">Total Employees</p>
-            <p className="text-4xl font-bold text-white">{totalEmployees}</p>
+            <p className="text-muted-foreground text-sm mb-2">Total Employees</p>
+            <p className="text-4xl font-bold text-foreground">{totalEmployees}</p>
           </div>
 
           {/* Active Today Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/5 border border-teal-500/20 rounded-2xl p-6 hover:border-teal-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/20 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '0.1s' }} data-testid="card-active">
+          <div className="group bg-card border border-border rounded-lg p-6 hover-elevate active-elevate-2 transition-all duration-200" data-testid="card-active">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-teal-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <Activity className="w-6 h-6 text-teal-400 animate-pulse" />
+              <div className="p-3 bg-muted rounded-lg">
+                <Activity className="w-6 h-6 text-accent" />
               </div>
-              <div className="h-2 w-2 bg-teal-400 rounded-full animate-pulse"></div>
             </div>
-            <p className="text-slate-300 text-sm mb-2">Active Today</p>
-            <p className="text-4xl font-bold text-white">{activeToday}</p>
+            <p className="text-muted-foreground text-sm mb-2">Active Today</p>
+            <p className="text-4xl font-bold text-foreground">{activeToday}</p>
           </div>
 
           {/* Revenue Card */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '0.2s' }} data-testid="card-revenue">
+          <div className="group bg-card border border-border rounded-lg p-6 hover-elevate active-elevate-2 transition-all duration-200" data-testid="card-revenue">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <DollarSign className="w-6 h-6 text-emerald-400" />
+              <div className="p-3 bg-muted rounded-lg">
+                <DollarSign className="w-6 h-6 text-primary" />
               </div>
-              <div className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></div>
             </div>
-            <p className="text-slate-300 text-sm mb-2">Total Revenue</p>
-            <p className="text-4xl font-bold text-white">${(totalRevenue / 1000).toFixed(1)}K</p>
+            <p className="text-muted-foreground text-sm mb-2">Total Revenue</p>
+            <p className="text-4xl font-bold text-foreground">${(totalRevenue / 1000).toFixed(1)}K</p>
           </div>
         </div>
 
-        {/* Quick Actions Grid */}
+        {/* Quick Actions Grid - Professional Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Link href="/employees">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-emerald-500/30 transition-all duration-300 group" data-testid="button-manage-employees">
-              <div className="p-3 bg-emerald-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <Users className="w-8 h-8 text-emerald-400" />
+            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-manage-employees">
+              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
+                <Users className="w-8 h-8 text-primary" />
               </div>
-              <h4 className="font-bold text-white mb-2 text-lg">Manage Employees</h4>
-              <p className="text-sm text-slate-400 mb-3">View and edit employee records</p>
-              <div className="flex items-center text-emerald-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <h4 className="font-bold text-foreground mb-2 text-lg">Manage Employees</h4>
+              <p className="text-sm text-muted-foreground mb-3">View and edit employee records</p>
+              <div className="flex items-center text-primary text-sm font-semibold">
                 View all <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
 
           <Link href="/schedule">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-green-500/30 transition-all duration-300 group" data-testid="button-schedule">
-              <div className="p-3 bg-green-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <Calendar className="w-8 h-8 text-green-400" />
+            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-schedule">
+              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
+                <Calendar className="w-8 h-8 text-accent" />
               </div>
-              <h4 className="font-bold text-white mb-2 text-lg">Schedule</h4>
-              <p className="text-sm text-slate-400 mb-3">Manage shifts and assignments</p>
-              <div className="flex items-center text-green-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <h4 className="font-bold text-foreground mb-2 text-lg">Schedule</h4>
+              <p className="text-sm text-muted-foreground mb-3">Manage shifts and assignments</p>
+              <div className="flex items-center text-accent text-sm font-semibold">
                 Open <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
 
           <Link href="/time-tracking">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-teal-500/30 transition-all duration-300 group" data-testid="button-time-tracking">
-              <div className="p-3 bg-teal-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <Clock className="w-8 h-8 text-teal-400" />
+            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-time-tracking">
+              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
+                <Clock className="w-8 h-8 text-accent" />
               </div>
-              <h4 className="font-bold text-white mb-2 text-lg">Time Tracking</h4>
-              <p className="text-sm text-slate-400 mb-3">Review and approve time entries</p>
-              <div className="flex items-center text-teal-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <h4 className="font-bold text-foreground mb-2 text-lg">Time Tracking</h4>
+              <p className="text-sm text-muted-foreground mb-3">Review and approve time entries</p>
+              <div className="flex items-center text-accent text-sm font-semibold">
                 Review <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
 
           <Link href="/invoices">
-            <button className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 hover:border-emerald-500/30 transition-all duration-300 group" data-testid="button-invoices">
-              <div className="p-3 bg-emerald-500/20 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-                <FileText className="w-8 h-8 text-emerald-400" />
+            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-invoices">
+              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
+                <FileText className="w-8 h-8 text-primary" />
               </div>
-              <h4 className="font-bold text-white mb-2 text-lg">Invoices</h4>
-              <p className="text-sm text-slate-400 mb-3">Generate and send invoices</p>
-              <div className="flex items-center text-emerald-400 text-sm font-semibold group-hover:translate-x-2 transition-transform">
+              <h4 className="font-bold text-foreground mb-2 text-lg">Invoices</h4>
+              <p className="text-sm text-muted-foreground mb-3">Generate and send invoices</p>
+              <div className="flex items-center text-primary text-sm font-semibold">
                 Create <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </Link>
         </div>
 
-        {/* Notification Center Section */}
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '0.3s' }}>
+        {/* Notification Center Section - Professional Style */}
+        <div className="bg-card border border-border rounded-lg p-6 sm:p-8">
           {/* Notification Center Header */}
           <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/20 rounded-xl">
-                <Bell className="w-6 h-6 text-emerald-400" />
+              <div className="p-3 bg-muted rounded-lg">
+                <Bell className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
                   Notification Center
                   {isConnected && (
-                    <span className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse" title="Live updates active" />
+                    <span className="h-2 w-2 bg-primary rounded-full" title="Live updates active" />
                   )}
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Stay updated on your shifts, PTO, and important platform changes
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Unread:</span>
-              <span className="inline-flex items-center justify-center min-w-[2rem] h-8 px-2 text-sm font-bold text-white bg-emerald-500 rounded-full shadow-lg">
+              <span className="text-sm text-muted-foreground">Unread:</span>
+              <span className="inline-flex items-center justify-center min-w-[2rem] h-8 px-2 text-sm font-bold text-foreground bg-muted rounded-full">
                 {unreadCount}
               </span>
             </div>
@@ -335,7 +327,6 @@ export default function Dashboard() {
               variant={notificationFilter === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setNotificationFilter('all')}
-              className={notificationFilter === 'all' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
               data-testid="button-filter-all"
             >
               All ({notifications.length})
@@ -344,7 +335,6 @@ export default function Dashboard() {
               variant={notificationFilter === 'unread' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setNotificationFilter('unread')}
-              className={notificationFilter === 'unread' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
               data-testid="button-filter-unread"
             >
               Unread ({unreadCount})
@@ -353,7 +343,7 @@ export default function Dashboard() {
               variant={notificationFilter === 'read' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setNotificationFilter('read')}
-              className={notificationFilter === 'read' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
+              className={notificationFilter === 'read' ? 'bg-muted/30 ' : ''}
               data-testid="button-filter-read"
             >
               Read ({notifications.length - unreadCount})
@@ -363,7 +353,7 @@ export default function Dashboard() {
                 variant="ghost"
                 size="sm"
                 onClick={() => markAllAsReadMutation.mutate()}
-                className="ml-auto text-emerald-400 hover:text-emerald-300"
+                className="ml-auto text-primary hover:text-primary"
                 data-testid="button-mark-all-read"
               >
                 Mark all as read
@@ -375,7 +365,7 @@ export default function Dashboard() {
           <div className="overflow-x-auto">
             {notificationsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary/80"></div>
                 <span className="ml-3 text-slate-400">Loading notifications...</span>
               </div>
             ) : filteredNotifications.length === 0 ? (
@@ -398,7 +388,7 @@ export default function Dashboard() {
                     className={`backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01] ${
                       notification.isRead
                         ? 'bg-white/5 border-white/10'
-                        : 'bg-emerald-500/10 border-emerald-500/30 shadow-lg shadow-emerald-500/10'
+                        : 'bg-muted/30/10 border-primary/30 shadow-lg shadow-primary/10'
                     }`}
                     data-testid={`notification-${notification.id}`}
                   >
@@ -418,7 +408,7 @@ export default function Dashboard() {
                             {getNotificationTypeBadge(notification.type)}
                           </div>
                           {!notification.isRead && (
-                            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
                           )}
                         </div>
                         <p className="text-sm text-slate-300 mb-2 break-words">
@@ -439,8 +429,8 @@ export default function Dashboard() {
                           onClick={() => markAsReadMutation.mutate(notification.id)}
                           className={`h-9 w-9 p-0 ${
                             notification.isRead
-                              ? 'text-slate-400 hover:text-emerald-400'
-                              : 'text-emerald-400 hover:text-emerald-300'
+                              ? 'text-slate-400 hover:text-primary'
+                              : 'text-primary hover:text-primary'
                           }`}
                           title={notification.isRead ? 'Mark as unread' : 'Mark as read'}
                           data-testid={`button-toggle-read-${notification.id}`}

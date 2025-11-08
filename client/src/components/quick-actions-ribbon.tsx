@@ -33,7 +33,7 @@ interface QuickAction {
 
 const ACTION_VARIANTS = {
   default: "bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100",
-  success: "bg-emerald-100 hover:bg-emerald-200 text-emerald-900 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-100",
+  success: "bg-muted/50 hover:bg-muted text-foreground dark:bg-slate-900/30 dark:hover:bg-slate-900/50 dark:text-background",
   warning: "bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-100",
   danger: "bg-red-100 hover:bg-red-200 text-red-900 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-100",
   info: "bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-100",
@@ -239,7 +239,7 @@ export function QuickActionsRibbon({
             {isStaff && (
               <div className="flex items-center gap-3 pl-3 border-l border-slate-300 dark:border-slate-700 ml-2 flex-shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-muted/30 rounded-full animate-pulse" />
                   <span className="text-xs text-slate-600 dark:text-slate-400">
                     {liveData.onlineStaff || 0} staff
                   </span>

@@ -89,11 +89,11 @@ export function SupportChatroomList() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-emerald-500" />
+            <div className="h-12 w-12 rounded-xl bg-muted/30/10 flex items-center justify-center">
+              <Shield className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-teal-400 bg-clip-text text-transparent">
                 Support Command Center
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -103,7 +103,7 @@ export function SupportChatroomList() {
           </div>
           <Button
             onClick={() => setLocation('/comm-os/create')}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-primary hover:bg-primary"
             data-testid="button-create-room"
           >
             <MessageSquare className="h-4 w-4 mr-2" />
@@ -118,7 +118,7 @@ export function SupportChatroomList() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active Rooms</CardTitle>
-              <MessageSquare className="h-4 w-4 text-emerald-500" />
+              <MessageSquare className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
@@ -210,7 +210,7 @@ export function SupportChatroomList() {
                 Click any room to join with admin access
               </CardDescription>
             </div>
-            <Badge variant="outline" className="border-emerald-500/50 text-emerald-400">
+            <Badge variant="outline" className="border-primary/50 text-primary">
               <Sparkles className="h-3 w-3 mr-1" />
               Live Updates
             </Badge>
@@ -219,7 +219,7 @@ export function SupportChatroomList() {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : sortedChatrooms.length === 0 ? (
             <div className="text-center py-12">
@@ -259,7 +259,7 @@ export function SupportChatroomList() {
                           <div className="flex items-center gap-2">
                             <div 
                               className={`h-2.5 w-2.5 rounded-full ${
-                                isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                                isOpen ? 'bg-muted/30 animate-pulse' : 'bg-rose-500'
                               }`}
                               title={isOpen ? 'Open' : 'Closed'}
                             />
@@ -270,13 +270,13 @@ export function SupportChatroomList() {
                         </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-emerald-500" />
+                            <MessageSquare className="h-4 w-4 text-primary" />
                             {room.name}
                           </div>
                         </TableCell>
                         <TableCell>
                           {isPlatformOwned ? (
-                            <Badge variant="outline" className="border-emerald-500/50 text-emerald-400">
+                            <Badge variant="outline" className="border-primary/50 text-primary">
                               <Shield className="h-3 w-3 mr-1" />
                               Platform
                             </Badge>
@@ -302,7 +302,7 @@ export function SupportChatroomList() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                            className="text-primary hover:text-primary hover:bg-muted/30/10"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleJoinRoom(room.id);

@@ -84,7 +84,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'promo',
     bannerIcon: 'star',
     effect: 'none',
-    gradient: 'from-green-600 to-emerald-700'
+    gradient: 'from-green-600 to-accent'
   },
   {
     id: 'independence',

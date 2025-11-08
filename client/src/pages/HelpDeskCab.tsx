@@ -589,8 +589,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     if (userType === 'subscriber') {
       const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
       return (
-        <Avatar className="w-5 h-5 border border-emerald-400">
-          <AvatarFallback className="bg-emerald-100 text-emerald-700 text-[9px] font-bold">
+        <Avatar className="w-5 h-5 border border-primary/80">
+          <AvatarFallback className="bg-muted/50 text-primary text-[9px] font-bold">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -622,7 +622,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   // Get status indicator - Extra Compact
   const getStatusIndicator = (status: string) => {
     switch (status) {
-      case 'online': return <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-sm" />;
+      case 'online': return <div className="w-1.5 h-1.5 bg-muted/30 rounded-full animate-pulse shadow-sm" />;
       case 'away': return <div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-sm" />;
       case 'busy': return <div className="w-1.5 h-1.5 bg-rose-500 rounded-full shadow-sm" />;
       default: return <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />;
@@ -718,8 +718,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       case 'root_admin': return 'text-green-600 font-bold';  // Root admin
       case 'bot': return 'text-amber-600 font-bold';  // Bot
       case 'deputy_admin': return 'text-green-600 font-bold';
-      case 'support_manager': return 'text-emerald-600 font-bold';
-      case 'sysop': return 'text-emerald-600 font-bold';
+      case 'support_manager': return 'text-primary font-bold';
+      case 'sysop': return 'text-primary font-bold';
       default: return 'text-slate-700 font-semibold';  // Regular users
     }
   };
@@ -728,7 +728,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const getMessageBubbleColor = (senderType: string, role: string, isSelf: boolean) => {
     if (isSelf) {
       // Support staff own messages - soft indigo (not too dark)
-      return 'bg-gradient-to-br from-emerald-50 to-emerald-50 border border-green-200 shadow-sm';
+      return 'bg-gradient-to-br from-neutral-50 to-primary border border-green-200 shadow-sm';
     }
     
     // Bot messages - warm amber/cream background
@@ -738,7 +738,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     
     // Staff messages - soft indigo/blue background (lighter than own messages)
     if (role === 'root_admin' || role === 'deputy_admin' || role === 'support_manager' || role === 'sysop') {
-      return 'bg-gradient-to-br from-emerald-50 to-emerald-50 border border-emerald-200 shadow-sm';
+      return 'bg-gradient-to-br from-neutral-50 to-primary border border-primary shadow-sm';
     }
     
     // Customer/regular messages - neutral warm gray
@@ -1103,7 +1103,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="border-t-2 border-emerald-200 bg-white/90 backdrop-blur-sm p-4">
+          <div className="border-t-2 border-primary bg-white/90 backdrop-blur-sm p-4">
             <div className="flex items-end gap-2">
               <Input
                 value={inputMessage}
@@ -1138,13 +1138,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         <section className="min-w-[200px] max-w-[260px] w-auto bg-gradient-to-b from-slate-100 via-teal-50 to-slate-100 backdrop-blur-sm flex flex-col flex-shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.1)]">
           
           {/* User List Header */}
-          <div className="px-3 py-2 border-b border-emerald-300/50 flex-shrink-0 bg-gradient-to-r from-emerald-100/80 to-slate-100/80">
+          <div className="px-3 py-2 border-b border-primary/50 flex-shrink-0 bg-gradient-to-r from-neutral-100/80 to-slate-100/80">
             <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <Users className="w-4 h-4 text-primary flex-shrink-0" />
               <h2 className="text-xs font-bold text-slate-800">
                 Online Users
               </h2>
-              <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0 bg-emerald-600 text-white" data-testid="text-user-count">
+              <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0 bg-primary text-white" data-testid="text-user-count">
                 {uniqueUsers.length}
               </Badge>
             </div>
@@ -1162,8 +1162,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                         className={`
                           flex items-center gap-1.5 p-1 rounded-lg cursor-pointer transition-all border
                           ${selectedUserId === u.id 
-                            ? 'bg-emerald-100/90 shadow-sm border-emerald-400/70' 
-                            : 'bg-amber-50/90 hover:bg-amber-100/95 border-slate-200/50 hover:border-emerald-300/50'
+                            ? 'bg-muted/50/90 shadow-sm border-primary/80/70' 
+                            : 'bg-amber-50/90 hover:bg-amber-100/95 border-slate-200/50 hover:border-primary/50'
                           }
                         `}
                         onClick={() => setSelectedUserId(u.id)}
@@ -1733,12 +1733,12 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
 
       {/* Controls Menu - Slide-Over Panel (Emerald Color Scheme) */}
       <Sheet open={showControlsMenu} onOpenChange={setShowControlsMenu}>
-        <SheetContent className="w-full sm:max-w-2xl bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300">
-          <SheetHeader className="border-b border-emerald-200 pb-4 mb-4">
+        <SheetContent className="w-full sm:max-w-2xl bg-gradient-to-br from-neutral-50 to-green-50 border-primary">
+          <SheetHeader className="border-b border-primary pb-4 mb-4">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-2xl font-bold text-emerald-900">
+              <SheetTitle className="text-2xl font-bold text-primary">
                 <div className="flex items-center gap-2">
-                  <Settings className="w-6 h-6 text-emerald-600" />
+                  <Settings className="w-6 h-6 text-primary" />
                   Controls & Actions
                 </div>
               </SheetTitle>
@@ -1746,7 +1746,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 onClick={() => setShowControlsMenu(false)}
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-emerald-700 hover:bg-emerald-200"
+                className="h-8 w-8 text-primary hover:bg-primary"
                 data-testid="button-close-controls"
               >
                 <X className="w-5 h-5" />
@@ -1828,7 +1828,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 border border-white/10 text-white">
+        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
               <AutoForceLogo size="sm" variant="icon" />
@@ -1849,21 +1849,21 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 {(selectedUserId.startsWith('sim-') || selectedUserId.startsWith('demo-')) && userContext.user?.isSimulated ? (
                   /* Simulated/Demo user information */
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-primary/20 to-green-500/20 border border-primary/30 rounded-lg p-4">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center ring-2 ring-emerald-500/50">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center ring-2 ring-primary/50">
                           <Users size={24} className="text-white" />
                         </div>
                         <div>
                           <h3 className="text-white font-bold text-lg">
                             {userContext.user.firstName} {userContext.user.lastName}
                           </h3>
-                          <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 mt-1">
+                          <Badge variant="secondary" className="bg-muted/30/20 text-primary border-primary/30 mt-1">
                             Simulated Demo User
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-emerald-200 text-sm mb-3">
+                      <p className="text-primary text-sm mb-3">
                         This is a simulated user account for testing and demonstration purposes.
                       </p>
                       <div className="space-y-2 text-xs">
@@ -1883,10 +1883,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                     </div>
 
                     {userContext.note && (
-                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                      <div className="bg-muted/30/10 border border-primary/30 rounded-lg p-3">
                         <div className="flex items-start gap-2">
-                          <Info className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-emerald-300 text-xs">
+                          <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-primary text-xs">
                             {userContext.note}
                           </span>
                         </div>
@@ -1922,19 +1922,19 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                       </h4>
                       <ul className="space-y-2">
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                           <span className="text-slate-300 text-xs">24/7 instant customer support</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                           <span className="text-slate-300 text-xs">Automated ticket creation and routing</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                           <span className="text-slate-300 text-xs">Context-aware responses</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                           <span className="text-slate-300 text-xs">Human escalation when needed</span>
                         </li>
                       </ul>
@@ -2032,7 +2032,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                               </div>
                               <div>
                                 <span className="text-slate-400 text-xs block mb-1">Resolved</span>
-                                <span className="text-emerald-400 text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
+                                <span className="text-primary text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
                               </div>
                               <div>
                                 <span className="text-slate-400 text-xs block mb-1">Resolution Rate</span>
@@ -2050,7 +2050,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                             });
                             setShowUserProfile(false);
                           }}
-                          className="w-full bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white"
+                          className="w-full bg-muted/30/20 hover:bg-muted/30/30 border border-primary/30 text-white"
                           data-testid="button-user-history"
                         >
                           <History className="w-4 h-4 mr-2" />
@@ -2071,13 +2071,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                           <div>
                             <span className="text-slate-400 text-xs block mb-1">Status</span>
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-emerald-400 text-sm">Online</span>
+                              <div className="w-2 h-2 rounded-full bg-muted/30 animate-pulse" />
+                              <span className="text-primary text-sm">Online</span>
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                          <p className="text-emerald-300 text-xs">
+                        <div className="mt-4 p-3 bg-muted/30/10 border border-primary/30 rounded-lg">
+                          <p className="text-primary text-xs">
                             <Info className="w-3 h-3 inline mr-1" />
                             Full user details are only visible to support staff
                           </p>

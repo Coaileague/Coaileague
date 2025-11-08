@@ -106,13 +106,13 @@ export function AppSidebar() {
                 <Link href={item.url} className="flex items-center gap-3 w-full">
                   <item.icon className={`h-4 w-4 shrink-0 transition-colors ${
                     location === item.url 
-                      ? 'text-emerald-400' 
-                      : 'text-muted-foreground group-hover:text-emerald-300'
+                      ? 'text-primary' 
+                      : 'text-muted-foreground group-hover:text-primary'
                   }`} />
                   <span className={`text-sm leading-tight font-medium transition-colors ${
                     location === item.url
-                      ? 'text-emerald-100'
-                      : 'text-foreground group-hover:text-emerald-50'
+                      ? 'text-primary'
+                      : 'text-foreground group-hover:text-primary'
                   }`}>
                     {item.title}
                   </span>

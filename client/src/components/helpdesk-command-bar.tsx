@@ -169,9 +169,9 @@ export function HelpDeskCommandBar({
           {/* Staff Controls */}
           {isStaff && (
             <>
-              <div className="flex items-center gap-2 pr-4 border-r-2 border-slate-300 bg-emerald-100 px-3 py-1 rounded-md">
+              <div className="flex items-center gap-2 pr-4 border-r-2 border-slate-300 bg-muted/50 px-3 py-1 rounded-md">
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-bold text-emerald-900 flex items-center gap-1">
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1">
                     Status:
                     {showCoffeeCup && (
                       <Coffee className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
@@ -180,7 +180,7 @@ export function HelpDeskCommandBar({
                   <select
                     value={userStatus}
                     onChange={(e) => onStatusChange?.(e.target.value as any)}
-                    className="h-9 px-3 border-2 border-emerald-600 rounded-md text-xs font-semibold bg-white text-emerald-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    className="h-9 px-3 border-2 border-primary rounded-md text-xs font-semibold bg-white text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
                     data-testid="select-status"
                   >
                     <option value="online">● Available</option>
@@ -190,8 +190,8 @@ export function HelpDeskCommandBar({
                 </div>
                 
                 <div className="flex items-center gap-2 ml-2">
-                  <span className="text-xs font-bold text-emerald-900">Staff Online:</span>
-                  <Badge variant="secondary" className="h-6 px-3 text-xs bg-emerald-700 text-white font-bold">
+                  <span className="text-xs font-bold text-foreground">Staff Online:</span>
+                  <Badge variant="secondary" className="h-6 px-3 text-xs bg-primary text-white font-bold">
                     {onlineStaffCount}
                   </Badge>
                 </div>

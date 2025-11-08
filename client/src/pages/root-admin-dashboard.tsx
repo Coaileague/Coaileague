@@ -225,9 +225,9 @@ export default function RootAdminDashboard() {
   // Activity icon helper
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case "login": return <UserCheck className="h-4 w-4 text-emerald-500" />;
+      case "login": return <UserCheck className="h-4 w-4 text-primary" />;
       case "invoice": return <DollarSign className="h-4 w-4 text-amber-500" />;
-      case "subscription": return <Users className="h-4 w-4 text-emerald-500" />;
+      case "subscription": return <Users className="h-4 w-4 text-primary" />;
       case "error": return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default: return <Activity className="h-4 w-4 text-slate-500" />;
     }
@@ -263,11 +263,11 @@ export default function RootAdminDashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900">
       {/* Animated background gradient orbs - Hidden on mobile for performance */}
       <div className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-slate-900/20 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-slate-900/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-teal-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
@@ -276,14 +276,14 @@ export default function RootAdminDashboard() {
         {/* Branded Header - Compact on mobile, full on desktop */}
         <div className="sm:mb-6">
           {/* Mobile Header - Very compact */}
-          <div className="sm:hidden relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-3 border border-emerald-500/20">
+          <div className="sm:hidden relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 p-3 border border-primary/20">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-bold text-white truncate">
                   Platform Command
                 </h1>
                 {personalData && (
-                  <p className="text-xs text-emerald-300 truncate">
+                  <p className="text-xs text-primary truncate">
                     {personalData.userName} · {personalData.assignedTickets + personalData.newSupportTickets} tasks
                   </p>
                 )}
@@ -292,7 +292,7 @@ export default function RootAdminDashboard() {
           </div>
 
           {/* Desktop Header - Reduced Padding */}
-          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-3 sm:p-4 border border-emerald-500/20 backdrop-blur-xl bg-white/5">
+          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 p-3 sm:p-4 border border-primary/20 backdrop-blur-xl bg-white/5">
             {/* Logo and Title */}
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -300,7 +300,7 @@ export default function RootAdminDashboard() {
                   <AutoForceLogo size="lg" variant="icon" lightMode={true} />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-teal-200 bg-clip-text text-transparent">
                     Platform Command Center
                   </h1>
                   <p className="text-slate-400 text-xs sm:text-sm">
@@ -309,7 +309,7 @@ export default function RootAdminDashboard() {
                   <TimeGreeting 
                     userName={personalData?.userName}
                     role=""
-                    className="text-emerald-300 text-xs mt-0.5"
+                    className="text-primary text-xs mt-0.5"
                   />
                 </div>
               </div>
@@ -365,17 +365,17 @@ export default function RootAdminDashboard() {
         {/* Desktop: 2-Column Grid | Mobile: Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* Quick Access Menu - Organized by Categories (Registry-Based) */}
-          <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-emerald-950/30 to-slate-900/50 backdrop-blur-sm">
+          <Card className="border-primary/20 bg-gradient-to-br from-slate-900/50 via-slate-900/30 to-slate-900/50 backdrop-blur-sm">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 shrink-0" />
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                 <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
               </div>
 
               {/* Support & Helpdesk Tools */}
               {supportActions.length > 0 && (
                 <div className="mb-3">
-                  <h3 className="text-[10px] sm:text-xs font-semibold text-emerald-400/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-primary/70 mb-2 uppercase tracking-wider">Support & Helpdesk</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {supportActions.map((action) => {
                       const Icon = action.icon;
@@ -384,7 +384,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-emerald-500/20 hover:border-emerald-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-primary/20 hover:border-primary/80/40"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -448,7 +448,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-green-500/20 hover:border-green-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-primary/20 hover:border-green-400/40"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -503,7 +503,7 @@ export default function RootAdminDashboard() {
           </Card>
 
           {/* 🔐 ADMIN CONTROLS - User & Workspace Management */}
-          <Card className="border-emerald-500/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
+          <Card className="border-primary/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
             <CardHeader className="pb-3 pt-3 px-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <ShieldAlert className="h-4 w-4 text-red-400" />
@@ -515,8 +515,8 @@ export default function RootAdminDashboard() {
               {/* User Search & Management */}
               <div className="space-y-3" id="user-section">
                 <div className="flex items-center gap-2">
-                  <UserCog className="h-3.5 w-3.5 text-emerald-400" />
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-400">User Management</h3>
+                  <UserCog className="h-3.5 w-3.5 text-primary" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-primary">User Management</h3>
                 </div>
                 
                 <div className="relative">
@@ -525,13 +525,13 @@ export default function RootAdminDashboard() {
                     placeholder="Search users (min 3 chars)..."
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="pl-10 bg-slate-800/50 border-emerald-500/30 h-8 text-sm"
+                    className="pl-10 bg-slate-800/50 border-primary/30 h-8 text-sm"
                     data-testid="input-user-search"
                   />
                 </div>
 
                 {userSearchResults && (userSearchResults as any[]).length > 0 && (
-                  <ScrollArea className="h-[160px] border border-emerald-500/20 rounded-lg bg-slate-800/30 p-2">
+                  <ScrollArea className="h-[160px] border border-primary/20 rounded-lg bg-slate-800/30 p-2">
                     <div className="space-y-1.5">
                       {(userSearchResults as any[]).map((user: any) => (
                         <div
@@ -566,9 +566,9 @@ export default function RootAdminDashboard() {
                 )}
 
               {selectedUser && (
-                <div className="border border-emerald-500/30 rounded-lg p-4 bg-emerald-950/20">
+                <div className="border border-primary/30 rounded-lg p-4 bg-slate-950/20">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-emerald-300">Managing: {selectedUser.firstName} {selectedUser.lastName}</h4>
+                    <h4 className="text-sm font-semibold text-primary">Managing: {selectedUser.firstName} {selectedUser.lastName}</h4>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -692,7 +692,7 @@ export default function RootAdminDashboard() {
                           {selectedWorkspace.isLocked && <Badge variant="destructive" className="text-[10px]">Locked</Badge>}
                           {selectedWorkspace.isFrozen && <Badge variant="destructive" className="text-[10px]">Frozen</Badge>}
                           {!selectedWorkspace.isSuspended && !selectedWorkspace.isLocked && !selectedWorkspace.isFrozen && (
-                            <Badge variant="secondary" className="text-[10px] bg-green-500/20 text-green-400">Active</Badge>
+                            <Badge variant="secondary" className="text-[10px] bg-muted/30/20 text-green-400">Active</Badge>
                           )}
                         </div>
                       </div>
@@ -707,7 +707,7 @@ export default function RootAdminDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-full bg-green-500/10 border-green-500/30 hover:bg-green-500/20"
+                          className="w-full bg-muted/30/10 border-primary/30 hover:bg-muted/30/20"
                           onClick={() => {
                             if (confirm('Unsuspend this account?')) {
                               unsuspendAccountMutation.mutate({ workspaceId: selectedWorkspace.id });
@@ -742,7 +742,7 @@ export default function RootAdminDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-full bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
+                          className="w-full bg-muted/30/10 border-primary/30 hover:bg-muted/30/20"
                           onClick={() => {
                             if (confirm('Unlock this account?')) {
                               unlockAccountMutation.mutate({ workspaceId: selectedWorkspace.id });
@@ -783,10 +783,10 @@ export default function RootAdminDashboard() {
 
       {/* Platform Business Metrics - COMPACT */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-primary">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <Building2 className="h-3.5 w-3.5 text-emerald-500" />
+              <Building2 className="h-3.5 w-3.5 text-primary" />
               New Customers
             </CardDescription>
           </CardHeader>
@@ -800,10 +800,10 @@ export default function RootAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-primary">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+              <DollarSign className="h-3.5 w-3.5 text-primary" />
               Monthly Invoices
             </CardDescription>
           </CardHeader>
@@ -865,21 +865,21 @@ export default function RootAdminDashboard() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs">Web Application</span>
-                <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-[10px] py-0 h-5">
+                <Badge variant="secondary" className="bg-muted/30/10 text-green-600 text-[10px] py-0 h-5">
                   <CheckCircle className="h-2.5 w-2.5 mr-1" />
                   Live
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs">API Server</span>
-                <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-[10px] py-0 h-5">
+                <Badge variant="secondary" className="bg-muted/30/10 text-green-600 text-[10px] py-0 h-5">
                   <CheckCircle className="h-2.5 w-2.5 mr-1" />
                   Live
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs">Database</span>
-                <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-[10px] py-0 h-5">
+                <Badge variant="secondary" className="bg-muted/30/10 text-green-600 text-[10px] py-0 h-5">
                   <CheckCircle className="h-2.5 w-2.5 mr-1" />
                   {stats?.systemHealth?.database || "healthy"}
                 </Badge>
@@ -921,7 +921,7 @@ export default function RootAdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Server className="h-5 w-5 text-emerald-500" />
+                <Server className="h-5 w-5 text-primary" />
                 System Health
               </CardTitle>
               <CardDescription>Real-time server metrics</CardDescription>
@@ -930,7 +930,7 @@ export default function RootAdminDashboard() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <Cpu className="h-4 w-4 text-emerald-500" />
+                    <Cpu className="h-4 w-4 text-primary" />
                     <span>CPU Usage</span>
                   </div>
                   <span className="font-bold">{stats?.systemHealth?.cpu || 0}%</span>
@@ -952,10 +952,10 @@ export default function RootAdminDashboard() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <Database className="h-4 w-4 text-emerald-500" />
+                    <Database className="h-4 w-4 text-primary" />
                     <span>Database</span>
                   </div>
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                  <Badge variant="secondary" className="bg-muted/30/10 text-primary">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     {stats?.systemHealth?.database || "healthy"}
                   </Badge>
@@ -981,13 +981,13 @@ export default function RootAdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Activity className="h-5 w-5 text-emerald-500 animate-pulse" />
+                  <Activity className="h-5 w-5 text-primary animate-pulse" />
                   Live Platform Activity & Metrics
                 </CardTitle>
                 <CardDescription>Real-time events and comprehensive data analysis</CardDescription>
               </div>
-              <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
-                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse mr-2" />
+              <Badge variant="secondary" className="bg-muted/30/10 text-primary">
+                <div className="h-2 w-2 bg-muted/30 rounded-full animate-pulse mr-2" />
                 Live
               </Badge>
             </div>

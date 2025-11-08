@@ -76,7 +76,7 @@ export function MessageAttachment({ url, name, type, className = "" }: MessageAt
     return (
       <Card className={`p-3 max-w-xs ${className}`}>
         <div className="flex items-center gap-3">
-          <Music className="h-8 w-8 text-emerald-500" />
+          <Music className="h-8 w-8 text-primary" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{name || "Audio file"}</p>
             <audio controls className="w-full mt-2" data-testid="audio-message-attachment">
@@ -103,7 +103,7 @@ export function MessageAttachment({ url, name, type, className = "" }: MessageAt
             variant="ghost"
             size="sm"
             onClick={handleDownload}
-            className="h-auto p-0 text-emerald-500 hover:text-emerald-400"
+            className="h-auto p-0 text-primary hover:text-primary"
             data-testid="button-download-attachment"
           >
             <Download className="h-3 w-3 mr-1" />

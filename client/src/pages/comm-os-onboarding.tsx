@@ -94,7 +94,7 @@ export default function CommOSOnboarding() {
     <div className="container mx-auto py-8 px-4 max-w-3xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
-          <MessageSquare className="w-8 h-8 text-emerald-600" />
+          <MessageSquare className="w-8 h-8 text-primary" />
           CommOS™ Setup
         </h1>
         <p className="text-muted-foreground">
@@ -110,7 +110,7 @@ export default function CommOSOnboarding() {
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div 
-            className="h-full bg-emerald-600 transition-all duration-300"
+            className="h-full bg-primary transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -121,25 +121,25 @@ export default function CommOSOnboarding() {
           <CardTitle className="flex items-center gap-2">
             {currentStep === 1 && (
               <>
-                <Sparkles className="w-5 h-5 text-emerald-600" />
+                <Sparkles className="w-5 h-5 text-primary" />
                 Name Your Room
               </>
             )}
             {currentStep === 2 && (
               <>
-                <MessageSquare className="w-5 h-5 text-emerald-600" />
+                <MessageSquare className="w-5 h-5 text-primary" />
                 Add Channels
               </>
             )}
             {currentStep === 3 && (
               <>
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <CheckCircle2 className="w-5 h-5 text-primary" />
                 Configure Settings
               </>
             )}
             {currentStep === 4 && (
               <>
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <CheckCircle2 className="w-5 h-5 text-primary" />
                 Review & Launch
               </>
             )}
@@ -292,7 +292,7 @@ export default function CommOSOnboarding() {
           {/* Step 4: Review */}
           {currentStep === 4 && (
             <div className="space-y-4">
-              <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-4 space-y-3">
+              <div className="bg-muted/30 dark:bg-slate-950/20 rounded-lg p-4 space-y-3">
                 <div>
                   <Label className="text-sm text-muted-foreground">Room Name</Label>
                   <p className="text-lg font-semibold">{roomName}</p>
@@ -357,7 +357,7 @@ export default function CommOSOnboarding() {
             ) : (
               <Button 
                 onClick={handleComplete} 
-                className="bg-emerald-600 hover:bg-emerald-700" 
+                className="bg-primary hover:bg-primary" 
                 data-testid="button-complete"
                 disabled={completeOnboardingMutation.isPending}
               >

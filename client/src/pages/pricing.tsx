@@ -108,7 +108,7 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-slate-gradient text-white">
       {/* Modern Header */}
-      <div className="bg-card-translucent border-b border-emerald-500/20 backdrop-blur-sm">
+      <div className="bg-card-translucent border-b border-primary/20 backdrop-blur-sm">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <AutoForceLogo size="sm" variant="full" />
           <div className="flex items-center gap-4">
@@ -123,7 +123,7 @@ export default function Pricing() {
             <Button
               size="sm"
               onClick={() => window.location.href = "/api/login"}
-              className="bg-emerald-gradient btn-scale"
+              className="bg-gradient-to-r from-primary to-accent btn-scale"
             >
               Launch Platform
             </Button>
@@ -134,7 +134,7 @@ export default function Pricing() {
       {/* Pricing Hero */}
       <section className="responsive-container responsive-spacing-y">
         <div className="text-center space-y-4 mb-12 animate-slide-up fix-overflow">
-          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 mb-2">
+          <Badge className="bg-muted/30/10 text-primary border-primary/20 mb-2">
             <Sparkles className="h-3 w-3 mr-1" />
             Enterprise-Grade ROI
           </Badge>
@@ -152,13 +152,13 @@ export default function Pricing() {
             <Card
               key={tier.name}
               className={`card-interactive hover-lift p-8 space-y-6 relative animate-slide-up ${
-                tier.popular ? "border-emerald-500/50" : ""
+                tier.popular ? "border-primary/50" : ""
               }`}
               style={{ animationDelay: `${index * 0.1}s` }}
               data-testid={`card-pricing-${tier.name.toLowerCase().replace(/\s+/g, "-")}`}
             >
               {tier.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-gradient text-white border-none">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white border-none">
                   Best Value
                 </Badge>
               )}
@@ -173,8 +173,8 @@ export default function Pricing() {
                 
                 {/* ROI Badge */}
                 <div className="flex items-center gap-2 pt-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  <span className="text-sm font-semibold text-emerald-400">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold text-primary">
                     {tier.roi}
                   </span>
                   <span className="text-xs text-slate-500">
@@ -202,7 +202,7 @@ export default function Pricing() {
               <Button
                 className={`w-full h-11 btn-scale ${
                   tier.popular
-                    ? "bg-emerald-gradient"
+                    ? "bg-gradient-to-r from-primary to-accent"
                     : ""
                 }`}
                 variant={tier.popular ? "default" : "outline"}
@@ -219,7 +219,7 @@ export default function Pricing() {
                     className="flex items-start gap-3 text-sm"
                   >
                     {feature.included ? (
-                      <Check className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                     ) : (
                       <X className="h-5 w-5 text-slate-600 flex-shrink-0 mt-0.5" />
                     )}
@@ -276,12 +276,12 @@ export default function Pricing() {
                   netSavings: "$300k+/yr"
                 },
               ].map((breakdown) => (
-                <div key={breakdown.plan} className="bg-slate-900/50 border border-emerald-500/20 rounded-lg p-6 space-y-4">
+                <div key={breakdown.plan} className="bg-slate-900/50 border border-primary/20 rounded-lg p-6 space-y-4">
                   <div className="space-y-2">
                     <h3 className="font-semibold text-lg text-white">
                       {breakdown.plan}
                     </h3>
-                    <div className="text-2xl font-bold text-emerald-400 font-mono">
+                    <div className="text-2xl font-bold text-primary font-mono">
                       {breakdown.price}
                     </div>
                   </div>
@@ -292,7 +292,7 @@ export default function Pricing() {
                     </div>
                     {breakdown.replaces.map((item) => (
                       <div key={item} className="flex items-center gap-2 text-slate-300">
-                        <Check className="h-3 w-3 text-emerald-400" />
+                        <Check className="h-3 w-3 text-primary" />
                         {item}
                       </div>
                     ))}
@@ -305,7 +305,7 @@ export default function Pricing() {
                     </div>
                     <div className="flex justify-between text-sm font-semibold pt-2">
                       <span className="text-white">Net savings:</span>
-                      <span className="text-emerald-400 font-mono text-lg">+{breakdown.netSavings}</span>
+                      <span className="text-primary font-mono text-lg">+{breakdown.netSavings}</span>
                     </div>
                   </div>
                 </div>
@@ -328,33 +328,33 @@ export default function Pricing() {
             </div>
 
             {/* AI Features & Token Usage */}
-            <div className="mt-4 p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+            <div className="mt-4 p-6 bg-muted/30/5 border border-primary/20 rounded-lg">
               <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <Sparkles className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                 <div className="space-y-3">
                   <h3 className="font-semibold text-white">AI Features & Token Usage</h3>
                   <p className="text-sm text-slate-400">
-                    AI-powered features (HelpOS™ Support Bot, TrainingOS™ AI, Smart RFP Analysis, Platform Healing) operate on a <strong className="text-emerald-400">customer-pays usage model</strong> to ensure fair pricing as we scale.
+                    AI-powered features (HelpOS™ Support Bot, TrainingOS™ AI, Smart RFP Analysis, Platform Healing) operate on a <strong className="text-primary">customer-pays usage model</strong> to ensure fair pricing as we scale.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-3 pt-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-emerald-400">HelpOS™ Support Bot</div>
+                      <div className="text-xs font-semibold text-primary">HelpOS™ Support Bot</div>
                       <div className="text-xs text-slate-400">$0.002 per message • ~$0.50 avg per session</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-emerald-400">TrainingOS™ AI Tutor</div>
+                      <div className="text-xs font-semibold text-primary">TrainingOS™ AI Tutor</div>
                       <div className="text-xs text-slate-400">$0.003 per interaction • ~$2 avg per course</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-emerald-400">Smart RFP Analysis</div>
+                      <div className="text-xs font-semibold text-primary">Smart RFP Analysis</div>
                       <div className="text-xs text-slate-400">$0.10 per RFP document analyzed</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-emerald-400">Platform Healing AI</div>
+                      <div className="text-xs font-semibold text-primary">Platform Healing AI</div>
                       <div className="text-xs text-slate-400">$0.005 per diagnostic session</div>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 pt-2 border-t border-emerald-500/10">
+                  <p className="text-xs text-slate-500 pt-2 border-t border-primary/10">
                     <strong>Example:</strong> Professional plan with 50 employees using AI features moderately: Base $999/mo + ~$25/mo AI usage = $1,024/mo total (still saving $100k+/year vs. traditional staffing).
                   </p>
                 </div>
@@ -417,7 +417,7 @@ export default function Pricing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-emerald-500/20 bg-card-translucent backdrop-blur-sm">
+      <footer className="border-t border-primary/20 bg-card-translucent backdrop-blur-sm">
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-400">

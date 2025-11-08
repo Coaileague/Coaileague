@@ -263,7 +263,7 @@ export default function CustomRegister() {
               Already have an account?{" "}
               <button
                 onClick={() => setLocation("/login")}
-                className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline font-medium"
+                className="text-primary hover:text-primary dark:text-primary dark:hover:text-primary hover:underline font-medium"
                 data-testid="link-login"
               >
                 Sign in

@@ -86,7 +86,7 @@ export function MessageSearch({ roomId, trigger }: MessageSearchProps) {
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Search className="w-5 h-5 text-emerald-600" />
+            <Search className="w-5 h-5 text-primary" />
             Search Messages
           </DialogTitle>
           <DialogDescription>
@@ -196,7 +196,7 @@ export function MessageSearch({ roomId, trigger }: MessageSearchProps) {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <User className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <User className="w-4 h-4 text-primary flex-shrink-0" />
                     <span className="font-medium truncate">{result.senderName}</span>
                     <Badge variant="outline" className="flex-shrink-0">
                       {result.roomName}

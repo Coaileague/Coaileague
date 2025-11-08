@@ -326,10 +326,10 @@ export function WebRTCCall({ roomId, roomName, ws }: WebRTCCallProps) {
 
   if (callState.isIncoming) {
     return (
-      <Card className="border-emerald-600" data-testid="card-incoming-call">
+      <Card className="border-primary" data-testid="card-incoming-call">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <PhoneCall className="w-5 h-5 text-emerald-600 animate-pulse" />
+            <PhoneCall className="w-5 h-5 text-primary animate-pulse" />
             Incoming Call
           </CardTitle>
         </CardHeader>
@@ -340,7 +340,7 @@ export function WebRTCCall({ roomId, roomName, ws }: WebRTCCallProps) {
           <div className="flex gap-2">
             <Button 
               onClick={answerCall}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 bg-primary hover:bg-primary"
               data-testid="button-answer-call"
             >
               <Phone className="w-4 h-4 mr-2" />
@@ -367,7 +367,7 @@ export function WebRTCCall({ roomId, roomName, ws }: WebRTCCallProps) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Phone className="w-5 h-5 text-emerald-600" />
+              <Phone className="w-5 h-5 text-primary" />
               Active Call
             </span>
             <Badge variant="secondary">
