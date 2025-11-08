@@ -3330,6 +3330,14 @@ export const supportTickets = pgTable("support_tickets", {
   verifiedAt: timestamp("verified_at"),
   verifiedBy: varchar("verified_by").references(() => users.id), // Support staff who verified
 
+  // Organization-to-Platform Escalation
+  isEscalated: boolean("is_escalated").default(false), // Whether ticket escalated to platform support
+  escalatedAt: timestamp("escalated_at"), // When escalated
+  escalatedBy: varchar("escalated_by").references(() => users.id), // Org leader who escalated
+  escalatedReason: text("escalated_reason"), // Why escalated
+  platformAssignedTo: varchar("platform_assigned_to").references(() => users.id), // Platform support staff assigned
+  platformNotes: text("platform_notes"), // Internal platform support notes
+
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
