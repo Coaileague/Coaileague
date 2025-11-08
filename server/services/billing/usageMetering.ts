@@ -386,12 +386,17 @@ export class UsageMeteringService {
    */
   private async getUnitPrice(featureKey: string, usageType: string): Promise<number> {
     // Default pricing (per 1000 tokens/units)
+    // CRITICAL: Prices MUST exceed supplier costs to ensure profitability
+    // Gemini 2.0 Flash: ~$0.35/1K output tokens
+    // GPT-4o-mini: ~$0.60/1K output tokens
+    // GPT-5: Higher than GPT-4o-mini
     const defaultPricing: Record<string, number> = {
-      // HelpDesk AI (OpenAI GPT-3.5-turbo + Gemini)
-      'helpdesk_gemini_chat': 0.00003, // $0.03 per 1000 tokens (Gemini 2.0 Flash pricing)
-      'helpdesk_ai_greeting': 0.00002, // $0.02 per 1000 tokens (GPT-3.5-turbo)
-      'helpdesk_ai_response': 0.00002, // $0.02 per 1000 tokens (GPT-3.5-turbo)
-      'helpdesk_ai_analysis': 0.00002, // $0.02 per 1000 tokens (GPT-3.5-turbo)
+      // HelpDesk AI (Profitable pricing with 50%+ margin)
+      'helpdesk_gemini_chat': 0.50, // $0.50 per 1000 tokens (50% margin over Gemini 2.0 Flash)
+      'helpdesk_ai_greeting': 0.50, // $0.50 per 1000 tokens (covers GPT-4o-mini/GPT-5 with margin)
+      'helpdesk_ai_response': 0.90, // $0.90 per 1000 tokens (GPT-4o-mini responses with margin)
+      'helpdesk_ai_analysis': 0.50, // $0.50 per 1000 tokens (sentiment analysis with margin)
+      'helpdesk_ai_question': 0.90, // $0.90 per 1000 tokens (GPT-4o-mini Q&A with margin)
       
       // ScheduleOS
       'scheduleos_ai_generation': 0.05, // $0.05 per generation

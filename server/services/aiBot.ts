@@ -1,7 +1,8 @@
 // AI Bot service for HelpOS - greets and assists customers until human help arrives
-// Subscriber-Pays Model: WorkforceOS subscribers pay for AI usage, we track costs and bill monthly
+// CRITICAL: Client-pays-all model - All AI usage is tracked and billed via UsageMeteringService
 import OpenAI from "openai";
 import { storage } from '../storage';
+import { usageMeteringService } from '../services/billing/usageMetering';
 
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -146,25 +147,25 @@ If unsure, direct to human support team.`
     const totalTokens = usage?.total_tokens || 0;
     const totalCost = calculateCost(promptTokens, completionTokens);
     
-    // Log AI usage for subscriber billing (they pay, we don't)
-    const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    await storage.logAiUsage({
-      conversationId,
+    // CRITICAL: Track AI usage for billing via NEW usageMeteringService
+    // This ensures all token usage is properly billed to customer workspaces
+    await usageMeteringService.recordUsage({
       workspaceId,
       userId,
-      messageId: null, // Will be set after message is saved
-      requestType: 'question',
-      model: AI_MODEL,
-      promptTokens,
-      completionTokens,
-      totalTokens,
-      promptCost: ((promptTokens / 1_000_000) * PRICING[AI_MODEL].input).toString(),
-      completionCost: ((completionTokens / 1_000_000) * PRICING[AI_MODEL].output).toString(),
-      totalCost: totalCost.toString(),
-      userTier: isSubscriber ? 'subscriber' : 'free_guest',
-      usageCount: usageCount + 1,
-      billingMonth
+      featureKey: 'helpdesk_ai_question',
+      usageType: 'token',
+      usageAmount: totalTokens,
+      usageUnit: 'tokens',
+      activityType: 'helpos_ai_question',
+      metadata: {
+        model: AI_MODEL,
+        conversationId,
+        promptTokens,
+        completionTokens,
+        isSubscriber,
+      }
     });
+    console.log(`💰 HelpOS AI - Question answered (${totalTokens} tokens) - Billed to workspace: ${workspaceId}`);
     
     // Increment usage count for free guests
     if (!isSubscriber) {
