@@ -9,6 +9,8 @@ Do not make changes to the folder `Z`.
 Do not make changes to the file `Y`.
 All branding must be 100% AutoForce™ (not WorkforceOS).
 FTC COMPLIANCE: All marketing claims must be factual and verifiable. Avoid monopolistic language.
+  - **Latest Audit (Nov 9, 2025)**: ✅ FULLY COMPLIANT - All 8 OS modules verified against marketing claims. See `FTC_COMPLIANCE_VERIFICATION.md` for detailed evidence.
+  - **Key Verified Features**: GPS + photo time tracking, automated payroll/billing, AI search/analytics, intelligent scheduling, onboarding workflows.
 DESIGN: Professional Fortune 500 aesthetic - NO bright glowing colors (green-500, blue-500, amber-500, etc.). Use muted professional tones from design_guidelines.md only.
 No Refresh Buttons.
 Universal Back Navigation: Every page, modal, dialog needs clear exit/cancel/back buttons.
@@ -36,7 +38,8 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
     - **Employee Lifecycle**: Onboarding, contract management, shift management, timesheet and time-off requests.
     - **Compliance & Policy**: I-9 re-verification tracking, Policy Management (PolicIOS™) with version control.
     - **Expense Management**: ExpenseOS™ for reimbursement, tracking, mileage calculation.
-    - **Scheduling**: ScheduleOS™ with mobile-optimized shift calendars and **hybrid constraint solver + GPT-4 validation** for intelligent schedule generation (greedy constraint satisfaction algorithm optimizes assignments based on reliability/location/compliance, GPT-4 validates and explains results).
+    - **Scheduling**: ScheduleOS™ with mobile-optimized shift calendars and **hybrid constraint solver + GPT-4 validation** for intelligent schedule generation (greedy constraint satisfaction algorithm optimizes assignments based on reliability/location/compliance, GPT-4 validates and explains results). Marketing accurately describes this as "intelligent scheduling" (not "optimal").
+    - **Time Tracking**: TimeOS™ with **GPS-verified clock-in/out** (navigator.geolocation API, 50m accuracy validation) and **photo verification** (MediaDevices API, front-facing camera, base64 JPEG encoding). Fully implemented in `client/src/pages/time-tracking.tsx` and `server/routes.ts`.
     - **Asset Management**: AssetOS™ for tracking vehicles and equipment.
     - **AI & Analytics**: RecordOS™ and InsightOS™ for natural language search, autonomous analytics, and predictive insights.
     - **Platform Administration**: ROOT Admin Dashboard, organization onboarding, and HelpDesk queue management.
