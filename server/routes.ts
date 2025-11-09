@@ -1241,7 +1241,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validated = payrollSchema.parse(req.body);
-      const workspace = await storage.updateWorkspace(workspaceId, validated);
+      
+      // Apply automation update with anchor seeding if transitioning to biweekly
+      const workspace = await applyAutomationUpdate({
+        workspaceId,
+        validated,
+        scheduleField: 'payrollSchedule',
+        dayOfWeekField: 'payrollDayOfWeek',
+        anchorField: 'payrollBiweeklyAnchor',
+      });
 
       // Audit log
       console.log(`[AUDIT] User ${userId} (${role}) updated payroll automation for workspace ${workspaceId}`);
@@ -1287,7 +1295,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validated = schedulingSchema.parse(req.body);
-      const workspace = await storage.updateWorkspace(workspaceId, validated);
+      
+      // Apply automation update with anchor seeding if transitioning to biweekly
+      const workspace = await applyAutomationUpdate({
+        workspaceId,
+        validated,
+        scheduleField: 'scheduleGenerationInterval',
+        dayOfWeekField: 'scheduleDayOfWeek',
+        anchorField: 'scheduleBiweeklyAnchor',
+      });
 
       // Audit log
       console.log(`[AUDIT] User ${userId} (${role}) updated scheduling automation for workspace ${workspaceId}`);
