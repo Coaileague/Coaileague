@@ -366,7 +366,8 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
     let score = employee.reliabilityScore; // Start with 0-100 reliability
 
     // HARD CONSTRAINT: Check availability
-    const shiftDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][shift.startTime.getDay()];
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+    const shiftDay = dayNames[shift.startTime.getDay()] as keyof typeof employee.availability;
     const availability = employee.availability[shiftDay];
     
     if (!availability || !availability.available) {
