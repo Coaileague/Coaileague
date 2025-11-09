@@ -167,18 +167,18 @@ export default function Landing() {
                   </Button>
                 </div>
 
-                {/* Trust Indicators */}
+                {/* Trust Indicators - Professional Muted Tones */}
                 <div className="flex flex-wrap gap-4 sm:gap-6 pt-2 sm:pt-4 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Shield className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-green-500 shrink-0" />
+                    <Shield className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary shrink-0" />
                     <span className="truncate">SOC 2 Compliant</span>
                   </div>
                   <div className="flex items-center gap-2 min-w-0">
-                    <Lock className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-blue-500 shrink-0" />
+                    <Lock className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary shrink-0" />
                     <span className="truncate">256-bit Encryption</span>
                   </div>
                   <div className="flex items-center gap-2 min-w-0">
-                    <Award className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-amber-500 shrink-0" />
+                    <Award className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary shrink-0" />
                     <span className="truncate">99.9% Uptime</span>
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default function Landing() {
                 <ul className="space-y-2 max-w-full">
                   {["GPS location verification", "Photo proof required", "Real-time tracking", "Automatic overtime calculations"].map((feature) => (
                     <li key={feature} className="flex items-center gap-2 min-w-0">
-                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
+                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-primary shrink-0" />
                       <span className="text-sm sm:text-base">{feature}</span>
                     </li>
                   ))}
@@ -299,7 +299,7 @@ export default function Landing() {
                 <ul className="space-y-2 max-w-full">
                   {["Drag-and-drop interface", "Conflict detection", "Mobile shift swaps", "AI optimization (beta)"].map((feature) => (
                     <li key={feature} className="flex items-center gap-2 min-w-0">
-                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
+                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-primary shrink-0" />
                       <span className="text-sm sm:text-base">{feature}</span>
                     </li>
                   ))}
@@ -343,7 +343,7 @@ export default function Landing() {
                 <ul className="space-y-2 max-w-full">
                   {["Live dashboards", "Cost forecasting", "Performance metrics", "Custom reports"].map((feature) => (
                     <li key={feature} className="flex items-center gap-2 min-w-0">
-                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
+                      <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-primary shrink-0" />
                       <span className="text-sm sm:text-base">{feature}</span>
                     </li>
                   ))}
@@ -405,7 +405,7 @@ export default function Landing() {
                 description: "GPS-verified time tracking with photo proof. Eliminate buddy punching and time theft.",
                 features: ["GPS verification", "Photo required", "Location accuracy", "Real-time tracking"],
                 badge: "Live",
-                color: "text-teal-500",
+                color: "text-accent",
               },
               {
                 icon: DollarSign,
@@ -413,7 +413,7 @@ export default function Landing() {
                 description: "Streamlined payroll with automated calculations. Full automation coming soon.",
                 features: ["Payroll tracking", "Wage calculations", "Multi-state ready", "Compliance"],
                 badge: "In Development",
-                color: "text-green-500",
+                color: "text-primary",
               },
               {
                 icon: CreditCard,
@@ -429,7 +429,7 @@ export default function Landing() {
                 description: "Smart hiring and digital onboarding. From applicant to employee in hours.",
                 features: ["ATS system", "E-signatures", "Compliance docs", "Onboarding flow"],
                 badge: "Live",
-                color: "text-green-500",
+                color: "text-primary",
               },
               {
                 icon: FileText,
@@ -437,7 +437,7 @@ export default function Landing() {
                 description: "Industry-specific compliance reports with photo requirements.",
                 features: ["Templates", "Photo capture", "Approvals", "Client delivery"],
                 badge: "Live",
-                color: "text-teal-500",
+                color: "text-accent",
               },
               {
                 icon: BarChart3,
@@ -445,7 +445,7 @@ export default function Landing() {
                 description: "Real-time business intelligence. Track labor costs, revenue, performance.",
                 features: ["Dashboards", "Forecasting", "Cost analysis", "ROI metrics"],
                 badge: "Live",
-                color: "text-pink-500",
+                color: "text-secondary",
               },
               {
                 icon: Headphones,
@@ -536,7 +536,7 @@ export default function Landing() {
                           {row.us === true ? (
                             <div className="flex justify-center">
                               <div className="h-6 w-6 rounded-full bg-muted/20 flex items-center justify-center">
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                <CheckCircle2 className="h-4 w-4 text-primary" />
                               </div>
                             </div>
                           ) : (
@@ -661,7 +661,7 @@ export default function Landing() {
                       key={feature}
                       className="flex items-start gap-2 text-sm"
                     >
-                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                       <span>{feature}</span>
                     </li>
                   ))}
