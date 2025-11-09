@@ -49,6 +49,13 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
     - **RecordOS™ - AI-Powered Natural Language Search**: Semantic search using GPT-3.5-turbo to convert natural language queries into structured searches across employees, clients, invoices, shifts. Includes AI usage tracking and billing.
     - **InsightOS™ - AI Analytics & Autonomous Insights**: Real-time GPT-4o-powered analytics that analyzes workspace metrics (employees, clients, labor costs, revenue) to generate 3-5 actionable insights with priorities, confidence scores, suggested actions, and estimated business impact. Includes AI usage tracking and billing.
     - **DispatchOS™ - Computer-Aided Dispatch**: Backend implementation is complete, featuring GPS tracking, unit status management, incident queue, dispatcher command center, and comprehensive audit logging. Real-time updates are handled via WebSockets. (Frontend for map visualization is pending).
+    - **Autonomous Automation System**: Production-ready anchor-based biweekly automation eliminates month-boundary drift for invoicing, payroll, and scheduling. Features include:
+        - **Anchor-Based Biweekly Scheduling**: Seeded 14 days before recent occurrence to ensure first run happens on next scheduled day (no 2-week delay). Anchors advance every 14 days when schedule matches, maintaining consistent cadence even with zero work output.
+        - **Daily Cron Execution**: All three jobs (BillOS™ invoicing 2 AM, ScheduleOS™ scheduling 11 PM, PayrollOS™ payroll 3 AM) run daily, supporting weekly, biweekly, monthly, and semi-monthly cadences.
+        - **Transaction Safety**: All anchor seeding and advancement operations wrapped in isolated row-scoped transactions for atomicity.
+        - **Cadence Preservation**: Anchors advance on schedule match (not conditional on work output), preventing 4-week gaps when no invoices/schedules/payroll items are generated.
+        - **Drift Detection**: Warns if anchor >30 days behind current date, enabling proactive monitoring.
+        - **Backfill Support**: Standalone script seeds anchors for existing workspaces, ensuring smooth transition to anchor-based system.
 - **Security**: Includes Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 - **Production Monitoring**: Comprehensive observability infrastructure with error logging, performance metrics tracking, health checks, slow request detection, and graceful shutdown handling.
 
