@@ -1106,6 +1106,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update workspace automation settings - Invoicing
+  app.patch('/api/workspace/automation/invoicing', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import("./rbac");
+      const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
+      
+      if (error || !workspaceId) {
+        return res.status(404).json({ message: error || "Workspace not found" });
+      }
+
+      // Only org owners and admins can update automation settings
+      if (!['org_owner', 'org_admin'].includes(role || '')) {
+        return res.status(403).json({ message: "Only organization owners and admins can update automation settings" });
+      }
+
+      // Validate invoicing automation settings
+      const invoicingSchema = insertWorkspaceSchema.pick({
+        autoInvoicingEnabled: true,
+        invoiceSchedule: true,
+        invoiceCustomDays: true,
+        invoiceGenerationDay: true,
+      }).refine((data) => {
+        if (data.invoiceSchedule === 'custom' && !data.invoiceCustomDays) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "invoiceCustomDays is required when invoiceSchedule is 'custom'",
+        path: ["invoiceCustomDays"],
+      });
+
+      const validated = invoicingSchema.parse(req.body);
+      const workspace = await storage.updateWorkspace(workspaceId, validated);
+
+      // Audit log
+      console.log(`[AUDIT] User ${userId} (${role}) updated invoicing automation for workspace ${workspaceId}`);
+      
+      res.json(workspace);
+    } catch (error: any) {
+      console.error("Error updating invoicing automation:", error);
+      res.status(400).json({ message: error.message || "Failed to update invoicing automation" });
+    }
+  });
+
+  // Update workspace automation settings - Payroll
+  app.patch('/api/workspace/automation/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import("./rbac");
+      const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
+      
+      if (error || !workspaceId) {
+        return res.status(404).json({ message: error || "Workspace not found" });
+      }
+
+      // Only org owners and admins can update automation settings
+      if (!['org_owner', 'org_admin'].includes(role || '')) {
+        return res.status(403).json({ message: "Only organization owners and admins can update automation settings" });
+      }
+
+      // Validate payroll automation settings
+      const payrollSchema = insertWorkspaceSchema.pick({
+        autoPayrollEnabled: true,
+        payrollSchedule: true,
+        payrollCustomDays: true,
+        payrollProcessDay: true,
+        payrollCutoffDay: true,
+      }).refine((data) => {
+        if (data.payrollSchedule === 'custom' && !data.payrollCustomDays) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "payrollCustomDays is required when payrollSchedule is 'custom'",
+        path: ["payrollCustomDays"],
+      });
+
+      const validated = payrollSchema.parse(req.body);
+      const workspace = await storage.updateWorkspace(workspaceId, validated);
+
+      // Audit log
+      console.log(`[AUDIT] User ${userId} (${role}) updated payroll automation for workspace ${workspaceId}`);
+      
+      res.json(workspace);
+    } catch (error: any) {
+      console.error("Error updating payroll automation:", error);
+      res.status(400).json({ message: error.message || "Failed to update payroll automation" });
+    }
+  });
+
+  // Update workspace automation settings - Scheduling
+  app.patch('/api/workspace/automation/scheduling', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import("./rbac");
+      const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
+      
+      if (error || !workspaceId) {
+        return res.status(404).json({ message: error || "Workspace not found" });
+      }
+
+      // Only org owners and admins can update automation settings
+      if (!['org_owner', 'org_admin'].includes(role || '')) {
+        return res.status(403).json({ message: "Only organization owners and admins can update automation settings" });
+      }
+
+      // Validate scheduling automation settings
+      const schedulingSchema = insertWorkspaceSchema.pick({
+        autoSchedulingEnabled: true,
+        scheduleGenerationInterval: true,
+        scheduleCustomDays: true,
+        scheduleAdvanceNoticeDays: true,
+        scheduleGenerationDay: true,
+      }).refine((data) => {
+        if (data.scheduleGenerationInterval === 'custom' && !data.scheduleCustomDays) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "scheduleCustomDays is required when scheduleGenerationInterval is 'custom'",
+        path: ["scheduleCustomDays"],
+      });
+
+      const validated = schedulingSchema.parse(req.body);
+      const workspace = await storage.updateWorkspace(workspaceId, validated);
+
+      // Audit log
+      console.log(`[AUDIT] User ${userId} (${role}) updated scheduling automation for workspace ${workspaceId}`);
+      
+      res.json(workspace);
+    } catch (error: any) {
+      console.error("Error updating scheduling automation:", error);
+      res.status(400).json({ message: error.message || "Failed to update scheduling automation" });
+    }
+  });
+
   // Update workspace organization info (Platform Admin Staff ONLY)
   app.patch('/api/admin/workspace/:workspaceId', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
