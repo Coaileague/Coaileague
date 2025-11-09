@@ -37,6 +37,7 @@ import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from 
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
 import { queueManager } from './services/helpOsQueue';
 import { HelpOSAI } from './helpos-ai';
+import { seedAnchor } from './services/utils/scheduling';
 import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,

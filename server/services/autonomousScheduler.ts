@@ -94,13 +94,15 @@ async function runNightlyInvoiceGeneration() {
         } else if (schedule === 'biweekly') {
           const dayOfWeekSetting = workspace.invoiceDayOfWeek ?? 1; // Default Monday
           
-          // Seed anchor if not set
+          // Seed anchor if not set (transactional)
           if (!workspace.invoiceBiweeklyAnchor) {
             console.log(`   🌱 Seeding biweekly anchor for first run...`);
             const anchor = seedAnchor(dayOfWeekSetting, today);
-            await db.update(workspaces)
-              .set({ invoiceBiweeklyAnchor: anchor })
-              .where(eq(workspaces.id, workspace.id));
+            await db.transaction(async (tx) => {
+              await tx.update(workspaces)
+                .set({ invoiceBiweeklyAnchor: anchor })
+                .where(eq(workspaces.id, workspace.id));
+            });
             workspace.invoiceBiweeklyAnchor = anchor;
           }
           
@@ -137,8 +139,12 @@ async function runNightlyInvoiceGeneration() {
             console.log(`✅ Generated ${invoices.length} invoice(s) for ${workspace.name}`);
             totalInvoicesGenerated += invoices.length;
             successCount++;
-            
-            // Update lastRunAt timestamp
+          } else {
+            console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
+          }
+          
+          // Update lastRunAt and advance anchor (transactional) - ALWAYS run to maintain cadence
+          await db.transaction(async (tx) => {
             const updateData: any = { lastInvoiceRunAt: today };
             
             // Advance biweekly anchor if applicable
@@ -147,12 +153,10 @@ async function runNightlyInvoiceGeneration() {
               updateData.invoiceBiweeklyAnchor = newAnchor;
             }
             
-            await db.update(workspaces)
+            await tx.update(workspaces)
               .set(updateData)
               .where(eq(workspaces.id, workspace.id));
-          } else {
-            console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
-          }
+          });
         } else {
           console.log(`   ℹ️  Not an invoice generation date for this schedule, skipping`);
         }
@@ -235,13 +239,15 @@ async function runWeeklyScheduleGeneration() {
         } else if (interval === 'biweekly') {
           const dayOfWeekSetting = workspace.scheduleDayOfWeek ?? 0; // Default Sunday
           
-          // Seed anchor if not set
+          // Seed anchor if not set (transactional)
           if (!workspace.scheduleBiweeklyAnchor) {
             console.log(`   🌱 Seeding biweekly anchor for first run...`);
             const anchor = seedAnchor(dayOfWeekSetting, today);
-            await db.update(workspaces)
-              .set({ scheduleBiweeklyAnchor: anchor })
-              .where(eq(workspaces.id, workspace.id));
+            await db.transaction(async (tx) => {
+              await tx.update(workspaces)
+                .set({ scheduleBiweeklyAnchor: anchor })
+                .where(eq(workspaces.id, workspace.id));
+            });
             workspace.scheduleBiweeklyAnchor = anchor;
           }
           
@@ -268,18 +274,20 @@ async function runWeeklyScheduleGeneration() {
           console.log(`   ℹ️  Shift templates not yet configured for ${workspace.name}`);
           console.log(`   (Requires shift requirement templates in workspace settings)`);
           
-          // Update lastRunAt even when skipping (for tracking purposes)
-          const updateData: any = { lastScheduleRunAt: today };
-          
-          // Advance biweekly anchor if applicable
-          if (interval === 'biweekly' && workspace.scheduleBiweeklyAnchor) {
-            const newAnchor = advanceAnchor(workspace.scheduleBiweeklyAnchor);
-            updateData.scheduleBiweeklyAnchor = newAnchor;
-          }
-          
-          await db.update(workspaces)
-            .set(updateData)
-            .where(eq(workspaces.id, workspace.id));
+          // Update lastRunAt and advance anchor (transactional)
+          await db.transaction(async (tx) => {
+            const updateData: any = { lastScheduleRunAt: today };
+            
+            // Advance biweekly anchor if applicable
+            if (interval === 'biweekly' && workspace.scheduleBiweeklyAnchor) {
+              const newAnchor = advanceAnchor(workspace.scheduleBiweeklyAnchor);
+              updateData.scheduleBiweeklyAnchor = newAnchor;
+            }
+            
+            await tx.update(workspaces)
+              .set(updateData)
+              .where(eq(workspaces.id, workspace.id));
+          });
           
           // Example of how it would work:
           /*
@@ -369,13 +377,15 @@ async function runAutomaticPayrollProcessing() {
         } else if (paySchedule === 'biweekly') {
           const dayOfWeekSetting = workspace.payrollDayOfWeek ?? 1; // Default Monday
           
-          // Seed anchor if not set
+          // Seed anchor if not set (transactional)
           if (!workspace.payrollBiweeklyAnchor) {
             console.log(`   🌱 Seeding biweekly anchor for first run...`);
             const anchor = seedAnchor(dayOfWeekSetting, today);
-            await db.update(workspaces)
-              .set({ payrollBiweeklyAnchor: anchor })
-              .where(eq(workspaces.id, workspace.id));
+            await db.transaction(async (tx) => {
+              await tx.update(workspaces)
+                .set({ payrollBiweeklyAnchor: anchor })
+                .where(eq(workspaces.id, workspace.id));
+            });
             workspace.payrollBiweeklyAnchor = anchor;
           }
           
@@ -413,37 +423,38 @@ async function runAutomaticPayrollProcessing() {
             )
             .limit(1);
 
-          if (!owner || !owner.userId) {
-            console.log(`⚠️  No owner found for ${workspace.name}, skipping`);
-            continue;
-          }
+          if (owner && owner.userId) {
+            // Process automated payroll
+            const result = await PayrollAutomationEngine.processAutomatedPayroll(
+              workspace.id,
+              owner.userId
+            );
 
-          // Process automated payroll
-          const result = await PayrollAutomationEngine.processAutomatedPayroll(
-            workspace.id,
-            owner.userId
-          );
-
-          console.log(`✅ Payroll processed for ${workspace.name}:`);
-          console.log(`   Employees: ${result.totalEmployees}`);
-          console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);
-          console.log(`   Net Pay: $${result.totalNetPay.toFixed(2)}`);
-          
-          // Update lastRunAt timestamp
-          const updateData: any = { lastPayrollRunAt: today };
-          
-          // Advance biweekly anchor if applicable
-          if (paySchedule === 'biweekly' && workspace.payrollBiweeklyAnchor) {
-            const newAnchor = advanceAnchor(workspace.payrollBiweeklyAnchor);
-            updateData.payrollBiweeklyAnchor = newAnchor;
+            console.log(`✅ Payroll processed for ${workspace.name}:`);
+            console.log(`   Employees: ${result.totalEmployees}`);
+            console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);
+            console.log(`   Net Pay: $${result.totalNetPay.toFixed(2)}`);
+            
+            totalPayrollRuns++;
+            successCount++;
+          } else {
+            console.log(`⚠️  No owner found for ${workspace.name}, skipping payroll`);
           }
           
-          await db.update(workspaces)
-            .set(updateData)
-            .where(eq(workspaces.id, workspace.id));
-          
-          totalPayrollRuns++;
-          successCount++;
+          // Update lastRunAt and advance anchor (transactional) - ALWAYS run to maintain cadence
+          await db.transaction(async (tx) => {
+            const updateData: any = { lastPayrollRunAt: today };
+            
+            // Advance biweekly anchor if applicable
+            if (paySchedule === 'biweekly' && workspace.payrollBiweeklyAnchor) {
+              const newAnchor = advanceAnchor(workspace.payrollBiweeklyAnchor);
+              updateData.payrollBiweeklyAnchor = newAnchor;
+            }
+            
+            await tx.update(workspaces)
+              .set(updateData)
+              .where(eq(workspaces.id, workspace.id));
+          });
         } else {
           console.log(`   ℹ️  Not a pay period date, skipping`);
         }
