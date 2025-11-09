@@ -39,18 +39,16 @@ export default function RecordOS() {
   // Search mutation
   const searchMutation = useMutation({
     mutationFn: async ({ query, searchType }: { query: string; searchType: string }) => {
-      return await apiRequest('/api/search', {
-        method: 'POST',
-        body: JSON.stringify({ query, searchType }),
-      });
+      const response = await apiRequest('POST', '/api/search', { query, searchType });
+      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setResults(data.results);
       setMetadata(data.metadata);
       queryClient.invalidateQueries({ queryKey: ['/api/search/history'] });
       toast({
-        title: "Search complete",
-        description: `Found ${data.metadata.totalResults} results in ${data.metadata.executionTimeMs}ms`,
+        title: data.metadata.aiPowered ? "AI Search Complete" : "Search Complete",
+        description: `Found ${data.metadata.totalResults} results in ${data.metadata.executionTimeMs}ms${data.metadata.aiPowered ? ' (AI-powered)' : ''}`,
       });
     },
     onError: () => {

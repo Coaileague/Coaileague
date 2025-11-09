@@ -60,15 +60,14 @@ export default function InsightOS() {
   // Generate insights mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/insights/generate', {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', '/api/insights/generate', {});
+      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
       toast({
-        title: "Insights generated",
-        description: `Generated ${data.count} new AI insights`,
+        title: data.aiPowered ? "AI Insights Generated" : "Insights Generated",
+        description: `Generated ${data.count} new insights${data.aiPowered ? ' using GPT-4o' : ''}`,
       });
     },
     onError: () => {
@@ -83,10 +82,8 @@ export default function InsightOS() {
   // Dismiss insight mutation
   const dismissMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return await apiRequest(`/api/insights/dismiss/${id}`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      });
+      const response = await apiRequest('POST', `/api/insights/dismiss/${id}`, { reason });
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
