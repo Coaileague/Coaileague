@@ -392,9 +392,9 @@ export default function Landing() {
               {
                 icon: CalendarClock,
                 title: "ScheduleOS™",
-                description: "Smart scheduling with shift management. AI auto-scheduling coming soon.",
-                features: ["Smart scheduling", "Conflict detection", "Mobile access", "Shift swaps"],
-                badge: "Live + AI Soon",
+                description: "AI-powered auto-scheduling with GPT-4. Generate optimal schedules in seconds.",
+                features: ["GPT-4 scheduling", "Conflict detection", "Mobile access", "Risk scoring"],
+                badge: "AI Powered",
                 color: "text-primary",
               },
               {
@@ -408,9 +408,9 @@ export default function Landing() {
               {
                 icon: DollarSign,
                 title: "PayrollOS™",
-                description: "Streamlined payroll with automated calculations. Full automation coming soon.",
-                features: ["Payroll tracking", "Wage calculations", "Multi-state ready", "Compliance"],
-                badge: "In Development",
+                description: "Fully automated payroll processing. Zero-touch calculation with tax withholding.",
+                features: ["Auto-payroll", "Tax calculations", "Multi-state ready", "Compliance"],
+                badge: "Live",
                 color: "text-primary",
               },
               {
