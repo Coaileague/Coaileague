@@ -1107,6 +1107,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * Shared helper for automation updates with biweekly anchor seeding
+   * Handles: load workspace → detect biweekly transition → seed anchor → update in transaction
+   */
+  async function applyAutomationUpdate(params: {
+    workspaceId: string;
+    validated: any;
+    scheduleField: 'invoiceSchedule' | 'payrollSchedule' | 'scheduleGenerationInterval';
+    dayOfWeekField: 'invoiceDayOfWeek' | 'payrollDayOfWeek' | 'scheduleDayOfWeek';
+    anchorField: 'invoiceBiweeklyAnchor' | 'payrollBiweeklyAnchor' | 'scheduleBiweeklyAnchor';
+  }) {
+    const { workspaceId, validated, scheduleField, dayOfWeekField, anchorField } = params;
+    
+    // Load current workspace to detect biweekly transition
+    const currentWorkspace = await storage.getWorkspace(workspaceId);
+    if (!currentWorkspace) {
+      throw new Error('Workspace not found');
+    }
+    
+    const newSchedule = validated[scheduleField];
+    const currentSchedule = currentWorkspace[scheduleField];
+    const currentAnchor = currentWorkspace[anchorField];
+    
+    // Determine if we need to seed an anchor
+    const shouldSeedAnchor = (
+      newSchedule === 'biweekly' && // New schedule is biweekly
+      (currentSchedule !== 'biweekly' || !currentAnchor) // Either transitioning TO biweekly OR anchor missing
+    );
+    
+    // If seeding anchor, compute it and merge into update
+    if (shouldSeedAnchor) {
+      const dayOfWeek = validated[dayOfWeekField] ?? currentWorkspace[dayOfWeekField] ?? 1; // Default Monday
+      const anchor = seedAnchor(dayOfWeek, new Date());
+      validated[anchorField] = anchor;
+      console.log(`🌱 Seeding ${anchorField} for workspace ${workspaceId} (day ${dayOfWeek})`);
+    }
+    
+    // Update workspace in transaction
+    return await db.transaction(async (tx) => {
+      const [updated] = await tx.update(workspaces)
+        .set(validated)
+        .where(eq(workspaces.id, workspaceId))
+        .returning();
+      return updated;
+    });
+  }
+
   // Update workspace automation settings - Invoicing
   app.patch('/api/workspace/automation/invoicing', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1140,7 +1187,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validated = invoicingSchema.parse(req.body);
-      const workspace = await storage.updateWorkspace(workspaceId, validated);
+      
+      // Apply automation update with anchor seeding if transitioning to biweekly
+      const workspace = await applyAutomationUpdate({
+        workspaceId,
+        validated,
+        scheduleField: 'invoiceSchedule',
+        dayOfWeekField: 'invoiceDayOfWeek',
+        anchorField: 'invoiceBiweeklyAnchor',
+      });
 
       // Audit log
       console.log(`[AUDIT] User ${userId} (${role}) updated invoicing automation for workspace ${workspaceId}`);
