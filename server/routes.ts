@@ -5156,9 +5156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workspaceId: workspace.id,
         clockIn: new Date().toISOString(),
         clockInIpAddress: ipAddress,
-        clockInGpsLatitude: gpsLatitude,
-        clockInGpsLongitude: gpsLongitude,
-        clockInGpsAccuracy: gpsAccuracy,
+        clockInLatitude: gpsLatitude,
+        clockInLongitude: gpsLongitude,
+        clockInAccuracy: gpsAccuracy,
       });
 
       const timeEntry = await storage.createTimeEntry(validated);
@@ -5211,9 +5211,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalHours,
         totalAmount,
         clockOutIpAddress: ipAddress,
-        clockOutGpsLatitude: gpsLatitude,
-        clockOutGpsLongitude: gpsLongitude,
-        clockOutGpsAccuracy: gpsAccuracy,
+        clockOutLatitude: gpsLatitude,
+        clockOutLongitude: gpsLongitude,
+        clockOutAccuracy: gpsAccuracy,
       });
 
       // GEO-COMPLIANCE: Detect IP anomaly (different IP between clock-in and clock-out)

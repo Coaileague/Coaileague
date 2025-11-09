@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Play, Square, Calendar, DollarSign, User, Building2, Download, Filter, Home, ArrowLeft } from "lucide-react";
+import { Clock, Play, Square, Calendar, DollarSign, User, Building2, Download, Filter, Home, ArrowLeft, Camera, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -42,6 +42,15 @@ export default function TimeTracking() {
   const [notes, setNotes] = useState("");
   const [selectedShift, setSelectedShift] = useState<string>("");
   const [now, setNow] = useState(Date.now());
+  
+  // GPS and Photo states
+  const [gpsData, setGpsData] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [isCapturingGPS, setIsCapturingGPS] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
 
   // Filtering states
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
@@ -108,20 +117,36 @@ export default function TimeTracking() {
   }, [allTimeEntries, workspaceRole, currentEmployee]);
 
   const clockInMutation = useMutation({
-    mutationFn: async (data: { employeeId: string; clientId?: string; shiftId?: string; notes?: string; hourlyRate: string }) => {
+    mutationFn: async (data: { 
+      employeeId: string; 
+      clientId?: string; 
+      shiftId?: string; 
+      notes?: string; 
+      hourlyRate: string;
+      gpsLatitude?: number;
+      gpsLongitude?: number;
+      gpsAccuracy?: number;
+      photoUrl?: string;
+    }) => {
       return apiRequest("POST", "/api/time-entries/clock-in", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
       toast({
         title: "Clocked In",
-        description: "Time tracking started successfully",
+        description: "Time tracking started successfully with GPS verification",
       });
       setClockInDialogOpen(false);
+      // Clear all form state
       setSelectedEmployee("");
       setSelectedClient("");
       setSelectedShift("");
       setNotes("");
+      // Clear GPS and photo state to force fresh captures
+      setGpsData(null);
+      setCapturedPhoto(null);
+      setGpsError(null);
+      stopCamera();
     },
     onError: (error: any) => {
       toast({
@@ -133,8 +158,19 @@ export default function TimeTracking() {
   });
 
   const clockOutMutation = useMutation({
-    mutationFn: async (timeEntryId: string) => {
-      return apiRequest("PATCH", `/api/time-entries/${timeEntryId}/clock-out`, {});
+    mutationFn: async (data: { 
+      timeEntryId: string; 
+      gpsLatitude?: number; 
+      gpsLongitude?: number; 
+      gpsAccuracy?: number;
+      photoUrl?: string;
+    }) => {
+      return apiRequest("PATCH", `/api/time-entries/${data.timeEntryId}/clock-out`, {
+        gpsLatitude: data.gpsLatitude,
+        gpsLongitude: data.gpsLongitude,
+        gpsAccuracy: data.gpsAccuracy,
+        photoUrl: data.photoUrl,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
@@ -152,11 +188,191 @@ export default function TimeTracking() {
     },
   });
 
+  // GPS Capture Function
+  const captureGPS = async (): Promise<{ latitude: number; longitude: number; accuracy: number } | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        setGpsError("GPS not supported on this device");
+        toast({
+          title: "GPS Not Available",
+          description: "Your device doesn't support GPS tracking",
+          variant: "destructive",
+        });
+        resolve(null);
+        return;
+      }
+
+      setIsCapturingGPS(true);
+      setGpsError(null);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const gps = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          };
+          setGpsData(gps);
+          setIsCapturingGPS(false);
+          
+          if (gps.accuracy > 50) {
+            toast({
+              title: "GPS Warning",
+              description: `GPS accuracy is ${Math.round(gps.accuracy)}m. For best results, ensure clear sky visibility.`,
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "GPS Captured",
+              description: `Location verified with ${Math.round(gps.accuracy)}m accuracy`,
+            });
+          }
+          
+          resolve(gps);
+        },
+        (error) => {
+          setIsCapturingGPS(false);
+          let errorMsg = "Failed to get GPS location";
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMsg = "GPS permission denied. Please enable location access in your browser settings.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMsg = "GPS position unavailable. Please ensure location services are enabled.";
+              break;
+            case error.TIMEOUT:
+              errorMsg = "GPS request timed out. Please try again.";
+              break;
+          }
+          
+          setGpsError(errorMsg);
+          toast({
+            title: "GPS Error",
+            description: errorMsg,
+            variant: "destructive",
+          });
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    });
+  };
+
+  // Photo Capture Function
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setIsCameraActive(true);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Camera Error",
+        description: error.name === "NotAllowedError" 
+          ? "Camera permission denied. Please enable camera access." 
+          : "Failed to access camera",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedPhoto(photoDataUrl);
+        stopCamera();
+        
+        toast({
+          title: "Photo Captured",
+          description: "Verification photo saved successfully",
+        });
+      }
+    }
+  };
+
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+    startCamera();
+  };
+
+  // Auto-capture GPS when dialog opens, cleanup on close
+  useEffect(() => {
+    if (clockInDialogOpen) {
+      // Reset states to force fresh captures
+      setGpsData(null);
+      setCapturedPhoto(null);
+      setGpsError(null);
+      setIsCameraActive(false);
+      // Auto-capture GPS
+      captureGPS();
+    } else {
+      // Cleanup when dialog closes
+      stopCamera();
+      // Clear states to prevent stale data
+      setGpsData(null);
+      setCapturedPhoto(null);
+      setGpsError(null);
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      stopCamera();
+    };
+  }, [clockInDialogOpen]);
+
   const handleClockIn = () => {
     if (!selectedEmployee) {
       toast({
         title: "Error",
         description: "Please select an employee",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate GPS data
+    if (!gpsData) {
+      toast({
+        title: "GPS Required",
+        description: "Please wait for GPS to be captured or try again",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate photo
+    if (!capturedPhoto) {
+      toast({
+        title: "Photo Required",
+        description: "Please capture a verification photo",
         variant: "destructive",
       });
       return;
@@ -171,6 +387,10 @@ export default function TimeTracking() {
       shiftId: selectedShift && selectedShift !== "none" ? selectedShift : undefined,
       notes: notes || undefined,
       hourlyRate,
+      gpsLatitude: gpsData.latitude,
+      gpsLongitude: gpsData.longitude,
+      gpsAccuracy: gpsData.accuracy,
+      photoUrl: capturedPhoto,
     });
   };
 
@@ -406,14 +626,151 @@ export default function TimeTracking() {
                 />
               </div>
 
+              {/* GPS Verification */}
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-semibold">GPS Verification</Label>
+                  </div>
+                  {gpsData && (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Verified
+                    </Badge>
+                  )}
+                </div>
+
+                {isCapturingGPS && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                    Capturing location...
+                  </div>
+                )}
+
+                {gpsError && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {gpsError}
+                    <Button size="sm" variant="outline" onClick={captureGPS} className="ml-auto">
+                      Retry
+                    </Button>
+                  </div>
+                )}
+
+                {gpsData && !isCapturingGPS && (
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Latitude:</span>
+                      <span className="font-mono">{gpsData.latitude.toFixed(6)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Longitude:</span>
+                      <span className="font-mono">{gpsData.longitude.toFixed(6)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Accuracy:</span>
+                      <span className={gpsData.accuracy > 50 ? "text-yellow-600" : "text-green-600"}>
+                        ±{Math.round(gpsData.accuracy)}m
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Photo Verification */}
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Camera className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-semibold">Photo Verification</Label>
+                  </div>
+                  {capturedPhoto && (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Captured
+                    </Badge>
+                  )}
+                </div>
+
+                {!capturedPhoto && !isCameraActive && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={startCamera}
+                    data-testid="button-start-camera"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Take Verification Photo
+                  </Button>
+                )}
+
+                {isCameraActive && (
+                  <div className="space-y-3">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full rounded-lg bg-black"
+                    />
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="default" 
+                        className="flex-1" 
+                        onClick={capturePhoto}
+                        data-testid="button-capture-photo"
+                      >
+                        <Camera className="mr-2 h-4 w-4" />
+                        Capture Photo
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={stopCamera}
+                        data-testid="button-cancel-camera"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {capturedPhoto && (
+                  <div className="space-y-3">
+                    <img 
+                      src={capturedPhoto} 
+                      alt="Verification photo" 
+                      className="w-full rounded-lg"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={retakePhoto}
+                      className="w-full"
+                      data-testid="button-retake-photo"
+                    >
+                      Retake Photo
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Hidden canvas for photo capture */}
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+              </div>
+
               <Button
                 onClick={handleClockIn}
-                disabled={clockInMutation.isPending}
+                disabled={clockInMutation.isPending || !gpsData || !capturedPhoto}
                 className="w-full"
                 data-testid="button-submit-clockin"
               >
                 {clockInMutation.isPending ? "Clocking In..." : "Start Tracking"}
               </Button>
+
+              {(!gpsData || !capturedPhoto) && (
+                <p className="text-xs text-muted-foreground text-center">
+                  GPS location and photo verification are required to clock in
+                </p>
+              )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -588,7 +945,7 @@ export default function TimeTracking() {
                       variant="destructive"
                       size="sm"
                       className="w-full sm:w-auto min-h-[44px] shrink-0"
-                      onClick={() => clockOutMutation.mutate(entry.id)}
+                      onClick={() => clockOutMutation.mutate({ timeEntryId: entry.id })}
                       disabled={clockOutMutation.isPending}
                       data-testid={`button-clock-out-${entry.id}`}
                     >

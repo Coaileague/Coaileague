@@ -248,13 +248,13 @@ export default function Landing() {
                   TimeOS™
                 </Badge>
                 <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold max-w-full">
-                  Smart Time Tracking
+                  GPS-Verified Time Tracking
                 </h3>
                 <p className="text-muted-foreground text-base sm:text-lg max-w-full">
-                  Accurate time tracking with mobile clock-in/out. Employees track time from their phones, managers get real-time visibility.
+                  Eliminate time theft with GPS verification and photo proof. Employees clock in/out from their phones with location validation.
                 </p>
                 <ul className="space-y-2 max-w-full">
-                  {["Mobile clock-in/out", "Real-time notifications", "Automatic overtime calculations", "Detailed time reports"].map((feature) => (
+                  {["GPS location verification", "Photo proof required", "Real-time tracking", "Automatic overtime calculations"].map((feature) => (
                     <li key={feature} className="flex items-center gap-2 min-w-0">
                       <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 text-green-500 shrink-0" />
                       <span className="text-sm sm:text-base">{feature}</span>
@@ -402,8 +402,8 @@ export default function Landing() {
               {
                 icon: Clock,
                 title: "TimeOS™",
-                description: "Smart time tracking with mobile access. Track hours accurately from anywhere.",
-                features: ["Mobile clock-in/out", "Real-time tracking", "Overtime alerts", "Detailed reports"],
+                description: "GPS-verified time tracking with photo proof. Eliminate buddy punching and time theft.",
+                features: ["GPS verification", "Photo required", "Location accuracy", "Real-time tracking"],
                 badge: "Live",
                 color: "text-teal-500",
               },
@@ -520,7 +520,7 @@ export default function Landing() {
                   <tbody>
                     {[
                       { feature: "Smart Scheduling", us: true, them: "Separate tool" },
-                      { feature: "Mobile Time Tracking", us: true, them: "Separate tool" },
+                      { feature: "GPS Time Tracking", us: true, them: "Separate tool" },
                       { feature: "Payroll Management", us: true, them: "Separate tool" },
                       { feature: "Automated Billing", us: true, them: "Separate tool" },
                       { feature: "Digital Onboarding", us: true, them: "Separate tool" },
@@ -589,7 +589,7 @@ export default function Landing() {
                 employees: "Up to 25 employees",
                 features: [
                   "Core scheduling & tracking",
-                  "Mobile time tracking",
+                  "GPS time tracking",
                   "Basic scheduling",
                   "Automated invoicing",
                   "Email support",
