@@ -109,23 +109,31 @@ export default function Pricing() {
     <div className="min-h-screen bg-slate-gradient text-white">
       {/* Modern Header */}
       <div className="bg-card-translucent border-b border-primary/20 backdrop-blur-sm">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <AutoForceLogo size="sm" variant="full" />
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
+          <div className="shrink-0">
+            {/* Desktop: Show full logo */}
+            <div className="hidden sm:block">
+              <AutoForceLogo size="sm" variant="full" />
+            </div>
+            {/* Mobile: Show icon only */}
+            <div className="block sm:hidden">
+              <AutoForceLogo size="sm" variant="icon" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="ghost"
-              size="sm"
+              className="min-h-[44px] px-3 text-sm text-slate-400 hover:text-white whitespace-nowrap"
               onClick={() => window.location.href = "/"}
-              className="text-slate-400 hover:text-white"
             >
               Back
             </Button>
             <Button
-              size="sm"
+              className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-primary to-accent btn-scale whitespace-nowrap"
               onClick={() => window.location.href = "/api/login"}
-              className="bg-gradient-to-r from-primary to-accent btn-scale"
             >
-              Launch Platform
+              <span className="hidden sm:inline">Launch Platform</span>
+              <span className="sm:hidden">Login</span>
             </Button>
           </div>
         </div>

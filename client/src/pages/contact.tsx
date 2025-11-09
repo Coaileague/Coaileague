@@ -91,25 +91,33 @@ export default function Contact() {
   return (
     <div className="min-h-screen bg-slate-gradient text-white">
       {/* Top Bar */}
-      <div className="h-16 bg-card-translucent border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-6">
-        <AutoForceLogo size="sm" variant="full" />
-        <div className="flex items-center gap-4">
+      <div className="h-16 bg-card-translucent border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-3 sm:px-6 gap-2">
+        <div className="shrink-0">
+          {/* Desktop: Show full logo */}
+          <div className="hidden sm:block">
+            <AutoForceLogo size="sm" variant="full" />
+          </div>
+          {/* Mobile: Show icon only */}
+          <div className="block sm:hidden">
+            <AutoForceLogo size="sm" variant="icon" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => window.location.href = "/"}
-            className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+            className="min-h-[44px] px-3 text-sm text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))] whitespace-nowrap"
             data-testid="button-back"
           >
             Back
           </Button>
           <Button
-            size="sm"
             onClick={() => window.location.href = "/api/login"}
-            className="h-8 text-xs bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
+            className="min-h-[44px] px-3 sm:px-4 text-sm bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white whitespace-nowrap"
             data-testid="button-launch-platform"
           >
-            Launch Platform
+            <span className="hidden sm:inline">Launch Platform</span>
+            <span className="sm:hidden">Login</span>
           </Button>
         </div>
       </div>
