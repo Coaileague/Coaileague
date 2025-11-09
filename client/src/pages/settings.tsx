@@ -58,6 +58,7 @@ export default function Settings() {
   
   const [autoSchedulingEnabled, setAutoSchedulingEnabled] = useState<boolean>(true);
   const [scheduleGenerationInterval, setScheduleGenerationInterval] = useState<string>("weekly");
+  const [scheduleCustomDays, setScheduleCustomDays] = useState<number | undefined>();
   const [scheduleAdvanceNoticeDays, setScheduleAdvanceNoticeDays] = useState<number>(7);
   
   // Track original values to detect changes
@@ -131,6 +132,99 @@ export default function Settings() {
     },
   });
 
+  // Update invoicing automation mutation
+  const updateInvoicingMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/workspace/automation/invoicing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update invoicing automation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      toast({
+        title: "Success",
+        description: "Invoicing automation updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update invoicing automation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update payroll automation mutation
+  const updatePayrollMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/workspace/automation/payroll', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update payroll automation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      toast({
+        title: "Success",
+        description: "Payroll automation updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update payroll automation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update scheduling automation mutation
+  const updateSchedulingMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/workspace/automation/scheduling', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update scheduling automation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      toast({
+        title: "Success",
+        description: "Scheduling automation updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update scheduling automation",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Initialize form fields when workspace loads
   useEffect(() => {
     if (workspace) {
@@ -143,6 +237,17 @@ export default function Settings() {
         phone: ws.phone || "",
         address: ws.address || "",
         website: ws.website || "",
+        // Automation settings
+        autoInvoicingEnabled: ws.autoInvoicingEnabled ?? true,
+        invoiceSchedule: ws.invoiceSchedule || "monthly",
+        invoiceCustomDays: ws.invoiceCustomDays || undefined,
+        autoPayrollEnabled: ws.autoPayrollEnabled ?? true,
+        payrollSchedule: ws.payrollSchedule || "biweekly",
+        payrollCustomDays: ws.payrollCustomDays || undefined,
+        autoSchedulingEnabled: ws.autoSchedulingEnabled ?? true,
+        scheduleGenerationInterval: ws.scheduleGenerationInterval || "weekly",
+        scheduleCustomDays: ws.scheduleCustomDays || undefined,
+        scheduleAdvanceNoticeDays: ws.scheduleAdvanceNoticeDays || 7,
       };
       setSelectedCategory(values.businessCategory);
       setWorkspaceName(values.name);
@@ -151,6 +256,19 @@ export default function Settings() {
       setPhone(values.phone);
       setAddress(values.address);
       setWebsite(values.website);
+      
+      // Automation settings
+      setAutoInvoicingEnabled(values.autoInvoicingEnabled);
+      setInvoiceSchedule(values.invoiceSchedule);
+      setInvoiceCustomDays(values.invoiceCustomDays);
+      setAutoPayrollEnabled(values.autoPayrollEnabled);
+      setPayrollSchedule(values.payrollSchedule);
+      setPayrollCustomDays(values.payrollCustomDays);
+      setAutoSchedulingEnabled(values.autoSchedulingEnabled);
+      setScheduleGenerationInterval(values.scheduleGenerationInterval);
+      setScheduleCustomDays(values.scheduleCustomDays);
+      setScheduleAdvanceNoticeDays(values.scheduleAdvanceNoticeDays);
+      
       setOriginalValues(values);
       setHasUnsavedChanges(false);
     }
@@ -208,6 +326,35 @@ export default function Settings() {
       phone,
       address,
       website,
+    });
+  };
+
+  const handleSaveInvoicing = async () => {
+    await updateInvoicingMutation.mutateAsync({
+      autoInvoicingEnabled,
+      invoiceSchedule,
+      invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
+      invoiceGenerationDay: 1,
+    });
+  };
+
+  const handleSavePayroll = async () => {
+    await updatePayrollMutation.mutateAsync({
+      autoPayrollEnabled,
+      payrollSchedule,
+      payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
+      payrollProcessDay: 1,
+      payrollCutoffDay: 15,
+    });
+  };
+
+  const handleSaveScheduling = async () => {
+    await updateSchedulingMutation.mutateAsync({
+      autoSchedulingEnabled,
+      scheduleGenerationInterval,
+      scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
+      scheduleAdvanceNoticeDays,
+      scheduleGenerationDay: 0,
     });
   };
 
@@ -547,6 +694,213 @@ export default function Settings() {
                 data-testid="button-setup-2fa"
               >
                 Set Up
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Automation Settings */}
+        <Card data-testid="card-automation-settings">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Zap className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Automation Settings</CardTitle>
+                <CardDescription>Configure autonomous scheduling for invoicing, payroll, and shift generation</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            {/* BillOS™ Invoicing Automation */}
+            <div className="space-y-4" aria-busy={updateInvoicingMutation.isPending}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">BillOS™ Invoicing Automation</h3>
+                  <p className="text-xs text-muted-foreground">Automatically generate invoices from approved time entries</p>
+                </div>
+                <Switch 
+                  checked={autoInvoicingEnabled} 
+                  onCheckedChange={setAutoInvoicingEnabled}
+                  disabled={updateInvoicingMutation.isPending}
+                  data-testid="switch-auto-invoicing"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceSchedule">Invoice Generation Schedule</Label>
+                <Select 
+                  value={invoiceSchedule} 
+                  onValueChange={setInvoiceSchedule}
+                  disabled={!autoInvoicingEnabled || updateInvoicingMutation.isPending}
+                >
+                  <SelectTrigger id="invoiceSchedule" data-testid="select-invoice-schedule">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-weekly (Every 2 weeks)</SelectItem>
+                    <SelectItem value="semi-monthly">Semi-monthly (15th and last day)</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="net30">Net 30 (30 days after service)</SelectItem>
+                    <SelectItem value="custom">Custom interval</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">How often to automatically generate invoices</p>
+              </div>
+              <div 
+                className="space-y-2" 
+                hidden={invoiceSchedule !== 'custom'}
+                aria-expanded={invoiceSchedule === 'custom'}
+                aria-hidden={invoiceSchedule !== 'custom'}
+              >
+                <Label htmlFor="invoiceCustomDays">Custom Interval (days)</Label>
+                <Input 
+                  id="invoiceCustomDays"
+                  type="number"
+                  value={invoiceCustomDays || ''}
+                  onChange={(e) => setInvoiceCustomDays(parseInt(e.target.value) || undefined)}
+                  disabled={!autoInvoicingEnabled || updateInvoicingMutation.isPending}
+                  data-testid="input-invoice-custom-days"
+                />
+              </div>
+              <Button 
+                onClick={handleSaveInvoicing}
+                disabled={updateInvoicingMutation.isPending}
+                data-testid="button-save-invoicing"
+              >
+                {updateInvoicingMutation.isPending ? 'Saving...' : 'Save Invoicing Settings'}
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            {/* PayrollOS™ Payroll Automation */}
+            <div className="space-y-4" aria-busy={updatePayrollMutation.isPending}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">PayrollOS™ Payroll Automation</h3>
+                  <p className="text-xs text-muted-foreground">Automatically process payroll on pay period dates</p>
+                </div>
+                <Switch 
+                  checked={autoPayrollEnabled} 
+                  onCheckedChange={setAutoPayrollEnabled}
+                  disabled={updatePayrollMutation.isPending}
+                  data-testid="switch-auto-payroll"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payrollSchedule">Payroll Processing Schedule</Label>
+                <Select 
+                  value={payrollSchedule} 
+                  onValueChange={setPayrollSchedule}
+                  disabled={!autoPayrollEnabled || updatePayrollMutation.isPending}
+                >
+                  <SelectTrigger id="payrollSchedule" data-testid="select-payroll-schedule">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-weekly (Every 2 weeks)</SelectItem>
+                    <SelectItem value="semi-monthly">Semi-monthly (15th and last day)</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="custom">Custom interval</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">How often to automatically process payroll</p>
+              </div>
+              <div 
+                className="space-y-2" 
+                hidden={payrollSchedule !== 'custom'}
+                aria-expanded={payrollSchedule === 'custom'}
+                aria-hidden={payrollSchedule !== 'custom'}
+              >
+                <Label htmlFor="payrollCustomDays">Custom Interval (days)</Label>
+                <Input 
+                  id="payrollCustomDays"
+                  type="number"
+                  value={payrollCustomDays || ''}
+                  onChange={(e) => setPayrollCustomDays(parseInt(e.target.value) || undefined)}
+                  disabled={!autoPayrollEnabled || updatePayrollMutation.isPending}
+                  data-testid="input-payroll-custom-days"
+                />
+              </div>
+              <Button 
+                onClick={handleSavePayroll}
+                disabled={updatePayrollMutation.isPending}
+                data-testid="button-save-payroll"
+              >
+                {updatePayrollMutation.isPending ? 'Saving...' : 'Save Payroll Settings'}
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            {/* ScheduleOS™ Schedule Generation */}
+            <div className="space-y-4" aria-busy={updateSchedulingMutation.isPending}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">ScheduleOS™ Schedule Generation</h3>
+                  <p className="text-xs text-muted-foreground">Automatically generate employee schedules in advance</p>
+                </div>
+                <Switch 
+                  checked={autoSchedulingEnabled} 
+                  onCheckedChange={setAutoSchedulingEnabled}
+                  disabled={updateSchedulingMutation.isPending}
+                  data-testid="switch-auto-scheduling"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduleGenerationInterval">Schedule Generation Interval</Label>
+                <Select 
+                  value={scheduleGenerationInterval} 
+                  onValueChange={setScheduleGenerationInterval}
+                  disabled={!autoSchedulingEnabled || updateSchedulingMutation.isPending}
+                >
+                  <SelectTrigger id="scheduleGenerationInterval" data-testid="select-schedule-interval">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-weekly (Every 2 weeks)</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="custom">Custom interval</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">How often to automatically generate schedules</p>
+              </div>
+              <div 
+                className="space-y-2" 
+                hidden={scheduleGenerationInterval !== 'custom'}
+                aria-expanded={scheduleGenerationInterval === 'custom'}
+                aria-hidden={scheduleGenerationInterval !== 'custom'}
+              >
+                <Label htmlFor="scheduleCustomDays">Custom Interval (days)</Label>
+                <Input 
+                  id="scheduleCustomDays"
+                  type="number"
+                  value={scheduleCustomDays || ''}
+                  onChange={(e) => setScheduleCustomDays(parseInt(e.target.value) || undefined)}
+                  disabled={!autoSchedulingEnabled || updateSchedulingMutation.isPending}
+                  data-testid="input-schedule-custom-days"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduleAdvanceNoticeDays">Advance Notice (days)</Label>
+                <Input 
+                  id="scheduleAdvanceNoticeDays"
+                  type="number"
+                  value={scheduleAdvanceNoticeDays}
+                  onChange={(e) => setScheduleAdvanceNoticeDays(parseInt(e.target.value) || 7)}
+                  disabled={!autoSchedulingEnabled || updateSchedulingMutation.isPending}
+                  data-testid="input-schedule-advance-days"
+                />
+                <p className="text-xs text-muted-foreground">How many days in advance to generate schedules</p>
+              </div>
+              <Button 
+                onClick={handleSaveScheduling}
+                disabled={updateSchedulingMutation.isPending}
+                data-testid="button-save-scheduling"
+              >
+                {updateSchedulingMutation.isPending ? 'Saving...' : 'Save Scheduling Settings'}
               </Button>
             </div>
           </CardContent>
