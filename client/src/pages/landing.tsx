@@ -101,16 +101,14 @@ export default function Landing() {
             <div className="flex md:hidden items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
-                className="min-h-[44px] px-4"
+                className="min-h-[48px] px-5 text-sm whitespace-nowrap"
                 onClick={() => setLocation("/login")}
                 data-testid="button-login-mobile"
               >
                 Login
               </Button>
               <Button
-                size="sm"
-                className="min-h-[44px] px-4 bg-primary"
+                className="min-h-[48px] px-5 text-sm whitespace-nowrap"
                 onClick={() => setLocation("/register")}
                 data-testid="button-signup-mobile"
               >
