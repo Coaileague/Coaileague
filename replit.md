@@ -43,6 +43,8 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
     - **Organization Support System**: Internal support ticket escalation workflow.
     - **HelpOS™ FAQ System**: AI-powered knowledge base with semantic search and auto-generation from resolved tickets.
     - **HelpOS™ Autonomous Bot**: An intelligent support agent with usage-based billing providing bot-first assistance, human escalation, FAQ-powered responses, sentiment detection, auto-resolution, and smart escalation with context preservation. All AI token usage is tracked and billed.
+    - **RecordOS™ - AI-Powered Natural Language Search**: Semantic search using GPT-3.5-turbo to convert natural language queries into structured searches across employees, clients, invoices, shifts. Includes AI usage tracking and billing.
+    - **InsightOS™ - AI Analytics & Autonomous Insights**: Real-time GPT-4o-powered analytics that analyzes workspace metrics (employees, clients, labor costs, revenue) to generate 3-5 actionable insights with priorities, confidence scores, suggested actions, and estimated business impact. Includes AI usage tracking and billing.
     - **DispatchOS™ - Computer-Aided Dispatch**: Backend implementation is complete, featuring GPS tracking, unit status management, incident queue, dispatcher command center, and comprehensive audit logging. Real-time updates are handled via WebSockets. (Frontend for map visualization is pending).
 - **Security**: Includes Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 - **Production Monitoring**: Comprehensive observability infrastructure with error logging, performance metrics tracking, health checks, slow request detection, and graceful shutdown handling.
@@ -53,9 +55,9 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 - **Payment Processing**: Stripe Connect
 - **Email**: Resend
 - **AI**:
-    - OpenAI GPT-3.5-turbo (HelpOS support bot)
+    - OpenAI GPT-3.5-turbo (HelpOS support bot, RecordOS search)
     - Gemini 2.0 Flash Exp (HelpDesk chat)
     - GPT-4 (ScheduleOS auto-scheduling)
     - GPT-4-turbo (DisputeAI grievance analysis)
-    - GPT-4o (PredictionOS predictions)
-    (All AI integrations include comprehensive usage tracking and billing.)
+    - GPT-4o (PredictionOS predictions, InsightOS analytics)
+    (All AI integrations include comprehensive usage tracking and billing in the aiUsage table.)
