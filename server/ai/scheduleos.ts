@@ -244,6 +244,12 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
     // 6. Parse GPT-4 validation response
     const validationResult = JSON.parse(aiResponse.choices[0].message.content || '{}');
 
+    // FAIL FAST: If GPT-4 validation fails, reject the schedule
+    if (validationResult.valid === false) {
+      console.error(`[ScheduleOS™] GPT-4 validation failed. Rejecting schedule.`);
+      throw new Error(`Schedule validation failed: ${validationResult.warnings?.join(', ') || 'Unknown validation errors'}`);
+    }
+
     // 7. Transform solver output into shift objects with full metadata
     const generatedShifts = solvedSchedule.assignments.map((assignment: any): any => {
       const emp = employeeIntelligence.find(e => e.employeeId === assignment.employeeId);

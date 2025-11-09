@@ -36,7 +36,7 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
     - **Employee Lifecycle**: Onboarding, contract management, shift management, timesheet and time-off requests.
     - **Compliance & Policy**: I-9 re-verification tracking, Policy Management (PolicIOS™) with version control.
     - **Expense Management**: ExpenseOS™ for reimbursement, tracking, mileage calculation.
-    - **Scheduling**: ScheduleOS™ with mobile-optimized shift calendars and **hybrid constraint solver + GPT-4 validation** for optimal schedule generation (constraint satisfaction algorithm computes optimal assignments, GPT-4 validates and explains results).
+    - **Scheduling**: ScheduleOS™ with mobile-optimized shift calendars and **hybrid constraint solver + GPT-4 validation** for intelligent schedule generation (greedy constraint satisfaction algorithm optimizes assignments based on reliability/location/compliance, GPT-4 validates and explains results).
     - **Asset Management**: AssetOS™ for tracking vehicles and equipment.
     - **AI & Analytics**: RecordOS™ and InsightOS™ for natural language search, autonomous analytics, and predictive insights.
     - **Platform Administration**: ROOT Admin Dashboard, organization onboarding, and HelpDesk queue management.
@@ -57,8 +57,8 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 - **AI**:
     - OpenAI GPT-3.5-turbo (HelpOS support bot, RecordOS search)
     - Gemini 2.0 Flash Exp (HelpDesk chat)
-    - GPT-4 (ScheduleOS validation & explanation - constraint solver does optimization)
+    - GPT-4 (ScheduleOS validation & explanation - greedy solver does optimization)
     - GPT-4-turbo (DisputeAI grievance analysis)
     - GPT-4o (PredictionOS predictions, InsightOS analytics)
     (All AI integrations include comprehensive usage tracking and billing in the aiUsage table.)
-    - **Constraint Solving**: TypeScript CSP solver for ScheduleOS™ optimal shift assignments (hard + soft constraints)
+    - **Constraint Solving**: TypeScript greedy constraint solver for ScheduleOS™ intelligent shift assignments (enforces hard constraints, optimizes soft constraints like reliability/distance/performance)

@@ -392,8 +392,8 @@ export default function Landing() {
               {
                 icon: CalendarClock,
                 title: "ScheduleOS™",
-                description: "AI-powered optimal scheduling with constraint solving + GPT-4 validation. Mathematically proven best assignments.",
-                features: ["Constraint optimization", "GPT-4 validation", "Conflict detection", "Risk scoring"],
+                description: "AI-powered intelligent scheduling with constraint solver + GPT-4 validation. Optimizes for reliability, location, and compliance.",
+                features: ["Smart algorithms", "GPT-4 validation", "Conflict detection", "Risk scoring"],
                 badge: "AI Powered",
                 color: "text-primary",
               },
