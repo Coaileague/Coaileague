@@ -24,7 +24,10 @@ import {
   Shield,
   Briefcase,
   FileText,
+  Clock,
+  Zap,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { MobileLoading } from "@/components/mobile-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -43,6 +46,19 @@ export default function Settings() {
   const [phone, setPhone] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [website, setWebsite] = useState<string>("");
+  
+  // Automation settings state
+  const [autoInvoicingEnabled, setAutoInvoicingEnabled] = useState<boolean>(true);
+  const [invoiceSchedule, setInvoiceSchedule] = useState<string>("monthly");
+  const [invoiceCustomDays, setInvoiceCustomDays] = useState<number | undefined>();
+  
+  const [autoPayrollEnabled, setAutoPayrollEnabled] = useState<boolean>(true);
+  const [payrollSchedule, setPayrollSchedule] = useState<string>("biweekly");
+  const [payrollCustomDays, setPayrollCustomDays] = useState<number | undefined>();
+  
+  const [autoSchedulingEnabled, setAutoSchedulingEnabled] = useState<boolean>(true);
+  const [scheduleGenerationInterval, setScheduleGenerationInterval] = useState<string>("weekly");
+  const [scheduleAdvanceNoticeDays, setScheduleAdvanceNoticeDays] = useState<number>(7);
   
   // Track original values to detect changes
   const [originalValues, setOriginalValues] = useState<any>({});
