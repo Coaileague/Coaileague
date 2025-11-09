@@ -1146,9 +1146,19 @@ export const timeEntries = pgTable("time_entries", {
   jobSiteLongitude: decimal("job_site_longitude", { precision: 10, scale: 7 }),
   jobSiteAddress: text("job_site_address"),
 
-  // BillOS™ Integration
-  status: varchar("status").default('pending'), // 'pending', 'approved', 'rejected', 'billed'
+  // Approval workflow (approval-focused states only)
+  status: varchar("status").default('pending'), // 'pending', 'approved', 'rejected'
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }), // Who approved
+  approvedAt: timestamp("approved_at"), // When approved
+  rejectedBy: varchar("rejected_by").references(() => users.id, { onDelete: 'set null' }), // Who rejected
+  rejectedAt: timestamp("rejected_at"), // When rejected
+  rejectionReason: text("rejection_reason"), // Why rejected
+
+  // BillOS™ & PayrollOS™ Integration (separate orthogonal tracking)
   invoiceId: varchar("invoice_id").references(() => invoices.id, { onDelete: 'set null' }),
+  billedAt: timestamp("billed_at"), // When included in invoice
+  payrollRunId: varchar("payroll_run_id"), // Future: link to payroll run table
+  payrolledAt: timestamp("payrolled_at"), // When included in payroll
   billableToClient: boolean("billable_to_client").default(true),
 
   notes: text("notes"),
@@ -1168,6 +1178,37 @@ export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({
 
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
 export type TimeEntry = typeof timeEntries.$inferSelect;
+
+// Time Entry Approval Audit Trail (Immutable history)
+export const timeEntryApprovalAudit = pgTable("time_entry_approval_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  timeEntryId: varchar("time_entry_id").notNull().references(() => timeEntries.id, { onDelete: 'cascade' }),
+  
+  // Audit details
+  action: varchar("action").notNull(), // 'approved', 'rejected', 'reverted_to_pending'
+  performedBy: varchar("performed_by").references(() => users.id, { onDelete: 'set null' }), // Nullable to preserve history
+  performedAt: timestamp("performed_at").notNull().defaultNow(),
+  
+  // Previous and new state
+  previousStatus: varchar("previous_status"),
+  newStatus: varchar("new_status").notNull(),
+  
+  // Context
+  reason: text("reason"), // Rejection reason or approval notes
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTimeEntryApprovalAuditSchema = createInsertSchema(timeEntryApprovalAudit).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTimeEntryApprovalAudit = z.infer<typeof insertTimeEntryApprovalAuditSchema>;
+export type TimeEntryApprovalAudit = typeof timeEntryApprovalAudit.$inferSelect;
 
 // ============================================================================
 // SHIFT ORDERS & POST ORDERS
@@ -1654,7 +1695,7 @@ export const shiftsRelations = relations(shifts, ({ one, many }) => ({
   shiftOrders: many(shiftOrders),
 }));
 
-export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
+export const timeEntriesRelations = relations(timeEntries, ({ one, many }) => ({
   workspace: one(workspaces, {
     fields: [timeEntries.workspaceId],
     references: [workspaces.id],
@@ -1670,6 +1711,22 @@ export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
   client: one(clients, {
     fields: [timeEntries.clientId],
     references: [clients.id],
+  }),
+  approvalAudits: many(timeEntryApprovalAudit),
+}));
+
+export const timeEntryApprovalAuditRelations = relations(timeEntryApprovalAudit, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [timeEntryApprovalAudit.workspaceId],
+    references: [workspaces.id],
+  }),
+  timeEntry: one(timeEntries, {
+    fields: [timeEntryApprovalAudit.timeEntryId],
+    references: [timeEntries.id],
+  }),
+  performedByUser: one(users, {
+    fields: [timeEntryApprovalAudit.performedBy],
+    references: [users.id],
   }),
 }));
 
