@@ -270,6 +270,16 @@ export const workspaces = pgTable("workspaces", {
   scheduleDayOfWeek: integer("schedule_day_of_week").default(0), // 0-6 for weekly/biweekly (0=Sunday)
   scheduleDayOfMonth: integer("schedule_day_of_month"), // 1-31 for monthly
 
+  // Biweekly Anchor Dates - Fix month-boundary drift
+  invoiceBiweeklyAnchor: timestamp("invoice_biweekly_anchor", { withTimezone: true }), // Last biweekly invoice anchor date
+  scheduleBiweeklyAnchor: timestamp("schedule_biweekly_anchor", { withTimezone: true }), // Last biweekly schedule anchor date
+  payrollBiweeklyAnchor: timestamp("payroll_biweekly_anchor", { withTimezone: true }), // Last biweekly payroll anchor date
+
+  // Last Run Tracking - Enables custom intervals and prevents duplicate runs
+  lastInvoiceRunAt: timestamp("last_invoice_run_at", { withTimezone: true }),
+  lastScheduleRunAt: timestamp("last_schedule_run_at", { withTimezone: true }),
+  lastPayrollRunAt: timestamp("last_payroll_run_at", { withTimezone: true }),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

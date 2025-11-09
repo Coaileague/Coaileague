@@ -14,6 +14,7 @@ import { generateUsageBasedInvoices } from './billos';
 import { PayrollAutomationEngine } from './payrollAutomation';
 import { ScheduleOSAI } from '../ai/scheduleos';
 import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
+import { shouldRunBiweekly, seedAnchor, advanceAnchor, detectAnchorDrift } from './utils/scheduling';
 
 // ============================================================================
 // CONFIGURATION
@@ -92,8 +93,22 @@ async function runNightlyInvoiceGeneration() {
           console.log(`   Day of Week: ${dayOfWeekSetting} (today: ${dayOfWeek})`);
         } else if (schedule === 'biweekly') {
           const dayOfWeekSetting = workspace.invoiceDayOfWeek ?? 1; // Default Monday
-          shouldGenerateInvoices = dayOfWeek === dayOfWeekSetting && (Math.floor((dayOfMonth - 1) / 7) % 2 === 0);
-          console.log(`   Day of Week: ${dayOfWeekSetting} (today: ${dayOfWeek})`);
+          
+          // Seed anchor if not set
+          if (!workspace.invoiceBiweeklyAnchor) {
+            console.log(`   🌱 Seeding biweekly anchor for first run...`);
+            const anchor = seedAnchor(dayOfWeekSetting, today);
+            await db.update(workspaces)
+              .set({ invoiceBiweeklyAnchor: anchor })
+              .where(eq(workspaces.id, workspace.id));
+            workspace.invoiceBiweeklyAnchor = anchor;
+          }
+          
+          // Check anchor drift
+          detectAnchorDrift(workspace.invoiceBiweeklyAnchor, today);
+          
+          // Use anchor-based calculation
+          shouldGenerateInvoices = shouldRunBiweekly(workspace.invoiceBiweeklyAnchor, dayOfWeekSetting, today);
         } else if (schedule === 'semi-monthly') {
           // 15th and last day of month
           shouldGenerateInvoices = dayOfMonth === 15 || dayOfMonth === lastDayOfMonth;
@@ -122,6 +137,19 @@ async function runNightlyInvoiceGeneration() {
             console.log(`✅ Generated ${invoices.length} invoice(s) for ${workspace.name}`);
             totalInvoicesGenerated += invoices.length;
             successCount++;
+            
+            // Update lastRunAt timestamp
+            const updateData: any = { lastInvoiceRunAt: today };
+            
+            // Advance biweekly anchor if applicable
+            if (schedule === 'biweekly' && workspace.invoiceBiweeklyAnchor) {
+              const newAnchor = advanceAnchor(workspace.invoiceBiweeklyAnchor);
+              updateData.invoiceBiweeklyAnchor = newAnchor;
+            }
+            
+            await db.update(workspaces)
+              .set(updateData)
+              .where(eq(workspaces.id, workspace.id));
           } else {
             console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
           }
@@ -206,8 +234,22 @@ async function runWeeklyScheduleGeneration() {
           console.log(`   Day of Week: ${dayOfWeekSetting} (today: ${dayOfWeek})`);
         } else if (interval === 'biweekly') {
           const dayOfWeekSetting = workspace.scheduleDayOfWeek ?? 0; // Default Sunday
-          shouldGenerateSchedule = dayOfWeek === dayOfWeekSetting && (Math.floor((dayOfMonth - 1) / 7) % 2 === 0);
-          console.log(`   Day of Week: ${dayOfWeekSetting} (today: ${dayOfWeek})`);
+          
+          // Seed anchor if not set
+          if (!workspace.scheduleBiweeklyAnchor) {
+            console.log(`   🌱 Seeding biweekly anchor for first run...`);
+            const anchor = seedAnchor(dayOfWeekSetting, today);
+            await db.update(workspaces)
+              .set({ scheduleBiweeklyAnchor: anchor })
+              .where(eq(workspaces.id, workspace.id));
+            workspace.scheduleBiweeklyAnchor = anchor;
+          }
+          
+          // Check anchor drift
+          detectAnchorDrift(workspace.scheduleBiweeklyAnchor, today);
+          
+          // Use anchor-based calculation
+          shouldGenerateSchedule = shouldRunBiweekly(workspace.scheduleBiweeklyAnchor, dayOfWeekSetting, today);
         } else if (interval === 'monthly') {
           const dayOfMonthSetting = workspace.scheduleDayOfMonth ?? 25; // Default 25th
           shouldGenerateSchedule = dayOfMonth === dayOfMonthSetting;
@@ -225,6 +267,19 @@ async function runWeeklyScheduleGeneration() {
           // For now, skip auto-scheduling until shift requirements are configured
           console.log(`   ℹ️  Shift templates not yet configured for ${workspace.name}`);
           console.log(`   (Requires shift requirement templates in workspace settings)`);
+          
+          // Update lastRunAt even when skipping (for tracking purposes)
+          const updateData: any = { lastScheduleRunAt: today };
+          
+          // Advance biweekly anchor if applicable
+          if (interval === 'biweekly' && workspace.scheduleBiweeklyAnchor) {
+            const newAnchor = advanceAnchor(workspace.scheduleBiweeklyAnchor);
+            updateData.scheduleBiweeklyAnchor = newAnchor;
+          }
+          
+          await db.update(workspaces)
+            .set(updateData)
+            .where(eq(workspaces.id, workspace.id));
           
           // Example of how it would work:
           /*
@@ -313,8 +368,22 @@ async function runAutomaticPayrollProcessing() {
           console.log(`   Day of Week: ${dayOfWeekSetting} (today: ${dayOfWeek})`);
         } else if (paySchedule === 'biweekly') {
           const dayOfWeekSetting = workspace.payrollDayOfWeek ?? 1; // Default Monday
-          shouldProcessPayroll = dayOfWeek === dayOfWeekSetting && (Math.floor((dayOfMonth - 1) / 7) % 2 === 0);
-          console.log(`   Day of Week: ${dayOfWeekSetting} (today: ${dayOfWeek})`);
+          
+          // Seed anchor if not set
+          if (!workspace.payrollBiweeklyAnchor) {
+            console.log(`   🌱 Seeding biweekly anchor for first run...`);
+            const anchor = seedAnchor(dayOfWeekSetting, today);
+            await db.update(workspaces)
+              .set({ payrollBiweeklyAnchor: anchor })
+              .where(eq(workspaces.id, workspace.id));
+            workspace.payrollBiweeklyAnchor = anchor;
+          }
+          
+          // Check anchor drift
+          detectAnchorDrift(workspace.payrollBiweeklyAnchor, today);
+          
+          // Use anchor-based calculation
+          shouldProcessPayroll = shouldRunBiweekly(workspace.payrollBiweeklyAnchor, dayOfWeekSetting, today);
         } else if (paySchedule === 'semi-monthly') {
           const processDay = workspace.payrollDayOfMonth ?? 1;
           shouldProcessPayroll = dayOfMonth === processDay || dayOfMonth === cutoffDay;
@@ -359,6 +428,19 @@ async function runAutomaticPayrollProcessing() {
           console.log(`   Employees: ${result.totalEmployees}`);
           console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);
           console.log(`   Net Pay: $${result.totalNetPay.toFixed(2)}`);
+          
+          // Update lastRunAt timestamp
+          const updateData: any = { lastPayrollRunAt: today };
+          
+          // Advance biweekly anchor if applicable
+          if (paySchedule === 'biweekly' && workspace.payrollBiweeklyAnchor) {
+            const newAnchor = advanceAnchor(workspace.payrollBiweeklyAnchor);
+            updateData.payrollBiweeklyAnchor = newAnchor;
+          }
+          
+          await db.update(workspaces)
+            .set(updateData)
+            .where(eq(workspaces.id, workspace.id));
           
           totalPayrollRuns++;
           successCount++;
