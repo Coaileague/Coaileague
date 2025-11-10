@@ -65,7 +65,7 @@ function generateFingerprint(params: Record<string, any>): string {
  * - Inflight token to distinguish resurrected vs active duplicates
  * - Retry middleware with exponential backoff
  */
-async function executeIdempotencyCheck(params: IdempotencyParams): Promise<IdempotencyResult> {
+export async function executeIdempotencyCheck(params: IdempotencyParams): Promise<IdempotencyResult> {
   const { workspaceId, operationType, requestData, ttlDays = 7 } = params;
   
   const fingerprint = generateFingerprint(requestData);
