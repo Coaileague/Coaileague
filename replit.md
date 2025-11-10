@@ -4,18 +4,24 @@
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive workforce management platform designed for emergency services and other service-related industries. Its primary goal is to streamline operations, reduce administrative burdens, and serve as a single source of truth for workforce management. Key features include time tracking with advanced verification, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform employs an "OS" design philosophy for extensibility and aims for a hybrid subscription and usage-based AI revenue model.
 
 ### HelpDesk Chat System
-**Two public chat versions with NO entry barriers:**
-- **Desktop Chat (HelpDesk)**: `client/src/pages/HelpDesk5.tsx` → Route: `/chat` 
-  - Feature-rich desktop chat with Gemini AI support
-  - Staff controls, queue management, user diagnostics
+**Intelligent device-aware chat routing with NO entry barriers:**
+- **Desktop Chat**: `client/src/pages/HelpDeskCab.tsx` → Route: `/chat` 
+  - Full-featured IRC-style 3-column desktop chat
+  - Gemini AI support, staff controls, queue management, user diagnostics
+  - Auto-redirects mobile/small screens (≤768px) to `/mobile-chat`
   - Removed all authentication dialogs (Nov 10, 2025)
   
-- **Mobile Chat (HelpDesk5)**: `client/src/pages/modern-mobile-chat.tsx` → Route: `/mobile-chat`
+- **Mobile Chat**: `client/src/pages/modern-mobile-chat.tsx` → Route: `/mobile-chat`
   - Mobile-optimized responsive interface  
-  - Touch-friendly FAB buttons, slide-out panels
+  - Touch-friendly FAB buttons, quick actions, slide-out panels
+  - Auto-redirects desktop/large screens (>768px) to `/chat`
   - Removed ChatAgreementModal barrier (Nov 10, 2025)
 
-Both chats allow immediate access without popups, forms, or authentication requirements. Users can enter and chat directly.
+**Smart Routing (Nov 10, 2025):**
+- Automatic device detection via user agent + screen width
+- Mobile users → `/mobile-chat` (optimized touch UI with FABs)
+- Desktop users → `/chat` (full desktop experience)
+- Both chats allow immediate access without popups, forms, or authentication requirements
 
 ## User Preferences
 I prefer detailed explanations.
