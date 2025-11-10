@@ -397,6 +397,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // SECURE USER IDENTITY & AUTHORIZATION ENDPOINTS
+  // ============================================================================
+  
+  // Get current user's workspace role (secure - no data leak)
+  app.get('/api/me/workspace-role', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.user!.currentWorkspaceId;
+      
+      if (!workspaceId) {
+        return res.json({ workspaceRole: null });
+      }
+      
+      const [employee] = await db
+        .select({ workspaceRole: employees.workspaceRole })
+        .from(employees)
+        .where(and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, workspaceId)
+        ))
+        .limit(1);
+      
+      res.json({ workspaceRole: employee?.workspaceRole || null });
+    } catch (error) {
+      console.error('[API] Error fetching workspace role:', error);
+      res.status(500).json({ message: 'Failed to fetch workspace role' });
+    }
+  });
+  
+  // Get current user's platform role (secure)
+  app.get('/api/me/platform-role', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const [platformRole] = await db
+        .select({ role: platformRoles.role })
+        .from(platformRoles)
+        .where(and(
+          eq(platformRoles.userId, userId),
+          isNull(platformRoles.revokedAt)
+        ))
+        .limit(1);
+      
+      res.json({ platformRole: platformRole?.role || 'none' });
+    } catch (error) {
+      console.error('[API] Error fetching platform role:', error);
+      res.status(500).json({ message: 'Failed to fetch platform role' });
+    }
+  });
+  
+  // Get workspace features available to current user (SERVER-SIDE VALIDATION)
+  app.get('/api/me/workspace-features', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.user!.currentWorkspaceId;
+      
+      // Fetch workspace role
+      let workspaceRole = null;
+      if (workspaceId) {
+        const [employee] = await db
+          .select({ workspaceRole: employees.workspaceRole })
+          .from(employees)
+          .where(and(
+            eq(employees.userId, userId),
+            eq(employees.workspaceId, workspaceId)
+          ))
+          .limit(1);
+        workspaceRole = employee?.workspaceRole || null;
+      }
+      
+      // Fetch platform role
+      const [platformRoleData] = await db
+        .select({ role: platformRoles.role })
+        .from(platformRoles)
+        .where(and(
+          eq(platformRoles.userId, userId),
+          isNull(platformRoles.revokedAt)
+        ))
+        .limit(1);
+      const platformRole = platformRoleData?.role || 'none';
+      
+      // Import workspace features and filter server-side
+      const { getFeaturesForRole } = await import('@shared/workspaceFeatures');
+      const features = getFeaturesForRole(platformRole, workspaceRole);
+      
+      res.json({ 
+        features,
+        platformRole,
+        workspaceRole
+      });
+    } catch (error) {
+      console.error('[API] Error fetching workspace features:', error);
+      res.status(500).json({ message: 'Failed to fetch workspace features' });
+    }
+  });
+
   // Get feature updates (What's New)
   app.get('/api/feature-updates', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
