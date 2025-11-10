@@ -38,6 +38,18 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 -   **Autonomous Automation System**: Anchor-based biweekly scheduling for BillOS™ and OperationsOS™ ensuring consistent cadence for invoicing and payroll, with FLSA-compliant calculations and audit tracking.
 -   **Security**: Stripe webhook validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 -   **Production Monitoring**: Comprehensive observability with error logging, performance metrics, health checks.
+-   **Partner API Usage Tracking**: Comprehensive middleware-based tracking system with:
+    - Mandatory caller-supplied deterministic IDs for idempotency (prevents double-billing on retries)
+    - Database deduplication checks before inserting usage events
+    - Non-blocking async architecture (usage tracking never blocks partner operations)
+    - Three tracking wrappers: `withUsageTracking()` (single API calls), `withBatchUsageTracking()` (bulk operations), `trackWebhookEvent()` (partner webhooks)
+    - Detailed metrics: request/response payload sizes, response times, error tracking, success rates
+-   **Cost Aggregation & Billing**: Automated cost calculation and Stripe invoice generation:
+    - Monthly cost rollup aggregating AI usage + partner API costs per workspace
+    - Tier-based markup rates: Free 50%, Starter 30%, Professional 20%, Enterprise 10%
+    - Users pay ALL operational costs (AI tokens, QuickBooks API calls, Gusto API calls) + AutoForce™ markup
+    - Stripe invoice line item generation with detailed breakdowns
+    - Amortized pricing model: Partner subscription costs ($50/mo QuickBooks, $39/mo Gusto) divided by monthly API call volume
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)
