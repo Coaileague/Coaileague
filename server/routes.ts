@@ -20516,6 +20516,220 @@ Respond with valid JSON array only.`
     }
   });
 
+  // ============================================================================
+  // OVERSIGHT API - 1% Autonomous Oversight Queue
+  // ============================================================================
+
+  // GET /api/oversight - Get all pending oversight events for current workspace
+  app.get('/api/oversight', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.user!.currentWorkspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace selected" });
+      }
+
+      const { oversightEvents } = await import('@shared/schema');
+      
+      const events = await db
+        .select()
+        .from(oversightEvents)
+        .where(
+          and(
+            eq(oversightEvents.workspaceId, workspaceId),
+            eq(oversightEvents.status, 'pending')
+          )
+        )
+        .orderBy(desc(oversightEvents.detectedAt));
+
+      res.json(events);
+    } catch (error: any) {
+      console.error("Error fetching oversight events:", error);
+      res.status(500).json({ message: "Failed to fetch oversight events" });
+    }
+  });
+
+  // GET /api/oversight/stats - Get oversight statistics
+  app.get('/api/oversight/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.user!.currentWorkspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace selected" });
+      }
+
+      const { oversightEvents } = await import('@shared/schema');
+      
+      const [pending, approved, rejected] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` })
+          .from(oversightEvents)
+          .where(and(
+            eq(oversightEvents.workspaceId, workspaceId),
+            eq(oversightEvents.status, 'pending')
+          )),
+        db.select({ count: sql<number>`count(*)` })
+          .from(oversightEvents)
+          .where(and(
+            eq(oversightEvents.workspaceId, workspaceId),
+            eq(oversightEvents.status, 'approved')
+          )),
+        db.select({ count: sql<number>`count(*)` })
+          .from(oversightEvents)
+          .where(and(
+            eq(oversightEvents.workspaceId, workspaceId),
+            eq(oversightEvents.status, 'rejected')
+          )),
+      ]);
+
+      res.json({
+        pending: pending[0]?.count || 0,
+        approved: approved[0]?.count || 0,
+        rejected: rejected[0]?.count || 0,
+      });
+    } catch (error: any) {
+      console.error("Error fetching oversight stats:", error);
+      res.status(500).json({ message: "Failed to fetch oversight stats" });
+    }
+  });
+
+  // PATCH /api/oversight/:id/approve - Approve an oversight event
+  app.patch('/api/oversight/:id/approve', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.user!.currentWorkspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace selected" });
+      }
+
+      const eventId = req.params.id;
+      const { resolutionNotes } = req.body;
+      const { oversightEvents } = await import('@shared/schema');
+
+      const [event] = await db
+        .select()
+        .from(oversightEvents)
+        .where(
+          and(
+            eq(oversightEvents.id, eventId),
+            eq(oversightEvents.workspaceId, workspaceId)
+          )
+        );
+
+      if (!event) {
+        return res.status(404).json({ message: "Oversight event not found" });
+      }
+
+      if (event.status !== 'pending') {
+        return res.status(400).json({ message: "Event already resolved" });
+      }
+
+      const [updated] = await db
+        .update(oversightEvents)
+        .set({
+          status: 'approved',
+          resolvedBy: req.user!.id,
+          resolvedAt: new Date(),
+          resolutionNotes: resolutionNotes || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(oversightEvents.id, eventId))
+        .returning();
+
+      // Log audit trail
+      await storage.createAuditLog({
+        workspaceId,
+        userId: req.user!.id,
+        userEmail: req.user!.email,
+        userRole: req.user!.role || 'unknown',
+        action: 'approve_oversight',
+        actionDescription: `Approved ${event.entityType} oversight event`,
+        targetType: 'oversight_event',
+        targetId: eventId,
+        metadata: {
+          entityType: event.entityType,
+          entityId: event.entityId,
+          flagReason: event.flagReason,
+          resolutionNotes,
+        },
+        ipAddress: req.ip,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error approving oversight event:", error);
+      res.status(500).json({ message: "Failed to approve oversight event" });
+    }
+  });
+
+  // PATCH /api/oversight/:id/reject - Reject an oversight event
+  app.patch('/api/oversight/:id/reject', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.user!.currentWorkspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "No workspace selected" });
+      }
+
+      const eventId = req.params.id;
+      const { resolutionNotes } = req.body;
+      const { oversightEvents } = await import('@shared/schema');
+
+      if (!resolutionNotes?.trim()) {
+        return res.status(400).json({ message: "Rejection reason required" });
+      }
+
+      const [event] = await db
+        .select()
+        .from(oversightEvents)
+        .where(
+          and(
+            eq(oversightEvents.id, eventId),
+            eq(oversightEvents.workspaceId, workspaceId)
+          )
+        );
+
+      if (!event) {
+        return res.status(404).json({ message: "Oversight event not found" });
+      }
+
+      if (event.status !== 'pending') {
+        return res.status(400).json({ message: "Event already resolved" });
+      }
+
+      const [updated] = await db
+        .update(oversightEvents)
+        .set({
+          status: 'rejected',
+          resolvedBy: req.user!.id,
+          resolvedAt: new Date(),
+          resolutionNotes,
+          updatedAt: new Date(),
+        })
+        .where(eq(oversightEvents.id, eventId))
+        .returning();
+
+      // Log audit trail
+      await storage.createAuditLog({
+        workspaceId,
+        userId: req.user!.id,
+        userEmail: req.user!.email,
+        userRole: req.user!.role || 'unknown',
+        action: 'reject_oversight',
+        actionDescription: `Rejected ${event.entityType} oversight event`,
+        targetType: 'oversight_event',
+        targetId: eventId,
+        metadata: {
+          entityType: event.entityType,
+          entityId: event.entityId,
+          flagReason: event.flagReason,
+          resolutionNotes,
+        },
+        ipAddress: req.ip,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error rejecting oversight event:", error);
+      res.status(500).json({ message: "Failed to reject oversight event" });
+    }
+  });
+
   // Return the server we created at the top with WebSocket
   return server;
 }

@@ -22,6 +22,9 @@ export const FRIENDLY_LABELS = {
   // QuickBooks & Gusto
   quickbooks: 'QuickBooks (Invoicing)',
   gusto: 'Gusto (Payroll)',
+  
+  // Oversight
+  oversight: 'Review Queue',
 } as const;
 
 export const FRIENDLY_MESSAGES = {
