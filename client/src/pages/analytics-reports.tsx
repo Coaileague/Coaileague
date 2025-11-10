@@ -53,9 +53,21 @@ const reportRoleRequirements: Record<ReportTab, string[]> = {
 export default function AnalyticsReportsPage() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading: accessLoading } = useWorkspaceAccess();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<ReportTab>('billable');
   const [startDate, setStartDate] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
   const [endDate, setEndDate] = useState<Date>(endOfMonth(subMonths(new Date(), 1)));
+
+  // Determine first accessible tab for initial state
+  const getFirstAccessibleTab = (): ReportTab => {
+    const tabs: ReportTab[] = ['billable', 'payroll', 'client', 'activity', 'audit'];
+    return tabs.find(tab => {
+      const hasRole = isPlatformStaff || reportRoleRequirements[tab].includes(workspaceRole);
+      const tierHierarchy = { free: 1, starter: 2, professional: 3, enterprise: 4 };
+      const hasTier = isPlatformStaff || tierHierarchy[subscriptionTier] >= tierHierarchy[reportTierRequirements[tab]];
+      return hasRole && hasTier;
+    }) || 'billable';
+  };
+
+  const [activeTab, setActiveTab] = useState<ReportTab>(getFirstAccessibleTab());
 
   const handleExport = () => {
     // Check tier access - export is Enterprise feature
@@ -86,18 +98,20 @@ export default function AnalyticsReportsPage() {
         setStartDate(startOfMonth(subMonths(now, 1)));
         setEndDate(endOfMonth(subMonths(now, 1)));
         break;
-      case 'this-quarter':
+      case 'this-quarter': {
         const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
         const quarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
         setStartDate(quarterStart);
         setEndDate(quarterEnd);
         break;
-      case 'last-quarter':
+      }
+      case 'last-quarter': {
         const lastQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1);
         const lastQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 0);
         setStartDate(lastQuarterStart);
         setEndDate(lastQuarterEnd);
         break;
+      }
     }
   };
 
@@ -271,27 +285,87 @@ export default function AnalyticsReportsPage() {
 
           {/* Billable Hours Report */}
           <TabsContent value="billable" className="space-y-4">
-            <BillableHoursReport startDate={startDate} endDate={endDate} />
+            {canAccessTab('billable') ? (
+              <BillableHoursReport startDate={startDate} endDate={endDate} />
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="font-medium">Access Restricted</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Requires {reportRoleRequirements['billable'].includes('supervisor') ? 'Supervisor' : 'Manager'} role and {reportTierRequirements['billable']} tier.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Payroll Report */}
           <TabsContent value="payroll" className="space-y-4">
-            <PayrollReport startDate={startDate} endDate={endDate} />
+            {canAccessTab('payroll') ? (
+              <PayrollReport startDate={startDate} endDate={endDate} />
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="font-medium">Access Restricted</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Requires Manager role and Professional tier.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Client Summary Report */}
           <TabsContent value="client" className="space-y-4">
-            <ClientSummaryReport startDate={startDate} endDate={endDate} />
+            {canAccessTab('client') ? (
+              <ClientSummaryReport startDate={startDate} endDate={endDate} />
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="font-medium">Access Restricted</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Requires Manager role and Starter tier.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Employee Activity Report */}
           <TabsContent value="activity" className="space-y-4">
-            <EmployeeActivityReport startDate={startDate} endDate={endDate} />
+            {canAccessTab('activity') ? (
+              <EmployeeActivityReport startDate={startDate} endDate={endDate} />
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="font-medium">Access Restricted</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Requires Supervisor role and Starter tier.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Audit Trail Report */}
           <TabsContent value="audit" className="space-y-4">
-            <AuditTrailReport startDate={startDate} endDate={endDate} />
+            {canAccessTab('audit') ? (
+              <AuditTrailReport startDate={startDate} endDate={endDate} />
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="font-medium">Access Restricted</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Requires Manager role and Professional tier.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
