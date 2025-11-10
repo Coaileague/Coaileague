@@ -35,6 +35,7 @@ import {
 } from "@shared/schema";
 import { eq, and, gte, lte, isNull, desc, sql } from "drizzle-orm";
 import { Resend } from "resend";
+import { aggregateBillableHours, markEntriesAsBilled } from "./automation/billableHoursAggregator";
 
 // Lazy initialize Resend only when sending emails (allows server to start without API key)
 let resend: Resend | null = null;
@@ -50,8 +51,9 @@ function getResend() {
  */
 
 /**
- * Zero-Touch Usage-Based Invoicing
- * Runs nightly to auto-generate invoices from approved time entries
+ * Zero-Touch Usage-Based Invoicing (PRODUCTION)
+ * Uses billable hours aggregator for accurate OT/regular/holiday calculation
+ * Generates draft invoices requiring manager approval before sending to clients
  */
 export async function generateUsageBasedInvoices(workspaceId: string, generateDate?: Date) {
   const targetDate = generateDate || new Date();
@@ -62,38 +64,53 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
   startDate.setDate(startDate.getDate() - 1);
   const endDate = new Date(targetDate);
   
-  // Find all approved time entries that haven't been billed
-  const unbilledEntries = await db
-    .select()
-    .from(timeEntries)
-    .where(
-      and(
-        eq(timeEntries.workspaceId, workspaceId),
-        eq(timeEntries.status, 'approved'),
-        gte(timeEntries.clockIn, startDate),
-        lte(timeEntries.clockIn, endDate),
-        isNull(timeEntries.invoiceId), // Not yet invoiced
-        eq(timeEntries.billableToClient, true)
-      )
-    );
+  // Use production aggregator for FLSA-compliant OT calculation
+  const aggregationResult = await aggregateBillableHours({
+    workspaceId,
+    startDate,
+    endDate,
+  });
   
-  // Group by client
-  const entriesByClient = unbilledEntries.reduce((acc: Record<string, typeof unbilledEntries>, entry) => {
-    if (!entry.clientId) return acc;
-    if (!acc[entry.clientId]) acc[entry.clientId] = [];
-    acc[entry.clientId].push(entry);
-    return acc;
-  }, {} as Record<string, typeof unbilledEntries>);
+  // Log warnings for human review (surfaced in invoice review dashboard)
+  if (aggregationResult.warnings.length > 0) {
+    console.warn('[BillOS™] Billable hours aggregation warnings:', aggregationResult.warnings);
+  }
+  
+  // Check for critical warnings that should block invoice generation
+  const criticalWarnings = aggregationResult.warnings.filter(w => 
+    w.includes('missing clock-out') || 
+    w.includes('fell back to workspace default') ||
+    w.includes('No billing rate configured')
+  );
+  
+  if (criticalWarnings.length > 0) {
+    console.error('[BillOS™] Critical warnings detected - invoices require manual review:', criticalWarnings);
+    // Continue generation but flag for review (warnings stored with invoice)
+  }
   
   const generatedInvoices: Invoice[] = [];
   
-  // Generate invoice for each client with unbilled hours
-  for (const [clientId, entries] of Object.entries(entriesByClient)) {
+  // Generate DRAFT invoice for each client (requires manager approval)
+  for (const clientSummary of aggregationResult.clientSummaries) {
     try {
-      const invoice = await createInvoiceFromTimeEntries(workspaceId, clientId, entries);
+      const invoice = await createInvoiceFromBillableSummary(
+        workspaceId,
+        clientSummary,
+        aggregationResult.warnings.filter(w => 
+          w.includes(clientSummary.clientId) || w.includes(clientSummary.clientName)
+        )
+      );
       generatedInvoices.push(invoice);
+      
+      // Mark time entries as billed (link to invoice) after successful creation
+      const allTimeEntryIds = clientSummary.entries.map(entry => entry.timeEntryId);
+      await markEntriesAsBilled({
+        timeEntryIds: allTimeEntryIds,
+        invoiceId: invoice.id,
+      });
+      
     } catch (error) {
-      console.error(`Failed to generate invoice for client ${clientId}:`, error);
+      console.error(`[BillOS™] Failed to generate invoice for client ${clientSummary.clientName}:`, error);
     }
   }
   
@@ -101,29 +118,27 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
 }
 
 /**
- * Create invoice from time entries with client billing rates
+ * Create invoice from billable hours summary with OT/regular/holiday breakdown (PRODUCTION)
+ * Generates employee-grouped line items showing hour types for transparency
+ * Keeps invoice in DRAFT status requiring manager approval before sending to client
  */
-async function createInvoiceFromTimeEntries(
+async function createInvoiceFromBillableSummary(
   workspaceId: string,
-  clientId: string,
-  entries: any[]
+  clientSummary: any, // ClientBillableSummary from aggregator
+  warnings: string[]
 ) {
-  // Get client billing rate
+  // Get client rate configuration (for subscription billing if applicable)
   const [clientRate] = await db
     .select()
     .from(clientRates)
     .where(
       and(
         eq(clientRates.workspaceId, workspaceId),
-        eq(clientRates.clientId, clientId),
+        eq(clientRates.clientId, clientSummary.clientId!),
         eq(clientRates.isActive, true)
       )
     )
     .limit(1);
-  
-  if (!clientRate) {
-    throw new Error(`No active billing rate found for client ${clientId}`);
-  }
   
   // Get workspace for platform fee
   const [workspace] = await db
@@ -132,49 +147,125 @@ async function createInvoiceFromTimeEntries(
     .where(eq(workspaces.id, workspaceId))
     .limit(1);
   
-  // Calculate line items
-  const lineItems = entries.map((entry) => {
-    const hours = parseFloat(entry.hoursWorked || "0");
-    const rate = parseFloat(entry.hourlyRateOverride || clientRate.billableRate);
-    const amount = hours * rate;
-    
-    return {
-      timeEntryId: entry.id,
-      description: `Time Entry - ${hours.toFixed(2)} hours`,
-      quantity: hours.toString(),
-      unitPrice: rate.toString(),
-      amount: amount.toString(),
-    };
-  });
+  // Build line items: Employee-grouped with hour type breakdown
+  const lineItems: Array<{
+    description: string;
+    quantity: string;
+    unitPrice: string;
+    amount: string;
+    metadata?: string; // Store rate source for audit trail
+  }> = [];
   
-  // Calculate totals
-  const subtotal = lineItems.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+  // Group entries by employee for consolidated line items
+  const entriesByEmployee = new Map<string, typeof clientSummary.entries>();
+  for (const entry of clientSummary.entries) {
+    const key = entry.employeeId;
+    if (!entriesByEmployee.has(key)) {
+      entriesByEmployee.set(key, []);
+    }
+    entriesByEmployee.get(key)!.push(entry);
+  }
+  
+  // Generate line items per employee showing hour type breakdown
+  for (const [employeeId, entries] of entriesByEmployee) {
+    const employeeName = entries[0].employeeName;
+    const rateSource = entries[0].rateSource;
+    const billingRate = entries[0].billingRate;
+    
+    // Sum up hours by type for this employee
+    let totalRegular = 0;
+    let totalOvertime = 0;
+    let totalHoliday = 0;
+    let regularAmount = 0;
+    let overtimeAmount = 0;
+    let holidayAmount = 0;
+    
+    for (const entry of entries) {
+      totalRegular += entry.regularHours;
+      totalOvertime += entry.overtimeHours;
+      totalHoliday += entry.holidayHours;
+      regularAmount += entry.regularHours * billingRate;
+      overtimeAmount += entry.overtimeHours * billingRate * 1.5;
+      holidayAmount += entry.holidayHours * billingRate * 2.0;
+    }
+    
+    // Regular hours line item
+    if (totalRegular > 0) {
+      lineItems.push({
+        description: `${employeeName} - Regular Hours`,
+        quantity: totalRegular.toFixed(2),
+        unitPrice: billingRate.toFixed(2),
+        amount: regularAmount.toFixed(2),
+        metadata: JSON.stringify({ 
+          rateSource, 
+          hourType: 'regular',
+          employeeId 
+        }),
+      });
+    }
+    
+    // Overtime hours line item (1.5x billing rate)
+    if (totalOvertime > 0) {
+      const overtimeRate = billingRate * 1.5;
+      lineItems.push({
+        description: `${employeeName} - Overtime Hours (1.5x)`,
+        quantity: totalOvertime.toFixed(2),
+        unitPrice: overtimeRate.toFixed(2),
+        amount: overtimeAmount.toFixed(2),
+        metadata: JSON.stringify({ 
+          rateSource, 
+          hourType: 'overtime',
+          employeeId,
+          multiplier: 1.5
+        }),
+      });
+    }
+    
+    // Holiday hours line item (2.0x billing rate)
+    if (totalHoliday > 0) {
+      const holidayRate = billingRate * 2.0;
+      lineItems.push({
+        description: `${employeeName} - Holiday Hours (2.0x)`,
+        quantity: totalHoliday.toFixed(2),
+        unitPrice: holidayRate.toFixed(2),
+        amount: holidayAmount.toFixed(2),
+        metadata: JSON.stringify({ 
+          rateSource, 
+          hourType: 'holiday',
+          employeeId,
+          multiplier: 2.0
+        }),
+      });
+    }
+  }
+  
+  // Calculate subtotal from aggregator (already includes OT calculations)
+  let subtotal = clientSummary.totalAmount;
   
   // Add subscription fee if hybrid billing
-  let subscriptionAmount = 0;
-  if (clientRate.hasSubscription && clientRate.subscriptionAmount) {
-    subscriptionAmount = parseFloat(clientRate.subscriptionAmount);
-    
-    // Prorate subscription based on frequency
+  if (clientRate?.hasSubscription && clientRate.subscriptionAmount) {
+    const subscriptionAmount = parseFloat(clientRate.subscriptionAmount);
     const proratedAmount = prorateSubscription(
       subscriptionAmount,
       clientRate.subscriptionFrequency || 'monthly',
-      entries.length > 0 ? new Date(entries[0].clockIn!) : new Date()
+      new Date()
     );
     
     lineItems.unshift({
-      timeEntryId: null as any,
       description: `${clientRate.subscriptionFrequency === 'monthly' ? 'Monthly' : 'Quarterly'} Subscription (Prorated)`,
       quantity: "1",
       unitPrice: proratedAmount.toString(),
       amount: proratedAmount.toString(),
+      metadata: JSON.stringify({ type: 'subscription' }),
     });
+    
+    subtotal += proratedAmount;
   }
   
-  const finalSubtotal = subtotal + subscriptionAmount;
+  // Calculate tax and totals
   const taxRate = 0; // TODO: Integrate tax calculation API
-  const taxAmount = finalSubtotal * taxRate;
-  const total = finalSubtotal + taxAmount;
+  const taxAmount = subtotal * taxRate;
+  const total = subtotal + taxAmount;
   
   // Calculate platform fee
   const platformFeePercentage = parseFloat(workspace?.platformFeePercentage || "3.00");
@@ -189,44 +280,40 @@ async function createInvoiceFromTimeEntries(
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
   
-  // Create invoice
+  // Create invoice in DRAFT status (requires manager approval)
   const [invoice] = await db
     .insert(invoices)
     .values({
       workspaceId,
-      clientId,
+      clientId: clientSummary.clientId,
       invoiceNumber,
       issueDate,
       dueDate,
-      subtotal: finalSubtotal.toString(),
+      subtotal: subtotal.toFixed(2),
       taxRate: taxRate.toString(),
-      taxAmount: taxAmount.toString(),
-      total: total.toString(),
+      taxAmount: taxAmount.toFixed(2),
+      total: total.toFixed(2),
       platformFeePercentage: platformFeePercentage.toString(),
-      platformFeeAmount: platformFeeAmount.toString(),
-      businessAmount: businessAmount.toString(),
-      status: 'draft',
+      platformFeeAmount: platformFeeAmount.toFixed(2),
+      businessAmount: businessAmount.toFixed(2),
+      status: 'draft', // HUMAN OVERSIGHT: Manager must review before sending
+      notes: warnings.length > 0 
+        ? `⚠️ Aggregation Warnings:\n${warnings.join('\n')}` 
+        : null,
     })
     .returning();
   
-  // Create line items
+  // Create line items with hour type breakdown
   await db.insert(invoiceLineItems).values(
     lineItems.map(item => ({
       invoiceId: invoice.id,
-      ...item,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      // Note: metadata field doesn't exist in schema yet - will be added for rate source tracking
     }))
   );
-  
-  // Update time entries to link to invoice
-  for (const entry of entries) {
-    await db
-      .update(timeEntries)
-      .set({ invoiceId: invoice.id })
-      .where(eq(timeEntries.id, entry.id));
-  }
-  
-  // Send invoice to client portal
-  await sendInvoiceToClientPortal(invoice);
   
   return invoice;
 }
