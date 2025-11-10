@@ -89,14 +89,18 @@ function buildPayrollFingerprintData(workspace: any, date: Date) {
 
 /**
  * Build idempotency fingerprint for schedule generation
+ * Includes: workspace, period boundaries (next week), schedule config hash
  */
-function buildScheduleFingerprintData(workspace: any, date: Date) {
+function buildScheduleFingerprintData(workspace: any, date: Date, nextWeekStart: Date, nextWeekEnd: Date) {
   return {
     workspaceId: workspace.id,
-    date: date.toISOString().split('T')[0],
+    runDate: date.toISOString().split('T')[0], // YYYY-MM-DD
+    periodStart: nextWeekStart.toISOString().split('T')[0],
+    periodEnd: nextWeekEnd.toISOString().split('T')[0],
     interval: workspace.scheduleGenerationInterval,
     dayOfWeek: workspace.scheduleDayOfWeek,
     dayOfMonth: workspace.scheduleDayOfMonth,
+    advanceNoticeDays: workspace.scheduleAdvanceNoticeDays,
     biweeklyAnchor: workspace.scheduleBiweeklyAnchor?.toISOString(),
     configHash: crypto
       .createHash('sha256')
@@ -104,6 +108,7 @@ function buildScheduleFingerprintData(workspace: any, date: Date) {
         interval: workspace.scheduleGenerationInterval,
         dayOfWeek: workspace.scheduleDayOfWeek,
         dayOfMonth: workspace.scheduleDayOfMonth,
+        advanceNoticeDays: workspace.scheduleAdvanceNoticeDays,
       }))
       .digest('hex')
       .substring(0, 16),
@@ -547,7 +552,7 @@ async function runWeeklyScheduleGeneration() {
         }
         
         if (shouldGenerateSchedule) {
-          console.log(`   ✓ Schedule interval matched, generating schedules...`);
+          console.log(`   ✓ Schedule interval matched, checking idempotency...`);
           
           // Wrap automation in audit logging lifecycle
           const runId = `operationsos-${workspace.id}-${Date.now()}`;
@@ -560,27 +565,81 @@ async function runWeeklyScheduleGeneration() {
               runId,
             },
             async () => {
-              // TODO: Get shift requirements from workspace configuration
-              // For now, skip auto-scheduling until shift requirements are configured
-              console.log(`   ℹ️  Shift templates not yet configured for ${workspace.name}`);
-              console.log(`   (Requires shift requirement templates in workspace settings)`);
-              
-              // Update lastRunAt and advance anchor (transactional)
-              await db.transaction(async (tx) => {
-                const updateData: any = { lastScheduleRunAt: today };
-                
-                // Advance biweekly anchor if applicable
-                if (interval === 'biweekly' && workspace.scheduleBiweeklyAnchor) {
-                  const newAnchor = advanceAnchor(workspace.scheduleBiweeklyAnchor);
-                  updateData.scheduleBiweeklyAnchor = newAnchor;
-                }
-                
-                await tx.update(workspaces)
-                  .set(updateData)
-                  .where(eq(workspaces.id, workspace.id));
+              // IDEMPOTENCY: Check if this operation already ran today (14-day TTL)
+              const idem = await executeIdempotencyCheck({
+                workspaceId: workspace.id,
+                operationType: 'schedule_generation',
+                requestData: buildScheduleFingerprintData(workspace, today, nextWeekStart, nextWeekEnd),
+                ttlDays: 14,
               });
               
-              return { shiftsGenerated: 0 }; // Will be non-zero when shift templates are configured
+              if (!idem.isNew) {
+                console.log(`   ⚠️  Duplicate schedule generation detected (idempotency key ${idem.idempotencyKeyId})`);
+                console.log(`   Existing status: ${idem.status}, skipping execution`);
+                return { 
+                  shiftsGenerated: 0, 
+                  isDuplicate: true,
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                };
+              }
+              
+              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), generating schedules...`);
+              
+              try {
+                // TODO: Get shift requirements from workspace configuration
+                // For now, skip auto-scheduling until shift requirements are configured
+                console.log(`   ℹ️  Shift templates not yet configured for ${workspace.name}`);
+                console.log(`   (Requires shift requirement templates in workspace settings)`);
+                
+                const shiftsGenerated = 0; // Will be non-zero when shift templates are configured
+                
+                // Update lastRunAt, advance anchor, and mark idempotency complete (ATOMIC)
+                await db.transaction(async (tx) => {
+                  const updateData: any = { lastScheduleRunAt: today };
+                  
+                  // Advance biweekly anchor if applicable
+                  if (interval === 'biweekly' && workspace.scheduleBiweeklyAnchor) {
+                    const newAnchor = advanceAnchor(workspace.scheduleBiweeklyAnchor);
+                    updateData.scheduleBiweeklyAnchor = newAnchor;
+                  }
+                  
+                  await tx.update(workspaces)
+                    .set(updateData)
+                    .where(eq(workspaces.id, workspace.id));
+                  
+                  // Mark idempotency operation complete (with transaction)
+                  await updateIdempotencyResult({
+                    idempotencyKeyId: idem.idempotencyKeyId,
+                    status: 'completed',
+                    resultId: undefined, // No specific result ID for schedule generation yet
+                    resultMetadata: {
+                      shiftsGenerated,
+                      periodStart: nextWeekStart.toISOString().split('T')[0],
+                      periodEnd: nextWeekEnd.toISOString().split('T')[0],
+                      interval,
+                    },
+                  }, tx);
+                });
+                
+                if (shiftsGenerated > 0) {
+                  console.log(`✅ Generated ${shiftsGenerated} shift(s) for ${workspace.name}`);
+                  successCount++;
+                } else {
+                  console.log(`ℹ️  No shifts generated (templates not configured)`);
+                }
+                
+                return { shiftsGenerated };
+                
+              } catch (error) {
+                // Mark idempotency operation failed (no transaction on error path)
+                await updateIdempotencyResult({
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                  status: 'failed',
+                  errorMessage: error instanceof Error ? error.message : String(error),
+                  errorStack: error instanceof Error ? error.stack : undefined,
+                });
+                throw error; // Re-throw to trigger audit log error handling
+              }
             }
           );
           
