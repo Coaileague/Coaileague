@@ -16,6 +16,22 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useState } from 'react';
+import { FRIENDLY_LABELS, FRIENDLY_MESSAGES, FRIENDLY_HELP, friendlyError } from '@/lib/friendlyStrings';
+
+// Helper function for relative time
+function getRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString();
+}
 
 interface PartnerConnection {
   id: string;
@@ -65,8 +81,8 @@ export default function IntegrationsPage() {
     },
     onError: (error: any) => {
       toast({
-        title: 'Connection Failed',
-        description: error.message || 'Failed to initiate connection',
+        title: 'Could Not Connect',
+        description: friendlyError(error.message || 'Failed to initiate connection'),
         variant: 'destructive',
       });
     },
@@ -86,14 +102,14 @@ export default function IntegrationsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
       toast({
         title: 'Disconnected',
-        description: 'Integration disconnected successfully',
+        description: FRIENDLY_MESSAGES.disconnectSuccess,
       });
       setDisconnectDialog({ open: false, partner: null });
     },
     onError: (error: any) => {
       toast({
-        title: 'Disconnect Failed',
-        description: error.message || 'Failed to disconnect',
+        title: 'Could Not Disconnect',
+        description: friendlyError(error.message || 'Failed to disconnect'),
         variant: 'destructive',
       });
     },
@@ -112,14 +128,14 @@ export default function IntegrationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
       toast({
-        title: 'Token Refreshed',
-        description: 'Access token refreshed successfully',
+        title: 'Connection Renewed',
+        description: FRIENDLY_MESSAGES.refreshSuccess,
       });
     },
     onError: (error: any) => {
       toast({
-        title: 'Refresh Failed',
-        description: error.message || 'Failed to refresh token',
+        title: 'Could Not Renew',
+        description: friendlyError(error.message || 'Failed to refresh token'),
         variant: 'destructive',
       });
     },
@@ -131,28 +147,28 @@ export default function IntegrationsPage() {
         return (
           <Badge variant="default" className="gap-1" data-testid={`badge-status-connected`}>
             <CheckCircle className="w-3 h-3" />
-            Connected
+            {FRIENDLY_LABELS.connected}
           </Badge>
         );
       case 'expired':
         return (
           <Badge variant="secondary" className="gap-1" data-testid={`badge-status-expired`}>
             <AlertCircle className="w-3 h-3" />
-            Expired
+            {FRIENDLY_LABELS.expired}
           </Badge>
         );
       case 'error':
         return (
           <Badge variant="destructive" className="gap-1" data-testid={`badge-status-error`}>
             <XCircle className="w-3 h-3" />
-            Error
+            {FRIENDLY_LABELS.error}
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" className="gap-1" data-testid={`badge-status-disconnected`}>
             <Unlink className="w-3 h-3" />
-            Not Connected
+            {FRIENDLY_LABELS.disconnected}
           </Badge>
         );
     }
@@ -192,29 +208,37 @@ export default function IntegrationsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {connection && (
-            <div className="space-y-2 text-sm">
-              {connection.companyId && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Company ID:</span>
-                  <span className="font-mono text-xs" data-testid={`text-company-id-${partner}`}>
-                    {connection.companyId}
-                  </span>
-                </div>
-              )}
+            <div className="space-y-3 text-sm bg-muted/30 p-4 rounded-md">
               {connection.lastSyncedAt && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Synced:</span>
-                  <span data-testid={`text-last-synced-${partner}`}>
-                    {new Date(connection.lastSyncedAt).toLocaleString()}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium" data-testid={`text-last-synced-${partner}`}>
+                        {partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'} finished updating {getRelativeTime(new Date(connection.lastSyncedAt))}. You're all set!
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {partner === 'quickbooks' 
+                          ? 'Invoices and payments update automatically in the background.' 
+                          : 'Payroll and employee hours update automatically in the background.'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
               {connection.accessTokenExpiresAt && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Token Expires:</span>
-                  <span data-testid={`text-token-expires-${partner}`}>
-                    {new Date(connection.accessTokenExpiresAt).toLocaleString()}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 text-secondary shrink-0" />
+                    <div>
+                      <p className="font-medium" data-testid={`text-token-expires-${partner}`}>
+                        This connection stays active until {new Date(connection.accessTokenExpiresAt).toLocaleDateString()}.
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        We'll remind you before then. If you see a warning, click "Renew Connection" to keep things running.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -251,7 +275,7 @@ export default function IntegrationsPage() {
                     data-testid={`button-refresh-${partner}`}
                   >
                     <RefreshCw className="w-4 h-4" />
-                    {refreshMutation.isPending ? 'Refreshing...' : 'Refresh Token'}
+                    {refreshMutation.isPending ? 'Renewing...' : 'Renew Connection'}
                   </Button>
                 )}
               </>
@@ -275,17 +299,16 @@ export default function IntegrationsPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">Partner Integrations</h1>
+        <h1 className="text-3xl font-bold" data-testid="text-page-title">Connect Your Services</h1>
         <p className="text-muted-foreground mt-2" data-testid="text-page-description">
-          Connect AutoForce™ with QuickBooks Online for invoicing and Gusto for payroll processing
+          Link QuickBooks for automatic invoicing and Gusto for automatic payroll
         </p>
       </div>
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Production Setup Required:</strong> Before connecting, ensure your admin has configured
-          the OAuth credentials (client ID, client secret, redirect URIs) and encryption key in environment variables.
+          <strong>Need Help Getting Started?</strong> Contact AutoForce support and we'll help you set up these connections.
         </AlertDescription>
       </Alert>
 
@@ -317,28 +340,25 @@ export default function IntegrationsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>About Partner Integrations</CardTitle>
+          <CardTitle>What These Services Do</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <div>
             <h3 className="font-semibold text-foreground mb-2">QuickBooks Online</h3>
             <p>
-              Sync your AutoForce™ clients as QuickBooks customers, create invoices automatically,
-              and record payments. All financial data stays synchronized between platforms.
+              Automatically creates invoices for your clients and tracks payments. Your financial data stays updated in both systems.
             </p>
           </div>
           <div>
             <h3 className="font-semibold text-foreground mb-2">Gusto Payroll</h3>
             <p>
-              Sync employees, submit time tracking data, create payroll runs, and process payroll
-              directly from AutoForce™. Ensure FLSA compliance with automated calculations.
+              Automatically processes payroll for your employees using their time tracking data. Ensures accurate calculations and compliance.
             </p>
           </div>
           <div>
-            <h3 className="font-semibold text-foreground mb-2">Usage-Based Billing</h3>
+            <h3 className="font-semibold text-foreground mb-2">How Billing Works</h3>
             <p>
-              All API calls to partner services are tracked and billed based on your workspace tier.
-              You pay operational costs (API fees) plus AutoForce™ markup.
+              You pay only for what you use. AutoForce charges you for the actual cost plus a small service fee based on your plan.
             </p>
           </div>
           <div className="pt-2 border-t">
@@ -349,7 +369,7 @@ export default function IntegrationsPage() {
               className="text-primary hover:underline flex items-center gap-1"
               data-testid="link-integration-docs"
             >
-              Learn more about integrations
+              Learn more
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
@@ -359,10 +379,10 @@ export default function IntegrationsPage() {
       <Dialog open={disconnectDialog.open} onOpenChange={(open) => setDisconnectDialog({ open, partner: null })}>
         <DialogContent data-testid="dialog-disconnect">
           <DialogHeader>
-            <DialogTitle>Disconnect Integration</DialogTitle>
+            <DialogTitle>Stop Using {disconnectDialog.partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'}?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to disconnect from {disconnectDialog.partner === 'quickbooks' ? 'QuickBooks Online' : 'Gusto'}?
-              This will revoke access and you'll need to reconnect to use the integration again.
+              Are you sure you want to stop using {disconnectDialog.partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'}?
+              You'll need to connect again to use automatic {disconnectDialog.partner === 'quickbooks' ? 'invoicing' : 'payroll'}.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -379,7 +399,7 @@ export default function IntegrationsPage() {
               disabled={disconnectMutation.isPending}
               data-testid="button-confirm-disconnect"
             >
-              {disconnectMutation.isPending ? 'Disconnecting...' : 'Disconnect'}
+              {disconnectMutation.isPending ? 'Stopping...' : 'Stop Using'}
             </Button>
           </DialogFooter>
         </DialogContent>
