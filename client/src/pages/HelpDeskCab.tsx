@@ -1191,26 +1191,78 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           </div>
         </section>
 
-        {/* RIGHT COLUMN: User List */}
-        <section className="min-w-[200px] max-w-[260px] w-auto bg-gradient-to-b from-slate-100 via-teal-50 to-slate-100 backdrop-blur-sm flex flex-col flex-shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.1)]">
+        {/* RIGHT COLUMN: User List or Context Panel */}
+        <section className="min-w-[280px] max-w-[320px] w-auto bg-gradient-to-b from-slate-100 via-teal-50 to-slate-100 backdrop-blur-sm flex flex-col flex-shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.1)]">
           
-          {/* User List Header */}
+          {/* Header with toggle */}
           <div className="px-3 py-2 border-b border-primary/50 flex-shrink-0 bg-gradient-to-r from-neutral-100/80 to-slate-100/80">
             <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-primary flex-shrink-0" />
-              <h2 className="text-xs font-bold text-slate-800">
-                Online Users
-              </h2>
-              <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0 bg-primary text-white" data-testid="text-user-count">
-                {uniqueUsers.length}
-              </Badge>
+              {showContextPanel && isStaff ? (
+                <>
+                  <Info className="w-4 h-4 text-primary flex-shrink-0" />
+                  <h2 className="text-xs font-bold text-slate-800">
+                    Ticket Context
+                  </h2>
+                </>
+              ) : (
+                <>
+                  <Users className="w-4 h-4 text-primary flex-shrink-0" />
+                  <h2 className="text-xs font-bold text-slate-800">
+                    Online Users
+                  </h2>
+                </>
+              )}
+              {isStaff && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-5 px-2 text-[9px]"
+                  onClick={() => setShowContextPanel(!showContextPanel)}
+                  data-testid="toggle-context-panel"
+                >
+                  {showContextPanel ? 'Users' : 'Context'}
+                </Button>
+              )}
+              {!showContextPanel && (
+                <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0 bg-primary text-white" data-testid="text-user-count">
+                  {uniqueUsers.length}
+                </Badge>
+              )}
             </div>
           </div>
           
-          <ScrollArea className="flex-grow p-2">
-            <div className="space-y-1">
-              {uniqueUsers.map((u) => {
-                // No IRC prefix - WF logo icon shows authority
+          {/* Content Area - Context Panel or User List */}
+          {showContextPanel && isStaff && selectedUserId ? (
+            <TicketContextPanel
+              user={{
+                id: selectedUserId,
+                name: uniqueUsers.find(u => u.id === selectedUserId)?.name || "User",
+                email: "customer@example.com",
+                organization: "AutoForce™ Customer",
+                subscriptionTier: "professional" as const,
+                accountCreated: new Date().toISOString().split('T')[0],
+              }}
+              previousTickets={[]}
+              suggestedArticles={[
+                {
+                  id: "kb-001",
+                  title: "Getting Started with AutoForce™",
+                  url: "/help/getting-started",
+                  relevance: 0.95,
+                },
+                {
+                  id: "kb-002",
+                  title: "Common Support Issues",
+                  url: "/help/troubleshooting",
+                  relevance: 0.87,
+                },
+              ]}
+            />
+          ) : (
+            <ScrollArea className="flex-grow p-2">
+              <div className="space-y-1">
+                {uniqueUsers.map((u) => {
+                  // No IRC prefix - WF logo icon shows authority
                 
                 return (
                   <ContextMenu key={u.id}>
@@ -1493,8 +1545,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                   </ContextMenu>
                 );
               })}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          )}
         </section>
       </main>
 

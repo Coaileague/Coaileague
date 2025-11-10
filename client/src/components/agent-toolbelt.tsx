@@ -97,7 +97,7 @@ export function AgentToolbelt({
 
   const handleKBLink = (article: typeof kbArticles[0]) => {
     if (onSendKBLink) {
-      onSendKBLink(`📚 **${article.title}**: ${window.location.origin}${article.url}`);
+      onSendKBLink(`[KB] **${article.title}**: ${window.location.origin}${article.url}`);
     }
     toast({
       title: "KB Link Sent",
