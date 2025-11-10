@@ -2,6 +2,7 @@ import { db } from "server/db";
 import { timeEntries, employees, workspaces, clients } from "@shared/schema";
 import { and, eq, gte, lte, isNull, sql } from "drizzle-orm";
 import { resolveRates, bucketHours, calculateAmount, roundHours } from "./rateResolver";
+import { isHolidayDate } from "./holidayDetector";
 
 /**
  * Payroll Hours Aggregation Service
@@ -85,7 +86,7 @@ export async function aggregatePayrollHours(params: {
   
   console.log(`[PayrollHours] Aggregating for workspace ${workspaceId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
-  // Get workspace settings for overtime rules and default rates
+  // Get workspace settings for overtime rules, holiday calendar, and default rates
   const workspace = await db.query.workspaces.findFirst({
     where: eq(workspaces.id, workspaceId),
   });
@@ -99,6 +100,10 @@ export async function aggregatePayrollHours(params: {
   const dailyOTThreshold = parseFloat(workspace.dailyOvertimeThreshold || "8.00");
   const weeklyOTThreshold = parseFloat(workspace.weeklyOvertimeThreshold || "40.00");
   const workspaceDefaultPayRate = workspace.defaultHourlyRate;
+  
+  // Holiday calendar and timezone for timezone-aware holiday detection
+  const holidayCalendar = workspace.holidayCalendar as any[] || [];
+  const workspaceTimezone = workspace.timezone || "America/New_York";
 
   // Find all approved, unpayrolled time entries in period
   const approvedEntries = await db
@@ -242,12 +247,16 @@ export async function aggregatePayrollHours(params: {
 
       // Calculate hours bucketing (regular, OT, holiday) using workspace settings
       const totalHours = parseFloat(timeEntry.totalHours);
+      
+      // Timezone-aware holiday detection using workspace holiday calendar
+      const isHoliday = isHolidayDate(timeEntry.clockIn, holidayCalendar, workspaceTimezone);
+      
       const hoursBucket = bucketHours({
         totalHours,
         weeklyHoursSoFar,
         enableDailyOvertime: enableDailyOT,
         weeklyOvertimeThreshold: weeklyOTThreshold,
-        isHoliday: false, // TODO: Check if shift is marked as holiday
+        isHoliday,
       });
 
       // Update weekly hours accumulator for next entry
