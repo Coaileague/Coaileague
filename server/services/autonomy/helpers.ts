@@ -204,46 +204,84 @@ export async function checkIdempotency(params: IdempotencyParams): Promise<Idemp
 }
 
 /**
+ * Mark idempotency operation as completed or failed
+ * Unified interface for updating idempotency status
+ */
+export async function updateIdempotencyResult(params: {
+  idempotencyKeyId: string;
+  status: 'completed' | 'failed';
+  resultId?: number | string;
+  resultMetadata?: Record<string, any>;
+  errorMessage?: string;
+  errorStack?: string;
+}): Promise<void> {
+  const { idempotencyKeyId, status, resultId, resultMetadata, errorMessage, errorStack } = params;
+  
+  const updateData: any = {
+    status,
+    completedAt: new Date(),
+  };
+  
+  if (status === 'completed') {
+    if (resultId !== undefined) {
+      updateData.resultId = String(resultId);
+    }
+    if (resultMetadata) {
+      updateData.resultMetadata = resultMetadata;
+    }
+  } else if (status === 'failed') {
+    if (errorMessage) {
+      updateData.errorMessage = errorMessage.substring(0, 2000);
+    }
+    if (errorStack) {
+      updateData.errorStack = errorStack.substring(0, 2000);
+    }
+  }
+  
+  await db
+    .update(idempotencyKeys)
+    .set(updateData)
+    .where(eq(idempotencyKeys.id, idempotencyKeyId));
+
+  if (status === 'completed') {
+    console.log(`[IDEMPOTENCY] Operation completed: ${idempotencyKeyId} → ${resultId || 'no result'}`);
+  } else {
+    console.log(`[IDEMPOTENCY] Operation failed: ${idempotencyKeyId}`);
+    console.error(`[IDEMPOTENCY] Error: ${errorMessage}`);
+  }
+}
+
+/**
  * Mark idempotency operation as completed
+ * @deprecated Use updateIdempotencyResult instead
  */
 export async function completeIdempotencyKey(
   idempotencyKeyId: string,
   resultId: string,
   resultMetadata?: Record<string, any>
 ): Promise<void> {
-  await db
-    .update(idempotencyKeys)
-    .set({
-      status: 'completed',
-      resultId,
-      resultMetadata,
-      completedAt: new Date(),
-    })
-    .where(eq(idempotencyKeys.id, idempotencyKeyId));
-
-  console.log(`[IDEMPOTENCY] Operation completed: ${idempotencyKeyId} → ${resultId}`);
+  await updateIdempotencyResult({
+    idempotencyKeyId,
+    status: 'completed',
+    resultId,
+  });
 }
 
 /**
  * Mark idempotency operation as failed
+ * @deprecated Use updateIdempotencyResult instead
  */
 export async function failIdempotencyKey(
   idempotencyKeyId: string,
   errorMessage: string,
   errorStack?: string
 ): Promise<void> {
-  await db
-    .update(idempotencyKeys)
-    .set({
-      status: 'failed',
-      errorMessage,
-      errorStack: errorStack?.substring(0, 2000), // Truncate long stacks
-      completedAt: new Date(),
-    })
-    .where(eq(idempotencyKeys.id, idempotencyKeyId));
-
-  console.log(`[IDEMPOTENCY] Operation failed: ${idempotencyKeyId}`);
-  console.error(`[IDEMPOTENCY] Error: ${errorMessage}`);
+  await updateIdempotencyResult({
+    idempotencyKeyId,
+    status: 'failed',
+    errorMessage,
+    errorStack, // FIXED: Forward stack trace
+  });
 }
 
 /**

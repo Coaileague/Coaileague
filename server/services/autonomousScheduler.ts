@@ -10,7 +10,7 @@
 
 import cron from 'node-cron';
 import { db } from '../db';
-import { workspaces, employees } from '@shared/schema';
+import { workspaces, employees, idempotencyKeys } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { generateUsageBasedInvoices } from './billos';
 import { PayrollAutomationEngine } from './payrollAutomation';
@@ -18,6 +18,90 @@ import { ScheduleOSAI } from '../ai/scheduleos';
 import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
 import { shouldRunBiweekly, seedAnchor, advanceAnchor, detectAnchorDrift } from './utils/scheduling';
 import { storage } from '../storage';
+import { checkIdempotency, updateIdempotencyResult } from './autonomy/helpers';
+import crypto from 'crypto';
+
+// ============================================================================
+// IDEMPOTENCY FINGERPRINTING
+// ============================================================================
+
+/**
+ * Build idempotency fingerprint for invoice generation
+ * Includes: workspace, period boundaries (start/end dates), schedule config hash
+ */
+function buildInvoiceFingerprintData(workspace: any, date: Date) {
+  // Calculate billing period boundaries (yesterday's work)
+  const periodEnd = new Date(date);
+  periodEnd.setHours(0, 0, 0, 0);
+  const periodStart = new Date(periodEnd);
+  periodStart.setDate(periodStart.getDate() - 1);
+  
+  return {
+    workspaceId: workspace.id,
+    runDate: date.toISOString().split('T')[0], // YYYY-MM-DD
+    periodStart: periodStart.toISOString().split('T')[0],
+    periodEnd: periodEnd.toISOString().split('T')[0],
+    schedule: workspace.invoiceSchedule,
+    dayOfWeek: workspace.invoiceDayOfWeek,
+    dayOfMonth: workspace.invoiceDayOfMonth,
+    biweeklyAnchor: workspace.invoiceBiweeklyAnchor?.toISOString(),
+    configHash: crypto
+      .createHash('sha256')
+      .update(JSON.stringify({
+        schedule: workspace.invoiceSchedule,
+        dayOfWeek: workspace.invoiceDayOfWeek,
+        dayOfMonth: workspace.invoiceDayOfMonth,
+      }))
+      .digest('hex')
+      .substring(0, 16),
+  };
+}
+
+/**
+ * Build idempotency fingerprint for payroll generation
+ */
+function buildPayrollFingerprintData(workspace: any, date: Date) {
+  return {
+    workspaceId: workspace.id,
+    date: date.toISOString().split('T')[0],
+    schedule: workspace.payrollSchedule,
+    dayOfWeek: workspace.payrollDayOfWeek,
+    dayOfMonth: workspace.payrollDayOfMonth,
+    biweeklyAnchor: workspace.payrollBiweeklyAnchor?.toISOString(),
+    configHash: crypto
+      .createHash('sha256')
+      .update(JSON.stringify({
+        schedule: workspace.payrollSchedule,
+        dayOfWeek: workspace.payrollDayOfWeek,
+        dayOfMonth: workspace.payrollDayOfMonth,
+      }))
+      .digest('hex')
+      .substring(0, 16),
+  };
+}
+
+/**
+ * Build idempotency fingerprint for schedule generation
+ */
+function buildScheduleFingerprintData(workspace: any, date: Date) {
+  return {
+    workspaceId: workspace.id,
+    date: date.toISOString().split('T')[0],
+    interval: workspace.scheduleGenerationInterval,
+    dayOfWeek: workspace.scheduleDayOfWeek,
+    dayOfMonth: workspace.scheduleDayOfMonth,
+    biweeklyAnchor: workspace.scheduleBiweeklyAnchor?.toISOString(),
+    configHash: crypto
+      .createHash('sha256')
+      .update(JSON.stringify({
+        interval: workspace.scheduleGenerationInterval,
+        dayOfWeek: workspace.scheduleDayOfWeek,
+        dayOfMonth: workspace.scheduleDayOfMonth,
+      }))
+      .digest('hex')
+      .substring(0, 16),
+  };
+}
 
 // ============================================================================
 // AUTOMATION AUDIT LOGGING
@@ -249,7 +333,7 @@ async function runNightlyInvoiceGeneration() {
         }
         
         if (shouldGenerateInvoices) {
-          console.log(`   ✓ Schedule matched, generating invoices...`);
+          console.log(`   ✓ Schedule matched, checking idempotency...`);
           
           // Wrap automation in audit logging lifecycle
           const runId = `billos-${workspace.id}-${Date.now()}`;
@@ -262,33 +346,90 @@ async function runNightlyInvoiceGeneration() {
               runId,
             },
             async () => {
-              // Generate invoices for yesterday's approved time entries
-              const invoices = await generateUsageBasedInvoices(workspace.id);
-              
-              if (invoices.length > 0) {
-                console.log(`✅ Generated ${invoices.length} invoice(s) for ${workspace.name}`);
-                totalInvoicesGenerated += invoices.length;
-                successCount++;
-              } else {
-                console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
-              }
-              
-              // Update lastRunAt and advance anchor (transactional) - ALWAYS run to maintain cadence
-              await db.transaction(async (tx) => {
-                const updateData: any = { lastInvoiceRunAt: today };
-                
-                // Advance biweekly anchor if applicable
-                if (schedule === 'biweekly' && workspace.invoiceBiweeklyAnchor) {
-                  const newAnchor = advanceAnchor(workspace.invoiceBiweeklyAnchor);
-                  updateData.invoiceBiweeklyAnchor = newAnchor;
-                }
-                
-                await tx.update(workspaces)
-                  .set(updateData)
-                  .where(eq(workspaces.id, workspace.id));
+              // IDEMPOTENCY: Check if this operation already ran today (14-day TTL for retry window)
+              const idem = await checkIdempotency({
+                workspaceId: workspace.id,
+                operationType: 'invoice_generation',
+                requestData: buildInvoiceFingerprintData(workspace, today),
+                ttlDays: 14,
               });
               
-              return { invoicesGenerated: invoices.length };
+              if (!idem.isNew) {
+                console.log(`   ⚠️  Duplicate invoice generation detected (idempotency key ${idem.idempotencyKeyId})`);
+                console.log(`   Existing status: ${idem.status}, skipping execution`);
+                return { 
+                  invoicesGenerated: 0, 
+                  isDuplicate: true,
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                };
+              }
+              
+              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), generating invoices...`);
+              
+              try {
+                // Generate invoices for yesterday's approved time entries
+                const invoices = await generateUsageBasedInvoices(workspace.id);
+                
+                if (invoices.length > 0) {
+                  console.log(`✅ Generated ${invoices.length} invoice(s) for ${workspace.name}`);
+                  totalInvoicesGenerated += invoices.length;
+                  successCount++;
+                } else {
+                  console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
+                }
+                
+                // Update lastRunAt, advance anchor, and mark idempotency complete (ATOMIC)
+                await db.transaction(async (tx) => {
+                  const updateData: any = { lastInvoiceRunAt: today };
+                  
+                  // Advance biweekly anchor if applicable (maintains 14-day cadence)
+                  if (schedule === 'biweekly' && workspace.invoiceBiweeklyAnchor) {
+                    const newAnchor = advanceAnchor(workspace.invoiceBiweeklyAnchor);
+                    updateData.invoiceBiweeklyAnchor = newAnchor;
+                  }
+                  
+                  await tx.update(workspaces)
+                    .set(updateData)
+                    .where(eq(workspaces.id, workspace.id));
+                  
+                  // Mark idempotency complete in SAME transaction with metadata for monitoring
+                  await tx.update(idempotencyKeys)
+                    .set({
+                      status: 'completed',
+                      resultId: invoices.length > 0 ? String(invoices[0].id) : null,
+                      resultMetadata: {
+                        invoicesGenerated: invoices.length,
+                        isDuplicate: false,
+                        workspaceName: workspace.name,
+                        schedule,
+                        periodStart: buildInvoiceFingerprintData(workspace, today).periodStart,
+                        periodEnd: buildInvoiceFingerprintData(workspace, today).periodEnd,
+                      },
+                      completedAt: new Date(),
+                    })
+                    .where(eq(idempotencyKeys.id, idem.idempotencyKeyId));
+                });
+                
+                return { 
+                  invoicesGenerated: invoices.length,
+                  isDuplicate: false,
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                };
+              } catch (error: any) {
+                // Mark idempotency operation failed with full error context
+                await updateIdempotencyResult({
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                  status: 'failed',
+                  errorMessage: error.message,
+                  errorStack: error.stack,
+                  resultMetadata: {
+                    isDuplicate: false,
+                    workspaceName: workspace.name,
+                    schedule,
+                  },
+                });
+                throw error; // Re-throw to trigger audit log error
+              }
             }
           );
         } else {
