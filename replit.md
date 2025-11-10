@@ -3,6 +3,20 @@
 ## Overview
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive workforce management platform designed for emergency services and other service-related industries. Its primary goal is to streamline operations, reduce administrative burdens, and serve as a single source of truth for workforce management. Key features include time tracking with advanced verification, automated invoice generation, smart hiring, compliance audit trails, and real-time analytics. The platform employs an "OS" design philosophy for extensibility and aims for a hybrid subscription and usage-based AI revenue model.
 
+### HelpDesk Chat System
+**Two public chat versions with NO entry barriers:**
+- **Desktop Chat (HelpDesk)**: `client/src/pages/HelpDesk5.tsx` → Route: `/chat` 
+  - Feature-rich desktop chat with Gemini AI support
+  - Staff controls, queue management, user diagnostics
+  - Removed all authentication dialogs (Nov 10, 2025)
+  
+- **Mobile Chat (HelpDesk5)**: `client/src/pages/modern-mobile-chat.tsx` → Route: `/mobile-chat`
+  - Mobile-optimized responsive interface  
+  - Touch-friendly FAB buttons, slide-out panels
+  - Removed ChatAgreementModal barrier (Nov 10, 2025)
+
+Both chats allow immediate access without popups, forms, or authentication requirements. Users can enter and chat directly.
+
 ## User Preferences
 I prefer detailed explanations.
 Do not make changes to the folder `Z`.
