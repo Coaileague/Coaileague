@@ -8736,3 +8736,165 @@ export const insertDispatchLogSchema = createInsertSchema(dispatchLogs).omit({
 
 export type InsertDispatchLog = z.infer<typeof insertDispatchLogSchema>;
 export type DispatchLog = typeof dispatchLogs.$inferSelect;
+
+// ============================================================================
+// AUTONOMY AUDIT PHASE 1: IDEMPOTENCY & RATE VERSIONING
+// ============================================================================
+
+// Idempotency Keys - Prevent duplicate operations (invoice generation, payroll runs, timesheet ingestion)
+export const operationTypeEnum = pgEnum('operation_type', [
+  'invoice_generation',
+  'payroll_run', 
+  'timesheet_ingest',
+  'schedule_generation',
+  'payment_processing'
+]);
+
+export const idempotencyStatusEnum = pgEnum('idempotency_status', [
+  'processing',
+  'completed',
+  'failed'
+]);
+
+export const idempotencyKeys = pgTable("idempotency_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Operation identification
+  operationType: operationTypeEnum("operation_type").notNull(),
+  requestFingerprint: text("request_fingerprint").notNull(), // Hash of request params
+  
+  // Result tracking
+  status: idempotencyStatusEnum("status").default('processing').notNull(),
+  resultId: varchar("result_id"), // ID of created invoice/payroll/timesheet
+  resultMetadata: jsonb("result_metadata"), // Additional result data
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  errorStack: text("error_stack"),
+  
+  // Lifecycle
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at").notNull(), // TTL for cleanup (7-30 days)
+}, (table) => ({
+  workspaceIdx: index("idempotency_keys_workspace_idx").on(table.workspaceId),
+  operationIdx: index("idempotency_keys_operation_idx").on(table.operationType),
+  fingerprintIdx: uniqueIndex("idempotency_keys_fingerprint_idx").on(table.workspaceId, table.operationType, table.requestFingerprint),
+  expiresIdx: index("idempotency_keys_expires_idx").on(table.expiresAt),
+}));
+
+export const insertIdempotencyKeySchema = createInsertSchema(idempotencyKeys).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertIdempotencyKey = z.infer<typeof insertIdempotencyKeySchema>;
+export type IdempotencyKey = typeof idempotencyKeys.$inferSelect;
+
+// Employee Rate History - Versioned payroll rates with audit trail
+export const employeeRateHistory = pgTable("employee_rate_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Rate details
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }).notNull(),
+  
+  // Versioning
+  validFrom: timestamp("valid_from").notNull().defaultNow(),
+  validTo: timestamp("valid_to"), // NULL = current active rate
+  supersededBy: varchar("superseded_by"), // FK to next version
+  
+  // Audit trail
+  changedBy: varchar("changed_by").references(() => users.id, { onDelete: 'set null' }),
+  changeReason: text("change_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index("employee_rate_history_workspace_idx").on(table.workspaceId),
+  employeeIdx: index("employee_rate_history_employee_idx").on(table.employeeId),
+  validFromIdx: index("employee_rate_history_valid_from_idx").on(table.validFrom),
+  validToIdx: index("employee_rate_history_valid_to_idx").on(table.validTo),
+  activeRateIdx: index("employee_rate_history_active_idx").on(table.employeeId, table.validTo),
+}));
+
+export const insertEmployeeRateHistorySchema = createInsertSchema(employeeRateHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEmployeeRateHistory = z.infer<typeof insertEmployeeRateHistorySchema>;
+export type EmployeeRateHistory = typeof employeeRateHistory.$inferSelect;
+
+// Workspace Rate History - Versioned default rates for workspace
+export const workspaceRateHistory = pgTable("workspace_rate_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Default rates (fallback when employee/client rates not configured)
+  defaultBillableRate: decimal("default_billable_rate", { precision: 10, scale: 2 }),
+  defaultHourlyRate: decimal("default_hourly_rate", { precision: 10, scale: 2 }),
+  
+  // Versioning
+  validFrom: timestamp("valid_from").notNull().defaultNow(),
+  validTo: timestamp("valid_to"), // NULL = current active rate
+  supersededBy: varchar("superseded_by"), // FK to next version
+  
+  // Audit trail
+  changedBy: varchar("changed_by").references(() => users.id, { onDelete: 'set null' }),
+  changeReason: text("change_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index("workspace_rate_history_workspace_idx").on(table.workspaceId),
+  validFromIdx: index("workspace_rate_history_valid_from_idx").on(table.validFrom),
+  validToIdx: index("workspace_rate_history_valid_to_idx").on(table.validTo),
+  activeRateIdx: index("workspace_rate_history_active_idx").on(table.workspaceId, table.validTo),
+}));
+
+export const insertWorkspaceRateHistorySchema = createInsertSchema(workspaceRateHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertWorkspaceRateHistory = z.infer<typeof insertWorkspaceRateHistorySchema>;
+export type WorkspaceRateHistory = typeof workspaceRateHistory.$inferSelect;
+
+// Client Rate History - Client-specific billing rate overrides
+export const clientRateHistory = pgTable("client_rate_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  
+  // Client-specific billing rate
+  billableRate: decimal("billable_rate", { precision: 10, scale: 2 }).notNull(),
+  
+  // Optional: role-specific rates for this client
+  roleRateOverrides: jsonb("role_rate_overrides"), // { "Technician": 45.00, "Senior Tech": 65.00 }
+  
+  // Versioning
+  validFrom: timestamp("valid_from").notNull().defaultNow(),
+  validTo: timestamp("valid_to"), // NULL = current active rate
+  supersededBy: varchar("superseded_by"), // FK to next version
+  
+  // Audit trail
+  changedBy: varchar("changed_by").references(() => users.id, { onDelete: 'set null' }),
+  changeReason: text("change_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdx: index("client_rate_history_workspace_idx").on(table.workspaceId),
+  clientIdx: index("client_rate_history_client_idx").on(table.clientId),
+  validFromIdx: index("client_rate_history_valid_from_idx").on(table.validFrom),
+  validToIdx: index("client_rate_history_valid_to_idx").on(table.validTo),
+  activeRateIdx: index("client_rate_history_active_idx").on(table.clientId, table.validTo),
+}));
+
+export const insertClientRateHistorySchema = createInsertSchema(clientRateHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertClientRateHistory = z.infer<typeof insertClientRateHistorySchema>;
+export type ClientRateHistory = typeof clientRateHistory.$inferSelect;
