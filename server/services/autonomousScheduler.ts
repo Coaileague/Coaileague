@@ -52,6 +52,14 @@ async function logAutomationLifecycle<T>(
   const { jobType, workspaceId, workspaceName, runId } = params;
   const startTime = Date.now();
 
+  // Map job types to consolidated OS names
+  const osNameMap = {
+    invoicing: 'BillOS™',
+    scheduling: 'OperationsOS™',
+    payroll: 'BillOS™',
+  };
+  const osName = osNameMap[jobType];
+
   // Log job start (don't fail if audit logging fails)
   try {
     await storage.createAuditLog({
@@ -60,9 +68,10 @@ async function logAutomationLifecycle<T>(
       action: 'automation_job_start',
       entityType: 'automation_job',
       entityId: runId,
-      entityDescription: `${jobType.toUpperCase()}OS™ automation started for ${workspaceName}`,
+      entityDescription: `${osName} automation started for ${workspaceName}`,
       metadata: {
         jobType,
+        osName,
         timestamp: new Date().toISOString(),
       },
     });
@@ -83,9 +92,10 @@ async function logAutomationLifecycle<T>(
         action: 'automation_job_complete',
         entityType: 'automation_job',
         entityId: runId,
-        entityDescription: `${jobType.toUpperCase()}OS™ automation completed for ${workspaceName}`,
+        entityDescription: `${osName} automation completed for ${workspaceName}`,
         metadata: {
           jobType,
+          osName,
           duration,
           timestamp: new Date().toISOString(),
           result: typeof result === 'object' ? result : { value: result },
@@ -107,9 +117,10 @@ async function logAutomationLifecycle<T>(
         action: 'automation_job_error',
         entityType: 'automation_job',
         entityId: runId,
-        entityDescription: `${jobType.toUpperCase()}OS™ automation failed for ${workspaceName}: ${error.message}`,
+        entityDescription: `${osName} automation failed for ${workspaceName}: ${error.message}`,
         metadata: {
           jobType,
+          osName,
           duration,
           error: error.message,
           stack: error.stack?.substring(0, 500), // Truncate stack trace
@@ -308,7 +319,7 @@ async function runNightlyInvoiceGeneration() {
  */
 async function runWeeklyScheduleGeneration() {
   console.log('=================================================');
-  console.log('🤖 SCHEDULEΟΣ™ AUTONOMOUS SCHEDULING - START');
+  console.log('🤖 OPERATIONSOS™ AUTONOMOUS SCHEDULING - START');
   console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log('=================================================');
 
@@ -680,7 +691,7 @@ export function startAutonomousScheduler() {
     cron.schedule(SCHEDULER_CONFIG.payroll.schedule, () => {
       runAutomaticPayrollProcessing();
     });
-    console.log('✅ PayrollOS™ Payroll Automation:');
+    console.log('✅ BillOS™ Payroll Automation:');
     console.log(`   Schedule: ${SCHEDULER_CONFIG.payroll.schedule} (daily 3 AM)`);
     console.log(`   ${SCHEDULER_CONFIG.payroll.description}\n`);
   }
