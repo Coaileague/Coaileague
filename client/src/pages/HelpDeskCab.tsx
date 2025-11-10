@@ -961,26 +961,26 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             }] : []}
           />
           
-          {/* Floating Controls - Overlaid on banner - Navigation + Settings */}
-          <div className="absolute top-1 left-2 right-2 flex items-center justify-between gap-1.5">
-            {/* Left Side: Navigation Buttons - Working X and Home buttons */}
-            <div className="flex items-center gap-1.5">
+          {/* Mobile-Safe Header Controls - Flex Layout with Responsive Spacing */}
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between px-2 sm:px-3 py-1 gap-1 sm:gap-2 safe-area-inset">
+            {/* Left Side: Navigation Buttons - Mobile-first sizing */}
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <Button
                 onClick={() => navigate('/')}
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2 gap-1 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm"
+                className="h-8 sm:h-7 px-2 gap-1 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm text-xs sm:text-[10px]"
                 data-testid="button-home"
                 title="Go to Home"
               >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="text-[10px] font-semibold">Home</span>
+                <ChevronLeft className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden xs:inline font-semibold">Home</span>
               </Button>
               <Button
                 onClick={() => navigate('/')}
                 size="sm"
                 variant="ghost"
-                className="h-7 w-7 p-0 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm"
+                className="h-8 sm:h-7 w-8 sm:w-7 p-0 flex-shrink-0 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm"
                 data-testid="button-close-chat"
                 title="Close Chat"
               >
@@ -988,8 +988,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
               </Button>
             </div>
             
-            {/* Right Side: Theme + Staff Controls */}
-            <div className="flex items-center gap-1.5">
+            {/* Right Side: Theme + Staff Controls - Hidden on very small screens */}
+            <div className="flex items-center gap-1 sm:gap-1.5">
               {/* Theme Toggle - Transparent and only visible on hover (desktop) */}
               <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
                 <div className="bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md h-6 w-6 rounded-md flex items-center justify-center">
@@ -1032,10 +1032,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         </div>
       </div>
 
-      {/* Main Layout - Full Width with MSN-style separation */}
-      <main className="flex flex-grow overflow-hidden w-full relative z-10">
-        {/* CENTER COLUMN: Chat Area - Clear boundary */}
-        <section className="flex-grow flex flex-col bg-white/60 backdrop-blur-md relative border-r-2 border-slate-300/70 shadow-inner">
+      {/* Main Layout - Responsive: Stacked (mobile) vs 3-column (desktop) */}
+      <main className="flex flex-col md:flex-row flex-grow overflow-y-auto md:overflow-hidden w-full relative z-10">
+        {/* CENTER COLUMN: Chat Area - Mobile-first with proper scroll */}
+        <section className="flex-grow flex flex-col bg-white/60 backdrop-blur-md relative md:border-r-2 border-slate-300/70 shadow-inner min-h-0">
           {/* Progress Header - Only visible to staff */}
           {isStaff && (
             <div className="px-4 py-3 border-b border-slate-300/70 bg-white/40">
@@ -1076,28 +1076,28 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 const nameColor = getRoleColor(role);
 
                 return (
-                  <div key={idx} className={`${bubbleColor} shadow-sm p-2 rounded-lg max-w-[90%] hover:shadow-md transition-all`}>
-                    <div className="flex items-start gap-2">
-                      {/* Avatar Icon - Compact */}
-                      <div className="flex-shrink-0 mt-0.5">
+                  <div key={idx} className={`${bubbleColor} shadow-sm p-2 sm:p-2.5 rounded-lg w-full max-w-full sm:max-w-[90%] hover:shadow-md transition-all min-w-0`}>
+                    <div className="flex items-start gap-1.5 sm:gap-2 min-w-0">
+                      {/* Avatar Icon - Compact, hidden on very small screens */}
+                      <div className="hidden xs:block flex-shrink-0 mt-0.5">
                         {getUserTypeIcon((msg as any).userType || 'guest', role, displayName)}
                       </div>
                       
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         {/* Header: Name with inline superscript role badge + Timestamp */}
-                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          <span className={`text-xs font-bold ${nameColor}`}>
+                        <div className="flex items-center gap-1 sm:gap-1.5 mb-1 flex-wrap min-w-0">
+                          <span className={`text-xs font-bold ${nameColor} truncate`}>
                             {role === 'bot' ? 'HelpOS' : displayName.split('(')[0].trim()}
                             {/* Role badge as inline superscript like mathematical notation */}
                             {getRoleIcon(role)}
                           </span>
-                          <span className="text-[10px] text-slate-500 ml-auto">
+                          <span className="text-[10px] text-slate-500 ml-auto flex-shrink-0">
                             {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                         
-                        {/* Message Content - Smaller text with proper wrapping */}
-                        <p className="text-slate-800 text-xs leading-snug break-words whitespace-pre-wrap">
+                        {/* Message Content - Mobile-safe wrapping with overflow protection */}
+                        <p className="text-slate-800 text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto">
                           {role === 'bot' ? parseSystemMessage(msg.message) : msg.message}
                         </p>
                       </div>
@@ -1109,11 +1109,11 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             </div>
           </ScrollArea>
 
-          {/* Input Area */}
-          <div className="border-t-2 border-primary bg-white/90 backdrop-blur-sm p-4">
-            {/* Agent Toolbelt - Only visible to staff */}
+          {/* Input Area - Mobile-responsive padding and sizing */}
+          <div className="border-t-2 border-primary bg-white/90 backdrop-blur-sm p-2 sm:p-3 md:p-4">
+            {/* Agent Toolbelt - Only visible to staff, stacked on mobile */}
             {isStaff && (
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-2 sm:mb-3 flex flex-col xs:flex-row items-stretch xs:items-center gap-2">
                 <AgentToolbelt
                   ticketId={sessionId}
                   onMacroInsert={(macro) => setInputMessage(prev => prev ? `${prev}\n\n${macro}` : macro)}
@@ -1130,6 +1130,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                   onCreateBug={(description) => {
                     toast({ title: "Bug Report Created", description: "Engineering team notified" });
                   }}
+                  className="w-full xs:w-auto"
                 />
                 <Button
                   variant="outline"
@@ -1141,6 +1142,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                     setTicketStatus(statuses[nextIndex]);
                     toast({ title: "Status Updated", description: `Changed to ${statuses[nextIndex]}` });
                   }}
+                  className="w-full xs:w-auto"
                   data-testid="button-update-status"
                 >
                   Update Status
@@ -1148,23 +1150,24 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
               </div>
             )}
             
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-1.5 sm:gap-2">
               <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message here..."
+                placeholder="Type message..."
                 disabled={!isConnected}
-                className="flex-grow p-3 border-2 border-slate-300 rounded-2xl resize-none focus:ring-slate-500 focus:border-slate-500 bg-white text-slate-900 placeholder:text-slate-400"
+                className="flex-grow p-2 sm:p-2.5 md:p-3 border-2 border-slate-300 rounded-xl sm:rounded-2xl resize-none focus:ring-slate-500 focus:border-slate-500 bg-white text-slate-900 placeholder:text-slate-400 text-sm"
                 data-testid="input-message"
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={!isConnected || !inputMessage.trim()}
-                className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-2xl font-semibold shadow-sm transition-all h-full"
+                className="bg-slate-700 hover:bg-slate-600 text-white px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-sm transition-all h-auto text-sm flex-shrink-0"
                 data-testid="button-send"
               >
-                Send <Send className="w-4 h-4 ml-1" />
+                <Send className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Send</span>
               </Button>
             </div>
             <div className="mt-2 px-1" data-testid="chat-status-bar">
@@ -1178,8 +1181,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
           </div>
         </section>
 
-        {/* RIGHT COLUMN: User List or Context Panel */}
-        <section className="min-w-[280px] max-w-[320px] w-auto bg-gradient-to-b from-slate-100 via-teal-50 to-slate-100 backdrop-blur-sm flex flex-col flex-shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.1)]">
+        {/* RIGHT COLUMN: User List or Context Panel - Hidden on mobile, visible on desktop */}
+        <section className="hidden md:flex min-w-[280px] max-w-[320px] w-auto bg-gradient-to-b from-slate-100 via-teal-50 to-slate-100 backdrop-blur-sm flex-col flex-shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.1)]">
           
           {/* Header with toggle */}
           <div className="px-3 py-2 border-b border-primary/50 flex-shrink-0 bg-gradient-to-r from-neutral-100/80 to-slate-100/80">
