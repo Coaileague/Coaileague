@@ -12,6 +12,21 @@ import {
   MessageSquare,
   Briefcase,
   AlertCircle,
+  MessagesSquare,
+  LockKeyhole,
+  Headphones,
+  CalendarDays,
+  Wallet,
+  FileCheck2,
+  GraduationCap,
+  UsersRound,
+  BookUser,
+  BadgeDollarSign,
+  Award,
+  TrendingUp,
+  PieChart,
+  FileBarChart,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,6 +59,8 @@ export type OSCapability =
   | 'view_messages'
   | 'support_dashboard';
 
+export type FamilyId = 'communication' | 'operations' | 'growth' | 'platform';
+
 export interface OSModuleRoute {
   id: string;
   label: string;
@@ -53,6 +70,9 @@ export interface OSModuleRoute {
   capabilities?: OSCapability[];
   minimumTier?: SubscriptionTier;
   badge?: string;
+  familyId?: FamilyId;
+  isPrimary?: boolean;
+  order?: number;
 }
 
 export interface OSModule {
@@ -64,6 +84,15 @@ export interface OSModule {
   routes: OSModuleRoute[];
   capabilities: OSCapability[];
   minimumTier?: SubscriptionTier;
+  familyId?: FamilyId;
+}
+
+export interface SidebarFamily {
+  id: FamilyId;
+  label: string;
+  order: number;
+  routes: OSModuleRoute[];
+  locked: OSModuleRoute[];
 }
 
 /**
@@ -189,13 +218,16 @@ export const osModules: OSModule[] = [
     icon: LayoutDashboard,
     color: 'hsl(var(--primary))',
     capabilities: [],
+    familyId: 'platform',
     routes: [
       {
         id: 'dashboard-home',
-        label: 'Dashboard',
+        label: 'Admin Dashboard',
         href: '/dashboard',
         icon: LayoutDashboard,
         description: 'Your personalized overview',
+        familyId: 'platform',
+        order: 20,
       },
     ],
   },
@@ -203,25 +235,30 @@ export const osModules: OSModule[] = [
     id: 'operations-os',
     name: 'OperationsOS™',
     description: 'Field Operations Management',
-    icon: Calendar,
+    icon: CalendarDays,
     color: 'hsl(var(--chart-1))',
     capabilities: ['view_schedules', 'manage_schedules', 'view_timesheets', 'approve_timesheets'],
+    familyId: 'operations',
     routes: [
       {
-        id: 'schedules',
-        label: 'Schedules',
-        href: '/schedules',
-        icon: Calendar,
-        description: 'View and manage work schedules',
+        id: 'schedule-os',
+        label: 'ScheduleOS™',
+        href: '/schedule',
+        icon: CalendarDays,
+        description: 'Intelligent shift scheduling',
         capabilities: ['view_schedules'],
+        familyId: 'operations',
+        order: 10,
       },
       {
-        id: 'timesheets',
-        label: 'Timesheets',
-        href: '/timesheets',
+        id: 'time-os',
+        label: 'TimeOS™',
+        href: '/time-tracking',
         icon: Clock,
-        description: 'Track and approve hours',
+        description: 'GPS-verified time tracking',
         capabilities: ['view_timesheets'],
+        familyId: 'operations',
+        order: 11,
       },
       {
         id: 'timesheets-pending',
@@ -230,7 +267,9 @@ export const osModules: OSModule[] = [
         icon: Clock,
         description: 'Review and approve submitted hours',
         capabilities: ['approve_timesheets'],
-        badge: 'Manager',
+        badge: 'Supervisor',
+        familyId: 'operations',
+        order: 12,
       },
     ],
   },
@@ -238,26 +277,31 @@ export const osModules: OSModule[] = [
     id: 'bill-os',
     name: 'BillOS™',
     description: 'Administrative Billing & Financial Management',
-    icon: DollarSign,
+    icon: Wallet,
     color: 'hsl(var(--chart-2))',
     capabilities: ['view_invoices', 'manage_invoices', 'view_payroll', 'process_payroll'],
+    familyId: 'operations',
     routes: [
       {
-        id: 'invoices',
-        label: 'Invoices',
-        href: '/invoices',
-        icon: FileText,
-        description: 'Client billing and invoices',
-        capabilities: ['view_invoices'],
-      },
-      {
-        id: 'payroll',
-        label: 'Payroll',
+        id: 'payroll-os',
+        label: 'PayrollOS™',
         href: '/payroll',
-        icon: DollarSign,
-        description: 'Employee payroll processing',
+        icon: Wallet,
+        description: 'FLSA-compliant payroll processing',
         capabilities: ['view_payroll'],
         minimumTier: 'professional',
+        familyId: 'operations',
+        order: 13,
+      },
+      {
+        id: 'bill-os-invoices',
+        label: 'BillOS™',
+        href: '/invoices',
+        icon: FileCheck2,
+        description: 'Automated invoice generation',
+        capabilities: ['view_invoices'],
+        familyId: 'operations',
+        order: 14,
       },
     ],
   },
@@ -265,25 +309,40 @@ export const osModules: OSModule[] = [
     id: 'management',
     name: 'Management',
     description: 'Workforce & Client Management',
-    icon: Users,
+    icon: UsersRound,
     color: 'hsl(var(--chart-3))',
     capabilities: ['manage_employees', 'manage_clients'],
+    familyId: 'operations',
     routes: [
+      {
+        id: 'training-os',
+        label: 'TrainingOS™',
+        href: '/training',
+        icon: GraduationCap,
+        description: 'Employee onboarding and compliance training',
+        capabilities: ['manage_employees'],
+        familyId: 'operations',
+        order: 15,
+      },
       {
         id: 'employees',
         label: 'Employees',
         href: '/employees',
-        icon: Users,
+        icon: UsersRound,
         description: 'Manage workforce',
         capabilities: ['manage_employees'],
+        familyId: 'operations',
+        order: 16,
       },
       {
         id: 'clients',
         label: 'Clients',
         href: '/clients',
-        icon: Building2,
+        icon: BookUser,
         description: 'Manage client relationships',
         capabilities: ['manage_clients'],
+        familyId: 'operations',
+        order: 17,
       },
     ],
   },
@@ -291,27 +350,64 @@ export const osModules: OSModule[] = [
     id: 'intelligence-os',
     name: 'IntelligenceOS™',
     description: 'AI-Powered Automation & Analytics',
-    icon: BarChart3,
+    icon: FileBarChart,
     color: 'hsl(var(--chart-4))',
     capabilities: ['view_reports', 'advanced_analytics'],
+    familyId: 'growth',
     routes: [
       {
-        id: 'reports',
-        label: 'Reports',
-        href: '/reports',
-        icon: BarChart3,
-        description: 'Analytics and insights',
-        capabilities: ['view_reports'],
+        id: 'deal-os',
+        label: 'DealOS™ Sales',
+        href: '/sales',
+        icon: BadgeDollarSign,
+        description: 'AI-powered RFP hunting and contract generation',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise',
+        familyId: 'growth',
+        order: 30,
       },
       {
-        id: 'analytics',
-        label: 'Advanced Analytics',
+        id: 'talent-os',
+        label: 'TalentOS™',
+        href: '/leaders-hub',
+        icon: Award,
+        description: 'Leadership development and recognition',
+        capabilities: ['manage_employees'],
+        familyId: 'growth',
+        order: 31,
+      },
+      {
+        id: 'engagement-os',
+        label: 'EngagementOS™',
+        href: '/engagement/dashboard',
+        icon: TrendingUp,
+        description: 'Pulse surveys and employee engagement',
+        capabilities: ['manage_employees'],
+        familyId: 'growth',
+        order: 32,
+      },
+      {
+        id: 'analytics-os',
+        label: 'AnalyticsOS™',
         href: '/analytics',
-        icon: BarChart3,
+        icon: PieChart,
         description: 'AI-powered predictive analytics',
         capabilities: ['advanced_analytics'],
         minimumTier: 'enterprise',
         badge: 'Enterprise',
+        familyId: 'growth',
+        order: 33,
+      },
+      {
+        id: 'report-os',
+        label: 'ReportOS™',
+        href: '/reports',
+        icon: FileBarChart,
+        description: 'Comprehensive business intelligence',
+        capabilities: ['view_reports'],
+        minimumTier: 'starter',
+        familyId: 'growth',
+        order: 34,
       },
     ],
   },
@@ -319,17 +415,39 @@ export const osModules: OSModule[] = [
     id: 'comm-os',
     name: 'CommOS™',
     description: 'Unified Communications Platform',
-    icon: MessageSquare,
+    icon: MessagesSquare,
     color: 'hsl(var(--chart-5))',
     capabilities: ['view_messages'],
+    familyId: 'communication',
     routes: [
       {
-        id: 'messages',
-        label: 'Messages',
-        href: '/messages',
-        icon: MessageSquare,
-        description: 'Team communications',
+        id: 'comm-os-dashboard',
+        label: 'CommOS™',
+        href: '/comm-os',
+        icon: MessagesSquare,
+        description: 'Communication hub dashboard',
         capabilities: ['view_messages'],
+        familyId: 'communication',
+        order: 1,
+      },
+      {
+        id: 'private-messages',
+        label: 'Private Messages',
+        href: '/messages',
+        icon: LockKeyhole,
+        description: 'Direct messaging',
+        capabilities: ['view_messages'],
+        familyId: 'communication',
+        order: 2,
+      },
+      {
+        id: 'support-helpdesk',
+        label: 'SupportOS™ HelpDesk',
+        href: '/chat',
+        icon: Headphones,
+        description: 'AI-powered support chat',
+        familyId: 'communication',
+        order: 3,
       },
     ],
   },
@@ -340,14 +458,18 @@ export const osModules: OSModule[] = [
     icon: Shield,
     color: 'hsl(var(--destructive))',
     capabilities: ['view_audit_logs'],
+    familyId: 'platform',
     routes: [
       {
         id: 'audit-logs',
-        label: 'Audit Logs',
+        label: 'AuditOS™',
         href: '/audit-logs',
         icon: Shield,
         description: 'Compliance and activity tracking',
         capabilities: ['view_audit_logs'],
+        minimumTier: 'professional',
+        familyId: 'platform',
+        order: 22,
       },
     ],
   },
@@ -358,21 +480,27 @@ export const osModules: OSModule[] = [
     icon: Settings,
     color: 'hsl(var(--muted-foreground))',
     capabilities: ['manage_workspace'],
+    familyId: 'platform',
     routes: [
       {
+        id: 'integration-os',
+        label: 'IntegrationOS™',
+        href: '/integrations',
+        icon: Zap,
+        description: 'External system connections',
+        capabilities: ['manage_workspace'],
+        familyId: 'platform',
+        order: 21,
+      },
+      {
         id: 'settings-workspace',
-        label: 'Workspace Settings',
+        label: 'Settings',
         href: '/settings',
         icon: Settings,
         description: 'Configure workspace preferences',
         capabilities: ['manage_workspace'],
-      },
-      {
-        id: 'settings-profile',
-        label: 'My Profile',
-        href: '/profile',
-        icon: Users,
-        description: 'Personal settings and preferences',
+        familyId: 'platform',
+        order: 23,
       },
     ],
   },
@@ -461,4 +589,90 @@ export function getLockedRoutes(
   });
 
   return locked;
+}
+
+/**
+ * Family display configuration
+ */
+const familyConfig: Record<FamilyId, { label: string; order: number }> = {
+  communication: { label: 'Communication', order: 1 },
+  operations: { label: 'Operations', order: 2 },
+  growth: { label: 'Growth & AI', order: 3 },
+  platform: { label: 'Platform', order: 4 },
+};
+
+/**
+ * Select sidebar families with accessible and locked routes
+ * Central selector that groups routes by family and applies RBAC filtering
+ */
+export function selectSidebarFamilies(
+  role: WorkspaceRole,
+  tier: SubscriptionTier,
+  isPlatformStaff: boolean = false
+): SidebarFamily[] {
+  // Collect all routes from all modules
+  const allRoutes: OSModuleRoute[] = [];
+  
+  // Add platform support module routes for staff
+  if (isPlatformStaff) {
+    platformSupportModule.routes.forEach(route => {
+      allRoutes.push({
+        ...route,
+        familyId: 'platform',
+        order: 0, // Show at top of platform family
+      });
+    });
+  }
+
+  // Add regular module routes
+  osModules.forEach(module => {
+    module.routes.forEach(route => {
+      allRoutes.push(route);
+    });
+  });
+
+  // Group routes by family
+  const familyMap: Record<FamilyId, { accessible: OSModuleRoute[]; locked: OSModuleRoute[] }> = {
+    communication: { accessible: [], locked: [] },
+    operations: { accessible: [], locked: [] },
+    growth: { accessible: [], locked: [] },
+    platform: { accessible: [], locked: [] },
+  };
+
+  // Categorize each route as accessible or locked
+  allRoutes.forEach(route => {
+    if (!route.familyId) return;
+
+    const hasRoleAccess = !route.capabilities || 
+      route.capabilities.some(cap => hasCapability(role, cap));
+    const hasTier = hasTierAccess(tier, route.minimumTier);
+
+    if (isPlatformStaff || (hasRoleAccess && hasTier)) {
+      // User can access this route
+      familyMap[route.familyId].accessible.push(route);
+    } else if (hasRoleAccess && !hasTier && route.minimumTier) {
+      // User has role access but not tier (locked)
+      familyMap[route.familyId].locked.push({
+        ...route,
+        badge: route.minimumTier.charAt(0).toUpperCase() + route.minimumTier.slice(1),
+      });
+    }
+  });
+
+  // Build final family array
+  const families: SidebarFamily[] = Object.entries(familyConfig).map(([id, config]) => {
+    const familyId = id as FamilyId;
+    return {
+      id: familyId,
+      label: config.label,
+      order: config.order,
+      routes: familyMap[familyId].accessible.sort((a, b) => (a.order || 0) - (b.order || 0)),
+      locked: familyMap[familyId].locked.sort((a, b) => (a.order || 0) - (b.order || 0)),
+    };
+  });
+
+  // Filter out empty families and sort by order
+  return families
+    .filter(family => family.routes.length > 0 || family.locked.length > 0)
+    .sort((a, b) => a.order - b.order);
 }

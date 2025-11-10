@@ -1,5 +1,5 @@
 // Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, FileText, Settings, LayoutDashboard, LogOut, Clock, BarChart3, Activity, Headphones, CreditCard, MessageSquare, Shield, UserCog, DollarSign, Receipt, Briefcase, TrendingUp, Zap, Package, Lock, Sparkles, Brain, Target, Layers, ChevronUp, Building2, Bell, HelpCircle, Download, MessagesSquare, LockKeyhole, HeadphonesIcon, CalendarClock, Timer, Banknote, FileText as FileInvoice, GraduationCap, UsersRound, UserCheck, Rocket, Medal, LineChart, FileBarChart, Wallet, CalendarDays, BadgeDollarSign, Coins, FileCheck2, BookUser, UserSquare2, Award, PieChart, TrendingUpDown } from "lucide-react";
+import { Calendar, Users, UserCircle, Settings, LogOut, Lock, ChevronUp, Building2, Bell, HelpCircle, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { selectSidebarFamilies } from "@/lib/osModules";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,46 +30,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// FAMILY 1: Communication & Collaboration OS
-const communicationFamilyItems = [
-  { title: "CommOS™", url: "/comm-os", icon: MessagesSquare },
-  { title: "Private Messages", url: "/messages", icon: LockKeyhole },
-  { title: "SupportOS™ HelpDesk", url: "/chat", icon: Headphones },
-];
-
-// FAMILY 2: Workforce Operations OS
-const operationsFamilyItems = [
-  { title: "ScheduleOS™", url: "/schedule", icon: CalendarDays },
-  { title: "TimeOS™", url: "/time-tracking", icon: Clock },
-  { title: "PayrollOS™", url: "/payroll", icon: Wallet },
-  { title: "BillOS™", url: "/invoices", icon: FileCheck2 },
-  { title: "TrainingOS™", url: "/training", icon: GraduationCap },
-  { title: "Employees", url: "/employees", icon: UsersRound },
-  { title: "Clients", url: "/clients", icon: BookUser },
-];
-
-// FAMILY 3: Growth & Intelligence OS
-const growthFamilyItems = [
-  { title: "🚀 Growth Family", url: "/os-family/growth", icon: Rocket, isFamily: true },
-  { title: "DealOS™ Sales", url: "/sales", icon: BadgeDollarSign },
-  { title: "TalentOS™", url: "/leaders-hub", icon: Award },
-  { title: "EngagementOS™", url: "/engagement/dashboard", icon: TrendingUp },
-  { title: "AnalyticsOS™", url: "/analytics", icon: PieChart },
-  { title: "ReportOS™", url: "/reports", icon: FileBarChart },
-];
-
-// FAMILY 4: Platform & Control OS
-const platformFamilyItems = [
-  { title: "⚡ Platform Family", url: "/os-family/platform", icon: Zap, isFamily: true },
-  { title: "IntegrationOS™", url: "/integrations", icon: Zap },
-  { title: "Admin Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
   const transition = useTransition();
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
@@ -88,42 +62,10 @@ export function AppSidebar() {
     showLogoutTransition(transition);
   };
 
-  const renderMenuSection = (title: string, items: typeof communicationFamilyItems, showBadge?: boolean) => (
-    <SidebarGroup>
-      <SidebarGroupLabel className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-2">
-        {title}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu className="space-y-0.5">
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton 
-                asChild 
-                isActive={location === item.url}
-                data-testid={`link-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                className="hover-elevate active-elevate-2 h-9 px-3 group"
-              >
-                <Link href={item.url} className="flex items-center gap-3 w-full">
-                  <item.icon className={`h-4 w-4 shrink-0 transition-colors ${
-                    location === item.url 
-                      ? 'text-primary' 
-                      : 'text-muted-foreground group-hover:text-primary'
-                  }`} />
-                  <span className={`text-sm leading-tight font-medium transition-colors ${
-                    location === item.url
-                      ? 'text-primary'
-                      : 'text-foreground group-hover:text-primary'
-                  }`}>
-                    {item.title}
-                  </span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
+  // Get sidebar families with RBAC filtering
+  const families = isLoading 
+    ? [] 
+    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
 
   return (
     <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass z-50">
@@ -134,17 +76,87 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-3 py-4 overflow-y-auto">
-        {/* OS Family 1: Communication */}
-        {renderMenuSection("Communication", communicationFamilyItems, true)}
-
-        {/* OS Family 2: Operations */}
-        {renderMenuSection("Operations", operationsFamilyItems, true)}
-
-        {/* OS Family 3: Growth & AI */}
-        {renderMenuSection("Growth & AI", growthFamilyItems, true)}
-
-        {/* OS Family 4: Platform */}
-        {renderMenuSection("Platform", platformFamilyItems, true)}
+        {families.map((family) => (
+          <SidebarGroup key={family.id}>
+            <SidebarGroupLabel className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-2">
+              {family.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-0.5">
+                {/* Accessible routes */}
+                {family.routes.map((route) => (
+                  <SidebarMenuItem key={route.id}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={location === route.href}
+                      data-testid={`link-${route.id}`}
+                      className="hover-elevate active-elevate-2 h-9 px-3 group"
+                    >
+                      <Link href={route.href} className="flex items-center gap-3 w-full">
+                        <route.icon className={`h-4 w-4 shrink-0 transition-colors ${
+                          location === route.href 
+                            ? 'text-primary' 
+                            : 'text-muted-foreground group-hover:text-primary'
+                        }`} />
+                        <span className={`text-sm leading-tight font-medium transition-colors ${
+                          location === route.href
+                            ? 'text-primary'
+                            : 'text-foreground group-hover:text-primary'
+                        }`}>
+                          {route.label}
+                        </span>
+                        {route.badge && (
+                          <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
+                            {route.badge}
+                          </Badge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+                
+                {/* Locked routes (tier upgrade prompts) */}
+                {family.locked.map((route) => (
+                  <SidebarMenuItem key={`locked-${route.id}`}>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton 
+                            disabled
+                            data-testid={`link-locked-${route.id}`}
+                            className="h-9 px-3 group opacity-50 cursor-not-allowed"
+                          >
+                            <div className="flex items-center gap-3 w-full">
+                              <route.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <span className="text-sm leading-tight font-medium text-muted-foreground">
+                                {route.label}
+                              </span>
+                              <div className="ml-auto flex items-center gap-1">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400">
+                                  {route.badge}
+                                </Badge>
+                                <Lock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                              </div>
+                            </div>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p className="font-medium">{route.label}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {route.description}
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                            Requires {route.badge} tier or higher
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-white/[0.08]">
