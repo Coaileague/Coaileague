@@ -1,0 +1,328 @@
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Wrench, FileText, Camera, Link as LinkIcon, 
+  TrendingUp, Users, Bug, MessageSquare 
+} from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+interface AgentToolbeltProps {
+  ticketId?: string;
+  onMacroInsert?: (macro: string) => void;
+  onRequestFile?: (fileType: string) => void;
+  onSendKBLink?: (article: string) => void;
+  onEscalate?: (reason: string, queue: string) => void;
+  onTransfer?: (agentId: string) => void;
+  onCreateBug?: (description: string) => void;
+  className?: string;
+}
+
+const macros = [
+  { id: 'greeting', label: 'Greeting', text: 'Hello! Thanks for reaching out to AutoForce™ Support. How can I assist you today?' },
+  { id: 'investigation', label: 'Investigating', text: 'I\'m looking into this issue for you. I\'ll have an update shortly.' },
+  { id: 'need_info', label: 'Need Info', text: 'To help resolve this, could you provide more details about when this started?' },
+  { id: 'resolved', label: 'Resolved', text: 'Great! I\'m glad we could resolve this. Is there anything else I can help with?' },
+  { id: 'escalation', label: 'Escalation Notice', text: 'I\'m escalating this to our senior team for specialized assistance. They\'ll reach out shortly.' },
+];
+
+const kbArticles = [
+  { id: 'getting-started', title: 'Getting Started Guide', url: '/help/getting-started' },
+  { id: 'billing', title: 'Billing & Subscriptions', url: '/help/billing' },
+  { id: 'security', title: 'Security Best Practices', url: '/help/security' },
+  { id: 'integrations', title: 'Integration Setup', url: '/help/integrations' },
+  { id: 'troubleshooting', title: 'Common Issues', url: '/help/troubleshooting' },
+];
+
+export function AgentToolbelt({
+  ticketId,
+  onMacroInsert,
+  onRequestFile,
+  onSendKBLink,
+  onEscalate,
+  onTransfer,
+  onCreateBug,
+  className
+}: AgentToolbeltProps) {
+  const { toast } = useToast();
+  const [escalateDialog, setEscalateDialog] = useState(false);
+  const [bugDialog, setBugDialog] = useState(false);
+  const [escalateReason, setEscalateReason] = useState('');
+  const [escalateQueue, setEscalateQueue] = useState('');
+  const [bugDescription, setBugDescription] = useState('');
+
+  const handleMacro = (macroText: string) => {
+    if (onMacroInsert) {
+      onMacroInsert(macroText);
+    }
+    toast({
+      title: "Macro Inserted",
+      description: "Template text has been added to your message.",
+    });
+  };
+
+  const handleRequestFile = (fileType: string) => {
+    if (onRequestFile) {
+      onRequestFile(fileType);
+    }
+    toast({
+      title: "File Requested",
+      description: `Requesting ${fileType} from user...`,
+    });
+  };
+
+  const handleKBLink = (article: typeof kbArticles[0]) => {
+    if (onSendKBLink) {
+      onSendKBLink(`📚 **${article.title}**: ${window.location.origin}${article.url}`);
+    }
+    toast({
+      title: "KB Link Sent",
+      description: `Sent link to ${article.title}`,
+    });
+  };
+
+  const handleEscalate = () => {
+    if (onEscalate && escalateReason && escalateQueue) {
+      onEscalate(escalateReason, escalateQueue);
+      setEscalateDialog(false);
+      setEscalateReason('');
+      setEscalateQueue('');
+      toast({
+        title: "Ticket Escalated",
+        description: `Escalated to ${escalateQueue} queue`,
+      });
+    }
+  };
+
+  const handleCreateBug = () => {
+    if (onCreateBug && bugDescription) {
+      onCreateBug(bugDescription);
+      setBugDialog(false);
+      setBugDescription('');
+      toast({
+        title: "Bug Report Created",
+        description: "Engineering has been notified",
+      });
+    }
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={className}
+            data-testid="agent-toolbelt-trigger"
+          >
+            <Wrench className="w-4 h-4 mr-2" />
+            Agent Tools
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {/* Macros */}
+          <DropdownMenuItem asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="w-full flex items-center px-2 py-1.5 cursor-pointer hover:bg-accent">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Insert Macro
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="left" className="w-56">
+                {macros.map(macro => (
+                  <DropdownMenuItem 
+                    key={macro.id}
+                    onClick={() => handleMacro(macro.text)}
+                    data-testid={`macro-${macro.id}`}
+                  >
+                    {macro.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </DropdownMenuItem>
+
+          {/* Request Files */}
+          <DropdownMenuItem asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="w-full flex items-center px-2 py-1.5 cursor-pointer hover:bg-accent">
+                <Camera className="w-4 h-4 mr-2" />
+                Request File
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="left" className="w-56">
+                <DropdownMenuItem onClick={() => handleRequestFile('screenshot')} data-testid="request-screenshot">
+                  Screenshot
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRequestFile('log')} data-testid="request-log">
+                  Log File
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRequestFile('file')} data-testid="request-file">
+                  General File
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </DropdownMenuItem>
+
+          {/* KB Links */}
+          <DropdownMenuItem asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="w-full flex items-center px-2 py-1.5 cursor-pointer hover:bg-accent">
+                <LinkIcon className="w-4 h-4 mr-2" />
+                Send KB Link
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="left" className="w-56">
+                {kbArticles.map(article => (
+                  <DropdownMenuItem 
+                    key={article.id}
+                    onClick={() => handleKBLink(article)}
+                    data-testid={`kb-${article.id}`}
+                  >
+                    {article.title}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Escalate */}
+          <DropdownMenuItem 
+            onClick={() => setEscalateDialog(true)}
+            data-testid="escalate-button"
+          >
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Escalate Ticket
+          </DropdownMenuItem>
+
+          {/* Create Bug */}
+          <DropdownMenuItem 
+            onClick={() => setBugDialog(true)}
+            data-testid="create-bug-button"
+          >
+            <Bug className="w-4 h-4 mr-2" />
+            Create Bug Report
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Escalate Dialog */}
+      <Dialog open={escalateDialog} onOpenChange={setEscalateDialog}>
+        <DialogContent data-testid="escalate-dialog">
+          <DialogHeader>
+            <DialogTitle>Escalate Ticket</DialogTitle>
+            <DialogDescription>
+              Escalate this ticket to a specialized team for further assistance.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="escalate-queue">Escalate To</Label>
+              <Select value={escalateQueue} onValueChange={setEscalateQueue}>
+                <SelectTrigger id="escalate-queue" data-testid="select-escalate-queue">
+                  <SelectValue placeholder="Select queue..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sysops">SysOps (Technical)</SelectItem>
+                  <SelectItem value="billing">Billing Team</SelectItem>
+                  <SelectItem value="engineering">Engineering</SelectItem>
+                  <SelectItem value="management">Management</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="escalate-reason">Reason for Escalation</Label>
+              <Textarea
+                id="escalate-reason"
+                value={escalateReason}
+                onChange={(e) => setEscalateReason(e.target.value)}
+                placeholder="Explain why this needs escalation..."
+                rows={3}
+                data-testid="input-escalate-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEscalateDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEscalate}
+              disabled={!escalateReason || !escalateQueue}
+              data-testid="button-confirm-escalate"
+            >
+              Escalate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bug Report Dialog */}
+      <Dialog open={bugDialog} onOpenChange={setBugDialog}>
+        <DialogContent data-testid="bug-dialog">
+          <DialogHeader>
+            <DialogTitle>Create Bug Report</DialogTitle>
+            <DialogDescription>
+              Report a technical issue to the engineering team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bug-description">Bug Description</Label>
+              <Textarea
+                id="bug-description"
+                value={bugDescription}
+                onChange={(e) => setBugDescription(e.target.value)}
+                placeholder="Describe the bug, steps to reproduce, and impact..."
+                rows={5}
+                data-testid="input-bug-description"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This will create a ticket for engineering with context from this support session.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBugDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateBug}
+              disabled={!bugDescription}
+              data-testid="button-confirm-bug"
+            >
+              Create Bug Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
