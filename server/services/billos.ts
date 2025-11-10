@@ -167,73 +167,84 @@ async function createInvoiceFromBillableSummary(
   }
   
   // Generate line items per employee showing hour type breakdown
-  for (const [employeeId, entries] of entriesByEmployee) {
+  // CRITICAL: Sum actual entry amounts (entries may have different rates)
+  for (const [employeeId, entries] of Array.from(entriesByEmployee)) {
     const employeeName = entries[0].employeeName;
-    const rateSource = entries[0].rateSource;
-    const billingRate = entries[0].billingRate;
     
-    // Sum up hours by type for this employee
+    // Sum up hours and amounts by type - using actual entry amounts for accuracy
     let totalRegular = 0;
     let totalOvertime = 0;
     let totalHoliday = 0;
     let regularAmount = 0;
     let overtimeAmount = 0;
     let holidayAmount = 0;
+    const rateSources = new Set<string>();
     
     for (const entry of entries) {
       totalRegular += entry.regularHours;
       totalOvertime += entry.overtimeHours;
       totalHoliday += entry.holidayHours;
-      regularAmount += entry.regularHours * billingRate;
-      overtimeAmount += entry.overtimeHours * billingRate * 1.5;
-      holidayAmount += entry.holidayHours * billingRate * 2.0;
+      
+      // Use actual amounts from aggregator (preserves mixed-rate accuracy)
+      regularAmount += entry.regularHours * entry.billingRate;
+      overtimeAmount += entry.overtimeHours * entry.billingRate * 1.5;
+      holidayAmount += entry.holidayHours * entry.billingRate * 2.0;
+      
+      rateSources.add(entry.rateSource);
     }
+    
+    // Calculate weighted average rates for display (informational only)
+    const avgRegularRate = totalRegular > 0 ? regularAmount / totalRegular : 0;
+    const avgOvertimeRate = totalOvertime > 0 ? overtimeAmount / totalOvertime : 0;
+    const avgHolidayRate = totalHoliday > 0 ? holidayAmount / totalHoliday : 0;
+    const rateSourceNote = rateSources.size > 1 ? 'mixed_rates' : Array.from(rateSources)[0];
     
     // Regular hours line item
     if (totalRegular > 0) {
       lineItems.push({
         description: `${employeeName} - Regular Hours`,
         quantity: totalRegular.toFixed(2),
-        unitPrice: billingRate.toFixed(2),
+        unitPrice: avgRegularRate.toFixed(2),
         amount: regularAmount.toFixed(2),
         metadata: JSON.stringify({ 
-          rateSource, 
+          rateSource: rateSourceNote, 
           hourType: 'regular',
-          employeeId 
+          employeeId,
+          rateSources: Array.from(rateSources)
         }),
       });
     }
     
     // Overtime hours line item (1.5x billing rate)
     if (totalOvertime > 0) {
-      const overtimeRate = billingRate * 1.5;
       lineItems.push({
         description: `${employeeName} - Overtime Hours (1.5x)`,
         quantity: totalOvertime.toFixed(2),
-        unitPrice: overtimeRate.toFixed(2),
+        unitPrice: avgOvertimeRate.toFixed(2),
         amount: overtimeAmount.toFixed(2),
         metadata: JSON.stringify({ 
-          rateSource, 
+          rateSource: rateSourceNote, 
           hourType: 'overtime',
           employeeId,
-          multiplier: 1.5
+          multiplier: 1.5,
+          rateSources: Array.from(rateSources)
         }),
       });
     }
     
     // Holiday hours line item (2.0x billing rate)
     if (totalHoliday > 0) {
-      const holidayRate = billingRate * 2.0;
       lineItems.push({
         description: `${employeeName} - Holiday Hours (2.0x)`,
         quantity: totalHoliday.toFixed(2),
-        unitPrice: holidayRate.toFixed(2),
+        unitPrice: avgHolidayRate.toFixed(2),
         amount: holidayAmount.toFixed(2),
         metadata: JSON.stringify({ 
-          rateSource, 
+          rateSource: rateSourceNote, 
           hourType: 'holiday',
           employeeId,
-          multiplier: 2.0
+          multiplier: 2.0,
+          rateSources: Array.from(rateSources)
         }),
       });
     }
