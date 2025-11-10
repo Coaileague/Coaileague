@@ -6,9 +6,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { GraduationCap, Settings2, Search, Menu } from "lucide-react";
-import { AppSidebar } from "@/components/app-sidebar";
+import { PeekRailNav } from "@/components/peek-rail-nav";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
 import { TransitionProvider } from "@/contexts/transition-context";
@@ -132,36 +131,15 @@ import { PlanBadge } from "@/components/plan-badge";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
-// Separate header component to use useSidebar hook
+// Separate header component for app navigation
 function AppHeader({ isRootAdmin, setLocation, setShowOnboarding }: any) {
-  const { toggleSidebar } = useSidebar();
   const { user } = useAuth();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
+    <header className="fixed top-0 left-14 right-0 z-[60] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
       <div className="flex items-center gap-2">
-        {/* Menu Toggle Button - uses proper Shadcn sidebar API */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleSidebar}
-              data-testid="button-menu-toggle"
-              className="shrink-0 gap-2"
-            >
-              <Menu className="h-4 w-4" />
-              <span className="text-sm">Menu</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Toggle navigation menu</p>
-          </TooltipContent>
-        </Tooltip>
         {/* Workspace Switcher */}
-        <div className="hidden md:block">
-          <WorkspaceSwitcher />
-        </div>
+        <WorkspaceSwitcher />
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
@@ -284,12 +262,6 @@ function AppContent() {
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
 
-  // Custom sidebar width for better workspace layout (increased for longer menu text)
-  const style = {
-    "--sidebar-width": "22rem",  // 352px - prevents text truncation
-    "--sidebar-width-icon": "4rem",
-  };
-
   // Show minimal loading state during auth check to prevent routing issues
   if (isLoading) {
     return (
@@ -338,12 +310,11 @@ function AppContent() {
 
   return (
     <ProtectedRoute>
-      <SidebarProvider defaultOpen={false} style={style as React.CSSProperties}>
-        <CommandPalette />
-        <div className="flex h-screen w-full overflow-x-hidden max-w-full relative">
-          {/* Hide global sidebar for mobile chat - it has its own support menu */}
-          {!isMobileChat && <AppSidebar />}
-          <div className="flex flex-col absolute inset-0 min-h-0 w-full max-w-full overflow-x-hidden z-0">
+      <CommandPalette />
+      <div className="flex h-screen w-full overflow-x-hidden max-w-full relative">
+        {/* Gmail-style Peek Rail Navigation */}
+        {!isMobileChat && <PeekRailNav defaultPinned={false} />}
+        <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden z-0">
             {/* Demo Banner - positioned to account for fixed header */}
             <DemoBanner />
 
@@ -496,11 +467,10 @@ function AppContent() {
           </div>
         </div>
         
-        {/* Mobile Bottom Navigation - Only shown on mobile, hidden on tablet/desktop */}
-        {!isMobileChat && !isHelpDesk && <MobileBottomNav />}
-        
-        <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
-      </SidebarProvider>
+      {/* Mobile Bottom Navigation - Only shown on mobile, hidden on tablet/desktop */}
+      {!isMobileChat && !isHelpDesk && <MobileBottomNav />}
+      
+      <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ProtectedRoute>
   );
 }
