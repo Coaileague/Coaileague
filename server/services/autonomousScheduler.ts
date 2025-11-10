@@ -18,7 +18,7 @@ import { ScheduleOSAI } from '../ai/scheduleos';
 import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
 import { shouldRunBiweekly, seedAnchor, advanceAnchor, detectAnchorDrift } from './utils/scheduling';
 import { storage } from '../storage';
-import { checkIdempotency, updateIdempotencyResult } from './autonomy/helpers';
+import { executeIdempotencyCheck, updateIdempotencyResult } from './autonomy/helpers';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -57,16 +57,22 @@ function buildInvoiceFingerprintData(workspace: any, date: Date) {
   };
 }
 
-/**
- * Build idempotency fingerprint for payroll generation
- */
 function buildPayrollFingerprintData(workspace: any, date: Date) {
+  // Calculate payroll period boundaries  
+  const periodEnd = new Date(date);
+  periodEnd.setHours(0, 0, 0, 0);
+  const periodStart = new Date(periodEnd);
+  periodStart.setDate(periodStart.getDate() - 1);
+  
   return {
     workspaceId: workspace.id,
-    date: date.toISOString().split('T')[0],
+    runDate: date.toISOString().split('T')[0], // YYYY-MM-DD
+    periodStart: periodStart.toISOString().split('T')[0],
+    periodEnd: periodEnd.toISOString().split('T')[0],
     schedule: workspace.payrollSchedule,
     dayOfWeek: workspace.payrollDayOfWeek,
     dayOfMonth: workspace.payrollDayOfMonth,
+    cutoffDay: workspace.payrollCutoffDay,
     biweeklyAnchor: workspace.payrollBiweeklyAnchor?.toISOString(),
     configHash: crypto
       .createHash('sha256')
@@ -74,6 +80,7 @@ function buildPayrollFingerprintData(workspace: any, date: Date) {
         schedule: workspace.payrollSchedule,
         dayOfWeek: workspace.payrollDayOfWeek,
         dayOfMonth: workspace.payrollDayOfMonth,
+        cutoffDay: workspace.payrollCutoffDay,
       }))
       .digest('hex')
       .substring(0, 16),
@@ -347,7 +354,7 @@ async function runNightlyInvoiceGeneration() {
             },
             async () => {
               // IDEMPOTENCY: Check if this operation already ran today (14-day TTL for retry window)
-              const idem = await checkIdempotency({
+              const idem = await executeIdempotencyCheck({
                 workspaceId: workspace.id,
                 operationType: 'invoice_generation',
                 requestData: buildInvoiceFingerprintData(workspace, today),
@@ -710,56 +717,129 @@ async function runAutomaticPayrollProcessing() {
               runId,
             },
             async () => {
-              // Get workspace owner to attribute payroll run
-              const [owner] = await db
-                .select()
-                .from(employees)
-                .where(
-                  and(
-                    eq(employees.workspaceId, workspace.id),
-                    eq(employees.workspaceRole, 'org_owner')
-                  )
-                )
-                .limit(1);
-
-              if (owner && owner.userId) {
-                // Process automated payroll
-                const result = await PayrollAutomationEngine.processAutomatedPayroll(
-                  workspace.id,
-                  owner.userId
-                );
-
-                console.log(`✅ Payroll processed for ${workspace.name}:`);
-                console.log(`   Employees: ${result.totalEmployees}`);
-                console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);
-                console.log(`   Net Pay: $${result.totalNetPay.toFixed(2)}`);
-                
-                totalPayrollRuns++;
-                successCount++;
-                
-                // Update lastRunAt and advance anchor (transactional) - ALWAYS run to maintain cadence
-                await db.transaction(async (tx) => {
-                  const updateData: any = { lastPayrollRunAt: today };
-                  
-                  // Advance biweekly anchor if applicable
-                  if (paySchedule === 'biweekly' && workspace.payrollBiweeklyAnchor) {
-                    const newAnchor = advanceAnchor(workspace.payrollBiweeklyAnchor);
-                    updateData.payrollBiweeklyAnchor = newAnchor;
-                  }
-                  
-                  await tx.update(workspaces)
-                    .set(updateData)
-                    .where(eq(workspaces.id, workspace.id));
-                });
-                
-                return {
-                  employeesProcessed: result.totalEmployees,
-                  grossPay: result.totalGrossPay,
-                  netPay: result.totalNetPay
+              // Idempotency check (45-day TTL for payroll)
+              const idem = await executeIdempotencyCheck({
+                workspaceId: workspace.id,
+                operationType: 'payroll_run',
+                requestData: buildPayrollFingerprintData(workspace, today),
+                ttlDays: 45, // Longer TTL for critical payroll operations
+              });
+              
+              if (!idem.isNew) {
+                console.log(`   ⚠️  Duplicate payroll processing detected (idempotency key ${idem.idempotencyKeyId})`);
+                console.log(`   Existing status: ${idem.status}, skipping execution`);
+                return { 
+                  employeesProcessed: 0,
+                  grossPay: 0,
+                  netPay: 0,
+                  isDuplicate: true,
+                  idempotencyKeyId: idem.idempotencyKeyId,
                 };
-              } else {
-                console.log(`⚠️  No owner found for ${workspace.name}, skipping payroll`);
-                return { employeesProcessed: 0, grossPay: 0, netPay: 0 };
+              }
+              
+              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), processing payroll...`);
+              
+              try {
+                // Get workspace owner to attribute payroll run
+                const [owner] = await db
+                  .select()
+                  .from(employees)
+                  .where(
+                    and(
+                      eq(employees.workspaceId, workspace.id),
+                      eq(employees.workspaceRole, 'org_owner')
+                    )
+                  )
+                  .limit(1);
+
+                if (owner && owner.userId) {
+                  // Process automated payroll
+                  const result = await PayrollAutomationEngine.processAutomatedPayroll(
+                    workspace.id,
+                    owner.userId
+                  );
+
+                  console.log(`✅ Payroll processed for ${workspace.name}:`);
+                  console.log(`   Employees: ${result.totalEmployees}`);
+                  console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);
+                  console.log(`   Net Pay: $${result.totalNetPay.toFixed(2)}`);
+                  
+                  totalPayrollRuns++;
+                  successCount++;
+                  
+                  // Update lastRunAt, advance anchor, and mark idempotency complete (ATOMIC)
+                  await db.transaction(async (tx) => {
+                    const updateData: any = { lastPayrollRunAt: today };
+                    
+                    // Advance biweekly anchor if applicable
+                    if (paySchedule === 'biweekly' && workspace.payrollBiweeklyAnchor) {
+                      const newAnchor = advanceAnchor(workspace.payrollBiweeklyAnchor);
+                      updateData.payrollBiweeklyAnchor = newAnchor;
+                    }
+                    
+                    await tx.update(workspaces)
+                      .set(updateData)
+                      .where(eq(workspaces.id, workspace.id));
+                    
+                    // Mark idempotency complete in SAME transaction
+                    await updateIdempotencyResult({
+                      idempotencyKeyId: idem.idempotencyKeyId,
+                      status: 'completed',
+                      resultId: result.payrollRunId ? String(result.payrollRunId) : undefined,
+                      resultMetadata: {
+                        employeesProcessed: result.totalEmployees,
+                        grossPay: result.totalGrossPay,
+                        netPay: result.totalNetPay,
+                        isDuplicate: false,
+                        workspaceName: workspace.name,
+                        schedule: paySchedule,
+                        periodStart: buildPayrollFingerprintData(workspace, today).periodStart,
+                        periodEnd: buildPayrollFingerprintData(workspace, today).periodEnd,
+                      },
+                    }, tx); // Pass transaction client for atomic update
+                  });
+                  
+                  return {
+                    employeesProcessed: result.totalEmployees,
+                    grossPay: result.totalGrossPay,
+                    netPay: result.totalNetPay,
+                    isDuplicate: false,
+                    idempotencyKeyId: idem.idempotencyKeyId,
+                  };
+                } else {
+                  console.log(`⚠️  No owner found for ${workspace.name}, skipping payroll`);
+                  
+                  // Still mark idempotency as complete (zero result is valid)
+                  await updateIdempotencyResult({
+                    idempotencyKeyId: idem.idempotencyKeyId,
+                    status: 'completed',
+                    resultMetadata: {
+                      employeesProcessed: 0,
+                      grossPay: 0,
+                      netPay: 0,
+                      isDuplicate: false,
+                      workspaceName: workspace.name,
+                      schedule: paySchedule,
+                      reason: 'no_owner',
+                    },
+                  });
+                  
+                  return { employeesProcessed: 0, grossPay: 0, netPay: 0 };
+                }
+              } catch (error: any) {
+                // Mark idempotency operation failed with full error context
+                await updateIdempotencyResult({
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                  status: 'failed',
+                  errorMessage: error.message,
+                  errorStack: error.stack,
+                  resultMetadata: {
+                    isDuplicate: false,
+                    workspaceName: workspace.name,
+                    schedule: paySchedule,
+                  },
+                });
+                throw error; // Re-throw to trigger audit log error
               }
             }
           );
