@@ -34,6 +34,15 @@ interface Notification {
   actionUrl?: string;
 }
 
+interface WorkspaceHealth {
+  status: 'green' | 'yellow' | 'red';
+  message: string;
+  billing: { status: string; active: boolean };
+  integrations: { quickbooks: string; gusto: string };
+  automations: { invoicing: boolean; payroll: boolean; scheduling: boolean };
+  safeToRun: boolean;
+}
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -51,6 +60,12 @@ export default function Dashboard() {
     queryKey: ['/api/workspace'] 
   });
   const workspaceId = workspace?.id;
+
+  // Fetch workspace health status
+  const { data: workspaceHealth } = useQuery<WorkspaceHealth>({
+    queryKey: ['/api/workspace/health'],
+    enabled: isAuthenticated,
+  });
 
   // Connect to notification WebSocket for real-time updates
   const { unreadCount: wsUnreadCount, isConnected } = useNotificationWebSocket(userId, workspaceId);
@@ -246,6 +261,68 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Workspace Health Status - Simple visual indicator */}
+        {workspaceHealth && (
+          <div className={`mb-8 rounded-xl border-2 p-6 ${
+            workspaceHealth.status === 'green' ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/30' :
+            workspaceHealth.status === 'yellow' ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-500/30' :
+            'bg-red-50/50 dark:bg-red-950/20 border-red-500/30'
+          }`} data-testid="workspace-health-status">
+            <div className="flex items-start gap-4">
+              {/* Traffic Light Indicator */}
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center shrink-0 ${
+                workspaceHealth.status === 'green' ? 'bg-emerald-500' :
+                workspaceHealth.status === 'yellow' ? 'bg-amber-500' :
+                'bg-red-500'
+              }`}>
+                {workspaceHealth.status === 'green' && <CheckCircle className="w-8 h-8 text-white" />}
+                {workspaceHealth.status === 'yellow' && <AlertCircle className="w-8 h-8 text-white" />}
+                {workspaceHealth.status === 'red' && <XCircle className="w-8 h-8 text-white" />}
+              </div>
+
+              {/* Status Message */}
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-2 text-foreground">
+                  {workspaceHealth.status === 'green' && '✓ Everything Running Smoothly'}
+                  {workspaceHealth.status === 'yellow' && '⚠ Action Recommended'}
+                  {workspaceHealth.status === 'red' && '✗ Action Required'}
+                </h3>
+                <p className="text-foreground/80 mb-4">{workspaceHealth.message}</p>
+
+                {/* Simple status grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Billing</p>
+                    <p className="font-semibold text-sm">{workspaceHealth.billing.active ? '✓ Active' : '✗ Inactive'}</p>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">QuickBooks</p>
+                    <p className="font-semibold text-sm">{workspaceHealth.integrations.quickbooks === 'connected' ? '✓ Connected' : '- Not Connected'}</p>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Gusto</p>
+                    <p className="font-semibold text-sm">{workspaceHealth.integrations.gusto === 'connected' ? '✓ Connected' : '- Not Connected'}</p>
+                  </div>
+                </div>
+
+                {/* Action button for yellow/red status */}
+                {workspaceHealth.status !== 'green' && (
+                  <div className="mt-4">
+                    <Button
+                      onClick={() => setLocation(workspaceHealth.billing.active ? '/integrations' : '/settings')}
+                      variant="default"
+                      size="sm"
+                      data-testid="button-fix-health"
+                    >
+                      {workspaceHealth.billing.active ? 'Connect Integrations' : 'Update Billing'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Metrics Grid - Professional Cards (NO glow effects) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
