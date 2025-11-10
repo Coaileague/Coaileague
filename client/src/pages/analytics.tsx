@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, Clock, Users, UserCheck, TrendingUp, FileText, BarChart3 } from "lucide-react";
+import { DollarSign, Clock, Users, UserCheck, TrendingUp, FileText, BarChart3, Download, FileSpreadsheet } from "lucide-react";
 import { AutoForceLogo } from "@/components/autoforce-logo";
+import { Button } from "@/components/ui/button";
+import { exportReport } from "@/lib/exportUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -19,9 +22,46 @@ interface AnalyticsData {
 }
 
 export default function Analytics() {
+  const { toast } = useToast();
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
     queryKey: ['/api/analytics'],
   });
+
+  const handleExport = (format: 'csv' | 'pdf') => {
+    if (!analytics) {
+      toast({
+        title: "No data available",
+        description: "Cannot export - please wait for data to load",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const exportData = [
+      { metric: 'Total Revenue', value: `$${analytics.totalRevenue.toLocaleString()}`, category: 'Financial' },
+      { metric: 'Hours Worked', value: analytics.totalHoursWorked.toLocaleString(), category: 'Operations' },
+      { metric: 'Active Employees', value: analytics.activeEmployees, category: 'Team' },
+      { metric: 'Total Employees', value: analytics.employeeCount, category: 'Team' },
+      { metric: 'Active Clients', value: analytics.activeClients, category: 'Business' },
+      { metric: 'Total Clients', value: analytics.clientCount, category: 'Business' },
+      { metric: 'Total Invoices', value: analytics.totalInvoices, category: 'Billing' },
+      { metric: 'Paid Invoices', value: analytics.paidInvoices, category: 'Billing' },
+      { metric: 'Payment Rate', value: `${Math.round((analytics.paidInvoices / analytics.totalInvoices) * 100)}%`, category: 'Performance' },
+      { metric: 'Subscription Plan', value: analytics.workspace.subscriptionTier, category: 'Account' },
+      { metric: 'Employee Capacity', value: `${analytics.employeeCount} / ${analytics.workspace.maxEmployees}`, category: 'Limits' },
+      { metric: 'Client Capacity', value: `${analytics.clientCount} / ${analytics.workspace.maxClients}`, category: 'Limits' },
+    ];
+
+    exportReport(format, 'Analytics Dashboard', exportData, {
+      columns: ['metric', 'value', 'category'],
+      columnLabels: { metric: 'Metric', value: 'Value', category: 'Category' },
+    });
+
+    toast({
+      title: `${format.toUpperCase()} Export Started`,
+      description: `Your analytics report is being prepared`,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -64,17 +104,39 @@ export default function Analytics() {
         {/* Branded Header with Logo */}
         <div className="mb-8">
           <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="transform hover:scale-105 transition-transform duration-300">
                 <AutoForceLogo size="lg" variant="icon" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-[200px]">
                 <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent mb-1" data-testid="heading-analytics">
                   Analytics Dashboard
                 </h2>
                 <p className="text-slate-300 text-sm sm:text-base">
                   📊 Track your business performance and usage metrics
                 </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport('csv')}
+                  data-testid="button-export-csv"
+                  className="gap-2 bg-white/5 hover-elevate"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport('pdf')}
+                  data-testid="button-export-pdf"
+                  className="gap-2 bg-white/5 hover-elevate"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">PDF</span>
+                </Button>
               </div>
             </div>
           </div>
