@@ -529,3 +529,231 @@ html {
     display: none !important;
   }
 }
+
+/* ============================================================================
+   COMPACT DESIGN UTILITIES (Nov 10, 2025)
+   Progressive disclosure, sticky CTAs, and reduced-redundancy layouts
+   ============================================================================ */
+
+/* Sticky bottom CTA bar for mobile (fixed actions) */
+.sticky-bottom-cta {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: hsl(var(--background));
+  border-top: 1px solid hsl(var(--border));
+  padding: 0.75rem 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+@media (min-width: 1024px) {
+  .sticky-bottom-cta {
+    display: none; /* Hide on desktop unless explicitly shown */
+  }
+}
+
+/* Compact spacing for mobile (reduced gaps) */
+.compact-gap {
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .compact-gap {
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .compact-gap {
+    gap: 1.5rem;
+  }
+}
+
+/* Compact padding for dense layouts */
+.compact-padding {
+  padding: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .compact-padding {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .compact-padding {
+    padding: 1.5rem;
+  }
+}
+
+/* Mobile table accessibility helper - visually hide thead but keep for screen readers */
+@media (max-width: 767px) {
+  .mobile-table-accessible thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Transform table rows into cards - keeping native table display */
+  .mobile-table-accessible tbody {
+    display: block;
+  }
+
+  .mobile-table-accessible tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background: hsl(var(--card));
+  }
+
+  .mobile-table-accessible td {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border: 0;
+  }
+
+  /* Use actual DOM content for labels via data-mobile-label */
+  .mobile-table-accessible td::before {
+    content: attr(data-mobile-label);
+    font-weight: 600;
+    color: hsl(var(--foreground));
+  }
+}
+
+/* NOTE: For best accessibility, use React DataSummaryCard component instead of CSS-only table transformation */
+
+/* Sticky section navigation (quick jump chips) */
+.sticky-section-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.5rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sticky-section-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.sticky-section-nav .chips {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+/* Line clamping for progressive disclosure */
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.clamp-4 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+/* Remove clamping on desktop */
+@media (min-width: 1024px) {
+  .clamp-2,
+  .clamp-3,
+  .clamp-4 {
+    -webkit-line-clamp: unset;
+  }
+}
+
+/* Collapsible content on mobile (use with aria-expanded) */
+.mobile-collapse-content {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .mobile-collapse-content[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+/* Touch-friendly minimum sizes for mobile */
+.touch-friendly {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Reduced margin/padding for compact layouts */
+.tight-spacing > * + * {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .tight-spacing > * + * {
+    margin-top: 0.75rem;
+  }
+}
+
+/* Horizontal scroll container for mobile cards/chips */
+.mobile-scroll-container {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.mobile-scroll-container > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-width: 80%;
+}
+
+@media (min-width: 768px) {
+  .mobile-scroll-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    overflow-x: visible;
+  }
+
+  .mobile-scroll-container > * {
+    min-width: 0;
+  }
+}
+
+/* Hide duplicate/redundant columns on mobile */
+.hide-dup-column {
+  display: table-cell;
+}
+
+@media (max-width: 767px) {
+  .hide-dup-column {
+    display: none;
+  }
+}
