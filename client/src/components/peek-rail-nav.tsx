@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import {
@@ -113,6 +113,9 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  
+  // Refs for debouncing hover interactions
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -137,17 +140,49 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
     }
   };
 
+  // Debounce hover interactions to prevent glitching
   const handleMouseEnter = () => {
     if (!isMobile && !isPinned) {
-      setIsExpanded(true);
+      // Clear any pending collapse
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      // Small delay to prevent accidental triggers
+      hoverTimeoutRef.current = setTimeout(() => {
+        if (!isPinned && !isMobile) {
+          setIsExpanded(true);
+        }
+        hoverTimeoutRef.current = null;
+      }, 100);
     }
   };
 
   const handleMouseLeave = () => {
     if (!isMobile && !isPinned) {
-      setIsExpanded(false);
+      // Clear any pending expand
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      // Delay collapse to allow moving to expanded content
+      hoverTimeoutRef.current = setTimeout(() => {
+        if (!isPinned && !isMobile) {
+          setIsExpanded(false);
+        }
+        hoverTimeoutRef.current = null;
+      }, 200);
     }
   };
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleMobileToggle = () => {
     if (isMobile) {
@@ -245,12 +280,30 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
       >
         {/* Header with Logo and Pin Button */}
         <div className="h-14 border-b border-border/40 flex items-center justify-between px-3 flex-shrink-0">
-          <Link href="/dashboard" className="flex items-center justify-center" data-testid="link-dashboard-logo">
-            <AnimatedAutoForceLogo
-              variant={isExpanded ? "full" : "icon"}
-              size={isExpanded ? "sm" : "md"}
-              animated={true}
-            />
+          <Link href="/dashboard" className="flex items-center min-w-0 flex-1" data-testid="link-dashboard-logo">
+            {isExpanded ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg w-10 h-10">
+                  <span className="text-white font-black text-sm">AF</span>
+                </div>
+                <div className="flex flex-col min-w-0 overflow-hidden">
+                  <div className="text-base font-bold tracking-tight leading-tight flex items-baseline gap-1 whitespace-nowrap">
+                    <span className="text-foreground">AUTO</span>
+                    <span className="text-primary">FORCE</span>
+                    <span className="text-[10px] align-super">™</span>
+                  </div>
+                  <div className="text-[9px] text-muted-foreground font-medium tracking-wide truncate">
+                    Workforce Management
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <AnimatedAutoForceLogo
+                variant="icon"
+                size="md"
+                animated={true}
+              />
+            )}
           </Link>
           
           <AnimatePresence>
@@ -543,12 +596,12 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                   data-testid="button-profile-menu"
                 >
                   <div className="flex items-center gap-3 w-full min-w-0">
-                    <Avatar className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 dark:from-red-600 dark:to-red-800 flex-shrink-0">
+                    <Avatar className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex-shrink-0">
                       <AvatarImage
                         src={user?.profileImageUrl || undefined}
                         className="object-cover rounded-xl"
                       />
-                      <AvatarFallback className="text-sm font-black rounded-xl bg-gradient-to-br from-red-500 to-red-700 dark:from-red-600 dark:to-red-800 text-white">
+                      <AvatarFallback className="text-sm font-black rounded-xl bg-gradient-to-br from-primary to-accent text-white">
                         {getInitials(user?.firstName, user?.lastName)}
                       </AvatarFallback>
                     </Avatar>
@@ -568,7 +621,12 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                   </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="w-64">
+              <DropdownMenuContent 
+                side="right" 
+                align="end" 
+                className="w-64 ml-2"
+                sideOffset={8}
+              >
                 <DropdownMenuLabel className="font-semibold">
                   {user?.firstName || user?.lastName
                     ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
@@ -664,12 +722,12 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                     className="w-full h-10 hover-elevate active-elevate-2"
                     data-testid="button-avatar-collapsed"
                   >
-                    <Avatar className="h-8 w-8 rounded-xl bg-gradient-to-br from-red-500 to-red-700 dark:from-red-600 dark:to-red-800">
+                    <Avatar className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary to-accent">
                       <AvatarImage
                         src={user?.profileImageUrl || undefined}
                         className="object-cover rounded-xl"
                       />
-                      <AvatarFallback className="text-xs font-black rounded-xl bg-gradient-to-br from-red-500 to-red-700 dark:from-red-600 dark:to-red-800 text-white">
+                      <AvatarFallback className="text-xs font-black rounded-xl bg-gradient-to-br from-primary to-accent text-white">
                         {getInitials(user?.firstName, user?.lastName)}
                       </AvatarFallback>
                     </Avatar>

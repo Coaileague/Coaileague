@@ -18,6 +18,17 @@ MOBILE-FIRST: All UI components must be fully responsive with proper text wrappi
 ## System Architecture
 AutoForce™ is built on a modular "OS" design philosophy with 6 major autonomous systems, emphasizing clean code, automation, and extensibility. It features a comprehensive Role-Based Access Control (RBAC) and Tier Gating System across Free, Starter, Professional, and Enterprise tiers, with two-tier role hierarchy for platform staff and workspace users.
 
+### Navigation System
+**Gmail-Style Peek Rail Navigation** (replaced Shadcn Sidebar):
+- **Three Layout Modes**: Collapsed (56px icons only), Expanded (240px with labels), Mobile Overlay (slide-in with backdrop)
+- **Smart State Management**: localStorage persistence for pin state, debounced hover interactions (100ms expand, 200ms collapse), proper cleanup on unmount
+- **RBAC Integration**: Reuses `selectSidebarFamilies()` for role-based menu filtering, platform staff get dedicated quick links section
+- **Responsive Design**: Viewport detection at 768px (md breakpoint), mobile overlay with dismiss-on-backdrop-click
+- **Accessibility**: ARIA labels, keyboard navigation (Enter/Space to expand, Escape to collapse), aria-current for active routes
+- **Custom Logo**: Inline "AUTOFORCE™" logo optimized for 240px width (prevents text wrapping), gradient AF badge matching brand colors (primary/accent)
+- **Profile Dropdown**: Positioned to the right with proper sideOffset to avoid breaking nav border, includes user avatar, name, email, and quick actions
+- **Technical Details**: Framer Motion spring animations (stiffness: 300, damping: 30), useRef-based hover debouncing to prevent glitching, AnimatePresence for smooth transitions
+
 ### The 6 Major OS Systems
 1.  **BillOS™**: Administrative Billing & Financial Management (automated invoicing, payroll, expense management, usage-based AI billing).
 2.  **OperationsOS™**: Field Operations Management (intelligent scheduling, GPS-verified time tracking, dispatch, asset tracking).
