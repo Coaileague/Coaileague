@@ -1,0 +1,143 @@
+Great questions—here’s the crisp truth so your hub works exactly how you expect:
+
+How invoices/payroll get created (with partners)
+
+Invoices (QuickBooks Online example)
+
+Your platform calls the QuickBooks API to create the invoice in QBO itself.
+
+Result: The invoice exists natively in QBO (just like if they made it manually). Clients can be emailed from QBO, payments reconcile there, and your hub stays in sync via webhooks.
+
+Recommendation for Phase 1: Let QBO be the source of truth for invoices. Your hub shows status, totals, links, and flags anomalies.
+
+
+Payroll (Gusto example)
+
+Your platform uses the Gusto API to create a payroll run (draft or ready) based on approved hours.
+
+You choose the behavior:
+
+Draft mode (best for 1% oversight): Your hub (or the employer in Gusto) hits “Approve.”
+
+Auto-approve (fully hands-off): Your hub approves via API once your 1% checks are clear.
+
+
+Result: The payroll exists in Gusto and is visible exactly like a manual run; taxes/filings stay with Gusto.
+
+
+
+So yes—they get the autonomous feature: your hub creates and advances the invoice/payroll inside the partner systems via API, while users still see everything in QBO/Gusto like normal.
+
+
+---
+
+Do users need to “log in” to partners through your site?
+
+Not with passwords—they “Connect” via OAuth once:
+
+Your site shows “Connect QuickBooks” / “Connect Gusto”.
+
+They authenticate on the partner’s page (OAuth consent).
+
+You store tokens (securely) and thereafter it’s all API + webhooks.
+
+If tokens die, you show “Reconnect”.
+
+
+Yes: you need those Connect buttons and OAuth flows on your site to enable autonomy for partner users.
+
+
+---
+
+What your hub needs (minimum)
+
+1. Settings → Connections
+
+Buttons: Connect QuickBooks, Connect Gusto.
+
+Show connection status, scopes, last sync, “Reconnect.”
+
+
+
+2. Data mapping
+
+Choose the QBO customer per client.
+
+Choose items/rates to use on invoices.
+
+Map employees/contractors to Gusto profiles.
+
+
+
+3. Automation preferences
+
+Invoices: create per shift / daily / weekly.
+
+Payroll: draft vs auto-approve; pay period rules; overtime rules.
+
+1% oversight: which anomalies force review.
+
+
+
+4. Oversight queue (1% review)
+
+Today’s new invoices/payroll runs.
+
+Flags (rate mismatch, missing client, extreme hours, rounding).
+
+Approve all / approve individually → your hub calls partner APIs to finalize.
+
+
+
+5. Webhooks + audit trail
+
+QBO: invoice created/paid/voided.
+
+Gusto: payroll created/submitted/paid.
+
+Log who/what/when for every action.
+
+
+
+
+
+---
+
+Two operating modes (you can support both)
+
+Partner-Native (recommended now):
+Create and store records in the partner (QBO/Gusto). Your hub is the brain + UI + audit, partners are the system of record.
+
+Hub-Native (later):
+Create invoices/payroll in your own ledger, then sync to partners (or replace partners entirely). More control, more responsibility.
+
+
+Start Partner-Native for speed/compliance; evolve to Hub-Native when you’re ready to own the finance layer.
+
+
+---
+
+Are we missing anything?
+
+Quick checklist to be “invite-ready”:
+
+[ ] OAuth apps registered (QBO + Gusto) with redirect URIs.
+
+[ ] Secure token store + auto-refresh + reconnect flow.
+
+[ ] Airtable/DB schema for shifts, clients, rates, workers, mappings.
+
+[ ] Make/n8n/Zapier (or backend) scenarios: - Shift approved → create QBO invoice. - Pay cycle close → create Gusto payroll (draft). - Oversight approve → finalize via API.
+
+[ ] Webhooks wired (QBO + Gusto) → update statuses in your hub.
+
+[ ] Oversight dashboard with Approve controls + anomaly rules.
+
+[ ] Email/Slack summaries for the 1% human check.
+
+[ ] Failsafes: pause automations toggle; rollback/void flow for invoices.
+
+[ ] Legal/UX: clear consent copy (“We act on your behalf via QBO/Gusto APIs”).
+
+
+If you want, tell me: QuickBooks + Gusto confirmed? I’ll give you an endpoint-by-endpoint sequence (OAuth scopes, webhook events, and call order) tailored to that pair so your dev/no-code builder can wire it straight in.
