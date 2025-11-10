@@ -1,0 +1,198 @@
+Totally fixable. The trick is progressive disclosure on small screens: show the essentials first, fold the rest behind taps. Below is a drop-in toolkit you can use on any page to make your AutoForce site compact on mobile while keeping all info accessible.
+
+1) Drop-in CSS (compact mobile layout)
+
+Paste this into your <head> inside a <style> tag or your CSS file.
+
+/* ===== Base responsive + density controls ===== */
+* { box-sizing: border-box }
+html,body { margin:0; padding:0; width:100%; overflow-x:hidden; }
+img,video,iframe { max-width:100%; height:auto; display:block; }
+
+:root{
+  --maxw: 1200px;
+  --gap: clamp(12px, 2.5vw, 24px);
+  --pad: clamp(12px, 3vw, 24px);
+  --radius: 12px;
+  --txt: clamp(15px, 1.6vw, 17px);
+  --h2: clamp(20px, 3.2vw, 28px);
+  --muted:#6e727a;
+}
+
+.container { max-width: var(--maxw); margin: 0 auto; padding: var(--pad); }
+.row { display:flex; flex-wrap:wrap; gap: var(--gap); align-items:flex-start; }
+.col { flex:1 1 320px; min-width: 280px; }
+
+/* Compact spacing on mobile */
+@media (max-width: 768px){
+  .container { padding: 12px }
+  .row { gap: 12px }
+  .stack { display:grid; gap: 10px }             /* generic stacked blocks */
+  .tight > * { margin-block: 6px }               /* reduce vertical gaps */
+  .hide-desktop { display: initial }
+  .hide-mobile { display: none !important }
+}
+
+/* Desktop-only / Mobile-only helpers */
+.hide-desktop { display:none }                   /* default hidden; shown on mobile via media above */
+.hide-mobile { display: initial }                /* default shown; hidden on mobile via media above */
+
+/* ===== Progressive disclosure patterns ===== */
+
+/* A) Line clamp for long text on mobile with 'Show more' */
+.clamp-3 { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; -webkit-line-clamp:3; }
+@media (min-width: 769px){ .clamp-3 { -webkit-line-clamp:unset; } }
+
+/* B) Details/summary accordion (native, no JS) */
+details { border:1px solid #ececec; border-radius: var(--radius); padding:10px 12px; background:#fff; }
+details + details { margin-top: 10px }
+summary { cursor:pointer; font-weight:600; }
+
+/* C) Cards → horizontal carousel on mobile */
+.card-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: var(--gap);}
+@media (max-width: 768px){
+  .card-grid { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:8px; }
+  .card-grid .card { min-width: 80%; scroll-snap-align: start; }
+}
+.card { background:#fff; border:1px solid #ececec; border-radius: var(--radius); padding:16px; }
+
+/* D) Tables → stacked lists on mobile */
+.table { width:100%; border-collapse: collapse; }
+.table th, .table td { border-bottom:1px solid #ececec; padding:10px; text-align:left; }
+@media (max-width: 768px){
+  .table, .table thead, .table tbody, .table tr, .table th, .table td { display:block; }
+  .table thead { display:none; }
+  .table tr { background:#fff; border:1px solid #ececec; border-radius: var(--radius); padding:8px; margin-bottom:10px; }
+  .table td { border:0; padding:6px 8px; }
+  .table td[data-label]::before { content: attr(data-label) ": "; font-weight:600; color:#444; }
+}
+
+/* E) Section index: sticky jump menu (mobile) */
+.section-nav { position: sticky; top: 0; z-index: 30; background:#fff; border-bottom:1px solid #ececec; }
+.section-nav .chips { display:flex; gap:10px; overflow-x:auto; padding:8px var(--pad); }
+.chip { white-space:nowrap; border:1px solid #e3e3e3; border-radius:999px; padding:6px 10px; font-size:14px; }
+
+/* F) Sticky bottom action bar (mobile CTA) */
+@media (max-width: 768px){
+  .cta-bar { position: sticky; bottom: 0; background:#101113; color:#fff; padding:10px var(--pad); display:flex; gap:10px; align-items:center; justify-content:space-between; }
+  .cta-bar .btn { background:#f7b500; color:#101113; border-radius:10px; padding:10px 14px; border:0; }
+}
+
+/* G) Secondary blocks collapsible on mobile */
+.mobile-collapse { }
+@media (max-width: 768px){
+  .mobile-collapse .collapse-body { display:none; }
+  .mobile-collapse[aria-expanded="true"] .collapse-body { display:block; }
+}
+
+2) HTML patterns you can reuse
+A) Hero that compacts on mobile (no overlap, shorter copy)
+<section class="container row">
+  <div class="col tight">
+    <h2 style="font-size:var(--h2)">AutoForce — Autonomous Workforce</h2>
+    <p class="clamp-3">Plan tasks, deploy agents, verify outcomes, and publish results with full visibility and control across your org.</p>
+    <div class="row" style="gap:10px">
+      <a class="btn" href="#start" style="background:#f7b500; padding:10px 14px; border-radius:10px; text-decoration:none; color:#101113">Start free</a>
+      <a class="btn" href="#demo" style="border:1px solid #e3e3e3; padding:10px 14px; border-radius:10px; text-decoration:none;">See demo</a>
+    </div>
+  </div>
+
+  <div class="col">
+    <img src="hero.png" alt="AutoForce dashboard preview">
+  </div>
+</section>
+
+B) Long sections → accordions on mobile (keep everything, hide bulk)
+<section class="container">
+  <!-- Desktop descriptive blocks -->
+  <div class="hide-mobile row">
+    <div class="col card"><h3>Plan</h3><p>Convert goals into tasks and dependencies.</p></div>
+    <div class="col card"><h3>Execute</h3><p>Agents run tools one step at a time.</p></div>
+    <div class="col card"><h3>Verify</h3><p>Assertions & tests confirm outcomes.</p></div>
+  </div>
+
+  <!-- Mobile accordions with same content -->
+  <div class="hide-desktop">
+    <details open><summary><b>Plan</b></summary><p>Convert goals into tasks and dependencies.</p></details>
+    <details><summary><b>Execute</b></summary><p>Agents run tools one step at a time.</p></details>
+    <details><summary><b>Verify</b></summary><p>Assertions & tests confirm outcomes.</p></details>
+  </div>
+</section>
+
+C) Cards → carousel on mobile (no endless scroll)
+<section class="container">
+  <h2 style="font-size:var(--h2)">Popular Playbooks</h2>
+  <div class="card-grid">
+    <article class="card"><h3>Build API</h3><p class="clamp-3">Scaffold, test, and deploy a REST API.</p></article>
+    <article class="card"><h3>ETL Pipeline</h3><p class="clamp-3">Ingest, clean, transform, verify datasets.</p></article>
+    <article class="card"><h3>Web Scraper</h3><p class="clamp-3">Fetch, dedupe, export to your DB.</p></article>
+    <article class="card"><h3>Docs Site</h3><p class="clamp-3">Generate docs and publish.</p></article>
+  </div>
+</section>
+
+D) Tables → stacked list on mobile
+<table class="table container">
+  <thead>
+    <tr><th>Run</th><th>Status</th><th>Duration</th><th>Tokens</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td data-label="Run">#483</td>
+      <td data-label="Status">Complete</td>
+      <td data-label="Duration">42s</td>
+      <td data-label="Tokens">2.1k</td>
+    </tr>
+  </tbody>
+</table>
+
+E) Sticky section index for quick jumps on long pages
+<nav class="section-nav hide-desktop">
+  <div class="chips">
+    <a class="chip" href="#overview">Overview</a>
+    <a class="chip" href="#features">Features</a>
+    <a class="chip" href="#pricing">Pricing</a>
+    <a class="chip" href="#faq">FAQ</a>
+  </div>
+</nav>
+
+F) Sticky bottom CTA bar (mobile)
+<div class="cta-bar hide-desktop">
+  <span>Start your first automation</span>
+  <button class="btn">Start free</button>
+</div>
+
+G) “Collapse on mobile, full on desktop” (for any block)
+<section class="container mobile-collapse" aria-expanded="false">
+  <div class="row">
+    <div class="col">
+      <h3>Advanced Logs</h3>
+      <p class="clamp-3">Stream stdout/stderr, filter by level, and export NDJSON.</p>
+    </div>
+    <button class="hide-desktop btn" onclick="
+      const s=this.closest('.mobile-collapse');
+      s.setAttribute('aria-expanded', s.getAttribute('aria-expanded')==='true'?'false':'true');
+    ">Show more</button>
+  </div>
+  <div class="collapse-body">
+    <ul class="stack">
+      <li>Live tail with pause</li>
+      <li>Regex search</li>
+      <li>Copy-to-clipboard</li>
+      <li>Span/trace IDs</li>
+    </ul>
+  </div>
+</section>
+
+3) Content strategy (so mobile isn’t “infinite scroll”)
+
+Prioritize: put P1 info (what it is, why it helps, one CTA) above the fold; push P2 into accordions.
+
+Summarize: show 2–3 lines with .clamp-3, include “Show more” toggles.
+
+Group: convert large grids into a carousel on mobile (users swipe).
+
+Jump links: Add the sticky section nav so users hop between sections.
+
+Sticky CTA: bottom action bar on mobile to avoid scrolling back up.
+
+Shorten spacing: .tight and smaller gap on mobile reduce empty space.
