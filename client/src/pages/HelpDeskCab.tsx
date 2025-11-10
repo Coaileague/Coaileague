@@ -161,7 +161,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     isSilenced, 
     justGotVoice 
   } = useChatroomWebSocket(
-    user?.id, 
+    user?.id || `guest-${sessionId}`, // Use sessionId for guests so WebSocket connects
     userName,
     (request) => {
       // When staff requests secure info, open the dialog
