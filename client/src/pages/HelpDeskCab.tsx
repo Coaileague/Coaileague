@@ -50,7 +50,6 @@ import { PriorityManagerPanel } from "@/components/priority-manager-panel";
 import { AccountSupportPanel } from "@/components/account-support-panel";
 import { MotdDialog } from "@/components/motd-dialog";
 import { AnimatedStatusBar } from "@/components/animated-status-bar";
-import { TermsDialog } from "@/components/terms-dialog";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
@@ -272,24 +271,13 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     retry: 1,
   });
 
-  // Check if user has accepted terms on component mount
+  // Show MOTD dialog if there's an active MOTD that hasn't been acknowledged
   useEffect(() => {
-    const accepted = localStorage.getItem('helpdesk_terms_accepted');
-    if (accepted === 'true') {
-      setTermsAccepted(true);
-    } else {
-      // Show terms dialog on first visit
-      setShowTermsDialog(true);
-    }
-  }, []);
-
-  // Show MOTD dialog if there's an active MOTD that hasn't been acknowledged (only after terms accepted)
-  useEffect(() => {
-    if (termsAccepted && motdResponse && motdResponse.motd && !motdResponse.acknowledged) {
+    if (motdResponse && motdResponse.motd && !motdResponse.acknowledged) {
       setMotdData(motdResponse.motd);
       setShowMotd(true);
     }
-  }, [motdResponse, termsAccepted]);
+  }, [motdResponse]);
 
   // Monitor connection and API health - Make server more self-aware
   useEffect(() => {
@@ -320,7 +308,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       setConnectionStatus('connected');
       setApiErrors([]);
     }
-  }, [isConnected, roomError, agreementError, queueError, motdError, onlineUsers.length, roomData]);
+  }, [isConnected, roomError, queueError, motdError, onlineUsers.length, roomData]);
 
   // MOTD acknowledgment mutation
   const acknowledgeMOTD = useMutation({
@@ -478,52 +466,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     setTimeout(() => setShowCoffeeCup(false), 2000);
   };
 
-  // Handle terms acceptance with initials
-  const handleAcceptTerms = async (initials: string) => {
-    try {
-      // Save to database for audit compliance
-      await apiRequest('POST', '/api/helpdesk/terms/accept', {
-        initialsProvided: initials,
-        userName: userName,
-        userEmail: user?.email,
-        workspaceId: (user as any)?.currentWorkspaceId,
-        ticketNumber: (user as any)?.ticketNumber || null,
-      });
-
-      localStorage.setItem('helpdesk_terms_accepted', 'true');
-      setTermsAccepted(true);
-      setShowTermsDialog(false);
-      
-      toast({
-        title: "Terms Accepted",
-        description: "Your agreement has been recorded. Welcome to HelpDesk Support!",
-      });
-    } catch (error) {
-      console.error('Failed to save terms acceptance:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save your acceptance. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeclineTerms = () => {
-    // Clear any stored acceptance and redirect away from chat
-    localStorage.removeItem('helpdesk_terms_accepted');
-    setShowTermsDialog(false);
-    
-    toast({
-      title: "Terms Declined",
-      description: "You must accept the terms to access support chat. Redirecting...",
-      variant: "destructive",
-    });
-    
-    // Redirect to home page after a brief delay
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1500);
-  };
 
   // Get user type icon - WorkforceOS logo ONLY for staff, avatars for users
   const getUserTypeIcon = (userType: string, role: string, userName: string = 'User') => {
@@ -944,101 +886,48 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative">
       {/* Seasonal Animated Background */}
       <SeasonalBackground enabled={seasonalAnimationsEnabled} />
-      {/* ADVERTISEMENT / ANNOUNCEMENT BANNER - Thick, customizable, seasonal */}
-      <div className="relative z-20 bg-transparent">
-        <div className="relative">
-          {/* Main Banner Content */}
-          <ChatAnnouncementBanner
-            queuePosition={queueLength || 1}
-            queueWaitTime="2-3 minutes"
-            onlineStaff={uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length}
-            seasonalAnimationsEnabled={seasonalAnimationsEnabled}
-            customMessages={customBannerMessage ? [{
-              id: 'custom-1',
-              text: customBannerMessage,
-              type: 'promo' as const,
-              icon: 'zap'
-            }] : []}
-          />
-          
-          {/* Mobile-Safe Header Controls - Flex Layout with Responsive Spacing - High z-index for clickability */}
-          <div className="absolute inset-x-0 top-0 flex items-center justify-between px-2 sm:px-3 py-1 gap-1 sm:gap-2 z-50 pointer-events-none">
-            {/* Left Side: Navigation Buttons - Mobile-first sizing - Enable pointer events */}
-            <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto">
-              <Button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate('/');
-                }}
-                size="sm"
-                variant="ghost"
-                className="h-8 sm:h-7 px-2 gap-1 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm text-xs sm:text-[10px] cursor-pointer"
-                data-testid="button-home"
-                title="Go to Home"
-              >
-                <ChevronLeft className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden xs:inline font-semibold">Home</span>
-              </Button>
-              <Button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate('/');
-                }}
-                size="sm"
-                variant="ghost"
-                className="h-8 sm:h-7 w-8 sm:w-7 p-0 flex-shrink-0 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm cursor-pointer"
-                data-testid="button-close-chat"
-                title="Close Chat"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+      
+      {/* CLEAN MOBILE-FIRST HEADER - No overlapping elements */}
+      <header className="relative z-50 bg-gradient-to-r from-primary via-teal-600 to-primary border-b-4 border-accent flex-shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 gap-2">
+          {/* Left: Logo + Title */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-green-600 flex items-center justify-center flex-shrink-0 shadow-md">
+              <span className="text-white font-black text-sm">AF</span>
             </div>
-            
-            {/* Right Side: Theme + Staff Controls - Hidden on very small screens - Enable pointer events */}
-            <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto">
-              {/* Theme Toggle - Transparent and only visible on hover (desktop) */}
-              <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
-                <div className="bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md h-6 w-6 rounded-md flex items-center justify-center">
-                  <ThemeToggle />
-                </div>
-              </div>
-            
-            {/* Staff Controls - Transparent and only visible on hover (desktop) */}
-            {isStaff && (
-              <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
-                <Button
-                  onClick={() => {
-                    const newValue = !seasonalAnimationsEnabled;
-                    setSeasonalAnimationsEnabled(newValue);
-                    localStorage.setItem('seasonal-animations-enabled', String(newValue));
-                    toast({ 
-                      title: newValue ? "✓ Animations On" : "Animations Off",
-                    });
-                  }}
-                  size="sm"
-                  variant="outline"
-                  className="h-6 text-[9px] px-2 gap-1 bg-white/20 hover:bg-white/40 border-white/30 backdrop-blur-md text-white shadow-sm"
-                  data-testid="button-toggle-seasonal"
-                >
-                  ❄️ {seasonalAnimationsEnabled ? 'ON' : 'OFF'}
-                </Button>
-                <Button
-                  onClick={() => setShowBannerManager(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-6 text-[9px] px-2 gap-1 bg-white/20 hover:bg-white/40 border-white/30 backdrop-blur-md text-white shadow-sm"
-                  data-testid="button-open-banner-manager"
-                >
-                  <Sparkles className="w-2.5 h-2.5" />
-                  Banner
-                </Button>
-              </div>
-            )}
+            <div className="min-w-0">
+              <h1 className="text-white font-bold text-sm sm:text-base truncate">HelpDesk</h1>
+              <p className="text-white/80 text-[10px] sm:text-xs truncate">Live support chat</p>
+            </div>
+          </div>
+
+          {/* Right: Clear Close Button */}
+          <Button
+            onClick={() => navigate('/')}
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 flex-shrink-0 bg-white/10 hover:bg-white/20 border border-white/20 text-white shadow-md"
+            data-testid="button-close-helpdesk"
+            title="Close and return home"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Queue Status Bar - Subtle info strip */}
+        <div className="bg-white/10 backdrop-blur-sm px-3 py-1.5 border-t border-white/10">
+          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs text-white/90">
+            <span className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">{uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length} agents online</span>
+            </span>
+            <span className="flex items-center gap-1.5 flex-shrink-0">
+              <Clock className="w-3.5 h-3.5" />
+              <span>~2-3 min wait</span>
+            </span>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Layout - Responsive: Stacked (mobile) vs 3-column (desktop) */}
       <main className="flex flex-col md:flex-row flex-grow overflow-y-auto md:overflow-hidden w-full relative z-10">
@@ -1831,13 +1720,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         }}
       />
 
-      {/* Terms & Conditions Dialog - Must accept before accessing chat */}
-      <TermsDialog
-        open={showTermsDialog}
-        onAccept={handleAcceptTerms}
-        onDecline={handleDeclineTerms}
-        userName={userName}
-      />
 
       {/* Controls Menu - Slide-Over Panel (Emerald Color Scheme) */}
       <Sheet open={showControlsMenu} onOpenChange={setShowControlsMenu}>
