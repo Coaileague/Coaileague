@@ -961,15 +961,19 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             }] : []}
           />
           
-          {/* Mobile-Safe Header Controls - Flex Layout with Responsive Spacing */}
-          <div className="absolute inset-x-0 top-0 flex items-center justify-between px-2 sm:px-3 py-1 gap-1 sm:gap-2 safe-area-inset">
-            {/* Left Side: Navigation Buttons - Mobile-first sizing */}
-            <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Mobile-Safe Header Controls - Flex Layout with Responsive Spacing - High z-index for clickability */}
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between px-2 sm:px-3 py-1 gap-1 sm:gap-2 z-50 pointer-events-none">
+            {/* Left Side: Navigation Buttons - Mobile-first sizing - Enable pointer events */}
+            <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto">
               <Button
-                onClick={() => navigate('/')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate('/');
+                }}
                 size="sm"
                 variant="ghost"
-                className="h-8 sm:h-7 px-2 gap-1 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm text-xs sm:text-[10px]"
+                className="h-8 sm:h-7 px-2 gap-1 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm text-xs sm:text-[10px] cursor-pointer"
                 data-testid="button-home"
                 title="Go to Home"
               >
@@ -977,10 +981,14 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
                 <span className="hidden xs:inline font-semibold">Home</span>
               </Button>
               <Button
-                onClick={() => navigate('/')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate('/');
+                }}
                 size="sm"
                 variant="ghost"
-                className="h-8 sm:h-7 w-8 sm:w-7 p-0 flex-shrink-0 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm"
+                className="h-8 sm:h-7 w-8 sm:w-7 p-0 flex-shrink-0 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm cursor-pointer"
                 data-testid="button-close-chat"
                 title="Close Chat"
               >
@@ -988,8 +996,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
               </Button>
             </div>
             
-            {/* Right Side: Theme + Staff Controls - Hidden on very small screens */}
-            <div className="flex items-center gap-1 sm:gap-1.5">
+            {/* Right Side: Theme + Staff Controls - Hidden on very small screens - Enable pointer events */}
+            <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto">
               {/* Theme Toggle - Transparent and only visible on hover (desktop) */}
               <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
                 <div className="bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md h-6 w-6 rounded-md flex items-center justify-center">
@@ -1049,8 +1057,8 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             </div>
           )}
           
-          {/* Messages Area */}
-          <ScrollArea className="flex-grow p-3">
+          {/* Messages Area - Explicit height for mobile scroll */}
+          <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
             <div className="space-y-2">
 
               {/* Chat Messages - Modern bubbles with WorkforceOS blue */}
