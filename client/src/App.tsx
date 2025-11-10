@@ -118,6 +118,7 @@ import TimesheetApprovals from "@/pages/timesheet-approvals";
 import Error403 from "@/pages/error-403";
 import Error404 from "@/pages/error-404";
 import Error500 from "@/pages/error-500";
+import IntegrationsPage from "@/pages/integrations-page";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -379,6 +380,7 @@ function AppContent() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/billing" component={Billing} />
+                <Route path="/integrations" component={IntegrationsPage} />
                 <Route path="/expenses" component={Expenses} />
                 <Route path="/expense-approvals" component={ExpenseApprovals} />
                 <Route path="/timesheets/pending" component={PendingTimeEntries} />

@@ -1,6 +1,8 @@
 import { Router, Request, Response, RequestHandler } from 'express';
 import { quickbooksOAuthService } from './services/oauth/quickbooks';
 import { gustoOAuthService } from './services/oauth/gusto';
+import { quickbooksService } from './services/partners/quickbooks';
+import { gustoService } from './services/partners/gusto';
 import { requireAuth } from './auth';
 import { db } from './db';
 import { partnerConnections, users, workspaces } from '@shared/schema';
@@ -388,6 +390,201 @@ router.get('/connections', requireAuth, requireWorkspaceMembership('query'), asy
   } catch (error: any) {
     console.error('Fetch connections error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch connections' });
+  }
+});
+
+// ============================================================================
+// PARTNER OPERATIONS - QUICKBOOKS
+// ============================================================================
+
+/**
+ * POST /api/integrations/quickbooks/sync-client
+ * 
+ * Sync AutoForce client to QuickBooks customer
+ */
+router.post('/quickbooks/sync-client', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, clientId } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !clientId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const customerId = await quickbooksService.syncClient(workspaceId, clientId, userId);
+
+    return res.json({ 
+      success: true, 
+      customerId,
+      message: 'Client synced to QuickBooks successfully'
+    });
+  } catch (error: any) {
+    console.error('Sync client error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to sync client' });
+  }
+});
+
+/**
+ * POST /api/integrations/quickbooks/create-invoice
+ * 
+ * Create invoice in QuickBooks from AutoForce invoice
+ */
+router.post('/quickbooks/create-invoice', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, invoiceId } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !invoiceId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const qboInvoiceId = await quickbooksService.createInvoice(workspaceId, invoiceId, userId);
+
+    return res.json({ 
+      success: true, 
+      qboInvoiceId,
+      message: 'Invoice created in QuickBooks successfully'
+    });
+  } catch (error: any) {
+    console.error('Create invoice error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to create invoice' });
+  }
+});
+
+/**
+ * POST /api/integrations/quickbooks/record-payment
+ * 
+ * Record payment in QuickBooks
+ */
+router.post('/quickbooks/record-payment', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, invoiceId, amount } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !invoiceId || !amount) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const paymentId = await quickbooksService.recordPayment(workspaceId, invoiceId, amount, userId);
+
+    return res.json({ 
+      success: true, 
+      paymentId,
+      message: 'Payment recorded in QuickBooks successfully'
+    });
+  } catch (error: any) {
+    console.error('Record payment error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to record payment' });
+  }
+});
+
+// ============================================================================
+// PARTNER OPERATIONS - GUSTO
+// ============================================================================
+
+/**
+ * POST /api/integrations/gusto/sync-employee
+ * 
+ * Sync AutoForce employee to Gusto
+ */
+router.post('/gusto/sync-employee', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, employeeId } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !employeeId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const gustoEmployeeId = await gustoService.syncEmployee(workspaceId, employeeId, userId);
+
+    return res.json({ 
+      success: true, 
+      gustoEmployeeId,
+      message: 'Employee synced to Gusto successfully'
+    });
+  } catch (error: any) {
+    console.error('Sync employee error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to sync employee' });
+  }
+});
+
+/**
+ * POST /api/integrations/gusto/create-payroll
+ * 
+ * Create payroll run in Gusto
+ */
+router.post('/gusto/create-payroll', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, payrollRunId } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !payrollRunId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const gustoPayrollId = await gustoService.createPayrollRun(workspaceId, payrollRunId, userId);
+
+    return res.json({ 
+      success: true, 
+      gustoPayrollId,
+      message: 'Payroll run created in Gusto successfully'
+    });
+  } catch (error: any) {
+    console.error('Create payroll error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to create payroll' });
+  }
+});
+
+/**
+ * POST /api/integrations/gusto/submit-time
+ * 
+ * Submit time activities to Gusto for payroll
+ */
+router.post('/gusto/submit-time', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, payrollRunId } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !payrollRunId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    await gustoService.submitTimeActivities(workspaceId, payrollRunId, userId);
+
+    return res.json({ 
+      success: true,
+      message: 'Time activities submitted to Gusto successfully'
+    });
+  } catch (error: any) {
+    console.error('Submit time error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to submit time activities' });
+  }
+});
+
+/**
+ * POST /api/integrations/gusto/process-payroll
+ * 
+ * Process payroll run in Gusto (finalize and submit)
+ */
+router.post('/gusto/process-payroll', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, payrollRunId } = req.body;
+    const userId = (req as any).session?.userId;
+
+    if (!workspaceId || !payrollRunId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    await gustoService.processPayroll(workspaceId, payrollRunId, userId);
+
+    return res.json({ 
+      success: true,
+      message: 'Payroll processed in Gusto successfully'
+    });
+  } catch (error: any) {
+    console.error('Process payroll error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to process payroll' });
   }
 });
 

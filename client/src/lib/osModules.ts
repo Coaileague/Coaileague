@@ -303,6 +303,16 @@ export const osModules: OSModule[] = [
         familyId: 'operations',
         order: 14,
       },
+      {
+        id: 'bill-os-integrations',
+        label: 'Integrations',
+        href: '/integrations',
+        icon: Zap,
+        description: 'QuickBooks & Gusto integrations',
+        capabilities: ['manage_invoices', 'process_payroll'],
+        familyId: 'operations',
+        order: 15,
+      },
     ],
   },
   {
