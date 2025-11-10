@@ -6,7 +6,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { GraduationCap, Settings2, Search } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -135,6 +135,7 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const { toggleSidebar } = useSidebar();
 
   // Check if on mobile chat, HelpDeskCab, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
@@ -214,10 +215,7 @@ function AppContent() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          const trigger = document.querySelector('[data-testid="button-sidebar-toggle"]') as HTMLButtonElement;
-                          if (trigger) trigger.click();
-                        }}
+                        onClick={toggleSidebar}
                         data-testid="button-menu-toggle"
                         className="shrink-0 gap-2"
                       >
@@ -225,10 +223,9 @@ function AppContent() {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Open navigation menu</p>
+                      <p>Toggle navigation menu</p>
                     </TooltipContent>
                   </Tooltip>
-
                   {/* Workspace Switcher */}
                   <div className="hidden md:block">
                     <WorkspaceSwitcher />
@@ -345,8 +342,8 @@ function AppContent() {
               </header>
             )}
 
-            {/* Hidden SidebarTrigger - controlled by Menu button */}
-            <SidebarTrigger data-testid="button-sidebar-toggle" className="hidden" />
+            {/* SidebarTrigger - accessible for keyboard users and programmatic control */}
+            <SidebarTrigger data-testid="button-sidebar-toggle" className="sr-only" />
 
             {/* Main content area - add padding-top for fixed header */}
             <main className={`flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-transparent min-h-0 w-full max-w-full ${!isMobileChat && !isHelpDesk ? 'pt-14' : ''}`}>
