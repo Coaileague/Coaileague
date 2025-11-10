@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { GraduationCap, Settings2, Search, Menu } from "lucide-react";
 import { PeekRailNav } from "@/components/peek-rail-nav";
+import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
 import { TransitionProvider } from "@/contexts/transition-context";
@@ -136,7 +137,7 @@ function AppHeader({ isRootAdmin, setLocation, setShowOnboarding }: any) {
   const { user } = useAuth();
 
   return (
-    <header className="fixed top-0 left-14 right-0 z-[60] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
+    <header className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
       <div className="flex items-center gap-2">
         {/* Workspace Switcher */}
         <WorkspaceSwitcher />
@@ -311,10 +312,15 @@ function AppContent() {
   return (
     <ProtectedRoute>
       <CommandPalette />
-      <div className="flex h-screen w-full overflow-x-hidden max-w-full relative">
+      <div className="flex h-screen w-full overflow-x-hidden max-w-full">
         {/* Gmail-style Peek Rail Navigation */}
         {!isMobileChat && <PeekRailNav defaultPinned={false} />}
-        <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden z-0">
+        
+        {/* Main content container with proper spacing for peek rail */}
+        <div className={cn(
+          "flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden",
+          !isMobileChat && "ml-14 md:ml-14" // 56px (3.5rem = 14*4px) margin for collapsed rail
+        )}>
             {/* Demo Banner - positioned to account for fixed header */}
             <DemoBanner />
 
