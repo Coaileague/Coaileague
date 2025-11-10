@@ -6,8 +6,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { GraduationCap, Settings2, Search } from "lucide-react";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { GraduationCap, Settings2, Search, Menu } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
@@ -131,6 +131,148 @@ import { PlanBadge } from "@/components/plan-badge";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
+// Separate header component to use useSidebar hook
+function AppHeader({ isRootAdmin, setLocation, setShowOnboarding }: any) {
+  const { toggleSidebar } = useSidebar();
+  const { user } = useAuth();
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
+      <div className="flex items-center gap-2">
+        {/* Menu Toggle Button - uses proper Shadcn sidebar API */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSidebar}
+              data-testid="button-menu-toggle"
+              className="shrink-0 gap-2"
+            >
+              <Menu className="h-4 w-4" />
+              <span className="text-sm">Menu</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Toggle navigation menu</p>
+          </TooltipContent>
+        </Tooltip>
+        {/* Workspace Switcher */}
+        <div className="hidden md:block">
+          <WorkspaceSwitcher />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 flex-wrap">
+        {/* Dynamic Billboard */}
+        <HeaderBillboard />
+
+        {/* Plan Badge */}
+        <div className="hidden md:block">
+          <PlanBadge />
+        </div>
+
+        {/* Global Search */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if ((window as any).openCommandPalette) {
+                  (window as any).openCommandPalette();
+                } else {
+                  const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                  document.dispatchEvent(event);
+                }
+              }}
+              className="shrink-0 gap-2"
+              data-testid="button-global-search"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline text-sm">Search</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Search platform (Cmd/Ctrl + K)</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* What's New Badge */}
+        <div className="hidden sm:block">
+          <WhatsNewBadge />
+        </div>
+
+        {/* Help Dropdown */}
+        <div className="hidden md:block">
+          <HelpDropdown />
+        </div>
+
+        {/* Feedback Widget */}
+        <div className="hidden lg:block">
+          <FeedbackWidget />
+        </div>
+
+        {/* Tutorial Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowOnboarding(true)}
+              data-testid="button-open-onboarding"
+              className="shrink-0 hidden sm:flex gap-2"
+            >
+              <GraduationCap className="h-4 w-4" />
+              <span className="text-sm">Tutorial</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Start interactive walkthrough</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Settings Gear */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (isRootAdmin) {
+                  setLocation('/platform-admin');
+                } else if (
+                  (user as any)?.platformRole === 'deputy_admin' ||
+                  (user as any)?.platformRole === 'support_manager' ||
+                  (user as any)?.platformRole === 'support_agent' ||
+                  (user as any)?.platformRole === 'compliance_officer'
+                ) {
+                  setLocation('/admin-command-center');
+                } else {
+                  setLocation('/settings');
+                }
+              }}
+              data-testid="button-settings-gear"
+              className="shrink-0 gap-2"
+            >
+              <Settings2 className="h-4 w-4 text-primary" />
+              <span className="hidden sm:inline text-sm">{isRootAdmin ? 'Admin' : 'Settings'}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isRootAdmin ? 'Platform Management' : 'Organization Settings'}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Theme Toggle */}
+        <div className="shrink-0">
+          <ThemeToggle />
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
@@ -206,146 +348,12 @@ function AppContent() {
 
             {/* Global Header - FIXED floats over all content */}
             {!isMobileChat && !isHelpDesk && (
-              <header className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
-                <div className="flex items-center gap-2">
-                  {/* Menu Toggle with visible label */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const trigger = document.querySelector('[data-testid="button-sidebar-toggle"]') as HTMLButtonElement;
-                          if (trigger) trigger.click();
-                        }}
-                        data-testid="button-menu-toggle"
-                        className="shrink-0 gap-2"
-                      >
-                        <span className="text-sm">Menu</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Toggle navigation menu</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  {/* Workspace Switcher */}
-                  <div className="hidden md:block">
-                    <WorkspaceSwitcher />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 flex-wrap">
-                  {/* Dynamic Billboard - Greetings, Announcements, Birthday Celebrations */}
-                  <HeaderBillboard />
-
-                  {/* Plan Badge - Hidden on small screens */}
-                  <div className="hidden md:block">
-                    <PlanBadge />
-                  </div>
-
-                  {/* Global Search with label */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if ((window as any).openCommandPalette) {
-                            (window as any).openCommandPalette();
-                          } else {
-                            const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
-                            document.dispatchEvent(event);
-                          }
-                        }}
-                        className="shrink-0 gap-2"
-                        data-testid="button-global-search"
-                      >
-                        <Search className="h-4 w-4" />
-                        <span className="hidden sm:inline text-sm">Search</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Search platform (Cmd/Ctrl + K)</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* What's New Badge - Hidden on mobile */}
-                  <div className="hidden sm:block">
-                    <WhatsNewBadge />
-                  </div>
-
-                  {/* Help Dropdown - Hidden on small screens */}
-                  <div className="hidden md:block">
-                    <HelpDropdown />
-                  </div>
-
-                  {/* Feedback Widget - Hidden on mobile */}
-                  <div className="hidden lg:block">
-                    <FeedbackWidget />
-                  </div>
-
-                  {/* Tutorial/Tour Button with label */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowOnboarding(true)}
-                        data-testid="button-open-onboarding"
-                        className="shrink-0 hidden sm:flex gap-2"
-                      >
-                        <GraduationCap className="h-4 w-4" />
-                        <span className="text-sm">Tutorial</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Start interactive walkthrough</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Role-Aware Settings Gear with label */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          // Role-based routing
-                          if (isRootAdmin) {
-                            setLocation('/platform-admin');
-                          } else if (
-                            (user as any)?.platformRole === 'deputy_admin' ||
-                            (user as any)?.platformRole === 'support_manager' ||
-                            (user as any)?.platformRole === 'support_agent' ||
-                            (user as any)?.platformRole === 'compliance_officer'
-                          ) {
-                            setLocation('/admin-command-center');
-                          } else {
-                            setLocation('/settings');
-                          }
-                        }}
-                        data-testid="button-settings-gear"
-                        className="shrink-0 gap-2"
-                      >
-                        <Settings2 className="h-4 w-4 text-primary" />
-                        <span className="hidden sm:inline text-sm">{isRootAdmin ? 'Admin' : 'Settings'}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isRootAdmin ? 'Platform Management' : 'Organization Settings'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Theme Toggle */}
-                  <div className="shrink-0">
-                    <ThemeToggle />
-                  </div>
-                </div>
-              </header>
+              <AppHeader 
+                isRootAdmin={isRootAdmin} 
+                setLocation={setLocation} 
+                setShowOnboarding={setShowOnboarding}
+              />
             )}
-
-            {/* SidebarTrigger - accessible for keyboard users and programmatic control */}
-            <SidebarTrigger data-testid="button-sidebar-toggle" className="sr-only" />
 
             {/* Main content area - add padding-top for fixed header */}
             <main className={`flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-transparent min-h-0 w-full max-w-full ${!isMobileChat && !isHelpDesk ? 'pt-14' : ''}`}>
