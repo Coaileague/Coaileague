@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { selectSidebarFamilies, type OSModuleRoute } from "@/lib/osModules";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Users, Activity, DollarSign, 
   FileText, Calendar, Clock, ArrowRight,
-  Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail
+  Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail, Lock
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AutoForceLogo } from "@/components/autoforce-logo";
@@ -15,6 +17,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Notification {
   id: string;
@@ -29,6 +37,7 @@ interface Notification {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading: accessLoading } = useWorkspaceAccess();
   const { showTransition, hideTransition } = useTransition();
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread' | 'read'>('all');
 
@@ -64,9 +73,40 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  // Determine current user's workspace role
+  // Determine current user's workspace role (fallback if hook not loaded)
   const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
-  const workspaceRole = currentEmployee?.workspaceRole || 'staff';
+  const fallbackRole = currentEmployee?.workspaceRole || 'staff';
+  
+  // Get role-specific accessible routes for quick actions
+  const families = accessLoading 
+    ? [] 
+    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+  
+  // Extract top accessible routes for quick actions (excluding dashboard itself)
+  const accessibleRoutes: OSModuleRoute[] = [];
+  const lockedRoutes: OSModuleRoute[] = [];
+  
+  families.forEach(family => {
+    family.routes.forEach(route => {
+      if (route.href !== '/dashboard') {
+        accessibleRoutes.push(route);
+      }
+    });
+    family.locked.forEach(route => {
+      if (route.href !== '/dashboard') {
+        lockedRoutes.push(route);
+      }
+    });
+  });
+  
+  // Prioritize operations family routes for quick actions
+  const quickActions = [
+    ...accessibleRoutes.filter(r => r.familyId === 'operations').slice(0, 4),
+    ...accessibleRoutes.filter(r => r.familyId !== 'operations').slice(0, 2),
+  ].slice(0, 6);
+  
+  // Show top 2 locked routes as upgrade prompts
+  const upgradePrompts = lockedRoutes.slice(0, 2);
 
   // Mark notification as read
   const markAsReadMutation = useMutation({
@@ -194,7 +234,9 @@ export default function Dashboard() {
                 </h2>
                 <p className="text-muted-foreground text-sm sm:text-base">
                   {workspaceRole === 'org_owner' ? '🎯 Manage your entire workforce with AutoForce™' : 
+                   workspaceRole === 'org_admin' ? '🏢 Administer your organization' :
                    workspaceRole === 'department_manager' ? '📊 Oversee your team performance' :
+                   workspaceRole === 'supervisor' ? '👥 Lead your team to success' :
                    '⏰ Track your time and tasks'}
                 </p>
               </div>
@@ -238,59 +280,69 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions Grid - Professional Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Link href="/employees">
-            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-manage-employees">
-              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
-                <Users className="w-8 h-8 text-primary" />
-              </div>
-              <h4 className="font-bold text-foreground mb-2 text-lg">Manage Employees</h4>
-              <p className="text-sm text-muted-foreground mb-3">View and edit employee records</p>
-              <div className="flex items-center text-primary text-sm font-semibold">
-                View all <ArrowRight className="w-4 h-4 ml-1" />
-              </div>
-            </button>
-          </Link>
-
-          <Link href="/schedule">
-            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-schedule">
-              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
-                <Calendar className="w-8 h-8 text-accent" />
-              </div>
-              <h4 className="font-bold text-foreground mb-2 text-lg">Schedule</h4>
-              <p className="text-sm text-muted-foreground mb-3">Manage shifts and assignments</p>
-              <div className="flex items-center text-accent text-sm font-semibold">
-                Open <ArrowRight className="w-4 h-4 ml-1" />
-              </div>
-            </button>
-          </Link>
-
-          <Link href="/time-tracking">
-            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-time-tracking">
-              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
-                <Clock className="w-8 h-8 text-accent" />
-              </div>
-              <h4 className="font-bold text-foreground mb-2 text-lg">Time Tracking</h4>
-              <p className="text-sm text-muted-foreground mb-3">Review and approve time entries</p>
-              <div className="flex items-center text-accent text-sm font-semibold">
-                Review <ArrowRight className="w-4 h-4 ml-1" />
-              </div>
-            </button>
-          </Link>
-
-          <Link href="/invoices">
-            <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid="button-invoices">
-              <div className="p-3 bg-muted rounded-lg w-fit mb-4">
-                <FileText className="w-8 h-8 text-primary" />
-              </div>
-              <h4 className="font-bold text-foreground mb-2 text-lg">Invoices</h4>
-              <p className="text-sm text-muted-foreground mb-3">Generate and send invoices</p>
-              <div className="flex items-center text-primary text-sm font-semibold">
-                Create <ArrowRight className="w-4 h-4 ml-1" />
-              </div>
-            </button>
-          </Link>
+        {/* Quick Actions Grid - Role-Based Dynamic Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {/* Accessible quick actions */}
+          {quickActions.map((route) => (
+            <Link key={route.id} href={route.href}>
+              <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid={`button-quick-${route.id}`}>
+                <div className="p-3 bg-muted rounded-lg w-fit mb-4">
+                  <route.icon className="w-8 h-8 text-primary" />
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-bold text-foreground text-lg">{route.label}</h4>
+                  {route.badge && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{route.badge}</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">{route.description}</p>
+                <div className="flex items-center text-primary text-sm font-semibold">
+                  Open <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </button>
+            </Link>
+          ))}
+          
+          {/* Locked features (tier upgrade prompts) */}
+          {upgradePrompts.map((route) => (
+            <TooltipProvider key={route.id}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative">
+                    <button 
+                      disabled
+                      className="w-full bg-card/30 border border-border/50 rounded-lg p-6 text-left opacity-60 cursor-not-allowed group" 
+                      data-testid={`button-locked-${route.id}`}
+                    >
+                      <div className="p-3 bg-muted/50 rounded-lg w-fit mb-4 relative">
+                        <route.icon className="w-8 h-8 text-muted-foreground" />
+                        <div className="absolute -top-1 -right-1 bg-amber-500 dark:bg-amber-600 rounded-full p-1">
+                          <Lock className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-bold text-muted-foreground text-lg">{route.label}</h4>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400">
+                          {route.badge}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground/80 mb-3">{route.description}</p>
+                      <div className="flex items-center text-amber-600 dark:text-amber-400 text-sm font-semibold">
+                        Upgrade to unlock <ArrowRight className="w-4 h-4 ml-1" />
+                      </div>
+                    </button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="font-medium">{route.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{route.description}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-semibold">
+                    Requires {route.badge} plan to access
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
         </div>
 
         {/* Notification Center Section - Professional Style */}
