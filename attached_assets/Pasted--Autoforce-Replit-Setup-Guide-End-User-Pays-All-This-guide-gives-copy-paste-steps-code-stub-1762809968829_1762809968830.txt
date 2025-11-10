@@ -1,0 +1,1384 @@
+# Autoforce — Replit Setup Guide (End‑User Pays All)
+
+This guide gives copy‑paste steps, code stubs, and checks so your **autonomous** schedule→invoice→payroll features work on Replit. It assumes **Node.js + Express + Postgres** and **Stripe Billing**. Users connect **their own** QuickBooks/Gusto/Paychex; your app orchestrates via OAuth + webhooks.
+
+---
+
+## 0) TL;DR Launch Steps
+
+1. **Fork Replit** and set Environment Secrets (see §2).
+2. **Create Postgres** (Neon/Supabase/Railway) and run **SQL migrations** (see §3).
+3. **Install** dependencies: `npm i` (see §4 for `package.json`).
+4. **Stripe Billing**: create product + prices; set webhooks (see §6).
+5. **Register OAuth apps** for QBO/Gusto/Paychex; set redirect URIs (see §5).
+6. **Paste server skeleton** (Express app, queues, health, OAuth routes, webhooks) from §4–§7.
+7. **Seed demo org** + sample data (see §9).
+8. **Verify health** endpoint shows `safe_to_run: true` (see §8).
+9. **Run chaos tests** (see §10). If clean, invite pilots.
+
+---
+
+## 1) Architecture Snapshot
+
+* **DB**: Postgres with multi‑tenant tables (`org_id` everywhere)
+* **Auth**: JWT; Support impersonation via `x-impersonate-org-id` logged to `audit_logs`
+* **Integrations**: OAuth 2.0 (QuickBooks, Gusto, Paychex), webhooks to mirror status
+* **Automation**: Job queues (BullMQ) with idempotency keys on all writes
+* **Billing**: Stripe Checkout + metered usage (user pays partners separately)
+* **Reports**: REST endpoints (Payroll, Billable Hours, Invoices) + CSV/PDF exports
+* **Oversight**: 1% approval queue with rules + audit trail
+
+---
+
+## 2) Replit Secrets (.env)
+
+Set these in **Replit → Tools → Secrets**:
+
+```
+APP_BASE_URL=https://<your-repl-subdomain>.replit.app
+PORT=3000
+NODE_ENV=production
+JWT_SECRET=change_me
+
+# Postgres
+DATABASE_URL=postgres://user:pass@host:port/db
+
+# Stripe (end user pays your plan)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_MONTHLY=price_monthly_99
+STRIPE_PRICE_METERED=price_shift_1
+CUSTOMER_PORTAL_RETURN_URL=${APP_BASE_URL}/settings/billing
+
+# QuickBooks
+QBO_CLIENT_ID=...
+QBO_CLIENT_SECRET=...
+QBO_REDIRECT_URI=${APP_BASE_URL}/oauth/callback/qbo
+QBO_WEBHOOK_SECRET=...
+QBO_ENV=sandbox
+
+# Gusto
+GUSTO_CLIENT_ID=...
+GUSTO_CLIENT_SECRET=...
+GUSTO_REDIRECT_URI=${APP_BASE_URL}/oauth/callback/gusto
+GUSTO_WEBHOOK_SECRET=...
+
+# Paychex
+PAYCHEX_CLIENT_ID=...
+PAYCHEX_CLIENT_SECRET=...
+PAYCHEX_REDIRECT_URI=${APP_BASE_URL}/oauth/callback/paychex
+PAYCHEX_WEBHOOK_SECRET=...
+
+# Exports
+SIGNED_DOWNLOAD_TTL_SECONDS=86400
+REDIS_URL=redis://default:password@host:6379
+```
+
+---
+
+## 3) SQL Migrations (copy‑paste)
+
+Run this in your Postgres (psql/GUI):
+
+```sql
+-- Tenants
+CREATE TABLE organizations (
+  id uuid PRIMARY KEY,
+  name text NOT NULL,
+  timezone text DEFAULT 'America/Chicago',
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  billing_status text DEFAULT 'inactive', -- inactive|active|past_due|canceled
+  created_at timestamptz DEFAULT now()
+);
+
+-- OAuth connections
+CREATE TABLE connections (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  provider text NOT NULL CHECK (provider IN ('qbo','gusto','paychex')),
+  access_token text NOT NULL,
+  refresh_token text,
+  scope text,
+  expires_at timestamptz,
+  external_company_id text, -- e.g., QBO realmId / Gusto company id
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+CREATE INDEX connections_org_provider_idx ON connections(org_id, provider);
+
+-- Core
+CREATE TABLE clients (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  name text NOT NULL,
+  qbo_customer_id text,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX clients_org_idx ON clients(org_id);
+
+CREATE TABLE workers (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  name text NOT NULL,
+  gusto_employee_id text,
+  paychex_employee_id text,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX workers_org_idx ON workers(org_id);
+
+CREATE TABLE shifts (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  worker_id uuid NOT NULL REFERENCES workers(id),
+  client_id uuid NOT NULL REFERENCES clients(id),
+  start_at timestamptz NOT NULL,
+  end_at timestamptz NOT NULL,
+  hours numeric(7,2) GENERATED ALWAYS AS ((extract(epoch from (end_at - start_at))/3600.0)) STORED,
+  rate numeric(10,2) NOT NULL,
+  approved_bool boolean DEFAULT false,
+  flagged_reason text,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX shifts_org_date_idx ON shifts(org_id, start_at);
+
+-- Invoices mirror
+CREATE TABLE invoices (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  client_id uuid NOT NULL REFERENCES clients(id),
+  provider text NOT NULL DEFAULT 'qbo',
+  external_id text,
+  issue_date date,
+  due_date date,
+  status text,
+  total numeric(12,2),
+  paid_total numeric(12,2),
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX invoices_org_dates_idx ON invoices(org_id, issue_date);
+
+CREATE TABLE invoice_line_items (
+  id uuid PRIMARY KEY,
+  invoice_id uuid NOT NULL REFERENCES invoices(id),
+  shift_id uuid REFERENCES shifts(id),
+  hours numeric(7,2),
+  rate numeric(10,2),
+  amount numeric(12,2)
+);
+
+-- Payroll mirror
+CREATE TABLE payroll_runs (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  provider text NOT NULL CHECK (provider IN ('gusto','paychex')),
+  external_id text,
+  period_start date,
+  period_end date,
+  gross_total numeric(12,2),
+  status text, -- draft|submitted|paid|failed
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX payroll_runs_org_period_idx ON payroll_runs(org_id, period_start, period_end);
+
+CREATE TABLE payroll_earnings (
+  id uuid PRIMARY KEY,
+  payroll_run_id uuid NOT NULL REFERENCES payroll_runs(id),
+  worker_id uuid NOT NULL REFERENCES workers(id),
+  hours numeric(7,2),
+  rate numeric(10,2),
+  gross numeric(12,2)
+);
+
+-- Audit
+CREATE TABLE audit_logs (
+  id uuid PRIMARY KEY,
+  org_id uuid,
+  actor_id uuid,
+  actor_role text,            -- user|support|webhook|system
+  action text,                -- e.g., REPORT_VIEW|OAUTH_CONNECT|WEBHOOK
+  entity text,                -- invoice|payroll|shift
+  entity_id text,
+  payload jsonb,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX audit_logs_org_time_idx ON audit_logs(org_id, created_at DESC);
+```
+
+---
+
+## 4) package.json & Server Skeleton
+
+**package.json**
+
+```json
+{
+  "name": "autoforce",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.3",
+    "jsonwebtoken": "^9.0.2",
+    "stripe": "^16.0.0",
+    "axios": "^1.7.4",
+    "bullmq": "^5.7.0",
+    "ioredis": "^5.4.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+```
+
+**src/server.js (skeleton)**
+
+```js
+import express from 'express';
+import crypto from 'crypto';
+import { createClient } from 'pg';
+import { Queue, Worker, QueueScheduler } from 'bullmq';
+import Redis from 'ioredis';
+import jwt from 'jsonwebtoken';
+import Stripe from 'stripe';
+
+const app = express();
+app.use(express.json({ limit: '2mb' }));
+
+// DB
+const db = new createClient({ connectionString: process.env.DATABASE_URL });
+await db.connect();
+
+// Redis/Queues
+const connection = new Redis(process.env.REDIS_URL);
+const scheduler = new QueueScheduler('autoforce', { connection });
+const queue = new Queue('autoforce', { connection });
+
+// Helpers
+const auth = (req, res, next) => { /* verify JWT, set req.user + req.org_id */ next(); };
+const supportImpersonation = (req, res, next) => { /* if support role and header present, override req.org_id and log */ next(); };
+
+// Health
+app.get('/health', async (req, res) => {
+  res.json({ ok: true, version: '1.0.0', time: new Date().toISOString() });
+});
+
+// Org health (drives autonomy switch)
+app.get('/orgs/:orgId/health', auth, async (req, res) => {
+  const { orgId } = req.params;
+  const { rows: [org] } = await db.query('SELECT billing_status FROM organizations WHERE id=$1', [orgId]);
+  // fetch connections and compute safe_to_run
+  const { rows: conns } = await db.query('SELECT provider, expires_at FROM connections WHERE org_id=$1', [orgId]);
+  const integrations = Object.fromEntries(conns.map(c => [c.provider, 'connected']));
+  const safe_to_run = org?.billing_status === 'active' && conns.length > 0;
+  res.json({ billing: org?.billing_status, integrations, automations: { schedule: true, invoice: true, payroll: true }, safe_to_run });
+});
+
+// Stripe webhooks
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+app.post('/webhooks/stripe', express.raw({type:'application/json'}), (req, res) => {
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) { return res.status(400).send('sig err'); }
+  // handle invoice.paid / payment_failed / customer.subscription.deleted
+  // update organizations.billing_status accordingly
+  res.json({ received: true });
+});
+
+// OAuth connect endpoints (stubs)
+app.get('/integrations/qbo/connect', auth, async (req, res)=>{/* redirect to QBO auth URL */});
+app.get('/oauth/callback/qbo', async (req, res)=>{/* exchange code, save tokens in connections */ res.redirect('/settings/integrations');});
+app.post('/webhooks/qbo', async (req, res)=>{/* verify signature; upsert invoices/line_items; audit log */ res.json({ok:true});});
+
+app.get('/integrations/gusto/connect', auth, async (req, res)=>{/* ... */});
+app.get('/oauth/callback/gusto', async (req, res)=>{/* ... */ res.redirect('/settings/integrations');});
+app.post('/webhooks/gusto', async (req, res)=>{/* ... upsert payroll runs */ res.json({ok:true});});
+
+app.get('/integrations/paychex/connect', auth, async (req, res)=>{/* ... */});
+app.get('/oauth/callback/paychex', async (req, res)=>{/* ... */ res.redirect('/settings/integrations');});
+app.post('/webhooks/paychex', async (req, res)=>{/* ... */ res.json({ok:true});});
+
+// Reports
+app.get('/api/reports/billable-hours', auth, supportImpersonation, async (req, res)=>{/* SELECT with groupings, pagination */});
+app.get('/api/reports/payroll-summary', auth, supportImpersonation, async (req, res)=>{/* SELECT payroll_runs + payroll_earnings */});
+app.get('/api/reports/invoices', auth, supportImpersonation, async (req, res)=>{/* SELECT invoices; aging buckets */});
+app.post('/api/reports/export', auth, supportImpersonation, async (req, res)=>{/* generate CSV/PDF; signed URL */});
+
+// Oversight queue
+app.get('/api/oversight/summary', auth, async (req, res)=>{/* list clean + flagged */});
+app.post('/api/oversight/approve', auth, async (req, res)=>{/* submit payroll + send invoices via API */});
+app.post('/api/oversight/reject', auth, async (req, res)=>{/* rollback/void */});
+
+app.listen(process.env.PORT || 3000, ()=> console.log('Autoforce server up'));
+```
+
+---
+
+## 5) OAuth Quick Setup Notes
+
+* **QuickBooks**: create app in Intuit Developer → set Redirect URI to `${APP_BASE_URL}/oauth/callback/qbo` and subscribe to **Accounting** scopes; enable webhooks; capture `realmId`.
+* **Gusto**: register app; request payroll scopes; capture **company_id** after connect.
+* **Paychex**: partner onboarding often required; stub now, wire later.
+* **Storage**: save `access_token`, `refresh_token`, `expires_at`, `external_company_id` in `connections`.
+* **Refresh**: cron job or on‑demand refresh before calls; pause automations if refresh fails.
+
+---
+
+## 6) Stripe Billing Wiring (end‑user pays all)
+
+**Endpoints**
+
+* `POST /billing/checkout` → create Checkout Session with recurring + metered price; store `stripe_customer_id` on success.
+* `GET /billing/portal` → Stripe Customer Portal link.
+* `POST /webhooks/stripe` handles:
+
+  * `invoice.paid` → set `billing_status=active`
+  * `invoice.payment_failed` → `billing_status=past_due`
+  * `customer.subscription.deleted` → `billing_status=canceled`
+
+**Usage metering**
+
+* Nightly job counts **processed shifts** per org and posts usage to `price_shift_1`.
+
+---
+
+## 7) Job Queue & Idempotency
+
+* Use **BullMQ** with Redis for write jobs (QBO invoice create/send, Gusto payroll create/submit).
+* **Idempotency**: Compute hash of (org_id, provider, action, payload) → store in Redis for 48h; skip repeats.
+* **Retries**: exponential backoff with jitter; max 5.
+* **Dead‑letter**: failed jobs go to a DLQ; show banner in Oversight.
+
+---
+
+## 8) Health & Autonomy Gate
+
+`GET /orgs/:orgId/health` returns:
+
+```json
+{
+  "billing":"active",
+  "integrations":{"qbo":"connected","gusto":"connected","paychex":"disconnected"},
+  "automations":{"schedule":true,"invoice":true,"payroll":true},
+  "safe_to_run":true
+}
+```
+
+Your UI should disable runs if `safe_to_run=false` and show reasons (billing past_due or missing integration).
+
+---
+
+## 9) Seed Script (demo org + data)
+
+1. Insert demo `organizations` row + `clients`, `workers`.
+2. Insert a week of `shifts` with mixed hours/rates.
+3. Mark some `shifts.approved_bool=true` to test flows.
+4. Create placeholder `invoices` and `payroll_runs` for reports testing.
+
+*(Optional Node script `scripts/seed.js` that calls `INSERT` statements.)*
+
+---
+
+## 10) Chaos & Acceptance Tests
+
+**Chaos**
+
+* Drop partner API for 10m → verify retries + no duplicates (idempotency keys).
+* Reorder webhooks (payment before invoice) → eventual consistency maintained.
+* DST overnight shift (1:30–02:30 fallback) → correct hours.
+* Revoke OAuth token → UI shows reconnect; queues pause.
+
+**Acceptance**
+
+* 3 parallel pay cycles with **0 monetary variance** post‑approval.
+* Reports match partner totals; CSV export parity.
+* P95 latency: shift→invoice < 10m.
+
+---
+
+## 11) Oversight Rules (1% layer)
+
+* Flags: overlaps, >12h, missing mapping, rate mismatch, negative totals, invoice↔payroll variance > $0.01.
+* Confidence scoring: auto‑approve clean; queue flagged.
+* Approve triggers: QBO **send**; Gusto/Paychex **submit**.
+* Audit: record actor, rule version, timestamps.
+
+---
+
+## 12) Report Queries (examples)
+
+**Billable hours (by client, by week)**
+
+```sql
+SELECT c.name AS client,
+       DATE_TRUNC('week', s.start_at) AS week,
+       SUM(s.hours) AS hours,
+       SUM(s.hours * s.rate) AS amount
+FROM shifts s
+JOIN clients c ON c.id = s.client_id
+WHERE s.org_id = $1 AND s.approved_bool = TRUE
+  AND s.start_at >= $2 AND s.end_at <= $3
+GROUP BY client, week
+ORDER BY week DESC, client;
+```
+
+**Payroll summary (by pay period)**
+
+```sql
+SELECT pr.period_start, pr.period_end,
+       SUM(pe.hours) AS hours, SUM(pe.gross) AS gross
+FROM payroll_runs pr
+JOIN payroll_earnings pe ON pe.payroll_run_id = pr.id
+WHERE pr.org_id = $1
+  AND pr.period_start >= $2 AND pr.period_end <= $3
+GROUP BY pr.period_start, pr.period_end
+ORDER BY pr.period_start DESC;
+```
+
+**Invoice aging**
+
+```sql
+SELECT i.id, c.name AS client, i.issue_date, i.due_date, i.total,
+       (i.total - COALESCE(i.paid_total,0)) AS balance,
+       CASE WHEN i.status = 'paid' THEN '0'
+            WHEN CURRENT_DATE - i.due_date <= 30 THEN '0-30'
+            WHEN CURRENT_DATE - i.due_date <= 60 THEN '31-60'
+            WHEN CURRENT_DATE - i.due_date <= 90 THEN '61-90'
+            ELSE '90+' END AS aging_bucket
+FROM invoices i
+JOIN clients c ON c.id = i.client_id
+WHERE i.org_id = $1 AND i.issue_date BETWEEN $2 AND $3;
+```
+
+---
+
+## 13) Copy Deck (Legal & UX)
+
+**Integrations consent**
+
+> By connecting a third‑party account, you authorize Autoforce to read and create records (within approved scopes) on your behalf. You pay any fees charged by those providers. Automations pause if connections expire.
+
+**Billing consent**
+
+> Your Autoforce subscription is billed by Stripe. Partner products (QuickBooks, Gusto, Paychex, etc.) are billed directly by their providers. If billing is past due, automations pause safely until resolved.
+
+**Lapse banner**
+
+> ⚠️ Action required: QuickBooks connection expired. Invoicing automation is paused until you reconnect.
+
+---
+
+## 14) Support Runbooks (snippets)
+
+* **Token expired**: Ask user to click Reconnect; after success, run backfill job to sync any missed items.
+* **Invoice mismatch**: Run reconciliation script; if delta found, void and rebuild invoice via queue job.
+* **Payroll stuck in draft**: Reject in Oversight with reason; fix mapping; re‑queue submit job.
+
+---
+
+## 15) Graduation to Autonomous Mode (Org-Level)
+
+**Goal:** For the first *N* automations per org (configurable), run with **guided approvals (1% or higher)** and/or **user-guided steps**. When the org demonstrates a stable success score above a threshold, **graduate to Autonomous Mode** (no prompts). Org can opt to keep approvals on.
+
+### Config (feature flags / per‑org settings)
+
+* `FF_AUTONOMY_GRADUATION_ENABLED = true`
+* `org_settings.autonomy.minimum_trials = 50`
+* `org_settings.autonomy.min_success_score = 0.95`
+* `org_settings.autonomy.min_approval_rate = 0.98`
+* `org_settings.autonomy.sample_rate = 0.01`
+* `org_settings.autonomy.require_approvals_until_graduated = true`
+* `org_settings.notifications.email_recipients = ["ops@org.com"]`
+
+### Data Model Additions
+
+```sql
+ALTER TABLE organizations ADD COLUMN autonomy_state text DEFAULT 'shadow'; -- shadow|copilot|autonomous|paused
+ALTER TABLE organizations ADD COLUMN autonomy_trials int DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN autonomy_successes int DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN autonomy_score numeric(5,4) DEFAULT 0.0000;
+ALTER TABLE organizations ADD COLUMN autonomy_last_review timestamptz;
+
+CREATE TABLE autonomy_events (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  action_type text NOT NULL,                -- invoice|payroll|schedule
+  result text NOT NULL,                     -- success|flagged|failed|rolled_back
+  confidence numeric(5,4) DEFAULT 1.0000,   -- 0..1 (validator output)
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX autonomy_events_org_time_idx ON autonomy_events(org_id, created_at DESC);
+```
+
+### Graduation Algorithm (nightly job)
+
+1. Compute windowed stats (last 50–200 automations):
+
+   * `success_rate = successes / trials`
+   * `approval_rate = approvals_without_changes / approvals_total`
+   * `error_rate`, `rollback_rate`, `flag_rate`
+2. If `trials ≥ minimum_trials` **AND** `success_rate ≥ min_success_score` **AND** `approval_rate ≥ min_approval_rate` **AND** circuit healthy:
+
+   * Set `organizations.autonomy_state = 'autonomous'`
+   * Set `org_settings.autonomy.require_approvals_until_graduated = false`
+   * Keep random sampling at `sample_rate` for post-checks.
+3. If error/rollback spike occurs → demote to `copilot` and notify.
+
+### Oversight Behavior by State
+
+* **shadow**: simulate only; create drafts; no external mutations.
+* **copilot**: create drafts + require approval (1% minimum, plus all flagged).
+* **autonomous**: auto-execute; no approval prompts; continue 1% random sampling.
+* **paused**: no execution; health or billing issue.
+
+### Endpoints
+
+```
+GET  /orgs/:id/autonomy
+PATCH /orgs/:id/autonomy { state?:'shadow'|'copilot'|'autonomous'|'paused', sample_rate?:number, require_approvals?:boolean }
+GET  /orgs/:id/autonomy/score  -- returns trials, successes, score, last_review
+```
+
+### Notifications
+
+* **On Graduation:**
+
+  * Email: "Your org has graduated to Autonomous Mode — no more prompts. Sampling remains at 1%."
+  * Workspace banner for 24h with dismiss.
+* **On Demotion:**
+
+  * Email + banner: reason (error spike, circuit breaker), next steps.
+* **Run Updates (optional):**
+
+  * "Invoice batch for ACME created → sent"; "Payroll draft submitted".
+
+**Email template (subject/body)**
+
+> Subject: ✅ Autoforce: Your org is now in Autonomous Mode
+> Body: Based on your last {{trials}} automations with a {{success_rate}} success rate and {{approval_rate}} approval rate, we’ve enabled Autonomous Mode. You can opt back into approvals in Settings → Autonomy.
+
+### UI/UX
+
+* **Settings → Autonomy** panel:
+
+  * Status badge: Shadow / Co‑Pilot / Autonomous / Paused
+  * Toggle: "Require approvals before submission" (default off after graduation)
+  * Slider/input: Sampling rate (0–10%)
+  * Read‑only metrics: trials, success rate, approval rate, last demotion reason
+
+### Acceptance Tests
+
+* Create 60 simulated clean runs → verify state flips to `autonomous` with emails sent.
+* Introduce 3 failures in 20 runs → verify demotion back to `copilot` and banner appears.
+* Ensure user toggle can force approvals even in `autonomous`.
+
+---
+
+## 16) Notifications & Notification Center (Email + Push + In‑App)
+
+**Objective:** Deliver real‑time visibility without forcing email. Support **in‑app notifications, web push, email**, optional **Slack/SMS**, and a user **Notification Center** with preferences. All tied to automation events (runs, flags, approvals, graduation/demotion, billing, webhooks).
+
+### Channels (now vs later)
+
+* **In‑App Notification Center (NOW)**: bell icon, unread badge, inbox list, toasts.
+* **Web Push (NOW)**: VAPID-based Web Push for desktop/mobile browsers (permissions opt‑in). Store subscriptions per device.
+* **Email (NOW)**: for critical + daily digests.
+* **Slack / Teams (LATER)**: per‑org webhook URL.
+* **SMS (LATER)**: Twilio stub; only for CRITICAL alerts if opted in.
+
+### Event Categories & Severity
+
+* **Categories:** `automation_update`, `approval_required`, `flagged_item`, `graduation`, `demotion`, `billing_status`, `integration_status`, `report_ready`.
+* **Severity:** `info`, `warning`, `critical` (critical also emails by default).
+
+### UX Spec
+
+* **Bell icon** with unread count; dropdown shows last 10 notifications; link to **Notification Center** page.
+* **Notification Center page**: filters (category, severity, unread), search, bulk mark‑as‑read, pagination.
+* **Toasts**: real‑time for key events (e.g., “Payroll draft submitted”).
+* **Deep links**: each item links to the relevant entity (invoice, payroll run, oversight queue).
+* **Workspace banners**: for state changes (Paused, Reconnect, Graduated/Demoted) until dismissed.
+
+### Preferences & Quiet Hours
+
+* Per‑user, per‑category channel prefs: in_app, push, email (checkbox matrix).
+* **Quiet Hours** (local timezone): suppress push/email except critical.
+* **Digest** options: daily/weekly summaries for non‑critical categories.
+
+### Data Model (additions)
+
+```sql
+CREATE TABLE user_notification_prefs (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  user_id uuid NOT NULL,
+  category text NOT NULL,
+  in_app boolean DEFAULT true,
+  push boolean DEFAULT false,
+  email boolean DEFAULT true,
+  quiet_start time,
+  quiet_end time,
+  digest text DEFAULT 'none', -- none|daily|weekly
+  UNIQUE(org_id, user_id, category)
+);
+
+CREATE TABLE notifications (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  user_id uuid, -- nullable for org-wide broadcast
+  category text NOT NULL,
+  severity text NOT NULL CHECK (severity IN ('info','warning','critical')),
+  title text NOT NULL,
+  body text,
+  entity_type text,    -- invoice|payroll|shift|org
+  entity_id text,
+  link_url text,
+  read_bool boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX notifications_org_time_idx ON notifications(org_id, created_at DESC);
+
+CREATE TABLE notification_deliveries (
+  id uuid PRIMARY KEY,
+  notification_id uuid NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+  channel text NOT NULL CHECK (channel IN ('in_app','push','email','slack','sms')),
+  status text NOT NULL DEFAULT 'queued', -- queued|sent|failed
+  attempts int DEFAULT 0,
+  error text,
+  created_at timestamptz DEFAULT now(),
+  sent_at timestamptz
+);
+
+CREATE TABLE web_push_subscriptions (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  user_id uuid NOT NULL,
+  endpoint text NOT NULL,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(user_id, endpoint)
+);
+```
+
+### API Endpoints
+
+```
+GET    /api/notifications               # list with filters ?category=&severity=&unread=true&page=
+PATCH  /api/notifications/:id/read      # mark read
+POST   /api/notifications/test          # create a test item for current user
+GET    /api/notifications/prefs         # get per-user prefs
+PATCH  /api/notifications/prefs         # update matrix + quiet hours + digest
+POST   /api/notifications/push/subscribe   # save Web Push subscription
+DELETE /api/notifications/push/unsubscribe # remove subscription
+```
+
+### Delivery Worker (Queue)
+
+* Input: notification id; expands to user’s channel prefs.
+* **Idempotency key**: `notif:{id}:{channel}` to avoid duplicate sends.
+* Retries with backoff; failures recorded in `notification_deliveries`.
+* **Digest job** (daily/weekly): collect non‑critical events → one email/push summary.
+
+### Templates
+
+* Store templates per category + channel with variables (e.g., `{{client}}`, `{{period}}`).
+* Example titles:
+
+  * `approval_required`: "Action needed: {{count}} item(s) awaiting approval"
+  * `graduation`: "✅ Your org is now in Autonomous Mode"
+  * `demotion`: "⚠️ Autonomy paused — reason: {{reason}}"
+  * `report_ready`: "Your {{report}} is ready to download"
+
+### Integration with Autonomy States
+
+* On **graduation/demotion**: create org‑wide notification + (optionally) email/push to admins.
+* On **pause** (billing/integration): CRITICAL notification + workspace banner, deep link to Settings.
+* On **run progress**: info toasts ("Invoice batch sent", "Payroll submitted").
+
+### Accessibility, Privacy, Compliance
+
+* ARIA roles for toasts/inbox; keyboard navigation.
+* PII minimization in payloads; include only necessary identifiers.
+* Unsubscribe per channel where applicable (email/SMS).
+* Signed deep links with short TTL for action items.
+
+### Acceptance Tests
+
+* Subscribing/unsubscribing to Web Push works; test permission denied path.
+* Quiet hours suppress email/push (non‑critical) but still show in‑app.
+* Demotion/Graduation emits notifications to all admins and appears in Center.
+* Digest job composes a single summary and marks source items as "digested".
+* Delivery retries capped; duplicates prevented by idempotency key.
+
+````
+
+---
+
+## 16A) Mobile Push, Chat Apps, and "Call Me" Escalations (CRITICAL)
+
+**Objective:** Extend notifications beyond email to **mobile push**, **Slack/Teams**, and **voice/SMS escalations** for CRITICAL events (circuit breaker, billing halted, payroll submission failure, webhook outage).
+
+### Channels Added (Now vs Later)
+- **Mobile Push (NOW)**: Native push via **FCM (Android/Web)** and **APNs (iOS)**.
+- **Slack / Microsoft Teams (NOW)**: Incoming webhooks per org + channel mapping.
+- **SMS + Voice Call (NOW)**: Twilio or equivalent for CRITICAL alerts with escalation & acknowledgement.
+
+### Data Model Additions
+```sql
+-- Slack / Teams targets
+CREATE TABLE org_webhooks (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  kind text NOT NULL CHECK (kind IN ('slack','teams')),
+  display_name text,
+  webhook_url text NOT NULL,
+  default_bool boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX org_webhooks_org_idx ON org_webhooks(org_id);
+
+-- Mobile push device tokens (FCM/APNs)
+CREATE TABLE mobile_push_tokens (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  user_id uuid NOT NULL,
+  platform text NOT NULL CHECK (platform IN ('ios','android','web')),
+  device_token text NOT NULL,      -- APNs token or FCM registration token
+  last_seen_at timestamptz,
+  is_active boolean DEFAULT true,
+  UNIQUE(user_id, platform, device_token)
+);
+
+-- Escalation policies & on-call
+CREATE TABLE escalation_policies (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  name text NOT NULL,
+  step_timeout_seconds int NOT NULL DEFAULT 300, -- 5 min
+  max_retries int NOT NULL DEFAULT 2,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE escalation_targets (
+  id uuid PRIMARY KEY,
+  policy_id uuid NOT NULL REFERENCES escalation_policies(id) ON DELETE CASCADE,
+  order_index int NOT NULL,
+  user_id uuid,                       -- optional; null for external number
+  contact_method text NOT NULL CHECK (contact_method IN ('sms','voice','email','push','slack')),
+  address text NOT NULL,              -- phone/email/webhook id, etc.
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX escalation_targets_policy_idx ON escalation_targets(policy_id, order_index);
+
+-- Track active escalations & acknowledgements
+CREATE TABLE escalation_incidents (
+  id uuid PRIMARY KEY,
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  policy_id uuid NOT NULL REFERENCES escalation_policies(id),
+  notification_id uuid REFERENCES notifications(id),
+  status text NOT NULL DEFAULT 'open', -- open|acked|resolved|canceled
+  current_step int NOT NULL DEFAULT 0,
+  attempts int NOT NULL DEFAULT 0,
+  acked_by_user_id uuid,
+  acked_at timestamptz,
+  resolved_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+````
+
+### Environment Variables
+
+```
+# Mobile Push
+FCM_SERVER_KEY=...
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+APNS_TEAM_ID=...
+APNS_KEY_ID=...
+APNS_AUTH_KEY_BASE64=...   # .p8 contents base64
+APNS_BUNDLE_ID=com.autoforce.app
+
+# Chat Apps
+SLACK_SIGNING_SECRET=...   # if using Events API later
+
+# SMS/Voice (Twilio or similar)
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_FROM_NUMBER=+1XXXXXXXXXX
+```
+
+### API Endpoints
+
+```
+POST /api/notifications/push/subscribe        # save FCM/APNs token
+DELETE /api/notifications/push/unsubscribe    # remove token
+
+POST /api/org-webhooks                        # add Slack/Teams webhook
+GET  /api/org-webhooks                        # list
+PATCH /api/org-webhooks/:id                   # set default / rename
+DELETE /api/org-webhooks/:id
+
+POST /api/escalations/policies                # create policy
+GET  /api/escalations/policies                # list
+POST /api/escalations/policies/:id/targets    # add targets in order
+POST /api/escalations/test                    # fire a test CRITICAL to policy
+POST /api/escalations/:incidentId/ack         # acknowledge (web + DTMF)
+```
+
+### Delivery & Escalation Logic
+
+* **CRITICAL** notifications spawn an **escalation_incident** if a policy is attached to the org.
+* Step through **escalation_targets** in order: send SMS/Voice/Push/Slack; wait `step_timeout_seconds`; if no **ack**, go to next target.
+* **Acknowledgement**:
+
+  * Web: signed link hits `/api/escalations/:id/ack` and records `acked_by_user_id`.
+  * Voice: DTMF menu ("Press 1 to acknowledge, 2 to call back ops").
+  * SMS: reply `ACK <incidentId>` (simple parser).
+* When acked → set incident `status='acked'`, stop further steps; create follow‑up **in‑app** notification.
+* After root cause fixed → mark `resolved` and notify involved targets.
+
+### Slack/Teams Formatting
+
+* Use attachments/cards with: **title**, **severity emoji**, **org**, **category**, **deep link**.
+* Example Slack JSON (Incoming Webhook):
+
+```json
+{ "text": ":rotating_light: CRITICAL — Payroll submission failed",
+  "attachments":[{
+     "color":"#d32f2f",
+     "fields":[
+       {"title":"Org","value":"ACME Security","short":true},
+       {"title":"Run","value":"PR-2025-11-15","short":true}
+     ],
+     "actions":[{"type":"button","text":"Open Incident","url":"https://app/autoforce/incidents/123"}]
+  }]
+}
+```
+
+### Mobile Push Notes
+
+* Keep payloads **<4KB** (APNs limit). Use deep links to open the entity.
+* For iOS: use **high‑priority** for CRITICAL; request **provisional auth** for first‑run (optional).
+* Use **silent push** (content‑available=1) to refresh badge counts.
+
+### Preferences & Quiet Hours Integration
+
+* Extend `user_notification_prefs` to include **mobile push** channel and per‑channel quiet‑hour behavior.
+* CRITICAL events **ignore quiet hours** unless user explicitly disables voice/SMS.
+
+### UI Additions
+
+* **Notification Center**: device management (list registered devices; revoke), Slack/Teams webhook list, Escalation Policy builder (drag‑order targets).
+* **On‑Call Calendar** (v1.1): simple weekly rotation picker that updates `escalation_targets` or future `oncall_rotations` table.
+
+### Acceptance Tests
+
+* Register/unregister device tokens; send test push; verify receipt.
+* Slack/Teams webhook test message appears in selected channel.
+* Trigger synthetic CRITICAL; verify stepwise escalation, ack halts escalation.
+* Quiet hours: non‑critical suppressed for push/SMS; still visible in in‑app inbox.
+* Duplicate delivery prevented via idempotency key `notif:{id}:{channel}`.
+
+---
+
+## 17) Implementation Snippets — Twilio Voice ACK + Web Push Service Worker
+
+### 17.1 Twilio Voice Webhook — “Press 1 to Acknowledge”
+
+**Routes (Express):**
+
+```js
+// src/routes/twilio.js
+import express from 'express';
+import crypto from 'crypto';
+const router = express.Router();
+
+// Optional: validate Twilio signature
+function validateTwilioSig(req) {
+  // If you want strict validation, use twilio SDK's validateRequest.
+  return true;
+}
+
+// Inbound call entrypoint — say incident and gather DTMF
+router.post('/twilio/voice/inbound', async (req, res) => {
+  if (!validateTwilioSig(req)) return res.status(403).end();
+  const incidentId = req.query.incidentId || 'unknown';
+  const sayOpts = 'voice="Polly.Matthew" language="en-US"';
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="dtmf" numDigits="1" action="/twilio/voice/ack?incidentId=${incidentId}" timeout="6">
+    <Say ${sayOpts}>This is Autoforce. A critical incident requires attention. Press 1 to acknowledge, or 2 to request a call back from support.</Say>
+  </Gather>
+  <Say ${sayOpts}>No input received. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+  res.type('text/xml').send(twiml);
+});
+
+// Handle DTMF
+router.post('/twilio/voice/ack', async (req, res) => {
+  const { incidentId } = req.query;
+  const digits = (req.body.Digits || '').trim();
+  const sayOpts = 'voice="Polly.Matthew" language="en-US"';
+  let twiml;
+  if (digits === '1') {
+    // mark ack in DB
+    // await db.query('UPDATE escalation_incidents SET status=\'acked\', acked_at=now() WHERE id=$1', [incidentId]);
+    twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say ${sayOpts}>Acknowledged. Thank you.</Say>
+  <Hangup/>
+</Response>`;
+  } else if (digits === '2') {
+    // trigger support call back workflow (queue job)
+    twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say ${sayOpts}>We will call you back shortly. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+  } else {
+    twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say ${sayOpts}>Invalid input.</Say>
+  <Redirect>/twilio/voice/inbound?incidentId=${incidentId}</Redirect>
+</Response>`;
+  }
+  res.type('text/xml').send(twiml);
+});
+
+export default router;
+```
+
+**Server wiring:**
+
+```js
+// src/server.js
+import twilioRoutes from './routes/twilio.js';
+app.use(express.urlencoded({ extended: false })); // Twilio sends application/x-www-form-urlencoded
+app.use(twilioRoutes);
+```
+
+**Twilio Console:**
+
+* Voice → Phone Numbers → your number → A Call Comes In: `POST https://<your-app>/twilio/voice/inbound?incidentId={dynamic}`
+* (Optional) Use **TwiML Bins** for quick testing.
+
+**SMS ACK (optional route):**
+
+```js
+router.post('/twilio/sms/inbound', async (req, res) => {
+  const body = (req.body.Body || '').toUpperCase();
+  const match = body.match(/ACK\s+(\S+)/);
+  if (match) {
+    const incidentId = match[1];
+    // await db.query('UPDATE escalation_incidents SET status=\'acked\', acked_at=now() WHERE id=$1', [incidentId]);
+  }
+  res.type('text/xml').send('<Response/>');
+});
+```
+
+---
+
+### 17.2 Web Push — Service Worker + Client Registration
+
+**Service Worker (public/sw.js)**
+
+```js
+/* global self */
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  const title = data.title || 'Autoforce';
+  const options = {
+    body: data.body || '',
+    icon: data.icon || '/icons/icon-192.png',
+    badge: data.badge || '/icons/badge-72.png',
+    data: { url: data.url || '/', entityId: data.entityId, entityType: data.entityType },
+    requireInteraction: data.requireInteraction || false,
+    tag: data.tag || undefined
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
+```
+
+**Client Registration (e.g., src/push.js)**
+
+```js
+export async function registerPush(vapidPublicKey) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return { ok:false, reason:'unsupported' };
+  const reg = await navigator.serviceWorker.register('/sw.js');
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return { ok:false, reason:'denied' };
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+  });
+
+  const resp = await fetch('/api/notifications/push/subscribe', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sub)
+  });
+  return { ok: resp.ok };
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+```
+
+**Server Endpoint to Save Subscription**
+
+```js
+// src/routes/push.js
+import express from 'express';
+const router = express.Router();
+
+router.post('/api/notifications/push/subscribe', async (req, res) => {
+  const sub = req.body; // endpoint, keys.{p256dh, auth}
+  const userId = req.user.id; const orgId = req.user.org_id; // from auth middleware
+  // upsert into web_push_subscriptions (orgId, userId, endpoint, p256dh, auth)
+  res.json({ ok: true });
+});
+
+router.delete('/api/notifications/push/unsubscribe', async (req, res) => {
+  const { endpoint } = req.body;
+  // delete from web_push_subscriptions where user + endpoint
+  res.json({ ok: true });
+});
+
+export default router;
+```
+
+**Server Sender (Web Push dispatch)**
+
+```js
+// src/lib/webpush.js
+import webpush from 'web-push';
+webpush.setVapidDetails('mailto:support@autoforce.app', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+
+export async function sendPush(sub, payload) {
+  try { await webpush.sendNotification(sub, JSON.stringify(payload)); }
+  catch (e) { /* handle 410 Gone (delete subscription) */ }
+}
+```
+
+**Env (add):**
+
+```
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+```
+
+**Test Payload**
+
+```js
+await sendPush(subscription, { title: 'Payroll submitted', body: 'Run PR-2025-11-15 submitted successfully', url: '/payroll/runs/123' });
+```
+
+---
+
+## 17.3 Slack / Teams Sender Helpers (Server)
+
+**Slack (Incoming Webhook) — src/lib/slack.js**
+
+```js
+import fetch from 'node-fetch';
+
+export async function postSlack(webhookUrl, { title, text, severity='info', fields=[], actions=[] }) {
+  const color = severity === 'critical' ? '#d32f2f' : severity === 'warning' ? '#f9a825' : '#1976d2';
+  const payload = {
+    text: title || text,
+    attachments: [{ color, text, fields, actions }]
+  };
+  const r = await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  if (!r.ok) throw new Error(`Slack post failed ${r.status}`);
+}
+```
+
+**Teams (Incoming Webhook) — src/lib/teams.js**
+
+```js
+import fetch from 'node-fetch';
+
+export async function postTeams(webhookUrl, { title, text, severity='info', facts=[] }) {
+  const themeColor = severity === 'critical' ? 'D32F2F' : severity === 'warning' ? 'F9A825' : '1976D2';
+  const payload = {
+    '@type': 'MessageCard', '@context': 'http://schema.org/extensions',
+    themeColor, summary: title || text,
+    sections: [{ activityTitle: title, text, facts }]
+  };
+  const r = await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  if (!r.ok) throw new Error(`Teams post failed ${r.status}`);
+}
+```
+
+**Usage in Notification Worker**
+
+```js
+// if org has default Slack/Teams webhook and user prefs allow channel
+await postSlack(orgWebhook, { title: '✅ Payroll submitted', text: `Run ${runId} complete`, severity: 'info' });
+```
+
+---
+
+## 17.4 Notification Center UI (React JSX Stub)
+
+**/src/components/NotificationBell.jsx**
+
+```jsx
+import { useEffect, useState } from 'react';
+
+export default function NotificationBell() {
+  const [count, setCount] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => { fetch('/api/notifications?unread=true&page=1&page_size=10').then(r=>r.json()).then(d=>{ setItems(d.rows||[]); setCount(d.unread||0); }); }, []);
+
+  return (
+    <div className="relative">
+      <button className="relative" onClick={()=>setOpen(!open)} aria-label="Notifications">
+        <span className="icon-bell"/>
+        {count>0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full text-xs px-1">{count}</span>}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-96 bg-white shadow-lg rounded-md p-3 z-50">
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-semibold">Notifications</h4>
+            <a className="text-sm text-blue-600" href="/notifications">View all</a>
+          </div>
+          <ul className="divide-y">
+            {items.map(n => (
+              <li key={n.id} className="py-2">
+                <a href={n.link_url || '#'} className="block">
+                  <div className="text-sm font-medium">{n.title}</div>
+                  <div className="text-xs text-gray-600">{n.body}</div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**/src/pages/NotificationCenter.jsx**
+
+```jsx
+import { useEffect, useState } from 'react';
+
+export default function NotificationCenter() {
+  const [rows, setRows] = useState([]);
+  const [filters, setFilters] = useState({ category:'', severity:'', unread:false, page:1 });
+
+  useEffect(() => { load(); }, [filters]);
+  async function load(){
+    const params = new URLSearchParams({ ...filters, page: String(filters.page) });
+    const r = await fetch(`/api/notifications?${params}`); const d = await r.json();
+    setRows(d.rows || []);
+  }
+
+  async function markRead(id){ await fetch(`/api/notifications/${id}/read`, { method:'PATCH' }); load(); }
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Notification Center</h1>
+      {/* filters */}
+      <div className="flex gap-3 mb-4">
+        <select value={filters.category} onChange={e=>setFilters(f=>({...f, category:e.target.value}))}>
+          <option value="">All Categories</option>
+          <option value="automation_update">Automation Updates</option>
+          <option value="approval_required">Approval Required</option>
+          <option value="flagged_item">Flagged</option>
+          <option value="graduation">Graduation</option>
+          <option value="demotion">Demotion</option>
+          <option value="billing_status">Billing</option>
+          <option value="integration_status">Integrations</option>
+          <option value="report_ready">Reports</option>
+        </select>
+        <select value={filters.severity} onChange={e=>setFilters(f=>({...f, severity:e.target.value}))}>
+          <option value="">All Severity</option>
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="critical">Critical</option>
+        </select>
+        <label className="flex items-center gap-1 text-sm">
+          <input type="checkbox" checked={filters.unread} onChange={e=>setFilters(f=>({...f, unread:e.target.checked}))}/>
+          Unread only
+        </label>
+      </div>
+
+      {/* list */}
+      <div className="bg-white shadow rounded">
+        {rows.map(n => (
+          <div key={n.id} className="p-4 border-b">
+            <div className="flex justify-between">
+              <div>
+                <div className="font-semibold">{n.title}</div>
+                <div className="text-sm text-gray-600">{n.body}</div>
+                {n.link_url && <a className="text-blue-600 text-sm" href={n.link_url}>Open</a>}
+              </div>
+              {!n.read_bool && <button className="text-sm text-green-700" onClick={()=>markRead(n.id)}>Mark read</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 17.5 Sample Webhook Payloads & cURL (for Support & Dev)
+
+**QuickBooks: Invoice Create**
+
+```json
+{
+  "eventNotifications": [{
+    "realmId": "1234567890",
+    "dataChangeEvent": {
+      "entities": [
+        {"name":"Invoice","id":"89","operation":"Create","lastUpdated":"2025-11-10T14:50:21Z"}
+      ]
+    }
+  }]
+}
+```
+
+**Gusto: Payroll Submitted**
+
+```json
+{
+  "event":"payroll.submitted",
+  "company_id":"co_abc123",
+  "payload":{"payroll_id":"pr_789","period_start":"2025-11-01","period_end":"2025-11-15","status":"submitted","totals":{"gross":"12500.00"}}
+}
+```
+
+**Paychex: Payroll Paid**
+
+```json
+{
+  "event":"payroll.paid",
+  "companyId":"pcx_123",
+  "data":{"payrollId":"p_456","periodStart":"2025-11-01","periodEnd":"2025-11-15","gross":"9800.00","status":"paid"}
+}
+```
+
+**Stripe: Invoice Paid**
+
+```json
+{
+  "type": "invoice.paid",
+  "data": { "object": { "id": "in_123", "customer": "cus_123", "subscription": "sub_123" } }
+}
+```
+
+**cURL Test (local tunnel):**
+
+```bash
+curl -X POST http://localhost:3000/webhooks/qbo \
+  -H 'Content-Type: application/json' \
+  -d '{"eventNotifications":[{"realmId":"1234567890","dataChangeEvent":{"entities":[{"name":"Invoice","id":"89","operation":"Create","lastUpdated":"2025-11-10T14:50:21Z"}]}}]}'
+
+curl -X POST http://localhost:3000/webhooks/gusto \
+  -H 'Content-Type: application/json' \
+  -d '{"event":"payroll.submitted","company_id":"co_abc123","payload":{"payroll_id":"pr_789","period_start":"2025-11-01","period_end":"2025-11-15","status":"submitted","totals":{"gross":"12500.00"}}}'
+
+curl -X POST http://localhost:3000/webhooks/paychex \
+  -H 'Content-Type: application/json' \
+  -d '{"event":"payroll.paid","companyId":"pcx_123","data":{"payrollId":"p_456","periodStart":"2025-11-01","periodEnd":"2025-11-15","gross":"9800.00","status":"paid"}}'
+
+curl -X POST http://localhost:3000/webhooks/stripe \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"invoice.paid","data":{"object":{"id":"in_123","customer":"cus_123","subscription":"sub_123"}}}'
+```
+
+---
+
+## 17.6 OpenAPI (Swagger) Minimal Spec (YAML excerpt)
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Autoforce API
+  version: 1.0.0
+servers:
+  - url: https://your-repl.replit.app
+paths:
+  /api/reports/payroll-summary:
+    get:
+      summary: Payroll Summary
+      parameters:
+        - in: query; name: start; schema: { type: string, format: date }
+        - in: query; name: end; schema: { type: string, format: date }
+        - in: query; name: group_by; schema: { type: string, enum: [worker, client, pay_period] }
+      responses: { '200': { description: OK } }
+  /api/reports/billable-hours:
+    get:
+      summary: Billable Hours
+      responses: { '200': { description: OK } }
+  /api/reports/invoices:
+    get:
+      summary: Invoice Summary & Aging
+      responses: { '200': { description: OK } }
+  /api/notifications:
+    get:
+      summary: List notifications
+      responses: { '200': { description: OK } }
+  /api/notifications/push/subscribe:
+    post:
+      summary: Save push subscription
+      responses: { '200': { description: OK } }
+  /api/oversight/approve:
+    post:
+      summary: Approve items (submit payroll, send invoices)
+      responses: { '200': { description: OK } }
+  /orgs/{id}/autonomy:
+    get:
+      summary: Get autonomy state
+      responses: { '200': { description: OK } }
+```
+
+---
+
+## 18) What to Ship Next (quality of life)
+
+* Saved report presets per org
+* Scheduled emails for Payroll Summary (Mondays) and Aging (Fridays)
+* Variance report (invoice vs payroll by client/time)
+* Self‑serve data export (JSON/CSV) per entity
+
+---
+
+**You’re set.** Paste these pieces into your Replit app, wire the secrets, and run through §10 tests. When `/orgs/:orgId/health` says `safe_to_run: true` and variances are zero, invite your first users.
