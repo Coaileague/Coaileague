@@ -33,16 +33,16 @@ interface OnlineUser {
 export default function ModernMobileChat() {
   const [, navigate] = useLocation();
   
-  // Desktop Detection & Auto-Redirect
+  // Desktop Detection & Auto-Redirect (runs once on mount)
   useEffect(() => {
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
     
     if (!isMobileDevice && !isSmallScreen) {
       console.log('💻 Desktop/large screen detected, redirecting to /chat');
-      navigate('/chat');
+      navigate('/chat', { replace: true });
     }
-  }, [navigate]);
+  }, []); // Empty deps - run only once on mount
   
   const [messageText, setMessageText] = useState("");
   const [showQuickResponses, setShowQuickResponses] = useState(false);
