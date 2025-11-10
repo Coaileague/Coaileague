@@ -2571,6 +2571,12 @@ export const auditActionEnum = pgEnum('audit_action', [
   'request_secure_info',
   'release_spectator',
 
+  // Autonomous Automation actions (BillOS™, ScheduleOS™, PayrollOS™)
+  'automation_job_start',
+  'automation_job_complete',
+  'automation_job_error',
+  'automation_artifact_generated',
+
   // Other
   'other'
 ]);
