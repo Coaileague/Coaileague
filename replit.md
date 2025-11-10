@@ -56,6 +56,7 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
         - **Cadence Preservation**: Anchors advance on schedule match (not conditional on work output), preventing 4-week gaps when no invoices/schedules/payroll items are generated.
         - **Drift Detection**: Warns if anchor >30 days behind current date, enabling proactive monitoring.
         - **Backfill Support**: Standalone script seeds anchors for existing workspaces, ensuring smooth transition to anchor-based system.
+        - **Automated Data Collection**: Production-ready billable and payroll hours aggregation services automatically collect, validate, and aggregate approved time entries with workspace-configured OT rules, FLSA-compliant weekly resets, employee-first grouping for deterministic OT, chronological sorting, batch-loaded rates, and N+1 query elimination. Services output structured summaries ready for invoice/payroll generation.
 - **Security**: Includes Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 - **Production Monitoring**: Comprehensive observability infrastructure with error logging, performance metrics tracking, health checks, slow request detection, and graceful shutdown handling.
 
