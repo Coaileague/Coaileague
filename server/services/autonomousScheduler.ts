@@ -11,7 +11,7 @@
 import cron from 'node-cron';
 import { db } from '../db';
 import { workspaces, employees, idempotencyKeys } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { generateUsageBasedInvoices } from './billos';
 import { PayrollAutomationEngine } from './payrollAutomation';
 import { ScheduleOSAI } from '../ai/scheduleos';
@@ -138,7 +138,7 @@ const AUTOFORCE_AUTOMATION_USER = {
  */
 async function logAutomationLifecycle<T>(
   params: {
-    jobType: 'invoicing' | 'scheduling' | 'payroll';
+    jobType: 'invoicing' | 'scheduling' | 'payroll' | 'idempotency_cleanup';
     workspaceId: string;
     workspaceName: string;
     runId: string;
@@ -153,6 +153,7 @@ async function logAutomationLifecycle<T>(
     invoicing: 'BillOS™',
     scheduling: 'OperationsOS™',
     payroll: 'BillOS™',
+    idempotency_cleanup: 'AuditOS™',
   };
   const osName = osNameMap[jobType];
 
@@ -250,6 +251,11 @@ const SCHEDULER_CONFIG = {
     enabled: true,
     schedule: '0 3 * * *', // Every day at 3 AM (after invoicing)
     description: 'Daily check for payroll processing based on workspace pay periods'
+  },
+  cleanup: {
+    enabled: true,
+    schedule: '0 4 * * *', // Every day at 4 AM (after all automation jobs)
+    description: 'Daily cleanup of expired idempotency keys based on TTL'
   }
 };
 
@@ -925,6 +931,66 @@ async function runAutomaticPayrollProcessing() {
   }
 }
 
+/**
+ * Daily Idempotency Key Cleanup
+ * Removes expired keys based on TTL to prevent database bloat
+ * Runs at 4 AM after all automation jobs complete
+ */
+async function runIdempotencyKeyCleanup() {
+  console.log('=================================================');
+  console.log('🧹 IDEMPOTENCY KEY CLEANUP - START');
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.log('=================================================');
+  
+  try {
+    const runId = `cleanup-${Date.now()}`;
+    
+    await logAutomationLifecycle(
+      {
+        jobType: 'idempotency_cleanup',
+        workspaceId: 'system',
+        workspaceName: 'System-wide Cleanup',
+        runId,
+      },
+      async () => {
+        // Calculate expiration threshold
+        // Use 60 days as max retention (beyond longest TTL of 45 days for payroll)
+        const maxRetentionDays = 60;
+        const expirationThreshold = new Date();
+        expirationThreshold.setDate(expirationThreshold.getDate() - maxRetentionDays);
+        
+        console.log(`Removing idempotency keys older than ${maxRetentionDays} days`);
+        console.log(`Expiration threshold: ${expirationThreshold.toISOString()}`);
+        
+        // Delete expired keys
+        const deletedKeys = await db
+          .delete(idempotencyKeys)
+          .where(sql`${idempotencyKeys.createdAt} < ${expirationThreshold}`)
+          .returning({ id: idempotencyKeys.id });
+        
+        const deletedCount = deletedKeys.length;
+        
+        if (deletedCount > 0) {
+          console.log(`✅ Cleaned up ${deletedCount} expired idempotency key(s)`);
+        } else {
+          console.log(`ℹ️  No expired keys found`);
+        }
+        
+        return { 
+          keysDeleted: deletedCount,
+          retentionDays: maxRetentionDays,
+          expirationThreshold: expirationThreshold.toISOString(),
+        };
+      }
+    );
+    
+  } catch (error) {
+    console.error('💥 Critical error in idempotency key cleanup:', error);
+  }
+  
+  console.log('=================================================\n');
+}
+
 // ============================================================================
 // SCHEDULER INITIALIZATION
 // ============================================================================
@@ -974,6 +1040,16 @@ export function startAutonomousScheduler() {
     console.log(`   ${SCHEDULER_CONFIG.payroll.description}\n`);
   }
 
+  // 4. Idempotency Key Cleanup (4 AM daily)
+  if (SCHEDULER_CONFIG.cleanup.enabled) {
+    cron.schedule(SCHEDULER_CONFIG.cleanup.schedule, () => {
+      runIdempotencyKeyCleanup();
+    });
+    console.log('✅ Idempotency Key Cleanup:');
+    console.log(`   Schedule: ${SCHEDULER_CONFIG.cleanup.schedule} (daily 4 AM)`);
+    console.log(`   ${SCHEDULER_CONFIG.cleanup.description}\n`);
+  }
+
   isSchedulerRunning = true;
 
   console.log('╔════════════════════════════════════════════════╗');
@@ -988,4 +1064,5 @@ export const manualTriggers = {
   invoicing: runNightlyInvoiceGeneration,
   scheduling: runWeeklyScheduleGeneration,
   payroll: runAutomaticPayrollProcessing,
+  cleanup: runIdempotencyKeyCleanup,
 };
