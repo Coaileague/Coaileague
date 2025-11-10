@@ -539,18 +539,40 @@ export const platformSupportModule: OSModule = {
   capabilities: ['support_dashboard'],
   routes: [
     {
+      id: 'platform-admin',
+      label: 'Platform Admin',
+      href: '/platform-admin',
+      icon: Shield,
+      description: 'Root platform administration',
+      familyId: 'platform',
+      order: 0,
+    },
+    {
+      id: 'admin-command-center',
+      label: 'Command Center',
+      href: '/admin-command-center',
+      icon: Settings,
+      description: 'Admin control panel',
+      familyId: 'platform',
+      order: 1,
+    },
+    {
+      id: 'platform-users',
+      label: 'All Users',
+      href: '/platform/users',
+      icon: Users,
+      description: 'Platform-wide user management',
+      familyId: 'platform',
+      order: 2,
+    },
+    {
       id: 'support-dashboard',
       label: 'Support Dashboard',
       href: '/support',
-      icon: Shield,
+      icon: Headphones,
       description: 'Multi-tenant support view',
-    },
-    {
-      id: 'support-workspaces',
-      label: 'All Workspaces',
-      href: '/support/workspaces',
-      icon: Building2,
-      description: 'Browse all organizations',
+      familyId: 'platform',
+      order: 3,
     },
     {
       id: 'support-monitoring',
@@ -558,9 +580,26 @@ export const platformSupportModule: OSModule = {
       href: '/support/monitoring',
       icon: BarChart3,
       description: 'Platform health and metrics',
+      familyId: 'platform',
+      order: 4,
     },
   ],
 };
+
+/**
+ * Curated workspace routes for platform staff (root_admin)
+ * Key operational routes needed for QA/support/monitoring
+ */
+const curatedWorkspaceRoutesForPlatformStaff: string[] = [
+  'schedule-os',         // ScheduleOS™ - verify schedule automation
+  'payroll-os',          // PayrollOS™ - verify payroll processing
+  'bill-os-invoices',    // BillOS™ Invoices - verify invoice generation
+  'time-os',             // TimeOS™ - verify time tracking
+  'employees',           // Employee management
+  'clients',             // Client management
+  'analytics-os',        // AnalyticsOS™ - insights and reporting
+  'integration-os',      // IntegrationOS™ - integration monitoring
+];
 
 /**
  * Get accessible modules and routes for a given role and tier
@@ -648,7 +687,16 @@ export function selectSidebarFamilies(
   // Add regular module routes
   osModules.forEach(module => {
     module.routes.forEach(route => {
-      allRoutes.push(route);
+      // For platform staff, highlight curated routes with QA badge
+      if (isPlatformStaff && curatedWorkspaceRoutesForPlatformStaff.includes(route.id)) {
+        allRoutes.push({
+          ...route,
+          badge: route.badge || 'QA', // Add QA badge for monitoring routes
+        });
+      } else {
+        // All other routes pass through unchanged
+        allRoutes.push(route);
+      }
     });
   });
 

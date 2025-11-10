@@ -6,7 +6,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { GraduationCap, Settings2, Search } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -135,7 +135,6 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const { toggleSidebar } = useSidebar();
 
   // Check if on mobile chat, HelpDeskCab, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
@@ -215,7 +214,10 @@ function AppContent() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={toggleSidebar}
+                        onClick={() => {
+                          const trigger = document.querySelector('[data-testid="button-sidebar-toggle"]') as HTMLButtonElement;
+                          if (trigger) trigger.click();
+                        }}
                         data-testid="button-menu-toggle"
                         className="shrink-0 gap-2"
                       >
