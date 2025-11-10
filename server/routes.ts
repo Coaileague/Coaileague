@@ -1715,6 +1715,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * Get workspace access context for role-based navigation and permissions
+   * Returns lightweight response with role, tier, and platform staff status
+   */
+  app.get('/api/workspace/access', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get platform role
+      const { getUserPlatformRole, isPlatformStaff } = await import('./rbac');
+      const platformRole = await getUserPlatformRole(userId);
+      const staffStatus = isPlatformStaff({ platformRole });
+      
+      // Get workspace and role
+      const { resolveWorkspaceForUser } = await import('./rbac');
+      const { workspaceId, role: workspaceRole, error } = await resolveWorkspaceForUser(userId);
+      
+      if (!workspaceId || !workspaceRole) {
+        return res.status(400).json({ 
+          error: error || 'No workspace access found',
+          requiresWorkspaceSelection: error?.includes('specify workspaceId'),
+        });
+      }
+      
+      // Get workspace tier
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, workspaceId),
+        columns: {
+          subscriptionTier: true,
+          subscriptionStatus: true,
+        },
+      });
+      
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+      
+      res.json({
+        workspaceId,
+        workspaceRole,
+        subscriptionTier: workspace.subscriptionTier || 'free',
+        subscriptionStatus: workspace.subscriptionStatus || 'active',
+        platformRole,
+        isPlatformStaff: staffStatus,
+      });
+    } catch (error) {
+      console.error('[API] Error fetching workspace access:', error);
+      res.status(500).json({ message: 'Failed to fetch workspace access' });
+    }
+  });
+
   // Get current employee profile (Employee Self-Service)
   app.get('/api/employees/me', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
