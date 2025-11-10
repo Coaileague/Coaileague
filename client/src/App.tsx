@@ -78,6 +78,7 @@ import LeadersHub from "@/pages/leaders-hub";
 import MobileChatPage from "@/pages/mobile-chat";
 import EngagementDashboard from "@/pages/engagement-dashboard";
 import EmployeeEngagement from "@/pages/engagement-employee";
+import AnalyticsReportsPage from "@/pages/analytics-reports";
 import Disputes from "@/pages/disputes";
 import MyAuditRecord from "@/pages/my-audit-record";
 import FileGrievance from "@/pages/file-grievance";
@@ -372,6 +373,7 @@ function AppContent() {
                 <Route path="/manager-dashboard" component={ManagerDashboard} />
                 <Route path="/engagement/dashboard" component={EngagementDashboard} />
                 <Route path="/engagement/employee" component={EmployeeEngagement} />
+                <Route path="/analytics/reports" component={AnalyticsReportsPage} />
                 <Route path="/clients" component={Clients} />
                 <Route path="/invoices" component={Invoices} />
                 <Route path="/reports" component={Reports} />

@@ -409,6 +409,17 @@ export const osModules: OSModule[] = [
         familyId: 'growth',
         order: 34,
       },
+      {
+        id: 'insight-os',
+        label: 'InsightOS™ Reports',
+        href: '/analytics/reports',
+        icon: FileCheck2,
+        description: 'Management reports with role-based access',
+        capabilities: ['view_reports'],
+        minimumTier: 'starter',
+        familyId: 'growth',
+        order: 35,
+      },
     ],
   },
   {

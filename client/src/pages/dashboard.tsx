@@ -77,10 +77,13 @@ export default function Dashboard() {
   const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
   const fallbackRole = currentEmployee?.workspaceRole || 'staff';
   
+  // Use fallback employee-derived role while workspace access is loading
+  const effectiveRole = accessLoading ? fallbackRole : workspaceRole;
+  const effectiveTier = accessLoading ? 'free' : subscriptionTier;
+  const effectivePlatformStaff = accessLoading ? false : isPlatformStaff;
+  
   // Get role-specific accessible routes for quick actions
-  const families = accessLoading 
-    ? [] 
-    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+  const families = selectSidebarFamilies(effectiveRole, effectiveTier, effectivePlatformStaff);
   
   // Extract top accessible routes for quick actions (excluding dashboard itself)
   const accessibleRoutes: OSModuleRoute[] = [];

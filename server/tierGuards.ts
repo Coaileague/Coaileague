@@ -42,7 +42,7 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
 
     // Check subscription status
     if (workspace.subscriptionStatus !== 'active') {
-      return res.status(403).json({ 
+      return res.status(402).json({ 
         error: 'Subscription inactive',
         subscriptionStatus: workspace.subscriptionStatus,
         requiresReactivation: true,
@@ -55,7 +55,7 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
     const requiredLevel = tierHierarchy[minimumTier];
 
     if (currentLevel < requiredLevel) {
-      return res.status(403).json({ 
+      return res.status(402).json({ 
         error: `This feature requires ${minimumTier} plan or higher`,
         currentTier,
         minimumTier,

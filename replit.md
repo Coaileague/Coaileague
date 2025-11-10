@@ -19,6 +19,30 @@ Unsaved Changes Protection: Forms and pages with editable content must warn user
 ## System Architecture
 AutoForce™ is built on a modular "OS" design philosophy with **6 major autonomous systems** to ensure clean code, eliminate redundancy, and maximize automation.
 
+### Role-Based Access Control (RBAC) & Tier Gating System
+**Production-ready as of Nov 10, 2025** - Comprehensive role and subscription tier-based feature gating infrastructure:
+
+**Backend Infrastructure:**
+- **server/tierGuards.ts**: Middleware guards (requireStarter/requireProfessional/requireEnterprise) return HTTP 402 for tier upgrades
+- **server/rbac.ts**: Role-based guards (requireSupervisor/requireManager/requireOrgAdmin/requireOrgOwner)
+- **server/services/reportService.ts**: 5 major report functions with workspace scoping and RBAC validation
+- **/api/workspace/access**: Endpoint returning { workspaceRole, subscriptionTier, isPlatformStaff } for current user
+- **/api/reports/\***: Backend reporting routes with combined RBAC + tier guards
+
+**Frontend Infrastructure:**
+- **client/src/lib/osModules.ts**: Single source of truth registry with 38+ routes across 6 OS families (operations, billing, communications, intelligence, audit, admin)
+- **client/src/hooks/useWorkspaceAccess.ts**: React hook for role/tier/platform staff status with loading states
+- **client/src/components/app-sidebar.tsx**: Dynamically filtered sidebar using osModules, shows locked routes with Lock icon + tier badges + tooltips
+- **client/src/pages/dashboard.tsx**: Role-aware dashboard with dynamic quick actions (6-8 cards), upgrade prompts for locked features, loading fallbacks
+
+**Key Features:**
+- **Hierarchical tier system**: Free → Starter → Professional → Enterprise with consistent HTTP 402 upgrade flow
+- **Two-tier role hierarchy**: Platform staff (support/root admin) + workspace roles (staff → supervisor → dept manager → org admin → org owner)
+- **Platform staff override**: Support/root admin bypass workspace tier restrictions for multi-tenant access
+- **Loading resilience**: Dashboard uses employee-derived role fallback during workspace access query
+- **Upgrade UX**: Locked features show Lock icon, amber tier badge, and tooltip with plan requirements
+- **Comprehensive data-testid**: All interactive elements tagged for e2e testing
+
 ### The 6 Major OS Systems
 
 **1. BillOS™** - Administrative Billing & Financial Management
