@@ -140,7 +140,7 @@ export default function ModernMobileChat() {
   // Use WebSocket for real-time messaging
   const { 
     messages, sendMessage, sendRawMessage, kickUser, silenceUser, giveVoice, onlineUsers, isConnected
-  } = useChatroomWebSocket(isAuthenticated ? userId : undefined, userName);
+  } = useChatroomWebSocket(userId || `guest-${sessionId}`, userName); // Use sessionId for guests so WebSocket connects
 
 
   // Show loading transition on initial load
