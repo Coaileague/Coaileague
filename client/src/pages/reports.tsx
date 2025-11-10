@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, ClipboardCheck, Clock, AlertCircle, CheckCircle2, XCircle, Play, Pause, Plus, AlertTriangle } from "lucide-react";
+import { FileText, ClipboardCheck, Clock, AlertCircle, CheckCircle2, XCircle, Play, Pause, Plus, AlertTriangle, Download, FileSpreadsheet } from "lucide-react";
+import { exportReport } from "@/lib/exportUtils";
 import type { ReportTemplate, ReportSubmission } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -385,6 +386,54 @@ export default function ReportsPage() {
     setDisputeDialogOpen(true);
   };
 
+  const handleExport = (format: 'csv' | 'pdf') => {
+    if (submissions.length === 0) {
+      toast({
+        title: "No data available",
+        description: "Cannot export - no report submissions found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const exportData = submissions.map(sub => ({
+      reportNumber: sub.reportNumber || 'N/A',
+      template: templates.find(t => t.id === sub.templateId)?.name || 'Unknown',
+      status: sub.status || 'Unknown',
+      submittedBy: sub.submittedBy || 'System',
+      submittedAt: sub.submittedAt ? format(new Date(sub.submittedAt), 'yyyy-MM-dd HH:mm') : 'N/A',
+      reviewedBy: sub.reviewedBy || '-',
+      reviewedAt: sub.reviewedAt ? format(new Date(sub.reviewedAt), 'yyyy-MM-dd HH:mm') : '-',
+    }));
+
+    exportReport(format, 'Report Submissions', exportData, {
+      columns: ['reportNumber', 'template', 'status', 'submittedBy', 'submittedAt', 'reviewedBy', 'reviewedAt'],
+      columnLabels: {
+        reportNumber: 'Report #',
+        template: 'Template',
+        status: 'Status',
+        submittedBy: 'Submitted By',
+        submittedAt: 'Submitted At',
+        reviewedBy: 'Reviewed By',
+        reviewedAt: 'Reviewed At',
+      },
+      onPopupBlocked: () => {
+        toast({
+          title: "Pop-up Blocked",
+          description: "Please allow pop-ups for this site to download PDF reports. Then try again.",
+          variant: "destructive",
+        });
+      },
+    });
+
+    if (format === 'csv') {
+      toast({
+        title: "CSV Export Started",
+        description: "Your report submissions are downloading",
+      });
+    }
+  };
+
   const activeTemplates = templates.filter(t => t.isActive);
   const inactiveTemplates = templates.filter(t => !t.isActive);
 
@@ -448,7 +497,28 @@ export default function ReportsPage() {
               Create, review, and manage organizational reports
             </p>
           </div>
-          <Dialog open={isNewReportOpen} onOpenChange={setIsNewReportOpen}>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('csv')}
+              data-testid="button-export-csv"
+              className="gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span className="hidden sm:inline">CSV</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('pdf')}
+              data-testid="button-export-pdf"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
+            <Dialog open={isNewReportOpen} onOpenChange={setIsNewReportOpen}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto touch-target" data-testid="button-new-report">
                 <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -508,7 +578,8 @@ export default function ReportsPage() {
               )}
               </div>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
         {/* Mobile-optimized Header Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">

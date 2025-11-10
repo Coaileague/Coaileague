@@ -37,6 +37,11 @@ export default function Analytics() {
       return;
     }
 
+    // Calculate payment rate safely (avoid division by zero)
+    const paymentRate = analytics.totalInvoices > 0
+      ? `${Math.round((analytics.paidInvoices / analytics.totalInvoices) * 100)}%`
+      : 'N/A';
+
     const exportData = [
       { metric: 'Total Revenue', value: `$${analytics.totalRevenue.toLocaleString()}`, category: 'Financial' },
       { metric: 'Hours Worked', value: analytics.totalHoursWorked.toLocaleString(), category: 'Operations' },
@@ -46,7 +51,7 @@ export default function Analytics() {
       { metric: 'Total Clients', value: analytics.clientCount, category: 'Business' },
       { metric: 'Total Invoices', value: analytics.totalInvoices, category: 'Billing' },
       { metric: 'Paid Invoices', value: analytics.paidInvoices, category: 'Billing' },
-      { metric: 'Payment Rate', value: `${Math.round((analytics.paidInvoices / analytics.totalInvoices) * 100)}%`, category: 'Performance' },
+      { metric: 'Payment Rate', value: paymentRate, category: 'Performance' },
       { metric: 'Subscription Plan', value: analytics.workspace.subscriptionTier, category: 'Account' },
       { metric: 'Employee Capacity', value: `${analytics.employeeCount} / ${analytics.workspace.maxEmployees}`, category: 'Limits' },
       { metric: 'Client Capacity', value: `${analytics.clientCount} / ${analytics.workspace.maxClients}`, category: 'Limits' },
@@ -55,12 +60,21 @@ export default function Analytics() {
     exportReport(format, 'Analytics Dashboard', exportData, {
       columns: ['metric', 'value', 'category'],
       columnLabels: { metric: 'Metric', value: 'Value', category: 'Category' },
+      onPopupBlocked: () => {
+        toast({
+          title: "Pop-up Blocked",
+          description: "Please allow pop-ups for this site to download PDF reports. Then try again.",
+          variant: "destructive",
+        });
+      },
     });
 
-    toast({
-      title: `${format.toUpperCase()} Export Started`,
-      description: `Your analytics report is being prepared`,
-    });
+    if (format === 'csv') {
+      toast({
+        title: "CSV Export Started",
+        description: "Your analytics report is downloading",
+      });
+    }
   };
 
   if (isLoading) {

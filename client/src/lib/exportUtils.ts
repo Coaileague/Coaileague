@@ -85,13 +85,17 @@ export function generatePDF(
     orientation?: 'portrait' | 'landscape';
     columns?: string[];
     columnLabels?: Record<string, string>;
+    onPopupBlocked?: () => void;
   }
 ): void {
   // Create a new window for printing
   const printWindow = window.open('', '_blank');
   
   if (!printWindow) {
-    alert('Please allow pop-ups to download PDF reports');
+    // Handle popup blocker gracefully
+    if (options?.onPopupBlocked) {
+      options.onPopupBlocked();
+    }
     return;
   }
   
@@ -255,6 +259,7 @@ export function exportReport(
     columns?: string[];
     columnLabels?: Record<string, string>;
     orientation?: 'portrait' | 'landscape';
+    onPopupBlocked?: () => void;
   }
 ): void {
   const filename = options?.filename || createReportFilename(
@@ -263,12 +268,13 @@ export function exportReport(
   );
   
   if (format === 'csv') {
-    downloadCSV(data, filename.replace('.csv', ''), options?.headers);
+    downloadCSV(data, filename.replace('.csv', ''), options?.headers || options?.columns);
   } else {
     generatePDF(title, data, {
       columns: options?.columns,
       columnLabels: options?.columnLabels,
       orientation: options?.orientation,
+      onPopupBlocked: options?.onPopupBlocked,
     });
   }
 }
