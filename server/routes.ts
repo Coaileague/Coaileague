@@ -654,6 +654,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Workspace health endpoint - returns simplified status for non-technical users
+  app.get('/api/workspace/health', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ error: 'No workspace selected' });
+      }
+
+      // Get workspace with billing info
+      const workspace = await storage.getWorkspace(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      // Check partner integrations
+      const qboConnection = await db.select().from(partnerIntegrations)
+        .where(and(
+          eq(partnerIntegrations.workspaceId, workspaceId),
+          eq(partnerIntegrations.provider, 'quickbooks')
+        ))
+        .limit(1);
+
+      const gustoConnection = await db.select().from(partnerIntegrations)
+        .where(and(
+          eq(partnerIntegrations.workspaceId, workspaceId),
+          eq(partnerIntegrations.provider, 'gusto')
+        ))
+        .limit(1);
+
+      // Determine overall health status
+      const billingActive = workspace.subscriptionStatus === 'active';
+      const hasIntegrations = qboConnection.length > 0 || gustoConnection.length > 0;
+      
+      // Simple traffic light logic
+      let overallStatus: 'green' | 'yellow' | 'red' = 'green';
+      let statusMessage = 'Your workspace is running smoothly';
+      
+      if (!billingActive) {
+        overallStatus = 'red';
+        statusMessage = 'Billing issue - please update payment method';
+      } else if (!hasIntegrations) {
+        overallStatus = 'yellow';
+        statusMessage = 'Connect QuickBooks or Gusto to enable automation';
+      }
+
+      res.json({
+        status: overallStatus,
+        message: statusMessage,
+        billing: {
+          status: workspace.subscriptionStatus || 'inactive',
+          active: billingActive,
+        },
+        integrations: {
+          quickbooks: qboConnection.length > 0 ? 'connected' : 'not_connected',
+          gusto: gustoConnection.length > 0 ? 'connected' : 'not_connected',
+        },
+        automations: {
+          invoicing: qboConnection.length > 0,
+          payroll: gustoConnection.length > 0,
+          scheduling: true, // Always available
+        },
+        safeToRun: billingActive && hasIntegrations,
+      });
+    } catch (error) {
+      console.error('Workspace health check error:', error);
+      res.status(500).json({ error: 'Failed to check workspace health' });
+    }
+  });
   
   // SECURITY: Apply rate limiting BEFORE auth routes to prevent brute-force attacks
   app.use('/api', apiLimiter);
