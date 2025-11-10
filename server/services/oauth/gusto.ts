@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { db } from '../../db';
-import { partnerConnections } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { partnerConnections, oauthStates } from '@shared/schema';
+import { eq, and, lt } from 'drizzle-orm';
+import { encryptToken, decryptToken } from '../../security/tokenEncryption';
 
 /**
  * Gusto OAuth 2.0 Service
@@ -44,7 +45,7 @@ export class GustoOAuthService {
   }
 
   /**
-   * Generate authorization URL for user to grant access
+   * Generate authorization URL for user to grant access with state persistence
    * 
    * @param workspaceId - Workspace requesting authorization
    * @returns Authorization URL and state token
@@ -53,11 +54,21 @@ export class GustoOAuthService {
     // Generate CSRF protection state token
     const state = crypto.randomBytes(32).toString('hex');
     
+    // Store state in database (expires in 10 minutes)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    
+    await db.insert(oauthStates).values({
+      workspaceId,
+      partnerType: 'gusto',
+      state,
+      expiresAt,
+    });
+    
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      state: `${workspaceId}:${state}`, // Encode workspace ID in state
+      state,
     });
 
     const authUrl = `${this.authorizationEndpoint}?${params.toString()}`;
@@ -75,12 +86,29 @@ export class GustoOAuthService {
     code: string,
     state: string
   ): Promise<{ workspaceId: string; connection: any }> {
-    // Extract workspace ID from state
-    const [workspaceId, stateToken] = state.split(':');
+    // Validate state from database
+    const [oauthState] = await db.select()
+      .from(oauthStates)
+      .where(
+        and(
+          eq(oauthStates.state, state),
+          eq(oauthStates.partnerType, 'gusto')
+        )
+      )
+      .limit(1);
     
-    if (!workspaceId || !stateToken) {
-      throw new Error('Invalid state token');
+    if (!oauthState) {
+      throw new Error('Invalid or expired state token');
     }
+    
+    // Check expiry
+    if (new Date() > oauthState.expiresAt) {
+      // Clean up expired state
+      await db.delete(oauthStates).where(eq(oauthStates.id, oauthState.id));
+      throw new Error('State token expired - please try again');
+    }
+    
+    const workspaceId = oauthState.workspaceId;
 
     // Exchange code for tokens
     const response = await fetch(this.tokenEndpoint, {
@@ -105,12 +133,19 @@ export class GustoOAuthService {
 
     const tokens: GustoTokenResponse = await response.json();
 
+    // Clean up used state token
+    await db.delete(oauthStates).where(eq(oauthStates.id, oauthState.id));
+
     // Calculate token expiry time (Gusto tokens expire in 2 hours by default)
     const now = new Date();
-    const accessTokenExpiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
+    const expiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
     
     // Gusto refresh tokens don't expire (but can be revoked)
     const refreshTokenExpiresAt = null;
+
+    // Encrypt tokens before storage
+    const encryptedAccessToken = encryptToken(tokens.access_token);
+    const encryptedRefreshToken = encryptToken(tokens.refresh_token);
 
     // Check if connection already exists
     const existing = await db.select()
@@ -129,16 +164,16 @@ export class GustoOAuthService {
       // Update existing connection
       const [updated] = await db.update(partnerConnections)
         .set({
-          status: 'active',
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-          accessTokenExpiresAt,
+          status: 'connected',
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          expiresAt,
           refreshTokenExpiresAt,
           metadata: {
             tokenType: tokens.token_type,
             scope: tokens.scope,
           },
-          lastSyncedAt: now,
+          lastSyncAt: now,
         })
         .where(eq(partnerConnections.id, existing[0].id))
         .returning();
@@ -149,20 +184,25 @@ export class GustoOAuthService {
       const [created] = await db.insert(partnerConnections).values({
         workspaceId,
         partnerType: 'gusto',
-        status: 'active',
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        accessTokenExpiresAt,
+        partnerName: 'Gusto Payroll',
+        status: 'connected',
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
+        expiresAt,
         refreshTokenExpiresAt,
         metadata: {
           tokenType: tokens.token_type,
           scope: tokens.scope,
         },
-        lastSyncedAt: now,
+        lastSyncAt: now,
       }).returning();
       
       connection = created;
     }
+
+    // Clean up old expired states (housekeeping)
+    await db.delete(oauthStates)
+      .where(lt(oauthStates.expiresAt, now));
 
     return { workspaceId, connection };
   }
@@ -182,6 +222,12 @@ export class GustoOAuthService {
       throw new Error('Connection not found or refresh token missing');
     }
 
+    // Decrypt refresh token
+    const decryptedRefreshToken = decryptToken(connection.refreshToken);
+    if (!decryptedRefreshToken) {
+      throw new Error('Failed to decrypt refresh token');
+    }
+
     const response = await fetch(this.tokenEndpoint, {
       method: 'POST',
       headers: {
@@ -192,7 +238,7 @@ export class GustoOAuthService {
         client_id: this.clientId,
         client_secret: this.clientSecret,
         grant_type: 'refresh_token',
-        refresh_token: connection.refreshToken,
+        refresh_token: decryptedRefreshToken,
       }),
     });
 
@@ -215,15 +261,19 @@ export class GustoOAuthService {
 
     // Calculate new expiry time
     const now = new Date();
-    const accessTokenExpiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
+    const expiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
+
+    // Encrypt new tokens
+    const encryptedAccessToken = encryptToken(tokens.access_token);
+    const encryptedRefreshToken = encryptToken(tokens.refresh_token);
 
     // Update connection with new tokens
     await db.update(partnerConnections)
       .set({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        accessTokenExpiresAt,
-        status: 'active',
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
+        expiresAt,
+        status: 'connected',
       })
       .where(eq(partnerConnections.id, connectionId));
   }
@@ -275,8 +325,8 @@ export class GustoOAuthService {
     // Check if access token is expired (refresh 5 minutes before expiry)
     const expiryBuffer = 5 * 60 * 1000; // 5 minutes
     const now = new Date();
-    const isExpiringSoon = connection.accessTokenExpiresAt && 
-      (now.getTime() + expiryBuffer) >= connection.accessTokenExpiresAt.getTime();
+    const isExpiringSoon = connection.expiresAt && 
+      (now.getTime() + expiryBuffer) >= connection.expiresAt.getTime();
 
     if (isExpiringSoon) {
       // Refresh token
@@ -292,10 +342,12 @@ export class GustoOAuthService {
         throw new Error('Failed to refresh access token');
       }
       
-      return updated.accessToken;
+      // Decrypt and return
+      return decryptToken(updated.accessToken) || '';
     }
 
-    return connection.accessToken;
+    // Decrypt and return current token
+    return decryptToken(connection.accessToken) || '';
   }
 }
 

@@ -1,12 +1,77 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, RequestHandler } from 'express';
 import { quickbooksOAuthService } from './services/oauth/quickbooks';
 import { gustoOAuthService } from './services/oauth/gusto';
-import { requireWorkspaceAccess } from './rbac';
+import { requireAuth } from './auth';
 import { db } from './db';
-import { partnerConnections } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { partnerConnections, users, workspaces } from '@shared/schema';
+import { eq, and, or } from 'drizzle-orm';
 
 const router = Router();
+
+/**
+ * Workspace Authorization Middleware
+ * 
+ * Ensures the authenticated user has access to the workspace they're trying to access.
+ * Prevents cross-tenant data access by validating:
+ * 1. User's currentWorkspaceId matches requested workspaceId, OR
+ * 2. User is the owner of the requested workspace
+ * 
+ * @param workspaceIdSource - Where to find workspaceId: 'body', 'params', or 'query'
+ */
+function requireWorkspaceMembership(
+  workspaceIdSource: 'body' | 'params' | 'query' = 'body'
+): RequestHandler {
+  return async (req: any, res: Response, next) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized - no user session' });
+      }
+
+      // Extract workspaceId from specified source
+      const workspaceId = req[workspaceIdSource]?.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ error: 'Missing workspaceId' });
+      }
+
+      // Check if user has access to this workspace
+      // Method 1: Check if user's currentWorkspaceId matches
+      const [user] = await db.select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (user?.currentWorkspaceId === workspaceId) {
+        // User is currently in this workspace
+        return next();
+      }
+
+      // Method 2: Check if user is the owner of this workspace
+      const [workspace] = await db.select()
+        .from(workspaces)
+        .where(
+          and(
+            eq(workspaces.id, workspaceId),
+            eq(workspaces.ownerId, userId)
+          )
+        )
+        .limit(1);
+
+      if (workspace) {
+        // User owns this workspace
+        return next();
+      }
+
+      // User does not have access
+      return res.status(403).json({ 
+        error: 'Forbidden - you do not have access to this workspace' 
+      });
+    } catch (error: any) {
+      console.error('Workspace membership check error:', error);
+      return res.status(500).json({ error: 'Failed to verify workspace access' });
+    }
+  };
+}
 
 /**
  * Integration Routes
@@ -23,7 +88,7 @@ const router = Router();
  * 
  * Initiate QuickBooks OAuth connection
  */
-router.post('/quickbooks/connect', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.post('/quickbooks/connect', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.body;
 
@@ -80,7 +145,7 @@ router.get('/quickbooks/callback', async (req: Request, res: Response) => {
  * 
  * Disconnect QuickBooks integration
  */
-router.post('/quickbooks/disconnect', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.post('/quickbooks/disconnect', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.body;
 
@@ -118,7 +183,7 @@ router.post('/quickbooks/disconnect', requireWorkspaceAccess(), async (req: Requ
  * 
  * Manually refresh QuickBooks access token
  */
-router.post('/quickbooks/refresh', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.post('/quickbooks/refresh', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.body;
 
@@ -160,7 +225,7 @@ router.post('/quickbooks/refresh', requireWorkspaceAccess(), async (req: Request
  * 
  * Initiate Gusto OAuth connection
  */
-router.post('/gusto/connect', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.post('/gusto/connect', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.body;
 
@@ -216,7 +281,7 @@ router.get('/gusto/callback', async (req: Request, res: Response) => {
  * 
  * Disconnect Gusto integration
  */
-router.post('/gusto/disconnect', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.post('/gusto/disconnect', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.body;
 
@@ -254,7 +319,7 @@ router.post('/gusto/disconnect', requireWorkspaceAccess(), async (req: Request, 
  * 
  * Manually refresh Gusto access token
  */
-router.post('/gusto/refresh', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.post('/gusto/refresh', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.body;
 
@@ -296,7 +361,7 @@ router.post('/gusto/refresh', requireWorkspaceAccess(), async (req: Request, res
  * 
  * Get all partner connections for workspace
  */
-router.get('/connections', requireWorkspaceAccess(), async (req: Request, res: Response) => {
+router.get('/connections', requireAuth, requireWorkspaceMembership('query'), async (req: Request, res: Response) => {
   try {
     const workspaceId = req.query.workspaceId as string;
 
