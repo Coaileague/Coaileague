@@ -717,7 +717,7 @@ export function setupWebSocket(server: Server) {
                   
                   const queueEntry = await queueManager.enqueue({
                     conversationId: payload.conversationId,
-                    userId: payload.userId,
+                    userId: payload.userId?.startsWith('guest-') ? undefined : payload.userId, // Guests don't have user records
                     ticketNumber,
                     userName: displayName,
                     workspaceId: ws.workspaceId,
@@ -1710,7 +1710,7 @@ export function setupWebSocket(server: Server) {
             // Save message to database
             const savedMessage = await storage.createChatMessage({
               conversationId: ws.conversationId, // Use server-bound conversation, not client payload
-              senderId: ws.userId,
+              senderId: ws.userId?.startsWith('guest-') ? null : ws.userId, // Guests don't have user records - use null for FK compatibility
               senderName: displayName, // Use server-formatted display name
               senderType: payload.senderType,
               message: payload.message,
