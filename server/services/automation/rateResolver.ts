@@ -13,6 +13,58 @@ import type { TimeEntry } from "@shared/schema";
  * to ensure consistent rate calculation across the platform.
  */
 
+/**
+ * Holiday Configuration (from workspace.holidayCalendar JSON)
+ */
+export interface HolidayEntry {
+  date: string; // ISO date format "YYYY-MM-DD"
+  name?: string; // Optional holiday name
+  billMultiplier?: number; // Per-holiday billing override
+  payMultiplier?: number; // Per-holiday pay override
+}
+
+/**
+ * Check if a given date is a holiday
+ * @param date Date to check
+ * @param holidays Array of holiday configurations from workspace
+ * @returns Holiday entry if found, null otherwise
+ */
+export function findHoliday(date: Date, holidays: any[]): HolidayEntry | null {
+  if (!holidays || holidays.length === 0) {
+    return null;
+  }
+
+  // Convert date to ISO format (YYYY-MM-DD) for comparison
+  const dateStr = date.toISOString().split('T')[0];
+
+  // Find matching holiday
+  const holiday = holidays.find((h: any) => {
+    if (typeof h === 'string') {
+      return h === dateStr;
+    }
+    if (h && typeof h === 'object' && h.date) {
+      return h.date === dateStr;
+    }
+    return false;
+  });
+
+  if (!holiday) {
+    return null;
+  }
+
+  // Normalize to HolidayEntry format
+  if (typeof holiday === 'string') {
+    return { date: holiday };
+  }
+
+  return {
+    date: holiday.date,
+    name: holiday.name,
+    billMultiplier: holiday.billMultiplier ? parseFloat(holiday.billMultiplier) : undefined,
+    payMultiplier: holiday.payMultiplier ? parseFloat(holiday.payMultiplier) : undefined,
+  };
+}
+
 export interface RateResolutionContext {
   timeEntry: TimeEntry;
   employeeHourlyRate?: string | null;
@@ -134,7 +186,8 @@ export function bucketHours(params: {
     isHoliday = false,
   } = params;
 
-  // Holiday hours get special treatment
+  // Holiday hours get special treatment - all hours count as holiday
+  // Holidays override overtime calculation (per architect guidance)
   if (isHoliday) {
     return {
       regularHours: 0,
@@ -167,5 +220,119 @@ export function bucketHours(params: {
     regularHours,
     overtimeHours,
     holidayHours: 0,
+  };
+}
+
+/**
+ * Apply rate multipliers to bucketed hours
+ * Precedence for multipliers: per-holiday override → client override → workspace default
+ */
+export interface MultiplierContext {
+  baseRate: number;
+  overtimeBillableMultiplier: number;
+  overtimePayMultiplier: number;
+  holidayBillableMultiplier: number;
+  holidayPayMultiplier: number;
+  holidayEntry?: HolidayEntry | null;
+  clientOvertimeMultiplier?: number | null;
+  clientHolidayMultiplier?: number | null;
+}
+
+export interface BucketedAmounts {
+  regularAmount: number;
+  overtimeAmount: number;
+  holidayAmount: number;
+  totalAmount: number;
+  billingMultipliers: {
+    regular: number;
+    overtime: number;
+    holiday: number;
+  };
+}
+
+/**
+ * Calculate billing amounts with multipliers applied to each bucket
+ */
+export function calculateBillingAmounts(
+  bucket: HoursBucket,
+  context: MultiplierContext
+): BucketedAmounts {
+  const {
+    baseRate,
+    overtimeBillableMultiplier,
+    holidayBillableMultiplier,
+    holidayEntry,
+    clientOvertimeMultiplier,
+    clientHolidayMultiplier,
+  } = context;
+
+  // Resolve overtime multiplier (client override → workspace default)
+  const otMultiplier = clientOvertimeMultiplier !== null && clientOvertimeMultiplier !== undefined
+    ? clientOvertimeMultiplier
+    : overtimeBillableMultiplier;
+
+  // Resolve holiday multiplier (per-holiday → client override → workspace default)
+  let holidayMultiplier = holidayBillableMultiplier;
+  if (holidayEntry?.billMultiplier !== undefined) {
+    holidayMultiplier = holidayEntry.billMultiplier;
+  } else if (clientHolidayMultiplier !== null && clientHolidayMultiplier !== undefined) {
+    holidayMultiplier = clientHolidayMultiplier;
+  }
+
+  // Calculate amounts per bucket
+  const regularAmount = calculateAmount(bucket.regularHours, baseRate);
+  const overtimeAmount = calculateAmount(bucket.overtimeHours, baseRate * otMultiplier);
+  const holidayAmount = calculateAmount(bucket.holidayHours, baseRate * holidayMultiplier);
+
+  return {
+    regularAmount,
+    overtimeAmount,
+    holidayAmount,
+    totalAmount: regularAmount + overtimeAmount + holidayAmount,
+    billingMultipliers: {
+      regular: 1.0,
+      overtime: otMultiplier,
+      holiday: holidayMultiplier,
+    },
+  };
+}
+
+/**
+ * Calculate payroll amounts with multipliers applied to each bucket
+ */
+export function calculatePayrollAmounts(
+  bucket: HoursBucket,
+  context: MultiplierContext
+): BucketedAmounts {
+  const {
+    baseRate,
+    overtimePayMultiplier,
+    holidayPayMultiplier,
+    holidayEntry,
+  } = context;
+
+  // For payroll, client overrides don't apply (employee-specific rates only)
+  const otMultiplier = overtimePayMultiplier;
+
+  // Resolve holiday multiplier (per-holiday → workspace default)
+  const holidayMultiplier = holidayEntry?.payMultiplier !== undefined
+    ? holidayEntry.payMultiplier
+    : holidayPayMultiplier;
+
+  // Calculate amounts per bucket
+  const regularAmount = calculateAmount(bucket.regularHours, baseRate);
+  const overtimeAmount = calculateAmount(bucket.overtimeHours, baseRate * otMultiplier);
+  const holidayAmount = calculateAmount(bucket.holidayHours, baseRate * holidayMultiplier);
+
+  return {
+    regularAmount,
+    overtimeAmount,
+    holidayAmount,
+    totalAmount: regularAmount + overtimeAmount + holidayAmount,
+    billingMultipliers: {
+      regular: 1.0,
+      overtime: otMultiplier,
+      holiday: holidayMultiplier,
+    },
   };
 }
