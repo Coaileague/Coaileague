@@ -62,7 +62,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
-      <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
@@ -243,7 +243,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
-      <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">

@@ -1720,9 +1720,9 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         onClose={() => setShowPriorityPanel(false)}
       />
 
-      {/* Room Status Dialog - Functional with Select + Textarea + Save */}
+      {/* Room Status Dialog - Functional with Select + Textarea + Save - Mobile responsive */}
       <Dialog open={showRoomStatus && isStaff} onOpenChange={(open) => { if (!open) setShowRoomStatus(false); }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <WFLogoCompact className="h-8 w-auto" />
@@ -1923,12 +1923,12 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
         </SheetContent>
       </Sheet>
 
-      {/* User Profile/Diagnostics Dialog */}
+      {/* User Profile/Diagnostics Dialog - Mobile responsive */}
       <Dialog open={showUserProfile} onOpenChange={(open) => {
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border border-white/10 text-white">
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
               <AutoForceLogo size="sm" variant="icon" />
