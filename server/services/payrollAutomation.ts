@@ -15,6 +15,7 @@ import { db } from "../db";
 import { timeEntries, employees, payrollRuns, payrollEntries, workspaces, invoiceLineItems, type TimeEntry } from "@shared/schema";
 import { eq, and, gte, lte, isNull, sql, notInArray } from "drizzle-orm";
 import { startOfWeek, endOfWeek, subWeeks, format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { aggregatePayrollHours, markEntriesAsPayrolled } from "./automation/payrollHoursAggregator";
 
 interface PayPeriod {
   start: Date;
@@ -27,6 +28,7 @@ interface PayrollCalculation {
   employeeName: string;
   regularHours: number;
   overtimeHours: number;
+  holidayHours: number; // Added for FLSA holiday pay tracking
   hourlyRate: number;
   grossPay: number;
   federalTax: number;
@@ -172,6 +174,8 @@ export class PayrollAutomationEngine {
     totalGrossPay: number;
     totalNetPay: number;
     calculations: PayrollCalculation[];
+    timeEntryIds: string[];
+    warnings: string[];
   }> {
     // Get workspace pay schedule
     const workspace = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
@@ -191,53 +195,55 @@ export class PayrollAutomationEngine {
         )
       );
     
+    // Use production aggregator for FLSA-compliant payroll calculation
+    const aggregationResult = await aggregatePayrollHours({
+      workspaceId,
+      startDate: payPeriod.start,
+      endDate: payPeriod.end,
+    });
+    
+    // Log warnings for human review (surfaced in payroll review dashboard)
+    if (aggregationResult.warnings.length > 0) {
+      console.warn('[PayrollOS™] Payroll hours aggregation warnings:', aggregationResult.warnings);
+    }
+    
+    // Fail early if no employees to process (prevent empty payroll runs)
+    if (aggregationResult.employeeSummaries.length === 0) {
+      console.warn('[PayrollOS™] No employees with approved hours for period:', payPeriod);
+      throw new Error('No employees with approved time entries found for payroll period');
+    }
+    
     const calculations: PayrollCalculation[] = [];
     let totalGrossPay = 0;
     let totalNetPay = 0;
     
-    // Calculate payroll for each employee
-    for (const employee of activeEmployees) {
-      // Get time entries for pay period
-      const employeeTimeEntries = await db
-        .select()
-        .from(timeEntries)
-        .where(
-          and(
-            eq(timeEntries.workspaceId, workspaceId),
-            eq(timeEntries.employeeId, employee.id),
-            gte(timeEntries.clockIn, payPeriod.start),
-            lte(timeEntries.clockIn, payPeriod.end)
-          )
-        );
+    // Collect all time entry IDs for marking as payrolled after approval
+    const allTimeEntryIds: string[] = [];
+    const allWarnings = [...aggregationResult.warnings];
+    
+    // Process each employee's payroll summary from aggregator
+    for (const employeeSummary of aggregationResult.employeeSummaries) {
+      // Use aggregator's FLSA-compliant hour calculations
+      const regularHours = employeeSummary.totalRegularHours;
+      const overtimeHours = employeeSummary.totalOvertimeHours;
+      const holidayHours = employeeSummary.totalHolidayHours;
       
-      // Filter out billed entries (check invoice_line_items)
-      const billedTimeEntryIds = await db
-        .select({ timeEntryId: invoiceLineItems.timeEntryId })
-        .from(invoiceLineItems)
-        .where(isNotNull(invoiceLineItems.timeEntryId));
+      // Use aggregator's calculated pay amounts (preserves mixed-rate accuracy)
+      const grossPay = employeeSummary.grossPay;
       
-      const billedIds = new Set(billedTimeEntryIds.map(item => item.timeEntryId).filter(Boolean));
-      const unbilledEntries = employeeTimeEntries.filter(entry => !billedIds.has(entry.id));
+      // Calculate weighted average hourly rate for display
+      // Use equivalent hours for proper weighting (regular + 1.5*OT + 2*holiday)
+      const equivalentHours = regularHours + (overtimeHours * 1.5) + (holidayHours * 2.0);
+      const hourlyRate = equivalentHours > 0 ? grossPay / equivalentHours : 0;
       
-      // Sum total hours
-      const totalHours = unbilledEntries.reduce((sum: number, entry: TimeEntry) => {
-        return sum + parseFloat(entry.totalHours?.toString() || '0');
-      }, 0);
+      // Validate rate calculation - warn if grossPay is 0 but hours exist
+      if (grossPay === 0 && (regularHours > 0 || overtimeHours > 0 || holidayHours > 0)) {
+        const warning = `Employee ${employeeSummary.employeeName} has ${regularHours + overtimeHours + holidayHours} hours but $0 gross pay - missing pay rates`;
+        allWarnings.push(warning);
+        console.warn(`[PayrollOS™] ${warning}`);
+      }
       
-      if (totalHours === 0) continue; // Skip employees with no hours
-      
-      // Calculate regular and overtime hours
-      const { regular, overtime } = this.calculateOvertimeHours(totalHours);
-      
-      const hourlyRate = parseFloat(employee.hourlyRate?.toString() || '0');
-      const overtimeRate = hourlyRate * 1.5;
-      
-      // Calculate gross pay
-      const regularPay = regular * hourlyRate;
-      const overtimePay = overtime * overtimeRate;
-      const grossPay = regularPay + overtimePay;
-      
-      // Calculate taxes and deductions
+      // Calculate taxes and deductions on gross pay
       const federalTax = this.calculateFederalTax(grossPay, payPeriod.type);
       const stateTax = this.calculateStateTax(grossPay);
       const socialSecurity = this.calculateSocialSecurity(grossPay);
@@ -248,10 +254,11 @@ export class PayrollAutomationEngine {
       const netPay = grossPay - totalDeductions;
       
       calculations.push({
-        employeeId: employee.id,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
-        regularHours: regular,
-        overtimeHours: overtime,
+        employeeId: employeeSummary.employeeId,
+        employeeName: employeeSummary.employeeName,
+        regularHours,
+        overtimeHours,
+        holidayHours, // Include holiday hours for QC review
         hourlyRate,
         grossPay: parseFloat(grossPay.toFixed(2)),
         federalTax,
@@ -263,6 +270,9 @@ export class PayrollAutomationEngine {
       
       totalGrossPay += grossPay;
       totalNetPay += netPay;
+      
+      // Collect time entry IDs for marking as payrolled
+      allTimeEntryIds.push(...employeeSummary.entries.map(e => e.timeEntryId));
     }
     
     // Create payroll run (status: pending for 1% QC)
@@ -289,6 +299,7 @@ export class PayrollAutomationEngine {
         workspaceId,
         regularHours: calc.regularHours.toFixed(2),
         overtimeHours: calc.overtimeHours.toFixed(2),
+        holidayHours: calc.holidayHours.toFixed(2), // Persist holiday hours for audit trail
         hourlyRate: calc.hourlyRate.toFixed(2),
         grossPay: calc.grossPay.toFixed(2),
         federalTax: calc.federalTax.toFixed(2),
@@ -304,14 +315,18 @@ export class PayrollAutomationEngine {
       totalEmployees: calculations.length,
       totalGrossPay: parseFloat(totalGrossPay.toFixed(2)),
       totalNetPay: parseFloat(totalNetPay.toFixed(2)),
-      calculations
+      calculations,
+      timeEntryIds: allTimeEntryIds, // Return for marking as payrolled after approval
+      warnings: allWarnings, // Surface warnings to caller
     };
   }
   
   /**
    * Approve payroll run (1% human QC step)
+   * Marks time entries as payrolled after approval
+   * BACKWARD COMPATIBLE: timeEntryIds optional for existing callers
    */
-  static async approvePayrollRun(payrollRunId: string, approverId: string): Promise<void> {
+  static async approvePayrollRun(payrollRunId: string, approverId: string, timeEntryIds?: string[]): Promise<void> {
     await db
       .update(payrollRuns)
       .set({
@@ -320,6 +335,16 @@ export class PayrollAutomationEngine {
         processedAt: new Date()
       })
       .where(eq(payrollRuns.id, payrollRunId));
+    
+    // Mark time entries as payrolled after approval (if IDs provided)
+    if (timeEntryIds && timeEntryIds.length > 0) {
+      await markEntriesAsPayrolled({
+        timeEntryIds,
+        payrollRunId,
+      });
+    } else {
+      console.warn(`[PayrollOS™] Approved payroll ${payrollRunId} without marking entries - timeEntryIds not provided`);
+    }
   }
   
   /**

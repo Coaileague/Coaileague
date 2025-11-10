@@ -2736,6 +2736,7 @@ export const payrollEntries = pgTable("payroll_entries", {
 
   regularHours: decimal("regular_hours", { precision: 8, scale: 2 }).default("0.00"),
   overtimeHours: decimal("overtime_hours", { precision: 8, scale: 2 }).default("0.00"),
+  holidayHours: decimal("holiday_hours", { precision: 8, scale: 2 }).default("0.00"),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }).notNull(),
 
   grossPay: decimal("gross_pay", { precision: 10, scale: 2 }).default("0.00"),
