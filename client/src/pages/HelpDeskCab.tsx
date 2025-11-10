@@ -68,6 +68,9 @@ import {
 } from "@/components/ui/context-menu";
 import { SeasonalBackground } from "@/components/seasonal-background";
 import type { ChatMessage } from "@shared/schema";
+import { HelpDeskProgressHeader } from "@/components/helpdesk-progress-header";
+import { AgentToolbelt } from "@/components/agent-toolbelt";
+import { TicketContextPanel } from "@/components/ticket-context-panel";
 
 const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 
@@ -118,6 +121,10 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
   const [documentRequests, setDocumentRequests] = useState<Map<string, Set<string>>>(new Map());
   // Map structure: userId => Set of request types ('authenticate', 'document', 'photo', 'signature', 'info')
+  
+  // Enhanced HelpDesk state
+  const [ticketStatus, setTicketStatus] = useState<'new' | 'assigned' | 'investigating' | 'waiting_user' | 'resolved' | 'escalated'>('investigating');
+  const [showContextPanel, setShowContextPanel] = useState(true);
   
   // Seasonal animations toggle (staff only)
   const [seasonalAnimationsEnabled, setSeasonalAnimationsEnabled] = useState(() => {
@@ -1042,6 +1049,19 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
       <main className="flex flex-grow overflow-hidden w-full relative z-10">
         {/* CENTER COLUMN: Chat Area - Clear boundary */}
         <section className="flex-grow flex flex-col bg-white/60 backdrop-blur-md relative border-r-2 border-slate-300/70 shadow-inner">
+          {/* Progress Header - Only visible to staff */}
+          {isStaff && (
+            <div className="px-4 py-3 border-b border-slate-300/70 bg-white/40">
+              <HelpDeskProgressHeader
+                status={ticketStatus}
+                assignedAgent={userName}
+                slaRemaining={3600}
+                priority="normal"
+                ticketId={sessionId}
+              />
+            </div>
+          )}
+          
           {/* Messages Area */}
           <ScrollArea className="flex-grow p-3">
             <div className="space-y-2">
@@ -1104,6 +1124,43 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
 
           {/* Input Area */}
           <div className="border-t-2 border-primary bg-white/90 backdrop-blur-sm p-4">
+            {/* Agent Toolbelt - Only visible to staff */}
+            {isStaff && (
+              <div className="mb-3 flex items-center gap-2">
+                <AgentToolbelt
+                  ticketId={sessionId}
+                  onMacroInsert={(macro) => setInputMessage(prev => prev ? `${prev}\n\n${macro}` : macro)}
+                  onRequestFile={(type) => {
+                    sendMessage(`📎 Please provide: ${type}`, userName, 'support');
+                    toast({ title: "File Request Sent", description: `Requested ${type} from customer` });
+                  }}
+                  onSendKBLink={(link) => setInputMessage(prev => prev ? `${prev}\n\n${link}` : link)}
+                  onEscalate={(reason, queue) => {
+                    setTicketStatus('escalated');
+                    sendMessage(`⚠️ Escalating to ${queue}: ${reason}`, userName, 'system');
+                    toast({ title: "Ticket Escalated", description: `Sent to ${queue} queue` });
+                  }}
+                  onCreateBug={(description) => {
+                    toast({ title: "Bug Report Created", description: "Engineering team notified" });
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const statuses: typeof ticketStatus[] = ['assigned', 'investigating', 'waiting_user', 'resolved'];
+                    const currentIndex = statuses.indexOf(ticketStatus);
+                    const nextIndex = (currentIndex + 1) % statuses.length;
+                    setTicketStatus(statuses[nextIndex]);
+                    toast({ title: "Status Updated", description: `Changed to ${statuses[nextIndex]}` });
+                  }}
+                  data-testid="button-update-status"
+                >
+                  Update Status
+                </Button>
+              </div>
+            )}
+            
             <div className="flex items-end gap-2">
               <Input
                 value={inputMessage}
