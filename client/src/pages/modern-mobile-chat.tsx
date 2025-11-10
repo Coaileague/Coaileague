@@ -533,6 +533,18 @@ export default function ModernMobileChat() {
   }, []);
 
   const handleSend = () => {
+    // Guard: Don't send if disconnected or silenced
+    if (!isConnected || isSilenced) {
+      if (isSilenced) {
+        toast({
+          title: "Cannot Send",
+          description: "You don't have permission to send messages yet.",
+          duration: 2000,
+        });
+      }
+      return;
+    }
+    
     const trimmedMessage = messageText.trim();
     if (trimmedMessage) {
       sendMessage(trimmedMessage, userName, isStaff ? 'support' : 'customer');
