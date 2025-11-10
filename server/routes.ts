@@ -18607,6 +18607,178 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
   });
 
   // ============================================================================
+  // AUTOMATION TESTING & MANUAL TRIGGERS (Development & Testing Only)
+  // ============================================================================
+
+  /**
+   * DEVELOPMENT ONLY: Seed expired idempotency keys for cleanup testing
+   * Creates test keys with createdAt in the past to verify cleanup cron
+   */
+  app.post('/api/dev/seed-expired-keys', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { count = 5, daysOld = 65 } = req.body;
+      const workspaceId = req.workspace!.id;
+      const { idempotencyKeys } = await import('@shared/schema');
+      const { sql } = await import('drizzle-orm');
+      
+      // Generate expired test keys
+      const expiredDate = new Date();
+      expiredDate.setDate(expiredDate.getDate() - daysOld);
+      
+      // Backdate expiresAt to match createdAt + TTL (makes keys truly expired)
+      const expiredExpiresAt = new Date(expiredDate);
+      expiredExpiresAt.setDate(expiredExpiresAt.getDate() + 1); // createdAt + 1 day TTL
+      
+      const seededKeys = [];
+      for (let i = 0; i < count; i++) {
+        const result = await db.insert(idempotencyKeys).values({
+          workspaceId,
+          operationType: 'test_cleanup',
+          requestFingerprint: `test-expired-${Date.now()}-${i}`,
+          status: 'completed',
+          expiresAt: expiredExpiresAt, // Backdated to be truly expired
+          createdAt: expiredDate, // 65 days old
+          statusVersion: 1,
+        }).returning({ id: idempotencyKeys.id });
+        
+        if (result[0]) {
+          seededKeys.push(result[0].id);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Seeded ${count} expired idempotency keys`,
+        keys: seededKeys,
+        daysOld,
+        expirationDate: expiredDate.toISOString(),
+      });
+    } catch (error: any) {
+      console.error('[DEV] Error seeding expired keys:', error);
+      res.status(500).json({ message: 'Failed to seed expired keys' });
+    }
+  });
+
+  /**
+   * DEVELOPMENT ONLY: Manually trigger automation jobs for testing
+   * Supports: invoicing, scheduling, payroll, cleanup
+   */
+  app.post('/api/dev/trigger-automation/:jobType', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobType } = req.params;
+      const { manualTriggers } = await import('./services/autonomousScheduler');
+      
+      const validJobs = ['invoicing', 'scheduling', 'payroll', 'cleanup'] as const;
+      if (!validJobs.includes(jobType as any)) {
+        return res.status(400).json({ 
+          message: 'Invalid job type', 
+          validJobs 
+        });
+      }
+      
+      // Trigger the job asynchronously
+      const trigger = manualTriggers[jobType as keyof typeof manualTriggers];
+      
+      // Don't await - just start the job and return immediately
+      trigger().catch((error: any) => {
+        console.error(`[DEV] Error in manual ${jobType} trigger:`, error);
+      });
+      
+      res.json({
+        success: true,
+        message: `${jobType} automation triggered (running asynchronously)`,
+        jobType,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('[DEV] Error triggering automation:', error);
+      res.status(500).json({ message: 'Failed to trigger automation' });
+    }
+  });
+
+  /**
+   * DEVELOPMENT ONLY: Query automation audit logs
+   * Returns recent automation lifecycle events for verification
+   */
+  app.get('/api/dev/automation-audit-logs', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspace!.id;
+      const { limit = 50, jobType } = req.query;
+      
+      // Query audit logs for automation events
+      const actions = [
+        'automation_job_start',
+        'automation_job_complete',
+        'automation_job_error'
+      ];
+      
+      let query = db
+        .select()
+        .from((await import('@shared/schema')).auditLogs)
+        .where(
+          (await import('drizzle-orm')).and(
+            (await import('drizzle-orm')).eq((await import('@shared/schema')).auditLogs.workspaceId, workspaceId),
+            (await import('drizzle-orm')).inArray((await import('@shared/schema')).auditLogs.action, actions)
+          )
+        )
+        .orderBy((await import('drizzle-orm')).desc((await import('@shared/schema')).auditLogs.timestamp))
+        .limit(Number(limit));
+      
+      const logs = await query;
+      
+      // Filter by jobType if specified
+      const filteredLogs = jobType 
+        ? logs.filter(log => log.metadata?.jobType === jobType)
+        : logs;
+      
+      res.json({
+        success: true,
+        logs: filteredLogs,
+        count: filteredLogs.length,
+        workspaceId,
+      });
+    } catch (error: any) {
+      console.error('[DEV] Error fetching automation audit logs:', error);
+      res.status(500).json({ message: 'Failed to fetch automation audit logs' });
+    }
+  });
+
+  /**
+   * DEVELOPMENT ONLY: Query idempotency keys for debugging
+   * Shows recent keys with their status and metadata
+   */
+  app.get('/api/dev/idempotency-keys', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { limit = 50, status } = req.query;
+      
+      const { idempotencyKeys } = await import('@shared/schema');
+      const { desc, eq } = await import('drizzle-orm');
+      
+      let query = db
+        .select()
+        .from(idempotencyKeys)
+        .orderBy(desc(idempotencyKeys.createdAt))
+        .limit(Number(limit));
+      
+      const keys = await query;
+      
+      // Filter by status if specified
+      const filteredKeys = status 
+        ? keys.filter(key => key.status === status)
+        : keys;
+      
+      res.json({
+        success: true,
+        keys: filteredKeys,
+        count: filteredKeys.length,
+      });
+    } catch (error: any) {
+      console.error('[DEV] Error fetching idempotency keys:', error);
+      res.status(500).json({ message: 'Failed to fetch idempotency keys' });
+    }
+  });
+
+  // ============================================================================
   // INSIGHTOS™ - AI ANALYTICS & AUTONOMOUS INSIGHTS API
   // ============================================================================
 
