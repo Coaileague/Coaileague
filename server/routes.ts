@@ -39,6 +39,7 @@ import { queueManager } from './services/helpOsQueue';
 import { HelpOSAI } from './helpos-ai';
 import { seedAnchor } from './services/utils/scheduling';
 import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, type AuthenticatedRequest } from "./rbac";
+import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { 
   insertWorkspaceSchema,
   insertEmployeeSchema,
@@ -1763,6 +1764,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching workspace access:', error);
       res.status(500).json({ message: 'Failed to fetch workspace access' });
+    }
+  });
+
+  // ==================== REPORTING API ROUTES ====================
+  
+  /**
+   * Billable Hours Report
+   * Shows approved billable time entries grouped by client/employee
+   * RBAC: supervisor+ (view_reports capability)
+   * Tier: starter+
+   */
+  app.get('/api/reports/billable-hours', requireAuth, requireSupervisor, requireStarter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { workspaceId } = await getWorkspaceForUser(req.user!.id);
+      
+      // Parse query parameters
+      const filters = {
+        workspaceId,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        clientId: req.query.clientId as string | undefined,
+        employeeId: req.query.employeeId as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 1000,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+      
+      const { getBillableHoursReport } = await import('./services/reportService');
+      const report = await getBillableHoursReport(filters);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('[Reports] Error generating billable hours report:', error);
+      res.status(500).json({ message: 'Failed to generate billable hours report' });
+    }
+  });
+
+  /**
+   * Payroll Report
+   * Shows approved payroll hours and earnings by employee
+   * RBAC: manager+ (view_payroll capability)
+   * Tier: professional+
+   */
+  app.get('/api/reports/payroll', requireAuth, requireManager, requireProfessional, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { workspaceId } = await getWorkspaceForUser(req.user!.id);
+      
+      const filters = {
+        workspaceId,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        employeeId: req.query.employeeId as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 1000,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+      
+      const { getPayrollReport } = await import('./services/reportService');
+      const report = await getPayrollReport(filters);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('[Reports] Error generating payroll report:', error);
+      res.status(500).json({ message: 'Failed to generate payroll report' });
+    }
+  });
+
+  /**
+   * Client Summary Report
+   * Shows invoice totals by client
+   * RBAC: manager+ (view_invoices capability)
+   * Tier: starter+
+   */
+  app.get('/api/reports/client-summary', requireAuth, requireManager, requireStarter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { workspaceId } = await getWorkspaceForUser(req.user!.id);
+      
+      const filters = {
+        workspaceId,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        clientId: req.query.clientId as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 100,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+      
+      const { getClientSummaryReport } = await import('./services/reportService');
+      const report = await getClientSummaryReport(filters);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('[Reports] Error generating client summary report:', error);
+      res.status(500).json({ message: 'Failed to generate client summary report' });
+    }
+  });
+
+  /**
+   * Employee Activity Report
+   * Shows shift attendance and time entry patterns
+   * RBAC: supervisor+ (approve_timesheets capability)
+   * Tier: starter+
+   */
+  app.get('/api/reports/employee-activity', requireAuth, requireSupervisor, requireStarter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { workspaceId } = await getWorkspaceForUser(req.user!.id);
+      
+      const filters = {
+        workspaceId,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        employeeId: req.query.employeeId as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 1000,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+      
+      const { getEmployeeActivityReport } = await import('./services/reportService');
+      const report = await getEmployeeActivityReport(filters);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('[Reports] Error generating employee activity report:', error);
+      res.status(500).json({ message: 'Failed to generate employee activity report' });
+    }
+  });
+
+  /**
+   * Audit Logs Report
+   * Shows compliance audit trail filtered by action or date range
+   * RBAC: manager+ (view_audit_logs capability)
+   * Tier: professional+
+   */
+  app.get('/api/reports/audit-logs', requireAuth, requireManager, requireProfessional, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { workspaceId } = await getWorkspaceForUser(req.user!.id);
+      
+      const filters = {
+        workspaceId,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        action: req.query.action as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 500,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+      
+      const { getAuditLogsReport } = await import('./services/reportService');
+      const report = await getAuditLogsReport(filters);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('[Reports] Error generating audit logs report:', error);
+      res.status(500).json({ message: 'Failed to generate audit logs report' });
     }
   });
 
