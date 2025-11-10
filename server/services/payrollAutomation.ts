@@ -379,13 +379,9 @@ export const calculatePayroll = (params: {
   hourlyRate: number;
   taxState: string;
 }) => {
-  return PayrollAutomationEngine.calculatePayroll(
-    params.timeEntries,
-    params.employeeId,
-    params.employeeName,
-    params.hourlyRate,
-    params.taxState
-  );
+  // Legacy function - use processAutomatedPayroll instead
+  console.warn('[PayrollOS™] Legacy calculatePayroll called - use processAutomatedPayroll with aggregator instead');
+  throw new Error('calculatePayroll is deprecated - use processAutomatedPayroll instead');
 };
 
 export const createAutomatedPayrollRun = async (params: {

@@ -57,6 +57,8 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
         - **Drift Detection**: Warns if anchor >30 days behind current date, enabling proactive monitoring.
         - **Backfill Support**: Standalone script seeds anchors for existing workspaces, ensuring smooth transition to anchor-based system.
         - **Automated Data Collection**: Production-ready billable and payroll hours aggregation services automatically collect, validate, and aggregate approved time entries with workspace-configured OT rules, FLSA-compliant weekly resets, employee-first grouping for deterministic OT, chronological sorting, batch-loaded rates, and N+1 query elimination. Services output structured summaries ready for invoice/payroll generation.
+- **BillOS™ Integration**: Fully integrated with billable hours aggregator. Generates draft invoices with employee-grouped line items showing regular/OT/holiday hour breakdowns. Handles mixed-rate scenarios by preserving per-entry amounts. Surfaced warnings for manager review.
+- **PayrollOS™ Integration**: Fully integrated with payroll hours aggregator. Generates pending payroll runs with FLSA-compliant tax calculations. Extended schema with `holidayHours` field for complete audit trail. Fails early on empty aggregation, surfaces warnings to callers, maintains backward-compatible approval workflow.
 - **Security**: Includes Stripe webhook signature validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 - **Production Monitoring**: Comprehensive observability infrastructure with error logging, performance metrics tracking, health checks, slow request detection, and graceful shutdown handling.
 
