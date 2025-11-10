@@ -1,0 +1,89 @@
+Perfect 👍 — you don’t need a full project, just a universal snippet that makes any webpage automatically resize, wrap, and fit all content (text, buttons, images) nicely across all screen sizes.
+
+Here’s a drop-in responsive layout script + CSS that you can paste into any existing page — it’ll instantly make everything adapt to mobile, tablet, and desktop.
+
+✅ Universal Responsive Code
+💾 HTML
+
+Put this inside your <head> (for proper scaling):
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* UNIVERSAL RESPONSIVE RESET + FLUID RULES */
+
+/* 1. Basic normalization */
+* {
+  box-sizing: border-box;
+  max-width: 100%;           /* prevents overflow on images and divs */
+  word-wrap: break-word;     /* prevents long text overflow */
+}
+
+/* 2. Body scaling */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  width: 100%;
+  overflow-x: hidden;        /* stops sideways scrolling */
+}
+
+/* 3. Flexible layout for any containers */
+.container, section, header, footer, main {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+/* 4. Responsive text that scales automatically */
+h1 { font-size: clamp(1.8rem, 6vw, 3rem); }
+h2 { font-size: clamp(1.4rem, 4vw, 2.2rem); }
+h3 { font-size: clamp(1.2rem, 3vw, 1.8rem); }
+p, li, a, span, button {
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+}
+
+/* 5. Images always fit */
+img, video, iframe {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+/* 6. Flexible hero or grid sections */
+.flex-wrap, .row {
+  display: flex;
+  flex-wrap: wrap;            /* ✅ auto-wraps text & image */
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+/* 7. Buttons scale properly */
+button, .btn {
+  padding: clamp(0.6rem, 1.5vw, 0.9rem) clamp(1rem, 3vw, 1.5rem);
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #F7B500;
+  color: #101113;
+  transition: 0.2s ease;
+}
+button:hover, .btn:hover { background: #FFD34D; }
+
+/* 8. Responsive stacking for smaller screens */
+@media (max-width: 768px) {
+  .flex-wrap, .row {
+    flex-direction: column;   /* ✅ stacks text above image on mobile */
+    text-align: center;
+  }
+  img {
+    max-width: 90%;
+    margin: 0 auto;
+  }
+}
+</style>
