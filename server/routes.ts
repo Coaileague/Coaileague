@@ -1797,7 +1797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       
-      // Get platform role
+      // Get platform role FIRST (always available)
       const { getUserPlatformRole, isPlatformStaff } = await import('./rbac');
       const platformRole = await getUserPlatformRole(userId);
       const staffStatus = isPlatformStaff({ platformRole });
@@ -1806,6 +1806,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role: workspaceRole, error } = await resolveWorkspaceForUser(userId);
       
+      // For platform staff without workspace context, return platform access only
+      if ((!workspaceId || !workspaceRole) && staffStatus) {
+        return res.json({
+          workspaceId: null,
+          workspaceRole: 'staff', // Default workspace role for platform staff
+          subscriptionTier: 'enterprise', // Platform staff get full access
+          subscriptionStatus: 'active',
+          platformRole,
+          isPlatformStaff: true,
+        });
+      }
+      
+      // For non-staff users, workspace is required
       if (!workspaceId || !workspaceRole) {
         return res.status(400).json({ 
           error: error || 'No workspace access found',

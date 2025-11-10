@@ -13,10 +13,6 @@ import {
   Building2,
   HelpCircle,
   Shield,
-  Database,
-  Code,
-  FileDown,
-  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,49 +47,6 @@ interface PeekRailNavProps {
   defaultPinned?: boolean;
 }
 
-interface QuickLink {
-  id: string;
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  badge?: string;
-  platformRolesOnly?: boolean;
-}
-
-// Root admin quick links for platform operations
-const platformQuickLinks: QuickLink[] = [
-  {
-    id: "api-console",
-    label: "API Console",
-    href: "/platform/api-console",
-    icon: Code,
-    badge: "Dev",
-    platformRolesOnly: true,
-  },
-  {
-    id: "data-exports",
-    label: "Data Exports",
-    href: "/platform/data-exports",
-    icon: FileDown,
-    badge: "Admin",
-    platformRolesOnly: true,
-  },
-  {
-    id: "system-health",
-    label: "System Health",
-    href: "/platform/health",
-    icon: Activity,
-    platformRolesOnly: true,
-  },
-  {
-    id: "database-admin",
-    label: "Database Admin",
-    href: "/platform/database",
-    icon: Database,
-    badge: "Root",
-    platformRolesOnly: true,
-  },
-];
 
 export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
   const [location] = useLocation();
@@ -222,11 +175,6 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
   const families = isLoading
     ? []
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
-
-  // Filter quick links based on platform role
-  const visibleQuickLinks = isPlatformStaff
-    ? platformQuickLinks
-    : platformQuickLinks.filter((link) => !link.platformRolesOnly);
 
   const railWidth = isExpanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH_COLLAPSED;
 
@@ -495,93 +443,6 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                 </div>
               </div>
             ))}
-
-            {/* Platform Quick Links (Root Admin Only) */}
-            {visibleQuickLinks.length > 0 && (
-              <div className="mb-6 pt-4 border-t border-border/40">
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40"
-                    >
-                      Platform Ops
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="space-y-1">
-                  {visibleQuickLinks.map((link) => {
-                    const isActive = location === link.href;
-                    
-                    const linkButton = (
-                      <Link href={link.href} key={link.id}>
-                        <Button
-                          variant={isActive ? "secondary" : "ghost"}
-                          className={cn(
-                            "w-full justify-start h-10 px-3",
-                            "hover-elevate active-elevate-2",
-                            !isExpanded && "px-2"
-                          )}
-                          data-testid={`link-${link.id}`}
-                        >
-                          <link.icon
-                            className={cn(
-                              "h-5 w-5 flex-shrink-0",
-                              isActive ? "text-primary" : "text-muted-foreground"
-                            )}
-                          />
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ opacity: 0, width: 0 }}
-                                animate={{ opacity: 1, width: "auto" }}
-                                exit={{ opacity: 0, width: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="ml-3 flex items-center gap-2 overflow-hidden"
-                              >
-                                <span className="text-sm font-medium truncate">
-                                  {link.label}
-                                </span>
-                                {link.badge && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-[10px] px-1.5 py-0 ml-auto flex-shrink-0"
-                                  >
-                                    {link.badge}
-                                  </Badge>
-                                )}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </Button>
-                      </Link>
-                    );
-
-                    if (!isExpanded) {
-                      return (
-                        <Tooltip key={link.id}>
-                          <TooltipTrigger asChild>{linkButton}</TooltipTrigger>
-                          <TooltipContent side="right">
-                            <p className="font-medium">{link.label}</p>
-                            {link.badge && (
-                              <Badge variant="outline" className="mt-1 text-[10px]">
-                                {link.badge}
-                              </Badge>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    }
-
-                    return linkButton;
-                  })}
-                </div>
-              </div>
-            )}
           </TooltipProvider>
         </div>
 
