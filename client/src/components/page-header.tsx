@@ -24,6 +24,7 @@ interface PageHeaderProps {
   backHref?: string;
   children?: React.ReactNode;
   className?: string;
+  align?: "left" | "center";
 }
 
 export function PageHeader({
@@ -34,12 +35,15 @@ export function PageHeader({
   backHref = "/dashboard",
   children,
   className,
+  align = "left",
 }: PageHeaderProps) {
+  const isCentered = align === "center";
+  
   return (
     <div className={cn("border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10", className)}>
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         {/* Breadcrumbs */}
-        {breadcrumbs.length > 0 && (
+        {breadcrumbs.length > 0 && !isCentered && (
           <Breadcrumb className="mb-2">
             <BreadcrumbList>
               <BreadcrumbItem>
@@ -83,10 +87,16 @@ export function PageHeader({
         )}
 
         {/* Header Content */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className={cn(
+          "flex items-start gap-4",
+          isCentered ? "flex-col items-center justify-center text-center" : "justify-between"
+        )}>
+          <div className={cn(
+            "flex items-center gap-3 min-w-0",
+            isCentered ? "flex-col" : "flex-1"
+          )}>
             {/* Back Button */}
-            {showBackButton && (
+            {showBackButton && !isCentered && (
               <Link href={backHref}>
                 <Button
                   variant="ghost"
@@ -101,12 +111,18 @@ export function PageHeader({
             )}
 
             {/* Title & Description */}
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight truncate">
+            <div className={cn("min-w-0", isCentered ? "max-w-3xl" : "flex-1")}>
+              <h1 className={cn(
+                "text-2xl sm:text-3xl font-semibold text-foreground tracking-tight",
+                isCentered ? "text-center" : "truncate"
+              )}>
                 {title}
               </h1>
               {description && (
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                <p className={cn(
+                  "text-sm text-muted-foreground mt-1",
+                  isCentered ? "text-center" : "line-clamp-2"
+                )}>
                   {description}
                 </p>
               )}
@@ -115,7 +131,10 @@ export function PageHeader({
 
           {/* Action Buttons */}
           {children && (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className={cn(
+              "flex items-center gap-2 shrink-0",
+              isCentered && "mt-2"
+            )}>
               {children}
             </div>
           )}

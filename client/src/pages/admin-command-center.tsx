@@ -35,6 +35,7 @@ import { AutoForceLogo } from "@/components/autoforce-logo";
 import { MasterKeysPanel } from "@/components/master-keys-panel";
 import { UserManagementPanel } from "@/components/user-management-panel";
 import { TimeGreeting } from "@/components/time-greeting";
+import { PageHeader } from "@/components/page-header";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,93 +106,70 @@ export default function AdminCommandCenter() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 relative overflow-hidden">
-      {/* Animated background gradient orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
-
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {/* Branded Header - Reduced Padding */}
-        <div className="mb-6">
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4">
-            <div className="flex items-center justify-between gap-4">
-              {/* Logo and Title */}
-              <div className="flex items-center gap-4">
-                <div className="transform hover:scale-105 transition-transform duration-300">
-                  <AutoForceLogo size="lg" variant="icon" lightMode={true} />
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent">
-                    Platform Command Center
-                  </h1>
-                  <p className="text-slate-400 text-xs sm:text-sm">
-                    {getRoleTitle()}
-                  </p>
-                  <TimeGreeting 
-                    userName={personalData?.userName}
-                    role=""
-                    className="text-indigo-300 text-xs mt-0.5"
-                  />
-                </div>
-              </div>
-              
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {/* Notifications Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative text-white hover:bg-white/10"
-                      data-testid="button-notifications"
-                    >
-                      <Bell className="h-5 w-5" />
-                      {personalData && (personalData.assignedTickets + personalData.newSupportTickets) > 0 && (
-                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold flex items-center justify-center">
-                          {personalData.assignedTickets + personalData.newSupportTickets}
-                        </span>
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80">
-                    {personalData && personalData.assignedTickets > 0 && (
-                      <DropdownMenuItem>
-                        <div className="flex flex-col gap-1">
-                          <p className="font-medium">{personalData.assignedTickets} Assigned Tickets</p>
-                          <p className="text-xs text-muted-foreground">View your assigned support tickets</p>
-                        </div>
-                      </DropdownMenuItem>
-                    )}
-                    {personalData && personalData.newSupportTickets > 0 && (
-                      <DropdownMenuItem>
-                        <div className="flex flex-col gap-1">
-                          <p className="font-medium">{personalData.newSupportTickets} New Support Requests</p>
-                          <p className="text-xs text-muted-foreground">New tickets require attention</p>
-                        </div>
-                      </DropdownMenuItem>
-                    )}
-                    {(!personalData || (personalData.assignedTickets === 0 && personalData.newSupportTickets === 0)) && (
-                      <DropdownMenuItem>
-                        <p className="text-sm text-muted-foreground">No new notifications</p>
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-background">
+      {/* Professional Centered Page Header */}
+      <PageHeader 
+        title="Platform Command Center"
+        description={getRoleTitle()}
+        align="center"
+        showBackButton={false}
+      >
+        <div className="flex items-center gap-2">
+          {/* Notifications Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                data-testid="button-notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {personalData && (personalData.assignedTickets + personalData.newSupportTickets) > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {personalData.assignedTickets + personalData.newSupportTickets}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              {personalData && personalData.assignedTickets > 0 && (
+                <DropdownMenuItem>
+                  <div className="flex flex-col gap-1">
+                    <p className="font-medium">{personalData.assignedTickets} Assigned Tickets</p>
+                    <p className="text-xs text-muted-foreground">View your assigned support tickets</p>
+                  </div>
+                </DropdownMenuItem>
+              )}
+              {personalData && personalData.newSupportTickets > 0 && (
+                <DropdownMenuItem>
+                  <div className="flex flex-col gap-1">
+                    <p className="font-medium">{personalData.newSupportTickets} New Support Requests</p>
+                    <p className="text-xs text-muted-foreground">New tickets require attention</p>
+                  </div>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {/* Refresh Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setRefreshKey(prev => prev + 1)}
+            data-testid="button-refresh-stats"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
+      </PageHeader>
 
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Main Tabbed Navigation */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-white/10 backdrop-blur-xl border border-white/20 p-1 grid grid-cols-2 sm:grid-cols-4 gap-1">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 gap-1">
             <TabsTrigger 
               value="overview" 
-              className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
               data-testid="tab-overview"
             >
               <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -199,7 +177,6 @@ export default function AdminCommandCenter() {
             </TabsTrigger>
             <TabsTrigger 
               value="tools" 
-              className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
               data-testid="tab-tools"
             >
               <Wrench className="h-4 w-4 mr-2" />
@@ -209,7 +186,6 @@ export default function AdminCommandCenter() {
               <>
                 <TabsTrigger 
                   value="users" 
-                  className="data-[state=active]:bg-indigo-500/40 data-[state=active]:text-white text-slate-300"
                   data-testid="tab-users"
                 >
                   <UserCog className="h-4 w-4 mr-2" />
