@@ -38,7 +38,7 @@ import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePen
 import { queueManager } from './services/helpOsQueue';
 import { HelpOSAI } from './helpos-ai';
 import { seedAnchor } from './services/utils/scheduling';
-import { requireOwner, requireManager, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest } from "./rbac";
+import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, type AuthenticatedRequest } from "./rbac";
 import { 
   insertWorkspaceSchema,
   insertEmployeeSchema,
@@ -1563,34 +1563,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EMPLOYEE ROUTES (Multi-tenant isolated)
   // ============================================================================
   
-  app.get('/api/employees', async (req: any, res) => {
+  // PROTECTED: Manager/owner or platform staff - prevents data leak
+  app.get('/api/employees', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      //  Support both Replit OAuth and session-based auth
-      let userId: string;
-      let user: any;
-      
-      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims) {
-        // Replit OAuth
-        userId = req.user.claims.sub;
-        user = req.user;
-      } else if (req.session?.userId) {
-        // Session-based auth
-        userId = req.session.userId;
-        const [dbUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-        if (!dbUser) {
-          return res.status(401).json({ message: "Unauthorized" });
+      // Platform staff accessing for diagnostics (middleware sets platformRole)
+      if (req.platformRole && (req.platformRole === 'root_admin' || req.platformRole === 'sysop' || req.platformRole === 'support_manager')) {
+        // Platform staff can specify workspaceId via query
+        const targetWorkspaceId = req.workspaceId || req.query.workspaceId as string;
+        
+        if (targetWorkspaceId) {
+          // Get specific workspace employees
+          const employees = await storage.getEmployeesByWorkspace(targetWorkspaceId);
+          return res.json(employees);
         }
-        user = dbUser;
-        // Load platform role
-        const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, userId));
-        const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
-        user.platformRole = activePlatformRole?.role || null;
-      } else {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Platform admins can see all employees or get demo workspace
-      if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
+        
+        // No workspaceId specified - show demo workspace for backwards compatibility
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const employees = await storage.getEmployeesByWorkspace(allWorkspaces[0].id);
@@ -1599,13 +1586,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Regular workspace manager/owner - use workspace from middleware
+      const workspaceId = req.workspaceId;
       
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
       }
 
-      const employees = await storage.getEmployeesByWorkspace(workspace.id);
+      const employees = await storage.getEmployeesByWorkspace(workspaceId);
       res.json(employees);
     } catch (error) {
       console.error("Error fetching employees:", error);
@@ -1613,19 +1601,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/employees', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Manager or platform staff
+  app.post('/api/employees', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
+      const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+      
+      // Get workspace for email sending
+      const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      // Validate with Zod and enforce workspace ownership
+      // Validate with Zod and enforce workspace from middleware
       const validated = insertEmployeeSchema.parse({
         ...req.body,
-        workspaceId: workspace.id, // Force workspace from auth, ignore client input
+        workspaceId, // Force workspace from middleware, ignore client input
       });
 
       const employee = await storage.createEmployee(validated);
@@ -1646,20 +1641,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/employees/:id', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Manager or platform staff
+  app.patch('/api/employees/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
+      const workspaceId = req.workspaceId;
       
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
       }
 
       // Validate partial update, ensure no workspaceId override
-      const { workspaceId, ...updateData } = req.body;
+      const { workspaceId: _, ...updateData } = req.body;
       const validated = insertEmployeeSchema.partial().parse(updateData);
 
-      const employee = await storage.updateEmployee(req.params.id, workspace.id, validated);
+      const employee = await storage.updateEmployee(req.params.id, workspaceId, validated);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -1671,16 +1667,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/employees/:id', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Owner only (destructive operation)
+  app.delete('/api/employees/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Use workspaceId from middleware
+      const workspaceId = req.workspaceId;
       
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
       }
 
-      const deleted = await storage.deleteEmployee(req.params.id, workspace.id);
+      const deleted = await storage.deleteEmployee(req.params.id, workspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -2828,29 +2825,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CLIENT ROUTES (Multi-tenant isolated)
   // ============================================================================
   
-  app.get('/api/clients', async (req: any, res) => {
+  // PROTECTED: Manager or platform staff
+  app.get('/api/clients', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      let userId: string;
-      let user: any;
-      
-      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims) {
-        userId = req.user.claims.sub;
-        user = req.user;
-      } else if (req.session?.userId) {
-        userId = req.session.userId;
-        const [dbUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-        if (!dbUser) {
-          return res.status(401).json({ message: "Unauthorized" });
+      // Platform staff accessing for diagnostics (middleware sets platformRole)
+      if (req.platformRole && (req.platformRole === 'root_admin' || req.platformRole === 'sysop' || req.platformRole === 'support_manager')) {
+        // Platform staff can specify workspaceId via query
+        const targetWorkspaceId = req.workspaceId || req.query.workspaceId as string;
+        
+        if (targetWorkspaceId) {
+          // Get specific workspace clients
+          const clients = await storage.getClientsByWorkspace(targetWorkspaceId);
+          return res.json(clients);
         }
-        user = dbUser;
-        const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, userId));
-        const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
-        user.platformRole = activePlatformRole?.role || null;
-      } else {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
+        
+        // No workspaceId specified - show demo workspace for backwards compatibility
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const clients = await storage.getClientsByWorkspace(allWorkspaces[0].id);
@@ -2859,13 +2848,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Regular workspace manager/owner - use workspace from middleware
+      const workspaceId = req.workspaceId;
       
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
       }
 
-      const clients = await storage.getClientsByWorkspace(workspace.id);
+      const clients = await storage.getClientsByWorkspace(workspaceId);
       res.json(clients);
     } catch (error) {
       console.error("Error fetching clients:", error);
@@ -2873,11 +2863,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/clients', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Manager or platform staff
+  app.post('/api/clients', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
+      const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+      
+      // Get workspace for reference
+      const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
       }
@@ -2885,10 +2882,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract billing info from request
       const { billableRate, billingCycle, serviceType, ...clientData } = req.body;
 
-      // Validate client data with Zod and enforce workspace ownership
+      // Validate client data with Zod and enforce workspace from middleware
       const validated = insertClientSchema.parse({
         ...clientData,
-        workspaceId: workspace.id, // Force workspace from auth, ignore client input
+        workspaceId, // Force workspace from middleware, ignore client input
       });
 
       // Create the client
@@ -2915,20 +2912,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/clients/:id', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Manager or platform staff
+  app.patch('/api/clients/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
+      const workspaceId = req.workspaceId;
       
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
       }
 
       // Validate partial update, ensure no workspaceId override
-      const { workspaceId, ...updateData } = req.body;
+      const { workspaceId: _, ...updateData } = req.body;
       const validated = insertClientSchema.partial().parse(updateData);
 
-      const client = await storage.updateClient(req.params.id, workspace.id, validated);
+      const client = await storage.updateClient(req.params.id, workspaceId, validated);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -2940,16 +2938,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/clients/:id', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Manager or platform staff
+  app.delete('/api/clients/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
+      const workspaceId = req.workspaceId;
       
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
       }
 
-      const deleted = await storage.deleteClient(req.params.id, workspace.id);
+      const deleted = await storage.deleteClient(req.params.id, workspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -4357,10 +4356,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INVOICE ROUTES (Multi-tenant isolated)
   // ============================================================================
 
-  // Auto-generate invoices for all clients due for billing (BillOS™ Automation)
-  app.post('/api/invoices/auto-generate', isAuthenticated, async (req: any, res) => {
+  // Auto-generate invoices for all clients due for billing (BillOS™ Automation) - PROTECTED: Owner only
+  app.post('/api/invoices/auto-generate', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -4542,9 +4541,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/invoices', isAuthenticated, async (req: any, res) => {
+  // PROTECTED: Managers and auditors only
+  app.get('/api/invoices', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -4559,10 +4559,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get line items for a specific invoice (with authorization check)
-  app.get('/api/invoices/:invoiceId/line-items', isAuthenticated, async (req: any, res) => {
+  // Get line items for a specific invoice (with authorization check) - PROTECTED: Manager/auditor/client
+  app.get('/api/invoices/:invoiceId/line-items', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { invoiceId } = req.params;
       
       // Get the invoice to check ownership

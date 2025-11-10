@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { db } from './db';
 import { employees, workspaces, platformRoles, users } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -181,6 +181,56 @@ export const requireEmployee = requireWorkspaceRole(['org_owner', 'department_ma
 
 // Leaders Hub - Organization Leaders (Owner/Manager only) for self-service admin
 export const requireLeader = requireWorkspaceRole(['org_owner', 'department_manager']);
+
+// Hybrid guard: Allows EITHER workspace managers/owners OR platform staff (for diagnostics)
+export const requireManagerOrPlatformStaff: RequestHandler = async (req, res, next) => {
+  const authReq = req as AuthenticatedRequest;
+  
+  if (!authReq.user?.id) {
+    return res.status(401).json({ message: 'Unauthorized - Please login' });
+  }
+  
+  const userId = authReq.user.id;
+  
+  // Check platform role first - platform staff get full access for diagnostics
+  const platformRole = await getUserPlatformRole(userId);
+  
+  if (platformRole === 'root_admin' || platformRole === 'sysop' || platformRole === 'support_manager') {
+    authReq.platformRole = platformRole;
+    
+    // Platform staff can optionally specify workspace via query/body for POST/PATCH operations
+    const requestedWorkspaceId = authReq.body?.workspaceId || authReq.query?.workspaceId || authReq.params?.workspaceId;
+    if (requestedWorkspaceId) {
+      authReq.workspaceId = requestedWorkspaceId as string;
+    }
+    
+    return next();
+  }
+  
+  // Not platform staff - check workspace role
+  // Read workspaceId from body, query, or params (like requireWorkspaceRole)
+  const requestedWorkspaceId = authReq.body?.workspaceId || authReq.query?.workspaceId || authReq.params?.workspaceId;
+  const resolved = await resolveWorkspaceForUser(userId, requestedWorkspaceId as string | undefined);
+  
+  if (!resolved.workspaceId || !resolved.role) {
+    return res.status(403).json({ 
+      message: resolved.error || 'No workspace access found' 
+    });
+  }
+  
+  const allowedRoles: WorkspaceRole[] = ['org_owner', 'department_manager'];
+  if (!allowedRoles.includes(resolved.role)) {
+    return res.status(403).json({ 
+      message: 'Insufficient permissions - requires manager role or higher' 
+    });
+  }
+  
+  authReq.workspaceId = resolved.workspaceId;
+  authReq.workspaceRole = resolved.role;
+  authReq.employeeId = resolved.employeeId || undefined;
+  
+  next();
+};
 
 export async function validateManagerAssignment(
   managerId: string,
