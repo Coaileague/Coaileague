@@ -129,6 +129,13 @@ AutoForce™ is built on a modular "OS" design philosophy with **6 major autonom
 ### UI/UX Decisions
 The platform features a professional aesthetic using Deep Charcoal, Platinum neutrals, and Evergreen/Steel Blue/Professional Teal accents as defined in `design_guidelines.md`. It prioritizes a mobile-first approach with responsive layouts, accessible touch targets, and PWA capabilities. Branding includes an "AF" lightning bolt logo within a circular green gradient badge. Key navigation elements include a floating header, visible labels for navigation buttons, and contextual breadcrumb navigation.
 
+**Responsive Typography Enhancement (Nov 10, 2025):**
+- Added opt-in fluid typography utilities using `clamp()` for smooth text scaling across all screen sizes
+- Available classes: `.fluid-h1`, `.fluid-h2`, `.fluid-h3`, `.fluid-h4`, `.fluid-text`, `.fluid-text-sm`
+- Available spacing: `.fluid-gap`, `.fluid-gap-sm`, `.fluid-padding`, `.fluid-padding-sm`
+- These are opt-in utilities that work alongside Tailwind's default text utilities without conflicts
+- Use when you need text/spacing to scale smoothly without breakpoint jumps
+
 ### Technical Implementations
 - **Frontend**: React, Vite, TypeScript, Wouter, TanStack Query, shadcn/ui, `react-hook-form`, `zod`.
 - **Backend**: Express.js, TypeScript, with Zod for validation.
