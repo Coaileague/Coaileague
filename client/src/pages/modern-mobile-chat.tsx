@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -31,26 +30,6 @@ interface OnlineUser {
 }
 
 export default function ModernMobileChat() {
-  const [, navigate] = useLocation();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  
-  // Desktop Detection & Auto-Redirect (runs once on mount)
-  useEffect(() => {
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
-    
-    if (!isMobileDevice && !isSmallScreen) {
-      console.log('💻 Desktop/large screen detected, redirecting to /chat');
-      setShouldRedirect(true);
-      navigate('/chat', { replace: true });
-    }
-  }, []); // Empty deps - run only once on mount
-  
-  // Don't render if redirecting
-  if (shouldRedirect) {
-    return null;
-  }
-  
   const [messageText, setMessageText] = useState("");
   const [showQuickResponses, setShowQuickResponses] = useState(false);
   const [showUserList, setShowUserList] = useState(false);
