@@ -9091,3 +9091,36 @@ export const insertPartnerDataMappingSchema = createInsertSchema(partnerDataMapp
 
 export type InsertPartnerDataMapping = z.infer<typeof insertPartnerDataMappingSchema>;
 export type PartnerDataMapping = typeof partnerDataMappings.$inferSelect;
+
+// OAuth States - Store CSRF tokens and PKCE verifiers for OAuth flows
+export const oauthStates = pgTable("oauth_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Partner identification
+  partnerType: partnerTypeEnum("partner_type").notNull(),
+  
+  // OAuth flow state
+  state: varchar("state").notNull().unique(), // CSRF protection token
+  codeVerifier: text("code_verifier"), // PKCE code verifier (for QuickBooks)
+  codeChallenge: varchar("code_challenge"), // PKCE code challenge
+  codeChallengeMethod: varchar("code_challenge_method").default('S256'), // 'S256' or 'plain'
+  
+  // Expiry tracking
+  expiresAt: timestamp("expires_at").notNull(), // State expires after 10 minutes
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("oauth_states_workspace_idx").on(table.workspaceId),
+  partnerIdx: index("oauth_states_partner_idx").on(table.partnerType),
+  stateIdx: index("oauth_states_state_idx").on(table.state),
+  expiryIdx: index("oauth_states_expiry_idx").on(table.expiresAt),
+}));
+
+export const insertOAuthStateSchema = createInsertSchema(oauthStates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOAuthState = z.infer<typeof insertOAuthStateSchema>;
+export type OAuthState = typeof oauthStates.$inferSelect;
