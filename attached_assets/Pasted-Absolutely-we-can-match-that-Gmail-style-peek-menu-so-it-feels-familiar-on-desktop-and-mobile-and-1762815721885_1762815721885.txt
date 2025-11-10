@@ -1,0 +1,89 @@
+Absolutely—we can match that Gmail-style “peek” menu so it feels familiar on desktop and mobile, and still respect role-based access.
+I added a new Gmail-style Peek Rail Navigation component to your canvas (same doc as the sidebar). Highlights:
+
+
+Slim icon rail (56px) that expands on hover (desktop) or tap (mobile).
+
+
+Pinned vs hover behavior (users can pin it open).
+
+
+Uses your existing role-based NAV_ITEMS and SETTINGS_LINKS, so owners/admins/managers/readonly/support only see what they should.
+
+
+Smooth Framer Motion transitions, Tailwind styling, a11y-friendly (titles/labels).
+
+
+Quick Settings links in the expanded panel (Autonomy, Integrations, Billing).
+
+
+Plays nice with your NotificationBell you already have—mount it in the header.
+
+
+How to drop it in
+// AppLayout.jsx (example)
+import { PeekRailNav } from "./Autoforce Sidebar & User Menu (Role-Based, Overlay)";
+import AutoforceSidebar, { NotificationBell } from "./Autoforce Sidebar & User Menu (Role-Based, Overlay)";
+
+export default function AppLayout({ user, children }) {
+  return (
+    <>
+      <PeekRailNav user={user} defaultPinned={true} />
+      <header className="fixed top-0 left-14 right-0 h-12 bg-zinc-900 border-b border-zinc-800 flex items-center justify-end pr-4">
+        <NotificationBell />
+      </header>
+      <main className="pt-12 md:pl-14">{children}</main>
+    </>
+  );
+}
+
+
+
+On desktop, the rail expands when hovered; if the user clicks the chevron, it pins/unpins.
+
+
+On mobile, tapping the chevron toggles expand/collapse.
+
+
+If you want the rail to push content instead of overlay, add left padding when expanded/pinned and keep it overlay-only on small screens.
+Need me to wire a tiny SSE backend route for the notification stream or tweak the visible items per role?ChatGPT said:Thought for 29sAutoforce Sidebar & User Menu (role‑based, Overlay)· typescript// === Autoforce Navigation & Notifications (Consolidated, Role‑Based) ======// This file merges the Gmail‑style Peek Rail, the Overlay Sidebar, and the// Notification Bell into ONE module. It also fixes duplicate identifiers by://  - Using unique section components: PeekSection and SidebarSection//  - Using a single helper: getInitials//  - Consolidating imports// Includes a few dev-time tests at the bottom (do not ship in prod builds).import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";import { motion, AnimatePresence } from "framer-motion";import {  // icons used across components  Menu, X, Bell, Shield, MessageSquare, Calendar, Clock, Headphones, LayoutGrid,  Building2, User, Users, Settings as SettingsIcon, Link as LinkIcon, BadgeCheck,  Key, BellRing, ShieldCheck, Globe, CreditCard, LogOut, Plus, ChevronDown,  ChevronRight, ChevronLeft} from "lucide-react";// ----- Roles & Permissions -------------------------------------------------export type Role = "owner" | "admin" | "manager" | "readonly" | "support";/** Gate helper — true if any of the user's roles match the allowed roles */export const can = (userRoles: Role[], allowed: Role[] | "any") => {  if (allowed === "any") return true;  return userRoles.some((r) => allowed.includes(r));};// ----- Shared Helpers ------------------------------------------------------export function getInitials(name?: string) {  const parts = (name || "").split(" ").filter(Boolean);  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";}// ----- Navigation Model ----------------------------------------------------export type NavItem = {  id: string;  label: string;  href: string;  icon: any;  section: "COMMUNICATION" | "OPERATIONS" | "PLATFORM" | "ADMIN";  roles: Role[] | "any";  badge?: string;};export const NAV_ITEMS: NavItem[] = [  // COMMUNICATION  { id: "commos", label: "CommOS™", href: "/comm", icon: MessageSquare, section: "COMMUNICATION", roles: "any" },  { id: "pm", label: "Private Messages", href: "/messages", icon: Shield, section: "COMMUNICATION", roles: "any" },  { id: "supportos", label: "SupportOS™ HelpDesk", href: "/support", icon: Headphones, section: "COMMUNICATION", roles: ["owner", "admin", "manager", "support"] },  // OPERATIONS  { id: "scheduleos", label: "ScheduleOS™", href: "/schedule", icon: Calendar, section: "OPERATIONS", roles: ["owner", "admin", "manager"] },  { id: "timeos", label: "TimeOS™", href: "/time", icon: Clock, section: "OPERATIONS", roles: ["owner", "admin", "manager"] },  // PLATFORM  { id: "dashboard", label: "Admin Dashboard", href: "/dashboard", icon: LayoutGrid, section: "PLATFORM", roles: ["owner", "admin", "support"] },  // ADMIN  { id: "orgs", label: "Organizations", href: "/admin/orgs", icon: Building2, section: "ADMIN", roles: ["owner", "admin", "support"] },  { id: "users", label: "Employees", href: "/admin/employees", icon: Users, section: "ADMIN", roles: ["owner", "admin", "manager"] },];// ----- Settings Links (User Dropdown) -------------------------------------export type SettingsLink = {  id: string;  label: string;  href: string;  icon: any;  roles: Role[] | "any";};export const SETTINGS_LINKS: SettingsLink[] = [  { id: "profile", label: "Profile", href: "/settings/profile", icon: User, roles: "any" },  { id: "unavailability", label: "Unavailability", href: "/settings/unavailability", icon: Calendar, roles: "any" },  { id: "employees", label: "Employees", href: "/settings/employees", icon: Users, roles: ["owner", "admin", "manager"] },  { id: "account", label: "Account", href: "/settings/account", icon: SettingsIcon, roles: "any" },  { id: "security", label: "Security / MFA", href: "/settings/security", icon: ShieldCheck, roles: "any" },  { id: "notifications", label: "Notifications", href: "/settings/notifications", icon: BellRing, roles: "any" },  { id: "integrations", label: "Integrations", href: "/settings/integrations", icon: LinkIcon, roles: ["owner", "admin"] },  { id: "autonomy", label: "Autonomy", href: "/settings/autonomy", icon: BadgeCheck, roles: ["owner", "admin"] },  { id: "billing", label: "Billing", href: "/settings/billing", icon: CreditCard, roles: ["owner"] },  { id: "api", label: "API Tokens", href: "/settings/api", icon: Key, roles: ["owner", "admin"] },  { id: "domain", label: "Domain / SSO", href: "/settings/domain", icon: Globe, roles: ["owner", "admin"] },];// ===========================================================================// Gmail‑style Peek Rail Navigation// ===========================================================================export function PeekRailNav({  user,  defaultPinned = true,}: {  user: { name: string; email: string; roles: Role[]; orgName: string };  defaultPinned?: boolean;}) {  const [expanded, setExpanded] = useState(false);  const [pinned, setPinned] = useState(defaultPinned);  const railRef = useRef<HTMLDivElement>(null);          aria-label={isTouch ? (expanded ? "Collapse" : "Expand") : pinned ? "Unpin" : "Pin"}Fixed! The crash came from declaring Section twice (and also re-declaring initials). I consolidated the file and rewired things so it compiles cleanly:
+What I changed
+
+
+Removed duplicate identifiers:
+
+
+Replaced the two Section components with PeekSection (for the Gmail rail) and SidebarSection (for the overlay sidebar).
+
+
+Replaced multiple initials versions with a single getInitials helper used everywhere.
+
+
+
+
+Consolidated imports to a single block.
+
+
+Kept all role-based logic intact (owner/admin/manager/readonly/support).
+
+
+Left your NotificationBell component working (SSE + polling fallback).
+
+
+Added a tiny dev sanity test block (console.assert) for can() and getInitials()—safe to remove in prod.
+
+
+Quick question (so I wire UX exactly how you want)
+For the Gmail-style peek rail:
+
+
+Should the rail push content when pinned on desktop (content gets left padding), or always overlay the page? I can add a onPinnedChange callback/prop to let your layout adjust padding automatically.
+
+
+If you want, I can also:
+
+
+add a selected/active state for the current route (so icons highlight), and
+
+
+include a small utility to read pathnames and set active items automatically.
