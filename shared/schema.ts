@@ -8898,3 +8898,196 @@ export const insertClientRateHistorySchema = createInsertSchema(clientRateHistor
 
 export type InsertClientRateHistory = z.infer<typeof insertClientRateHistorySchema>;
 export type ClientRateHistory = typeof clientRateHistory.$inferSelect;
+
+// ============================================================================
+// PARTNER INTEGRATIONS - QuickBooks, Gusto, etc.
+// ============================================================================
+
+// Partner connection types enum
+export const partnerTypeEnum = pgEnum('partner_type', [
+  'quickbooks', // QuickBooks Online
+  'gusto', // Gusto Payroll
+  'stripe', // Stripe (for reference, already integrated)
+  'other', // Future partners
+]);
+
+// Partner connection status enum
+export const partnerConnectionStatusEnum = pgEnum('partner_connection_status', [
+  'connected', // Active connection
+  'disconnected', // Manually disconnected
+  'expired', // Tokens expired
+  'error', // Connection error
+]);
+
+// Partner Connections - OAuth tokens and connection status
+export const partnerConnections = pgTable("partner_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Partner identification (use enum for data integrity)
+  partnerType: partnerTypeEnum("partner_type").notNull(),
+  partnerName: varchar("partner_name").notNull(), // Display name
+  
+  // OAuth credentials (encrypted at rest in production via application layer)
+  accessToken: text("access_token").notNull(), // OAuth access token
+  refreshToken: text("refresh_token"), // OAuth refresh token (if applicable)
+  tokenType: varchar("token_type").default('Bearer'), // Usually 'Bearer'
+  expiresAt: timestamp("expires_at"), // When access token expires
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"), // QuickBooks provides refresh token expiry
+  
+  // Scopes and permissions
+  scopes: text("scopes").array().default(sql`ARRAY[]::text[]`), // OAuth scopes granted
+  
+  // Connection status (use enum for data integrity)
+  status: partnerConnectionStatusEnum("status").notNull().default('connected'),
+  lastSyncAt: timestamp("last_sync_at"), // Last successful API call
+  lastErrorAt: timestamp("last_error_at"), // Last error encountered
+  lastError: text("last_error"), // Error message
+  
+  // Webhook configuration (for receiving real-time updates from partner)
+  webhookSecret: text("webhook_secret"), // Secret for validating incoming webhooks (encrypted)
+  webhookUrl: varchar("webhook_url"), // Registered webhook URL
+  webhookEnabled: boolean("webhook_enabled").default(false),
+  
+  // Partner-specific metadata
+  realmId: varchar("realm_id"), // QuickBooks company ID
+  companyId: varchar("company_id"), // Gusto company ID
+  metadata: jsonb("metadata"), // Additional partner-specific data
+  
+  // Connection management
+  connectedBy: varchar("connected_by").references(() => users.id, { onDelete: 'set null' }),
+  connectedAt: timestamp("connected_at").defaultNow(),
+  disconnectedBy: varchar("disconnected_by").references(() => users.id, { onDelete: 'set null' }),
+  disconnectedAt: timestamp("disconnected_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("partner_connections_workspace_idx").on(table.workspaceId),
+  partnerIdx: index("partner_connections_partner_idx").on(table.partnerType),
+  statusIdx: index("partner_connections_status_idx").on(table.status),
+  uniqueWorkspacePartner: uniqueIndex("unique_workspace_partner").on(table.workspaceId, table.partnerType),
+}));
+
+export const insertPartnerConnectionSchema = createInsertSchema(partnerConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPartnerConnection = z.infer<typeof insertPartnerConnectionSchema>;
+export type PartnerConnection = typeof partnerConnections.$inferSelect;
+
+// Partner API Usage Events - Track all partner API calls with costs
+export const partnerApiUsageEvents = pgTable("partner_api_usage_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id), // User who triggered the API call
+  partnerConnectionId: varchar("partner_connection_id").notNull().references(() => partnerConnections.id, { onDelete: 'cascade' }),
+  
+  // API call identification (use enum for data integrity)
+  partnerType: partnerTypeEnum("partner_type").notNull(),
+  endpoint: varchar("endpoint").notNull(), // API endpoint called (e.g., '/v3/invoice')
+  httpMethod: varchar("http_method").notNull(), // 'GET', 'POST', 'PUT', 'DELETE'
+  
+  // Usage metrics
+  usageType: varchar("usage_type").notNull(), // 'api_call', 'batch_operation', 'webhook_event'
+  usageAmount: decimal("usage_amount", { precision: 15, scale: 4 }).notNull().default("1.0000"), // Usually 1 per call
+  usageUnit: varchar("usage_unit").notNull().default('api_calls'), // 'api_calls', 'batch_operations'
+  
+  // Cost calculation
+  unitPrice: decimal("unit_price", { precision: 10, scale: 6 }), // Cost per API call (if applicable)
+  totalCost: decimal("total_cost", { precision: 10, scale: 6 }), // Total cost for this event
+  costCurrency: varchar("cost_currency").default('USD'),
+  
+  // Request/Response details
+  requestPayloadSize: integer("request_payload_size"), // Bytes
+  responsePayloadSize: integer("response_payload_size"), // Bytes
+  responseStatusCode: integer("response_status_code"), // HTTP status code
+  responseTimeMs: integer("response_time_ms"), // Response time in milliseconds
+  
+  // Success/Error tracking
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  errorCode: varchar("error_code"),
+  
+  // Context
+  featureKey: varchar("feature_key"), // Which AutoForce feature triggered this (e.g., 'billos_invoice_creation')
+  activityType: varchar("activity_type"), // 'invoice_creation', 'payroll_submission', 'customer_sync'
+  metadata: jsonb("metadata"), // Additional context (invoice ID, payroll run ID, etc.)
+  
+  // Audit trail
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("partner_api_usage_workspace_idx").on(table.workspaceId),
+  userIdx: index("partner_api_usage_user_idx").on(table.userId),
+  partnerIdx: index("partner_api_usage_partner_idx").on(table.partnerType),
+  connectionIdx: index("partner_api_usage_connection_idx").on(table.partnerConnectionId),
+  featureIdx: index("partner_api_usage_feature_idx").on(table.featureKey),
+  createdAtIdx: index("partner_api_usage_created_at_idx").on(table.createdAt),
+  successIdx: index("partner_api_usage_success_idx").on(table.success),
+}));
+
+export const insertPartnerApiUsageEventSchema = createInsertSchema(partnerApiUsageEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPartnerApiUsageEvent = z.infer<typeof insertPartnerApiUsageEventSchema>;
+export type PartnerApiUsageEvent = typeof partnerApiUsageEvents.$inferSelect;
+
+// Partner Data Mappings - Map AutoForce entities to partner entities
+export const partnerDataMappings = pgTable("partner_data_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  partnerConnectionId: varchar("partner_connection_id").notNull().references(() => partnerConnections.id, { onDelete: 'cascade' }),
+  
+  // Partner identification (use enum for data integrity)
+  partnerType: partnerTypeEnum("partner_type").notNull(),
+  
+  // Entity mapping
+  entityType: varchar("entity_type").notNull(), // 'client', 'employee', 'invoice', 'payroll_run'
+  autoforceEntityId: varchar("autoforce_entity_id").notNull(), // AutoForce entity ID (clients.id, employees.id, etc.)
+  partnerEntityId: varchar("partner_entity_id").notNull(), // Partner entity ID (QBO Customer ID, Gusto Employee ID)
+  partnerEntityName: varchar("partner_entity_name"), // Partner entity name for display
+  
+  // Sync status
+  syncStatus: varchar("sync_status").notNull().default('synced'), // 'synced', 'pending', 'failed', 'conflict'
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncError: text("last_sync_error"),
+  
+  // Mapping metadata
+  mappingSource: varchar("mapping_source").default('manual'), // 'manual', 'auto', 'import'
+  metadata: jsonb("metadata"), // Additional mapping data
+  
+  // Audit trail
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("partner_mappings_workspace_idx").on(table.workspaceId),
+  partnerIdx: index("partner_mappings_partner_idx").on(table.partnerType),
+  connectionIdx: index("partner_mappings_connection_idx").on(table.partnerConnectionId),
+  entityTypeIdx: index("partner_mappings_entity_type_idx").on(table.entityType),
+  autoforceEntityIdx: index("partner_mappings_autoforce_idx").on(table.autoforceEntityId),
+  partnerEntityIdx: index("partner_mappings_partner_entity_idx").on(table.partnerEntityId),
+  uniqueMapping: uniqueIndex("unique_partner_mapping").on(
+    table.workspaceId,
+    table.partnerType,
+    table.entityType,
+    table.autoforceEntityId
+  ),
+}));
+
+export const insertPartnerDataMappingSchema = createInsertSchema(partnerDataMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPartnerDataMapping = z.infer<typeof insertPartnerDataMappingSchema>;
+export type PartnerDataMapping = typeof partnerDataMappings.$inferSelect;
