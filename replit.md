@@ -28,6 +28,8 @@ AutoForce™ is built on a modular "OS" design philosophy with 6 major autonomou
 - **Custom Logo**: Inline "AUTOFORCE™" logo optimized for 240px width (prevents text wrapping), gradient AF badge matching brand colors (primary/accent)
 - **Profile Dropdown**: Positioned to the right with proper sideOffset to avoid breaking nav border, includes user avatar, name, email, and quick actions
 - **Technical Details**: Framer Motion spring animations (stiffness: 300, damping: 30), useRef-based hover debouncing to prevent glitching, AnimatePresence for smooth transitions
+- **Layering Architecture**: Peek rail at z-50, header at z-[40], main content with ml-14 (56px) offset to prevent overlap; harmonious coordination eliminates visual conflicts
+- **Professional Header System**: Clean centered page titles using PageHeader component with align="center" prop, single foreground color for Fortune-500 aesthetic; WorkspaceSwitcher clearly displays current workspace name
 
 ### The 6 Major OS Systems
 1.  **BillOS™**: Administrative Billing & Financial Management (automated invoicing, payroll, expense management, usage-based AI billing).
