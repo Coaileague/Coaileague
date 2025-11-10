@@ -42,8 +42,7 @@ async function migrateEmployeeRates(): Promise<{ count: number; errors: string[]
         hourlyRate: employees.hourlyRate,
         createdAt: employees.createdAt,
       })
-      .from(employees)
-      .where(isNull(employees.deletedAt));
+      .from(employees);
 
     console.log(`Found ${employeesWithRates.length} employees to migrate`);
 

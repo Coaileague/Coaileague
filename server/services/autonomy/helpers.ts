@@ -16,7 +16,7 @@ import {
   workspaces,
   clients
 } from '../../../shared/schema';
-import { eq, and, isNull, lte, or, gte } from 'drizzle-orm';
+import { eq, and, isNull, lte, or, gte, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -56,64 +56,151 @@ function generateFingerprint(params: Record<string, any>): string {
 }
 
 /**
- * Check for existing idempotency key - prevents duplicate operations
+ * PRODUCTION-READY IDEMPOTENCY GUARD
  * 
- * Returns existing result if operation was already completed
- * Creates new idempotency key if this is first time
+ * Single-transaction Postgres-first implementation with:
+ * - Atomic INSERT ... ON CONFLICT DO UPDATE
+ * - Database-side timestamp comparison (statement_timestamp())
+ * - Status versioning for deterministic duplicate detection
+ * - Inflight token to distinguish resurrected vs active duplicates
+ * - Retry middleware with exponential backoff
  */
-export async function checkIdempotency(params: IdempotencyParams): Promise<IdempotencyResult> {
+async function executeIdempotencyCheck(params: IdempotencyParams): Promise<IdempotencyResult> {
   const { workspaceId, operationType, requestData, ttlDays = 7 } = params;
   
   const fingerprint = generateFingerprint(requestData);
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + ttlDays);
+  const inflightToken = crypto.randomBytes(16).toString('hex');
 
-  // Check for existing key
-  const [existing] = await db
-    .select()
-    .from(idempotencyKeys)
-    .where(
-      and(
-        eq(idempotencyKeys.workspaceId, workspaceId),
-        eq(idempotencyKeys.operationType, operationType),
-        eq(idempotencyKeys.requestFingerprint, fingerprint),
-        gte(idempotencyKeys.expiresAt, new Date()) // Not expired
+  const result = await db.execute(sql`
+    WITH upsert AS (
+      INSERT INTO idempotency_keys (
+        workspace_id,
+        operation_type,
+        request_fingerprint,
+        status,
+        expires_at,
+        status_version,
+        inflight_token
       )
+      VALUES (
+        ${workspaceId},
+        ${operationType},
+        ${fingerprint},
+        'processing',
+        statement_timestamp() + make_interval(days => ${ttlDays}),
+        1,
+        ${inflightToken}
+      )
+      ON CONFLICT (workspace_id, operation_type, request_fingerprint)
+      DO UPDATE SET
+        status = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp() 
+          THEN 'processing'
+          ELSE idempotency_keys.status
+        END,
+        expires_at = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp()
+          THEN statement_timestamp() + make_interval(days => ${ttlDays})
+          ELSE idempotency_keys.expires_at
+        END,
+        status_version = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp()
+          THEN idempotency_keys.status_version + 1
+          ELSE idempotency_keys.status_version
+        END,
+        inflight_token = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp()
+          THEN ${inflightToken}
+          ELSE idempotency_keys.inflight_token
+        END,
+        completed_at = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp()
+          THEN NULL
+          ELSE idempotency_keys.completed_at
+        END,
+        result_id = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp()
+          THEN NULL
+          ELSE idempotency_keys.result_id
+        END,
+        error_message = CASE
+          WHEN idempotency_keys.expires_at <= statement_timestamp()
+          THEN NULL
+          ELSE idempotency_keys.error_message
+        END
+      RETURNING
+        id,
+        workspace_id,
+        operation_type,
+        status,
+        result_id,
+        error_message,
+        completed_at,
+        status_version,
+        inflight_token,
+        (xmax = 0) AS is_fresh_insert,
+        (xmax != 0 AND inflight_token = ${inflightToken}) AS is_resurrected
     )
-    .limit(1);
+    SELECT * FROM upsert
+  `);
 
-  if (existing) {
-    // Duplicate request detected
-    console.log(`[IDEMPOTENCY] Duplicate ${operationType} detected for workspace ${workspaceId}`);
-    console.log(`[IDEMPOTENCY] Existing status: ${existing.status}, resultId: ${existing.resultId}`);
+  if (!result.rows || result.rows.length === 0) {
+    throw new Error('[IDEMPOTENCY] No rows returned from atomic upsert');
+  }
+
+  const row = result.rows[0] as any;
+  const isNew = row.is_fresh_insert || row.is_resurrected;
+
+  if (isNew) {
+    const logPrefix = row.is_fresh_insert ? 'New' : 'Resurrected expired';
+    console.log(`[IDEMPOTENCY] ${logPrefix} ${operationType} (v${row.status_version}) for workspace ${workspaceId}`);
+    console.log(`[IDEMPOTENCY] Key: ${row.id}, Token: ${row.inflight_token}`);
     
     return {
-      isNew: false,
-      existingResultId: existing.resultId || undefined,
-      idempotencyKeyId: existing.id,
-      status: existing.status as IdempotencyStatus,
+      isNew: true,
+      idempotencyKeyId: row.id,
     };
   }
 
-  // Create new idempotency key
-  const [newKey] = await db
-    .insert(idempotencyKeys)
-    .values({
-      workspaceId,
-      operationType,
-      requestFingerprint: fingerprint,
-      status: 'processing',
-      expiresAt,
-    })
-    .returning();
-
-  console.log(`[IDEMPOTENCY] New ${operationType} operation for workspace ${workspaceId}`);
-  console.log(`[IDEMPOTENCY] Idempotency key: ${newKey.id}`);
-
+  console.log(`[IDEMPOTENCY] Duplicate ${operationType} detected (v${row.status_version}) for workspace ${workspaceId}`);
+  console.log(`[IDEMPOTENCY] Status: ${row.status}, ResultId: ${row.result_id}`);
+  
   return {
-    isNew: true,
-    idempotencyKeyId: newKey.id,
+    isNew: false,
+    existingResultId: row.result_id || undefined,
+    idempotencyKeyId: row.id,
+    status: row.status as IdempotencyStatus,
   };
+}
+
+/**
+ * Retry wrapper with exponential backoff for serialization/lock errors
+ */
+export async function checkIdempotency(params: IdempotencyParams): Promise<IdempotencyResult> {
+  const maxAttempts = 5;
+  const baseDelayMs = 100;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await executeIdempotencyCheck(params);
+    } catch (error: any) {
+      const isRetryable = 
+        error.code === '40001' || // serialization_failure
+        error.code === '40P01' || // deadlock_detected
+        error.code === '55P03';   // lock_not_available
+
+      if (!isRetryable || attempt === maxAttempts) {
+        console.error(`[IDEMPOTENCY] Fatal error on attempt ${attempt}/${maxAttempts}: ${error.message}`);
+        throw error;
+      }
+
+      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+      console.warn(`[IDEMPOTENCY] Retryable error on attempt ${attempt}/${maxAttempts}, retrying in ${delayMs}ms: ${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error('[IDEMPOTENCY] Unreachable - retry loop exhausted');
 }
 
 /**
