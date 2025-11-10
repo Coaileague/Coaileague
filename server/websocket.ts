@@ -723,6 +723,14 @@ export function setupWebSocket(server: Server) {
                     workspaceId: ws.workspaceId,
                   });
 
+                  // AUTO-VOICE for public HelpDesk room: Give guests immediate ability to send messages
+                  if (payload.conversationId === MAIN_ROOM_ID) {
+                    if (ws.readyState === WebSocket.OPEN) {
+                      ws.send(JSON.stringify({ type: 'voice_granted' }));
+                      console.log(`🎤 Auto-granted voice to ${displayName} in public HelpDesk`);
+                    }
+                  }
+
                   await queueManager.updateQueuePositions();
                   const updatedEntry = await queueManager.getQueueEntry(payload.conversationId);
                   
