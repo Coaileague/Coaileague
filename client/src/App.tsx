@@ -137,7 +137,7 @@ function AppHeader({ isRootAdmin, setLocation, setShowOnboarding }: any) {
   const { user } = useAuth();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[40] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
+    <header className="fixed top-0 left-14 right-0 z-[40] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
       <div className="flex items-center gap-2">
         {/* Workspace Switcher - shows current workspace name */}
         <WorkspaceSwitcher />
