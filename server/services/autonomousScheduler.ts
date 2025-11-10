@@ -2,10 +2,10 @@
  * Autonomous Scheduler Service
  * Runs scheduled jobs for AutoForce™ autonomous operations:
  * - Nightly invoice generation (BillOS™)
- * - Weekly schedule generation (ScheduleOS™)
- * - Automatic payroll processing (PayrollOS™)
+ * - Weekly schedule generation (OperationsOS™)
+ * - Automatic payroll processing (BillOS™)
  * 
- * All automation activities are logged to AuditOS for compliance tracking.
+ * All automation activities are logged to AuditOS™ for compliance tracking.
  */
 
 import cron from 'node-cron';
@@ -393,7 +393,7 @@ async function runWeeklyScheduleGeneration() {
           console.log(`   ✓ Schedule interval matched, generating schedules...`);
           
           // Wrap automation in audit logging lifecycle
-          const runId = `scheduleos-${workspace.id}-${Date.now()}`;
+          const runId = `operationsos-${workspace.id}-${Date.now()}`;
           
           await logAutomationLifecycle(
             {
@@ -452,7 +452,7 @@ async function runWeeklyScheduleGeneration() {
     }
 
     console.log('\n=================================================');
-    console.log('📈 SCHEDULEΟΣ™ AUTONOMOUS SCHEDULING - SUMMARY');
+    console.log('📈 OPERATIONSOS™ AUTONOMOUS SCHEDULING - SUMMARY');
     console.log(`Total Workspaces: ${activeWorkspaces.length}`);
     console.log(`Successful: ${successCount}`);
     console.log(`Errors: ${errorCount}`);
@@ -670,7 +670,7 @@ export function startAutonomousScheduler() {
     cron.schedule(SCHEDULER_CONFIG.scheduling.schedule, () => {
       runWeeklyScheduleGeneration();
     });
-    console.log('✅ ScheduleOS™ Schedule Automation:');
+    console.log('✅ OperationsOS™ Schedule Automation:');
     console.log(`   Schedule: ${SCHEDULER_CONFIG.scheduling.schedule} (daily 11 PM)`);
     console.log(`   ${SCHEDULER_CONFIG.scheduling.description}\n`);
   }
