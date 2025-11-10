@@ -27,11 +27,12 @@ let cachedMasterKey: Buffer | null = null;
 /**
  * Load and validate master encryption key from environment
  * 
+ * @returns Buffer | null - Returns null in development if key not set (graceful degradation)
  * @throws Error if key missing in production or invalid length
  */
-function getMasterKey(): Buffer {
+function getMasterKey(): Buffer | null {
   // Return cached key if available
-  if (cachedMasterKey) {
+  if (cachedMasterKey !== null) {
     return cachedMasterKey;
   }
 
@@ -49,7 +50,9 @@ function getMasterKey(): Buffer {
         '⚠️  ENCRYPTION_KEY not set - OAuth tokens will be stored in PLAINTEXT! ' +
         'Set ENCRYPTION_KEY in .env for security.'
       );
-      throw new Error('ENCRYPTION_KEY not configured');
+      // Return null in development to allow graceful degradation
+      cachedMasterKey = null;
+      return null;
     }
   }
 
@@ -75,7 +78,7 @@ function getMasterKey(): Buffer {
  * Encrypt OAuth token using master key
  * 
  * @param token - Plaintext OAuth token
- * @returns Encrypted token in format: iv:authTag:ciphertext (base64)
+ * @returns Encrypted token in format: iv:authTag:ciphertext (base64), or plaintext if encryption unavailable in dev
  * @throws Error if token is null/undefined or encryption key invalid
  */
 export function encryptToken(token: string | null | undefined): string {
@@ -91,6 +94,13 @@ export function encryptToken(token: string | null | undefined): string {
 
   try {
     const key = getMasterKey();
+    
+    // Graceful degradation in development - store plaintext if no encryption key
+    if (!key) {
+      console.warn('⚠️  Storing token in PLAINTEXT - ENCRYPTION_KEY not configured');
+      return token; // Return plaintext in development
+    }
+    
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
@@ -112,7 +122,7 @@ export function encryptToken(token: string | null | undefined): string {
  * 
  * @param encryptedToken - Encrypted token in format: iv:authTag:ciphertext (base64)
  * @returns Decrypted plaintext token
- * @throws Error if token is null/undefined, invalid format, or decryption fails
+ * @throws Error if token is null/undefined, invalid format, or decryption fails (except in dev without key)
  */
 export function decryptToken(encryptedToken: string | null | undefined): string {
   if (!encryptedToken) {
@@ -121,9 +131,7 @@ export function decryptToken(encryptedToken: string | null | undefined): string 
 
   // Handle legacy plaintext tokens (backward compatibility)
   if (!isEncrypted(encryptedToken)) {
-    console.warn(
-      '⚠️  Decrypting legacy plaintext token - should be re-encrypted on next refresh'
-    );
+    // In development without encryption key, this is expected
     return encryptedToken;
   }
 
@@ -139,6 +147,12 @@ export function decryptToken(encryptedToken: string | null | undefined): string 
 
   try {
     const key = getMasterKey();
+    
+    // If no key in development, cannot decrypt encrypted tokens
+    if (!key) {
+      throw new Error('Cannot decrypt encrypted token - ENCRYPTION_KEY not configured');
+    }
+    
     const iv = Buffer.from(ivBase64, 'base64');
     const authTag = Buffer.from(authTagBase64, 'base64');
 
@@ -231,7 +245,8 @@ export function isEncryptionConfigured(): boolean {
 }
 
 // Export key generator for setup script
-if (require.main === module) {
+// Run with: tsx server/security/tokenEncryption.ts
+if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('Generated ENCRYPTION_KEY (add to .env file):');
   console.log('ENCRYPTION_KEY=' + generateEncryptionKey());
   console.log('\nExample .env entry:');

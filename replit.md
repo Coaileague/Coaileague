@@ -50,6 +50,17 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
     - Users pay ALL operational costs (AI tokens, QuickBooks API calls, Gusto API calls) + AutoForce™ markup
     - Stripe invoice line item generation with detailed breakdowns
     - Amortized pricing model: Partner subscription costs ($50/mo QuickBooks, $39/mo Gusto) divided by monthly API call volume
+-   **Partner OAuth Integration**: Secure OAuth 2.0 implementation for QuickBooks Online and Gusto:
+    - AES-256-GCM encryption at rest for access/refresh tokens (dedicated tokenEncryption module)
+    - PKCE (Proof Key for Code Exchange) for authorization code flow (QuickBooks)
+    - CSRF protection via state tokens with 10-minute TTL stored in oauth_states table
+    - Auto-refresh logic with 5-minute expiry buffer
+    - Encrypted token storage with backward-compatible legacy plaintext handling
+    - Exponential backoff retry logic with status tracking (connected/expired/disconnected/error)
+    - Clean separation: dedicated `server/security/tokenEncryption.ts` for OAuth tokens vs `server/encryption.ts` for message encryption
+    - Multi-tenant isolation: workspace membership validation on all integration endpoints
+    - Graceful degradation: Works in development without ENCRYPTION_KEY (with warnings), requires it in production
+    - **PRODUCTION SETUP REQUIRED**: Generate encryption key with `openssl rand -hex 32` and set as ENCRYPTION_KEY environment variable
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)
