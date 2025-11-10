@@ -201,6 +201,10 @@ export interface ResponsiveTableConfig {
 
 /**
  * Filters columns based on screen size and user preferences
+ * 
+ * IMPORTANT: User preferences (userHiddenColumns and defaultHiddenColumns) 
+ * are honored across ALL breakpoints to prevent columns from reappearing 
+ * when viewport size changes.
  */
 export function getVisibleColumns(
   config: ResponsiveTableConfig,
@@ -210,16 +214,21 @@ export function getVisibleColumns(
   const { columns, defaultHiddenColumns = [], mobileVisibleColumns = [] } = config;
 
   if (screenSize === 'mobile') {
-    // On mobile, only show P1 columns or explicitly requested mobile columns
+    // On mobile, show P1 columns or explicitly requested mobile columns
+    // BUT respect user preferences and default hidden columns
     return columns.filter(col => 
-      col.priority === 'P1' || mobileVisibleColumns.includes(col.key)
+      (col.priority === 'P1' || mobileVisibleColumns.includes(col.key)) &&
+      !defaultHiddenColumns.includes(col.key) &&
+      !userHiddenColumns.includes(col.key)
     );
   }
 
   if (screenSize === 'tablet') {
-    // On tablet, show P1 and P2 columns unless user hid them
+    // On tablet, show P1 and P2 columns
+    // BUT respect user preferences and default hidden columns
     return columns.filter(col => 
       (col.priority === 'P1' || col.priority === 'P2') && 
+      !defaultHiddenColumns.includes(col.key) &&
       !userHiddenColumns.includes(col.key)
     );
   }
