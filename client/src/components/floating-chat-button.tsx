@@ -98,7 +98,15 @@ export function FloatingChatButton() {
   // Handle click - only navigate if button wasn't dragged
   const handleClick = () => {
     if (!hasMoved.current) {
-      setLocation("/chat");
+      // Detect mobile and send to appropriate chat
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      
+      if (isMobileDevice || isSmallScreen) {
+        setLocation("/mobile-chat");
+      } else {
+        setLocation("/chat");
+      }
     }
   };
 

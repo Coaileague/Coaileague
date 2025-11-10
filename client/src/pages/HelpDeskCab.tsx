@@ -84,26 +84,6 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation(); // For navigation buttons
-  
-  // Mobile Detection & Auto-Redirect (runs once on mount)
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  
-  useEffect(() => {
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
-    
-    if ((isMobileDevice || isSmallScreen) && !forceMobileLayout) {
-      console.log('📱 Mobile/small screen detected, redirecting to /mobile-chat');
-      setShouldRedirect(true);
-      navigate('/mobile-chat', { replace: true });
-    }
-  }, []); // Empty deps - run only once on mount
-  
-  // Don't render if redirecting
-  if (shouldRedirect) {
-    return null;
-  }
-  
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
