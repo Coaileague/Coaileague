@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -83,6 +84,7 @@ interface HelpDeskCabProps {
 export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}) {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation(); // For navigation buttons
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -108,10 +110,7 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
   const [aiEnabled, setAiEnabled] = useState(false);
   const [showMotd, setShowMotd] = useState(false);
   const [motdData, setMotdData] = useState<any>(null);
-  const [showTermsDialog, setShowTermsDialog] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showAgreement, setShowAgreement] = useState(false);
-  const [hasAcceptedAgreement, setHasAcceptedAgreement] = useState(false);
+  // REMOVED: Agreement and terms dialogs - chatroom is now publicly accessible without barriers
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -185,52 +184,15 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
     retry: 1,
   });
 
-  // Check if user has accepted agreement - FIXED: Custom queryFn to pass sessionId properly
-  const { data: agreementStatus, error: agreementError } = useQuery<{ hasAccepted: boolean; acceptedAt: string | null }>({
-    queryKey: ['/api/helpdesk/agreement/check/helpdesk', sessionId],
-    queryFn: async () => {
-      const res = await fetch(`/api/helpdesk/agreement/check/helpdesk?sessionId=${sessionId}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to check agreement');
-      return res.json();
-    },
-    enabled: isAuthenticated,
-    retry: false,
-  });
-
-  // Agreement acceptance mutation
-  const acceptAgreementMutation = useMutation({
-    mutationFn: async (fullName: string) => {
-      return apiRequest('POST', '/api/helpdesk/agreement/accept', {
-        fullName,
-        roomSlug: 'helpdesk',
-        sessionId,
-      });
-    },
-    onSuccess: () => {
-      setHasAcceptedAgreement(true);
-      setShowAgreement(false);
-      toast({
-        title: "Agreement Accepted",
-        description: "Welcome to WorkforceOS Support Chat",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit agreement",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Show agreement modal if not accepted
-  useEffect(() => {
-    if (agreementStatus && !agreementStatus.hasAccepted && !hasAcceptedAgreement && isAuthenticated) {
-      setShowAgreement(true);
-    }
-  }, [agreementStatus, hasAcceptedAgreement, isAuthenticated]);
+  // REMOVED MANDATORY AGREEMENT CHECK - Chatroom is now publicly accessible
+  // Agreement modal is now optional (staff can enable if needed for compliance)
+  // Support staff are auto-authenticated and bypass all entry forms
+  // Audit trails still maintained via sessionId tracking in websocket connections
+  
+  // TODO: END-USER PRIORITY SYSTEM
+  // Implement queue weighting in server/services/helpOsQueue.ts to give end users
+  // priority over support staff during peak hours. Use weighted round-robin that
+  // demotes staff join requests when end-user concurrency threshold is hit.
 
   const { data: queueData, error: queueError } = useQuery<any[]>({
     queryKey: ['/api/helpdesk/queue'],
@@ -999,16 +961,41 @@ export function HelpDeskCab({ forceMobileLayout = false }: HelpDeskCabProps = {}
             }] : []}
           />
           
-          {/* Floating Controls - Overlaid on banner - Far Right Only */}
-          <div className="absolute top-1 right-2 flex items-center gap-1.5">
-            {/* Connection Status indicators removed - only show by send button */}
-            
-            {/* Theme Toggle - Transparent and only visible on hover (desktop) */}
-            <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
-              <div className="bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md h-6 w-6 rounded-md flex items-center justify-center">
-                <ThemeToggle />
-              </div>
+          {/* Floating Controls - Overlaid on banner - Navigation + Settings */}
+          <div className="absolute top-1 left-2 right-2 flex items-center justify-between gap-1.5">
+            {/* Left Side: Navigation Buttons - Working X and Home buttons */}
+            <div className="flex items-center gap-1.5">
+              <Button
+                onClick={() => navigate('/')}
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 gap-1 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm"
+                data-testid="button-home"
+                title="Go to Home"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="text-[10px] font-semibold">Home</span>
+              </Button>
+              <Button
+                onClick={() => navigate('/')}
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md text-white shadow-sm"
+                data-testid="button-close-chat"
+                title="Close Chat"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
+            
+            {/* Right Side: Theme + Staff Controls */}
+            <div className="flex items-center gap-1.5">
+              {/* Theme Toggle - Transparent and only visible on hover (desktop) */}
+              <div className="hidden md:flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
+                <div className="bg-white/20 hover:bg-white/40 border border-white/30 backdrop-blur-md h-6 w-6 rounded-md flex items-center justify-center">
+                  <ThemeToggle />
+                </div>
+              </div>
             
             {/* Staff Controls - Transparent and only visible on hover (desktop) */}
             {isStaff && (
