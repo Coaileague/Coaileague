@@ -1,0 +1,460 @@
+Got it—let’s make AutoForce truly autonomous on Replit: hours flow in → rates are classified (normal/OT/holiday) → invoices are drafted → user can edit → final invoice sent/paid → books reconcile. Below is a clean, do-this-now blueprint with concrete code patterns to “tell Replit” how to wire it all together.
+
+
+---
+
+1) High-level shape on Replit
+
+Spin up three deployables (they can be separate Repls or a monorepo with 3 processes):
+
+1. api (FastAPI or Express)
+
+Receives timesheets, exposes dashboards, draft invoices, approval endpoints
+
+Talks to DB, Stripe/QuickBooks/Gusto, and publishes events to a queue
+
+
+
+2. worker (background jobs)
+
+Listens to the queue, runs rate classification, generates invoice drafts, does retries
+
+
+
+3. webhooks (public endpoint just for third-party callbacks)
+
+Verifies signatures and publishes trusted events to the queue (never heavy logic here)
+
+
+
+
+> On Replit, use Deployments (or equivalent always-on processes) + Secrets for API keys. Use a managed PostgreSQL (e.g., Supabase/Neon) and a managed Redis (e.g., Upstash) for queues. Avoid Replit DB for this—rates and money need ACID.
+
+
+
+
+---
+
+2) Minimal data model (Postgres)
+
+-- workers & clients
+CREATE TABLE workers(
+  id uuid PRIMARY KEY, name text, external_ref text, active bool default true
+);
+
+CREATE TABLE clients(
+  id uuid PRIMARY KEY, name text, qb_customer_id text, stripe_customer_id text
+);
+
+-- rate rules tied to a client (or fallback global)
+CREATE TABLE rate_rules(
+  id uuid PRIMARY KEY,
+  client_id uuid NULL REFERENCES clients(id),
+  name text,
+  base_rate_cents int NOT NULL,
+  ot_multiplier numeric(5,2) DEFAULT 1.5,
+  holiday_multiplier numeric(5,2) DEFAULT 2.0,
+  holiday_calendar jsonb DEFAULT '[]',            -- e.g., ["2025-11-27"]
+  ot_threshold_hours numeric(5,2) DEFAULT 40.0,   -- weekly threshold
+  valid_from date DEFAULT CURRENT_DATE,
+  valid_to date
+);
+
+-- raw time (as reported)
+CREATE TABLE timesheets(
+  id uuid PRIMARY KEY,
+  worker_id uuid REFERENCES workers(id),
+  client_id uuid REFERENCES clients(id),
+  site_id text,
+  clock_in timestamptz,
+  clock_out timestamptz,
+  source jsonb,                -- device/GPS/face logs
+  status text DEFAULT 'received' CHECK (status in ('received','verified','rejected'))
+);
+
+-- normalized classified segments (normal/ot/holiday)
+CREATE TABLE time_segments(
+  id uuid PRIMARY KEY,
+  timesheet_id uuid REFERENCES timesheets(id),
+  kind text CHECK (kind in ('normal','ot','holiday')),
+  hours numeric(6,2),
+  rate_cents int,          -- resolved unit rate
+  amount_cents int
+);
+
+-- invoices
+CREATE TABLE invoices(
+  id uuid PRIMARY KEY,
+  client_id uuid REFERENCES clients(id),
+  status text CHECK (status in ('draft','approved','sent','paid','void')) DEFAULT 'draft',
+  currency text DEFAULT 'USD',
+  qb_invoice_id text,      -- if using QuickBooks
+  stripe_invoice_id text,  -- if using Stripe
+  meta jsonb
+);
+
+CREATE TABLE invoice_lines(
+  id uuid PRIMARY KEY,
+  invoice_id uuid REFERENCES invoices(id),
+  description text,
+  kind text,               -- normal/ot/holiday
+  qty numeric(6,2),
+  unit_cents int,
+  amount_cents int
+);
+
+
+---
+
+3) Event bus (Redis) + contracts
+
+Define a tiny JSON contract so the services talk consistently:
+
+// hours landed
+{
+  "type": "timesheet.received",
+  "timesheet_id": "uuid",
+  "client_id": "uuid"
+}
+
+// verified by the verification bot
+{
+  "type": "timesheet.verified",
+  "timesheet_id": "uuid"
+}
+
+// classification done
+{
+  "type": "timesheet.classified",
+  "timesheet_id": "uuid"
+}
+
+// new invoice draft ready to view/edit
+{
+  "type": "invoice.draft.created",
+  "invoice_id": "uuid",
+  "client_id": "uuid"
+}
+
+// user approved
+{
+  "type": "invoice.approved",
+  "invoice_id": "uuid",
+  "send_via": "quickbooks|stripe"
+}
+
+// payment completed webhook
+{
+  "type": "payment.succeeded",
+  "invoice_id": "uuid",
+  "provider": "stripe|quickbooks"
+}
+
+
+---
+
+4) FastAPI skeletons (drop-in)
+
+api: receive timesheets, create drafts, approve/send
+
+# api/main.py
+from fastapi import FastAPI, Depends
+from pydantic import BaseModel
+import uuid, json
+from db import sql
+from queue_bus import publish
+
+app = FastAPI()
+
+class TimeIn(BaseModel):
+    worker_id: str
+    client_id: str
+    site_id: str
+    clock_in: str
+    clock_out: str
+    source: dict
+
+@app.post("/timesheets")
+def receive_timesheet(t: TimeIn):
+    tid = str(uuid.uuid4())
+    sql("""INSERT INTO timesheets(id,worker_id,client_id,site_id,clock_in,clock_out,source)
+           VALUES(%s,%s,%s,%s,%s,%s,%s)""",
+        (tid,t.worker_id,t.client_id,t.site_id,t.clock_in,t.clock_out,json.dumps(t.source)))
+    publish({"type":"timesheet.received","timesheet_id":tid,"client_id":t.client_id})
+    return {"ok": True, "timesheet_id": tid}
+
+@app.post("/invoices/{invoice_id}/approve")
+def approve_invoice(invoice_id: str, send_via: str = "quickbooks"):
+    # set status approved and emit event
+    sql("UPDATE invoices SET status='approved' WHERE id=%s", (invoice_id,))
+    publish({"type":"invoice.approved","invoice_id":invoice_id,"send_via":send_via})
+    return {"ok": True}
+
+# simple edit endpoint for discounts
+class EditLine(BaseModel):
+    invoice_line_id: str
+    new_unit_cents: int | None = None
+    discount_cents: int | None = None
+
+@app.post("/invoices/{invoice_id}/edit-lines")
+def edit_lines(invoice_id: str, edits: list[EditLine]):
+    for e in edits:
+        if e.discount_cents:
+            sql("""UPDATE invoice_lines
+                   SET amount_cents = GREATEST(amount_cents - %s,0)
+                   WHERE id=%s AND invoice_id=%s""",
+                (e.discount_cents, e.invoice_line_id, invoice_id))
+        if e.new_unit_cents:
+            sql("""UPDATE invoice_lines
+                   SET unit_cents=%s, amount_cents = (qty * %s)::int
+                   WHERE id=%s AND invoice_id=%s""",
+                (e.new_unit_cents, e.new_unit_cents, e.invoice_line_id, invoice_id))
+    return {"ok": True}
+
+worker: classify time + draft invoice
+
+# worker/consumer.py
+import json, math
+from queue_bus import subscribe, publish
+from db import sql, fetchone, fetchall
+from datetime import datetime, date
+
+def is_holiday(d: date, cal: list[str]) -> bool:
+    return d.isoformat() in cal
+
+def classify_and_price(timesheet_id: str):
+    ts = fetchone("SELECT * FROM timesheets WHERE id=%s", (timesheet_id,))
+    rr = fetchone("""
+       SELECT * FROM rate_rules
+       WHERE (client_id=%s OR client_id IS NULL)
+         AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+       ORDER BY client_id NULLS LAST, valid_from DESC
+       LIMIT 1
+    """, (ts["client_id"],))
+    # split hours by day and kind
+    # 1) compute hours per day
+    clock_in = ts["clock_in"]; clock_out = ts["clock_out"]
+    # ... (split across days) ...
+    # for brevity assume total_hours:
+    total_hours = (clock_out - clock_in).total_seconds()/3600.0
+
+    # weekly context (simplified): pull week hours so far
+    week_hours = fetchone("""
+       SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (clock_out-clock_in))/3600),0) AS h
+       FROM timesheets WHERE worker_id=%s
+         AND date_trunc('week', clock_in)=date_trunc('week', %s)
+         AND status='verified'
+    """, (ts["worker_id"], clock_in))["h"]
+
+    normal_hours = min(max(rr["ot_threshold_hours"]-week_hours, 0), total_hours)
+    ot_hours = max(total_hours - normal_hours, 0)
+
+    # holiday check by date
+    holiday = is_holiday(clock_in.date(), rr["holiday_calendar"])
+    if holiday:
+        normal_hours, ot_hours = 0, 0
+        holiday_hours = total_hours
+    else:
+        holiday_hours = 0
+
+    # rates
+    base = rr["base_rate_cents"]
+    ot_rate = int(round(base * float(rr["ot_multiplier"])))
+    hol_rate = int(round(base * float(rr["holiday_multiplier"])))
+
+    # persist segments
+    def add(kind, hrs, rate):
+        if hrs <= 0: return
+        amt = int(round(hrs * rate))
+        sql("""INSERT INTO time_segments(id,timesheet_id,kind,hours,rate_cents,amount_cents)
+               VALUES(gen_random_uuid(),%s,%s,%s,%s,%s)""",
+            (timesheet_id, kind, hrs, rate, amt))
+
+    add("normal", normal_hours, base)
+    add("ot", ot_hours, ot_rate)
+    add("holiday", holiday_hours, hol_rate)
+
+    # link to or create an open draft invoice for that client (batched daily/weekly)
+    inv = fetchone("""SELECT * FROM invoices
+                      WHERE client_id=%s AND status='draft'
+                      ORDER BY created_at DESC NULLS LAST LIMIT 1""",
+                   (ts["client_id"],))
+    if not inv:
+        inv_id = fetchone("INSERT INTO invoices(id,client_id) VALUES(gen_random_uuid(),%s) RETURNING id",
+                          (ts["client_id"],))["id"]
+    else:
+        inv_id = inv["id"]
+
+    # roll segments into lines
+    segs = fetchall("SELECT kind, SUM(hours) h, AVG(rate_cents)::int r, SUM(amount_cents) a \
+                     FROM time_segments WHERE timesheet_id=%s GROUP BY kind", (timesheet_id,))
+    for s in segs:
+        desc = f"{s['kind'].upper()} hours for timesheet {timesheet_id}"
+        sql("""INSERT INTO invoice_lines(id,invoice_id,description,kind,qty,unit_cents,amount_cents)
+               VALUES(gen_random_uuid(),%s,%s,%s,%s,%s,%s)""",
+            (inv_id, desc, s["kind"], s["h"], s["r"], s["a"]))
+
+    publish({"type":"invoice.draft.created","invoice_id":inv_id,"client_id":ts["client_id"]})
+
+def handle(msg):
+    t = msg["type"]
+    if t == "timesheet.received":
+        # run verification pipeline (gps/face)—when OK:
+        sql("UPDATE timesheets SET status='verified' WHERE id=%s", (msg["timesheet_id"],))
+        publish({"type":"timesheet.verified","timesheet_id":msg["timesheet_id"]})
+    elif t == "timesheet.verified":
+        classify_and_price(msg["timesheet_id"])
+    elif t == "invoice.approved":
+        # push to provider
+        # if msg["send_via"] == "quickbooks": create QBO invoice & send
+        # if "stripe": create Stripe invoice & finalize
+        pass
+
+# main loop
+for event in subscribe(["timesheet.received","timesheet.verified","invoice.approved"]):
+    handle(event)
+
+webhooks: verify signatures, publish
+
+# webhooks/main.py
+from fastapi import FastAPI, Request, HTTPException
+from queue_bus import publish
+from providers import verify_stripe_sig, verify_qbo_sig
+
+app = FastAPI()
+
+@app.post("/webhooks/stripe")
+async def stripe_hook(req: Request):
+    raw = await req.body()
+    sig = req.headers.get("Stripe-Signature","")
+    event = verify_stripe_sig(raw, sig)  # raise if bad
+    if event["type"] == "invoice.payment_succeeded":
+        publish({"type":"payment.succeeded",
+                 "invoice_id": event["data"]["object"]["metadata"]["invoice_id"],
+                 "provider":"stripe"})
+    return {"ok": True}
+
+> Note: queue_bus, db, and provider helpers are tiny wrappers you write (Redis pub/sub, psycopg pool, Stripe/QBO SDK).
+
+
+
+
+---
+
+5) The editing step before send
+
+Flow your users will feel:
+
+1. Hours import/arrive → draft invoice is auto-built.
+
+
+2. User opens “Draft” → inline edits (line rate, add discount line, notes).
+
+
+3. Click Approve & Send → event invoice.approved → worker pushes to Stripe/QuickBooks.
+
+
+4. Webhook confirms payment → set status paid and reconcile.
+
+
+
+This maintains autonomy and gives humans a last look.
+
+
+---
+
+6) Make systems “communicate” reliably (the boring but critical stuff)
+
+Idempotency everywhere: include an Idempotency-Key header on all outbound calls and store processed keys.
+
+Signature verification: Stripe & QuickBooks webhooks must verify HMAC signatures before you trust them.
+
+Retries with backoff: worker should retry failed API calls (e.g., 5, 15, 60, 300 seconds).
+
+Queue for all cross-service hops: never call heavy logic inside webhooks or request handlers—enqueue it.
+
+Clock & TZ discipline: store UTC, display local.
+
+Versioned rate rules: never overwrite—append with valid_from/valid_to.
+
+Sandboxes first: use Stripe/QuickBooks sandboxes; add a “TEST” banner to UI when sandbox keys are loaded.
+
+Audit trail: one table recording who/what/when for compliance.
+
+
+
+---
+
+7) What to configure in Replit (checklist)
+
+Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REFRESH_TOKEN, GUSTO_TOKEN, DATABASE_URL, REDIS_URL.
+
+Deployments: one for each process (api, worker, webhooks) so they run 24/7.
+
+Health endpoints: /healthz on all services; Replit pings can restart if needed.
+
+Logs: pipe stdout logs; include request IDs in every log line.
+
+CORS: allow your dashboard origin only.
+
+TLS/HTTPS: terminate at Replit, your apps read X-Forwarded-Proto.
+
+
+
+---
+
+8) Rate classification logic (clear & extensible)
+
+Rules your classifier should apply in order:
+
+1. Reject/hold if timesheets.status != verified.
+
+
+2. Holiday: if date in holiday_calendar → all hours = holiday rate.
+
+
+3. Weekly OT: sum verified hours Mon–Sun; hours beyond ot_threshold_hours → OT rate.
+
+
+4. Daily OT (optional): if contract demands >8/day → OT that day.
+
+
+5. Site premiums (optional): e.g., +$2/hr at high-risk sites.
+
+
+6. Rounding: apply client’s 15-min rounding rule if required.
+
+
+
+Keep these rules in DB to change without deploys.
+
+
+---
+
+9) End-to-end test you can run today
+
+1. POST /timesheets with 42 hours for a worker and a rule ot_threshold_hours=40.
+
+
+2. Worker sees event chain: timesheet.received → verified → classified → invoice.draft.created.
+
+
+3. GET /invoices/{id} and verify there are normal and ot lines.
+
+
+4. POST /invoices/{id}/edit-lines to add a discount.
+
+
+5. POST /invoices/{id}/approve?send_via=stripe.
+
+
+6. Fire a Stripe test webhook → app marks invoice paid.
+
+
+
+If those pass in sandbox, you’ve delivered the autonomous promise.
+
+
+---
+
+If you want, I can adapt the code skeleton to your exact $45/hr + OT/holiday rules and QuickBooks vs Stripe preference, and produce a single Replit-ready repo layout (folders, requirements, Procfiles, and starter SQL).
