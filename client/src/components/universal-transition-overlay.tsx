@@ -169,51 +169,22 @@ export function UniversalTransitionOverlay({
               </motion.div>
             )}
 
-            {/* Loading dots animation - emergency green theme */}
-            {status === "loading" && (
+            {/* Status icon - shows for ALL states including loading spinner */}
+            <div className="flex justify-center mt-6">
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2, duration: 0.5 }}
-                className="flex justify-center gap-3 mt-8"
+                initial={{ scale: 0, rotate: status === "loading" ? 0 : -360 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ 
+                  delay: 0.6, 
+                  type: "spring", 
+                  damping: 15,
+                  duration: 0.8
+                }}
+                className="[&>svg]:w-12 [&>svg]:h-12 sm:[&>svg]:w-14 sm:[&>svg]:h-14"
               >
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-3 h-3 sm:w-4 sm:h-4 bg-primary rounded-full"
-                    animate={{
-                      scale: [1, 1.8, 1],
-                      opacity: [0.4, 1, 0.4]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      delay: i * 0.3,
-                      ease: "easeInOut"
-                    }}
-                  />
-                ))}
+                {config.icon}
               </motion.div>
-            )}
-            
-            {/* Status icon for non-loading states */}
-            {status !== "loading" && (
-              <div className="flex justify-center mt-6">
-                <motion.div
-                  initial={{ scale: 0, rotate: -360 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ 
-                    delay: 0.6, 
-                    type: "spring", 
-                    damping: 15,
-                    duration: 0.8
-                  }}
-                  className="[&>svg]:w-12 [&>svg]:h-12 sm:[&>svg]:w-14 sm:[&>svg]:h-14"
-                >
-                  {config.icon}
-                </motion.div>
-              </div>
-            )}
+            </div>
           </motion.div>
         </motion.div>
       )}
