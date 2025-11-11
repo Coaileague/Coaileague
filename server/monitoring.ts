@@ -132,6 +132,11 @@ class MonitoringService {
       memory: memoryPercent,
       timestamp: new Date()
     };
+    
+    // Log metrics for debugging (only when values change significantly)
+    if (this.cpuUsageSamples.length % 4 === 0) { // Log every 4th sample (every minute)
+      console.log(`[MONITORING] CPU: ${this.systemMetrics.cpu}%, Memory: ${this.systemMetrics.memory}%, Samples: ${this.cpuUsageSamples.length}`);
+    }
   }
   
   /**
