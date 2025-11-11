@@ -49,6 +49,10 @@ export function sanitizeChatMessage(message: string): string {
   // Cleanup hooks after use
   DOMPurify.removeAllHooks();
 
+  // DEBUG: Log sanitization results
+  console.log('[SANITIZATION] Input:', trimmed.substring(0, 200));
+  console.log('[SANITIZATION] Output:', clean.substring(0, 200));
+
   return clean;
 }
 
