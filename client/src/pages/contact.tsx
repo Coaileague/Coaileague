@@ -89,9 +89,9 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-gradient text-white">
+    <div className="min-h-screen bg-white">
       {/* Top Bar */}
-      <div className="h-16 bg-card-translucent border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-3 sm:px-6 gap-2">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white shadow-md border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 gap-2">
         <div className="shrink-0">
           {/* Desktop: Show full logo */}
           <div className="hidden sm:block">
@@ -106,36 +106,36 @@ export default function Contact() {
           <Button
             variant="ghost"
             onClick={() => window.location.href = "/"}
-            className="min-h-[44px] px-3 text-sm text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))] whitespace-nowrap"
+            className="min-h-[44px] px-3 text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
             data-testid="button-back"
           >
             Back
           </Button>
           <Button
             onClick={() => window.location.href = "/api/login"}
-            className="min-h-[44px] px-3 sm:px-4 text-sm bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white whitespace-nowrap"
+            className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white whitespace-nowrap shadow-md"
             data-testid="button-launch-platform"
           >
             <span className="hidden sm:inline">Launch Platform</span>
             <span className="sm:hidden">Login</span>
           </Button>
         </div>
-      </div>
+      </nav>
 
       {/* Contact Hero */}
-      <section className="container mx-auto px-6 py-16">
+      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
         <div className="text-center space-y-4 mb-12">
           <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-[hsl(var(--cad-blue))]" />
-            <span className="text-xs uppercase tracking-wider text-[hsl(var(--cad-text-tertiary))] font-mono">
+            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
+            <span className="text-xs uppercase tracking-wider text-gray-500 font-mono">
               Enterprise Support
             </span>
-            <div className="h-1 w-12 bg-[hsl(var(--cad-blue))]" />
+            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
           </div>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight" data-testid="heading-contact">
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900" data-testid="heading-contact">
             Contact Our Team
           </h1>
-          <p className="text-lg text-[hsl(var(--cad-text-secondary))] max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Elite-grade support for your workforce operations. Our experts are available 24/7 to ensure your success.
           </p>
         </div>
@@ -148,7 +148,7 @@ export default function Contact() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Email Support</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+              <p className="text-sm text-gray-600">
                 Get detailed technical assistance
               </p>
               <div className="space-y-1 pt-2">
@@ -159,7 +159,7 @@ export default function Contact() {
                 >
                   support@getdc360.com
                 </a>
-                <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                <p className="text-xs text-gray-500">
                   Response time: &lt;24 hours
                 </p>
               </div>
@@ -172,7 +172,7 @@ export default function Contact() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Live Chat</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+              <p className="text-sm text-gray-600">
                 Instant answers from our team
               </p>
               <div className="pt-2">
@@ -187,7 +187,7 @@ export default function Contact() {
                     Start Chat
                   </Button>
                 </Link>
-                <p className="text-xs text-[hsl(var(--cad-text-tertiary))] mt-2">
+                <p className="text-xs text-gray-500 mt-2">
                   Available 24/7 for all tiers
                 </p>
               </div>
@@ -200,7 +200,7 @@ export default function Contact() {
           <div className="p-8 space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">Enterprise Support Tiers</h2>
-              <p className="text-sm text-[hsl(var(--cad-text-tertiary))]">
+              <p className="text-sm text-gray-500">
                 Comprehensive support packages for businesses of all sizes
               </p>
             </div>
@@ -211,7 +211,7 @@ export default function Contact() {
                   <HeadphonesIcon className="h-5 w-5 text-[hsl(var(--cad-green))]" />
                   <h3 className="font-semibold">Standard Support</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-[hsl(var(--cad-text-secondary))]">
+                <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--cad-green))]">•</span>
                     Email & chat support
@@ -239,7 +239,7 @@ export default function Contact() {
                   <Briefcase className="h-5 w-5 text-[hsl(var(--cad-blue))]" />
                   <h3 className="font-semibold">Priority Support</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-[hsl(var(--cad-text-secondary))]">
+                <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--cad-blue))]">•</span>
                     Phone, email & chat support
@@ -257,7 +257,7 @@ export default function Contact() {
                     Quarterly business reviews
                   </li>
                 </ul>
-                <Badge className="bg-[hsl(var(--cad-blue))]/10 text-[hsl(var(--cad-blue))] border-none">
+                <Badge className="bg-gradient-to-r from-blue-500 to-blue-600/10 text-[hsl(var(--cad-blue))] border-none">
                   Included in Professional
                 </Badge>
               </div>
@@ -267,7 +267,7 @@ export default function Contact() {
                   <Zap className="h-5 w-5 text-[hsl(var(--cad-purple))]" />
                   <h3 className="font-semibold">White-Glove Support</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-[hsl(var(--cad-text-secondary))]">
+                <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--cad-purple))]">•</span>
                     24/7 priority phone support
@@ -300,7 +300,7 @@ export default function Contact() {
               <>
                 <div className="space-y-2">
                   <h2 className="text-3xl font-bold">Send Us a Message</h2>
-                  <p className="text-[hsl(var(--cad-text-secondary))]">
+                  <p className="text-gray-600">
                     Fill out the form and our team will get back to you within 24 hours.
                   </p>
                 </div>
@@ -402,7 +402,7 @@ export default function Contact() {
                   <Button
                 type="submit"
                 disabled={submitMutation.isPending}
-                className="w-full bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white h-11"
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-gradient-to-r from-blue-500 to-blue-600/90 text-white h-11"
                 data-testid="button-submit-contact"
               >
                 {submitMutation.isPending ? (
@@ -426,15 +426,15 @@ export default function Contact() {
                     <CheckCircle2 className="h-8 w-8 text-[hsl(var(--cad-green))]" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))]">Support Ticket Created!</h3>
-                    <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                    <h3 className="text-2xl font-bold text-gray-900">Support Ticket Created!</h3>
+                    <p className="text-sm text-gray-600">
                       Our team will respond within 24 hours
                     </p>
                   </div>
                 </div>
                 
                 <div className="space-y-3 p-4 bg-[hsl(var(--cad-background))] rounded-md border border-[hsl(var(--cad-border-strong))]">
-                  <p className="text-sm font-semibold text-[hsl(var(--cad-text-primary))]">Your Ticket Number:</p>
+                  <p className="text-sm font-semibold text-gray-900">Your Ticket Number:</p>
                   <div className="flex items-center justify-between gap-3">
                     <code className="text-2xl font-bold font-mono text-[hsl(var(--cad-green))]" data-testid="text-ticket-number">
                       {ticketNumber}
@@ -455,7 +455,7 @@ export default function Contact() {
                       Copy
                     </Button>
                   </div>
-                  <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                  <p className="text-xs text-gray-500">
                     Save this number! You'll need it to access Live Chat support.
                   </p>
                 </div>
@@ -500,7 +500,7 @@ export default function Contact() {
                 <Clock className="h-5 w-5 text-[hsl(var(--cad-blue))]" />
                 <h3 className="font-semibold">Business Hours</h3>
               </div>
-              <div className="space-y-2 text-sm text-[hsl(var(--cad-text-secondary))]">
+              <div className="space-y-2 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Monday - Friday:</span>
                   <span className="font-mono">6:00 AM - 10:00 PM EST</span>
@@ -523,11 +523,11 @@ export default function Contact() {
                 <h3 className="font-semibold">Online Business</h3>
               </div>
               <div className="space-y-2 text-sm">
-                <p className="text-[hsl(var(--cad-text-secondary))]">
+                <p className="text-gray-600">
                   AutoForce™ is a fully online platform. All support and communications are handled digitally for maximum efficiency.
                 </p>
                 <div className="pt-2 space-y-1">
-                  <p className="text-xs font-semibold text-[hsl(var(--cad-text-primary))]">General Inquiries:</p>
+                  <p className="text-xs font-semibold text-gray-900">General Inquiries:</p>
                   <a
                     href="mailto:info@getdc360.com"
                     className="text-sm font-mono text-[hsl(var(--cad-blue))] hover:underline block"
@@ -539,14 +539,14 @@ export default function Contact() {
               </div>
             </Card>
 
-            <Card className="bg-[hsl(var(--cad-blue))]/10 border-[hsl(var(--cad-blue))]/20 p-6 space-y-2">
-              <h3 className="font-semibold text-[hsl(var(--cad-text-primary))]">Enterprise Inquiries</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+            <Card className="bg-gradient-to-r from-blue-500 to-blue-600/10 border-[hsl(var(--cad-blue))]/20 p-6 space-y-2">
+              <h3 className="font-semibold text-gray-900">Enterprise Inquiries</h3>
+              <p className="text-sm text-gray-600">
                 Managing 100+ employees? Contact our team for custom pricing and dedicated onboarding.
               </p>
               <Button
                 variant="outline"
-                className="border-[hsl(var(--cad-blue))] text-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/10"
+                className="border-[hsl(var(--cad-blue))] text-[hsl(var(--cad-blue))] hover:bg-gradient-to-r from-blue-500 to-blue-600/10"
                 onClick={() => window.location.href = "mailto:info@getdc360.com"}
                 data-testid="button-enterprise-contact"
               >
@@ -561,20 +561,20 @@ export default function Contact() {
       <footer className="border-t border-[hsl(var(--cad-border))] bg-[hsl(var(--cad-chrome))]">
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-[hsl(var(--cad-text-tertiary))]">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
               <AutoForceLogo size="sm" variant="icon" />
               <span>© 2025 AutoForce™. Elite-grade workforce automation.</span>
             </div>
             <div className="flex items-center gap-6">
               <ReenableChatButton />
-              <div className="flex gap-6 text-xs text-[hsl(var(--cad-text-tertiary))]">
-                <a href="/support" className="hover:text-[hsl(var(--cad-text-primary))]" data-testid="link-support">
+              <div className="flex gap-6 text-xs text-gray-500">
+                <a href="/support" className="hover:text-gray-900" data-testid="link-support">
                   Support Center
                 </a>
-                <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
+                <a href="#" className="hover:text-gray-900">
                   Privacy
                 </a>
-                <a href="#" className="hover:text-[hsl(var(--cad-text-primary))]">
+                <a href="#" className="hover:text-gray-900">
                   Terms
                 </a>
               </div>

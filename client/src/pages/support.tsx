@@ -137,16 +137,16 @@ export default function Support() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-gradient text-white">
+    <div className="min-h-screen bg-white">
       {/* Top Bar */}
-      <div className="h-16 bg-card-translucent border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-6">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white shadow-md border-b border-gray-200 flex items-center justify-between px-6">
         <AutoForceLogo size="sm" variant="full" />
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => window.location.href = "/"}
-            className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+            className="text-xs h-8 text-gray-600 hover:text-gray-900"
             data-testid="button-back"
           >
             Back
@@ -155,7 +155,7 @@ export default function Support() {
             variant="ghost"
             size="sm"
             onClick={() => window.location.href = "/contact"}
-            className="text-xs h-8 text-[hsl(var(--cad-text-secondary))] hover:text-[hsl(var(--cad-text-primary))] hover:bg-[hsl(var(--cad-chrome-hover))]"
+            className="text-xs h-8 text-gray-600 hover:text-gray-900"
             data-testid="button-contact"
           >
             Contact
@@ -163,28 +163,28 @@ export default function Support() {
           <Button
             size="sm"
             onClick={() => window.location.href = "/api/login"}
-            className="h-8 text-xs bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
+            className="h-8 text-xs bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-md"
             data-testid="button-launch-platform"
           >
             Launch Platform
           </Button>
         </div>
-      </div>
+      </nav>
 
       {/* Support Hero */}
-      <section className="container mx-auto px-6 py-16">
+      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
         <div className="text-center space-y-4 mb-12">
           <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-[hsl(var(--cad-blue))]" />
-            <span className="text-xs uppercase tracking-wider text-[hsl(var(--cad-text-tertiary))] font-mono">
+            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
+            <span className="text-xs uppercase tracking-wider text-gray-500 font-mono">
               Help Center
             </span>
-            <div className="h-1 w-12 bg-[hsl(var(--cad-blue))]" />
+            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
           </div>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight" data-testid="heading-support">
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900" data-testid="heading-support">
             How Can We Help?
           </h1>
-          <p className="text-lg text-[hsl(var(--cad-text-secondary))] max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Search our knowledge base or browse resources to find answers
           </p>
         </div>
@@ -192,7 +192,7 @@ export default function Support() {
         {/* Search Bar */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[hsl(var(--cad-text-tertiary))]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -209,29 +209,29 @@ export default function Support() {
             <div className="p-6" onClick={() => window.location.href = "/support/tickets"}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-md bg-[hsl(var(--cad-blue))]/20 flex items-center justify-center flex-shrink-0">
+                  <div className="h-12 w-12 rounded-md bg-gradient-to-r from-blue-500 to-blue-600/20 flex items-center justify-center flex-shrink-0">
                     <LifeBuoy className="h-6 w-6 text-[hsl(var(--cad-blue))]" />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                       Need Direct Support?
-                      <Badge className="bg-[hsl(var(--cad-blue))] text-white">24/7 Available</Badge>
+                      <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">24/7 Available</Badge>
                     </h3>
-                    <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                    <p className="text-sm text-gray-600">
                       Submit a support ticket and our team will assist you. Track all your tickets, get priority help, and receive expert guidance for technical issues, billing questions, or feature requests.
                     </p>
                     <div className="flex items-center gap-4 pt-2">
-                      <span className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                      <span className="text-xs text-gray-500">
                         ⚡ Average response: 1 hour
                       </span>
-                      <span className="text-xs text-[hsl(var(--cad-text-tertiary))]">
+                      <span className="text-xs text-gray-500">
                         📞 Phone & Email Support
                       </span>
                     </div>
                   </div>
                 </div>
                 <Button 
-                  className="bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white flex-shrink-0"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-gradient-to-r from-blue-500 to-blue-600/90 text-white flex-shrink-0"
                   data-testid="button-open-tickets"
                 >
                   Open Tickets
@@ -252,7 +252,7 @@ export default function Support() {
                 </div>
                 <div>
                   <h3 className="font-semibold">System Status</h3>
-                  <p className="text-sm text-[hsl(var(--cad-text-tertiary))]">All systems operational</p>
+                  <p className="text-sm text-gray-500">All systems operational</p>
                 </div>
               </div>
               <Button
@@ -270,7 +270,7 @@ export default function Support() {
                 <div key={item.label} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-[hsl(var(--cad-green))]" />
                   <div className="flex-1">
-                    <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">{item.label}</p>
+                    <p className="text-xs text-gray-500">{item.label}</p>
                     <p className="text-sm font-medium">{item.value}</p>
                   </div>
                 </div>
@@ -307,13 +307,13 @@ export default function Support() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-semibold">{category.title}</h3>
-                  <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+                  <p className="text-sm text-gray-600">
                     {category.description}
                   </p>
                 </div>
                 <ul className="space-y-1.5 pt-2 border-t border-[hsl(var(--cad-border))]">
                   {category.items.map((item) => (
-                    <li key={item} className="text-xs text-[hsl(var(--cad-text-secondary))] flex items-center gap-2 hover:text-[hsl(var(--cad-text-primary))] transition-colors">
+                    <li key={item} className="text-xs text-gray-600 flex items-center gap-2 hover:text-gray-900 transition-colors">
                       <ExternalLink className="h-3 w-3" />
                       {item}
                     </li>
@@ -351,9 +351,9 @@ export default function Support() {
                 <topic.icon className="h-5 w-5 text-[hsl(var(--cad-blue))]" />
                 <div className="flex-1">
                   <h3 className="font-semibold text-sm">{topic.title}</h3>
-                  <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">{topic.articles} articles</p>
+                  <p className="text-xs text-gray-500">{topic.articles} articles</p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-[hsl(var(--cad-text-tertiary))]" />
+                <ExternalLink className="h-4 w-4 text-gray-500" />
               </Card>
             ))}
           </div>
@@ -369,7 +369,7 @@ export default function Support() {
                   <AccordionTrigger className="px-6 hover:no-underline hover:bg-[hsl(var(--cad-surface))]/50 data-testid={`faq-question-${index}`}">
                     <span className="text-left font-semibold">{faq.question}</span>
                   </AccordionTrigger>
-                  <AccordionContent className="px-6 pb-4 text-[hsl(var(--cad-text-secondary))]" data-testid={`faq-answer-${index}`}>
+                  <AccordionContent className="px-6 pb-4 text-gray-600" data-testid={`faq-answer-${index}`}>
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -380,16 +380,16 @@ export default function Support() {
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
-          <Card className="bg-[hsl(var(--cad-blue))]/10 border-[hsl(var(--cad-blue))]/20 p-6 space-y-4">
+          <Card className="bg-gradient-to-r from-blue-500 to-blue-600/10 border-[hsl(var(--cad-blue))]/20 p-6 space-y-4">
             <MessageSquare className="h-8 w-8 text-[hsl(var(--cad-blue))]" />
             <div className="space-y-2">
               <h3 className="font-semibold">Still Have Questions?</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+              <p className="text-sm text-gray-600">
                 Our support team is available 24/7 to help you succeed
               </p>
             </div>
             <Button
-              className="w-full bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-gradient-to-r from-blue-500 to-blue-600/90 text-white"
               onClick={() => window.location.href = "/contact"}
               data-testid="button-contact-support"
             >
@@ -401,7 +401,7 @@ export default function Support() {
             <Download className="h-8 w-8 text-[hsl(var(--cad-purple))]" />
             <div className="space-y-2">
               <h3 className="font-semibold">Download Resources</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+              <p className="text-sm text-gray-600">
                 Get PDFs, templates, and guides for offline reference
               </p>
             </div>
@@ -423,7 +423,7 @@ export default function Support() {
             <Video className="h-8 w-8 text-[hsl(var(--cad-green))]" />
             <div className="space-y-2">
               <h3 className="font-semibold">Video Walkthrough</h3>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))]">
+              <p className="text-sm text-gray-600">
                 Watch our comprehensive platform tutorial series
               </p>
             </div>
@@ -443,18 +443,18 @@ export default function Support() {
       <footer className="border-t border-[hsl(var(--cad-border))] bg-[hsl(var(--cad-chrome))]">
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-[hsl(var(--cad-text-tertiary))]">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
               <AutoForceLogo size="sm" variant="icon" />
               <span className="whitespace-nowrap">© 2025 AutoForce™</span>
             </div>
-            <div className="flex gap-3 sm:gap-6 text-xs text-[hsl(var(--cad-text-tertiary))] flex-wrap">
-              <a href="/contact" className="hover:text-[hsl(var(--cad-text-primary))] whitespace-nowrap" data-testid="link-contact">
+            <div className="flex gap-3 sm:gap-6 text-xs text-gray-500 flex-wrap">
+              <a href="/contact" className="hover:text-gray-900 whitespace-nowrap" data-testid="link-contact">
                 Contact Us
               </a>
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))] whitespace-nowrap">
+              <a href="#" className="hover:text-gray-900 whitespace-nowrap">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[hsl(var(--cad-text-primary))] whitespace-nowrap">
+              <a href="#" className="hover:text-gray-900 whitespace-nowrap">
                 Terms
               </a>
             </div>
