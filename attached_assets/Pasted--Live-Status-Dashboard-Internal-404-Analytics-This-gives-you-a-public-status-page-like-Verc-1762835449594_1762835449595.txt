@@ -1,0 +1,721 @@
+# Live Status Dashboard + Internal 404 Analytics
+
+This gives you a **public status page** (like Vercel/GitHub) + **internal admin panel** for support agents to see what's broken and why.
+
+---
+
+## Paste This Into Replit Shell
+
+```bash
+bash -lc '
+set -e
+
+echo "🚀 Building status dashboard + admin analytics..."
+
+# 1. Status page migration (track service health over time)
+cat > migrations/2025-11-11_status-tracking.sql << "STATUS_MIG"
+BEGIN;
+
+-- Service health checks
+CREATE TABLE IF NOT EXISTS service_health_log(
+  id BIGSERIAL PRIMARY KEY,
+  service_name TEXT NOT NULL,
+  status TEXT NOT NULL, -- healthy, degraded, down
+  response_time_ms INT,
+  error_message TEXT,
+  checked_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_health_service_time ON service_health_log(service_name, checked_at DESC);
+
+-- Incident tracking
+CREATE TABLE IF NOT EXISTS incidents(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL, -- investigating, identified, monitoring, resolved
+  severity TEXT NOT NULL, -- minor, major, critical
+  affected_services TEXT[], -- array of service names
+  started_at TIMESTAMPTZ DEFAULT now(),
+  resolved_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_incidents_status ON incidents(status, started_at DESC);
+
+-- Incident updates (timeline)
+CREATE TABLE IF NOT EXISTS incident_updates(
+  id BIGSERIAL PRIMARY KEY,
+  incident_id UUID NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_by UUID,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add metadata to 404 events for better triage
+ALTER TABLE web_404_events 
+  ADD COLUMN IF NOT EXISTS resolved BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS notes TEXT,
+  ADD COLUMN IF NOT EXISTS assigned_to UUID;
+
+CREATE INDEX IF NOT EXISTS idx_404_unresolved ON web_404_events(resolved, created_at DESC) WHERE resolved = false;
+
+COMMIT;
+STATUS_MIG
+
+# 2. Health monitoring service
+mkdir -p services
+cat > services/healthMonitor.ts << "MONITOR_EOF"
+import { Pool } from "pg";
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+interface ServiceCheck {
+  name: string;
+  url?: string;
+  checkFn?: () => Promise<{ ok: boolean; responseTime: number; error?: string }>;
+}
+
+const services: ServiceCheck[] = [
+  { 
+    name: "database",
+    checkFn: async () => {
+      const start = Date.now();
+      try {
+        await pool.query("SELECT 1");
+        return { ok: true, responseTime: Date.now() - start };
+      } catch (err: any) {
+        return { ok: false, responseTime: Date.now() - start, error: err.message };
+      }
+    }
+  },
+  {
+    name: "api",
+    url: process.env.BASE_URL + "/health"
+  }
+];
+
+async function checkService(service: ServiceCheck) {
+  if (service.checkFn) {
+    return service.checkFn();
+  }
+  
+  const start = Date.now();
+  try {
+    const res = await fetch(service.url!, { signal: AbortSignal.timeout(5000) });
+    return { 
+      ok: res.ok, 
+      responseTime: Date.now() - start,
+      error: res.ok ? undefined : `HTTP ${res.status}`
+    };
+  } catch (err: any) {
+    return { ok: false, responseTime: Date.now() - start, error: err.message };
+  }
+}
+
+export async function monitorServices() {
+  for (const service of services) {
+    const result = await checkService(service);
+    
+    await pool.query(
+      `INSERT INTO service_health_log(service_name, status, response_time_ms, error_message) 
+       VALUES($1, $2, $3, $4)`,
+      [
+        service.name,
+        result.ok ? "healthy" : "down",
+        result.responseTime,
+        result.error || null
+      ]
+    );
+  }
+}
+
+// Run every 60 seconds
+export function startHealthMonitor() {
+  monitorServices(); // immediate first run
+  setInterval(monitorServices, 60000);
+}
+MONITOR_EOF
+
+# 3. Public status page
+mkdir -p pages
+cat > pages/status.tsx << "STATUS_PAGE_EOF"
+import React, { useEffect, useState } from "react";
+import AppShell from "../ui/components/AppShell";
+
+interface Service {
+  name: string;
+  status: "healthy" | "degraded" | "down";
+  responseTime: number;
+  lastChecked: string;
+}
+
+interface Incident {
+  id: string;
+  title: string;
+  status: string;
+  severity: string;
+  started_at: string;
+  updates: Array<{ message: string; status: string; created_at: string }>;
+}
+
+export default function StatusPage() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [servicesRes, incidentsRes] = await Promise.all([
+        fetch("/api/status/services"),
+        fetch("/api/status/incidents")
+      ]);
+      setServices(await servicesRes.json());
+      setIncidents(await incidentsRes.json());
+      setLoading(false);
+    }
+    load();
+    const interval = setInterval(load, 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const overallStatus = services.every(s => s.status === "healthy") 
+    ? "All Systems Operational" 
+    : services.some(s => s.status === "down")
+    ? "Major Outage"
+    : "Degraded Performance";
+
+  const statusColor = overallStatus === "All Systems Operational" 
+    ? "text-emerald-400" 
+    : overallStatus === "Major Outage"
+    ? "text-red-400"
+    : "text-yellow-400";
+
+  if (loading) {
+    return <AppShell title="Status"><div className="text-center py-12">Loading...</div></AppShell>;
+  }
+
+  return (
+    <AppShell title="System Status">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center py-8 border-b border-zinc-800">
+          <h1 className="text-3xl font-bold mb-2">System Status</h1>
+          <p className={`text-xl ${statusColor}`}>{overallStatus}</p>
+        </div>
+
+        {/* Active Incidents */}
+        {incidents.filter(i => i.status !== "resolved").length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold mb-4">Active Incidents</h2>
+            {incidents.filter(i => i.status !== "resolved").map(incident => (
+              <div key={incident.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-lg">{incident.title}</h3>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    incident.severity === "critical" ? "bg-red-500/20 text-red-400" :
+                    incident.severity === "major" ? "bg-orange-500/20 text-orange-400" :
+                    "bg-yellow-500/20 text-yellow-400"
+                  }`}>
+                    {incident.severity}
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  {incident.updates.map((update, i) => (
+                    <div key={i} className="border-l-2 border-zinc-700 pl-3 py-1">
+                      <div className="text-zinc-400 text-xs mb-1">
+                        {new Date(update.created_at).toLocaleString()} · {update.status}
+                      </div>
+                      <div className="text-zinc-300">{update.message}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Service Status */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">Services</h2>
+          <div className="space-y-3">
+            {services.map(service => (
+              <div key={service.name} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    service.status === "healthy" ? "bg-emerald-500" :
+                    service.status === "degraded" ? "bg-yellow-500" :
+                    "bg-red-500"
+                  }`} />
+                  <span className="font-medium capitalize">{service.name}</span>
+                </div>
+                <div className="text-sm text-zinc-400">
+                  {service.responseTime}ms · {new Date(service.lastChecked).toLocaleTimeString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Past Incidents */}
+        {incidents.filter(i => i.status === "resolved").length > 0 && (
+          <div className="mt-8 mb-12">
+            <h2 className="text-xl font-bold mb-4">Incident History (Last 7 Days)</h2>
+            <div className="space-y-3">
+              {incidents.filter(i => i.status === "resolved").slice(0, 5).map(incident => (
+                <div key={incident.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-300">{incident.title}</span>
+                    <span className="text-xs text-zinc-500">
+                      {new Date(incident.started_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}
+STATUS_PAGE_EOF
+
+# 4. Admin analytics dashboard
+cat > pages/admin/analytics.tsx << "ADMIN_PAGE_EOF"
+import React, { useEffect, useState } from "react";
+import AppShell from "../../ui/components/AppShell";
+
+interface Error404 {
+  id: string;
+  path: string;
+  method: string;
+  count: number;
+  last_seen: string;
+  user_id?: string;
+  resolved: boolean;
+  notes?: string;
+}
+
+export default function AdminAnalytics() {
+  const [errors, setErrors] = useState<Error404[]>([]);
+  const [filter, setFilter] = useState<"unresolved" | "all">("unresolved");
+
+  useEffect(() => {
+    fetch(`/api/admin/404s?filter=${filter}`)
+      .then(r => r.json())
+      .then(setErrors);
+  }, [filter]);
+
+  async function markResolved(id: string, notes: string) {
+    await fetch(`/api/admin/404s/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resolved: true, notes })
+    });
+    setErrors(errors.filter(e => e.id !== id));
+  }
+
+  return (
+    <AppShell 
+      title="404 Analytics" 
+      breadcrumbs={[{ label: "Admin" }, { label: "404 Analytics" }]}
+    >
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Broken Links & 404s</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilter("unresolved")}
+              className={`px-4 py-2 rounded ${filter === "unresolved" ? "bg-red-500" : "bg-zinc-800"}`}
+            >
+              Unresolved ({errors.filter(e => !e.resolved).length})
+            </button>
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded ${filter === "all" ? "bg-blue-500" : "bg-zinc-800"}`}
+            >
+              All
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-zinc-800 text-left">
+              <tr>
+                <th className="px-4 py-3">Path</th>
+                <th className="px-4 py-3">Method</th>
+                <th className="px-4 py-3">Occurrences</th>
+                <th className="px-4 py-3">Last Seen</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {errors.map(err => (
+                <tr key={err.id} className="border-t border-zinc-800">
+                  <td className="px-4 py-3 font-mono text-sm">{err.path}</td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 bg-zinc-800 rounded text-xs">{err.method}</span>
+                  </td>
+                  <td className="px-4 py-3 text-red-400 font-semibold">{err.count}</td>
+                  <td className="px-4 py-3 text-sm text-zinc-400">
+                    {new Date(err.last_seen).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    {!err.resolved && (
+                      <button
+                        onClick={() => {
+                          const notes = prompt("Resolution notes:");
+                          if (notes) markResolved(err.id, notes);
+                        }}
+                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded text-sm"
+                      >
+                        Mark Fixed
+                      </button>
+                    )}
+                    {err.resolved && (
+                      <span className="text-emerald-400 text-sm">✓ Resolved</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+ADMIN_PAGE_EOF
+
+# 5. Status API routes
+cat > routes/api/status.ts << "STATUS_API_EOF"
+import { Router } from "express";
+import { Pool } from "pg";
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const r = Router();
+
+// Public: current service status
+r.get("/api/status/services", async (req, res) => {
+  const result = await pool.query(`
+    SELECT DISTINCT ON (service_name)
+      service_name as name,
+      status,
+      response_time_ms as "responseTime",
+      checked_at as "lastChecked"
+    FROM service_health_log
+    ORDER BY service_name, checked_at DESC
+  `);
+  res.json(result.rows);
+});
+
+// Public: active + recent incidents
+r.get("/api/status/incidents", async (req, res) => {
+  const incidents = await pool.query(`
+    SELECT 
+      i.id, i.title, i.status, i.severity, i.started_at,
+      json_agg(
+        json_build_object(
+          '\''message'\'', u.message,
+          '\''status'\'', u.status,
+          '\''created_at'\'', u.created_at
+        ) ORDER BY u.created_at DESC
+      ) as updates
+    FROM incidents i
+    LEFT JOIN incident_updates u ON u.incident_id = i.id
+    WHERE i.started_at > now() - interval '\''7 days'\''
+    GROUP BY i.id
+    ORDER BY i.started_at DESC
+  `);
+  res.json(incidents.rows);
+});
+
+export default r;
+STATUS_API_EOF
+
+# 6. Admin API routes
+cat > routes/api/admin.ts << "ADMIN_API_EOF"
+import { Router } from "express";
+import { Pool } from "pg";
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const r = Router();
+
+// Admin: 404 aggregates
+r.get("/api/admin/404s", async (req, res) => {
+  const { filter = "unresolved" } = req.query;
+  
+  const query = `
+    SELECT 
+      path || '\''|'\'' || method as id,
+      path,
+      method,
+      COUNT(*) as count,
+      MAX(created_at) as last_seen,
+      BOOL_OR(resolved) as resolved,
+      MAX(notes) as notes
+    FROM web_404_events
+    ${filter === "unresolved" ? "WHERE resolved = false" : ""}
+    GROUP BY path, method
+    ORDER BY count DESC, last_seen DESC
+    LIMIT 100
+  `;
+  
+  const result = await pool.query(query);
+  res.json(result.rows);
+});
+
+// Admin: mark 404 resolved
+r.patch("/api/admin/404s/:id", async (req, res) => {
+  const [path, method] = req.params.id.split("|");
+  const { resolved, notes } = req.body;
+  
+  await pool.query(
+    `UPDATE web_404_events 
+     SET resolved = $1, notes = $2 
+     WHERE path = $3 AND method = $4`,
+    [resolved, notes, path, method]
+  );
+  
+  res.json({ success: true });
+});
+
+// Admin: create incident
+r.post("/api/admin/incidents", async (req, res) => {
+  const { title, description, severity, affected_services } = req.body;
+  
+  const result = await pool.query(
+    `INSERT INTO incidents(title, description, status, severity, affected_services, created_by)
+     VALUES($1, $2, '\''investigating'\'', $3, $4, $5)
+     RETURNING id`,
+    [title, description, severity, affected_services, req.user?.id || null]
+  );
+  
+  await pool.query(
+    `INSERT INTO incident_updates(incident_id, message, status, created_by)
+     VALUES($1, $2, '\''investigating'\'', $3)`,
+    [result.rows[0].id, description, req.user?.id || null]
+  );
+  
+  res.json({ id: result.rows[0].id });
+});
+
+// Admin: update incident
+r.post("/api/admin/incidents/:id/updates", async (req, res) => {
+  const { message, status } = req.body;
+  
+  await pool.query(
+    `INSERT INTO incident_updates(incident_id, message, status, created_by)
+     VALUES($1, $2, $3, $4)`,
+    [req.params.id, message, status, req.user?.id || null]
+  );
+  
+  await pool.query(
+    `UPDATE incidents SET status = $1, updated_at = now() WHERE id = $2`,
+    [status, req.params.id]
+  );
+  
+  if (status === "resolved") {
+    await pool.query(
+      `UPDATE incidents SET resolved_at = now() WHERE id = $1`,
+      [req.params.id]
+    );
+  }
+  
+  res.json({ success: true });
+});
+
+export default r;
+ADMIN_API_EOF
+
+# 7. Add health monitor to server startup
+cat > scripts/start-with-monitoring.ts << "START_EOF"
+import { startHealthMonitor } from "../services/healthMonitor";
+
+// Start monitoring when server boots
+startHealthMonitor();
+
+console.log("✅ Health monitoring started");
+START_EOF
+
+echo "✅ Status dashboard + analytics created!"
+echo ""
+echo "📋 Setup steps:"
+echo "1. Run migration: npm run db:migrate"
+echo "2. Mount routes in your Express app:"
+echo "   import statusRouter from '\''./routes/api/status'\'';"
+echo "   import adminRouter from '\''./routes/api/admin'\'';"
+echo "   app.use(statusRouter);"
+echo "   app.use(adminRouter);"
+echo "3. Start health monitoring in server.ts:"
+echo "   import { startHealthMonitor } from '\''./services/healthMonitor'\'';"
+echo "   startHealthMonitor();"
+echo "4. Add routes to your router:"
+echo "   - /status → public status page"
+echo "   - /admin/analytics → internal 404 dashboard"
+echo ""
+echo "🎯 Public status: /status"
+echo "🔧 Admin analytics: /admin/analytics"
+'
+```
+
+---
+
+## What You Get
+
+### 1. **Public Status Page** (`/status`)
+- Live service health (DB, API, etc.)
+- Active incident feed with timeline
+- Historical incidents (last 7 days)
+- Auto-refreshes every 30s
+- **No auth required** (share with customers)
+
+### 2. **Admin Analytics** (`/admin/analytics`)
+- Aggregated 404s (sorted by frequency)
+- Mark issues as "resolved" with notes
+- Filter unresolved vs all
+- See which broken links are costing you users
+
+### 3. **Automated Health Monitoring**
+- Checks services every 60 seconds
+- Logs response times to DB
+- Powers the status page
+
+### 4. **Incident Management API**
+- Create incidents: `POST /api/admin/incidents`
+- Post updates: `POST /api/admin/incidents/:id/updates`
+- Auto-resolves when status = "resolved"
+
+---
+
+## After Install
+
+### 1. Run migration
+```bash
+npm run db:migrate
+```
+
+### 2. Wire up routes in `server.ts` or `app.ts`
+
+```ts
+import statusRouter from './routes/api/status';
+import adminRouter from './routes/api/admin';
+import { startHealthMonitor } from './services/healthMonitor';
+
+// Mount routes
+app.use(statusRouter);
+app.use(adminRouter);
+
+// Start health checks
+startHealthMonitor();
+```
+
+### 3. Add page routes to your router
+
+```ts
+// Example with Express + React
+app.get('/status', (req, res) => {
+  res.sendFile('pages/status.html'); // or however you serve React pages
+});
+
+app.get('/admin/analytics', (req, res) => {
+  // Add auth middleware here
+  res.sendFile('pages/admin/analytics.html');
+});
+```
+
+### 4. Protect admin routes (add auth middleware)
+
+```ts
+function requireAdmin(req, res, next) {
+  if (!req.user?.is_admin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  next();
+}
+
+app.use('/api/admin/*', requireAdmin);
+```
+
+---
+
+## Usage Examples
+
+### Create an incident when something breaks
+
+```bash
+curl -X POST http://localhost:3000/api/admin/incidents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Database Connection Pool Exhausted",
+    "description": "Investigating high load causing timeouts",
+    "severity": "major",
+    "affected_services": ["api", "database"]
+  }'
+```
+
+### Post an update
+
+```bash
+curl -X POST http://localhost:3000/api/admin/incidents/{id}/updates \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Scaled up connection pool to 50. Monitoring...",
+    "status": "monitoring"
+  }'
+```
+
+### Resolve it
+
+```bash
+curl -X POST http://localhost:3000/api/admin/incidents/{id}/updates \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Timeouts eliminated. Issue resolved.",
+    "status": "resolved"
+  }'
+```
+
+---
+
+## Bonus: Slack Integration (Optional)
+
+Want to auto-post incidents to Slack? Add this:
+
+```ts
+// services/notifications.ts
+export async function notifySlack(incident: any) {
+  await fetch(process.env.SLACK_WEBHOOK_URL!, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: `🚨 ${incident.severity.toUpperCase()}: ${incident.title}`,
+      blocks: [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: incident.description }
+        },
+        {
+          type: 'context',
+          elements: [
+            { type: 'mrkdwn', text: `Affected: ${incident.affected_services.join(', ')}` }
+          ]
+        }
+      ]
+    })
+  });
+}
+```
+
+Then call it in the incident creation route.
+
+---
+
+**You now have**:
+- ✅ Public transparency (status page)
+- ✅ Internal visibility (404 analytics)
+- ✅ Incident management
+- ✅ Automated health checks
+
+Want me to add **uptime percentage badges** or **API performance charts**?
