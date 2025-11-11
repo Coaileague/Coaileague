@@ -15,6 +15,9 @@ Universal Back Navigation: Every page, modal, dialog needs clear exit/cancel/bac
 Unsaved Changes Protection: Forms and pages with editable content must warn users before navigation/close.
 MOBILE-FIRST: All UI components must be fully responsive with proper text wrapping, scroll behavior, and touch-friendly tap targets.
 
+## Recent Changes
+-   **Professional Homepage** (November 2025): Created public-facing homepage (client/src/pages/homepage.tsx) with Fortune 500 enterprise aesthetic. Features emerald/green gradient CTAs, professional gray color palette, hero section with ROI calculator showcasing $168K average annual savings, autonomous features section (Scheduling, Payroll, Invoicing), trust indicators (SOC 2, 99.9% uptime), and responsive mobile navigation. All interactive elements instrumented with data-testid attributes for testing. Design adheres to universal guidelines using elevation classes instead of scale transforms.
+
 ## System Architecture
 AutoForce™ is built on a modular "OS" design philosophy, incorporating 6 major autonomous systems to promote clean code, automation, and extensibility. It features a comprehensive Role-Based Access Control (RBAC) and Tier Gating System across Free, Starter, Professional, and Enterprise tiers, with a two-tier role hierarchy for platform staff and workspace users.
 
