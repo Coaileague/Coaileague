@@ -15,6 +15,14 @@ Universal Back Navigation: Every page, modal, dialog needs clear exit/cancel/bac
 Unsaved Changes Protection: Forms and pages with editable content must warn users before navigation/close.
 MOBILE-FIRST: All UI components must be fully responsive with proper text wrapping, scroll behavior, and touch-friendly tap targets.
 
+## Demo Account Configuration
+**⚠️  SECURITY NOTE**: Demo account grants full platform access for E2E testing.
+- **Route**: `/api/demo-login` - Disabled in production (NODE_ENV check)
+- **Access Level**: org_owner role + enterprise tier
+- **Purpose**: Complete feature testing including autonomous AI features (ChatGPT/Gemini)
+- **Workspace**: demo-workspace-00000000 with 999 employee/client limits
+- **Production**: Automatically blocked via environment guard in server/routes.ts
+
 ## System Architecture
 AutoForce™ is built on a modular "OS" design philosophy with 6 major autonomous systems, emphasizing clean code, automation, and extensibility. It features a comprehensive Role-Based Access Control (RBAC) and Tier Gating System across Free, Starter, Professional, and Enterprise tiers, with two-tier role hierarchy for platform staff and workspace users.
 

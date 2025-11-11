@@ -810,7 +810,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Demo login route - bypasses authentication for demo workspace
+  // ⚠️  SECURITY: Grants full org_owner + enterprise access for E2E testing
+  // Only enabled in development. Production access blocked for security.
   app.get('/api/demo-login', async (req: any, res) => {
+    // Block demo login in production environments
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  Demo login blocked in production environment');
+      return res.status(403).json({ 
+        message: "Demo login is disabled in production for security reasons." 
+      });
+    }
+
     try {
       const DEMO_USER_ID = "demo-user-00000000";
       
