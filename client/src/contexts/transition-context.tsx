@@ -53,11 +53,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
   return (
     <TransitionContext.Provider value={{ showTransition, hideTransition, updateTransition }}>
       {children}
-      <ProgressLoadingOverlay
-        isVisible={isVisible}
-        status={options.status || "loading"}
-        title={options.message || "Loading"}
-      />
+      {/* ProgressLoadingOverlay disabled - using static HTML loader in index.html instead */}
     </TransitionContext.Provider>
   );
 }
