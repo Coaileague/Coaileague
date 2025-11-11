@@ -59,7 +59,7 @@ export type OSCapability =
   | 'view_messages'
   | 'support_dashboard';
 
-export type FamilyId = 'commos' | 'operationsos' | 'billos' | 'intelligenceos' | 'auditos' | 'marketingos' | 'platform';
+export type FamilyId = 'executive' | 'operations' | 'people' | 'intelligence' | 'platform';
 
 export interface OSModuleRoute {
   id: string;
@@ -208,7 +208,11 @@ export function canAccessRoute(
 
 /**
  * AutoForce™ OS Modules Registry
- * Central configuration for all 6 major OS systems
+ * Consolidated into 4 high-level suites for better organization:
+ * 1. Executive Control - Finance, Settings, Platform Admin
+ * 2. Operations Hub - Scheduling, Time, Training
+ * 3. People & Engagement - Workforce, Communication, Talent
+ * 4. Intelligence & Compliance - Analytics, Reports, Audit
  */
 export const osModules: OSModule[] = [
   {
@@ -222,12 +226,12 @@ export const osModules: OSModule[] = [
     routes: [
       {
         id: 'dashboard-home',
-        label: 'Admin Dashboard',
+        label: 'Dashboard',
         href: '/dashboard',
         icon: LayoutDashboard,
         description: 'Your personalized overview',
         familyId: 'platform',
-        order: 20,
+        order: 1,
       },
     ],
   },
@@ -238,7 +242,7 @@ export const osModules: OSModule[] = [
     icon: CalendarDays,
     color: 'hsl(var(--chart-1))',
     capabilities: ['view_schedules', 'manage_schedules', 'view_timesheets', 'approve_timesheets'],
-    familyId: 'operationsos',
+    familyId: 'operations',
     routes: [
       {
         id: 'schedule-os',
@@ -247,8 +251,8 @@ export const osModules: OSModule[] = [
         icon: CalendarDays,
         description: 'Intelligent shift scheduling',
         capabilities: ['view_schedules'],
-        familyId: 'operationsos',
-        order: 10,
+        familyId: 'operations',
+        order: 1,
       },
       {
         id: 'time-os',
@@ -257,8 +261,8 @@ export const osModules: OSModule[] = [
         icon: Clock,
         description: 'GPS-verified time tracking',
         capabilities: ['view_timesheets'],
-        familyId: 'operationsos',
-        order: 11,
+        familyId: 'operations',
+        order: 2,
       },
       {
         id: 'timesheets-pending',
@@ -268,8 +272,8 @@ export const osModules: OSModule[] = [
         description: 'Review and approve submitted hours',
         capabilities: ['approve_timesheets'],
         badge: 'Supervisor',
-        familyId: 'operationsos',
-        order: 12,
+        familyId: 'operations',
+        order: 3,
       },
     ],
   },
@@ -280,7 +284,7 @@ export const osModules: OSModule[] = [
     icon: Wallet,
     color: 'hsl(var(--chart-2))',
     capabilities: ['view_invoices', 'manage_invoices', 'view_payroll', 'process_payroll'],
-    familyId: 'billos',
+    familyId: 'executive',
     routes: [
       {
         id: 'payroll-os',
@@ -290,8 +294,8 @@ export const osModules: OSModule[] = [
         description: 'FLSA-compliant payroll processing',
         capabilities: ['view_payroll'],
         minimumTier: 'professional',
-        familyId: 'billos',
-        order: 13,
+        familyId: 'executive',
+        order: 2,
       },
       {
         id: 'bill-os-invoices',
@@ -300,8 +304,8 @@ export const osModules: OSModule[] = [
         icon: FileCheck2,
         description: 'Automated invoice generation',
         capabilities: ['view_invoices'],
-        familyId: 'billos',
-        order: 14,
+        familyId: 'executive',
+        order: 3,
       },
       {
         id: 'bill-os-integrations',
@@ -310,8 +314,8 @@ export const osModules: OSModule[] = [
         icon: Zap,
         description: 'QuickBooks & Gusto integrations',
         capabilities: ['manage_invoices', 'process_payroll'],
-        familyId: 'billos',
-        order: 15,
+        familyId: 'executive',
+        order: 4,
       },
     ],
   },
@@ -322,7 +326,7 @@ export const osModules: OSModule[] = [
     icon: UsersRound,
     color: 'hsl(var(--chart-3))',
     capabilities: ['manage_employees', 'manage_clients'],
-    familyId: 'platform',
+    familyId: 'people',
     routes: [
       {
         id: 'training-os',
@@ -331,8 +335,8 @@ export const osModules: OSModule[] = [
         icon: GraduationCap,
         description: 'Employee onboarding and compliance training',
         capabilities: ['manage_employees'],
-        familyId: 'operationsos',
-        order: 13,
+        familyId: 'operations',
+        order: 4,
       },
       {
         id: 'employees',
@@ -341,8 +345,8 @@ export const osModules: OSModule[] = [
         icon: UsersRound,
         description: 'Manage workforce',
         capabilities: ['manage_employees'],
-        familyId: 'platform',
-        order: 16,
+        familyId: 'people',
+        order: 1,
       },
       {
         id: 'clients',
@@ -351,8 +355,8 @@ export const osModules: OSModule[] = [
         icon: BookUser,
         description: 'Manage client relationships',
         capabilities: ['manage_clients'],
-        familyId: 'platform',
-        order: 17,
+        familyId: 'people',
+        order: 2,
       },
     ],
   },
@@ -363,7 +367,7 @@ export const osModules: OSModule[] = [
     icon: FileBarChart,
     color: 'hsl(var(--chart-4))',
     capabilities: ['view_reports', 'advanced_analytics'],
-    familyId: 'intelligenceos',
+    familyId: 'intelligence',
     routes: [
       {
         id: 'deal-os',
@@ -373,8 +377,8 @@ export const osModules: OSModule[] = [
         description: 'AI-powered RFP hunting and contract generation',
         capabilities: ['manage_workspace'],
         minimumTier: 'enterprise',
-        familyId: 'marketingos',
-        order: 30,
+        familyId: 'intelligence',
+        order: 4,
       },
       {
         id: 'talent-os',
@@ -383,8 +387,8 @@ export const osModules: OSModule[] = [
         icon: Award,
         description: 'Leadership development and recognition',
         capabilities: ['manage_employees'],
-        familyId: 'marketingos',
-        order: 31,
+        familyId: 'people',
+        order: 3,
       },
       {
         id: 'engagement-os',
@@ -393,8 +397,8 @@ export const osModules: OSModule[] = [
         icon: TrendingUp,
         description: 'Pulse surveys and employee engagement',
         capabilities: ['manage_employees'],
-        familyId: 'marketingos',
-        order: 32,
+        familyId: 'people',
+        order: 4,
       },
       {
         id: 'analytics-os',
@@ -405,8 +409,8 @@ export const osModules: OSModule[] = [
         capabilities: ['advanced_analytics'],
         minimumTier: 'enterprise',
         badge: 'Enterprise',
-        familyId: 'intelligenceos',
-        order: 33,
+        familyId: 'intelligence',
+        order: 1,
       },
       {
         id: 'report-os',
@@ -416,8 +420,8 @@ export const osModules: OSModule[] = [
         description: 'Comprehensive business intelligence',
         capabilities: ['view_reports'],
         minimumTier: 'starter',
-        familyId: 'intelligenceos',
-        order: 34,
+        familyId: 'intelligence',
+        order: 2,
       },
       {
         id: 'insight-os',
@@ -427,8 +431,8 @@ export const osModules: OSModule[] = [
         description: 'Management reports with role-based access',
         capabilities: ['view_reports'],
         minimumTier: 'starter',
-        familyId: 'intelligenceos',
-        order: 35,
+        familyId: 'intelligence',
+        order: 3,
       },
     ],
   },
@@ -439,7 +443,7 @@ export const osModules: OSModule[] = [
     icon: MessagesSquare,
     color: 'hsl(var(--chart-5))',
     capabilities: ['view_messages'],
-    familyId: 'communication',
+    familyId: 'people',
     routes: [
       {
         id: 'comm-os-dashboard',
@@ -448,27 +452,27 @@ export const osModules: OSModule[] = [
         icon: MessagesSquare,
         description: 'Communication hub dashboard',
         capabilities: ['view_messages'],
-        familyId: 'commos',
-        order: 1,
+        familyId: 'people',
+        order: 5,
       },
       {
         id: 'private-messages',
-        label: 'Private Messages',
+        label: 'Messages',
         href: '/messages',
         icon: LockKeyhole,
         description: 'Direct messaging',
         capabilities: ['view_messages'],
-        familyId: 'commos',
-        order: 2,
+        familyId: 'people',
+        order: 6,
       },
       {
         id: 'support-helpdesk',
-        label: 'SupportOS™ HelpDesk',
+        label: 'HelpDesk',
         href: '/chat',
         icon: Headphones,
         description: 'AI-powered support chat',
-        familyId: 'commos',
-        order: 3,
+        familyId: 'people',
+        order: 7,
       },
     ],
   },
@@ -479,7 +483,7 @@ export const osModules: OSModule[] = [
     icon: Shield,
     color: 'hsl(var(--destructive))',
     capabilities: ['view_audit_logs'],
-    familyId: 'auditos',
+    familyId: 'intelligence',
     routes: [
       {
         id: 'audit-logs',
@@ -489,8 +493,8 @@ export const osModules: OSModule[] = [
         description: 'Compliance and activity tracking',
         capabilities: ['view_audit_logs'],
         minimumTier: 'professional',
-        familyId: 'auditos',
-        order: 22,
+        familyId: 'intelligence',
+        order: 5,
       },
     ],
   },
@@ -504,16 +508,6 @@ export const osModules: OSModule[] = [
     familyId: 'platform',
     routes: [
       {
-        id: 'integration-os',
-        label: 'IntegrationOS™',
-        href: '/integrations',
-        icon: Zap,
-        description: 'External system connections',
-        capabilities: ['manage_workspace'],
-        familyId: 'platform',
-        order: 21,
-      },
-      {
         id: 'settings-workspace',
         label: 'Settings',
         href: '/settings',
@@ -521,7 +515,7 @@ export const osModules: OSModule[] = [
         description: 'Configure workspace preferences',
         capabilities: ['manage_workspace'],
         familyId: 'platform',
-        order: 23,
+        order: 2,
       },
     ],
   },
@@ -529,88 +523,25 @@ export const osModules: OSModule[] = [
 
 /**
  * Platform Support Module (for AutoForce staff - root_admin, deputy_admin, sysop, support)
- * ALL platform administration tools consolidated in one place
+ * Consolidated admin control center - ONE unified dashboard
  */
 export const platformSupportModule: OSModule = {
   id: 'support-control-center',
   name: 'Platform Operations',
-  description: 'Complete platform administration toolkit',
+  description: 'Unified Root Administrator Control Center',
   icon: Shield,
   color: 'hsl(var(--destructive))',
   capabilities: ['support_dashboard'],
   routes: [
     {
-      id: 'platform-admin',
-      label: 'Platform Admin',
-      href: '/platform-admin',
+      id: 'root-admin-dashboard',
+      label: 'Control Center',
+      href: '/root-admin-dashboard',
       icon: Shield,
-      description: 'Root platform administration dashboard',
+      description: 'Unified Root Administrator Control Center',
       familyId: 'platform',
       badge: 'Root',
       order: 0,
-    },
-    {
-      id: 'admin-command-center',
-      label: 'Command Center',
-      href: '/admin-command-center',
-      icon: Settings,
-      description: 'Unified admin control panel',
-      familyId: 'platform',
-      order: 1,
-    },
-    {
-      id: 'platform-users',
-      label: 'Platform Users',
-      href: '/platform/users',
-      icon: Users,
-      description: 'Cross-workspace user management',
-      familyId: 'platform',
-      order: 2,
-    },
-    {
-      id: 'admin-usage',
-      label: 'Usage & Billing',
-      href: '/admin/usage',
-      icon: BarChart3,
-      description: 'Platform-wide usage metrics and billing',
-      familyId: 'platform',
-      order: 3,
-    },
-    {
-      id: 'admin-support',
-      label: 'Support Dashboard',
-      href: '/admin/support',
-      icon: Headphones,
-      description: 'Customer support and ticket management',
-      familyId: 'platform',
-      order: 4,
-    },
-    {
-      id: 'company-reports',
-      label: 'Company Reports',
-      href: '/company-reports',
-      icon: FileBarChart,
-      description: 'Cross-workspace analytics and reports',
-      familyId: 'platform',
-      order: 5,
-    },
-    {
-      id: 'platform-sales',
-      label: 'Sales Pipeline',
-      href: '/platform/sales',
-      icon: TrendingUp,
-      description: 'Platform sales and revenue tracking',
-      familyId: 'platform',
-      order: 6,
-    },
-    {
-      id: 'admin-custom-forms',
-      label: 'Custom Forms',
-      href: '/admin/custom-forms',
-      icon: FileCheck2,
-      description: 'Dynamic form builder for workspaces',
-      familyId: 'platform',
-      order: 7,
     },
   ],
 };
@@ -627,7 +558,7 @@ const curatedWorkspaceRoutesForPlatformStaff: string[] = [
   'employees',           // Employee management
   'clients',             // Client management
   'analytics-os',        // AnalyticsOS™ - insights and reporting
-  'integration-os',      // IntegrationOS™ - integration monitoring
+  'bill-os-integrations', // Integrations - QuickBooks/Gusto monitoring
 ];
 
 /**
@@ -681,16 +612,14 @@ export function getLockedRoutes(
 }
 
 /**
- * Family display configuration
+ * Family display configuration (4 High-Level Suites)
  */
 const familyConfig: Record<FamilyId, { label: string; order: number }> = {
-  commos: { label: 'CommOS™', order: 1 },
-  operationsos: { label: 'OperationsOS™', order: 2 },
-  billos: { label: 'BillOS™', order: 3 },
-  intelligenceos: { label: 'IntelligenceOS™', order: 4 },
-  auditos: { label: 'AuditOS™', order: 5 },
-  marketingos: { label: 'MarketingOS™', order: 6 },
-  platform: { label: 'Platform', order: 7 },
+  platform: { label: 'Platform', order: 0 },
+  executive: { label: 'Executive Control', order: 1 },
+  operations: { label: 'Operations Hub', order: 2 },
+  people: { label: 'People & Engagement', order: 3 },
+  intelligence: { label: 'Intelligence & Compliance', order: 4 },
 };
 
 /**
@@ -732,15 +661,13 @@ export function selectSidebarFamilies(
     });
   });
 
-  // Group routes by family
+  // Group routes by family (4 High-Level Suites)
   const familyMap: Record<FamilyId, { accessible: OSModuleRoute[]; locked: OSModuleRoute[] }> = {
-    commos: { accessible: [], locked: [] },
-    operationsos: { accessible: [], locked: [] },
-    billos: { accessible: [], locked: [] },
-    intelligenceos: { accessible: [], locked: [] },
-    auditos: { accessible: [], locked: [] },
-    marketingos: { accessible: [], locked: [] },
     platform: { accessible: [], locked: [] },
+    executive: { accessible: [], locked: [] },
+    operations: { accessible: [], locked: [] },
+    people: { accessible: [], locked: [] },
+    intelligence: { accessible: [], locked: [] },
   };
 
   // Categorize each route as accessible or locked

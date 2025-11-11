@@ -408,29 +408,38 @@ function AppContent() {
 
                 {/* Support & Admin routes */}
                 <Route path="/org-support" component={OrgSupport} />
-                <Route path="/admin-command-center" component={AdminCommandCenter} />
                 
-                {/* Legacy routes - redirect to consolidated /dashboard */}
+                {/* Unified Root Administrator Control Center */}
+                <Route path="/root-admin-dashboard">
+                  <PlatformAdminRoute>
+                    <RootAdminDashboard />
+                  </PlatformAdminRoute>
+                </Route>
+                
+                {/* Redirect old admin dashboards to unified control center */}
+                <Route path="/platform-admin">
+                  <Redirect to="/root-admin-dashboard" />
+                </Route>
+                <Route path="/admin-command-center">
+                  <Redirect to="/root-admin-dashboard" />
+                </Route>
                 <Route path="/root-admin-portal">
-                  <Redirect to="/dashboard" />
+                  <Redirect to="/root-admin-dashboard" />
+                </Route>
+                <Route path="/platform/admin">
+                  <Redirect to="/root-admin-dashboard" />
                 </Route>
                 <Route path="/admin/command">
-                  <Redirect to="/dashboard" />
+                  <Redirect to="/root-admin-dashboard" />
                 </Route>
+                
+                {/* Platform admin tools (accessible from control center) */}
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/admin/custom-forms" component={AdminCustomForms} />
                 <Route path="/owner/hireos/workflow-builder" component={HireOSWorkflowBuilder} />
                 <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
                 <Route path="/support/dashboard" component={SupportDashboard} />
-                <Route path="/platform-admin">
-                  <PlatformAdminRoute>
-                    <PlatformAdmin />
-                  </PlatformAdminRoute>
-                </Route>
-                <Route path="/platform/admin">
-                  <Redirect to="/platform-admin" />
-                </Route>
                 <Route path="/platform/users" component={PlatformUsers} />
                 <Route path="/company-reports" component={CompanyReports} />
                 <Route path="/platform/sales" component={SalesPortal} />
