@@ -56,6 +56,15 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 -   **Database**: PostgreSQL with Drizzle ORM.
 -   **Authentication**: Custom session-based authentication supporting Replit Auth (OIDC) and Custom Auth, with account locking and password reset.
 -   **Multi-Tenancy**: Data isolation managed on a workspace basis.
+-   **External Identifier System**: Human-readable IDs for support and operations:
+    - **ID Formats**: ORG-XXXX (organizations), EMP-XXXX-00001 (employees), CLI-XXXX-00001 (clients), SUP-AB12 (support agents)
+    - **Auto-Generation**: External IDs automatically generated on entity creation with collision-resistant retry logic
+    - **Sequence Management**: Per-organization auto-incrementing sequences with database-level locking for concurrent safety
+    - **Transaction Safety**: Internal transaction-aware helpers prevent nested transaction issues and ensure ACID compliance
+    - **Support Lookup**: Universal search by external ID, UUID, or email for platform staff via `/api/admin/support/lookup`
+    - **Integration Points**: Automatic ID assignment in employee/client creation routes (non-blocking to preserve main flow)
+    - **Schema Tables**: `external_identifiers`, `id_sequences`, `support_registry`, `tombstones` for deletion tracking
+    - **Implementation**: `server/lib/idGenerator.ts` (ID generation), `server/services/identityService.ts` (management)
 -   **Autonomous Automation System**: Anchor-based biweekly scheduling for BillOS™ and OperationsOS™ ensuring consistent cadence for invoicing and payroll, with FLSA-compliant calculations and audit tracking.
 -   **Security**: Stripe webhook validation, payroll data protection, strict Zod validation, workspace scoping, and audit trails.
 -   **Production Monitoring**: Comprehensive observability with error logging, performance metrics, health checks.

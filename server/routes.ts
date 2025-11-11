@@ -1699,6 +1699,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const employee = await storage.createEmployee(validated);
       
+      // Generate external ID for new employee (non-blocking)
+      const { attachEmployeeExternalId } = await import('./services/identityService');
+      attachEmployeeExternalId(employee.id, workspaceId).catch(err => 
+        console.error('Failed to attach employee external ID:', err)
+      );
+      
       // Send onboarding email if employee has email
       if (employee.email) {
         sendEmployeeOnboardingEmail(employee.email, {
@@ -3177,6 +3183,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the client
       const client = await storage.createClient(validated);
+
+      // Generate external ID for new client (non-blocking)
+      const { attachClientExternalId } = await import('./services/identityService');
+      attachClientExternalId(client.id, workspaceId).catch(err => 
+        console.error('Failed to attach client external ID:', err)
+      );
 
       // Create client rate if billableRate is provided (with proper number conversion)
       const rateValue = parseFloat(billableRate || "0");

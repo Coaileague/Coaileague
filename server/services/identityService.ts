@@ -48,10 +48,11 @@ async function ensureOrgIdentifiersInTx(
 
   // Try to generate unique org code with collision retry
   let attempts = 0;
-  let orgCode: string;
-  let externalId: string;
+  let orgCode: string = '';
+  let externalId: string = '';
+  let success = false;
   
-  while (attempts < 10) {
+  while (attempts < 10 && !success) {
     // First attempt uses clean name, subsequent use random suffix
     orgCode = safeOrgCode(orgName, attempts > 0);
     externalId = genOrgExternalId(orgCode);
@@ -66,19 +67,42 @@ async function ensureOrgIdentifiersInTx(
         isPrimary: true,
       });
       
-      // Success! Initialize sequences and return
-      break;
+      // Success!
+      success = true;
     } catch (error: any) {
-      // If unique constraint violation (code 23505), retry with random suffix
-      if (error.code === '23505' && attempts < 9) {
-        attempts++;
-        continue;
+      // If unique constraint violation, another transaction may have created it
+      if (error.code === '23505') {
+        // Re-check if org now has an external ID (race condition)
+        const recheck = await tx
+          .select()
+          .from(externalIdentifiers)
+          .where(
+            and(
+              eq(externalIdentifiers.entityType, 'org'),
+              eq(externalIdentifiers.entityId, orgId)
+            )
+          )
+          .limit(1);
+        
+        if (recheck.length > 0) {
+          // Another transaction succeeded - use its ID
+          orgCode = recheck[0].externalId.substring(4);
+          externalId = recheck[0].externalId;
+          success = true;
+          break;
+        }
+        
+        // Still not found, retry with random suffix
+        if (attempts < 9) {
+          attempts++;
+          continue;
+        }
       }
       throw error;
     }
   }
 
-  if (attempts >= 10) {
+  if (!success) {
     throw new Error('Failed to generate unique organization code after 10 attempts');
   }
 
@@ -158,42 +182,40 @@ export async function attachEmployeeExternalId(
 
     const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
 
-    // Get next employee number for this org
-    const sequence = await tx
-      .select()
-      .from(idSequences)
+    // Get next employee number for this org (with concurrent-safe initialization)
+    let nextVal = 1;
+    
+    // Try to initialize sequence if it doesn't exist (concurrent-safe)
+    try {
+      await tx.insert(idSequences).values({
+        orgId: orgId,
+        kind: 'employee',
+        nextVal: 1,
+      });
+    } catch (error: any) {
+      // Ignore unique constraint violation - another transaction created it
+      if (error.code !== '23505') {
+        throw error;
+      }
+    }
+    
+    // Now atomically increment and get the value
+    const updated = await tx
+      .update(idSequences)
+      .set({ 
+        nextVal: sql`${idSequences.nextVal} + 1`,
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(idSequences.orgId, orgId),
           eq(idSequences.kind, 'employee')
         )
       )
-      .limit(1)
-      .for('update'); // Lock for concurrent safety
-
-    let nextVal = 1;
-    if (sequence.length > 0) {
-      nextVal = sequence[0].nextVal;
-      // Increment sequence
-      await tx
-        .update(idSequences)
-        .set({ 
-          nextVal: sql`${idSequences.nextVal} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(idSequences.orgId, orgId),
-            eq(idSequences.kind, 'employee')
-          )
-        );
-    } else {
-      // Create sequence if it doesn't exist
-      await tx.insert(idSequences).values({
-        orgId: orgId,
-        kind: 'employee',
-        nextVal: 2, // Next will be 2
-      });
+      .returning({ issued: sql`${idSequences.nextVal} - 1` });
+    
+    if (updated.length > 0) {
+      nextVal = updated[0].issued as number;
     }
 
     // Generate external ID
@@ -251,26 +273,28 @@ export async function attachClientExternalId(
 
     const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
 
-    // Get next client number for this org
-    const sequence = await tx
-      .select()
-      .from(idSequences)
-      .where(
-        and(
-          eq(idSequences.orgId, orgId),
-          eq(idSequences.kind, 'client')
-        )
-      )
-      .limit(1)
-      .for('update');
-
+    // Get next client number for this org (with concurrent-safe initialization)
     let nextVal = 1;
-    if (sequence.length > 0) {
-      nextVal = sequence[0].nextVal;
-      await tx
-        .update(idSequences)
-        .set({ 
-          nextVal: sql`${idSequences.nextVal} + 1`,
+    
+    // Try to initialize sequence if it doesn't exist (concurrent-safe)
+    try {
+      await tx.insert(idSequences).values({
+        orgId: orgId,
+        kind: 'client',
+        nextVal: 1,
+      });
+    } catch (error: any) {
+      // Ignore unique constraint violation - another transaction created it
+      if (error.code !== '23505') {
+        throw error;
+      }
+    }
+    
+    // Now atomically increment and get the value
+    const updated = await tx
+      .update(idSequences)
+      .set({ 
+        nextVal: sql`${idSequences.nextVal} + 1`,
           updatedAt: new Date(),
         })
         .where(
@@ -278,13 +302,11 @@ export async function attachClientExternalId(
             eq(idSequences.orgId, orgId),
             eq(idSequences.kind, 'client')
           )
-        );
-    } else {
-      await tx.insert(idSequences).values({
-        orgId: orgId,
-        kind: 'client',
-        nextVal: 2,
-      });
+        )
+        .returning({ issued: sql`${idSequences.nextVal} - 1` });
+    
+    if (updated.length > 0) {
+      nextVal = updated[0].issued as number;
     }
 
     const externalId = genClientExternalId(orgCode, nextVal);
