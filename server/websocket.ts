@@ -6,6 +6,8 @@ import { generateGreeting, generateStaffIntroduction, getAiResponse, shouldBotRe
 import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } from '@shared/commands';
 import { queueManager } from './services/helpOsQueue';
 import type { ChatMessage } from '@shared/schema';
+import { trackConnection, trackDisconnection, checkMessageRateLimit } from './middleware/wsRateLimiter';
+import { randomUUID } from 'crypto';
 
 /**
  * Helper function to create system messages with all required ChatMessage fields
@@ -84,6 +86,7 @@ interface WebSocketClient extends WebSocket {
   pingInterval?: NodeJS.Timeout;
   ipAddress?: string;
   userAgent?: string;
+  sessionId?: string; // For rate limiting and connection tracking
 }
 
 interface ChatMessagePayload {
@@ -340,18 +343,22 @@ export function setupWebSocket(server: Server) {
   // Track removed simulated users (so they don't re-appear on reconnect)
   const removedSimulatedUsers = new Set<string>();
 
-  wss.on('connection', (ws: WebSocketClient, request: IncomingMessage) => {
+  wss.on('connection', async (ws: WebSocketClient, request: IncomingMessage) => {
     // Extract IP address and user agent from request
     const ipAddress = (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() 
       || request.socket.remoteAddress 
       || 'unknown';
     const userAgent = request.headers['user-agent'] || 'unknown';
     
+    // Generate unique session ID for connection tracking
+    const sessionId = randomUUID();
+    ws.sessionId = sessionId;
+    
     // Store for audit trail
     ws.ipAddress = ipAddress;
     ws.userAgent = userAgent;
     
-    console.log(`New WebSocket connection from ${ipAddress}`);
+    console.log(`New WebSocket connection from ${ipAddress} (session: ${sessionId})`);
     
     // Initialize heartbeat
     ws.isAlive = true;
@@ -430,6 +437,23 @@ export function setupWebSocket(server: Server) {
             } else if (conversation.workspaceId) {
               // Users in a workspace are organization users
               userType = 'org_user';
+            }
+
+            // RATE LIMITING: Track connection (enforce 3 concurrent connections max)
+            const connectionTracking = await trackConnection(
+              payload.userId,
+              ws.sessionId!,
+              ws.ipAddress,
+              ws.userAgent
+            );
+            
+            if (!connectionTracking.allowed) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: connectionTracking.error || 'Connection limit exceeded',
+              }));
+              ws.close(1008, 'Too many concurrent connections');
+              return;
             }
 
             // Associate this client with the conversation
@@ -872,6 +896,17 @@ export function setupWebSocket(server: Server) {
               ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Cannot send message to different conversation',
+              }));
+              return;
+            }
+
+            // RATE LIMITING: Check message rate limit (30 messages/minute)
+            const rateCheck = checkMessageRateLimit(ws.userId);
+            if (!rateCheck.allowed) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: `Rate limit exceeded. You can send another message in ${rateCheck.retryAfter} seconds.`,
+                retryAfter: rateCheck.retryAfter
               }));
               return;
             }
@@ -3338,6 +3373,11 @@ export function setupWebSocket(server: Server) {
     });
 
     ws.on('close', async () => {
+      // RATE LIMITING: Track disconnection in database
+      if (ws.sessionId) {
+        await trackDisconnection(ws.sessionId, 'user_closed');
+      }
+
       // Clean up heartbeat interval
       if (ws.pingInterval) {
         clearInterval(ws.pingInterval);
