@@ -65,7 +65,7 @@ import HRReviews from "@/pages/hr-reviews";
 import HRPTO from "@/pages/hr-pto";
 import HRTerminations from "@/pages/hr-terminations";
 import HelpdeskChat from "@/pages/helpdesk-chat";
-import HelpDeskCab from "@/pages/HelpDeskCab";
+import HelpDesk from "@/pages/HelpDesk";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
 import LogoShowcase from "@/pages/logo-showcase";
@@ -252,7 +252,7 @@ function AppContent() {
   const [, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Check if on mobile chat, HelpDeskCab, or desktop live-chat - use window.location instead of useLocation() hook
+  // Check if on mobile chat, HelpDesk, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
@@ -279,7 +279,7 @@ function AppContent() {
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
         {/* Consolidated chat routes - redirect to main chat */}
-        <Route path="/chat" component={HelpDeskCab} />
+        <Route path="/chat" component={HelpDesk} />
         <Route path="/mobile-chat" component={MobileChatPage} /> {/* Guest access for mobile */}
         <Route path="/live-chat"><Redirect to="/chat" /></Route>
         <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
@@ -452,7 +452,7 @@ function AppContent() {
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
                 {/* Consolidated Chat Routes - ONLY 2 versions */}
-                <Route path="/chat" component={HelpDeskCab} /> {/* Desktop chat with Gemini AI */}
+                <Route path="/chat" component={HelpDesk} /> {/* Desktop chat with Gemini AI */}
                 <Route path="/mobile-chat" component={MobileChatPage} /> {/* Mobile optimized */}
                 
                 {/* Redirect legacy chat routes to unified /chat */}

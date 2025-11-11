@@ -7,9 +7,9 @@
  * Desktop version: /chat
  */
 
-import ModernMobileChat from "./modern-mobile-chat";
+import HelpDeskMobile from "./HelpDeskMobile";
 
 export default function MobileChatPage() {
   console.log("✅ AutoForce™ Mobile Chat is rendering");
-  return <ModernMobileChat />;
+  return <HelpDeskMobile />;
 }

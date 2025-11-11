@@ -93,11 +93,15 @@ export const chatMessageLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Key by user ID instead of IP to prevent shared NAT issues
+  // Key by user ID only - authenticated users tracked per-user
+  // Anonymous users handled by default IP-based rate limiting
   keyGenerator: (req: Request) => {
     // @ts-ignore - req.user is added by requireAuth middleware
-    return req.user?.id || req.ip || 'anonymous';
+    if (req.user?.id) return req.user.id;
+    // Return undefined to use default IP-based key (with proper IPv6 normalization)
+    return undefined;
   },
+  skipFailedRequests: false,
   handler: (req: Request, res: Response) => {
     res.status(429).json({
       error: 'Rate limit exceeded',
@@ -119,11 +123,15 @@ export const chatUploadLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Key by user ID for accurate per-user tracking
+  // Key by user ID only - authenticated users tracked per-user
+  // Anonymous users handled by default IP-based rate limiting
   keyGenerator: (req: Request) => {
     // @ts-ignore - req.user is added by requireAuth middleware
-    return req.user?.id || req.ip || 'anonymous';
+    if (req.user?.id) return req.user.id;
+    // Return undefined to use default IP-based key (with proper IPv6 normalization)
+    return undefined;
   },
+  skipFailedRequests: false,
   handler: (req: Request, res: Response) => {
     res.status(429).json({
       error: 'Upload limit exceeded',
@@ -145,10 +153,15 @@ export const chatConversationLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Key by user ID only - authenticated users tracked per-user
+  // Anonymous users handled by default IP-based rate limiting
   keyGenerator: (req: Request) => {
     // @ts-ignore - req.user is added by requireAuth middleware
-    return req.user?.id || req.ip || 'anonymous';
+    if (req.user?.id) return req.user.id;
+    // Return undefined to use default IP-based key (with proper IPv6 normalization)
+    return undefined;
   },
+  skipFailedRequests: false,
   handler: (req: Request, res: Response) => {
     res.status(429).json({
       error: 'Rate limit exceeded',
