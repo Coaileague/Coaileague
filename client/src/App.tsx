@@ -27,6 +27,7 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Homepage from "@/pages/homepage";
 import CustomLogin from "@/pages/custom-login";
 import CustomRegister from "@/pages/custom-register";
 import Pricing from "@/pages/pricing";
@@ -268,7 +269,7 @@ function AppContent() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        <Route path="/" component={Landing} />
+        <Route path="/" component={Homepage} />
         <Route path="/login" component={CustomLogin} />
         <Route path="/register" component={CustomRegister} />
         <Route path="/pricing" component={Pricing} />
@@ -290,7 +291,7 @@ function AppContent() {
         <Route path="/error-404" component={Error404} />
         <Route path="/error-500" component={Error500} />
         
-        <Route component={Landing} />
+        <Route component={Homepage} />
       </Switch>
     );
   }

@@ -1,0 +1,345 @@
+# AutoForce Design System - Quick Reference Guide
+
+## 🎨 Core Color Palette
+
+### Primary Colors (Money/Savings Theme)
+```
+Emerald/Green Gradient: from-emerald-600 to-green-600
+Light backgrounds: from-emerald-50 to-green-50
+Borders: border-emerald-200
+Text: text-emerald-600 or text-green-600
+```
+
+### Secondary Colors (Features)
+```
+Blue: from-blue-500 to-blue-600 (scheduling)
+Green: from-emerald-500 to-green-600 (payroll) 
+Purple: from-purple-500 to-purple-600 (invoicing)
+Cyan: from-cyan-500 to-cyan-600 (secondary actions)
+```
+
+### Neutral Colors
+```
+Page background: bg-white or bg-slate-100
+Card backgrounds: bg-white with border-gray-200
+Text primary: text-gray-900
+Text secondary: text-gray-600
+Text muted: text-gray-500
+```
+
+---
+
+## 📦 Component Styles
+
+### Navigation Bar
+```jsx
+<nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+  {/* Logo */}
+  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-lg">
+  
+  {/* CTA Button */}
+  <button className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold">
+    Start Free Trial
+  </button>
+</nav>
+```
+
+### Hero Section
+```jsx
+<section className="pt-24 pb-20 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+  {/* Main Heading */}
+  <h1 className="text-5xl font-bold text-gray-900">
+    Replace $100K+ in
+    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600">
+      Administrative Salaries
+    </span>
+  </h1>
+  
+  {/* Stats Box */}
+  <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-6 shadow-lg">
+    <div className="text-3xl font-bold text-emerald-600">$120K+</div>
+    <div className="text-sm text-gray-600">Eliminated salary costs</div>
+  </div>
+  
+  {/* Primary CTA */}
+  <button className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold hover:from-emerald-700 hover:to-green-700 transition-all shadow-lg hover:shadow-xl">
+    Calculate Your Savings
+  </button>
+</section>
+```
+
+### Feature Cards
+```jsx
+{/* Blue Feature Card */}
+<div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 hover:shadow-2xl transition-all">
+  <div className="w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+    <CalendarIcon className="w-8 h-8 text-white" />
+  </div>
+  <h3 className="text-2xl font-bold text-gray-900">Feature Title</h3>
+  <p className="text-gray-600">Description text</p>
+</div>
+
+{/* Green Feature Card */}
+<div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-emerald-300 hover:shadow-2xl transition-all">
+  <div className="w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg">
+    <DollarSignIcon className="w-8 h-8 text-white" />
+  </div>
+</div>
+
+{/* Purple Feature Card */}
+<div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 hover:shadow-2xl transition-all">
+  <div className="w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+    <FileTextIcon className="w-8 h-8 text-white" />
+  </div>
+</div>
+```
+
+### Integration Cards
+```jsx
+{/* Gusto Integration */}
+<div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
+  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+    G
+  </div>
+  <div className="font-bold text-gray-900 text-lg">Gusto Integration</div>
+  <div className="text-sm text-emerald-700 font-semibold">Connected & Syncing</div>
+</div>
+
+{/* QuickBooks Integration */}
+<div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+    QB
+  </div>
+  <div className="font-bold text-gray-900 text-lg">QuickBooks Integration</div>
+  <div className="text-sm text-blue-700 font-semibold">Connected & Syncing</div>
+</div>
+
+{/* Client Invoicing */}
+<div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6">
+  <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+    <FileTextIcon className="w-6 h-6 text-white" />
+  </div>
+  <div className="font-bold text-gray-900 text-lg">Client Invoicing</div>
+  <div className="text-sm text-purple-700 font-semibold">Fully Autonomous</div>
+</div>
+```
+
+### Badges
+```jsx
+{/* Blue Badge */}
+<div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold shadow-md">
+  <ZapIcon className="w-4 h-4" />
+  AI-Powered Automation
+</div>
+
+{/* Success Badge */}
+<div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-semibold shadow-md">
+  <CheckIcon className="w-4 h-4" />
+  Save 20+ hours per week
+</div>
+
+{/* Purple Badge */}
+<div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold shadow-md">
+  <CpuIcon className="w-4 h-4" />
+  Powered by Advanced AI Logic
+</div>
+```
+
+### ROI/Stats Section
+```jsx
+<section className="py-16 px-6 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600 text-white">
+  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/30">
+    <div className="text-5xl font-bold">$168K+</div>
+    <div className="text-emerald-100">Total Annual Savings</div>
+  </div>
+</section>
+```
+
+### Testimonial Cards
+```jsx
+{/* Blue Testimonial */}
+<div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border-2 border-blue-200 shadow-lg hover:shadow-xl transition-all">
+  <p className="text-gray-700 italic">Quote here...</p>
+  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full">
+    SJ
+  </div>
+</div>
+
+{/* Green Testimonial */}
+<div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border-2 border-green-200 shadow-lg hover:shadow-xl transition-all">
+  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-teal-600 rounded-full">
+    MC
+  </div>
+</div>
+
+{/* Purple Testimonial */}
+<div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all">
+  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full">
+    JM
+  </div>
+</div>
+```
+
+### Final CTA Section
+```jsx
+<section className="py-20 px-6 bg-gradient-to-br from-gray-900 via-emerald-900 to-green-900 text-white">
+  <h2 className="text-4xl font-bold">Replace $100K+ in Staff Costs with AI</h2>
+  
+  <button className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-green-700 border-2 border-emerald-400">
+    Calculate Your Savings
+  </button>
+  
+  <button className="px-8 py-4 bg-white/20 text-white rounded-xl font-semibold hover:bg-white/30 backdrop-blur-sm border-2 border-white/30">
+    Watch AI Demo
+  </button>
+</section>
+```
+
+### Footer
+```jsx
+<footer className="bg-slate-900 text-gray-400 py-8 px-6">
+  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+    <CpuIcon className="w-4 h-4 text-white" />
+  </div>
+  <span className="font-bold text-white">AUTOFORCE™</span>
+</footer>
+```
+
+---
+
+## 🎯 Button Variants
+
+### Primary (Money/Savings)
+```jsx
+className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold hover:from-emerald-700 hover:to-green-700 transition-all shadow-lg hover:shadow-xl"
+```
+
+### Secondary (Outline)
+```jsx
+className="px-8 py-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-50 transition-all border-2 border-gray-200 shadow-md"
+```
+
+### Blue Variant
+```jsx
+className="px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl"
+```
+
+### Purple Variant
+```jsx
+className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+```
+
+### Ghost (Dark Background)
+```jsx
+className="px-8 py-4 bg-white/20 text-white rounded-xl font-semibold hover:bg-white/30 transition-all backdrop-blur-sm border-2 border-white/30"
+```
+
+---
+
+## 📱 Responsive Patterns
+
+### Section Padding
+```jsx
+className="py-16 md:py-20 px-6"
+```
+
+### Grid Layouts
+```jsx
+{/* 3 Column Grid */}
+className="grid md:grid-cols-3 gap-8"
+
+{/* 2 Column Grid */}
+className="grid md:grid-cols-2 gap-12"
+
+{/* 4 Column Stats */}
+className="grid md:grid-cols-4 gap-8"
+```
+
+### Text Sizes
+```jsx
+{/* Hero Heading */}
+className="text-5xl md:text-6xl font-bold"
+
+{/* Section Heading */}
+className="text-4xl md:text-5xl font-bold"
+
+{/* Body Text */}
+className="text-xl text-gray-600"
+```
+
+---
+
+## ✅ Quick Implementation Checklist
+
+- [ ] Use `bg-gradient-to-r from-emerald-600 to-green-600` for primary CTAs
+- [ ] Use `bg-gradient-to-br from-white to-gray-50` for feature cards
+- [ ] Use `border-2 border-gray-200` for card borders
+- [ ] Use `hover:border-emerald-300` or `hover:border-blue-300` for hover states
+- [ ] Use `shadow-lg hover:shadow-xl` for interactive elements
+- [ ] Use `text-gray-900` for primary text, `text-gray-600` for secondary
+- [ ] Use `rounded-xl` for buttons and cards (1rem = 16px)
+- [ ] Use `rounded-lg` for smaller elements (0.5rem = 8px)
+- [ ] Use `transition-all` for smooth animations
+- [ ] Use `backdrop-blur-sm` for glass morphism effects
+
+---
+
+## 🔄 Color Consistency Rules
+
+1. **Money/Savings = Emerald/Green gradient**
+2. **Scheduling/Calendar = Blue**
+3. **Payroll/Integration = Green**
+4. **Invoicing/Billing = Purple**
+5. **AI/Tech = Purple or Indigo**
+6. **Status Online = Green (emerald-500)**
+7. **Neutral Cards = White with gray-200 borders**
+
+---
+
+## 💡 Pro Tips
+
+1. Always use gradients for CTAs and hero text
+2. Keep backgrounds light (white, slate-50, gray-50)
+3. Use emerald/green for money-focused messaging
+4. Add hover states to all interactive elements
+5. Use shadow-lg for depth, shadow-xl for emphasis
+6. Maintain consistent border radius (rounded-xl for cards, rounded-lg for buttons)
+7. Use backdrop-blur-sm for overlay effects
+8. Keep text contrast high (gray-900 on white backgrounds)
+
+---
+
+## 📋 Copy-Paste Starter Template
+
+```jsx
+export default function PageComponent() {
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        {/* Nav content */}
+      </nav>
+
+      {/* Hero */}
+      <section className="pt-24 pb-20 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+        {/* Hero content */}
+      </section>
+
+      {/* Features */}
+      <section className="py-20 px-6 bg-white">
+        {/* Feature cards */}
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 px-6 bg-gradient-to-br from-gray-900 via-emerald-900 to-green-900">
+        {/* CTA content */}
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-gray-400 py-8 px-6">
+        {/* Footer content */}
+      </footer>
+    </div>
+  );
+}
+```
