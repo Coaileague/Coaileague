@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import {
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Bell,
   Settings,
   LogOut,
@@ -37,6 +38,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { cn } from "@/lib/utils";
 
@@ -306,9 +313,10 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                   )}
                 </AnimatePresence>
 
-                {/* Accessible Routes */}
+                {/* Accessible Routes - Progressive Disclosure */}
                 <div className="space-y-1">
-                  {family.routes.map((route) => {
+                  {/* Primary Routes - Always Visible */}
+                  {family.routes.filter(route => route.isPrimary !== false).map((route) => {
                     const isActive = location === route.href;
                     
                     const routeButton = (
@@ -362,7 +370,6 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                       </Link>
                     );
 
-                    // Show tooltip only when collapsed
                     if (!isExpanded) {
                       return (
                         <Tooltip key={route.id}>
@@ -381,6 +388,50 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
 
                     return routeButton;
                   })}
+
+                  {/* Secondary Routes - Collapsible "More" Section */}
+                  {isExpanded && family.routes.filter(route => route.isPrimary === false).length > 0 && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="more" className="border-none">
+                        <AccordionTrigger className="py-2 px-3 text-xs text-muted-foreground hover:no-underline hover-elevate rounded-md" data-testid={`button-more-${family.id}`}>
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className="h-3 w-3" />
+                            <span>More</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-0">
+                          <div className="space-y-1 mt-1">
+                            {family.routes.filter(route => route.isPrimary === false).map((route) => {
+                              const isActive = location === route.href;
+                              
+                              return (
+                                <Link href={route.href} key={route.id}>
+                                  <Button
+                                    variant={isActive ? "secondary" : "ghost"}
+                                    className={cn(
+                                      "w-full justify-start h-10 px-3 text-xs",
+                                      "hover-elevate active-elevate-2",
+                                      isActive && "bg-secondary/80"
+                                    )}
+                                    data-testid={`link-${route.id}`}
+                                    aria-current={isActive ? "page" : undefined}
+                                  >
+                                    <route.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-foreground" : "text-muted-foreground")} />
+                                    <span className={cn("ml-3 truncate", isActive ? "text-foreground" : "text-foreground")}>{route.label}</span>
+                                    {route.badge && (
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-auto flex-shrink-0">
+                                        {route.badge}
+                                      </Badge>
+                                    )}
+                                  </Button>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
 
                   {/* Locked Routes */}
                   {family.locked.map((route) => {
