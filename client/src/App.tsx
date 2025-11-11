@@ -251,6 +251,7 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const isMobile = useIsMobile();
 
   // Check if on mobile chat, HelpDesk, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
@@ -333,7 +334,7 @@ function AppContent() {
               
               <Switch>
                 <Route path="/">
-                  {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
+                  {isMobile ? <MobileDashboard /> : (isRootAdmin ? <RootAdminDashboard /> : <Dashboard />)}
                 </Route>
                 <Route path="/login">
                   <Redirect to="/dashboard" />
@@ -343,7 +344,7 @@ function AppContent() {
                 </Route>
                 <Route path="/mobile-dashboard" component={MobileDashboard} />
                 <Route path="/dashboard">
-                  {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
+                  {isMobile ? <MobileDashboard /> : (isRootAdmin ? <RootAdminDashboard /> : <Dashboard />)}
                 </Route>
                 <Route path="/schedule" component={SmartScheduleOS} />
                 <Route path="/sales" component={SalesDashboard} />
