@@ -32,6 +32,7 @@ import Pricing from "@/pages/pricing";
 import Contact from "@/pages/contact";
 import Support from "@/pages/support";
 import Dashboard from "@/pages/dashboard";
+import MobileDashboard from "@/pages/mobile-dashboard";
 import { Redirect } from "wouter";
 import SmartScheduleOS from "@/pages/schedule-grid";
 import SalesDashboard from "@/pages/sales/dashboard";
@@ -340,6 +341,7 @@ function AppContent() {
                 <Route path="/register">
                   <Redirect to="/dashboard" />
                 </Route>
+                <Route path="/mobile-dashboard" component={MobileDashboard} />
                 <Route path="/dashboard">
                   {isRootAdmin ? <RootAdminDashboard /> : <Dashboard />}
                 </Route>
