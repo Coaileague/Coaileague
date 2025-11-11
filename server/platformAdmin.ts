@@ -98,6 +98,7 @@ export async function getPlatformStats(req: Request, res: Response) {
       database: "healthy",
       uptime: monitoringService.getPlatformUptime()
     };
+    console.log(`[PLATFORM-STATS] SystemHealth: CPU=${systemHealth.cpu}%, Memory=${systemHealth.memory}%, Uptime=${systemHealth.uptime}s`);
 
     // Recent activity - Aggregate multiple event types for comprehensive dashboard
     const recentActivity: Array<{
