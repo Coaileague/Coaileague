@@ -8,24 +8,44 @@ import DOMPurify from 'isomorphic-dompurify';
 /**
  * Sanitize chat message for safe HTML rendering
  * Allows basic formatting but strips dangerous content
+ * SECURITY: Normalizes all links to prevent reverse tabnabbing
  */
 export function sanitizeMessage(message: string): string {
   if (!message || typeof message !== 'string') {
     return '';
   }
 
+  // Remove any existing hooks to prevent accumulation
+  DOMPurify.removeAllHooks();
+
+  // Add hook to normalize ALL <a> tags - strip attacker rel and force noopener noreferrer
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName === 'A') {
+      // Always set target to _blank for external links
+      if (node.hasAttribute('href')) {
+        node.setAttribute('target', '_blank');
+      }
+      // CRITICAL: Remove any existing rel attribute (attacker controlled or legacy)
+      // Then add our safe rel attribute
+      node.removeAttribute('rel');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
   // Configure DOMPurify for chat messages
   // Allow basic formatting: bold, italic, links, line breaks
   const clean = DOMPurify.sanitize(message, {
     ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'a', 'br', 'p', 'code', 'pre'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
+    ALLOWED_ATTR: ['href'], // Only allow href - target and rel are forced by hook
     ALLOW_DATA_ATTR: false,
     RETURN_DOM: false,
     RETURN_DOM_FRAGMENT: false,
     RETURN_TRUSTED_TYPE: false,
-    // Force links to open in new tab and add noopener/noreferrer for security
     SAFE_FOR_TEMPLATES: true,
   });
+
+  // Cleanup hooks after use
+  DOMPurify.removeAllHooks();
 
   return clean;
 }

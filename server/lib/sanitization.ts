@@ -8,6 +8,7 @@ import DOMPurify from 'isomorphic-dompurify';
 /**
  * Sanitize chat message content
  * Allows basic formatting but strips dangerous HTML/JS
+ * SECURITY: Normalizes all links to prevent reverse tabnabbing
  */
 export function sanitizeChatMessage(message: string): string {
   if (!message || typeof message !== 'string') {
@@ -17,22 +18,38 @@ export function sanitizeChatMessage(message: string): string {
   // Trim and limit length
   const trimmed = message.trim().slice(0, 10000); // 10k char max
 
+  // Remove any existing hooks to prevent accumulation
+  DOMPurify.removeAllHooks();
+
+  // Add hook to normalize ALL <a> tags - strip attacker rel and force noopener noreferrer
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName === 'A') {
+      // Always set target to _blank for external links
+      if (node.hasAttribute('href')) {
+        node.setAttribute('target', '_blank');
+      }
+      // CRITICAL: Remove any existing rel attribute (attacker controlled)
+      // Then add our safe rel attribute
+      node.removeAttribute('rel');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
   // Configure DOMPurify for chat messages
   // Allow basic formatting: bold, italic, links, line breaks
   const clean = DOMPurify.sanitize(trimmed, {
     ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'a', 'br', 'p', 'code', 'pre'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
+    ALLOWED_ATTR: ['href'], // Only allow href - target and rel are forced by hook
     ALLOW_DATA_ATTR: false,
     RETURN_DOM: false,
     RETURN_DOM_FRAGMENT: false,
     RETURN_TRUSTED_TYPE: false,
-    // Add rel="noopener noreferrer" to all links to prevent reverse tabnabbing
-    ADD_ATTR: ['target'],
-    ADD_TAGS: [],
   });
 
-  // Force secure link attributes on all <a> tags
-  return clean.replace(/<a /g, '<a rel="noopener noreferrer" ');
+  // Cleanup hooks after use
+  DOMPurify.removeAllHooks();
+
+  return clean;
 }
 
 /**
