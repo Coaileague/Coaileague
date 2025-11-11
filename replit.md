@@ -24,7 +24,7 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 ### The 6 Major OS Systems
 1.  **BillOS™**: Administrative Billing & Financial Management (automated invoicing, payroll, expense management, usage-based AI billing).
 2.  **OperationsOS™**: Field Operations Management (intelligent scheduling, GPS-verified time tracking, dispatch, asset tracking).
-3.  **CommOS™**: Unified Communications Platform (organization chat, private messaging, automated notifications, HelpDesk with Gemini AI, WebRTC).
+3.  **CommOS™**: Unified Communications Platform (organization chat, private messaging, automated notifications, HelpDesk with Gemini AI, shift-linked workrooms with file uploads, automated room lifecycle management, comprehensive audit trails, WebRTC voice chat).
 4.  **AuditOS™**: Compliance & Audit Trail Management (activity logging, automation lifecycle tracking, SOC2/GDPR compliance).
 5.  **IntelligenceOS™**: AI-Powered Automation & Analytics (natural language search, real-time analytics, AI support bot, predictive analytics).
 6.  **MarketingOS™**: Automated Sales & Business Development (AI-powered RFP hunting, sales pipeline management).
@@ -37,7 +37,8 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 -   **Multi-Tenancy**: Data isolation managed on a workspace basis.
 -   **External Identifier System**: Human-readable IDs (e.g., ORG-XXXX, EMP-XXXX-00001) for organizations, employees, clients, and support agents, auto-generated with collision-resistant logic and per-organization sequences.
 -   **Autonomous Automation System**: Anchor-based biweekly scheduling for BillOS™ and OperationsOS™ ensuring consistent cadence for invoicing and payroll, with FLSA-compliant calculations and audit tracking.
--   **Security**: Stripe webhook validation, payroll data protection, strict Zod validation, workspace scoping, audit trails, and comprehensive XSS protection and rate limiting for the HelpDesk chat system.
+-   **Security**: Stripe webhook validation, payroll data protection, strict Zod validation, workspace scoping, audit trails, comprehensive XSS protection via DOMPurify sanitization across all messaging surfaces, IPv6-compliant rate limiting (100 requests/15min per IP), and conversation-level access control for file uploads.
+-   **CommOS™ Workroom System**: Shift-linked room creation for field operations coordination, multi-file upload system with MIME type validation and filename sanitization, automated room lifecycle management via cron (5-minute cadence), participant management with isActive enforcement, comprehensive audit trail via roomEvents and AuditOS integration, and workspace-scoped access control.
 -   **Partner API Usage Tracking**: Middleware-based tracking system with caller-supplied deterministic IDs for idempotency, database deduplication, and non-blocking asynchronous architecture.
 -   **Cost Aggregation & Billing**: Automated cost calculation and Stripe invoice generation, aggregating AI usage and partner API costs per workspace with tier-based markup rates.
 -   **Partner OAuth Integration**: Secure OAuth 2.0 implementation for QuickBooks Online and Gusto, featuring AES-256-GCM encryption for tokens, PKCE, CSRF protection, auto-refresh logic, and multi-tenant isolation.

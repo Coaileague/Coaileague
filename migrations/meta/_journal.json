@@ -8,6 +8,13 @@
       "when": 1762827330671,
       "tag": "0000_loose_starhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762839994463,
+      "tag": "0001_high_hammerhead",
+      "breakpoints": true
     }
   ]
 }

@@ -10,8 +10,8 @@
 
 import cron from 'node-cron';
 import { db } from '../db';
-import { workspaces, employees, idempotencyKeys } from '@shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { workspaces, employees, idempotencyKeys, chatConversations, roomEvents } from '@shared/schema';
+import { eq, and, sql, lt } from 'drizzle-orm';
 import { generateUsageBasedInvoices } from './billos';
 import { PayrollAutomationEngine } from './payrollAutomation';
 import { ScheduleOSAI } from '../ai/scheduleos';
@@ -138,7 +138,7 @@ const AUTOFORCE_AUTOMATION_USER = {
  */
 async function logAutomationLifecycle<T>(
   params: {
-    jobType: 'invoicing' | 'scheduling' | 'payroll' | 'idempotency_cleanup';
+    jobType: 'invoicing' | 'scheduling' | 'payroll' | 'idempotency_cleanup' | 'room_auto_close';
     workspaceId: string;
     workspaceName: string;
     runId: string;
@@ -154,6 +154,7 @@ async function logAutomationLifecycle<T>(
     scheduling: 'OperationsOS™',
     payroll: 'BillOS™',
     idempotency_cleanup: 'AuditOS™',
+    room_auto_close: 'CommOS™',
   };
   const osName = osNameMap[jobType];
 
@@ -256,6 +257,11 @@ const SCHEDULER_CONFIG = {
     enabled: true,
     schedule: '0 4 * * *', // Every day at 4 AM (after all automation jobs)
     description: 'Daily cleanup of expired idempotency keys based on TTL'
+  },
+  roomAutoClose: {
+    enabled: true,
+    schedule: '*/5 * * * *', // Every 5 minutes
+    description: 'Auto-close expired shift rooms based on autoCloseAt timestamp'
   }
 };
 
@@ -991,6 +997,194 @@ async function runIdempotencyKeyCleanup() {
   console.log('=================================================\n');
 }
 
+/**
+ * Room Auto-Close Automation
+ * Runs every 5 minutes to close expired shift rooms
+ */
+async function runRoomAutoClose() {
+  console.log('=================================================');
+  console.log('🤖 COMMOS™ ROOM AUTO-CLOSE - START');
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.log('=================================================');
+
+  try {
+    const now = new Date();
+    
+    // Truncate to 5-minute window for idempotency
+    const windowStart = new Date(now);
+    windowStart.setMinutes(Math.floor(now.getMinutes() / 5) * 5, 0, 0);
+    const windowEnd = new Date(windowStart);
+    windowEnd.setMinutes(windowStart.getMinutes() + 5);
+    
+    // Find all expired rooms that are still active
+    const expiredRooms = await db
+      .select({
+        id: chatConversations.id,
+        workspaceId: chatConversations.workspaceId,
+        subject: chatConversations.subject,
+        conversationType: chatConversations.conversationType,
+        autoCloseAt: chatConversations.autoCloseAt,
+        status: chatConversations.status,
+      })
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.status, 'active'),
+          lt(chatConversations.autoCloseAt, now),
+          sql`${chatConversations.autoCloseAt} IS NOT NULL`
+        )
+      )
+      .orderBy(chatConversations.workspaceId);
+
+    console.log(`Found ${expiredRooms.length} expired room(s) to auto-close`);
+
+    if (expiredRooms.length === 0) {
+      console.log('ℹ️  No expired rooms found');
+      console.log('=================================================\n');
+      return;
+    }
+
+    // Build idempotency fingerprint
+    const roomCountHash = crypto
+      .createHash('sha256')
+      .update(expiredRooms.map(r => r.id).join(','))
+      .digest('hex')
+      .substring(0, 16);
+
+    const fingerprintData = {
+      jobType: 'room_auto_close',
+      windowStart: windowStart.toISOString(),
+      windowEnd: windowEnd.toISOString(),
+      roomCount: expiredRooms.length,
+      roomCountHash,
+    };
+
+    const runId = `room-auto-close-${windowStart.toISOString().replace(/[:.]/g, '-')}`;
+    const idempotencyKey = `automation:room_auto_close:${crypto
+      .createHash('sha256')
+      .update(JSON.stringify(fingerprintData))
+      .digest('hex')}`;
+
+    // Check idempotency
+    const idempotencyResult = await executeIdempotencyCheck({
+      workspaceId: 'system', // System-wide job
+      operationType: 'room_auto_close',
+      requestData: fingerprintData,
+      ttlDays: 7 // TTL: 7 days (short retention for frequent job)
+    });
+
+    if (!idempotencyResult.isNew) {
+      console.log(`⏭️  Skipping - already processed this batch`);
+      console.log('=================================================\n');
+      return;
+    }
+
+    // Group rooms by workspace for batch processing
+    const roomsByWorkspace = new Map<string, typeof expiredRooms>();
+    for (const room of expiredRooms) {
+      if (!roomsByWorkspace.has(room.workspaceId)) {
+        roomsByWorkspace.set(room.workspaceId, []);
+      }
+      roomsByWorkspace.get(room.workspaceId)!.push(room);
+    }
+
+    let totalRoomsClosed = 0;
+    let successWorkspaces = 0;
+    let errorWorkspaces = 0;
+
+    // Process each workspace
+    for (const [workspaceId, rooms] of Array.from(roomsByWorkspace.entries())) {
+      try {
+        // Get workspace name for audit logging
+        const [workspace] = await db
+          .select({ name: workspaces.name })
+          .from(workspaces)
+          .where(eq(workspaces.id, workspaceId))
+          .limit(1);
+
+        const workspaceName = workspace?.name || 'Unknown Workspace';
+        
+        console.log(`\n📊 Processing workspace: ${workspaceName} (${workspaceId})`);
+        console.log(`   Rooms to close: ${rooms.length}`);
+
+        // Use transaction for atomic updates
+        await db.transaction(async (tx) => {
+          for (const room of rooms) {
+            // Update room status
+            await tx
+              .update(chatConversations)
+              .set({ 
+                status: 'closed',
+                updatedAt: now,
+              })
+              .where(eq(chatConversations.id, room.id));
+
+            // Create room event
+            await tx.insert(roomEvents).values({
+              workspaceId: room.workspaceId,
+              conversationId: room.id,
+              actorId: null, // System automation
+              actorName: AUTOFORCE_AUTOMATION_USER.userName,
+              actorRole: AUTOFORCE_AUTOMATION_USER.userRole,
+              eventType: 'room_closed',
+              description: `Room auto-closed at ${now.toISOString()} (scheduled: ${room.autoCloseAt})`,
+              eventPayload: {
+                previousStatus: room.status,
+                autoCloseAt: room.autoCloseAt,
+                conversationType: room.conversationType,
+                automationRunId: runId,
+              },
+              ipAddress: '127.0.0.1',
+            });
+
+            console.log(`   ✅ Closed room: ${room.subject || room.id}`);
+            totalRoomsClosed++;
+          }
+        });
+
+        // Log to AuditOS for workspace
+        await logAutomationLifecycle(
+          {
+            jobType: 'room_auto_close',
+            workspaceId,
+            workspaceName,
+            runId,
+          },
+          async () => ({
+            roomsClosed: rooms.length,
+            roomIds: rooms.map((r: any) => r.id),
+          })
+        );
+
+        successWorkspaces++;
+      } catch (error: any) {
+        console.error(`   ❌ Error processing workspace ${workspaceId}:`, error.message);
+        errorWorkspaces++;
+      }
+    }
+
+    // Mark idempotency key as completed
+    await updateIdempotencyResult({
+      idempotencyKeyId: idempotencyResult.idempotencyKeyId,
+      status: 'completed',
+      resultMetadata: {
+        totalRoomsClosed,
+        successWorkspaces,
+        errorWorkspaces,
+        timestamp: now.toISOString(),
+      },
+    });
+
+    console.log(`\n✅ Auto-close complete: ${totalRoomsClosed} room(s) closed`);
+    console.log(`   Workspaces processed: ${successWorkspaces} success, ${errorWorkspaces} errors`);
+
+  } catch (error) {
+    console.error('💥 Critical error in room auto-close:', error);
+  }
+
+  console.log('=================================================\n');
+}
+
 // ============================================================================
 // SCHEDULER INITIALIZATION
 // ============================================================================
@@ -1050,6 +1244,16 @@ export function startAutonomousScheduler() {
     console.log(`   ${SCHEDULER_CONFIG.cleanup.description}\n`);
   }
 
+  // 5. CommOS™ Room Auto-Close (Every 5 minutes)
+  if (SCHEDULER_CONFIG.roomAutoClose.enabled) {
+    cron.schedule(SCHEDULER_CONFIG.roomAutoClose.schedule, () => {
+      runRoomAutoClose();
+    });
+    console.log('✅ CommOS™ Room Auto-Close:');
+    console.log(`   Schedule: ${SCHEDULER_CONFIG.roomAutoClose.schedule} (every 5 minutes)`);
+    console.log(`   ${SCHEDULER_CONFIG.roomAutoClose.description}\n`);
+  }
+
   isSchedulerRunning = true;
 
   console.log('╔════════════════════════════════════════════════╗');
@@ -1065,4 +1269,5 @@ export const manualTriggers = {
   scheduling: runWeeklyScheduleGeneration,
   payroll: runAutomaticPayrollProcessing,
   cleanup: runIdempotencyKeyCleanup,
+  roomAutoClose: runRoomAutoClose,
 };

@@ -3760,6 +3760,11 @@ export const chatConversations = pgTable("chat_conversations", {
   shiftId: varchar("shift_id").references(() => shifts.id, { onDelete: 'set null' }),
   timeEntryId: varchar("time_entry_id").references(() => timeEntries.id, { onDelete: 'set null' }),
   
+  // Workroom lifecycle management (CommOS™ Workroom Upgrade)
+  autoCloseAt: timestamp("auto_close_at"), // Automatic room closure timestamp (shift end, etc.)
+  visibility: varchar("visibility").default("workspace"), // 'workspace', 'public', 'private'
+  helpdeskTicketId: varchar("helpdesk_ticket_id").references(() => supportTickets.id, { onDelete: 'set null' }), // Link to support ticket for helpdesk DMs
+  
   // Encryption metadata for private DMs
   isEncrypted: boolean("is_encrypted").default(false), // True if messages are encrypted at rest
   encryptionKeyId: varchar("encryption_key_id"), // Reference to encryption key for this conversation
@@ -3898,6 +3903,141 @@ export type InsertMessageReaction = z.infer<typeof insertMessageReactionSchema>;
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type InsertMessageReadReceipt = z.infer<typeof insertMessageReadReceiptSchema>;
 export type MessageReadReceipt = typeof messageReadReceipts.$inferSelect;
+
+// ============================================================================
+// COMMOS™ WORKROOM UPGRADE - FILE UPLOADS, EVENTS, VOICE
+// ============================================================================
+
+// Chat Uploads - Centralized file tracking with virus scanning and retention
+export const chatUploads = pgTable("chat_uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Uploader details
+  uploaderId: varchar("uploader_id").notNull().references(() => users.id, { onDelete: 'set null' }),
+  uploaderName: varchar("uploader_name").notNull(),
+  
+  // Link to conversation and message
+  conversationId: varchar("conversation_id").references(() => chatConversations.id, { onDelete: 'cascade' }),
+  messageId: varchar("message_id").references(() => chatMessages.id, { onDelete: 'cascade' }),
+  
+  // File metadata
+  filename: varchar("filename").notNull(), // Sanitized storage filename
+  originalFilename: varchar("original_filename").notNull(), // User's original filename
+  mimeType: varchar("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(), // Bytes
+  storageUrl: varchar("storage_url").notNull(), // Object storage path or URL
+  thumbnailUrl: varchar("thumbnail_url"), // For images/videos
+  
+  // Security scanning
+  isScanned: boolean("is_scanned").default(false),
+  scanStatus: varchar("scan_status").default("pending"), // 'pending', 'clean', 'infected', 'error'
+  scanResult: text("scan_result"), // Scan details or error message
+  
+  // Retention policy
+  expiresAt: timestamp("expires_at"), // Auto-delete timestamp
+  isDeleted: boolean("is_deleted").default(false),
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: varchar("deleted_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("chat_uploads_conversation_idx").on(table.conversationId),
+  index("chat_uploads_uploader_idx").on(table.uploaderId),
+  index("chat_uploads_workspace_idx").on(table.workspaceId),
+  uniqueIndex("chat_uploads_storage_unique").on(table.workspaceId, table.storageUrl),
+]);
+
+// Room Events - Audit trail for room lifecycle and moderation actions
+export const roomEvents = pgTable("room_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  
+  // Actor details
+  actorId: varchar("actor_id").references(() => users.id, { onDelete: 'set null' }),
+  actorName: varchar("actor_name").notNull(),
+  actorRole: varchar("actor_role").notNull(), // User's role at time of action
+  
+  // Event details
+  eventType: varchar("event_type").notNull(),
+  // Types: 'room_created', 'room_closed', 'room_archived', 'user_joined', 'user_left', 
+  //        'user_muted', 'user_unmuted', 'user_kicked', 'voice_granted', 'voice_revoked',
+  //        'file_uploaded', 'message_deleted', 'voice_session_started', 'voice_session_ended'
+  
+  eventPayload: jsonb("event_payload"), // Additional structured data
+  description: text("description"), // Human-readable event description
+  
+  // Context
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("room_events_conversation_created_idx").on(table.conversationId, table.createdAt), // Chronological replay
+  index("room_events_actor_idx").on(table.actorId),
+  index("room_events_type_idx").on(table.eventType),
+  index("room_events_workspace_idx").on(table.workspaceId),
+]);
+
+// Room Voice Sessions - WebRTC voice chat session management
+export const roomVoiceSessions = pgTable("room_voice_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  
+  // Session details
+  sessionId: varchar("session_id").notNull().unique(), // WebRTC session identifier
+  status: varchar("status").notNull().default("active"), // 'active', 'ended'
+  
+  // Participants (JSONB for dynamic participant list)
+  participants: jsonb("participants").notNull().default('[]'), // [{userId, userName, joinedAt, leftAt, isMuted, isSpeaking}]
+  activeParticipantCount: integer("active_participant_count").default(0),
+  
+  // Session lifecycle
+  startedBy: varchar("started_by").notNull().references(() => users.id, { onDelete: 'set null' }),
+  startedByName: varchar("started_by_name").notNull(),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  
+  endedBy: varchar("ended_by").references(() => users.id, { onDelete: 'set null' }),
+  endedByName: varchar("ended_by_name"),
+  endedAt: timestamp("ended_at"),
+  
+  // Recording (opt-in compliance)
+  isRecorded: boolean("is_recorded").default(false),
+  recordingUrl: varchar("recording_url"),
+  recordingConsent: jsonb("recording_consent"), // {userId: consentGiven} map
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("room_voice_sessions_conversation_idx").on(table.conversationId),
+  index("room_voice_sessions_status_idx").on(table.status),
+  index("room_voice_sessions_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertChatUploadSchema = createInsertSchema(chatUploads).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRoomEventSchema = createInsertSchema(roomEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRoomVoiceSessionSchema = createInsertSchema(roomVoiceSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertChatUpload = z.infer<typeof insertChatUploadSchema>;
+export type ChatUpload = typeof chatUploads.$inferSelect;
+export type InsertRoomEvent = z.infer<typeof insertRoomEventSchema>;
+export type RoomEvent = typeof roomEvents.$inferSelect;
+export type InsertRoomVoiceSession = z.infer<typeof insertRoomVoiceSessionSchema>;
+export type RoomVoiceSession = typeof roomVoiceSessions.$inferSelect;
 
 // ============================================================================
 // DM AUDIT & INVESTIGATION SYSTEM

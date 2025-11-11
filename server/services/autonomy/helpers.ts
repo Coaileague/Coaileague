@@ -23,7 +23,7 @@ import crypto from 'crypto';
 // IDEMPOTENCY HELPERS
 // ============================================================================
 
-export type OperationType = 'invoice_generation' | 'payroll_run' | 'timesheet_ingest' | 'schedule_generation' | 'payment_processing';
+export type OperationType = 'invoice_generation' | 'payroll_run' | 'timesheet_ingest' | 'schedule_generation' | 'payment_processing' | 'room_auto_close';
 export type IdempotencyStatus = 'processing' | 'completed' | 'failed';
 
 interface IdempotencyParams {

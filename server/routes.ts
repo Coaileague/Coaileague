@@ -756,6 +756,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const dispatchRouter = (await import('./routes/dispatch')).default;
   app.use('/api/dispatch', dispatchRouter);
 
+  // Register CommOS™ Chat Upload routes (file uploads with security, workroom attachments)
+  const chatUploadsRouter = (await import('./routes/chat-uploads')).default;
+  app.use('/api/chat/upload', chatUploadsRouter);
+
+  // Register CommOS™ Chat Room routes (room creation, participant management, shift-based rooms)
+  const chatRoomsRouter = (await import('./routes/chat-rooms')).default;
+  app.use('/api/chat/rooms', chatRoomsRouter);
+
   // Register HelpOS FAQ routes (AI-powered FAQ system with semantic search)
   registerFaqRoutes(app);
 
