@@ -21,15 +21,23 @@ AutoForce™ is built on a modular "OS" design philosophy with 6 major autonomou
 ### Navigation System
 **Gmail-Style Peek Rail Navigation** (replaced Shadcn Sidebar):
 - **Three Layout Modes**: Collapsed (56px icons only), Expanded (240px with labels), Mobile Overlay (slide-in with backdrop)
+- **6-Family Organization**: Menu structured around 6 major OS families to avoid long scrolling menus
+  - **CommOS™**: Communication hub, Messages, SupportOS™ HelpDesk
+  - **OperationsOS™**: ScheduleOS™, TimeOS™, Pending Approvals, TrainingOS™
+  - **BillOS™**: PayrollOS™, Invoices, Integrations (QuickBooks/Gusto)
+  - **IntelligenceOS™**: AnalyticsOS™, ReportOS™, InsightOS™ Reports
+  - **AuditOS™**: Audit logs, Compliance tracking
+  - **MarketingOS™**: DealOS™ Sales, TalentOS™, EngagementOS™
+  - **Platform**: Dashboard, Employees, Clients, Settings (Platform staff see additional admin tools)
 - **Smart State Management**: localStorage persistence for pin state, debounced hover interactions (100ms expand, 200ms collapse), proper cleanup on unmount
-- **RBAC Integration**: Reuses `selectSidebarFamilies()` for role-based menu filtering, platform staff get dedicated quick links section
+- **RBAC Integration**: Reuses `selectSidebarFamilies()` for role-based menu filtering, each family shows 3-4 high-value routes
 - **Responsive Design**: Viewport detection at 768px (md breakpoint), mobile overlay with dismiss-on-backdrop-click
 - **Accessibility**: ARIA labels, keyboard navigation (Enter/Space to expand, Escape to collapse), aria-current for active routes
 - **Custom Logo**: Inline "AUTOFORCE™" logo optimized for 240px width (prevents text wrapping), gradient AF badge matching brand colors (primary/accent)
 - **Profile Dropdown**: Positioned to the right with proper sideOffset to avoid breaking nav border, includes user avatar, name, email, and quick actions
 - **Technical Details**: Framer Motion spring animations (stiffness: 300, damping: 30), useRef-based hover debouncing to prevent glitching, AnimatePresence for smooth transitions
-- **Layering Architecture**: Peek rail at z-50, header at z-[40], main content with ml-14 (56px) offset to prevent overlap; harmonious coordination eliminates visual conflicts
-- **Professional Header System**: Clean centered page titles using PageHeader component with align="center" prop, single foreground color for Fortune-500 aesthetic; WorkspaceSwitcher clearly displays current workspace name
+- **Layering Architecture**: Peek rail at z-50, header at z-[40] starting at left-14, main content with ml-14 (56px) offset; harmonious coordination eliminates visual conflicts
+- **Professional Header System**: Clean centered page titles using PageHeader component with align="center" prop (three-column grid for true optical centering), single foreground color for Fortune-500 aesthetic; WorkspaceSwitcher clearly displays current workspace name
 
 ### The 6 Major OS Systems
 1.  **BillOS™**: Administrative Billing & Financial Management (automated invoicing, payroll, expense management, usage-based AI billing).

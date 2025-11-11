@@ -59,7 +59,7 @@ export type OSCapability =
   | 'view_messages'
   | 'support_dashboard';
 
-export type FamilyId = 'communication' | 'operations' | 'growth' | 'platform';
+export type FamilyId = 'commos' | 'operationsos' | 'billos' | 'intelligenceos' | 'auditos' | 'marketingos' | 'platform';
 
 export interface OSModuleRoute {
   id: string;
@@ -238,7 +238,7 @@ export const osModules: OSModule[] = [
     icon: CalendarDays,
     color: 'hsl(var(--chart-1))',
     capabilities: ['view_schedules', 'manage_schedules', 'view_timesheets', 'approve_timesheets'],
-    familyId: 'operations',
+    familyId: 'operationsos',
     routes: [
       {
         id: 'schedule-os',
@@ -247,7 +247,7 @@ export const osModules: OSModule[] = [
         icon: CalendarDays,
         description: 'Intelligent shift scheduling',
         capabilities: ['view_schedules'],
-        familyId: 'operations',
+        familyId: 'operationsos',
         order: 10,
       },
       {
@@ -257,7 +257,7 @@ export const osModules: OSModule[] = [
         icon: Clock,
         description: 'GPS-verified time tracking',
         capabilities: ['view_timesheets'],
-        familyId: 'operations',
+        familyId: 'operationsos',
         order: 11,
       },
       {
@@ -268,7 +268,7 @@ export const osModules: OSModule[] = [
         description: 'Review and approve submitted hours',
         capabilities: ['approve_timesheets'],
         badge: 'Supervisor',
-        familyId: 'operations',
+        familyId: 'operationsos',
         order: 12,
       },
     ],
@@ -280,7 +280,7 @@ export const osModules: OSModule[] = [
     icon: Wallet,
     color: 'hsl(var(--chart-2))',
     capabilities: ['view_invoices', 'manage_invoices', 'view_payroll', 'process_payroll'],
-    familyId: 'operations',
+    familyId: 'billos',
     routes: [
       {
         id: 'payroll-os',
@@ -290,7 +290,7 @@ export const osModules: OSModule[] = [
         description: 'FLSA-compliant payroll processing',
         capabilities: ['view_payroll'],
         minimumTier: 'professional',
-        familyId: 'operations',
+        familyId: 'billos',
         order: 13,
       },
       {
@@ -300,7 +300,7 @@ export const osModules: OSModule[] = [
         icon: FileCheck2,
         description: 'Automated invoice generation',
         capabilities: ['view_invoices'],
-        familyId: 'operations',
+        familyId: 'billos',
         order: 14,
       },
       {
@@ -310,7 +310,7 @@ export const osModules: OSModule[] = [
         icon: Zap,
         description: 'QuickBooks & Gusto integrations',
         capabilities: ['manage_invoices', 'process_payroll'],
-        familyId: 'operations',
+        familyId: 'billos',
         order: 15,
       },
     ],
@@ -322,7 +322,7 @@ export const osModules: OSModule[] = [
     icon: UsersRound,
     color: 'hsl(var(--chart-3))',
     capabilities: ['manage_employees', 'manage_clients'],
-    familyId: 'operations',
+    familyId: 'platform',
     routes: [
       {
         id: 'training-os',
@@ -331,8 +331,8 @@ export const osModules: OSModule[] = [
         icon: GraduationCap,
         description: 'Employee onboarding and compliance training',
         capabilities: ['manage_employees'],
-        familyId: 'operations',
-        order: 15,
+        familyId: 'operationsos',
+        order: 13,
       },
       {
         id: 'employees',
@@ -341,7 +341,7 @@ export const osModules: OSModule[] = [
         icon: UsersRound,
         description: 'Manage workforce',
         capabilities: ['manage_employees'],
-        familyId: 'operations',
+        familyId: 'platform',
         order: 16,
       },
       {
@@ -351,7 +351,7 @@ export const osModules: OSModule[] = [
         icon: BookUser,
         description: 'Manage client relationships',
         capabilities: ['manage_clients'],
-        familyId: 'operations',
+        familyId: 'platform',
         order: 17,
       },
     ],
@@ -363,7 +363,7 @@ export const osModules: OSModule[] = [
     icon: FileBarChart,
     color: 'hsl(var(--chart-4))',
     capabilities: ['view_reports', 'advanced_analytics'],
-    familyId: 'growth',
+    familyId: 'intelligenceos',
     routes: [
       {
         id: 'deal-os',
@@ -373,7 +373,7 @@ export const osModules: OSModule[] = [
         description: 'AI-powered RFP hunting and contract generation',
         capabilities: ['manage_workspace'],
         minimumTier: 'enterprise',
-        familyId: 'growth',
+        familyId: 'marketingos',
         order: 30,
       },
       {
@@ -383,7 +383,7 @@ export const osModules: OSModule[] = [
         icon: Award,
         description: 'Leadership development and recognition',
         capabilities: ['manage_employees'],
-        familyId: 'growth',
+        familyId: 'marketingos',
         order: 31,
       },
       {
@@ -393,7 +393,7 @@ export const osModules: OSModule[] = [
         icon: TrendingUp,
         description: 'Pulse surveys and employee engagement',
         capabilities: ['manage_employees'],
-        familyId: 'growth',
+        familyId: 'marketingos',
         order: 32,
       },
       {
@@ -405,7 +405,7 @@ export const osModules: OSModule[] = [
         capabilities: ['advanced_analytics'],
         minimumTier: 'enterprise',
         badge: 'Enterprise',
-        familyId: 'growth',
+        familyId: 'intelligenceos',
         order: 33,
       },
       {
@@ -416,7 +416,7 @@ export const osModules: OSModule[] = [
         description: 'Comprehensive business intelligence',
         capabilities: ['view_reports'],
         minimumTier: 'starter',
-        familyId: 'growth',
+        familyId: 'intelligenceos',
         order: 34,
       },
       {
@@ -427,7 +427,7 @@ export const osModules: OSModule[] = [
         description: 'Management reports with role-based access',
         capabilities: ['view_reports'],
         minimumTier: 'starter',
-        familyId: 'growth',
+        familyId: 'intelligenceos',
         order: 35,
       },
     ],
@@ -448,7 +448,7 @@ export const osModules: OSModule[] = [
         icon: MessagesSquare,
         description: 'Communication hub dashboard',
         capabilities: ['view_messages'],
-        familyId: 'communication',
+        familyId: 'commos',
         order: 1,
       },
       {
@@ -458,7 +458,7 @@ export const osModules: OSModule[] = [
         icon: LockKeyhole,
         description: 'Direct messaging',
         capabilities: ['view_messages'],
-        familyId: 'communication',
+        familyId: 'commos',
         order: 2,
       },
       {
@@ -467,7 +467,7 @@ export const osModules: OSModule[] = [
         href: '/chat',
         icon: Headphones,
         description: 'AI-powered support chat',
-        familyId: 'communication',
+        familyId: 'commos',
         order: 3,
       },
     ],
@@ -479,7 +479,7 @@ export const osModules: OSModule[] = [
     icon: Shield,
     color: 'hsl(var(--destructive))',
     capabilities: ['view_audit_logs'],
-    familyId: 'platform',
+    familyId: 'auditos',
     routes: [
       {
         id: 'audit-logs',
@@ -489,7 +489,7 @@ export const osModules: OSModule[] = [
         description: 'Compliance and activity tracking',
         capabilities: ['view_audit_logs'],
         minimumTier: 'professional',
-        familyId: 'platform',
+        familyId: 'auditos',
         order: 22,
       },
     ],
@@ -684,10 +684,13 @@ export function getLockedRoutes(
  * Family display configuration
  */
 const familyConfig: Record<FamilyId, { label: string; order: number }> = {
-  communication: { label: 'Communication', order: 1 },
-  operations: { label: 'Operations', order: 2 },
-  growth: { label: 'Growth & AI', order: 3 },
-  platform: { label: 'Platform', order: 4 },
+  commos: { label: 'CommOS™', order: 1 },
+  operationsos: { label: 'OperationsOS™', order: 2 },
+  billos: { label: 'BillOS™', order: 3 },
+  intelligenceos: { label: 'IntelligenceOS™', order: 4 },
+  auditos: { label: 'AuditOS™', order: 5 },
+  marketingos: { label: 'MarketingOS™', order: 6 },
+  platform: { label: 'Platform', order: 7 },
 };
 
 /**
@@ -731,9 +734,12 @@ export function selectSidebarFamilies(
 
   // Group routes by family
   const familyMap: Record<FamilyId, { accessible: OSModuleRoute[]; locked: OSModuleRoute[] }> = {
-    communication: { accessible: [], locked: [] },
-    operations: { accessible: [], locked: [] },
-    growth: { accessible: [], locked: [] },
+    commos: { accessible: [], locked: [] },
+    operationsos: { accessible: [], locked: [] },
+    billos: { accessible: [], locked: [] },
+    intelligenceos: { accessible: [], locked: [] },
+    auditos: { accessible: [], locked: [] },
+    marketingos: { accessible: [], locked: [] },
     platform: { accessible: [], locked: [] },
   };
 
