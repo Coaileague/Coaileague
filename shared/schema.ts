@@ -606,6 +606,12 @@ export const employees = pgTable("employees", {
   isActive: boolean("is_active").default(true),
   availabilityNotes: text("availability_notes"),
 
+  // Premium Schedule Features (Phase 1 MVP)
+  performanceScore: integer("performance_score").default(85), // 0-100 percentage
+  rating: decimal("rating", { precision: 2, scale: 1 }).default("4.0"), // 0.0-5.0 star rating
+  availabilityPercentage: integer("availability_percentage").default(90), // 0-100 percentage
+  overtimeHoursThisWeek: decimal("overtime_hours_this_week", { precision: 5, scale: 2 }).default("0.00"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
