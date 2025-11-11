@@ -9195,3 +9195,129 @@ export const insertOversightEventSchema = createInsertSchema(oversightEvents).om
 
 export type InsertOversightEvent = z.infer<typeof insertOversightEventSchema>;
 export type OversightEvent = typeof oversightEvents.$inferSelect;
+
+// ============================================================================
+// EXTERNAL IDENTIFIERS SYSTEM - Human-Readable IDs
+// ============================================================================
+
+// Entity types that can have external IDs
+export const externalIdEntityTypeEnum = pgEnum('external_id_entity_type', [
+  'org',
+  'employee',
+  'user',
+  'support',
+  'client',
+]);
+
+// External identifiers for human-readable reference (ORG-XXXX, EMP-XXXX-00001, etc.)
+export const externalIdentifiers = pgTable("external_identifiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Entity reference
+  entityType: externalIdEntityTypeEnum("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(), // UUID of the actual entity
+  
+  // Human-readable external ID
+  externalId: varchar("external_id").notNull().unique(), // Format: ORG-ABCD, EMP-ABCD-00001, SUP-AB12
+  
+  // Organization association (null for org entities themselves)
+  orgId: varchar("org_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Primary flag (in case entity has multiple external IDs)
+  isPrimary: boolean("is_primary").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  entityIdx: index("external_identifiers_entity_idx").on(table.entityType, table.entityId),
+  externalIdIdx: index("external_identifiers_external_id_idx").on(table.externalId),
+  orgIdx: index("external_identifiers_org_idx").on(table.orgId),
+  uniqueEntityPrimary: uniqueIndex("external_identifiers_entity_primary_idx").on(table.entityType, table.entityId, table.isPrimary),
+}));
+
+export const insertExternalIdentifierSchema = createInsertSchema(externalIdentifiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExternalIdentifier = z.infer<typeof insertExternalIdentifierSchema>;
+export type ExternalIdentifier = typeof externalIdentifiers.$inferSelect;
+
+// ID sequence tracking for auto-incrementing employee numbers per org
+export const idSequenceKindEnum = pgEnum('id_sequence_kind', [
+  'employee',
+  'ticket',
+  'client',
+]);
+
+export const idSequences = pgTable("id_sequences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  kind: idSequenceKindEnum("kind").notNull(),
+  nextVal: integer("next_val").notNull().default(1),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueOrgKind: uniqueIndex("id_sequences_org_kind_idx").on(table.orgId, table.kind),
+}));
+
+export const insertIdSequenceSchema = createInsertSchema(idSequences).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertIdSequence = z.infer<typeof insertIdSequenceSchema>;
+export type IdSequence = typeof idSequences.$inferSelect;
+
+// Support agent registry with unique codes
+export const supportRegistry = pgTable("support_registry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  supportCode: varchar("support_code").notNull().unique(), // Format: SUP-AB12
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSupportRegistrySchema = createInsertSchema(supportRegistry).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSupportRegistry = z.infer<typeof insertSupportRegistrySchema>;
+export type SupportRegistry = typeof supportRegistry.$inferSelect;
+
+// Tombstones for tracking deletions with approval workflow
+export const tombstones = pgTable("tombstones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Entity that was deleted
+  entityType: varchar("entity_type").notNull(), // 'org', 'employee', 'user', etc.
+  entityId: varchar("entity_id").notNull(),
+  
+  // Organization context
+  orgId: varchar("org_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  
+  // Deletion tracking
+  deletedByUserId: varchar("deleted_by_user_id").notNull().references(() => users.id),
+  approvalId: varchar("approval_id"), // Link to approval if required
+  reason: text("reason"),
+  
+  // Snapshot of deleted entity (for potential restoration)
+  entitySnapshot: jsonb("entity_snapshot"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  entityIdx: index("tombstones_entity_idx").on(table.entityType, table.entityId),
+  orgIdx: index("tombstones_org_idx").on(table.orgId),
+  deletedByIdx: index("tombstones_deleted_by_idx").on(table.deletedByUserId),
+}));
+
+export const insertTombstoneSchema = createInsertSchema(tombstones).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTombstone = z.infer<typeof insertTombstoneSchema>;
+export type Tombstone = typeof tombstones.$inferSelect;
