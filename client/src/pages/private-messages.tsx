@@ -26,6 +26,7 @@ import { MessageAttachment } from "@/components/message-attachment";
 import { CameraCapture } from "@/components/camera-capture";
 import { usePasteImageHandler, PasteImageHint } from "@/components/paste-image-handler";
 import { cn } from "@/lib/utils";
+import { sanitizeMessage } from "@/lib/sanitize";
 
 interface Conversation {
   id: string;
@@ -435,9 +436,10 @@ export default function PrivateMessages() {
                         </Badge>
                       </div>
                       {conv.lastMessage && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {conv.lastMessage}
-                        </p>
+                        <div 
+                          className="text-xs text-muted-foreground truncate"
+                          dangerouslySetInnerHTML={{ __html: sanitizeMessage(conv.lastMessage) }}
+                        />
                       )}
                       <div className="flex items-center gap-2 mt-1">
                         {conv.lastMessageAt && (
@@ -578,7 +580,10 @@ export default function PrivateMessages() {
                               </div>
                             )}
                             {msg.message && msg.message !== '[File attached]' && (
-                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              <div 
+                                className="text-sm whitespace-pre-wrap"
+                                dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
+                              />
                             )}
                           </div>
                         </div>

@@ -64,7 +64,6 @@ import HRBenefits from "@/pages/hr-benefits";
 import HRReviews from "@/pages/hr-reviews";
 import HRPTO from "@/pages/hr-pto";
 import HRTerminations from "@/pages/hr-terminations";
-import HelpdeskChat from "@/pages/helpdesk-chat";
 import HelpDesk from "@/pages/HelpDesk";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
