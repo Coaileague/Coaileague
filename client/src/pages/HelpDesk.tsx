@@ -71,16 +71,17 @@ import type { ChatMessage } from "@shared/schema";
 import { HelpDeskProgressHeader } from "@/components/helpdesk-progress-header";
 import { AgentToolbelt } from "@/components/agent-toolbelt";
 import { TicketContextPanel } from "@/components/ticket-context-panel";
+import { sanitizeMessage } from "@/lib/sanitize";
 
 const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 
-interface HelpDeskCabProps {
+interface HelpDeskProps {
   forceMobileLayout?: boolean; // Force mobile layout regardless of screen size
 }
 
 // Desktop IRC/MSN-style 3-column chatroom with WorkforceOS blue branding
 // Can also be forced to mobile layout for /mobilechat route
-export function HelpDeskCab(props?: HelpDeskCabProps & any) {
+export function HelpDesk(props?: HelpDeskProps & any) {
   const { forceMobileLayout = false } = props || {};
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -962,7 +963,7 @@ export function HelpDeskCab(props?: HelpDeskCabProps & any) {
                     <div key={idx} className="flex justify-center my-1">
                       <span className="text-[10px] font-mono text-slate-600 italic bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 flex items-center gap-1.5">
                         <WFLogoCompact size={10} />
-                        {parseSystemMessage(msg.message)}
+                        <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
                       </span>
                     </div>
                   );
@@ -995,9 +996,10 @@ export function HelpDeskCab(props?: HelpDeskCabProps & any) {
                         </div>
                         
                         {/* Message Content - Mobile-safe wrapping with overflow protection */}
-                        <p className="text-slate-800 text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto">
-                          {role === 'bot' ? parseSystemMessage(msg.message) : msg.message}
-                        </p>
+                        <div 
+                          className="text-slate-800 text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
+                          dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -2127,4 +2129,4 @@ export function HelpDeskCab(props?: HelpDeskCabProps & any) {
 }
 
 // Default export for backward compatibility
-export default HelpDeskCab;
+export default HelpDesk;

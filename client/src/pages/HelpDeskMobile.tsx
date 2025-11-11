@@ -21,6 +21,7 @@ import {
   Eye, UserCog, RefreshCw, PackageCheck, FileSearch
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
+import { sanitizeMessage } from "@/lib/sanitize";
 
 interface OnlineUser {
   id: string;
@@ -1003,9 +1004,10 @@ export default function ModernMobileChat() {
                   <div className="flex items-center gap-2 justify-center mb-1">
                     <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">System</span>
                   </div>
-                  <p className="text-sm text-slate-200 text-center leading-relaxed">
-                    {parseSystemMessage(msg.message)}
-                  </p>
+                  <div 
+                    className="text-sm text-slate-200 text-center leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
+                  />
                 </div>
               </div>
             );
@@ -1062,7 +1064,10 @@ export default function ModernMobileChat() {
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
               </div>
-              <p className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
+              <div 
+                className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
+              />
             </div>
           </div>
         )})}

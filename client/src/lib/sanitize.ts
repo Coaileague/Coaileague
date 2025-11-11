@@ -34,9 +34,11 @@ export function sanitizeMessage(message: string): string {
 
   // Configure DOMPurify for chat messages
   // Allow basic formatting: bold, italic, links, line breaks
+  // SECURITY: Only allow http/https/mailto URIs - block javascript:, data:, etc.
   const clean = DOMPurify.sanitize(message, {
     ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'a', 'br', 'p', 'code', 'pre'],
     ALLOWED_ATTR: ['href'], // Only allow href - target and rel are forced by hook
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i, // Only http(s) and mailto
     ALLOW_DATA_ATTR: false,
     RETURN_DOM: false,
     RETURN_DOM_FRAGMENT: false,

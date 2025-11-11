@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { sanitizeMessage } from "@/lib/sanitize";
 
 interface QueueUser {
   id: string;
@@ -202,9 +203,12 @@ export function QueueManagerPanel({
                               </div>
 
                               {user.lastMessage && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  "{user.lastMessage}"
-                                </p>
+                                <div 
+                                  className="text-xs text-muted-foreground truncate"
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: `"${sanitizeMessage(user.lastMessage)}"` 
+                                  }}
+                                />
                               )}
                             </div>
 
@@ -267,7 +271,12 @@ export function QueueManagerPanel({
                         {selectedUser.lastMessage && (
                           <div className="mt-3 p-2 bg-white dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800">
                             <p className="text-xs text-muted-foreground">Last message:</p>
-                            <p className="text-sm mt-1">"{selectedUser.lastMessage}"</p>
+                            <div 
+                              className="text-sm mt-1"
+                              dangerouslySetInnerHTML={{ 
+                                __html: `"${sanitizeMessage(selectedUser.lastMessage)}"` 
+                              }}
+                            />
                           </div>
                         )}
                       </div>
