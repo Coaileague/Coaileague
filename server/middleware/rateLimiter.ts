@@ -77,3 +77,85 @@ export const readLimiter = rateLimit({
     retryAfter: '1 minute'
   }
 });
+
+/**
+ * Chat-Specific Rate Limiters
+ * Implements tiered protection for chat/messaging features
+ */
+
+// Chat message rate limiter - 30 messages per minute per user
+export const chatMessageLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 messages per minute
+  message: {
+    error: 'Too many messages sent',
+    retryAfter: '1 minute'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by user ID instead of IP to prevent shared NAT issues
+  keyGenerator: (req: Request) => {
+    // @ts-ignore - req.user is added by requireAuth middleware
+    return req.user?.id || req.ip || 'anonymous';
+  },
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'You are sending messages too quickly. Please slow down.',
+      retryAfter: '1 minute',
+      limit: 30,
+      window: '1 minute'
+    });
+  }
+});
+
+// Chat file upload limiter - 5 uploads per hour per user
+export const chatUploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 uploads per hour
+  message: {
+    error: 'Too many file uploads',
+    retryAfter: '1 hour'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by user ID for accurate per-user tracking
+  keyGenerator: (req: Request) => {
+    // @ts-ignore - req.user is added by requireAuth middleware
+    return req.user?.id || req.ip || 'anonymous';
+  },
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      error: 'Upload limit exceeded',
+      message: 'You have reached the maximum number of file uploads per hour (5). Please try again later.',
+      retryAfter: '1 hour',
+      limit: 5,
+      window: '1 hour'
+    });
+  }
+});
+
+// Chat conversation creation limiter - prevent spam
+export const chatConversationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 conversations per 15 minutes
+  message: {
+    error: 'Too many chat conversations created',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    // @ts-ignore - req.user is added by requireAuth middleware
+    return req.user?.id || req.ip || 'anonymous';
+  },
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'You are creating chat conversations too frequently. Please slow down.',
+      retryAfter: '15 minutes',
+      limit: 10,
+      window: '15 minutes'
+    });
+  }
+});

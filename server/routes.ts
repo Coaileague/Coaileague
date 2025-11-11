@@ -12,7 +12,15 @@ import { billingRouter } from "./billing-api"; // Billing API routes
 import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { auditContextMiddleware } from "./middleware/audit";
-import { apiLimiter, authLimiter, mutationLimiter, readLimiter } from "./middleware/rateLimiter";
+import { 
+  apiLimiter, 
+  authLimiter, 
+  mutationLimiter, 
+  readLimiter,
+  chatMessageLimiter,
+  chatUploadLimiter,
+  chatConversationLimiter
+} from "./middleware/rateLimiter";
 import * as notificationHelpers from "./notifications";
 import Stripe from 'stripe';
 import PDFDocument from 'pdfkit';
@@ -6167,7 +6175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // MANUAL CHAT CREATION API - Create chatrooms with participants and guest tokens
   // ============================================================================
   
-  app.post('/api/chats/create', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/chats/create', requireAuth, chatConversationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const userId = req.user!.id;
