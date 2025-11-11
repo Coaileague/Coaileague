@@ -40,9 +40,9 @@ export async function seedDemoWorkspace() {
     address: "123 Demo Street, San Francisco, CA 94102",
     phone: "(555) 123-4567",
     website: "https://acmeservices.demo",
-    subscriptionTier: "professional",
+    subscriptionTier: "enterprise",
     subscriptionStatus: "active",
-    maxEmployees: 25,
+    maxEmployees: 999,
     maxClients: 999,
     platformFeePercentage: "10.00",
   }).returning();
@@ -58,7 +58,7 @@ export async function seedDemoWorkspace() {
     email: "demo@shiftsync.app",
     role: "Platform Administrator",
     hourlyRate: "50.00",
-    workspaceRole: "owner",
+    workspaceRole: "org_owner", // FULL ADMIN ACCESS - All features enabled for E2E testing
     isActive: true,
     color: "#6366f1",
   }).returning();
