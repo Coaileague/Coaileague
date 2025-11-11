@@ -21,14 +21,18 @@ export function sanitizeChatMessage(message: string): string {
   // Allow basic formatting: bold, italic, links, line breaks
   const clean = DOMPurify.sanitize(trimmed, {
     ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'a', 'br', 'p', 'code', 'pre'],
-    ALLOWED_ATTR: ['href', 'target'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
     ALLOW_DATA_ATTR: false,
     RETURN_DOM: false,
     RETURN_DOM_FRAGMENT: false,
     RETURN_TRUSTED_TYPE: false,
+    // Add rel="noopener noreferrer" to all links to prevent reverse tabnabbing
+    ADD_ATTR: ['target'],
+    ADD_TAGS: [],
   });
 
-  return clean;
+  // Force secure link attributes on all <a> tags
+  return clean.replace(/<a /g, '<a rel="noopener noreferrer" ');
 }
 
 /**

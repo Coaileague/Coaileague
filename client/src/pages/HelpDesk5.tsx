@@ -34,6 +34,7 @@ import {
   ArrowLeft, MoreVertical, ArrowDown, Smile, Reply, RefreshCw
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
+import { sanitizeMessage } from "@/lib/sanitize";
 
 interface OnlineUser {
   id: string;
@@ -1137,7 +1138,7 @@ export default function LiveChatroomPage() {
                       >
                         <div className="bg-orange-900/30 border border-orange-600/40 rounded-full px-4 py-1.5 text-xs text-orange-300">
                           <Bot className="w-3 h-3 inline mr-1.5 text-orange-400" />
-                          {message.message}
+                          <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(message.message) }} />
                         </div>
                       </div>
                     );
@@ -1174,9 +1175,10 @@ export default function LiveChatroomPage() {
                               : 'bg-gradient-to-br from-slate-700/60 to-slate-800/40 border border-slate-600/30 text-slate-100 shadow-lg'
                           }`}
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                            {message.message.replace(/\*/g, '')}
-                          </p>
+                          <div 
+                            className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                            dangerouslySetInnerHTML={{ __html: sanitizeMessage(message.message) }}
+                          />
                           {isBot && !isSystemMsg && (
                             <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-300">
                               <Sparkles className="w-3.5 h-3.5 text-primary" />
