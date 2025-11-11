@@ -231,6 +231,7 @@ export const osModules: OSModule[] = [
         icon: LayoutDashboard,
         description: 'Your personalized overview',
         familyId: 'platform',
+        isPrimary: true,
         order: 1,
       },
     ],
@@ -252,6 +253,7 @@ export const osModules: OSModule[] = [
         description: 'Intelligent shift scheduling',
         capabilities: ['view_schedules'],
         familyId: 'operations',
+        isPrimary: true,
         order: 1,
       },
       {
@@ -262,6 +264,7 @@ export const osModules: OSModule[] = [
         description: 'GPS-verified time tracking',
         capabilities: ['view_timesheets'],
         familyId: 'operations',
+        isPrimary: true,
         order: 2,
       },
       {
@@ -273,6 +276,7 @@ export const osModules: OSModule[] = [
         capabilities: ['approve_timesheets'],
         badge: 'Supervisor',
         familyId: 'operations',
+        isPrimary: false,
         order: 3,
       },
     ],
@@ -295,6 +299,7 @@ export const osModules: OSModule[] = [
         capabilities: ['view_payroll'],
         minimumTier: 'professional',
         familyId: 'executive',
+        isPrimary: true,
         order: 2,
       },
       {
@@ -305,6 +310,7 @@ export const osModules: OSModule[] = [
         description: 'Automated invoice generation',
         capabilities: ['view_invoices'],
         familyId: 'executive',
+        isPrimary: true,
         order: 3,
       },
       {
@@ -315,6 +321,7 @@ export const osModules: OSModule[] = [
         description: 'QuickBooks & Gusto integrations',
         capabilities: ['manage_invoices', 'process_payroll'],
         familyId: 'executive',
+        isPrimary: false,
         order: 4,
       },
     ],
@@ -336,6 +343,7 @@ export const osModules: OSModule[] = [
         description: 'Employee onboarding and compliance training',
         capabilities: ['manage_employees'],
         familyId: 'operations',
+        isPrimary: false,
         order: 4,
       },
       {
@@ -346,6 +354,7 @@ export const osModules: OSModule[] = [
         description: 'Manage workforce',
         capabilities: ['manage_employees'],
         familyId: 'people',
+        isPrimary: true,
         order: 1,
       },
       {
@@ -356,6 +365,7 @@ export const osModules: OSModule[] = [
         description: 'Manage client relationships',
         capabilities: ['manage_clients'],
         familyId: 'people',
+        isPrimary: true,
         order: 2,
       },
     ],
@@ -378,6 +388,7 @@ export const osModules: OSModule[] = [
         capabilities: ['manage_workspace'],
         minimumTier: 'enterprise',
         familyId: 'intelligence',
+        isPrimary: false,
         order: 4,
       },
       {
@@ -388,6 +399,7 @@ export const osModules: OSModule[] = [
         description: 'Leadership development and recognition',
         capabilities: ['manage_employees'],
         familyId: 'people',
+        isPrimary: false,
         order: 3,
       },
       {
@@ -398,6 +410,7 @@ export const osModules: OSModule[] = [
         description: 'Pulse surveys and employee engagement',
         capabilities: ['manage_employees'],
         familyId: 'people',
+        isPrimary: false,
         order: 4,
       },
       {
@@ -410,6 +423,7 @@ export const osModules: OSModule[] = [
         minimumTier: 'enterprise',
         badge: 'Enterprise',
         familyId: 'intelligence',
+        isPrimary: true,
         order: 1,
       },
       {
@@ -421,6 +435,7 @@ export const osModules: OSModule[] = [
         capabilities: ['view_reports'],
         minimumTier: 'starter',
         familyId: 'intelligence',
+        isPrimary: true,
         order: 2,
       },
       {
@@ -432,6 +447,7 @@ export const osModules: OSModule[] = [
         capabilities: ['view_reports'],
         minimumTier: 'starter',
         familyId: 'intelligence',
+        isPrimary: false,
         order: 3,
       },
     ],
@@ -453,6 +469,7 @@ export const osModules: OSModule[] = [
         description: 'Communication hub dashboard',
         capabilities: ['view_messages'],
         familyId: 'people',
+        isPrimary: true,
         order: 5,
       },
       {
@@ -463,6 +480,7 @@ export const osModules: OSModule[] = [
         description: 'Direct messaging',
         capabilities: ['view_messages'],
         familyId: 'people',
+        isPrimary: false,
         order: 6,
       },
       {
@@ -472,6 +490,7 @@ export const osModules: OSModule[] = [
         icon: Headphones,
         description: 'AI-powered support chat',
         familyId: 'people',
+        isPrimary: false,
         order: 7,
       },
     ],
@@ -494,6 +513,7 @@ export const osModules: OSModule[] = [
         capabilities: ['view_audit_logs'],
         minimumTier: 'professional',
         familyId: 'intelligence',
+        isPrimary: false,
         order: 5,
       },
     ],
@@ -515,6 +535,7 @@ export const osModules: OSModule[] = [
         description: 'Configure workspace preferences',
         capabilities: ['manage_workspace'],
         familyId: 'platform',
+        isPrimary: true,
         order: 2,
       },
     ],
@@ -541,6 +562,7 @@ export const platformSupportModule: OSModule = {
       description: 'Unified Root Administrator Control Center',
       familyId: 'platform',
       badge: 'Root',
+      isPrimary: true,
       order: 0,
     },
   ],
