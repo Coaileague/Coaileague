@@ -30,9 +30,132 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/print-styles.css" media="print">
+    <style>
+      /* Initial loading screen - shows BEFORE React loads */
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-center: center;
+        background: hsl(222.2 84% 4.9%);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      
+      #initial-loader.loaded {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease-out;
+      }
+      
+      .loader-content {
+        width: 90vw;
+        max-width: 400px;
+        padding: 0 24px;
+      }
+      
+      .loader-title {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      
+      .loader-title h1 {
+        font-size: clamp(24px, 5vw, 32px);
+        font-weight: 700;
+        color: hsl(210 40% 98%);
+        margin: 0 0 8px 0;
+      }
+      
+      .loader-title p {
+        font-size: 14px;
+        color: hsl(215 20.2% 65.1%);
+        margin: 0;
+      }
+      
+      .loader-bar {
+        height: 12px;
+        background: hsl(217.2 32.6% 17.5%);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 12px;
+        border: 1px solid hsl(217.2 32.6% 20%);
+      }
+      
+      .loader-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, hsl(221.2 83.2% 53.3%), hsl(210 40% 98%), hsl(221.2 83.2% 53.3%));
+        background-size: 200% 100%;
+        animation: loading-progress 2s ease-in-out forwards, loading-shimmer 1.5s linear infinite;
+        width: 0%;
+      }
+      
+      @keyframes loading-progress {
+        0% { width: 0%; }
+        50% { width: 60%; }
+        100% { width: 90%; }
+      }
+      
+      @keyframes loading-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      
+      .loader-message {
+        text-align: center;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .loader-message p {
+        font-size: 14px;
+        font-weight: 500;
+        color: hsl(221.2 83.2% 53.3%);
+        margin: 0;
+        animation: message-fade 2s ease-in-out infinite;
+      }
+      
+      @keyframes message-fade {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Static HTML loader - appears INSTANTLY before React -->
+    <div id="initial-loader">
+      <div class="loader-content">
+        <div class="loader-title">
+          <h1>AutoForce™</h1>
+          <p>Authenticating</p>
+        </div>
+        <div class="loader-bar">
+          <div class="loader-bar-fill"></div>
+        </div>
+        <div class="loader-message">
+          <p>Loading your workspace...</p>
+        </div>
+      </div>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Hide initial loader once React mounts -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.classList.add('loaded');
+            setTimeout(function() {
+              loader.remove();
+            }, 300);
+          }
+        }, 100);
+      });
+    </script>
   </body>
 </html>

@@ -59,16 +59,18 @@ export function ProgressLoadingOverlay({
       return;
     }
 
-    // Reset on mount and record start time
-    setProgress(0);
-    setMessageIndex(0);
-    const startTime = Date.now(); // Reset start time each time loading begins
-
     if (status !== "loading") {
       // Jump to 100% when complete
       setProgress(100);
       return;
     }
+
+    // Reset progress and message immediately when visible
+    setProgress(0);
+    setMessageIndex(0);
+
+    // Set start time RIGHT NOW, when the interval actually begins
+    const startTime = Date.now();
 
     // Simulate realistic loading progress based on elapsed time - STARTS AT 0%
     const interval = setInterval(() => {
