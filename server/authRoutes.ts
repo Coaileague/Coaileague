@@ -233,11 +233,11 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     user: {
       id: user.id,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      emailVerified: user.emailVerified,
-      currentWorkspaceId: user.currentWorkspaceId,
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
+      role: user.role ?? "user",
+      emailVerified: user.emailVerified ?? false,
+      currentWorkspaceId: user.currentWorkspaceId ?? null,
       platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role
     },
   });
@@ -315,7 +315,7 @@ router.post("/api/auth/change-password", requireAuth, async (req, res) => {
     const user = req.user!;
 
     // Verify current password
-    if (!user.passwordHash) {
+    if (!user.passwordHash || user.passwordHash === null) {
       return res.status(400).json({ message: "No password set" });
     }
 

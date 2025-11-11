@@ -73,6 +73,7 @@ export interface OSModuleRoute {
   familyId?: FamilyId;
   isPrimary?: boolean;
   order?: number;
+  excludeForCapabilities?: OSCapability[]; // Hide route if user has any of these capabilities
 }
 
 export interface OSModule {
@@ -197,6 +198,14 @@ export function canAccessRoute(
     return false;
   }
 
+  // Check if route should be excluded for user's capabilities
+  if (route.excludeForCapabilities && route.excludeForCapabilities.length > 0) {
+    const shouldExclude = route.excludeForCapabilities.some(cap => hasCapability(role, cap));
+    if (shouldExclude) {
+      return false; // User has an excluded capability, hide this route
+    }
+  }
+
   // Check capability access
   if (!route.capabilities || route.capabilities.length === 0) {
     return true; // No capability requirement
@@ -233,6 +242,8 @@ export const osModules: OSModule[] = [
         familyId: 'platform',
         isPrimary: true,
         order: 1,
+        // Hide from platform staff who have Control Center
+        excludeForCapabilities: ['support_dashboard'],
       },
     ],
   },
@@ -695,6 +706,14 @@ export function selectSidebarFamilies(
   // Categorize each route as accessible or locked
   allRoutes.forEach(route => {
     if (!route.familyId) return;
+
+    // Check if route should be excluded for user's capabilities
+    if (route.excludeForCapabilities && route.excludeForCapabilities.length > 0) {
+      const shouldExclude = route.excludeForCapabilities.some(cap => hasCapability(role, cap));
+      if (shouldExclude) {
+        return; // Skip this route entirely for this user
+      }
+    }
 
     const hasRoleAccess = !route.capabilities || 
       route.capabilities.some(cap => hasCapability(role, cap));

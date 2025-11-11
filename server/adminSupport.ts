@@ -346,7 +346,7 @@ export async function sendPasswordResetEmail(
  */
 export async function changeUserRole(
   employeeId: string,
-  newRole: "employee" | "manager" | "supervisor" | "owner",
+  newRole: "org_owner" | "org_admin" | "department_manager" | "supervisor" | "staff",
   adminUserId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
