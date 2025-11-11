@@ -145,10 +145,10 @@ export default function AdminCustomForms() {
     }
 
     const formData = {
-      title: formTitle,
+      name: formTitle,
       description: formDescription,
       category: formCategory,
-      formDefinition: { fields: formFields },
+      template: { fields: formFields },
       isActive: true,
     };
 
@@ -161,10 +161,10 @@ export default function AdminCustomForms() {
 
   const handleEdit = (form: CustomForm) => {
     setEditingForm(form);
-    setFormTitle(form.title);
+    setFormTitle(form.name);
     setFormDescription(form.description || "");
     setFormCategory(form.category as "onboarding" | "rms");
-    setFormFields((form.formDefinition as any)?.fields || []);
+    setFormFields((form.template as any)?.fields || []);
     setIsFormDialogOpen(true);
   };
 
@@ -362,7 +362,7 @@ export default function AdminCustomForms() {
                   <FileText className="h-5 w-5 text-primary" />
                   <div>
                     <h3 className="font-semibold text-foreground" data-testid={`text-form-title-${form.id}`}>
-                      {form.title}
+                      {form.name}
                     </h3>
                     {form.description && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -378,7 +378,7 @@ export default function AdminCustomForms() {
                   {form.category}
                 </span>
                 <span className="text-muted-foreground">
-                  {((form.formDefinition as any)?.fields || []).length} fields
+                  {((form.template as any)?.fields || []).length} fields
                 </span>
               </div>
 

@@ -971,13 +971,13 @@ export default function RootAdminPortal() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="font-medium text-sm truncate">{conv.userName}</p>
+                                <p className="font-medium text-sm truncate">{conv.customerName ?? 'Unknown'}</p>
                                 <Badge variant="outline" className="text-xs">
                                   {conv.priority}
                                 </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground truncate mt-1">
-                                {conv.userEmail}
+                                {conv.customerEmail ?? 'No email'}
                               </p>
                             </div>
                             {conv.isSilenced && (
@@ -989,7 +989,7 @@ export default function RootAdminPortal() {
                               {conv.status}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(conv.createdAt).toLocaleDateString()}
+                              {new Date(conv.createdAt ?? Date.now()).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -1044,18 +1044,18 @@ export default function RootAdminPortal() {
                           {messages.map((msg) => (
                             <div
                               key={msg.id}
-                              className={`flex ${msg.isStaff ? 'justify-end' : 'justify-start'}`}
+                              className={`flex ${msg.senderType === 'staff' ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
                                 className={`max-w-[70%] rounded-lg p-3 ${
-                                  msg.isStaff
+                                  msg.senderType === 'staff'
                                     ? 'bg-primary text-primary-foreground'
                                     : 'bg-muted'
                                 }`}
                               >
                                 <p className="text-sm">{msg.message}</p>
                                 <p className="text-xs opacity-70 mt-1">
-                                  {new Date(msg.createdAt).toLocaleTimeString()}
+                                  {new Date(msg.createdAt ?? Date.now()).toLocaleTimeString()}
                                 </p>
                               </div>
                             </div>
