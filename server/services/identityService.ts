@@ -28,7 +28,10 @@ async function ensureOrgIdentifiersInTx(
   orgId: string,
   orgName: string
 ): Promise<{ orgCode: string; externalId: string }> {
+  console.log(`[Identity] ensureOrgIdentifiersInTx START for org ${orgId} (${orgName})`);
+  
   // Check if org already has an external ID
+  console.log(`[Identity] Checking existing org external ID...`);
   const existing = await tx
     .select()
     .from(externalIdentifiers)
@@ -40,13 +43,17 @@ async function ensureOrgIdentifiersInTx(
     )
     .limit(1);
 
+  console.log(`[Identity] Existing org check complete: ${existing.length} found`);
+
   if (existing.length > 0) {
     // Extract org code from existing external ID (ORG-XXXX -> XXXX)
     const orgCode = existing[0].externalId.substring(4);
+    console.log(`[Identity] Using existing org code: ${orgCode}`);
     return { orgCode, externalId: existing[0].externalId };
   }
 
   // Try to generate unique org code with collision retry
+  console.log(`[Identity] No org external ID found, generating new one...`);
   let attempts = 0;
   let orgCode: string = '';
   let externalId: string = '';
@@ -56,9 +63,11 @@ async function ensureOrgIdentifiersInTx(
     // First attempt uses clean name, subsequent use random suffix
     orgCode = safeOrgCode(orgName, attempts > 0);
     externalId = genOrgExternalId(orgCode);
+    console.log(`[Identity] Attempt ${attempts + 1}: trying org code ${orgCode} -> ${externalId}`);
     
     try {
       // Create external identifier
+      console.log(`[Identity] Inserting org external ID into database...`);
       await tx.insert(externalIdentifiers).values({
         entityType: 'org',
         entityId: orgId,
@@ -66,6 +75,7 @@ async function ensureOrgIdentifiersInTx(
         orgId: null, // Orgs don't have a parent org
         isPrimary: true,
       });
+      console.log(`[Identity] Org external ID insert successful!`);
       
       // Success!
       success = true;
@@ -149,89 +159,109 @@ export async function attachEmployeeExternalId(
   employeeId: string,
   orgId: string
 ): Promise<{ externalId: string; localNumber: number }> {
-  return await db.transaction(async (tx: any) => {
-    // Check if employee already has an external ID
-    const existing = await tx
-      .select()
-      .from(externalIdentifiers)
-      .where(
-        and(
-          eq(externalIdentifiers.entityType, 'employee'),
-          eq(externalIdentifiers.entityId, employeeId)
-        )
-      )
-      .limit(1);
+  try {
+    return await db.transaction(async (tx: any) => {
+      try {
+        console.log(`[Identity] attachEmployeeExternalId starting for ${employeeId}`);
+        
+        // Check if employee already has an external ID
+        console.log(`[Identity] Checking for existing external ID...`);
+        const existing = await tx
+          .select()
+          .from(externalIdentifiers)
+          .where(
+            and(
+              eq(externalIdentifiers.entityType, 'employee'),
+              eq(externalIdentifiers.entityId, employeeId)
+            )
+          )
+          .limit(1);
+        
+        console.log(`[Identity] Existing check complete: ${existing.length} found`);
 
-    if (existing.length > 0) {
-      // Extract local number from existing ID (EMP-XXXX-00001 -> 1)
-      const parts = existing[0].externalId.split('-');
-      const localNumber = parseInt(parts[2], 10);
-      return { externalId: existing[0].externalId, localNumber };
-    }
+        if (existing.length > 0) {
+          // Extract local number from existing ID (EMP-XXXX-00001 -> 1)
+          const parts = existing[0].externalId.split('-');
+          const localNumber = parseInt(parts[2], 10);
+          console.log(`[Identity] Employee ${employeeId} already has external ID: ${existing[0].externalId}`);
+          return { externalId: existing[0].externalId, localNumber };
+        }
 
-    // Ensure org has identifiers set up
-    const org = await tx
-      .select({ name: workspaces.name })
-      .from(workspaces)
-      .where(eq(workspaces.id, orgId))
-      .limit(1);
+        // Ensure org has identifiers set up
+        console.log(`[Identity] About to query workspaces for orgId: ${orgId}`);
+        const org = await tx
+          .select({ name: workspaces.name })
+          .from(workspaces)
+          .where(eq(workspaces.id, orgId))
+          .limit(1);
+        console.log(`[Identity] Workspaces query completed, found ${org.length} rows`);
 
-    if (org.length === 0) {
-      throw new Error('Organization not found');
-    }
+        if (org.length === 0) {
+          console.error(`[Identity] Organization not found: ${orgId}`);
+          throw new Error('Organization not found');
+        }
 
-    const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
+        const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
 
-    // Get next employee number for this org (with concurrent-safe initialization)
-    let nextVal = 1;
-    
-    // Try to initialize sequence if it doesn't exist (concurrent-safe)
-    try {
-      await tx.insert(idSequences).values({
-        orgId: orgId,
-        kind: 'employee',
-        nextVal: 1,
-      });
-    } catch (error: any) {
-      // Ignore unique constraint violation - another transaction created it
-      if (error.code !== '23505') {
-        throw error;
+        // Get next employee number for this org (with concurrent-safe initialization)
+        let nextVal = 1;
+        
+        // Try to initialize sequence if it doesn't exist (concurrent-safe)
+        try {
+          await tx.insert(idSequences).values({
+            orgId: orgId,
+            kind: 'employee',
+            nextVal: 1,
+          });
+        } catch (error: any) {
+          // Ignore unique constraint violation - another transaction created it
+          if (error.code !== '23505') {
+            throw error;
+          }
+        }
+        
+        // Now atomically increment and get the value
+        const updated = await tx
+          .update(idSequences)
+          .set({ 
+            nextVal: sql`${idSequences.nextVal} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(idSequences.orgId, orgId),
+              eq(idSequences.kind, 'employee')
+            )
+          )
+          .returning({ issued: sql`${idSequences.nextVal} - 1` });
+        
+        if (updated.length > 0) {
+          nextVal = updated[0].issued as number;
+        }
+
+        // Generate external ID
+        const externalId = genEmployeeExternalId(orgCode, nextVal);
+
+        // Create external identifier
+        await tx.insert(externalIdentifiers).values({
+          entityType: 'employee',
+          entityId: employeeId,
+          externalId: externalId,
+          orgId: orgId,
+          isPrimary: true,
+        });
+
+        console.log(`[Identity] Created employee external ID: ${externalId} for employee ${employeeId}`);
+        return { externalId, localNumber: nextVal };
+      } catch (innerError: any) {
+        console.error('[Identity] Transaction error in attachEmployeeExternalId:', innerError.message, innerError.code);
+        throw innerError;
       }
-    }
-    
-    // Now atomically increment and get the value
-    const updated = await tx
-      .update(idSequences)
-      .set({ 
-        nextVal: sql`${idSequences.nextVal} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(idSequences.orgId, orgId),
-          eq(idSequences.kind, 'employee')
-        )
-      )
-      .returning({ issued: sql`${idSequences.nextVal} - 1` });
-    
-    if (updated.length > 0) {
-      nextVal = updated[0].issued as number;
-    }
-
-    // Generate external ID
-    const externalId = genEmployeeExternalId(orgCode, nextVal);
-
-    // Create external identifier
-    await tx.insert(externalIdentifiers).values({
-      entityType: 'employee',
-      entityId: employeeId,
-      externalId: externalId,
-      orgId: orgId,
-      isPrimary: true,
     });
-
-    return { externalId, localNumber: nextVal };
-  });
+  } catch (outerError: any) {
+    console.error('[Identity] Failed to attach employee external ID:', outerError.message, outerError.code);
+    throw outerError;
+  }
 }
 
 /**
@@ -241,86 +271,99 @@ export async function attachClientExternalId(
   clientId: string,
   orgId: string
 ): Promise<{ externalId: string; localNumber: number }> {
-  return await db.transaction(async (tx: any) => {
-    // Check if client already has an external ID
-    const existing = await tx
-      .select()
-      .from(externalIdentifiers)
-      .where(
-        and(
-          eq(externalIdentifiers.entityType, 'client'),
-          eq(externalIdentifiers.entityId, clientId)
-        )
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      const parts = existing[0].externalId.split('-');
-      const localNumber = parseInt(parts[2], 10);
-      return { externalId: existing[0].externalId, localNumber };
-    }
-
-    // Ensure org has identifiers set up
-    const org = await tx
-      .select({ name: workspaces.name })
-      .from(workspaces)
-      .where(eq(workspaces.id, orgId))
-      .limit(1);
-
-    if (org.length === 0) {
-      throw new Error('Organization not found');
-    }
-
-    const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
-
-    // Get next client number for this org (with concurrent-safe initialization)
-    let nextVal = 1;
-    
-    // Try to initialize sequence if it doesn't exist (concurrent-safe)
-    try {
-      await tx.insert(idSequences).values({
-        orgId: orgId,
-        kind: 'client',
-        nextVal: 1,
-      });
-    } catch (error: any) {
-      // Ignore unique constraint violation - another transaction created it
-      if (error.code !== '23505') {
-        throw error;
-      }
-    }
-    
-    // Now atomically increment and get the value
-    const updated = await tx
-      .update(idSequences)
-      .set({ 
-        nextVal: sql`${idSequences.nextVal} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(idSequences.orgId, orgId),
-            eq(idSequences.kind, 'client')
+  try {
+    return await db.transaction(async (tx: any) => {
+      try {
+        // Check if client already has an external ID
+        const existing = await tx
+          .select()
+          .from(externalIdentifiers)
+          .where(
+            and(
+              eq(externalIdentifiers.entityType, 'client'),
+              eq(externalIdentifiers.entityId, clientId)
+            )
           )
-        )
-        .returning({ issued: sql`${idSequences.nextVal} - 1` });
-    
-    if (updated.length > 0) {
-      nextVal = updated[0].issued as number;
-    }
+          .limit(1);
 
-    const externalId = genClientExternalId(orgCode, nextVal);
+        if (existing.length > 0) {
+          const parts = existing[0].externalId.split('-');
+          const localNumber = parseInt(parts[2], 10);
+          console.log(`[Identity] Client ${clientId} already has external ID: ${existing[0].externalId}`);
+          return { externalId: existing[0].externalId, localNumber };
+        }
 
-    await tx.insert(externalIdentifiers).values({
-      entityType: 'client',
-      entityId: clientId,
-      externalId: externalId,
-      orgId: orgId,
-      isPrimary: true,
+        // Ensure org has identifiers set up
+        const org = await tx
+          .select({ name: workspaces.name })
+          .from(workspaces)
+          .where(eq(workspaces.id, orgId))
+          .limit(1);
+
+        if (org.length === 0) {
+          console.error(`[Identity] Organization not found: ${orgId}`);
+          throw new Error('Organization not found');
+        }
+
+        const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
+
+        // Get next client number for this org (with concurrent-safe initialization)
+        let nextVal = 1;
+        
+        // Try to initialize sequence if it doesn't exist (concurrent-safe)
+        try {
+          await tx.insert(idSequences).values({
+            orgId: orgId,
+            kind: 'client',
+            nextVal: 1,
+          });
+        } catch (error: any) {
+          // Ignore unique constraint violation - another transaction created it
+          if (error.code !== '23505') {
+            throw error;
+          }
+        }
+        
+        // Now atomically increment and get the value
+        const updated = await tx
+          .update(idSequences)
+          .set({ 
+            nextVal: sql`${idSequences.nextVal} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(idSequences.orgId, orgId),
+              eq(idSequences.kind, 'client')
+            )
+          )
+          .returning({ issued: sql`${idSequences.nextVal} - 1` });
+        
+        if (updated.length > 0) {
+          nextVal = updated[0].issued as number;
+        }
+
+        const externalId = genClientExternalId(orgCode, nextVal);
+
+        await tx.insert(externalIdentifiers).values({
+          entityType: 'client',
+          entityId: clientId,
+          externalId: externalId,
+          orgId: orgId,
+          isPrimary: true,
+        });
+
+        console.log(`[Identity] Created client external ID: ${externalId} for client ${clientId}`);
+        return { externalId, localNumber: nextVal };
+      } catch (innerError: any) {
+        console.error('[Identity] Transaction error in attachClientExternalId:', innerError.message, innerError.code);
+        throw innerError;
+      }
     });
-
-    return { externalId, localNumber: nextVal };
-  });
+  } catch (outerError: any) {
+    console.error('[Identity] Failed to attach client external ID:', outerError.message, outerError.code);
+    throw outerError;
+  }
 }
 
 /**
