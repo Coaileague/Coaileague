@@ -1,55 +1,134 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface ProgressLoadingOverlayProps {
-  isVisible: boolean;
-  title?: string;
-  status?: "loading" | "success" | "error" | "info";
+// Scenario-based configuration type
+export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync";
+
+export interface ScenarioConfig {
+  messages: string[];
+  duration?: number;
+  title: string;
 }
 
-const AUTH_MESSAGES = [
-  "Connecting to AutoForce™...",
-  "Establishing secure connection...",
-  "Logging you in...",
-  "Verifying credentials...",
-  "Checking authentication status...",
-  "Validating session token...",
-  "Credentials accepted ✓",
-  "Loading your workspace...",
-  "Syncing account data...",
-  "Preparing dashboard...",
-  "Finalizing login...",
-  "Almost there...",
-];
+// Scenario-based message catalogs with creative workflow messages
+const SCENARIO_CONFIGS: Record<ProgressScenario, ScenarioConfig> = {
+  login: {
+    title: "Signing In",
+    duration: 3500,
+    messages: [
+      "Connecting to AutoForce™",
+      "Establishing secure connection",
+      "Verifying credentials",
+      "Validating session token",
+      "Credentials accepted ✓",
+      "Loading workspace preferences",
+      "Syncing user permissions",
+      "Initializing dashboard modules",
+      "Configuring workspace settings",
+      "Loading recent activity",
+      "Preparing your workspace",
+      "Verifying access controls",
+      "Finalizing authentication",
+      "Almost there",
+    ],
+  },
+  logout: {
+    title: "Signing Out",
+    duration: 3000,
+    messages: [
+      "Closing active sessions",
+      "Clearing cached credentials",
+      "Invalidating session tokens",
+      "Saving workspace state",
+      "Cleaning up temporary data",
+      "Removing access tokens",
+      "Signing you out securely",
+      "Terminating active connections",
+      "Saving final preferences",
+      "Clearing local cache",
+      "Goodbye! Come back soon ✓",
+    ],
+  },
+  heavyOperation: {
+    title: "Processing",
+    duration: 4000,
+    messages: [
+      "Processing request",
+      "Analyzing data patterns",
+      "Optimizing database queries",
+      "Synchronizing records",
+      "Validating data integrity",
+      "Computing analytics",
+      "Generating insights",
+      "Applying business rules",
+      "Updating indexes",
+      "Finalizing operations",
+      "Complete ✓",
+    ],
+  },
+  aiProcessing: {
+    title: "AI Automation",
+    duration: 5000,
+    messages: [
+      "Initializing AI engine",
+      "Loading neural network",
+      "Analyzing patterns with ML",
+      "Training models on dataset",
+      "Running predictive algorithms",
+      "Optimizing parameters",
+      "Processing natural language",
+      "Computing recommendations",
+      "Generating AI predictions",
+      "Validating AI results",
+      "Finalizing AI automation",
+      "Complete ✓",
+    ],
+  },
+  dataSync: {
+    title: "Synchronizing",
+    duration: 3500,
+    messages: [
+      "Connecting to data sources",
+      "Fetching latest updates",
+      "Synchronizing changes",
+      "Validating data consistency",
+      "Resolving conflicts",
+      "Updating local cache",
+      "Committing transactions",
+      "Verifying sync status",
+      "Refreshing indexes",
+      "Sync complete ✓",
+    ],
+  },
+};
 
-const TECH_MESSAGES = [
-  "Initializing workspace...",
-  "Loading modules...",
-  "Connecting to database...",
-  "Authenticating session...",
-  "Syncing data...",
-  "Preparing dashboard...",
-  "Optimizing performance...",
-  "Loading components...",
-  "Establishing secure connection...",
-  "Verifying credentials...",
-  "Configuring environment...",
-  "Building interface...",
-];
+interface ProgressLoadingOverlayProps {
+  isVisible: boolean;
+  scenario?: ProgressScenario;
+  title?: string;
+  status?: "loading" | "success" | "error" | "info";
+  duration?: number;
+  messages?: string[];
+}
 
 export function ProgressLoadingOverlay({ 
   isVisible, 
-  title = "Loading",
-  status = "loading"
+  scenario = "login",
+  title,
+  status = "loading",
+  duration,
+  messages: customMessages,
 }: ProgressLoadingOverlayProps) {
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
   const [showError, setShowError] = useState(false);
-  const [errorMessage] = useState("Authentication failed. Invalid credentials.");
+  const [errorMessage] = useState("Operation failed. Please try again.");
 
-  // Determine which message set to use
-  const isAuthFlow = title.toLowerCase().includes("authenticat") || title.toLowerCase().includes("login");
-  const messages = isAuthFlow ? AUTH_MESSAGES : TECH_MESSAGES;
+  // Get scenario configuration
+  const config = SCENARIO_CONFIGS[scenario];
+  const effectiveTitle = title || config.title;
+  const effectiveDuration = duration || config.duration || 3500;
+  const messages = customMessages || config.messages;
 
   useEffect(() => {
     if (!isVisible) {
@@ -69,38 +148,71 @@ export function ProgressLoadingOverlay({
     setProgress(0);
     setMessageIndex(0);
 
-    // Set start time RIGHT NOW, when the interval actually begins
-    const startTime = Date.now();
+    // Generate randomized progress steps with varied increments
+    // Progress increment options: 0.5%, 5%, 10%, 15%
+    const incrementOptions = [0.5, 5, 10, 15];
+    const progressSteps: { progress: number; duration: number }[] = [];
+    let currentProgress = 0;
 
-    // Simulate realistic loading progress based on elapsed time - STARTS AT 0%
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
+    // Generate steps to reach ~95% with random increments
+    while (currentProgress < 95) {
+      // Weighted random selection (favor smaller increments early, larger later)
+      const weights = currentProgress < 30 
+        ? [3, 2, 1, 1]  // Early: favor 0.5% and 5%
+        : currentProgress < 70
+        ? [1, 2, 3, 2]  // Mid: favor 5% and 10%
+        : [1, 1, 2, 3]; // Late: favor 10% and 15%
       
-      // Progress curve: fast start, slow end (asymptotic to 100)
-      let targetProgress = 0;
-      if (elapsed < 500) {
-        targetProgress = (elapsed / 500) * 30; // 0-30% in first 500ms
-      } else if (elapsed < 1500) {
-        targetProgress = 30 + ((elapsed - 500) / 1000) * 40; // 30-70% in next 1000ms
-      } else if (elapsed < 3000) {
-        targetProgress = 70 + ((elapsed - 1500) / 1500) * 20; // 70-90% in next 1500ms
-      } else {
-        targetProgress = 90 + ((elapsed - 3000) / 2000) * 8; // 90-98% asymptotically
+      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+      const random = Math.random() * totalWeight;
+      let cumulative = 0;
+      let selectedIncrement = incrementOptions[0];
+      
+      for (let i = 0; i < incrementOptions.length; i++) {
+        cumulative += weights[i];
+        if (random <= cumulative) {
+          selectedIncrement = incrementOptions[i];
+          break;
+        }
       }
 
-      setProgress(Math.min(98, targetProgress));
-    }, 50);
+      currentProgress = Math.min(currentProgress + selectedIncrement, 95);
+      
+      // Random duration for this step (distribute total duration)
+      const stepDuration = Math.floor((effectiveDuration / 15) + Math.random() * 300);
+      
+      progressSteps.push({ progress: Math.round(currentProgress * 10) / 10, duration: stepDuration });
+    }
 
-    // Rotate messages every 700ms (slightly faster for more dynamic feel)
-    const messageInterval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 700);
+    // Final push to 100%
+    progressSteps.push({ progress: 100, duration: 400 });
+
+    let stepIndex = 0;
+    let messageRotationIndex = 0;
+
+    function runNextStep() {
+      if (stepIndex >= progressSteps.length) return;
+
+      const step = progressSteps[stepIndex];
+      setProgress(step.progress);
+      
+      // Rotate through messages
+      setMessageIndex(messageRotationIndex % messages.length);
+      messageRotationIndex++;
+      
+      stepIndex++;
+      if (stepIndex < progressSteps.length) {
+        setTimeout(runNextStep, step.duration);
+      }
+    }
+
+    // Start the progress animation
+    const startTimeout = setTimeout(runNextStep, 100);
 
     return () => {
-      clearInterval(interval);
-      clearInterval(messageInterval);
+      clearTimeout(startTimeout);
     };
-  }, [isVisible, status, messages.length]);
+  }, [isVisible, status, messages, effectiveDuration]);
 
   // When loading completes, jump to 100%
   useEffect(() => {
@@ -135,7 +247,7 @@ export function ProgressLoadingOverlay({
                 AutoForce™
               </h2>
               <p className="text-sm text-muted-foreground">
-                {title}
+                {effectiveTitle}
               </p>
             </motion.div>
 
@@ -147,10 +259,13 @@ export function ProgressLoadingOverlay({
               className="mb-6"
             >
               {/* Progress background */}
-              <div className="h-2 sm:h-3 bg-muted rounded-full overflow-hidden border border-border">
+              <div className="h-3 sm:h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%]"
-                  style={{ width: `${progress}%` }}
+                  className="h-full bg-[length:200%_100%]"
+                  style={{ 
+                    width: `${progress}%`,
+                    background: "linear-gradient(90deg, hsl(210, 32%, 42%), hsl(204, 40%, 52%), hsl(210, 32%, 42%))"
+                  }}
                   animate={{
                     backgroundPosition: ["0% 0%", "100% 0%"],
                   }}
@@ -197,9 +312,10 @@ export function ProgressLoadingOverlay({
                 <motion.p
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="text-sm sm:text-base text-primary font-semibold"
+                  className="text-sm sm:text-base font-semibold"
+                  style={{ color: "hsl(210, 32%, 42%)" }}
                 >
-                  ✓ {isAuthFlow ? "Login Successful!" : "Complete!"}
+                  ✓ {scenario === "login" ? "Login Successful!" : scenario === "logout" ? "Logged Out!" : "Complete!"}
                 </motion.p>
               ) : (
                 <AnimatePresence mode="wait">
@@ -209,7 +325,8 @@ export function ProgressLoadingOverlay({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
-                    className="text-sm sm:text-base text-primary font-medium text-center"
+                    className="text-sm sm:text-base font-medium text-center"
+                    style={{ color: "hsl(210, 32%, 42%)" }}
                   >
                     {messages[messageIndex]}
                   </motion.p>
@@ -250,4 +367,124 @@ export function ProgressLoadingOverlay({
       )}
     </AnimatePresence>
   );
+}
+
+/**
+ * Hook for programmatically controlling the progress overlay
+ * 
+ * Usage:
+ * ```tsx
+ * const { show, hide, ProgressOverlay } = useProgressOverlay();
+ * 
+ * // Show loading overlay
+ * show({ scenario: "login", duration: 3500 });
+ * 
+ * // Hide when done
+ * hide();
+ * 
+ * // Render in component
+ * return <ProgressOverlay />;
+ * ```
+ */
+export function useProgressOverlay() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [scenario, setScenario] = useState<ProgressScenario>("login");
+  const [duration, setDuration] = useState<number | undefined>(undefined);
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "info">("loading");
+
+  const show = (config?: {
+    scenario?: ProgressScenario;
+    duration?: number;
+  }) => {
+    if (config?.scenario) setScenario(config.scenario);
+    if (config?.duration) setDuration(config.duration);
+    setStatus("loading");
+    setIsVisible(true);
+  };
+
+  const hide = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      setStatus("loading");
+    }, 300);
+  };
+
+  const resolve = () => {
+    setStatus("success");
+    setTimeout(hide, 1000);
+  };
+
+  const reject = () => {
+    setStatus("error");
+    setTimeout(hide, 2000);
+  };
+
+  const ProgressOverlay = () => (
+    <ProgressLoadingOverlay
+      isVisible={isVisible}
+      scenario={scenario}
+      duration={duration}
+      status={status}
+    />
+  );
+
+  return {
+    isVisible,
+    scenario,
+    duration,
+    status,
+    show,
+    hide,
+    resolve,
+    reject,
+    ProgressOverlay,
+  };
+}
+
+/**
+ * Wrapper for async operations with automatic loading overlay
+ * 
+ * Usage:
+ * ```tsx
+ * await withProgressOverlay(
+ *   async () => {
+ *     // Your async operation
+ *     await someApiCall();
+ *   },
+ *   { scenario: "aiProcessing", minDuration: 1000 }
+ * );
+ * ```
+ */
+export async function withProgressOverlay<T>(
+  asyncFn: () => Promise<T>,
+  config?: {
+    scenario?: ProgressScenario;
+    minDuration?: number;
+  }
+): Promise<T> {
+  const startTime = Date.now();
+  
+  try {
+    const result = await asyncFn();
+    
+    // Ensure minimum duration for smooth UX
+    const elapsed = Date.now() - startTime;
+    const minDuration = config?.minDuration || 800;
+    
+    if (elapsed < minDuration) {
+      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed));
+    }
+    
+    return result;
+  } catch (error) {
+    // Still enforce minimum duration even on error
+    const elapsed = Date.now() - startTime;
+    const minDuration = config?.minDuration || 800;
+    
+    if (elapsed < minDuration) {
+      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed));
+    }
+    
+    throw error;
+  }
 }

@@ -30,6 +30,7 @@ import {
   Zap,
   CheckCircle2,
   Globe,
+  Building2,
 } from "lucide-react";
 
 export default function Contact() {
@@ -539,14 +540,18 @@ export default function Contact() {
               </div>
             </Card>
 
-            <Card className="bg-blue-50 border-2 border-blue-200 shadow-md p-6 space-y-2">
-              <h3 className="font-semibold text-gray-900">Enterprise Inquiries</h3>
+            <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Enterprise Inquiries</h3>
+              </div>
               <p className="text-sm text-gray-600">
                 Managing 100+ employees? Contact our team for custom pricing and dedicated onboarding.
               </p>
               <Button
-                variant="outline"
-                className="border-blue-600 text-blue-600 hover:bg-blue-100"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md"
                 onClick={() => window.location.href = "mailto:info@getdc360.com"}
                 data-testid="button-enterprise-contact"
               >
