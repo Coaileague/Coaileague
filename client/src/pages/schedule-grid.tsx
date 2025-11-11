@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/core";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useIdentity } from "@/hooks/useIdentity";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useShiftWebSocket } from "@/hooks/use-shift-websocket";
 import { Button } from "@/components/ui/button";
@@ -645,6 +646,7 @@ function OpenShiftsSection({ shifts, weekDays, onShiftClick, clients, onAddAckno
 export default function ScheduleGrid() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { workspaceRole, platformRole, employeeId: currentEmployeeId, externalId } = useIdentity();
   const [, setLocation] = useLocation();
   
   // 🔴 REAL-TIME: Connect to shift updates WebSocket
@@ -687,6 +689,166 @@ export default function ScheduleGrid() {
     return employees.find(emp => emp.userId === user?.id);
   }, [employees, user?.id]);
 
+  // Role-based permissions (matching server-side RBAC)
+  const permissions = useMemo(() => {
+    // Platform staff permissions by role
+    if (platformRole && platformRole !== 'none') {
+      switch (platformRole) {
+        case 'root_admin':
+        case 'deputy_admin':
+        case 'sysop':
+          return {
+            canCreateShifts: true,
+            canEditShifts: true,
+            canDeleteShifts: true,
+            canAssignShifts: true,
+            canViewAllShifts: true,
+            canRunAIOptimization: true,
+            canExportSchedule: true,
+            canManageEmployees: true,
+            roleLabel: 'Platform Admin',
+          };
+        case 'support_manager':
+          return {
+            canCreateShifts: true,
+            canEditShifts: true,
+            canDeleteShifts: true,
+            canAssignShifts: true,
+            canViewAllShifts: true,
+            canRunAIOptimization: false,
+            canExportSchedule: true,
+            canManageEmployees: false,
+            roleLabel: 'Support Manager',
+          };
+        case 'support_agent':
+          return {
+            canCreateShifts: false,
+            canEditShifts: false,
+            canDeleteShifts: false,
+            canAssignShifts: false,
+            canViewAllShifts: true, // Read-only for diagnostics
+            canRunAIOptimization: false,
+            canExportSchedule: true,
+            canManageEmployees: false,
+            roleLabel: 'Support Agent',
+          };
+        case 'compliance_officer':
+          return {
+            canCreateShifts: false,
+            canEditShifts: false,
+            canDeleteShifts: false,
+            canAssignShifts: false,
+            canViewAllShifts: true, // Read-only audit access
+            canRunAIOptimization: false,
+            canExportSchedule: true,
+            canManageEmployees: false,
+            roleLabel: 'Compliance Officer',
+          };
+      }
+    }
+
+    // Workspace role-based permissions
+    switch (workspaceRole) {
+      case 'org_owner':
+        return {
+          canCreateShifts: true,
+          canEditShifts: true,
+          canDeleteShifts: true,
+          canAssignShifts: true,
+          canViewAllShifts: true,
+          canRunAIOptimization: true,
+          canExportSchedule: true,
+          canManageEmployees: true,
+          roleLabel: 'Organization Owner',
+        };
+      case 'org_admin':
+        return {
+          canCreateShifts: true,
+          canEditShifts: true,
+          canDeleteShifts: true,
+          canAssignShifts: true,
+          canViewAllShifts: true,
+          canRunAIOptimization: true,
+          canExportSchedule: true,
+          canManageEmployees: true,
+          roleLabel: 'Administrator',
+        };
+      case 'department_manager':
+        return {
+          canCreateShifts: true,
+          canEditShifts: true,
+          canDeleteShifts: true,
+          canAssignShifts: true,
+          canViewAllShifts: true,
+          canRunAIOptimization: true,
+          canExportSchedule: true,
+          canManageEmployees: false,
+          roleLabel: 'Department Manager',
+        };
+      case 'supervisor':
+        return {
+          canCreateShifts: true,
+          canEditShifts: true,
+          canDeleteShifts: false,
+          canAssignShifts: true,
+          canViewAllShifts: true,
+          canRunAIOptimization: false,
+          canExportSchedule: true,
+          canManageEmployees: false,
+          roleLabel: 'Supervisor',
+        };
+      case 'staff':
+        return {
+          canCreateShifts: false,
+          canEditShifts: false,
+          canDeleteShifts: false,
+          canAssignShifts: false,
+          canViewAllShifts: false, // Can only view own shifts
+          canRunAIOptimization: false,
+          canExportSchedule: false,
+          canManageEmployees: false,
+          roleLabel: 'Staff',
+        };
+      case 'auditor':
+        return {
+          canCreateShifts: false,
+          canEditShifts: false,
+          canDeleteShifts: false,
+          canAssignShifts: false,
+          canViewAllShifts: true, // Read-only access
+          canRunAIOptimization: false,
+          canExportSchedule: true,
+          canManageEmployees: false,
+          roleLabel: 'Auditor',
+        };
+      case 'contractor':
+        return {
+          canCreateShifts: false,
+          canEditShifts: false,
+          canDeleteShifts: false,
+          canAssignShifts: false,
+          canViewAllShifts: false, // Can only view own shifts
+          canRunAIOptimization: false,
+          canExportSchedule: false,
+          canManageEmployees: false,
+          roleLabel: 'Contractor',
+        };
+      default:
+        // Guest/unknown role - minimal access
+        return {
+          canCreateShifts: false,
+          canEditShifts: false,
+          canDeleteShifts: false,
+          canAssignShifts: false,
+          canViewAllShifts: false,
+          canRunAIOptimization: false,
+          canExportSchedule: false,
+          canManageEmployees: false,
+          roleLabel: 'Guest',
+        };
+    }
+  }, [workspaceRole, platformRole]);
+
   // Calculate days to display based on view mode
   const getDaysToShow = (): number => {
     switch (viewMode) {
@@ -711,6 +873,22 @@ export default function ScheduleGrid() {
     const daysToShow = getDaysToShow();
     return Array.from({ length: daysToShow }, (_, i) => start.clone().add(i, 'days').toDate());
   }, [currentDate, viewMode]);
+
+  // Filter shifts based on role permissions
+  const visibleShifts = useMemo(() => {
+    // If user can view all shifts, show everything
+    if (permissions.canViewAllShifts) {
+      return shifts;
+    }
+
+    // Staff and contractors can only see their own shifts
+    if (currentEmployee) {
+      return shifts.filter(shift => shift.employeeId === currentEmployee.id);
+    }
+
+    // No employee record - no shifts visible
+    return [];
+  }, [shifts, permissions.canViewAllShifts, currentEmployee]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -1181,7 +1359,7 @@ export default function ScheduleGrid() {
 
       {/* Premium Metrics: AI Status Bar + Dashboard KPI Cards */}
       <PremiumMetrics
-        shifts={shifts}
+        shifts={visibleShifts}
         employees={employees}
         aiMode={true}
         onAiOptimize={() => {
@@ -1191,6 +1369,11 @@ export default function ScheduleGrid() {
           });
         }}
         aiProcessing={false}
+        userRole={workspaceRole}
+        roleLabel={permissions.roleLabel}
+        employeeId={currentEmployeeId}
+        externalId={externalId}
+        canRunAI={permissions.canRunAIOptimization}
       />
 
       {/* Bar 2: Control Bar - Filters, Date Navigation, Actions */}
@@ -1285,59 +1468,66 @@ export default function ScheduleGrid() {
               </div>
               <div className="flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                <span data-testid="stat-open-shifts">{shifts.filter(s => !s.employeeId).length}</span>
+                <span data-testid="stat-open-shifts">{visibleShifts.filter(s => !s.employeeId).length}</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full bg-amber-500"></div>
-                <span data-testid="stat-draft-shifts">{shifts.filter(s => s.status === 'draft').length}</span>
+                <span data-testid="stat-draft-shifts">{visibleShifts.filter(s => s.status === 'draft').length}</span>
               </div>
             </div>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 text-xs" 
-                  onClick={handleExportSchedule}
-                  data-testid="button-export"
-                >
-                  <Send className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Export schedule to CSV file</TooltipContent>
-            </Tooltip>
+            {permissions.canExportSchedule && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs" 
+                    onClick={handleExportSchedule}
+                    data-testid="button-export"
+                  >
+                    <Send className="h-3 w-3 mr-1" />
+                    Export
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Export schedule to CSV file</TooltipContent>
+              </Tooltip>
+            )}
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 text-xs" 
-                  onClick={handlePrintSchedule}
-                  data-testid="button-print"
-                >
-                  <Printer className="h-3 w-3 mr-1" />
-                  Print
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Print schedule for posting</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  size="sm" 
-                  className="h-8 text-xs bg-primary hover:bg-primary" 
-                  onClick={() => handleOpenCreateShiftDialog('open', new Date())}
-                  data-testid="button-add-shift"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add shift
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Create a new shift</TooltipContent>
-            </Tooltip>
+            {permissions.canExportSchedule && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs" 
+                    onClick={handlePrintSchedule}
+                    data-testid="button-print"
+                  >
+                    <Printer className="h-3 w-3 mr-1" />
+                    Print
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Print schedule for posting</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {permissions.canCreateShifts && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    className="h-8 text-xs bg-primary hover:bg-primary" 
+                    onClick={() => handleOpenCreateShiftDialog('open', new Date())}
+                    data-testid="button-add-shift"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add shift
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Create a new shift</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -1414,7 +1604,7 @@ export default function ScheduleGrid() {
                     key={employee.id}
                     employee={employee}
                     weekDays={weekDays}
-                    shifts={shifts}
+                    shifts={visibleShifts}
                     employees={employees}
                     clients={clients}
                     onShiftClick={handleShiftClick}

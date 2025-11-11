@@ -27,6 +27,11 @@ interface PremiumMetricsProps {
   aiMode?: boolean;
   onAiOptimize?: () => void;
   aiProcessing?: boolean;
+  userRole?: string | null;
+  roleLabel?: string;
+  employeeId?: string | null;
+  externalId?: string | null;
+  canRunAI?: boolean;
 }
 
 export function PremiumMetrics({
@@ -35,6 +40,11 @@ export function PremiumMetrics({
   aiMode = true,
   onAiOptimize,
   aiProcessing = false,
+  userRole,
+  roleLabel = 'User',
+  employeeId,
+  externalId,
+  canRunAI = false,
 }: PremiumMetricsProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -144,7 +154,7 @@ export function PremiumMetrics({
                 <div>
                   <div className="font-bold text-lg">ScheduleOS™ AI Engine</div>
                   <div className="text-xs text-slate-300">
-                    Status: Active • Processing in real-time
+                    Status: Active • {roleLabel} {(externalId || employeeId) && `• ${externalId || employeeId}`}
                   </div>
                 </div>
               </div>
@@ -221,7 +231,7 @@ export function PremiumMetrics({
                   <span className="text-sm font-medium">Processing...</span>
                 </div>
               )}
-              {onAiOptimize && (
+              {onAiOptimize && canRunAI && (
                 <>
                   <Button
                     onClick={onAiOptimize}
