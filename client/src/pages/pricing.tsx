@@ -249,7 +249,6 @@ export default function Pricing() {
           ))}
         </div>
         </div>
-        </div>
       </section>
 
       {/* Cost Breakdown */}
