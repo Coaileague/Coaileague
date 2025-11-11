@@ -16,6 +16,7 @@ import {
   doublePrecision,
   boolean,
   pgEnum,
+  check,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -8043,6 +8044,116 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+// ============================================================================
+// CHAT SYSTEM ENHANCEMENTS - Connection Tracking, Routing, CSAT
+// ============================================================================
+
+// Chat Connections - Track WebSocket connections for analytics
+export const chatConnections = pgTable("chat_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id", { length: 255 }).notNull().unique(), // Unique and required to prevent duplicate sessions
+  
+  // Connection lifecycle
+  connectedAt: timestamp("connected_at").defaultNow(),
+  disconnectedAt: timestamp("disconnected_at"),
+  
+  // Client info
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 max length
+  userAgent: text("user_agent"),
+  
+  // Disconnect tracking
+  disconnectReason: varchar("disconnect_reason", { length: 50 }), // 'user_logout', 'timeout', 'error', etc.
+}, (table) => ({
+  userConnectedIdx: index("chat_connections_user_connected_idx").on(table.userId, table.connectedAt),
+}));
+
+// Agent Availability - Track agent status for smart routing
+export const agentAvailability = pgTable("agent_availability", {
+  userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Status tracking
+  status: varchar("status", { length: 20 }).notNull().default('offline'), // 'online', 'away', 'busy', 'offline'
+  
+  // Capacity management
+  maxConcurrentChats: integer("max_concurrent_chats").default(5),
+  currentChatCount: integer("current_chat_count").default(0),
+  
+  // Activity tracking
+  lastActivity: timestamp("last_activity"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  statusIdx: index("agent_availability_status_idx").on(table.status, table.updatedAt),
+}));
+
+// Routing Rules - Smart routing based on keywords
+export const routingRules = pgTable("routing_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }), // Optional workspace scoping
+  
+  // Rule definition
+  keyword: varchar("keyword", { length: 255 }).notNull(),
+  department: varchar("department", { length: 100 }),
+  priority: integer("priority").default(0), // Higher = more important
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  keywordIdx: index("routing_rules_keyword_idx").on(table.keyword),
+  departmentIdx: index("routing_rules_department_idx").on(table.department),
+  priorityIdx: index("routing_rules_priority_idx").on(table.priority),
+}));
+
+// Satisfaction Surveys - CSAT responses after ticket resolution
+export const satisfactionSurveys = pgTable("satisfaction_surveys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Related entities
+  ticketId: varchar("ticket_id").unique().references(() => supportTickets.id, { onDelete: 'set null' }), // Unique to prevent duplicate surveys
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  agentId: varchar("agent_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Survey response
+  rating: integer("rating").notNull(), // 1-5 scale, validated at DB level
+  feedback: text("feedback"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("satisfaction_surveys_ticket_idx").on(table.ticketId),
+  index("satisfaction_surveys_agent_date_idx").on(table.agentId, table.createdAt),
+  check("rating_valid", sql`${table.rating} BETWEEN 1 AND 5`), // DB-level validation
+]);
+
+export const insertChatConnectionSchema = createInsertSchema(chatConnections).omit({
+  id: true,
+  connectedAt: true,
+});
+
+export const insertAgentAvailabilitySchema = createInsertSchema(agentAvailability).omit({
+  updatedAt: true,
+});
+
+export const insertRoutingRuleSchema = createInsertSchema(routingRules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSatisfactionSurveySchema = createInsertSchema(satisfactionSurveys).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertChatConnection = z.infer<typeof insertChatConnectionSchema>;
+export type ChatConnection = typeof chatConnections.$inferSelect;
+
+export type InsertAgentAvailability = z.infer<typeof insertAgentAvailabilitySchema>;
+export type AgentAvailability = typeof agentAvailability.$inferSelect;
+
+export type InsertRoutingRule = z.infer<typeof insertRoutingRuleSchema>;
+export type RoutingRule = typeof routingRules.$inferSelect;
+
+export type InsertSatisfactionSurvey = z.infer<typeof insertSatisfactionSurveySchema>;
+export type SatisfactionSurvey = typeof satisfactionSurveys.$inferSelect;
 
 // ============================================================================
 // CUSTOMER PAYMENT INFORMATION - END CUSTOMER BILLING
