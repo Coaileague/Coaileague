@@ -1,0 +1,151 @@
+🧩 A. Functional Gaps — “Missing or Partial Features”
+1. Automated Billing Lifecycle (Final Mile)
+
+Current: You have Auto-Invoice and Auto-Payroll working with partner APIs.
+Gap: The cash-collection and payment reconciliation loop.
+
+✅ Add: A webhook listener for QuickBooks/Gusto payment confirmations → update your internal ledger automatically.
+
+✅ Add: A “Payment Status” badge for invoices (Pending / Paid / Failed).
+
+✅ Optional: Auto-send payment receipts via your notification system.
+
+2. Escalation Logic in Support
+
+Current: Chatroom + tickets + macro tools are implemented.
+Gap: No escalation tree or SLA timers.
+
+✅ Add: “Escalate to Level 2 / Supervisor” button → auto-reassigns ticket.
+
+✅ Add: Timer triggers escalation if ticket is idle > X hours.
+
+✅ Add: SLA dashboard (time to first response, resolution time).
+
+3. Global Notification Consistency
+
+Current: You have email + push + in-app notifications.
+Gap: Notification service isn’t unified.
+
+✅ Add: Central Notification Hub microservice or DB table (notifications), so all systems write to the same source.
+
+✅ Add: Read/unread states, “mark all as read,” and filters by module.
+
+4. Role-Based Audit Dashboard
+
+Current: Audit logs exist, but not visible in UI.
+Gap: A visual dashboard for compliance and transparency.
+
+✅ Add: /audit page with filters by org, user, action type, date.
+
+✅ Include export to PDF/CSV.
+
+✅ Ensure only Admin/Root/Compliance can view.
+
+5. Customer Account & Subscription Billing
+
+Current: Users pay partner apps indirectly (Gusto, QuickBooks).
+Gap: Your own billing gateway to collect subscription income.
+
+✅ Short term: integrate Stripe Billing → charge orgs monthly per active employee.
+
+✅ Long term: build internal billing microservice with credit ledger.
+
+6. AI / Predictive Suggestions
+
+Current: Manual human oversight (1%).
+Gap: Intelligent recommendations for anomaly detection.
+
+✅ Add: ML “Confidence Heatmap” — color-coded by risk of error.
+
+✅ Add: “Suggested human review” based on confidence threshold.
+
+7. API Throttling & Retry Queues
+
+Current: Partner integrations exist.
+Gap: Fault-tolerant retry & rate-limit handling.
+
+✅ Add: Retry queue (BullMQ or Redis) for transient failures.
+
+✅ Add: API-usage dashboard to monitor daily call limits.
+
+🔐 B. Security / Compliance Gaps
+Area	Missing/Needs Update	Why It Matters
+PII Encryption	Make sure all personal and payroll fields use AES-256-GCM	Protect employee data, GDPR
+Token Rotation	Auto-rotate API tokens every 90 days	Prevent stale credentials
+Session Timeout	Idle timeout 15 min + re-auth for payroll actions	Banking compliance
+Legal Templates	Terms of Service, Privacy, SLA, Data Retention policy	Needed for B2B onboarding
+Deletion Audit	Track who deleted orgs/users	Required for SOC2/ISO-type trust
+📱 C. Mobile Gaps
+Function	Status	What’s Needed
+Offline Mode	Not yet	Cache key screens (dashboard, helpdesk, invoices) for low signal
+Biometric Login	Not yet	Add FaceID/TouchID via WebAuthn
+Push Notification Opt-in	Not yet	Add toggle & permission check on first login
+Voice Chat Persistence	Partial	Reconnect gracefully on network loss
+File Upload Size Limit	Unknown	Enforce & show clear error for >25 MB uploads
+🧠 D. Operational / Business Gaps
+
+Pricing Configuration
+
+Decide if billing is per seat, per org, or per automation action.
+
+Add free trial flag in database.
+
+Support Workflows
+
+Need pre-filled FAQ macros and canned messages.
+
+Add “End Shift Report” generator for support agents.
+
+Performance Monitoring
+
+Add Prometheus + Grafana dashboard or Replit analytics page.
+
+Track average automation time, errors, API latency.
+
+Disaster Recovery
+
+Confirm backup restores are tested.
+
+Add replication if you’re scaling beyond Replit’s single region.
+
+Legal / Financial Setup
+
+Stripe/PayPal merchant account linked to your business bank.
+
+Terms + consent boxes in onboarding.
+
+🌐 E. User Experience Gaps
+Area	Improvement
+Navigation Hierarchy	Add persistent breadcrumb (“Home › Payroll › Invoice #1234”).
+Visual Feedback	Add loading spinners + toasts for background actions.
+User Tutorials	Interactive onboarding for new orgs (“Try Auto-Invoice now”).
+Accessibility	Ensure all buttons have aria-labels + color contrast passes WCAG AA.
+🧾 F. Launch-Checklist Summary
+Category	Goal	Status
+Automation Workflows	95% autonomy	✅
+Partner Integrations	QuickBooks/Gusto tested	⚠️ verify live
+Org/Employee IDs	Working + searchable	✅
+Helpdesk/Chat	Private DM + audit + upload	✅
+Notifications	Unified, real-time	⚠️ integrate center
+Mobile	Native feel + safe area + keyboard aware	✅
+Billing	Stripe subscription live	❌ pending
+Reporting	Payroll/invoice reports export	⚠️ verify CSV
+Compliance	Encryption + legal docs	⚠️ finalize
+Backups	Daily & restorable	✅ test again
+🔧 Next Steps Before Revenue Launch
+
+Ask Replit to:
+
+Run pre-launch checklist script → all PASS.
+
+Test rollback and circuit breaker manually.
+
+Test billing webhook (QuickBooks/Gusto or Stripe test mode).
+
+Add your Stripe Billing or subscription gateway for recurring payments.
+
+Prepare a short Onboarding walkthrough (one-page mini-wizard for new orgs).
+
+Add SLA + Privacy links in footer for compliance.
+
+Run one pilot org for 14 days to validate real-world stability.
