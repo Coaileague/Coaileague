@@ -81,6 +81,7 @@ import { EnhancedEmptyState } from "@/components/enhanced-empty-state";
 import { SlingMobileSchedule } from "@/components/schedule-mobile-sling";
 import { MobileShiftCalendar } from "@/components/mobile-shift-calendar";
 import { ShiftActionsMenu } from "@/components/shift-actions-menu";
+import { PremiumMetrics } from "@/components/schedule-premium-metrics";
 import type { Shift, Employee, Client } from "@shared/schema";
 import moment from "moment";
 
@@ -1177,6 +1178,20 @@ export default function ScheduleGrid() {
           </div>
         </div>
       </div>
+
+      {/* Premium Metrics: AI Status Bar + Dashboard KPI Cards */}
+      <PremiumMetrics
+        shifts={shifts}
+        employees={employees}
+        aiMode={true}
+        onAiOptimize={() => {
+          toast({
+            title: "AI Optimization",
+            description: "Analyzing schedules for optimal assignments...",
+          });
+        }}
+        aiProcessing={false}
+      />
 
       {/* Bar 2: Control Bar - Filters, Date Navigation, Actions */}
       <div className="border-b bg-background px-4 py-3">
