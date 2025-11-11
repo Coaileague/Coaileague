@@ -5,6 +5,7 @@
 
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import * as os from "os";
 
 interface ErrorLog {
   timestamp: Date;
@@ -27,16 +28,124 @@ interface PerformanceMetric {
   workspaceId?: string;
 }
 
+interface SystemMetrics {
+  cpu: number;
+  memory: number;
+  timestamp: Date;
+}
+
 class MonitoringService {
   private errorBuffer: ErrorLog[] = [];
   private metricsBuffer: PerformanceMetric[] = [];
   private flushInterval: NodeJS.Timeout | null = null;
+  private metricsInterval: NodeJS.Timeout | null = null;
+  private systemMetrics: SystemMetrics = {
+    cpu: 0,
+    memory: 0,
+    timestamp: new Date()
+  };
+  private platformStartedAt: Date = new Date();
+  private cpuUsageSamples: number[] = [];
+  private lastCpuUsage: NodeJS.CpuUsage | null = null;
+  private lastCpuTime: number = Date.now();
 
   constructor() {
     // Flush buffers every 10 seconds
     this.flushInterval = setInterval(() => {
       this.flush();
     }, 10000);
+    
+    // Sample system metrics every 15 seconds
+    this.metricsInterval = setInterval(() => {
+      this.sampleSystemMetrics();
+    }, 15000);
+    
+    // Initial sample
+    this.sampleSystemMetrics();
+  }
+  
+  /**
+   * Sample CPU and memory usage for rolling average
+   * Uses delta-based CPU calculation for accurate real-time readings
+   */
+  private sampleSystemMetrics(): void {
+    // Memory is straightforward - current usage
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memoryPercent = Math.round((usedMem / totalMem) * 1000) / 10;
+    
+    // CPU: Calculate delta between current and last sample for real-time usage
+    const currentCpuUsage = process.cpuUsage();
+    const currentTime = Date.now();
+    
+    let cpuPercent = 0;
+    if (this.lastCpuUsage) {
+      // Calculate CPU time used since last sample (in microseconds)
+      const cpuDelta = {
+        user: currentCpuUsage.user - this.lastCpuUsage.user,
+        system: currentCpuUsage.system - this.lastCpuUsage.system,
+      };
+      
+      // Time elapsed since last sample (in milliseconds, convert to microseconds)
+      const timeDelta = (currentTime - this.lastCpuTime) * 1000;
+      
+      // Guard against invalid time delta
+      if (timeDelta > 0) {
+        // Total CPU time used (user + system)
+        const totalCpuDelta = cpuDelta.user + cpuDelta.system;
+        
+        // Calculate percentage: (CPU time used / elapsed time) * 100
+        // Divide by core count to normalize to 0-100% range
+        const numCpus = os.cpus().length;
+        cpuPercent = (totalCpuDelta / timeDelta) * 100 / numCpus;
+        
+        // Clamp negative values to 0 (shouldn't happen but guard against anomalies)
+        cpuPercent = Math.max(0, cpuPercent);
+        
+        // Round to 1 decimal place
+        cpuPercent = Math.round(cpuPercent * 10) / 10;
+      }
+    }
+    
+    // Add to rolling samples (keep last 20 samples = 5 minutes of data)
+    // Include zero values so the average can decay during idle periods
+    // Only add after the first sample (when we have a valid delta calculation)
+    if (this.lastCpuUsage !== null) {
+      this.cpuUsageSamples.push(cpuPercent);
+      if (this.cpuUsageSamples.length > 20) {
+        this.cpuUsageSamples.shift();
+      }
+    }
+    
+    // Store current values for next delta calculation
+    this.lastCpuUsage = currentCpuUsage;
+    this.lastCpuTime = currentTime;
+    
+    // Calculate rolling average (or use current reading if no samples yet)
+    const avgCpu = this.cpuUsageSamples.length > 0
+      ? this.cpuUsageSamples.reduce((sum, val) => sum + val, 0) / this.cpuUsageSamples.length
+      : 0;
+    
+    this.systemMetrics = {
+      cpu: Math.round(avgCpu * 10) / 10,
+      memory: memoryPercent,
+      timestamp: new Date()
+    };
+  }
+  
+  /**
+   * Get current system metrics (cached, updated every 15s)
+   */
+  getSystemMetrics(): SystemMetrics {
+    return { ...this.systemMetrics };
+  }
+  
+  /**
+   * Get platform uptime in seconds (since monitoring service started)
+   */
+  getPlatformUptime(): number {
+    return Math.floor((Date.now() - this.platformStartedAt.getTime()) / 1000);
   }
 
   /**
@@ -178,6 +287,10 @@ class MonitoringService {
     if (this.flushInterval) {
       clearInterval(this.flushInterval);
       this.flushInterval = null;
+    }
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
     }
     this.flush(); // Final flush
   }

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
-import * as os from "os";
+import { monitoringService } from "./monitoring";
 import { 
   users, 
   workspaces, 
@@ -16,33 +16,6 @@ import {
 import { eq, sql, and, or, desc, gte } from "drizzle-orm";
 
 const db = (storage as any).db;
-
-/**
- * Calculate current CPU usage percentage
- * Returns average CPU load over 1 minute as percentage
- */
-function getCpuUsagePercent(): number {
-  const cpus = os.cpus();
-  const loadAvg = os.loadavg()[0]; // 1-minute load average
-  
-  // Convert load average to percentage (load / number of cores * 100)
-  const cpuPercent = (loadAvg / cpus.length) * 100;
-  
-  // Cap at 100% and round to 1 decimal place
-  return Math.min(Math.round(cpuPercent * 10) / 10, 100);
-}
-
-/**
- * Calculate current memory usage percentage
- */
-function getMemoryUsagePercent(): number {
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  
-  // Calculate percentage and round to 1 decimal place
-  return Math.round((usedMem / totalMem) * 1000) / 10;
-}
 
 /**
  * Platform Admin - Root Dashboard Statistics
@@ -117,15 +90,24 @@ export async function getPlatformStats(req: Request, res: Response) {
       ? ((cancelledSubs?.count || 0) / workspaceCount.count * 100).toFixed(1)
       : "0";
 
-    // System health - Real metrics from OS
+    // System health - Real metrics from monitoring service (cached, updated every 15s)
+    const sysMetrics = monitoringService.getSystemMetrics();
     const systemHealth = {
-      cpu: getCpuUsagePercent(),
-      memory: getMemoryUsagePercent(),
+      cpu: sysMetrics.cpu,
+      memory: sysMetrics.memory,
       database: "healthy",
-      uptime: process.uptime()
+      uptime: monitoringService.getPlatformUptime()
     };
 
-    // Recent activity (last 10 events)
+    // Recent activity - Aggregate multiple event types for comprehensive dashboard
+    const recentActivity: Array<{
+      type: string;
+      description: string;
+      timestamp: Date;
+      workspace?: string;
+    }> = [];
+
+    // Get recent invoices
     const recentInvoices = await db
       .select({
         invoice: invoices,
@@ -134,15 +116,56 @@ export async function getPlatformStats(req: Request, res: Response) {
       .from(invoices)
       .leftJoin(workspaces, eq(invoices.workspaceId, workspaces.id))
       .orderBy(desc(invoices.createdAt))
-      .limit(10);
+      .limit(5);
 
-    const recentActivity = recentInvoices.map(({ invoice, workspace }: any) => ({
-      type: "invoice",
-      description: `Invoice ${invoice.invoiceNumber} - $${invoice.total} - ${invoice.status}`,
-      timestamp: invoice.createdAt!,
-      workspaceId: workspace?.id,
-      workspaceName: workspace?.name || "Unknown"
-    }));
+    recentInvoices.forEach(({ invoice, workspace }: any) => {
+      recentActivity.push({
+        type: "invoice",
+        description: `Invoice ${invoice.invoiceNumber} - $${invoice.total} - ${invoice.status}`,
+        timestamp: invoice.createdAt!,
+        workspace: workspace?.name || "Unknown"
+      });
+    });
+
+    // Get recent support tickets
+    const recentTickets = await db
+      .select({
+        ticket: supportTickets,
+        workspace: workspaces
+      })
+      .from(supportTickets)
+      .leftJoin(workspaces, eq(supportTickets.workspaceId, workspaces.id))
+      .orderBy(desc(supportTickets.createdAt))
+      .limit(5);
+
+    recentTickets.forEach(({ ticket, workspace }: any) => {
+      recentActivity.push({
+        type: "support",
+        description: `Support: ${ticket.subject || 'New ticket'} - ${ticket.status}`,
+        timestamp: ticket.createdAt!,
+        workspace: workspace?.name || "Unknown"
+      });
+    });
+
+    // Get recent workspace signups
+    const recentSignups = await db
+      .select()
+      .from(workspaces)
+      .orderBy(desc(workspaces.createdAt))
+      .limit(5);
+
+    recentSignups.forEach((workspace: any) => {
+      recentActivity.push({
+        type: "signup",
+        description: `New workspace: ${workspace.name}`,
+        timestamp: workspace.createdAt!,
+        workspace: workspace.name
+      });
+    });
+
+    // Sort all events by timestamp and take top 10
+    recentActivity.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    const topActivity = recentActivity.slice(0, 10);
 
     // Support metrics
     const [openTicketCount] = await db
@@ -209,7 +232,7 @@ export async function getPlatformStats(req: Request, res: Response) {
       avgRevenue,
       churnRate,
       systemHealth,
-      recentActivity,
+      recentActivity: topActivity,
       supportMetrics,
       topWorkspaces
     });
