@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Building2 } from "lucide-react";
 import { AutoForceLogo } from "@/components/autoforce-logo";
+import { WFLogoCompact } from "@/components/wf-logo";
 
 interface BrandedInputDialogProps {
   open: boolean;
