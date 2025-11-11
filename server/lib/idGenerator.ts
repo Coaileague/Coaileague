@@ -21,12 +21,20 @@ function randomAlphaNumeric(charset: string, length: number): string {
  * Examples:
  *   "Acme Corp" -> "ACME"
  *   "ABC" -> "ABCX" (padded)
- *   "123" -> "XXXX" (fallback to random)
+ *   "123" -> random 4-char code (fallback)
+ * @param addRandomSuffix - If true, append random char for collision avoidance
  */
-export function safeOrgCode(name: string): string {
+export function safeOrgCode(name: string, addRandomSuffix: boolean = false): string {
   const sanitized = (name || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
+  
+  if (addRandomSuffix) {
+    // Use first 3 chars + random suffix for collision avoidance
+    const prefix = sanitized.slice(0, 3) || randomAlphaNumeric(base32, 3);
+    const suffix = randomAlphaNumeric(base32, 1);
+    return (prefix + suffix).padEnd(4, "X");
+  }
   
   const core = sanitized.slice(0, 4) || randomAlphaNumeric(base32, 4);
   return core.padEnd(4, "X");

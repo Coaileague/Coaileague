@@ -20,65 +20,101 @@ import {
 } from "../lib/idGenerator";
 
 /**
+ * Internal: Ensure organization has external ID (transaction-aware)
+ * @param tx - Active transaction context
+ */
+async function ensureOrgIdentifiersInTx(
+  tx: any,
+  orgId: string,
+  orgName: string
+): Promise<{ orgCode: string; externalId: string }> {
+  // Check if org already has an external ID
+  const existing = await tx
+    .select()
+    .from(externalIdentifiers)
+    .where(
+      and(
+        eq(externalIdentifiers.entityType, 'org'),
+        eq(externalIdentifiers.entityId, orgId)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Extract org code from existing external ID (ORG-XXXX -> XXXX)
+    const orgCode = existing[0].externalId.substring(4);
+    return { orgCode, externalId: existing[0].externalId };
+  }
+
+  // Try to generate unique org code with collision retry
+  let attempts = 0;
+  let orgCode: string;
+  let externalId: string;
+  
+  while (attempts < 10) {
+    // First attempt uses clean name, subsequent use random suffix
+    orgCode = safeOrgCode(orgName, attempts > 0);
+    externalId = genOrgExternalId(orgCode);
+    
+    try {
+      // Create external identifier
+      await tx.insert(externalIdentifiers).values({
+        entityType: 'org',
+        entityId: orgId,
+        externalId: externalId,
+        orgId: null, // Orgs don't have a parent org
+        isPrimary: true,
+      });
+      
+      // Success! Initialize sequences and return
+      break;
+    } catch (error: any) {
+      // If unique constraint violation (code 23505), retry with random suffix
+      if (error.code === '23505' && attempts < 9) {
+        attempts++;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (attempts >= 10) {
+    throw new Error('Failed to generate unique organization code after 10 attempts');
+  }
+
+  // Initialize employee sequence for this org
+  await tx
+    .insert(idSequences)
+    .values({
+      orgId: orgId,
+      kind: 'employee',
+      nextVal: 1,
+    })
+    .onConflictDoNothing();
+
+  // Initialize client sequence for this org
+  await tx
+    .insert(idSequences)
+    .values({
+      orgId: orgId,
+      kind: 'client',
+      nextVal: 1,
+    })
+    .onConflictDoNothing();
+
+  return { orgCode, externalId };
+}
+
+/**
  * Ensure organization has an external ID and employee sequence initialized
+ * Public wrapper that starts its own transaction
  */
 export async function ensureOrgIdentifiers(
   orgId: string,
   orgName: string
 ): Promise<{ orgCode: string; externalId: string }> {
   return await db.transaction(async (tx: any) => {
-    // Check if org already has an external ID
-    const existing = await tx
-      .select()
-      .from(externalIdentifiers)
-      .where(
-        and(
-          eq(externalIdentifiers.entityType, 'org'),
-          eq(externalIdentifiers.entityId, orgId)
-        )
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      // Extract org code from existing external ID (ORG-XXXX -> XXXX)
-      const orgCode = existing[0].externalId.substring(4);
-      return { orgCode, externalId: existing[0].externalId };
-    }
-
-    // Generate new org code and external ID
-    const orgCode = safeOrgCode(orgName);
-    const externalId = genOrgExternalId(orgCode);
-
-    // Create external identifier
-    await tx.insert(externalIdentifiers).values({
-      entityType: 'org',
-      entityId: orgId,
-      externalId: externalId,
-      orgId: null, // Orgs don't have a parent org
-      isPrimary: true,
-    });
-
-    // Initialize employee sequence for this org
-    await tx
-      .insert(idSequences)
-      .values({
-        orgId: orgId,
-        kind: 'employee',
-        nextVal: 1,
-      })
-      .onConflictDoNothing();
-
-    // Initialize client sequence for this org
-    await tx
-      .insert(idSequences)
-      .values({
-        orgId: orgId,
-        kind: 'client',
-        nextVal: 1,
-      })
-      .onConflictDoNothing();
-
-    return { orgCode, externalId };
+    return ensureOrgIdentifiersInTx(tx, orgId, orgName);
   });
 }
 
@@ -120,7 +156,7 @@ export async function attachEmployeeExternalId(
       throw new Error('Organization not found');
     }
 
-    const { orgCode } = await ensureOrgIdentifiers(orgId, org[0].name);
+    const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
 
     // Get next employee number for this org
     const sequence = await tx
@@ -213,7 +249,7 @@ export async function attachClientExternalId(
       throw new Error('Organization not found');
     }
 
-    const { orgCode } = await ensureOrgIdentifiers(orgId, org[0].name);
+    const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
 
     // Get next client number for this org
     const sequence = await tx

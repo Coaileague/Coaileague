@@ -10629,6 +10629,29 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // ============================================================================
+  // EXTERNAL IDENTIFIER LOOKUP SYSTEM
+  // ============================================================================
+  
+  // Universal lookup by external ID, UUID, or email (support staff only)
+  app.get('/api/admin/support/lookup', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const query = String(req.query.q || '').trim();
+      
+      if (!query) {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+
+      const { supportLookup } = await import('./services/identityService');
+      const results = await supportLookup(query);
+      
+      res.json({ results });
+    } catch (error) {
+      console.error("Error performing support lookup:", error);
+      res.status(500).json({ message: "Failed to perform lookup" });
+    }
+  });
+
   // Change user role (platform admin action)
   app.post('/api/admin/support/change-role', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
