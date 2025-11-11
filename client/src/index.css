@@ -2273,3 +2273,47 @@ html, body {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* ============================================================================
+   MENU OVERLAP FIX - Prevent menus from blocking content
+   Proper z-index hierarchy without breaking Radix positioning
+   ============================================================================ */
+
+/* Context Menu Content - Above dropdowns and sheets */
+[data-radix-context-menu-content] {
+  z-index: 1500;
+}
+
+/* Dropdown Menu Content - Standard overlay layer */
+[data-radix-dropdown-menu-content] {
+  z-index: 1200;
+}
+
+/* Popover Content */
+[data-radix-popover-content] {
+  z-index: 1300;
+}
+
+/* Sheet Content - Below context menus but above regular content */
+[data-radix-dialog-content][data-state] {
+  z-index: 1100;
+}
+
+/* Dialog/Modal - Proper stacking (overlay below content) */
+[data-radix-dialog-overlay] {
+  z-index: 1000;
+}
+
+[data-radix-dialog-content]:not([data-state]) {
+  z-index: 1050; /* Above overlay */
+}
+
+/* Tooltips - High priority */
+[data-radix-tooltip-content] {
+  z-index: 2000;
+}
+
+/* Toast - Always on top */
+[data-radix-toast-viewport] {
+  z-index: 3000;
+}
