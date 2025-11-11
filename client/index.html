@@ -86,14 +86,9 @@
         height: 100%;
         background: linear-gradient(90deg, hsl(221.2 83.2% 53.3%), hsl(210 40% 98%), hsl(221.2 83.2% 53.3%));
         background-size: 200% 100%;
-        animation: loading-progress 2s ease-in-out forwards, loading-shimmer 1.5s linear infinite;
+        animation: loading-shimmer 1.5s linear infinite;
         width: 0%;
-      }
-      
-      @keyframes loading-progress {
-        0% { width: 0%; }
-        50% { width: 60%; }
-        100% { width: 90%; }
+        transition: width 0.3s ease-out;
       }
       
       @keyframes loading-shimmer {
@@ -170,10 +165,14 @@
           <p>Authenticating</p>
         </div>
         <div class="loader-bar">
-          <div class="loader-bar-fill"></div>
+          <div class="loader-bar-fill" id="loader-bar-fill"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding: 0 4px;">
+          <span id="loader-percentage" style="font-size: 12px; font-weight: 600; color: hsl(221.2 83.2% 53.3%); font-family: 'JetBrains Mono', monospace;">0%</span>
+          <span style="font-size: 11px; color: hsl(215 20.2% 65.1%); font-family: 'JetBrains Mono', monospace;">Loading...</span>
         </div>
         <div class="loader-message">
-          <p>Loading your workspace</p>
+          <p id="loader-text">Initializing workspace</p>
           <div class="bouncing-dots">
             <span></span>
             <span></span>
@@ -186,19 +185,79 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Hide initial loader once React mounts -->
+    <!-- Animate loader with random techy messages -->
     <script>
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          var loader = document.getElementById('initial-loader');
-          if (loader) {
-            loader.classList.add('loaded');
-            setTimeout(function() {
-              loader.remove();
-            }, 300);
+      (function() {
+        var messages = [
+          "Initializing workspace...",
+          "Connecting to AutoForce™...",
+          "Establishing secure connection...",
+          "Loading modules...",
+          "Authenticating session...",
+          "Verifying credentials...",
+          "Syncing data...",
+          "Configuring environment...",
+          "Preparing dashboard...",
+          "Optimizing performance...",
+          "Building interface...",
+          "Loading components...",
+          "Almost there...",
+          "Finalizing..."
+        ];
+        
+        var progressSteps = [
+          { progress: 10, duration: 200 },
+          { progress: 30, duration: 300 },
+          { progress: 55, duration: 400 },
+          { progress: 70, duration: 350 },
+          { progress: 87, duration: 300 },
+          { progress: 95, duration: 400 },
+          { progress: 99, duration: 500 }
+        ];
+        
+        var currentStep = 0;
+        var currentMessage = 0;
+        var barFill = document.getElementById('loader-bar-fill');
+        var percentageText = document.getElementById('loader-percentage');
+        var messageText = document.getElementById('loader-text');
+        
+        function updateLoader() {
+          if (currentStep < progressSteps.length) {
+            var step = progressSteps[currentStep];
+            barFill.style.width = step.progress + '%';
+            percentageText.textContent = step.progress + '%';
+            
+            // Rotate through messages
+            messageText.textContent = messages[currentMessage];
+            currentMessage = (currentMessage + 1) % messages.length;
+            
+            currentStep++;
+            setTimeout(updateLoader, step.duration);
           }
-        }, 100);
-      });
+        }
+        
+        // Start animation immediately
+        setTimeout(updateLoader, 100);
+        
+        // Hide loader once React loads
+        window.addEventListener('load', function() {
+          setTimeout(function() {
+            barFill.style.width = '100%';
+            percentageText.textContent = '100%';
+            messageText.textContent = 'Complete!';
+            
+            setTimeout(function() {
+              var loader = document.getElementById('initial-loader');
+              if (loader) {
+                loader.classList.add('loaded');
+                setTimeout(function() {
+                  loader.remove();
+                }, 300);
+              }
+            }, 200);
+          }, 100);
+        });
+      })();
     </script>
   </body>
 </html>
