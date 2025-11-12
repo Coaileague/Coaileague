@@ -238,10 +238,10 @@ export default function AuditorPortal() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
+            <Card className="border-l-4 border-l-blue-500">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                  <AlertCircle className="h-5 w-5 text-blue-500" />
                   <Badge variant="secondary">Outstanding</Badge>
                 </div>
                 <div className="text-2xl font-bold" data-testid="text-outstanding">
@@ -348,7 +348,7 @@ export default function AuditorPortal() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Pending Invoices</span>
-                    <Badge className="bg-amber-500/10 text-amber-600 border-0">
+                    <Badge className="bg-blue-500/10 text-blue-600 border-0">
                       {invoices.filter(i => i.status === 'sent').length}
                     </Badge>
                   </div>
@@ -416,7 +416,7 @@ export default function AuditorPortal() {
                                 invoice.status === 'paid'
                                   ? 'bg-muted/10 text-primary border-0'
                                   : invoice.status === 'sent'
-                                  ? 'bg-amber-500/10 text-amber-600 border-0'
+                                  ? 'bg-blue-500/10 text-blue-600 border-0'
                                   : ''
                               }
                               variant={invoice.status === 'draft' ? 'secondary' : 'outline'}

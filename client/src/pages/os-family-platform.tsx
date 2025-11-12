@@ -12,7 +12,7 @@ export default function PlatformFamilyPage() {
       description: "Platform staff diagnostics with user search, account management, and impersonation controls",
       features: ["User Diagnostics", "Account Management", "Impersonation", "Audit Logs"],
       url: "/query-os",
-      color: "from-red-500 to-rose-500",
+      color: "from-red-500 to-blue-500",
       adminOnly: true
     },
     {
@@ -21,7 +21,7 @@ export default function PlatformFamilyPage() {
       description: "External service ecosystem with marketplace, API keys, webhooks, and OAuth2 connections",
       features: ["Marketplace", "API Keys", "Webhooks", "OAuth2"],
       url: "/integrations",
-      color: "from-amber-500 to-orange-500"
+      color: "from-blue-500 to-indigo-500"
     },
     {
       name: "BudgetOS™",
@@ -29,7 +29,7 @@ export default function PlatformFamilyPage() {
       description: "Budget planning and control with variance analysis, forecasting, and approval workflows",
       features: ["Budget Planning", "Variance Analysis", "Forecasting", "Approvals"],
       url: "/budget",
-      color: "from-primary to-green-500"
+      color: "from-primary to-blue-500"
     },
     {
       name: "Command Center",
@@ -46,7 +46,7 @@ export default function PlatformFamilyPage() {
       description: "Centralized admin dashboard with metrics, alerts, and quick access to all platform functions",
       features: ["Metrics Overview", "Alert Center", "Quick Actions", "System Status"],
       url: "/dashboard",
-      color: "from-blue-500 to-cyan-500"
+      color: "from-blue-500 to-blue-600"
     }
   ];
 
@@ -60,7 +60,7 @@ export default function PlatformFamilyPage() {
               <Sparkles className="h-12 w-12 text-red-400" />
             </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-red-400 via-orange-400 to-amber-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-red-400 via-orange-400 to-blue-400 bg-clip-text text-transparent">
             Platform & Control OS
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">

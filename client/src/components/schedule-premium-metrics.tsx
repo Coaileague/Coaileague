@@ -166,10 +166,10 @@ export function PremiumMetrics({
               <div className="flex items-center gap-6 text-sm flex-wrap">
                 <div className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg backdrop-blur-sm" 
                      data-testid="ai-metric-savings">
-                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <TrendingUp className="w-4 h-4 text-blue-400" />
                   <div>
                     <div className="text-xs text-purple-300">Savings</div>
-                    <div className="font-bold text-green-400">${aiInsights.totalSavings}</div>
+                    <div className="font-bold text-blue-400">${aiInsights.totalSavings}</div>
                   </div>
                 </div>
 
@@ -184,19 +184,19 @@ export function PremiumMetrics({
 
                 <div className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg backdrop-blur-sm" 
                      data-testid="ai-metric-resolved">
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle className="w-4 h-4 text-blue-400" />
                   <div>
                     <div className="text-xs text-purple-300">Resolved</div>
-                    <div className="font-bold text-emerald-400">{aiInsights.conflictsResolved}</div>
+                    <div className="font-bold text-blue-400">{aiInsights.conflictsResolved}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg backdrop-blur-sm" 
                      data-testid="ai-metric-coverage">
-                  <Target className="w-4 h-4 text-cyan-400" />
+                  <Target className="w-4 h-4 text-blue-400" />
                   <div>
                     <div className="text-xs text-purple-300">Coverage</div>
-                    <div className="font-bold text-cyan-400">{aiInsights.coverageScore}%</div>
+                    <div className="font-bold text-blue-400">{aiInsights.coverageScore}%</div>
                   </div>
                 </div>
 
@@ -251,12 +251,12 @@ export function PremiumMetrics({
           <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm" data-testid="stat-card-labor-cost">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-gray-600">LABOR COST</span>
-              <TrendingDown className="w-4 h-4 text-green-600" />
+              <TrendingDown className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-xl font-bold text-gray-900">
               ${dashboardStats.laborCost.toLocaleString()}
             </div>
-            <div className="text-xs text-green-600 font-semibold mt-1">
+            <div className="text-xs text-blue-600 font-semibold mt-1">
               ↓ {dashboardStats.laborSavings}% vs last week
             </div>
           </div>
@@ -287,7 +287,7 @@ export function PremiumMetrics({
           <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm" data-testid="stat-card-needs-action">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-gray-600">NEEDS ACTION</span>
-              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <AlertCircle className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-xl font-bold text-gray-900">{dashboardStats.needsAction}</div>
             <div className="text-xs text-gray-600 mt-1">

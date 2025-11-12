@@ -143,7 +143,7 @@ export default function ModernMobileChat() {
       parts.push(
         <span key={key++} className="font-semibold">
           {userName}
-          <sup className={`text-[8px] font-normal ${isBot ? 'text-amber-500' : 'text-emerald-500'}`}>
+          <sup className={`text-[8px] font-normal ${isBot ? 'text-blue-500' : 'text-blue-500'}`}>
             ({roleText})
           </sup>
         </span>
@@ -225,49 +225,49 @@ export default function ModernMobileChat() {
         icon: CheckCircle,
         label: 'Welcome & Introduction',
         text: `Hi ${firstName}! Welcome to AutoForce™ Support! I'm here to assist you. How can I help you today?`,
-        color: 'text-green-500'
+        color: 'text-blue-500'
       },
       {
         icon: Clock,
         label: 'Please Wait',
         text: `Thank you for your patience, ${firstName}. I'm looking into this for you right now and will have an answer shortly.`,
-        color: 'text-green-500'
+        color: 'text-blue-500'
       },
       {
         icon: HelpCircle,
         label: 'Need More Info',
         text: `${firstName}, to better assist you, could you provide more details about the issue you're experiencing?`,
-        color: 'text-amber-600'
+        color: 'text-blue-600'
       },
       {
         icon: FileSearch,
         label: 'Investigating Issue',
         text: `${firstName}, I'm investigating this issue now. I'll check our system logs and get back to you with a solution.`,
-        color: 'text-green-500'
+        color: 'text-blue-500'
       },
       {
         icon: PackageCheck,
         label: 'Issue Resolved',
         text: `Great news, ${firstName}! I've resolved the issue. Please let me know if you need any further assistance.`,
-        color: 'text-green-500'
+        color: 'text-blue-500'
       },
       {
         icon: RefreshCw,
         label: 'Try Refreshing',
         text: `${firstName}, please try refreshing your browser or logging out and back in. This should resolve the issue.`,
-        color: 'text-emerald-500'
+        color: 'text-blue-500'
       },
       {
         icon: Mail,
         label: 'Follow Up',
         text: `${firstName}, I'll follow up with our technical team and send you an email update within 24 hours.`,
-        color: 'text-green-500'
+        color: 'text-blue-500'
       },
       {
         icon: Star,
         label: 'Closing Remarks',
         text: `Thank you for contacting AutoForce™ Support, ${firstName}! Feel free to reach out anytime you need assistance.`,
-        color: 'text-amber-600'
+        color: 'text-blue-600'
       }
     ];
   };
@@ -282,7 +282,7 @@ export default function ModernMobileChat() {
         icon: UserCheck, 
         label: 'Release Hold & Welcome', 
         action: () => handleReleaseHold(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Remove spectator mode + send greeting',
         roles: ALL_STAFF,
         tier: 'Basic Support'
@@ -291,7 +291,7 @@ export default function ModernMobileChat() {
         icon: Info, 
         label: 'Request Info', 
         action: () => handleRequestInfo(),
-        color: 'text-amber-600',
+        color: 'text-blue-600',
         description: 'Ask for specific information',
         roles: ALL_STAFF,
         tier: 'Basic Support'
@@ -311,7 +311,7 @@ export default function ModernMobileChat() {
         icon: Lock, 
         label: 'Request Authentication', 
         action: () => handleRequestAuth(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Ask user to verify their identity',
         roles: DEPUTY_ASSISTANT_PLUS,
         tier: 'Authentication'
@@ -329,7 +329,7 @@ export default function ModernMobileChat() {
         icon: UserCog, 
         label: 'Unlock Account', 
         action: () => handleUnlockAccount(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Unlock locked user account',
         roles: DEPUTY_ADMIN_PLUS,
         tier: 'Authentication'
@@ -340,7 +340,7 @@ export default function ModernMobileChat() {
         icon: FileText, 
         label: 'Request Document', 
         action: () => handleRequestDocument(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Request file upload from user',
         roles: ALL_STAFF,
         tier: 'Documents'
@@ -349,7 +349,7 @@ export default function ModernMobileChat() {
         icon: Camera, 
         label: 'Request Photo', 
         action: () => handleRequestPhoto(),
-        color: 'text-emerald-500',
+        color: 'text-blue-500',
         description: 'Request photo/screenshot',
         roles: ALL_STAFF,
         tier: 'Documents'
@@ -358,7 +358,7 @@ export default function ModernMobileChat() {
         icon: PenTool, 
         label: 'Request Signature', 
         action: () => handleRequestSignature(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Request e-signature',
         roles: DEPUTY_ASSISTANT_PLUS,
         tier: 'Documents'
@@ -367,7 +367,7 @@ export default function ModernMobileChat() {
         icon: Eye, 
         label: 'View Documents', 
         action: () => handleViewDocuments(),
-        color: 'text-emerald-500',
+        color: 'text-blue-500',
         description: 'View user submitted documents',
         roles: DEPUTY_ASSISTANT_PLUS,
         tier: 'Documents'
@@ -378,7 +378,7 @@ export default function ModernMobileChat() {
         icon: CheckCircle, 
         label: 'Mark Resolved', 
         action: () => handleResolve(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Close ticket as resolved',
         roles: ALL_STAFF,
         tier: 'Ticket Management'
@@ -396,7 +396,7 @@ export default function ModernMobileChat() {
         icon: ArrowUpCircle, 
         label: 'Escalate', 
         action: () => handleEscalate(),
-        color: 'text-amber-600',
+        color: 'text-blue-600',
         description: 'Escalate to higher support tier',
         roles: ALL_STAFF,
         tier: 'Ticket Management'
@@ -405,7 +405,7 @@ export default function ModernMobileChat() {
         icon: Tag, 
         label: 'Priority Tag', 
         action: () => handlePriorityTag(),
-        color: 'text-rose-400',
+        color: 'text-blue-400',
         description: 'Mark ticket as high priority',
         roles: DEPUTY_ADMIN_PLUS,
         tier: 'Ticket Management'
@@ -414,7 +414,7 @@ export default function ModernMobileChat() {
         icon: Clock, 
         label: 'Schedule Follow-up', 
         action: () => handleFollowUp(),
-        color: 'text-amber-600',
+        color: 'text-blue-600',
         description: 'Schedule follow-up reminder',
         roles: DEPUTY_ASSISTANT_PLUS,
         tier: 'Ticket Management'
@@ -425,7 +425,7 @@ export default function ModernMobileChat() {
         icon: Mail, 
         label: 'Email Summary', 
         action: () => handleEmailSummary(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Send conversation summary via email',
         roles: DEPUTY_ADMIN_PLUS,
         tier: 'Advanced'
@@ -434,7 +434,7 @@ export default function ModernMobileChat() {
         icon: Star, 
         label: 'Mark VIP', 
         action: () => handleMarkVIP(),
-        color: 'text-amber-600',
+        color: 'text-blue-600',
         description: 'Flag user as VIP customer',
         roles: DEPUTY_ADMIN_PLUS,
         tier: 'Advanced'
@@ -492,7 +492,7 @@ export default function ModernMobileChat() {
         icon: TrendingUp, 
         label: 'Analytics', 
         action: () => handleAnalytics(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'View system analytics dashboard',
         roles: SYSTEM_ONLY,
         tier: 'System'
@@ -501,7 +501,7 @@ export default function ModernMobileChat() {
         icon: RefreshCw, 
         label: 'Force Reconnect', 
         action: () => handleForceReconnect(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Force user WebSocket reconnection',
         roles: SYSTEM_ONLY,
         tier: 'System'
@@ -510,7 +510,7 @@ export default function ModernMobileChat() {
         icon: Zap, 
         label: 'Test Message', 
         action: () => handleTestMessage(),
-        color: 'text-green-500',
+        color: 'text-blue-500',
         description: 'Send system test message',
         roles: SYSTEM_ONLY,
         tier: 'System'
@@ -519,7 +519,7 @@ export default function ModernMobileChat() {
         icon: PackageCheck, 
         label: 'Clear Cache', 
         action: () => handleClearCache(),
-        color: 'text-emerald-500',
+        color: 'text-blue-500',
         description: 'Clear user session cache',
         roles: SYSTEM_ONLY,
         tier: 'System'
@@ -968,7 +968,7 @@ export default function ModernMobileChat() {
         {selectedUser && isStaff ? (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-600 to-green-600 shadow-md flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-600 shadow-md flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-base">{selectedUser.name.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -999,8 +999,8 @@ export default function ModernMobileChat() {
                 <span>Session: {Math.floor((Date.now() - new Date().getTime()) / 60000) || 5}:23</span>
               </div>
               <div className="flex items-center gap-1">
-                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
-                <span className={isConnected ? 'text-emerald-500' : 'text-red-400'}>
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-blue-500 text-blue-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <span className={isConnected ? 'text-blue-500' : 'text-red-400'}>
                   {isConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
@@ -1009,7 +1009,7 @@ export default function ModernMobileChat() {
         ) : (
           <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-green-600 shadow-md flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-600 shadow-md flex items-center justify-center">
                 <WFLogoCompact size={16} className="text-white" />
               </div>
               <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
@@ -1021,7 +1021,7 @@ export default function ModernMobileChat() {
               <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
                 <Users size={10} />
                 <span>{onlineUsers.length} online</span>
-                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-blue-500 text-blue-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
               </div>
             </div>
             <Button
@@ -1068,7 +1068,7 @@ export default function ModernMobileChat() {
           <div key={msg.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-bottom-2">
             {/* WorkforceOS Logo Avatar - Bigger and Bolder */}
             <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ring-2 ${
-              msg.senderType === 'bot' ? 'bg-gradient-to-br from-amber-500 to-yellow-600 ring-amber-500/50' :
+              msg.senderType === 'bot' ? 'bg-gradient-to-br from-blue-500 to-blue-600 ring-blue-500/50' :
               msg.senderType === 'support' ? 'bg-gradient-to-br from-primary to-accent ring-primary/50' :
               'bg-gradient-to-br from-slate-600 to-slate-700 ring-slate-500/50'
             }`}>
@@ -1087,8 +1087,8 @@ export default function ModernMobileChat() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className={`font-bold text-sm ${
-                  msg.senderType === 'bot' ? 'text-amber-500' :
-                  msg.senderType === 'support' ? 'text-emerald-500' :
+                  msg.senderType === 'bot' ? 'text-blue-500' :
+                  msg.senderType === 'support' ? 'text-blue-500' :
                   'text-white'
                 }`}>
                   {msg.senderType === 'bot' ? 'HelpOS AI Bot' : msg.senderName?.split('(')[0].trim()}
@@ -1096,10 +1096,10 @@ export default function ModernMobileChat() {
                   {(roleDisplay || (msg.senderId === userId && userPlatformRole)) && (
                     <sup className={`text-[8px] font-normal ${
                       msg.senderType === 'bot' 
-                        ? 'text-amber-500/70' 
+                        ? 'text-blue-500/70' 
                         : isCurrentUser
-                          ? 'text-emerald-500'
-                          : 'text-emerald-500/70'
+                          ? 'text-blue-500'
+                          : 'text-blue-500/70'
                     }`}>
                       ({roleDisplay || (msg.senderId === userId ? getRoleDisplay(userPlatformRole || undefined) : null)})
                     </sup>
@@ -1159,14 +1159,14 @@ export default function ModernMobileChat() {
             data-testid="button-toggle-quick-responses"
           >
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-500" />
+              <Zap className="w-4 h-4 text-blue-500" />
               <div className="flex flex-col items-start">
                 <span className="text-sm font-semibold">Quick Responses</span>
-                <span className="text-[10px] text-emerald-500 font-medium">
+                <span className="text-[10px] text-blue-500 font-medium">
                   → {selectedUser.name.split(' ')[0]}
                 </span>
               </div>
-              <Badge variant="secondary" className="text-xs bg-amber-500/20 text-amber-500 border-amber-500/30">
+              <Badge variant="secondary" className="text-xs bg-blue-500/20 text-blue-500 border-blue-500/30">
                 {quickResponses.length}
               </Badge>
             </div>
@@ -1209,7 +1209,7 @@ export default function ModernMobileChat() {
           <Sheet open={showUserList} onOpenChange={setShowUserList}>
             <SheetTrigger asChild>
               <button
-                className="tap w-14 h-14 min-h-[56px] min-w-[56px] rounded-full bg-gradient-to-br from-emerald-600 to-green-600 text-white shadow-lg hover:shadow-emerald-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
+                className="tap w-14 h-14 min-h-[56px] min-w-[56px] rounded-full bg-gradient-to-br from-blue-600 to-blue-600 text-white shadow-lg hover:shadow-blue-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
                 data-testid="button-float-users"
               >
                 <Users size={24} />
@@ -1218,7 +1218,7 @@ export default function ModernMobileChat() {
             <SheetContent side="bottom" className="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 h-[85vh] flex flex-col">
               <SheetHeader className="flex-shrink-0">
                 <SheetTitle className="text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-emerald-500" />
+                  <Users className="w-5 h-5 text-blue-500" />
                   Online Users ({onlineUsers.length})
                 </SheetTitle>
               </SheetHeader>
@@ -1241,16 +1241,16 @@ export default function ModernMobileChat() {
                       data-testid={`user-${user.id}`}
                     >
                       {isBot ? (
-                        <Bot className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <Bot className="w-4 h-4 text-blue-500 flex-shrink-0" />
                       ) : (
                         <div className={`w-3 h-3 rounded-full ${user.status === 'online' ? 'bg-muted/30' : 'bg-slate-500'}`} />
                       )}
                       <div className="flex-1 text-left">
-                        <div className={`font-medium text-sm ${isBot ? 'text-amber-500' : 'text-white'}`}>
+                        <div className={`font-medium text-sm ${isBot ? 'text-blue-500' : 'text-white'}`}>
                           {isBot && '🤖 '}
                           {user.name.split('(')[0].trim()}
                           {user.role && user.role !== 'customer' && (
-                            <sup className="ml-0.5 text-[8px] font-normal text-emerald-500/70">
+                            <sup className="ml-0.5 text-[8px] font-normal text-blue-500/70">
                               ({getRoleDisplay(user.role)})
                             </sup>
                           )}
@@ -1276,7 +1276,7 @@ export default function ModernMobileChat() {
                 toast({ title: "No User Selected", description: "Please select a user from the user list first" });
               }
             }}
-            className="tap w-14 h-14 min-h-[56px] min-w-[56px] rounded-full bg-gradient-to-br from-cyan-600 to-teal-600 text-white shadow-lg hover:shadow-cyan-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
+            className="tap w-14 h-14 min-h-[56px] min-w-[56px] rounded-full bg-gradient-to-br from-blue-600 to-blue-600 text-white shadow-lg hover:shadow-blue-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
             data-testid="button-float-diagnostics"
           >
             <Eye size={24} />
@@ -1286,7 +1286,7 @@ export default function ModernMobileChat() {
           <Sheet open={showTools} onOpenChange={setShowTools}>
             <SheetTrigger asChild>
               <button
-                className="tap w-14 h-14 min-h-[56px] min-w-[56px] rounded-full bg-gradient-to-br from-green-600 to-pink-600 text-white shadow-lg hover:shadow-green-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
+                className="tap w-14 h-14 min-h-[56px] min-w-[56px] rounded-full bg-gradient-to-br from-blue-600 to-blue-600 text-white shadow-lg hover:shadow-blue-500/50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white/20"
                 data-testid="button-float-tools"
               >
                 <Settings size={24} />
@@ -1344,8 +1344,8 @@ export default function ModernMobileChat() {
       <div ref={inputWrapperRef} className="chat-input-sticky backdrop-blur-xl bg-black/40 border-t border-white/10 px-4 py-3 pb-safe">
         {/* Connection Status Indicator */}
         {!isConnected && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-amber-500">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          <div className="mb-2 flex items-center gap-2 text-xs text-blue-500">
+            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
             Connecting to chat...
           </div>
         )}

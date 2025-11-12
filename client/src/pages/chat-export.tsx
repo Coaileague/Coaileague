@@ -198,9 +198,9 @@ export default function ChatExport() {
               Export encrypted private messages. Requires owner permissions and an approved audit request due to privacy protections.
             </p>
           </div>
-          <div className="p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Compliance Note</p>
-            <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+          <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Compliance Note</p>
+            <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
               All chat exports are logged for audit purposes. Only export conversations when required for legitimate business, compliance, or training purposes.
             </p>
           </div>

@@ -130,7 +130,7 @@ export default function Pricing() {
               Back
             </Button>
             <Button
-              className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white whitespace-nowrap shadow-md"
+              className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white whitespace-nowrap shadow-md"
               onClick={() => window.location.href = "/api/login"}
               data-testid="button-launch-platform"
             >
@@ -142,15 +142,15 @@ export default function Pricing() {
       </nav>
 
       {/* Pricing Hero */}
-      <section className="pt-24 pb-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+      <section className="pt-24 pb-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
         <div className="container mx-auto max-w-7xl">
         <div className="text-center space-y-4 mb-12">
-          <Badge className="bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border-emerald-200 mb-2 shadow-md">
+          <Badge className="bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 border-blue-200 mb-2 shadow-md">
             <Sparkles className="h-3 w-3 mr-1" />
             Enterprise-Grade ROI
           </Badge>
           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600">Investment That Pays Itself</span> In Weeks
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">Investment That Pays Itself</span> In Weeks
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Replace entire departments. Save $100k-$500k annually. All plans include 14-day free trial.
@@ -162,13 +162,13 @@ export default function Pricing() {
           {tiers.map((tier, index) => (
             <Card
               key={tier.name}
-              className={`bg-white border-2 shadow-md p-8 space-y-6 relative hover:border-emerald-300 hover:shadow-2xl transition-all ${
-                tier.popular ? "border-emerald-300 shadow-xl" : "border-gray-200"
+              className={`bg-white border-2 shadow-md p-8 space-y-6 relative hover:border-blue-300 hover:shadow-2xl transition-all ${
+                tier.popular ? "border-blue-300 shadow-xl" : "border-gray-200"
               }`}
               data-testid={`card-pricing-${tier.name.toLowerCase().replace(/\s+/g, "-")}`}
             >
               {tier.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-600 to-green-600 text-white border-none shadow-lg">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-600 text-white border-none shadow-lg">
                   Best Value
                 </Badge>
               )}
@@ -183,8 +183,8 @@ export default function Pricing() {
                 
                 {/* ROI Badge */}
                 <div className="flex items-center gap-2 pt-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm font-semibold text-emerald-700">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-700">
                     {tier.roi}
                   </span>
                   <span className="text-xs text-gray-500">
@@ -194,7 +194,7 @@ export default function Pricing() {
               </div>
 
               <div className="space-y-1">
-                <div className="text-4xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-600">
+                <div className="text-4xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">
                   {tier.price}
                   {tier.price !== "Contact Sales" && tier.price !== "Custom" && (
                     <span className="text-lg font-normal text-gray-500">
@@ -212,8 +212,8 @@ export default function Pricing() {
               <Button
                 className={`w-full h-11 shadow-md ${
                   tier.popular
-                    ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
-                    : "bg-white text-gray-900 border-2 border-gray-300 hover:border-emerald-400 hover:bg-gray-50"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white"
+                    : "bg-white text-gray-900 border-2 border-gray-300 hover:border-blue-400 hover:bg-gray-50"
                 }`}
                 variant={tier.popular ? "default" : "outline"}
                 onClick={() => window.location.href = tier.cta === "Contact Sales" ? "/contact" : "/api/login"}
@@ -229,7 +229,7 @@ export default function Pricing() {
                     className="flex items-start gap-3 text-sm"
                   >
                     {feature.included ? (
-                      <Check className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <Check className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     ) : (
                       <X className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     )}
@@ -256,7 +256,7 @@ export default function Pricing() {
         <div className="container mx-auto max-w-6xl">
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-600">Why Our Pricing Makes Sense</h2>
+              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">Why Our Pricing Makes Sense</h2>
               <p className="text-gray-600">
                 Compare our monthly fee to the staff costs you're replacing
               </p>
@@ -289,36 +289,36 @@ export default function Pricing() {
                   netSavings: "$300k+/yr"
                 },
               ].map((breakdown) => (
-                <div key={breakdown.plan} className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-6 space-y-4 hover:shadow-xl transition-shadow">
+                <div key={breakdown.plan} className="bg-gradient-to-br from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4 hover:shadow-xl transition-shadow">
                   <div className="space-y-2">
                     <h3 className="font-semibold text-lg text-gray-900">
                       {breakdown.plan}
                     </h3>
-                    <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-600 font-mono">
+                    <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600 font-mono">
                       {breakdown.price}
                     </div>
                   </div>
 
                   <div className="space-y-2 text-sm">
-                    <div className="text-xs text-emerald-700 uppercase tracking-wide font-semibold">
+                    <div className="text-xs text-blue-700 uppercase tracking-wide font-semibold">
                       Replaces:
                     </div>
                     {breakdown.replaces.map((item) => (
                       <div key={item} className="flex items-center gap-2 text-gray-700">
-                        <Check className="h-3 w-3 text-emerald-600" />
+                        <Check className="h-3 w-3 text-blue-600" />
                         {item}
                       </div>
                     ))}
                   </div>
 
-                  <div className="pt-4 border-t border-emerald-300 space-y-1">
+                  <div className="pt-4 border-t border-blue-300 space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Annual plan cost:</span>
-                      <span className="text-rose-600 font-mono font-semibold">-{breakdown.costOfPlan}</span>
+                      <span className="text-blue-600 font-mono font-semibold">-{breakdown.costOfPlan}</span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold pt-2">
                       <span className="text-gray-900">Net savings:</span>
-                      <span className="text-emerald-700 font-mono text-lg">+{breakdown.netSavings}</span>
+                      <span className="text-blue-700 font-mono text-lg">+{breakdown.netSavings}</span>
                     </div>
                   </div>
                 </div>
@@ -378,10 +378,10 @@ export default function Pricing() {
       </section>
 
       {/* FAQ */}
-      <section className="py-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+      <section className="py-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
         <div className="container mx-auto max-w-3xl space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-600">Frequently Asked Questions</h2>
+            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">Frequently Asked Questions</h2>
           </div>
 
           <div className="space-y-4">
@@ -417,7 +417,7 @@ export default function Pricing() {
             ].map((faq) => (
               <div
                 key={faq.q}
-                className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-emerald-300 hover:shadow-lg transition-all"
+                className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all"
               >
                 <h3 className="font-semibold mb-2 text-gray-900">
                   {faq.q}
@@ -440,16 +440,16 @@ export default function Pricing() {
               <span className="text-xs sm:text-sm">© 2025 AutoForce™ by Drill Consulting 360. Enterprise-grade workforce automation.</span>
             </div>
             <div className="flex gap-4 sm:gap-6 text-xs text-gray-600">
-              <a href="/support" className="hover:text-emerald-600 transition-colors" data-testid="link-support">
+              <a href="/support" className="hover:text-blue-600 transition-colors" data-testid="link-support">
                 Support Center
               </a>
-              <a href="/contact" className="hover:text-emerald-600 transition-colors" data-testid="link-contact">
+              <a href="/contact" className="hover:text-blue-600 transition-colors" data-testid="link-contact">
                 Contact Us
               </a>
-              <a href="#" className="hover:text-emerald-600 transition-colors">
+              <a href="#" className="hover:text-blue-600 transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-emerald-600 transition-colors">
+              <a href="#" className="hover:text-blue-600 transition-colors">
                 Terms
               </a>
             </div>

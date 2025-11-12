@@ -32,8 +32,8 @@ const statusConfig: Record<TicketStatus, {
   assigned: {
     label: 'Assigned',
     icon: Clock,
-    color: 'text-amber-600 dark:text-amber-400',
-    bgColor: 'bg-amber-100 dark:bg-amber-950/30'
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-100 dark:bg-blue-950/30'
   },
   investigating: {
     label: 'Investigating',
@@ -50,8 +50,8 @@ const statusConfig: Record<TicketStatus, {
   resolved: {
     label: 'Resolved',
     icon: CheckCircle,
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-100 dark:bg-green-950/30'
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-100 dark:bg-blue-950/30'
   },
   escalated: {
     label: 'Escalated',
@@ -64,7 +64,7 @@ const statusConfig: Record<TicketStatus, {
 const priorityConfig = {
   low: { label: 'Low', color: 'bg-gray-500' },
   normal: { label: 'Normal', color: 'bg-blue-500' },
-  high: { label: 'High', color: 'bg-amber-500' },
+  high: { label: 'High', color: 'bg-blue-500' },
   urgent: { label: 'Urgent', color: 'bg-red-500' }
 };
 

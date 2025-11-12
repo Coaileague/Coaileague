@@ -132,7 +132,7 @@ export function SupportChatroomList() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Participants</CardTitle>
-              <Users className="h-4 w-4 text-teal-500" />
+              <Users className="h-4 w-4 text-blue-500" />
             </div>
           </CardHeader>
           <CardContent>
@@ -146,7 +146,7 @@ export function SupportChatroomList() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-muted-foreground">Unread Messages</CardTitle>
-              <MessageCircle className="h-4 w-4 text-amber-500" />
+              <MessageCircle className="h-4 w-4 text-blue-500" />
             </div>
           </CardHeader>
           <CardContent>

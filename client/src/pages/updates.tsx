@@ -73,7 +73,7 @@ export default function Updates() {
   const getCategoryColor = (category: Update["category"]) => {
     switch (category) {
       case "feature": return "bg-blue-500/10 text-blue-500";
-      case "improvement": return "bg-muted/10 text-green-500";
+      case "improvement": return "bg-muted/10 text-blue-500";
       case "bugfix": return "bg-orange-500/10 text-orange-500";
       case "security": return "bg-red-500/10 text-red-500";
     }

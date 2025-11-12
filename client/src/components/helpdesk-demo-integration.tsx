@@ -127,13 +127,13 @@ export function HelpDeskEnhancedDemo() {
 
               {/* Sample agent message */}
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
+                <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
                   SJ
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-sm">Sarah Johnson</span>
-                    <span className="text-xs text-green-600">Support</span>
+                    <span className="text-xs text-blue-600">Support</span>
                     <span className="text-xs text-muted-foreground">1 minute ago</span>
                   </div>
                   <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm">

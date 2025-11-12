@@ -132,10 +132,10 @@ export function AppSidebar() {
                                 {route.label}
                               </span>
                               <div className="ml-auto flex items-center gap-1">
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/50 text-blue-600 dark:text-blue-400">
                                   {route.badge}
                                 </Badge>
-                                <Lock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                <Lock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                               </div>
                             </div>
                           </SidebarMenuButton>
@@ -145,7 +145,7 @@ export function AppSidebar() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {route.description}
                           </p>
-                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                             Requires {route.badge} tier or higher
                           </p>
                         </TooltipContent>

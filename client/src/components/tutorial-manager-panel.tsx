@@ -222,8 +222,8 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
     const colors = {
       account: 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100',
       security: 'bg-red-100 text-red-900 dark:bg-red-900/30 dark:text-red-100',
-      password: 'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-100',
-      access: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100',
+      password: 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100',
+      access: 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100',
       verification: 'bg-purple-100 text-purple-900 dark:bg-purple-900/30 dark:text-purple-100'
     };
     return colors[category];
@@ -232,7 +232,7 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
   const getDifficultyColor = (difficulty: Tutorial['difficulty']) => {
     const colors = {
       easy: 'text-primary dark:text-primary',
-      medium: 'text-amber-600 dark:text-amber-400',
+      medium: 'text-blue-600 dark:text-blue-400',
       hard: 'text-red-600 dark:text-red-400'
     };
     return colors[difficulty];

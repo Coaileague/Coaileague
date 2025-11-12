@@ -28,7 +28,7 @@ export default function GrowthFamilyPage() {
       description: "Employee engagement analytics with pulse surveys, feedback loops, and recognition programs",
       features: ["Pulse Surveys", "Feedback Loops", "Recognition", "Sentiment Analysis"],
       url: "/engagement/dashboard",
-      color: "from-rose-500 to-red-500"
+      color: "from-blue-500 to-indigo-500"
     },
     {
       name: "AnalyticsOS™",
@@ -36,7 +36,7 @@ export default function GrowthFamilyPage() {
       description: "Real-time workforce analytics with predictive insights and customizable dashboards",
       features: ["Real-time Dashboards", "Predictive Analytics", "Custom Reports", "KPI Tracking"],
       url: "/analytics",
-      color: "from-cyan-500 to-blue-500"
+      color: "from-blue-500 to-blue-600"
     },
     {
       name: "ReportOS™",

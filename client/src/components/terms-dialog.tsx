@@ -80,7 +80,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
                 This AutoForce™ Support Chat provides real-time customer support, technical assistance, and general inquiries. 
                 This is a professional business communication channel operated by AutoForce™.
               </p>
-              <p className="font-semibold text-amber-400 mb-2">IMPORTANT:</p>
+              <p className="font-semibold text-blue-400 mb-2">IMPORTANT:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>We do NOT guarantee every issue will be resolved immediately or at all</li>
                 <li>Some issues may require platform upgrades, updates, or extended development time</li>
@@ -165,7 +165,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
 
             <section>
               <h3 className="font-bold text-base text-white mb-2">7. TAXES & PRICING</h3>
-              <p className="mb-2 font-semibold text-amber-400">
+              <p className="mb-2 font-semibold text-blue-400">
                 ALL PRICES EXCLUDE TAXES. YOU ARE RESPONSIBLE FOR ALL APPLICABLE TAXES.
               </p>
               <p className="mb-2">
@@ -189,12 +189,12 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
               </p>
             </section>
 
-            <section className="bg-gradient-to-r from-amber-600 to-orange-600 border-l-4 border-white p-3 rounded shadow-md">
+            <section className="bg-gradient-to-r from-blue-600 to-indigo-600 border-l-4 border-white p-3 rounded shadow-md">
               <div className="flex gap-2">
                 <AlertCircle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-white">BINDING LEGAL AGREEMENT</p>
-                  <p className="text-xs text-amber-50 mt-1">
+                  <p className="text-xs text-blue-50 mt-1">
                     By clicking "Accept", you create a legally binding agreement. Your acceptance is recorded with timestamp and IP address.
                     Your SOLE REMEDY is to DISCONTINUE USE of this service.
                   </p>

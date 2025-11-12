@@ -127,8 +127,8 @@ export function SlingMobileSchedule({
       return "bg-gray-400 border-gray-300";
     }
     if (shift.status === "draft") {
-      // Draft - beige/tan
-      return "bg-amber-200 border-amber-300 text-amber-900";
+      // Draft - blue
+      return "bg-blue-200 border-blue-300 text-blue-900";
     }
     // Published - red/salmon
     return "bg-red-400 border-red-500";
@@ -182,7 +182,7 @@ export function SlingMobileSchedule({
 
         {/* Status badge */}
         {shift.status === "draft" && (
-          <Badge className="mt-2 text-xs bg-amber-600 text-white">DRAFT</Badge>
+          <Badge className="mt-2 text-xs bg-blue-600 text-white">DRAFT</Badge>
         )}
       </div>
     );

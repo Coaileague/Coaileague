@@ -33,12 +33,12 @@ export function UniversalTransitionOverlay({
   const statusConfig = {
     loading: {
       icon: <Loader2 className="w-12 h-12 text-primary animate-spin" />,
-      color: "from-primary/20 to-green-500/20",
+      color: "from-primary/20 to-blue-500/20",
       borderColor: "border-primary/30"
     },
     success: {
       icon: <CheckCircle className="w-12 h-12 text-primary" />,
-      color: "from-primary/20 to-green-500/20",
+      color: "from-primary/20 to-blue-500/20",
       borderColor: "border-primary/30"
     },
     error: {
@@ -48,7 +48,7 @@ export function UniversalTransitionOverlay({
     },
     info: {
       icon: <AlertCircle className="w-12 h-12 text-primary" />,
-      color: "from-primary/20 to-green-500/20",
+      color: "from-primary/20 to-blue-500/20",
       borderColor: "border-primary/30"
     }
   };
@@ -80,7 +80,7 @@ export function UniversalTransitionOverlay({
               }}
             />
             <motion.div 
-              className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-600 rounded-full filter blur-3xl"
+              className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
                 opacity: [0.2, 0.4, 0.2]

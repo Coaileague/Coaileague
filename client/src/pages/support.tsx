@@ -66,8 +66,8 @@ export default function Support() {
       icon: FileText,
       title: "Knowledge Base",
       description: "Common solutions and best practices",
-      bgColor: "bg-cyan-50",
-      textColor: "text-cyan-600",
+      bgColor: "bg-blue-50",
+      textColor: "text-blue-600",
       items: [
         "Troubleshooting Guide",
         "Feature Comparisons",
@@ -79,8 +79,8 @@ export default function Support() {
       icon: Keyboard,
       title: "Keyboard Shortcuts",
       description: "Boost productivity with shortcuts",
-      bgColor: "bg-green-50",
-      textColor: "text-green-600",
+      bgColor: "bg-blue-50",
+      textColor: "text-blue-600",
       items: [
         "Navigation Shortcuts",
         "Quick Actions (Ctrl+K)",
@@ -167,7 +167,7 @@ export default function Support() {
           <Button
             size="sm"
             onClick={() => window.location.href = "/api/login"}
-            className="h-8 text-xs bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-md"
+            className="h-8 text-xs bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white shadow-md"
             data-testid="button-launch-platform"
           >
             Launch Platform
@@ -176,14 +176,14 @@ export default function Support() {
       </nav>
 
       {/* Support Hero */}
-      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
         <div className="text-center space-y-4 mb-12">
           <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
+            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
             <span className="text-xs uppercase tracking-wider text-gray-500 font-mono">
               Help Center
             </span>
-            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
+            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900" data-testid="heading-support">
             How Can We Help?
@@ -424,7 +424,7 @@ export default function Support() {
           </Card>
 
           <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4">
-            <Video className="h-8 w-8 text-green-600" />
+            <Video className="h-8 w-8 text-blue-600" />
             <div className="space-y-2">
               <h3 className="font-semibold text-gray-900">Video Walkthrough</h3>
               <p className="text-sm text-gray-600">
@@ -433,7 +433,7 @@ export default function Support() {
             </div>
             <Button
               variant="outline"
-              className="w-full border-green-600 text-green-600 hover:bg-green-50"
+              className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
               data-testid="button-watch-tutorials"
               onClick={() => window.location.href = "/api/demo-login"}
             >

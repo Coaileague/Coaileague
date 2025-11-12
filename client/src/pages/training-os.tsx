@@ -171,7 +171,7 @@ export default function TrainingOS() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
               <GraduationCap className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -207,7 +207,7 @@ export default function TrainingOS() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Play className="h-4 w-4 text-green-500" />
+              <Play className="h-4 w-4 text-blue-500" />
               In Progress
             </CardTitle>
           </CardHeader>

@@ -73,7 +73,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'promo',
     bannerIcon: 'heart',
     effect: 'hearts',
-    gradient: 'from-pink-600 to-rose-700'
+    gradient: 'from-pink-600 to-blue-700'
   },
   {
     id: 'spring-sale',
@@ -84,7 +84,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'promo',
     bannerIcon: 'star',
     effect: 'none',
-    gradient: 'from-green-600 to-accent'
+    gradient: 'from-blue-600 to-accent'
   },
   {
     id: 'independence',
@@ -106,7 +106,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'info',
     bannerIcon: 'trending',
     effect: 'none',
-    gradient: 'from-orange-600 to-amber-700'
+    gradient: 'from-orange-600 to-blue-700'
   },
   {
     id: 'halloween',
@@ -128,7 +128,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'success',
     bannerIcon: 'award',
     effect: 'none',
-    gradient: 'from-amber-600 to-orange-700'
+    gradient: 'from-blue-600 to-orange-700'
   },
   {
     id: 'black-friday',
@@ -150,7 +150,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'promo',
     bannerIcon: 'zap',
     effect: 'fireworks',
-    gradient: 'from-blue-600 to-cyan-700'
+    gradient: 'from-blue-600 to-blue-700'
   },
   {
     id: 'christmas',
@@ -161,7 +161,7 @@ const HOLIDAY_TEMPLATES: HolidayTemplate[] = [
     type: 'promo',
     bannerIcon: 'star',
     effect: 'snow',
-    gradient: 'from-red-600 to-green-700'
+    gradient: 'from-red-600 to-blue-700'
   },
   {
     id: 'year-end',
@@ -456,7 +456,7 @@ export function BannerManager({
                       <div className={`h-1 ${
                         banner.type === 'info' ? 'bg-blue-600' :
                         banner.type === 'warning' ? 'bg-yellow-600' :
-                        banner.type === 'success' ? 'bg-green-600' :
+                        banner.type === 'success' ? 'bg-blue-600' :
                         'bg-purple-600'
                       }`} />
                       <CardContent className="p-4">

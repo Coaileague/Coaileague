@@ -219,7 +219,7 @@ export function UserDiagnosticsPanel({
                 <div className="text-xs text-muted-foreground">Active</div>
               </div>
               <div className="text-center p-2 bg-card rounded-md border">
-                <div className="text-lg font-bold text-green-500" data-testid="text-resolved-tickets">
+                <div className="text-lg font-bold text-blue-500" data-testid="text-resolved-tickets">
                   {userContext.tickets?.history?.length || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Resolved</div>

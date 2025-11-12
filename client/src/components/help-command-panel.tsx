@@ -32,11 +32,11 @@ const COMMAND_BOXES: CommandItem[] = [
   // Chat & Support
   { id: 'welcome', name: 'Welcome', description: 'Greet new users', icon: MessageSquare, color: 'from-blue-500 to-blue-600', action: '/welcome', staffOnly: true },
   { id: 'ai-intro', name: 'AI Intro', description: 'HelpOS™ greeting', icon: Sparkles, color: 'from-violet-500 to-purple-600', action: '/intro', staffOnly: true },
-  { id: 'details', name: 'Request Details', description: 'Ask for more info', icon: FileText, color: 'from-cyan-500 to-cyan-600', action: '/details', staffOnly: true },
+  { id: 'details', name: 'Request Details', description: 'Ask for more info', icon: FileText, color: 'from-blue-500 to-blue-600', action: '/details', staffOnly: true },
   { id: 'screenshot', name: 'Screenshot', description: 'Request screenshot', icon: Eye, color: 'from-primary to-accent', action: '/screenshot', staffOnly: true },
   
   // User Management
-  { id: 'spectate', name: 'Hold User', description: 'Put on hold (silence)', icon: EyeOff, color: 'from-amber-500 to-amber-600', action: '/spectate', staffOnly: true },
+  { id: 'spectate', name: 'Hold User', description: 'Put on hold (silence)', icon: EyeOff, color: 'from-blue-500 to-blue-600', action: '/spectate', staffOnly: true },
   { id: 'release', name: 'Release Hold', description: 'Release from hold', icon: Eye, color: 'from-primary to-accent', action: '/release', staffOnly: true },
   { id: 'mute', name: 'Mute', description: 'Mute user', icon: VolumeX, color: 'from-red-500 to-red-600', action: '/mute', staffOnly: true },
   { id: 'kick', name: 'Kick User', description: 'Remove from chat', icon: UserX, color: 'from-rose-500 to-rose-600', action: '/kick', staffOnly: true },

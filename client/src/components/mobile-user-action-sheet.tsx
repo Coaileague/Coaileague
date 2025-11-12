@@ -54,7 +54,7 @@ const STAFF_USER_ACTIONS = [
     command: '/verify',
     icon: UserCheck,
     description: 'Check database',
-    color: 'text-green-500',
+    color: 'text-blue-500',
   },
   {
     id: 'silence',
@@ -70,7 +70,7 @@ const STAFF_USER_ACTIONS = [
     type: 'websocket',
     icon: Volume2,
     description: 'Restore voice',
-    color: 'text-green-500',
+    color: 'text-blue-500',
   },
   {
     id: 'resetpass',

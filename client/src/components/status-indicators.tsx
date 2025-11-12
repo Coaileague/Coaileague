@@ -39,7 +39,7 @@ export function StatusIndicators() {
       )}
 
       {isOnline && syncStatus === 'synced' && (
-        <Badge variant="outline" className="gap-1 border-primary/50 text-green-600 dark:text-green-400">
+        <Badge variant="outline" className="gap-1 border-primary/50 text-blue-600 dark:text-blue-400">
           <CheckCircle className="h-3 w-3" />
           <span className="hidden sm:inline">Synced</span>
         </Badge>

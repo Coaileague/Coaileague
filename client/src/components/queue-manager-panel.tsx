@@ -104,7 +104,7 @@ export function QueueManagerPanel({
 
   const getStatusColor = (status: QueueUser['status']) => {
     switch (status) {
-      case 'priority': return 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100';
+      case 'priority': return 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100';
       case 'vip': return 'bg-purple-100 text-purple-900 dark:bg-purple-900/30 dark:text-purple-100';
       case 'silenced': return 'bg-red-100 text-red-900 dark:bg-red-900/30 dark:text-red-100';
       default: return 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100';
@@ -113,9 +113,9 @@ export function QueueManagerPanel({
 
   const getTierBadge = (tier?: string) => {
     const tierColors = {
-      elite: 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black',
+      elite: 'bg-gradient-to-r from-blue-400 to-blue-500 text-white',
       enterprise: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white',
-      professional: 'bg-gradient-to-r from-green-500 to-accent text-white',
+      professional: 'bg-gradient-to-r from-blue-500 to-accent text-white',
       free: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
     };
     return tierColors[tier as keyof typeof tierColors] || tierColors.free;
@@ -189,7 +189,7 @@ export function QueueManagerPanel({
                                   {user.name}
                                 </span>
                                 {user.status === 'vip' && (
-                                  <Sparkles className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                  <Sparkles className="w-3 h-3 text-blue-500 flex-shrink-0" />
                                 )}
                               </div>
                               

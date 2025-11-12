@@ -229,7 +229,7 @@ export default function IntegrationOS() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className="h-4 w-4 text-blue-500" />
               Active Connections
             </CardTitle>
           </CardHeader>

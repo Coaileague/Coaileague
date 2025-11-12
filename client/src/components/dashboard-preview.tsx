@@ -25,7 +25,7 @@ export function DashboardPreview() {
           <div className="text-2xl font-bold text-white">142</div>
         </Card>
 
-        <Card className="bg-gradient-to-br from-primary/10 to-green-500/5 border-primary/20 p-3">
+        <Card className="bg-gradient-to-br from-primary/10 to-blue-500/5 border-primary/20 p-3">
           <div className="flex items-center justify-between mb-2">
             <DollarSign className="h-4 w-4 text-primary" />
           </div>
@@ -41,9 +41,9 @@ export function DashboardPreview() {
           <div className="text-2xl font-bold text-white">98</div>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border-amber-500/20 p-3">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-yellow-500/5 border-blue-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="h-4 w-4 text-amber-400" />
+            <TrendingUp className="h-4 w-4 text-blue-400" />
           </div>
           <div className="text-xs text-slate-300">Growth</div>
           <div className="text-2xl font-bold text-white">+18%</div>

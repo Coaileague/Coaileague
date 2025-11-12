@@ -228,7 +228,7 @@ export default function Employees() {
     }
     if (status === 'completed') {
       return (
-        <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700">
+        <Badge variant="default" className="text-xs bg-blue-600 hover:bg-blue-700">
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Completed
         </Badge>
@@ -651,7 +651,7 @@ export default function Employees() {
               <Button
                 onClick={handleApproveEmployee}
                 disabled={approveMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-blue-600 hover:bg-blue-700"
                 data-testid="button-confirm-approval"
               >
                 {approveMutation.isPending ? "Approving..." : "Approve & Activate"}

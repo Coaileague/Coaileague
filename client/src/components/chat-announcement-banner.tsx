@@ -248,8 +248,8 @@ export function ChatAnnouncementBanner({
   // Special styling for incident/maintenance messages
   const isSpecialStatus = currentMessage.type === 'incident' || currentMessage.type === 'maintenance';
   const backgroundClass = isSpecialStatus 
-    ? 'bg-emerald-700' 
-    : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600';
+    ? 'bg-blue-700' 
+    : 'bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600';
 
   const BannerContent = (
     <div className={`
@@ -294,7 +294,7 @@ export function ChatAnnouncementBanner({
           
           {/* Progress bar for incident/maintenance messages */}
           {isSpecialStatus && currentMessage.progress !== undefined && (
-            <div className="mt-2 w-full bg-emerald-900/30 rounded-full h-2 overflow-hidden">
+            <div className="mt-2 w-full bg-blue-900/30 rounded-full h-2 overflow-hidden">
               <div 
                 className="bg-white h-full rounded-full transition-all duration-500"
                 style={{ width: `${currentMessage.progress}%` }}
@@ -313,8 +313,8 @@ export function ChatAnnouncementBanner({
                 w-2.5 h-2.5 rounded-full transition-all duration-300 relative
                 ${index === currentIndex 
                   ? seasonalAnimationsEnabled 
-                    ? 'w-6 h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 animate-bounce' 
-                    : 'w-6 h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500'
+                    ? 'w-6 h-2.5 bg-gradient-to-r from-blue-400 via-blue-500 to-purple-500 animate-bounce' 
+                    : 'w-6 h-2.5 bg-gradient-to-r from-blue-400 via-blue-500 to-purple-500'
                   : 'bg-white/40'}
               `}
               style={seasonalAnimationsEnabled && index === currentIndex ? {

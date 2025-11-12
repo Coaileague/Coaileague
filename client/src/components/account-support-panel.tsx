@@ -68,7 +68,7 @@ export function AccountSupportPanel({
   const getStatusColor = (status: AccountInfo['status']) => {
     switch (status) {
       case 'active': return 'bg-muted/50 text-foreground dark:bg-slate-900/30';
-      case 'locked': return 'bg-amber-100 text-amber-900 dark:bg-amber-900/30';
+      case 'locked': return 'bg-blue-100 text-blue-900 dark:bg-blue-900/30';
       case 'suspended': return 'bg-rose-100 text-rose-900 dark:bg-rose-900/30';
       case 'pending': return 'bg-blue-100 text-blue-900 dark:bg-blue-900/30';
       default: return 'bg-slate-100 text-slate-900';
@@ -79,7 +79,7 @@ export function AccountSupportPanel({
     switch (tier) {
       case 'elite': return 'bg-purple-100 text-purple-900 border-purple-300';
       case 'enterprise': return 'bg-blue-100 text-blue-900 border-blue-300';
-      case 'professional': return 'bg-amber-100 text-amber-900 border-amber-300';
+      case 'professional': return 'bg-blue-100 text-blue-900 border-blue-300';
       case 'free': return 'bg-slate-100 text-slate-900 border-slate-300';
     }
   };
@@ -264,7 +264,7 @@ export function AccountSupportPanel({
                       {/* Lock Account */}
                       <Button 
                         variant="outline" 
-                        className="justify-start text-amber-700 border-amber-300"
+                        className="justify-start text-blue-700 border-blue-300"
                         onClick={() => handleAction('lock_account')}
                         data-testid="button-lock-account"
                       >

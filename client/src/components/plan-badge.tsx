@@ -23,7 +23,7 @@ export function PlanBadge() {
     free: { label: 'Free', icon: null, color: 'bg-gray-500' },
     basic: { label: 'Basic', icon: Zap, color: 'bg-blue-500' },
     professional: { label: 'Professional', icon: Crown, color: 'bg-purple-500' },
-    enterprise: { label: 'Enterprise', icon: Crown, color: 'bg-amber-500' },
+    enterprise: { label: 'Enterprise', icon: Crown, color: 'bg-blue-500' },
   };
 
   const config = tierConfig[tier] || tierConfig.free;

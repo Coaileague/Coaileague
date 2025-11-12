@@ -330,7 +330,7 @@ export default function RoleManagement() {
                       HR Manager
                     </div>
                     <div className="flex items-center gap-2">
-                      <Shield className="h-3 w-3 text-green-500" />
+                      <Shield className="h-3 w-3 text-blue-500" />
                       Supervisor
                     </div>
                     <div className="flex items-center gap-2">

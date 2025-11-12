@@ -439,17 +439,17 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
 
             {/* Post Orders / Acknowledgments Alert */}
             {shiftAcknowledgments.length > 0 && shiftAcknowledgments.some(a => !a.acknowledgedAt) && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-amber-900">Post Orders Require Acknowledgment</p>
-                    <p className="text-xs text-amber-700 mt-1">
+                    <p className="text-sm font-semibold text-blue-900">Post Orders Require Acknowledgment</p>
+                    <p className="text-xs text-blue-700 mt-1">
                       You must acknowledge {shiftAcknowledgments.filter(a => !a.acknowledgedAt).length} post order(s) before clocking in
                     </p>
                     <Button
                       size="sm"
-                      className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+                      className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
                       onClick={() => setShowAcknowledgmentDialog(true)}
                       data-testid="button-view-acknowledgments"
                     >
@@ -656,8 +656,8 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                     key={ack.id}
                     className={`p-4 rounded-lg border ${
                       ack.acknowledgedAt
-                        ? 'bg-muted/30 border-green-200'
-                        : 'bg-amber-50 border-amber-200'
+                        ? 'bg-muted/30 border-blue-200'
+                        : 'bg-blue-50 border-blue-200'
                     }`}
                     data-testid={`acknowledgment-${ack.id}`}
                   >
@@ -667,14 +667,14 @@ export function MobileShiftCalendar({ onCreateShift }: MobileShiftCalendarProps)
                         <p className="text-sm text-gray-600 mt-1">{ack.content}</p>
                       </div>
                       {ack.acknowledgedAt ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
                       ) : (
-                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
                       )}
                     </div>
 
                     {ack.acknowledgedAt ? (
-                      <div className="text-xs text-green-700 mt-2 flex items-center gap-1">
+                      <div className="text-xs text-blue-700 mt-2 flex items-center gap-1">
                         <CheckCircle className="h-3 w-3" />
                         Acknowledged on {format(new Date(ack.acknowledgedAt), 'MMM d, yyyy h:mm a')}
                       </div>

@@ -271,16 +271,16 @@ export function MasterKeysPanel() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gradient-to-br from-amber-900/20 to-orange-900/20 border-amber-500/30">
+      <Card className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border-blue-500/30">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <Key className="h-6 w-6 text-amber-400" />
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <Key className="h-6 w-6 text-blue-400" />
               </div>
               <div>
                 <CardTitle className="text-white">Master Keys</CardTitle>
-                <CardDescription className="text-amber-200/70">
+                <CardDescription className="text-blue-200/70">
                   ROOT-Only Organization Management
                 </CardDescription>
               </div>
@@ -382,7 +382,7 @@ export function MasterKeysPanel() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-amber-500" />
+              <Key className="h-5 w-5 text-blue-500" />
               Master Keys: {selectedOrg?.companyName || selectedOrg?.name}
             </DialogTitle>
             <DialogDescription>

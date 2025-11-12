@@ -86,7 +86,7 @@ export default function EmployeePortal() {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
         <div className="p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          <AlertCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Employee Profile Not Found</h2>
           <p className="text-muted-foreground">
             You need to be registered as an employee to access the portal.
@@ -388,7 +388,7 @@ export default function EmployeePortal() {
 
                   <div className="flex items-center justify-between p-4 rounded-lg border border-border opacity-50">
                     <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-amber-500" />
+                      <FileText className="h-5 w-5 text-blue-500" />
                       <div>
                         <p className="font-medium">Latest Payslip</p>
                         <p className="text-sm text-muted-foreground">Available after payroll processing</p>

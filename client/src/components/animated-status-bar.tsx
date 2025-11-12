@@ -10,7 +10,7 @@ interface AnimatedStatusBarProps {
 }
 
 const SILENCED_MESSAGES = [
-  { text: "You are silenced - Please wait until support staff helps you", icon: AlertCircle, color: "text-amber-600" },
+  { text: "You are silenced - Please wait until support staff helps you", icon: AlertCircle, color: "text-blue-600" },
   { text: "Please wait... A support representative will be with you shortly", icon: Clock, color: "text-blue-600" },
   { text: "We appreciate your patience - You'll be able to speak soon", icon: MessageSquare, color: "text-purple-600" },
   { text: "Support staff is reviewing your request", icon: Shield, color: "text-primary" },
@@ -51,7 +51,7 @@ export function AnimatedStatusBar({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex items-center gap-2 text-sm font-semibold text-green-600"
+        className="flex items-center gap-2 text-sm font-semibold text-blue-600"
         data-testid="voice-granted-message"
       >
         <CheckCircle className="w-4 h-4 animate-pulse" />

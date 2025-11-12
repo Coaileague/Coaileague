@@ -587,7 +587,7 @@ export default function ExpensesPage() {
                     <CardTitle className="text-lg">{expense.description}</CardTitle>
                     <CardDescription>{format(new Date(expense.expenseDate), "MMM dd, yyyy")}</CardDescription>
                   </div>
-                  <div className="text-2xl font-bold text-green-600">${parseFloat(expense.amount).toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-blue-600">${parseFloat(expense.amount).toFixed(2)}</div>
                 </div>
               </CardHeader>
             </Card>

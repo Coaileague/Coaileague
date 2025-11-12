@@ -257,7 +257,7 @@ export default function EngagementDashboard() {
         <Card className="mobile-card-enter">
           <CardHeader className="pb-1.5 sm:pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2">
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
               <span className="truncate">Employer Score</span>
             </CardTitle>
           </CardHeader>
@@ -310,7 +310,7 @@ export default function EngagementDashboard() {
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm font-medium text-muted-foreground">Stable</div>
-                      <div className="text-2xl font-bold text-green-500">
+                      <div className="text-2xl font-bold text-blue-500">
                         {healthScores.filter(s => s.riskLevel === 'low' || s.riskLevel === 'minimal').length}
                       </div>
                     </div>
@@ -537,7 +537,7 @@ export default function EngagementDashboard() {
 
                           {rating.positiveComments && (
                             <div className="bg-muted/50 p-3 rounded text-sm">
-                              <div className="font-medium text-green-600 dark:text-green-400 mb-1">Positive:</div>
+                              <div className="font-medium text-blue-600 dark:text-blue-400 mb-1">Positive:</div>
                               <p className="text-muted-foreground">{rating.positiveComments}</p>
                             </div>
                           )}

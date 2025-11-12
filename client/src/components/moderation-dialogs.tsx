@@ -82,13 +82,13 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
         {step === 1 ? (
           <>
             <DialogDescription className="text-sm text-slate-700 dark:text-slate-300 py-2">
-              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-amber-900 dark:text-amber-200">
+                  <p className="font-medium text-blue-900 dark:text-blue-200">
                     Are you sure you want to remove <strong>{userName}</strong> from the chat?
                   </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
                     This will immediately disconnect them from the support session. You'll be asked to provide a reason on the next screen.
                   </p>
                 </div>
@@ -343,7 +343,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
               </Button>
               <Button
                 onClick={handleConfirmSilence}
-                className="bg-gradient-to-r from-amber-600 to-amber-700"
+                className="bg-gradient-to-r from-blue-600 to-blue-700"
                 data-testid="button-confirm-silence"
               >
                 Silence for {duration}m

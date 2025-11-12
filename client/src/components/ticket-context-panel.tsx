@@ -46,7 +46,7 @@ const tierColors = {
   free: 'bg-gray-500',
   starter: 'bg-blue-500',
   professional: 'bg-purple-500',
-  enterprise: 'bg-amber-500'
+  enterprise: 'bg-blue-500'
 };
 
 const statusIcons = {

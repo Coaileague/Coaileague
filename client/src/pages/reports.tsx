@@ -451,7 +451,7 @@ export default function ReportsPage() {
         return <Clock className="w-4 h-4 text-yellow-500" />;
       case "approved":
       case "sent_to_customer":
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle2 className="w-4 h-4 text-blue-500" />;
       case "rejected":
         return <XCircle className="w-4 h-4 text-red-500" />;
       default:
@@ -612,10 +612,10 @@ export default function ReportsPage() {
           <Card className="mobile-card-enter">
             <CardHeader className="flex flex-row items-center justify-between gap-1 sm:gap-2 space-y-0 pb-1.5 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium truncate">Approved</CardTitle>
-              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
             </CardHeader>
             <CardContent className="pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl font-bold text-green-500" data-testid="stat-approved-reports">{approvedReports.length}</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-500" data-testid="stat-approved-reports">{approvedReports.length}</div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Ready for customers
               </p>

@@ -345,7 +345,7 @@ function DraggableShiftCard({ shift, employee, client, onAddAcknowledgment }: {
       className={`
         w-full rounded-md p-3 mb-2 cursor-grab active:cursor-grabbing relative group
         transition-all
-        ${isDraft ? 'bg-gradient-to-br from-amber-500 to-amber-600 border-2 border-amber-400 animate-pulse' : ''}
+        ${isDraft ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-400 animate-pulse' : ''}
         ${isPublished && !isOpen ? 'bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-400' : ''}
         ${isOpen ? 'bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-dashed border-purple-400' : ''}
         ${isDragging ? 'opacity-50' : 'hover-elevate active-elevate-2'}
@@ -1339,7 +1339,7 @@ export default function ScheduleGrid() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-7 w-7 text-amber-500" 
+                  className="h-7 w-7 text-blue-500" 
                   onClick={() => {
                     toast({
                       title: "Report a Bug",
@@ -1472,7 +1472,7 @@ export default function ScheduleGrid() {
                 <span data-testid="stat-open-shifts">{visibleShifts.filter(s => !s.employeeId).length}</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
                 <span data-testid="stat-draft-shifts">{visibleShifts.filter(s => s.status === 'draft').length}</span>
               </div>
             </div>
@@ -1541,7 +1541,7 @@ export default function ScheduleGrid() {
             <span className="text-muted-foreground">Published</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded bg-gradient-to-br from-amber-500 to-amber-600"></div>
+            <div className="h-3 w-3 rounded bg-gradient-to-br from-blue-500 to-blue-600"></div>
             <span className="text-muted-foreground">Draft</span>
           </div>
           <div className="flex items-center gap-1.5">

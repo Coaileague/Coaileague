@@ -111,7 +111,7 @@ export default function Analytics() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full filter blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
@@ -159,7 +159,7 @@ export default function Analytics() {
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Total Revenue */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-primary/10 to-green-500/5 border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20" data-testid="card-revenue">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-primary/10 to-blue-500/5 border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20" data-testid="card-revenue">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-muted/20 rounded-xl group-hover:scale-110 transition-transform">
                 <DollarSign className="w-6 h-6 text-primary" />
@@ -174,7 +174,7 @@ export default function Analytics() {
           </div>
 
           {/* Hours Worked */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-hours">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-hours">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6 text-blue-400" />
@@ -315,7 +315,7 @@ export default function Analytics() {
                 </div>
                 <div className="w-full bg-slate-800/50 rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-primary to-green-500 h-3 rounded-full transition-all duration-500 shadow-lg shadow-primary/30"
+                    className="bg-gradient-to-r from-primary to-blue-500 h-3 rounded-full transition-all duration-500 shadow-lg shadow-primary/30"
                     style={{ width: `${paidInvoiceRate}%` }}
                     data-testid="progress-payment-rate"
                   />
@@ -324,9 +324,9 @@ export default function Analytics() {
 
               {/* Outstanding */}
               <div className="pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <span className="text-sm text-slate-300">Draft/Sent</span>
-                  <span className="font-bold text-amber-400">
+                  <span className="font-bold text-blue-400">
                     {analytics.totalInvoices - analytics.paidInvoices}
                   </span>
                 </div>

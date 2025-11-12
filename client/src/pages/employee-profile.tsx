@@ -203,7 +203,7 @@ export default function EmployeeProfile() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Unlock className="h-5 w-5 text-green-600" />
+                  <Unlock className="h-5 w-5 text-blue-600" />
                   Contact Information (Editable)
                 </CardTitle>
                 <CardDescription>Keep your contact information up to date</CardDescription>
@@ -407,7 +407,7 @@ export default function EmployeeProfile() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-blue-600" />
                       <Badge variant="secondary">
                         <Lock className="h-3 w-3 mr-1" />
                         Locked

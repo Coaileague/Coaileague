@@ -84,7 +84,7 @@ export function NotificationsCenter() {
       case 'shift_assigned':
         return <Calendar className="h-4 w-4 text-blue-500" />;
       case 'pto_approved':
-        return <Check className="h-4 w-4 text-green-500" />;
+        return <Check className="h-4 w-4 text-blue-500" />;
       case 'pto_denied':
         return <X className="h-4 w-4 text-red-500" />;
       case 'schedule_change':

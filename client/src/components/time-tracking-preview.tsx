@@ -51,7 +51,7 @@ export function TimeTrackingPreview() {
               </div>
               <div className="text-right">
                 <div className="font-semibold text-sm">{entry.hours}h</div>
-                <div className="text-[10px] text-green-500">✓ Completed</div>
+                <div className="text-[10px] text-blue-500">✓ Completed</div>
               </div>
             </div>
           </Card>
@@ -65,7 +65,7 @@ export function TimeTrackingPreview() {
           <div className="text-[10px] text-muted-foreground">Hours Today</div>
         </div>
         <div>
-          <div className="text-lg font-bold text-green-500">$1,175</div>
+          <div className="text-lg font-bold text-blue-500">$1,175</div>
           <div className="text-[10px] text-muted-foreground">Revenue</div>
         </div>
       </div>

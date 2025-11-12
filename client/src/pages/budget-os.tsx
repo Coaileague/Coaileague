@@ -172,7 +172,7 @@ export default function BudgetOS() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-green-500" />
+              <Wallet className="h-4 w-4 text-blue-500" />
               Remaining
             </CardTitle>
           </CardHeader>
@@ -288,7 +288,7 @@ export default function BudgetOS() {
                         <p className="text-xs text-muted-foreground mb-1">Remaining</p>
                         <p
                           className={`text-sm font-bold ${
-                            budget.remaining < 0 ? "text-red-500" : "text-green-500"
+                            budget.remaining < 0 ? "text-red-500" : "text-blue-500"
                           }`}
                         >
                           ${Math.abs(budget.remaining / 1000).toFixed(0)}K
@@ -375,7 +375,7 @@ export default function BudgetOS() {
                           <p className="text-xs text-muted-foreground mb-1">Variance</p>
                           <p
                             className={`font-medium ${
-                              line.variance >= 0 ? "text-green-500" : "text-red-500"
+                              line.variance >= 0 ? "text-blue-500" : "text-red-500"
                             }`}
                           >
                             ${Math.abs(line.variance).toLocaleString()}

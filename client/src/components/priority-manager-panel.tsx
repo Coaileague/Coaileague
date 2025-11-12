@@ -104,7 +104,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
   const getTierInfo = (tier: PriorityUser['tier']) => {
     const tiers = {
       elite: {
-        color: 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black',
+        color: 'bg-gradient-to-r from-blue-400 to-blue-500 text-white',
         icon: Crown,
         priority: 'CRITICAL',
         sla: '< 2 min'
@@ -116,7 +116,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
         sla: '< 5 min'
       },
       professional: {
-        color: 'bg-gradient-to-r from-green-500 to-accent text-white',
+        color: 'bg-gradient-to-r from-blue-500 to-accent text-white',
         icon: TrendingUp,
         priority: 'MEDIUM',
         sla: '< 15 min'
@@ -133,7 +133,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
 
   const getPriorityColor = (score: number) => {
     if (score >= 90) return 'text-red-600 dark:text-red-400';
-    if (score >= 75) return 'text-amber-600 dark:text-amber-400';
+    if (score >= 75) return 'text-blue-600 dark:text-blue-400';
     if (score >= 50) return 'text-blue-600 dark:text-blue-400';
     return 'text-slate-600 dark:text-slate-400';
   };
@@ -143,7 +143,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
       <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-amber-500" />
+            <Crown className="w-5 h-5 text-blue-500" />
             Priority Queue Manager
           </DialogTitle>
           <DialogDescription>
@@ -227,7 +227,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
                               <div className={`w-12 h-12 rounded-lg ${tierInfo.color} flex items-center justify-center relative`}>
                                 <TierIcon className="w-6 h-6" />
                                 {user.vipStatus && (
-                                  <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-amber-400" />
+                                  <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-blue-400" />
                                 )}
                               </div>
                             </div>
@@ -237,7 +237,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className="font-semibold text-sm truncate">{user.name}</h3>
                                 {user.vipStatus && (
-                                  <Badge className="bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100 text-[10px] px-1.5 py-0">
+                                  <Badge className="bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100 text-[10px] px-1.5 py-0">
                                     VIP
                                   </Badge>
                                 )}
@@ -294,7 +294,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
               <CardContent>
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div className="flex items-start gap-2">
-                    <ArrowUp className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <ArrowUp className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold">Tier Weight</p>
                       <p className="text-muted-foreground">Elite: 50pts, Enterprise: 40pts, Pro: 25pts, Free: 10pts</p>

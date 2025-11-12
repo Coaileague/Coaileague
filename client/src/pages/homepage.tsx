@@ -46,7 +46,7 @@ export default function Homepage() {
           <div className="flex items-center justify-between">
             <Link href="/">
               <a className="flex items-center gap-3 cursor-pointer" data-testid="nav-logo">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-lg flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                   <Cpu className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -66,7 +66,7 @@ export default function Homepage() {
               <Link href="/contact"><a className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium" data-testid="nav-link-contact">Contact</a></Link>
               <Link href="/login"><a className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium" data-testid="nav-link-login">Login</a></Link>
               <Link href="/register">
-                <a className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md text-sm" data-testid="nav-button-start-trial">
+                <a className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm" data-testid="nav-button-start-trial">
                   Start Free Trial
                 </a>
               </Link>
@@ -86,7 +86,7 @@ export default function Homepage() {
                 <Link href="/contact"><a className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium py-2" data-testid="mobile-link-contact">Contact</a></Link>
                 <Link href="/login"><a className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium py-2" data-testid="mobile-link-login">Login</a></Link>
                 <Link href="/register">
-                  <a className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md text-sm text-center" data-testid="mobile-button-start-trial">
+                  <a className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm text-center" data-testid="mobile-button-start-trial">
                     Start Free Trial
                   </a>
                 </Link>
@@ -97,47 +97,47 @@ export default function Homepage() {
       </nav>
 
       {/* Hero Section - Enhanced */}
-      <section className="pt-24 pb-20 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 relative overflow-hidden">
+      <section className="pt-24 pb-20 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
           <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-40 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-40 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-md">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-md">
                 <Zap className="w-4 h-4" />
                 AI-Powered Workforce Automation
               </div>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 Replace $100K+ in
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">
                   Administrative Salaries
                 </span>
               </h1>
               <p className="text-xl text-gray-700 mb-6 leading-relaxed">
                 Let <strong className="text-gray-900">finely-trained AI logic</strong> handle your scheduling, payroll processing, and client invoicing. 
-                <strong className="text-emerald-600"> Save hundreds of thousands annually</strong> on HR and admin staff.
+                <strong className="text-blue-600"> Save hundreds of thousands annually</strong> on HR and admin staff.
               </p>
               
               {/* ROI Calculator Style Box */}
-              <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-6 shadow-lg mb-8">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg mb-8">
                 <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
+                  <DollarSign className="w-5 h-5 text-blue-600" />
                   <span className="font-bold text-gray-900">Typical Annual Savings</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-3xl font-bold text-emerald-600 mb-1">$120K+</div>
+                    <div className="text-3xl font-bold text-blue-600 mb-1">$120K+</div>
                     <div className="text-sm text-gray-600">Eliminated salary costs</div>
                     <div className="text-xs text-gray-500 mt-1">2-3 admin positions replaced</div>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-emerald-600 mb-1">$48K+</div>
+                    <div className="text-3xl font-bold text-blue-600 mb-1">$48K+</div>
                     <div className="text-sm text-gray-600">Reduced overtime waste</div>
                     <div className="text-xs text-gray-500 mt-1">Optimized scheduling</div>
                   </div>
@@ -146,7 +146,7 @@ export default function Homepage() {
 
               <div className="flex flex-wrap gap-4 mb-8">
                 <Link href="/pricing">
-                  <a className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold hover:from-emerald-700 hover:to-green-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2" data-testid="button-calculate-savings">
+                  <a className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2" data-testid="button-calculate-savings">
                     Calculate Your Savings
                     <ArrowRight className="w-5 h-5" />
                   </a>
@@ -178,15 +178,15 @@ export default function Homepage() {
 
             {/* Right Column - Visual Demo */}
             <div className="relative">
-              <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-emerald-400 to-green-400 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-400 to-blue-400 rounded-full opacity-20 blur-2xl"></div>
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 relative">
                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                   <div className="flex items-center gap-2">
-                    <Cpu className="w-5 h-5 text-emerald-600" />
+                    <Cpu className="w-5 h-5 text-blue-600" />
                     <span className="font-bold text-gray-900">AI Workforce Engine</span>
                   </div>
-                  <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                     AI Running
                   </div>
                 </div>
@@ -202,7 +202,7 @@ export default function Homepage() {
                         <div className="text-xs font-semibold">Tech Support</div>
                         <div className="text-xs opacity-90 mt-1">9AM-5PM</div>
                       </div>
-                      <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-3 rounded-lg shadow-md hover-elevate active-elevate-2 cursor-pointer">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-3 rounded-lg shadow-md hover-elevate active-elevate-2 cursor-pointer">
                         <div className="text-xs font-semibold">Field Ops</div>
                         <div className="text-xs opacity-90 mt-1">1PM-9PM</div>
                       </div>
@@ -214,16 +214,16 @@ export default function Homepage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">
                       JD
                     </div>
                     <div className="flex-1 grid grid-cols-4 gap-2">
-                      <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white p-3 rounded-lg shadow-md hover-elevate active-elevate-2 cursor-pointer">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-3 rounded-lg shadow-md hover-elevate active-elevate-2 cursor-pointer">
                         <div className="text-xs font-semibold">Healthcare</div>
                         <div className="text-xs opacity-90 mt-1">8AM-4PM</div>
                       </div>
                       <div className="border-2 border-dashed border-gray-300 p-3 rounded-lg bg-gray-50"></div>
-                      <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white p-3 rounded-lg shadow-md hover-elevate active-elevate-2 cursor-pointer">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-3 rounded-lg shadow-md hover-elevate active-elevate-2 cursor-pointer">
                         <div className="text-xs font-semibold">Training</div>
                         <div className="text-xs opacity-90 mt-1">10AM-2PM</div>
                       </div>
@@ -250,17 +250,17 @@ export default function Homepage() {
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-lg p-3 mb-3">
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Cpu className="w-4 h-4 text-emerald-600" />
+                        <Cpu className="w-4 h-4 text-blue-600" />
                         <span className="text-sm font-semibold text-gray-700">AI Generated Schedule</span>
                       </div>
-                      <span className="text-xs font-bold text-emerald-600">100% Automated</span>
+                      <span className="text-xs font-bold text-blue-600">100% Automated</span>
                     </div>
                   </div>
                   <Link href="/register">
-                    <a className="block w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg font-semibold text-sm hover:from-emerald-600 hover:to-green-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl" data-testid="button-watch-demo">
+                    <a className="block w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl" data-testid="button-watch-demo">
                       <Play className="w-4 h-4" />
                       Watch AI Demo
                     </a>
@@ -269,13 +269,13 @@ export default function Homepage() {
               </div>
 
               {/* Floating Stats Badge */}
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-2xl border-2 border-emerald-200 p-4">
+              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-2xl border-2 border-blue-200 p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                     <DollarSign className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-emerald-600">$168K</div>
+                    <div className="text-2xl font-bold text-blue-600">$168K</div>
                     <div className="text-xs text-gray-500">Avg. Annual Savings</div>
                   </div>
                 </div>
@@ -299,24 +299,24 @@ export default function Homepage() {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
               <strong className="text-gray-900">Fire-and-forget AI systems</strong> that work 24/7 without sick days, vacations, or raises.
             </p>
-            <p className="text-lg text-emerald-600 font-bold">
+            <p className="text-lg text-blue-600 font-bold">
               Stop paying $40K-$70K salaries for tasks AI does better
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             {autonomousFeatures.map((feature, idx) => (
-              <div key={idx} className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-emerald-300 hover:shadow-2xl transition-all relative overflow-hidden">
+              <div key={idx} className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 hover:shadow-2xl transition-all relative overflow-hidden">
                 {/* Decorative gradient */}
                 <div className={`absolute top-0 right-0 w-32 h-32 opacity-10 blur-3xl ${
                   feature.color === 'blue' ? 'bg-blue-500' :
-                  feature.color === 'green' ? 'bg-emerald-500' :
+                  feature.color === 'green' ? 'bg-blue-500' :
                   'bg-purple-500'
                 }`}></div>
 
                 <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 shadow-lg ${
                   feature.color === 'blue' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
-                  feature.color === 'green' ? 'bg-gradient-to-br from-emerald-500 to-green-600' :
+                  feature.color === 'green' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
                   'bg-gradient-to-br from-purple-500 to-purple-600'
                 }`}>
                   <feature.icon className="w-8 h-8 text-white" />
@@ -334,9 +334,9 @@ export default function Homepage() {
                 <p className="text-gray-600 mb-6 leading-relaxed">{feature.description}</p>
                 
                 {/* Cost Replacement Highlight */}
-                <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg p-4 mb-4">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                    <DollarSign className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-bold text-gray-900">Replaces Human Staff</span>
                   </div>
                   <div className="text-xs text-gray-600 mb-1">
@@ -344,7 +344,7 @@ export default function Homepage() {
                     {idx === 1 && "Replaces payroll administrator role"}
                     {idx === 2 && "Removes billing clerk position"}
                   </div>
-                  <div className="text-lg font-bold text-emerald-600">
+                  <div className="text-lg font-bold text-blue-600">
                     {idx === 0 && "$50K-$80K saved annually"}
                     {idx === 1 && "$45K-$65K saved annually"}
                     {idx === 2 && "$40K-$60K saved annually"}
@@ -354,19 +354,19 @@ export default function Homepage() {
                 <div className="space-y-3 mb-6">
                   <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                     feature.color === 'blue' ? 'bg-blue-50' :
-                    feature.color === 'green' ? 'bg-emerald-50' :
+                    feature.color === 'green' ? 'bg-blue-50' :
                     'bg-purple-50'
                   }`}>
                     <CheckCircle className={`w-5 h-5 ${
                       feature.color === 'blue' ? 'text-blue-600' :
-                      feature.color === 'green' ? 'text-emerald-600' :
+                      feature.color === 'green' ? 'text-blue-600' :
                       'text-purple-600'
                     }`} />
                     <span className="text-sm font-semibold text-gray-700">{feature.savings}</span>
                   </div>
                   <div className={`flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg ${
                     feature.color === 'blue' ? 'bg-blue-100 text-blue-700' :
-                    feature.color === 'green' ? 'bg-emerald-100 text-emerald-700' :
+                    feature.color === 'green' ? 'bg-blue-100 text-blue-700' :
                     'bg-purple-100 text-purple-700'
                   }`}>
                     <BarChart3 className="w-4 h-4" />
@@ -376,8 +376,8 @@ export default function Homepage() {
 
                 <Link href="/register">
                   <a className={`block w-full px-4 py-3 rounded-lg font-semibold text-white transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-2 ${
-                    feature.color === 'blue' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' :
-                    feature.color === 'green' ? 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700' :
+                    feature.color === 'blue' ? 'bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700' :
+                    feature.color === 'green' ? 'bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700' :
                     'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
                   }`} data-testid={`button-demo-${feature.color}`}>
                     See AI Demo
@@ -389,30 +389,30 @@ export default function Homepage() {
           </div>
 
           {/* Total Savings Calculator */}
-          <div className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600 rounded-2xl p-12 text-white text-center shadow-2xl">
+          <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-600 rounded-2xl p-12 text-white text-center shadow-2xl">
             <div className="max-w-3xl mx-auto">
               <h3 className="text-3xl md:text-4xl font-bold mb-4">
                 Total Administrative Replacement Value
               </h3>
-              <p className="text-xl text-emerald-100 mb-8">
+              <p className="text-xl text-blue-100 mb-8">
                 These three AI systems replace 3-5 full-time employees
               </p>
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/30">
                 <div className="grid md:grid-cols-3 gap-6 mb-6">
                   <div>
                     <div className="text-5xl font-bold mb-2">$135K+</div>
-                    <div className="text-emerald-100">Eliminated Salaries</div>
+                    <div className="text-blue-100">Eliminated Salaries</div>
                   </div>
                   <div>
                     <div className="text-5xl font-bold mb-2">$33K+</div>
-                    <div className="text-emerald-100">Benefits Saved</div>
+                    <div className="text-blue-100">Benefits Saved</div>
                   </div>
                   <div>
                     <div className="text-5xl font-bold mb-2">$168K+</div>
-                    <div className="text-emerald-100">Total Annual Savings</div>
+                    <div className="text-blue-100">Total Annual Savings</div>
                   </div>
                 </div>
-                <div className="text-sm text-emerald-100 italic">
+                <div className="text-sm text-blue-100 italic">
                   * Based on replacing scheduling coordinator ($55K), payroll admin ($50K), and billing clerk ($48K) + 25% benefits
                 </div>
               </div>
@@ -427,7 +427,7 @@ export default function Homepage() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-lg flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                   <Cpu className="w-5 h-5 text-white" />
                 </div>
                 <div className="font-bold text-lg">

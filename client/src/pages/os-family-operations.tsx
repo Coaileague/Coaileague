@@ -20,7 +20,7 @@ export default function OperationsFamilyPage() {
       description: "Comprehensive time tracking with geofencing, mobile clock-in, and overtime management",
       features: ["Geofencing", "Mobile Clock-in", "Overtime Tracking", "Break Management"],
       url: "/time-tracking",
-      color: "from-cyan-500 to-teal-500"
+      color: "from-blue-500 to-blue-600"
     },
     {
       name: "PayrollOS™",
@@ -28,7 +28,7 @@ export default function OperationsFamilyPage() {
       description: "Automated payroll processing with tax calculations, direct deposit, and compliance",
       features: ["Auto Processing", "Tax Calculations", "Direct Deposit", "Pay Stubs"],
       url: "/payroll",
-      color: "from-primary to-green-500"
+      color: "from-primary to-blue-500"
     },
     {
       name: "BillOS™",
@@ -36,7 +36,7 @@ export default function OperationsFamilyPage() {
       description: "Automated invoice generation, client billing, payment tracking, and expense management",
       features: ["Auto Invoicing", "Payment Tracking", "Expense Reports", "Client Portal"],
       url: "/invoices",
-      color: "from-amber-500 to-orange-500"
+      color: "from-blue-500 to-indigo-500"
     },
     {
       name: "TrainingOS™",
@@ -52,7 +52,7 @@ export default function OperationsFamilyPage() {
       description: "Employee and client management with profiles, documents, and relationship tracking",
       features: ["Employee Profiles", "Client Management", "Document Storage", "Analytics"],
       url: "/employees",
-      color: "from-rose-500 to-red-500"
+      color: "from-blue-500 to-indigo-500"
     }
   ];
 
@@ -62,11 +62,11 @@ export default function OperationsFamilyPage() {
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 border border-indigo-500/30">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30">
               <Sparkles className="h-12 w-12 text-indigo-400" />
             </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-400 via-blue-400 to-blue-500 bg-clip-text text-transparent">
             Workforce Operations OS
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">

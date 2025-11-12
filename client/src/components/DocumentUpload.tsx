@@ -144,8 +144,8 @@ export function DocumentUpload({
                 {file?.size ? `${(file.size / 1024).toFixed(1)} KB` : ""}
               </p>
               <div className="flex items-center gap-1 mt-1">
-                <CheckCircle className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-600">Uploaded successfully</span>
+                <CheckCircle className="h-3 w-3 text-blue-600" />
+                <span className="text-xs text-blue-600">Uploaded successfully</span>
               </div>
             </div>
 

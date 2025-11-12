@@ -321,7 +321,7 @@ export default function LeadersHub() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
             <UserCog className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -384,7 +384,7 @@ export default function LeadersHub() {
                     <span className="font-medium text-primary">{stats?.headcount.active || 0}</span> active
                   </div>
                   <div>
-                    <span className="font-medium text-amber-600">{stats?.headcount.onLeave || 0}</span> on leave
+                    <span className="font-medium text-blue-600">{stats?.headcount.onLeave || 0}</span> on leave
                   </div>
                 </div>
               </CardContent>
@@ -401,7 +401,7 @@ export default function LeadersHub() {
                 </div>
                 <div className="flex gap-4 text-xs text-muted-foreground mt-2">
                   {stats?.compliance.expiringSoon ? (
-                    <div className="flex items-center gap-1 text-amber-600">
+                    <div className="flex items-center gap-1 text-blue-600">
                       <AlertTriangle className="h-3 w-3" />
                       {stats.compliance.expiringSoon} expiring
                     </div>
@@ -416,7 +416,7 @@ export default function LeadersHub() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
+            <Card className="border-l-4 border-l-blue-500">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -776,7 +776,7 @@ export default function LeadersHub() {
                       >
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
                           action.status === 'completed' ? 'bg-muted/10 text-primary' :
-                          action.status === 'pending' ? 'bg-amber-500/10 text-amber-600' :
+                          action.status === 'pending' ? 'bg-blue-500/10 text-blue-600' :
                           'bg-destructive/10 text-destructive'
                         }`}>
                           {action.status === 'completed' && <CheckCircle2 className="h-4 w-4" />}

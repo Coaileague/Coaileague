@@ -78,7 +78,7 @@ export default function ManagerDashboard() {
                 <p className="text-sm text-muted-foreground">Timesheet Edits</p>
                 <p className="text-2xl font-bold">{pendingTimesheetEdits?.length || 0}</p>
               </div>
-              <Edit className="h-8 w-8 text-green-500" />
+              <Edit className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -173,7 +173,7 @@ export default function ManagerDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5 text-green-500" />
+              <Edit className="h-5 w-5 text-blue-500" />
               Timesheet Edits
               {pendingTimesheetEdits && pendingTimesheetEdits.length > 0 && (
                 <Badge variant="default">{pendingTimesheetEdits.length}</Badge>

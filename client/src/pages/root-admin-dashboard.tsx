@@ -226,7 +226,7 @@ export default function RootAdminDashboard() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "login": return <UserCheck className="h-4 w-4 text-primary" />;
-      case "invoice": return <DollarSign className="h-4 w-4 text-amber-500" />;
+      case "invoice": return <DollarSign className="h-4 w-4 text-blue-500" />;
       case "subscription": return <Users className="h-4 w-4 text-primary" />;
       case "error": return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default: return <Activity className="h-4 w-4 text-slate-500" />;
@@ -817,10 +817,10 @@ export default function RootAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <TrendingUp className="h-3.5 w-3.5 text-amber-500" />
+              <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
               Platform Fees Earned
             </CardDescription>
           </CardHeader>
@@ -854,10 +854,10 @@ export default function RootAdminDashboard() {
 
       {/* Platform Metrics - Real Data Only */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Card className="border-l-4 border-l-green-500">
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-1.5 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-              <Server className="h-3.5 w-3.5 text-green-500" />
+              <Server className="h-3.5 w-3.5 text-blue-500" />
               Services Status
             </CardDescription>
           </CardHeader>
@@ -865,21 +865,21 @@ export default function RootAdminDashboard() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs">Web Application</span>
-                <Badge variant="secondary" className="bg-muted/10 text-green-600 text-[10px] py-0 h-5">
+                <Badge variant="secondary" className="bg-muted/10 text-blue-600 text-[10px] py-0 h-5">
                   <CheckCircle className="h-2.5 w-2.5 mr-1" />
                   Live
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs">API Server</span>
-                <Badge variant="secondary" className="bg-muted/10 text-green-600 text-[10px] py-0 h-5">
+                <Badge variant="secondary" className="bg-muted/10 text-blue-600 text-[10px] py-0 h-5">
                   <CheckCircle className="h-2.5 w-2.5 mr-1" />
                   Live
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs">Database</span>
-                <Badge variant="secondary" className="bg-muted/10 text-green-600 text-[10px] py-0 h-5">
+                <Badge variant="secondary" className="bg-muted/10 text-blue-600 text-[10px] py-0 h-5">
                   <CheckCircle className="h-2.5 w-2.5 mr-1" />
                   {stats?.systemHealth?.database || "healthy"}
                 </Badge>
@@ -941,7 +941,7 @@ export default function RootAdminDashboard() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <HardDrive className="h-4 w-4 text-amber-500" />
+                    <HardDrive className="h-4 w-4 text-blue-500" />
                     <span>Memory</span>
                   </div>
                   <span className="font-bold">{stats?.systemHealth?.memory || 0}%</span>

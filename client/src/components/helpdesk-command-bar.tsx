@@ -142,7 +142,7 @@ export function HelpDeskCommandBar({
                 onClick={onShowPriority}
                 variant="outline"
                 size="sm"
-                className="h-9 text-xs gap-2 bg-amber-50 border-amber-500 text-amber-900 font-semibold hover:bg-amber-100"
+                className="h-9 text-xs gap-2 bg-blue-50 border-blue-500 text-blue-900 font-semibold hover:bg-blue-100"
                 data-testid="button-priority-support"
               >
                 <Star className="w-4 h-4" />
@@ -174,7 +174,7 @@ export function HelpDeskCommandBar({
                   <label className="text-xs font-bold text-foreground flex items-center gap-1">
                     Status:
                     {showCoffeeCup && (
-                      <Coffee className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+                      <Coffee className="w-3.5 h-3.5 text-blue-600 animate-bounce" />
                     )}
                   </label>
                   <select
@@ -265,7 +265,7 @@ export function HelpDeskCommandBar({
                       <AlertCircle className="w-4 h-4 mr-2" />
                       Escalate Issue
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onQuickResponse?.('/resolved')} className="text-green-700" data-testid="menu-resolved">
+                    <DropdownMenuItem onClick={() => onQuickResponse?.('/resolved')} className="text-blue-700" data-testid="menu-resolved">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Mark Resolved
                     </DropdownMenuItem>
@@ -290,11 +290,11 @@ export function HelpDeskCommandBar({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
                     <DropdownMenuItem onClick={() => onQuickResponse?.('/spectate')} data-testid="menu-spectate">
-                      <AlertCircle className="w-4 h-4 mr-2 text-amber-600" />
+                      <AlertCircle className="w-4 h-4 mr-2 text-blue-600" />
                       Silence User
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onQuickResponse?.('/voice')} data-testid="menu-voice">
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                      <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
                       Grant Voice
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onToggleRoomStatus} data-testid="menu-room">

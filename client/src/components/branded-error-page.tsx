@@ -29,7 +29,7 @@ export function BrandedErrorPage({
       icon: AlertTriangle,
       defaultTitle: "Page Not Found",
       defaultMessage: "The page you're looking for doesn't exist in WorkforceOS.",
-      color: "text-amber-500"
+      color: "text-blue-500"
     },
     "403": {
       icon: Ban,

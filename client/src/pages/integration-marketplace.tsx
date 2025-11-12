@@ -32,14 +32,14 @@ const categoryIcons = {
 
 // Category colors for visual distinction
 const categoryColors = {
-  accounting: "bg-muted/10 text-green-700 dark:text-green-400",
+  accounting: "bg-muted/10 text-blue-700 dark:text-blue-400",
   erp: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   crm: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   hris: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
   communication: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
   productivity: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
   analytics: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  storage: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+  storage: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   custom: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
 };
 
@@ -380,8 +380,8 @@ export default function IntegrationMarketplace() {
 
                       {connected && connectionStatus && (
                         <div className="flex items-center gap-2 p-2 rounded-md bg-muted/10 border border-primary/20">
-                          <Check className="w-4 h-4 text-green-600" />
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                          <Check className="w-4 h-4 text-blue-600" />
+                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                             Connected {connectionStatus.healthy ? '✓' : '⚠'}
                           </span>
                         </div>

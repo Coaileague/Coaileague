@@ -28,7 +28,7 @@ export function SchedulePreview() {
   ];
   
   const getStatusColor = (status: string) => {
-    return status === "published" ? "border-primary" : "border-amber-500 border-dashed animate-pulse";
+    return status === "published" ? "border-primary" : "border-blue-500 border-dashed animate-pulse";
   };
 
   return (
@@ -108,7 +108,7 @@ export function SchedulePreview() {
             </div>
             <div className="h-6 w-px bg-border" />
             <div className="space-y-0.5">
-              <div className="text-sm font-bold text-green-500">156h</div>
+              <div className="text-sm font-bold text-blue-500">156h</div>
               <div className="text-[9px] text-muted-foreground">Scheduled</div>
             </div>
             <div className="h-6 w-px bg-border" />

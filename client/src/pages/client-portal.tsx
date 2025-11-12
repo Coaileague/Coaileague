@@ -107,7 +107,7 @@ export default function ClientPortal() {
         );
       case 'sent':
         return (
-          <Badge className="bg-amber-500/10 text-amber-600 border-0">
+          <Badge className="bg-blue-500/10 text-blue-600 border-0">
             <Clock className="h-3 w-3 mr-1" />
             Outstanding
           </Badge>
@@ -145,7 +145,7 @@ export default function ClientPortal() {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
         <div className="p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          <AlertCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Client Account Not Found</h2>
           <p className="text-muted-foreground">
             You need to be registered as a client to access this portal.
@@ -203,11 +203,11 @@ export default function ClientPortal() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
+            <Card className="border-l-4 border-l-blue-500">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <AlertCircle className="h-5 w-5 text-amber-500" />
-                  <Badge className="bg-amber-500/10 text-amber-600 border-0">
+                  <AlertCircle className="h-5 w-5 text-blue-500" />
+                  <Badge className="bg-blue-500/10 text-blue-600 border-0">
                     {clientInvoices.filter(i => i.status === 'sent').length}
                   </Badge>
                 </div>
@@ -273,7 +273,7 @@ export default function ClientPortal() {
                               <p className="text-sm text-muted-foreground">
                                 Due {formatDate(invoice.dueDate)}
                                 {daysUntil !== null && (
-                                  <span className="ml-2 text-amber-600">
+                                  <span className="ml-2 text-blue-600">
                                     ({daysUntil} {daysUntil === 1 ? 'day' : 'days'})
                                   </span>
                                 )}
@@ -310,7 +310,7 @@ export default function ClientPortal() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Outstanding</span>
-                    <Badge className="bg-amber-500/10 text-amber-600 border-0">
+                    <Badge className="bg-blue-500/10 text-blue-600 border-0">
                       {clientInvoices.filter(i => i.status === 'sent').length}
                     </Badge>
                   </div>

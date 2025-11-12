@@ -548,8 +548,8 @@ export default function CommOS() {
                 </Button>
               </div>
             </div>
-            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3">
-              <p className="text-sm text-amber-900 dark:text-amber-100">
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
                 This export will include all messages, timestamps, and participant information. It will be logged for compliance purposes.
               </p>
             </div>

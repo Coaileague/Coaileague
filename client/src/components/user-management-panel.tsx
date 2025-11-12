@@ -325,7 +325,7 @@ export function UserManagementPanel() {
       deputy_admin: "bg-orange-500/20 text-orange-300 border-orange-500/30",
       deputy_assistant: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
       sysop: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-      support: "bg-muted/20 text-green-300 border-primary/30",
+      support: "bg-muted/20 text-blue-300 border-primary/30",
       none: "bg-slate-500/20 text-slate-300 border-slate-500/30",
     };
 

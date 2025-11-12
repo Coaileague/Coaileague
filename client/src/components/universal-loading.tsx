@@ -37,7 +37,7 @@ export function UniversalLoading({
           />
           
           <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-white/90 font-medium w-full justify-center px-4`}>
-            <Loader2 className={`${spinnerSize} sm:h-5 sm:w-5 animate-spin text-cyan-400 flex-shrink-0`} />
+            <Loader2 className={`${spinnerSize} sm:h-5 sm:w-5 animate-spin text-blue-400 flex-shrink-0`} />
             <span className="text-center break-words">{message}</span>
           </div>
         </div>
@@ -56,7 +56,7 @@ export function UniversalLoading({
         />
         
         <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-muted-foreground w-full justify-center px-4`}>
-          <Loader2 className={`${spinnerSize} animate-spin text-cyan-500 flex-shrink-0`} />
+          <Loader2 className={`${spinnerSize} animate-spin text-blue-500 flex-shrink-0`} />
           <span className="text-center break-words">{message}</span>
         </div>
       </div>

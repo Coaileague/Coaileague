@@ -194,7 +194,7 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-indigo-400" />
             <CardTitle className="text-lg">ScheduleOS™ AI - Free Trial</CardTitle>
-            <Badge variant="outline" className="ml-auto bg-amber-500/10 text-amber-500 border-amber-500/30">
+            <Badge variant="outline" className="ml-auto bg-blue-500/10 text-blue-500 border-blue-500/30">
               <Calendar className="h-3 w-3 mr-1" />
               {status.daysLeft} days left
             </Badge>
@@ -223,9 +223,9 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
             )}
           </Button>
 
-          <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30">
-            <p className="text-sm text-amber-500 font-medium">Trial expires in {status.daysLeft} days</p>
-            <p className="text-xs text-amber-500/80 mt-1">
+          <div className="p-3 rounded-md bg-blue-500/10 border border-blue-500/30">
+            <p className="text-sm text-blue-500 font-medium">Trial expires in {status.daysLeft} days</p>
+            <p className="text-xs text-blue-500/80 mt-1">
               Activate with payment to continue using ScheduleOS™ AI
             </p>
           </div>

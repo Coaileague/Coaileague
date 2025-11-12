@@ -46,15 +46,15 @@ export function CompactModerationDialog({
       icon: MessageCircleWarning,
       title: "Issue Warning?",
       subtitle: "Send a formal warning message",
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50 dark:bg-yellow-900/10"
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-900/10"
     },
     hold: {
       icon: Ban,
       title: "Put on Hold?",
       subtitle: "Silence user temporarily",
-      color: "text-amber-600",
-      bgColor: "bg-amber-50 dark:bg-amber-900/10"
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-900/10"
     }
   };
 

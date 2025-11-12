@@ -34,7 +34,7 @@ interface QuickAction {
 const ACTION_VARIANTS = {
   default: "bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100",
   success: "bg-muted/50 hover:bg-muted text-foreground dark:bg-slate-900/30 dark:hover:bg-slate-900/50 dark:text-background",
-  warning: "bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-100",
+  warning: "bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-100",
   danger: "bg-red-100 hover:bg-red-200 text-red-900 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-100",
   info: "bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-100",
 };

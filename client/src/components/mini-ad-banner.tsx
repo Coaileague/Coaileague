@@ -23,7 +23,7 @@ export function MiniAdBanner({ onDismiss }: MiniBannerProps) {
       icon: Sparkles,
       title: "EngagementOS™",
       subtitle: "Track employee satisfaction in real-time",
-      gradient: "from-purple-500 via-pink-500 to-rose-500",
+      gradient: "from-purple-500 via-pink-500 to-blue-500",
       iconColor: "text-pink-300",
       badge: "NEW"
     },
@@ -31,15 +31,15 @@ export function MiniAdBanner({ onDismiss }: MiniBannerProps) {
       icon: TrendingUp,
       title: "PredictionOS™",
       subtitle: "AI-powered turnover risk analysis",
-      gradient: "from-blue-500 via-cyan-500 to-teal-500",
-      iconColor: "text-cyan-300",
+      gradient: "from-blue-500 via-blue-500 to-teal-500",
+      iconColor: "text-blue-300",
       badge: "AI"
     },
     {
       icon: Zap,
       title: "AssetOS™",
       subtitle: "Physical resource scheduling & billing",
-      gradient: "from-amber-500 via-orange-500 to-red-500",
+      gradient: "from-blue-500 via-orange-500 to-red-500",
       iconColor: "text-orange-300",
       badge: "PRO"
     },

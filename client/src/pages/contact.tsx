@@ -114,7 +114,7 @@ export default function Contact() {
           </Button>
           <Button
             onClick={() => window.location.href = "/api/login"}
-            className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white whitespace-nowrap shadow-md"
+            className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white whitespace-nowrap shadow-md"
             data-testid="button-launch-platform"
           >
             <span className="hidden sm:inline">Launch Platform</span>
@@ -124,14 +124,14 @@ export default function Contact() {
       </nav>
 
       {/* Contact Hero */}
-      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
         <div className="text-center space-y-4 mb-12">
           <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
+            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
             <span className="text-xs uppercase tracking-wider text-gray-500 font-mono">
               Enterprise Support
             </span>
-            <div className="h-1 w-12 bg-gradient-to-r from-emerald-600 to-green-600" />
+            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900" data-testid="heading-contact">
             Contact Our Team
@@ -144,8 +144,8 @@ export default function Contact() {
         {/* Support Channels Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-16">
           <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4" data-testid="card-email-support">
-            <div className="h-12 w-12 rounded-md bg-cyan-50 flex items-center justify-center">
-              <Mail className="h-6 w-6 text-cyan-600" />
+            <div className="h-12 w-12 rounded-md bg-blue-50 flex items-center justify-center">
+              <Mail className="h-6 w-6 text-blue-600" />
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-gray-900">Email Support</h3>
@@ -209,28 +209,28 @@ export default function Contact() {
             <div className="grid md:grid-cols-3 gap-6">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <HeadphonesIcon className="h-5 w-5 text-green-600" />
+                  <HeadphonesIcon className="h-5 w-5 text-blue-600" />
                   <h3 className="font-semibold text-gray-900">Standard Support</h3>
                 </div>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
-                    <span className="text-green-600">•</span>
+                    <span className="text-blue-600">•</span>
                     Email & chat support
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-600">•</span>
+                    <span className="text-blue-600">•</span>
                     Response within 4 hours
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-600">•</span>
+                    <span className="text-blue-600">•</span>
                     Knowledge base access
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-600">•</span>
+                    <span className="text-blue-600">•</span>
                     Community forum
                   </li>
                 </ul>
-                <Badge className="bg-green-50 text-green-600 border-none">
+                <Badge className="bg-blue-50 text-blue-600 border-none">
                   Included in Starter
                 </Badge>
               </div>
@@ -421,10 +421,10 @@ export default function Contact() {
                 </form>
               </>
             ) : (
-              <Card className="bg-green-50 border-2 border-green-200 shadow-md p-8 space-y-6" data-testid="card-success">
+              <Card className="bg-blue-50 border-2 border-blue-200 shadow-md p-8 space-y-6" data-testid="card-success">
                 <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-8 w-8 text-green-600" />
+                  <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-8 w-8 text-blue-600" />
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-2xl font-bold text-gray-900">Support Ticket Created!</h3>
@@ -437,7 +437,7 @@ export default function Contact() {
                 <div className="space-y-3 p-4 bg-white rounded-md border border-gray-200 shadow-sm">
                   <p className="text-sm font-semibold text-gray-900">Your Ticket Number:</p>
                   <div className="flex items-center justify-between gap-3">
-                    <code className="text-2xl font-bold font-mono text-green-600" data-testid="text-ticket-number">
+                    <code className="text-2xl font-bold font-mono text-blue-600" data-testid="text-ticket-number">
                       {ticketNumber}
                     </code>
                     <Button
@@ -450,7 +450,7 @@ export default function Contact() {
                           description: "Ticket number copied to clipboard",
                         });
                       }}
-                      className="border-green-600 text-green-600 hover:bg-green-50"
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
                       data-testid="button-copy-ticket"
                     >
                       Copy
@@ -511,7 +511,7 @@ export default function Contact() {
                   <span className="font-mono">8:00 AM - 8:00 PM EST</span>
                 </div>
                 <div className="pt-2 border-t border-gray-200">
-                  <Badge className="bg-green-50 text-green-600 border-none">
+                  <Badge className="bg-blue-50 text-blue-600 border-none">
                     24/7 Emergency Support Available
                   </Badge>
                 </div>
@@ -520,7 +520,7 @@ export default function Contact() {
 
             <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <Globe className="h-5 w-5 text-cyan-600" />
+                <Globe className="h-5 w-5 text-blue-600" />
                 <h3 className="font-semibold text-gray-900">Online Business</h3>
               </div>
               <div className="space-y-2 text-sm">

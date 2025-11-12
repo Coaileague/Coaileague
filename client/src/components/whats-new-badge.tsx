@@ -47,7 +47,7 @@ export function WhatsNewBadge() {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'new':
-        return 'bg-muted/10 text-green-700 dark:text-green-400';
+        return 'bg-muted/10 text-blue-700 dark:text-blue-400';
       case 'improvement':
         return 'bg-blue-500/10 text-blue-700 dark:text-blue-400';
       case 'fix':

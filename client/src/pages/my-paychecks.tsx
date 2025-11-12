@@ -164,7 +164,7 @@ export default function MyPaychecks() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-bold text-green-600 dark:text-green-400" data-testid={`text-net-${paycheck.id}`}>
+                        <div className="font-bold text-blue-600 dark:text-blue-400" data-testid={`text-net-${paycheck.id}`}>
                           ${paycheck.netPay}
                         </div>
                       </TableCell>

@@ -355,7 +355,7 @@ export default function RootAdminPortal() {
     switch (type) {
       case "login": return <UserCheck className="h-4 w-4 text-primary" />;
       case "shift_created": return <Clock className="h-4 w-4 text-blue-500" />;
-      case "invoice_generated": return <DollarSign className="h-4 w-4 text-amber-500" />;
+      case "invoice_generated": return <DollarSign className="h-4 w-4 text-blue-500" />;
       case "employee_added": return <Users className="h-4 w-4 text-violet-500" />;
       case "error": return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default: return <Activity className="h-4 w-4" />;
@@ -468,7 +468,7 @@ export default function RootAdminPortal() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-amber-500">
+              <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-2">
                     <HardDrive className="h-4 w-4" />
@@ -586,10 +586,10 @@ export default function RootAdminPortal() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <AlertTriangle className="h-4 w-4 text-blue-500" />
                         <span className="text-sm">Errors (24h)</span>
                       </div>
-                      <div className="font-bold text-amber-600" data-testid="text-error-count">{systemHealth.errors}</div>
+                      <div className="font-bold text-blue-600" data-testid="text-error-count">{systemHealth.errors}</div>
                     </div>
                   </CardContent>
                 </Card>
@@ -855,7 +855,7 @@ export default function RootAdminPortal() {
                       <CardContent>
                         {workspaceDetail.billing.stripeConnected ? (
                           <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <CheckCircle className="h-4 w-4 text-blue-500" />
                             <span className="text-sm">Connected</span>
                           </div>
                         ) : (
@@ -981,7 +981,7 @@ export default function RootAdminPortal() {
                               </p>
                             </div>
                             {conv.isSilenced && (
-                              <MicOff className="h-4 w-4 text-amber-500" />
+                              <MicOff className="h-4 w-4 text-blue-500" />
                             )}
                           </div>
                           <div className="flex items-center justify-between mt-2">

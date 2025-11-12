@@ -56,7 +56,7 @@ export default function SalesDashboard() {
       prospect: 'bg-slate-500',
       qualified: 'bg-blue-500',
       rfp_identified: 'bg-purple-500',
-      proposal_sent: 'bg-amber-500',
+      proposal_sent: 'bg-blue-500',
       negotiation: 'bg-orange-500',
       awarded: 'bg-muted/30',
       lost: 'bg-red-500'
@@ -128,7 +128,7 @@ export default function SalesDashboard() {
           <Card className="hover-elevate">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Hot Leads</CardTitle>
-              <TrendingUp className="h-4 w-4 text-amber-500" />
+              <TrendingUp className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{hotLeads}</div>
