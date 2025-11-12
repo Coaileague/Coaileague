@@ -45,6 +45,7 @@ export default function CreateOrg() {
       <PageHeader
         title="Create New Organization"
         description="Set up a new workspace for your team"
+        align="center"
       />
 
       <Card className="mt-6">

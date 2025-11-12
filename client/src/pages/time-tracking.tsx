@@ -535,11 +535,7 @@ export default function TimeTracking() {
       <PageHeader
         title="Time Clock"
         description="Manage employee clock-ins and timesheet reports"
-        breadcrumbs={[
-          { label: "Time Tracking" }
-        ]}
-        showBackButton={true}
-        backHref="/dashboard"
+        align="center"
       >
         {(workspaceRole === 'org_owner' || workspaceRole === 'department_manager') && (
               <Dialog open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>

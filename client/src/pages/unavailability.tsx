@@ -60,6 +60,7 @@ export default function Unavailability() {
       <PageHeader
         title="Unavailability Calendar"
         description="Manage your time off requests and unavailable dates"
+        align="center"
       >
         <div className="flex gap-2">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
