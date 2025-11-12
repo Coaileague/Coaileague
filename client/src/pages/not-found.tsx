@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Home, ArrowLeft, Search, MessageSquare, FileQuestion } from "lucide-react";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 
 export default function NotFound() {
   const [, setLocation] = useLocation();
@@ -13,7 +13,7 @@ export default function NotFound() {
         <CardHeader className="text-center pb-4 pt-8">
           <div className="flex justify-center mb-6">
             <div className="p-3 bg-muted rounded-lg border">
-              <AutoForceLogo size="md" variant="icon" />
+              <AnimatedAutoForceLogo size="md" variant="icon" />
             </div>
           </div>
 

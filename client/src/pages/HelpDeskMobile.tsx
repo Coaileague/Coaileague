@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
 import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
 import { useTransition } from "@/contexts/transition-context";
@@ -443,7 +443,7 @@ export default function ModernMobileChat() {
         icon: History, 
         label: 'User History', 
         action: () => handleUserHistory(),
-        color: 'text-teal-400',
+        color: 'text-blue-400',
         description: 'View complete user interaction history',
         roles: DEPUTY_ADMIN_PLUS,
         tier: 'Advanced'
@@ -1075,7 +1075,7 @@ export default function ModernMobileChat() {
               {msg.senderType === 'bot' ? (
                 <Sparkles size={20} className="text-white font-bold" />
               ) : (
-                <AutoForceLogo className="h-7 w-7 font-bold" variant="icon" />
+                <AnimatedAutoForceLogo className="h-7 w-7 font-bold" variant="icon" />
               )}
             </div>
             {/* WF Logo for STAFF ONLY */}

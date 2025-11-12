@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { Shield, FileText, AlertCircle } from "lucide-react";
 
 interface ChatAgreementModalProps {
@@ -170,7 +170,7 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
         <div className="p-3 sm:p-4 border-b border-primary/30 bg-slate-900 shrink-0">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-primary rounded-lg">
-              <AutoForceLogo className="h-5 w-5 sm:h-6 sm:w-6" variant="icon" />
+              <AnimatedAutoForceLogo className="h-5 w-5 sm:h-6 sm:w-6" variant="icon" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-base sm:text-lg font-bold text-white truncate">Terms & Conditions</h2>

@@ -1,9 +1,9 @@
 // DEPRECATED: This file is kept for backward compatibility only
-// Please use @/components/autoforce-logo instead
+// Please use @/components/animated-autoforce-logo instead
 // This file will be removed in a future version
 
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 
 // Re-export for backward compatibility
-export { AutoForceLogo };
-export { AutoForceLogo as WorkforceOSLogo };
+export { AnimatedAutoForceLogo as AutoForceLogo };
+export { AnimatedAutoForceLogo as WorkforceOSLogo };

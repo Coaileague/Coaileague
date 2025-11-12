@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 
 interface ModernLayoutProps {
   children: ReactNode;
@@ -36,7 +36,7 @@ export default function ModernLayout({ children }: ModernLayoutProps) {
       <header className="bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border))] px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-50 flex-shrink-0">
         <div className="flex items-center justify-between">
           <Link href="/dashboard">
-            <AutoForceLogo size="sm" variant="full" className="cursor-pointer hover:opacity-80" />
+            <AnimatedAutoForceLogo size="sm" variant="full" className="cursor-pointer hover:opacity-80" />
           </Link>
           
           <button 

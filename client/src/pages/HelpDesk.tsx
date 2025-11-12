@@ -35,7 +35,7 @@ import {
   History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch
 } from "lucide-react";
 import { WFLogoCompact } from "@/components/wf-logo";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
@@ -475,7 +475,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     if (role === 'root_admin') {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
-          <AutoForceLogo size="sm" variant="icon" />
+          <AnimatedAutoForceLogo size="sm" variant="icon" />
         </div>
       );
     }
@@ -493,7 +493,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     if (['deputy_admin', 'support_manager', 'sysop'].includes(role)) {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
-          <AutoForceLogo size="sm" variant="icon" />
+          <AnimatedAutoForceLogo size="sm" variant="icon" />
         </div>
       );
     }
@@ -1836,7 +1836,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-blue-600/30 text-white [&>button]:text-slate-400 [&>button]:opacity-100 [&>button]:hover:text-white [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
-              <AutoForceLogo size="sm" variant="icon" />
+              <AnimatedAutoForceLogo size="sm" variant="icon" />
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-blue-400" />
                 User Profile & Diagnostics
@@ -2120,7 +2120,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               /* Loading state with AutoForce™ branding */
               <div className="text-center py-8">
                 <div className="mb-4 flex justify-center">
-                  <AutoForceLogo size="lg" variant="icon" className="opacity-75" />
+                  <AnimatedAutoForceLogo size="lg" variant="icon" className="opacity-75" />
                 </div>
                 <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-slate-400 text-sm font-medium">Loading user information...</p>

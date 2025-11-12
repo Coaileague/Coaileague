@@ -136,7 +136,7 @@ export function HelpDeskEnhancedDemo() {
                     <span className="text-xs text-blue-600">Support</span>
                     <span className="text-xs text-muted-foreground">1 minute ago</span>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm">
+                  <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm">
                     I'm looking into this for you. Can you try clearing your browser cache and refreshing?
                   </div>
                 </div>

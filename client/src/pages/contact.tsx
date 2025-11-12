@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -96,11 +96,11 @@ export default function Contact() {
         <div className="shrink-0">
           {/* Desktop: Show full logo */}
           <div className="hidden sm:block">
-            <AutoForceLogo size="sm" variant="full" />
+            <AnimatedAutoForceLogo size="sm" variant="full" />
           </div>
           {/* Mobile: Show icon only */}
           <div className="block sm:hidden">
-            <AutoForceLogo size="sm" variant="icon" />
+            <AnimatedAutoForceLogo size="sm" variant="icon" />
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -567,7 +567,7 @@ export default function Contact() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <AutoForceLogo size="sm" variant="icon" />
+              <AnimatedAutoForceLogo size="sm" variant="icon" />
               <span>© 2025 AutoForce™. Elite-grade workforce automation.</span>
             </div>
             <div className="flex items-center gap-6">

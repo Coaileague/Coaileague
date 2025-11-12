@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shield, Home, RefreshCw, LogIn, MessageSquare, AlertTriangle } from "lucide-react";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 
 export default function Chat404() {
   const [, setLocation] = useLocation();
@@ -64,7 +64,7 @@ export default function Chat404() {
           {/* WorkforceOS Logo */}
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl backdrop-blur-sm border border-blue-400/30">
-              <AutoForceLogo variant="icon" size="sm" />
+              <AnimatedAutoForceLogo variant="icon" size="sm" />
             </div>
           </div>
 

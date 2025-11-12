@@ -19,7 +19,7 @@ import {
   Lock, Unlock, Ban, XCircle, ShieldAlert, UserCog, FileText, AlertCircle, Key,
   Flag, Code, Activity as ActivityIcon, HelpCircle, Gauge, Webhook, ScrollText
 } from "lucide-react";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { TimeGreeting } from "@/components/time-greeting";
 import {
   DropdownMenu,
@@ -268,7 +268,7 @@ export default function RootAdminDashboard() {
       <div className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-slate-900/20 rounded-full filter blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-slate-900/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-teal-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       {/* Main Content - More compact on mobile */}
@@ -297,10 +297,10 @@ export default function RootAdminDashboard() {
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="transform hover:scale-105 transition-transform duration-300">
-                  <AutoForceLogo size="lg" variant="icon" lightMode={true} />
+                  <AnimatedAutoForceLogo size="lg" variant="icon" lightMode={true} />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-teal-200 bg-clip-text text-transparent">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-blue-200 bg-clip-text text-transparent">
                     Platform Command Center
                   </h1>
                   <p className="text-slate-400 text-xs sm:text-sm">
@@ -407,7 +407,7 @@ export default function RootAdminDashboard() {
               {/* Platform Management Tools */}
               {platformActions.length > 0 && (
                 <div className="mb-3">
-                  <h3 className="text-[10px] sm:text-xs font-semibold text-teal-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-blue-400/70 mb-2 uppercase tracking-wider">Platform Management</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {platformActions.map((action) => {
                       const Icon = action.icon;
@@ -416,7 +416,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-teal-500/20 hover:border-teal-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-blue-500/20 hover:border-blue-400/40"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -439,7 +439,7 @@ export default function RootAdminDashboard() {
               {/* Operations & Monitoring */}
               {operationsActions.length > 0 && (
                 <div className="mb-3">
-                  <h3 className="text-[10px] sm:text-xs font-semibold text-green-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-blue-400/70 mb-2 uppercase tracking-wider">Operations & Monitoring</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {operationsActions.map((action) => {
                       const Icon = action.icon;
@@ -448,7 +448,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-primary/20 hover:border-green-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-primary/20 hover:border-blue-400/40"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -692,7 +692,7 @@ export default function RootAdminDashboard() {
                           {selectedWorkspace.isLocked && <Badge variant="destructive" className="text-[10px]">Locked</Badge>}
                           {selectedWorkspace.isFrozen && <Badge variant="destructive" className="text-[10px]">Frozen</Badge>}
                           {!selectedWorkspace.isSuspended && !selectedWorkspace.isLocked && !selectedWorkspace.isFrozen && (
-                            <Badge variant="secondary" className="text-[10px] bg-muted/20 text-green-400">Active</Badge>
+                            <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">Active</Badge>
                           )}
                         </div>
                       </div>

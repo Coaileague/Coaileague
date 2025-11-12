@@ -193,7 +193,7 @@ function AccessLogDialog({ open, onOpenChange, documentId }: { open: boolean; on
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           {log.accessType === 'view' && <Eye className="h-4 w-4 text-blue-500" />}
-                          {log.accessType === 'download' && <Download className="h-4 w-4 text-green-500" />}
+                          {log.accessType === 'download' && <Download className="h-4 w-4 text-blue-500" />}
                           {log.accessType === 'print' && <Printer className="h-4 w-4 text-purple-500" />}
                           {log.accessType === 'share' && <Share2 className="h-4 w-4 text-orange-500" />}
                           <span className="font-medium capitalize">{log.accessType}</span>

@@ -9,7 +9,7 @@ import {
   Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail, Lock
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { useTransition } from "@/contexts/transition-context";
 import { MobileLoading } from "@/components/mobile-loading";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
@@ -244,7 +244,7 @@ export default function Dashboard() {
           <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
             <div className="flex items-center gap-4 mb-4">
               <div className="transform hover:scale-105 transition-transform duration-300">
-                <AutoForceLogo variant="full" size="md" />
+                <AnimatedAutoForceLogo variant="full" size="md" />
               </div>
               <div className="flex-1">
                 <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-1 break-words" data-testid="text-welcome">

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 
 interface EnhancedEmptyStateProps {
   icon: LucideIcon;
@@ -57,7 +57,7 @@ export function EnhancedEmptyState({
       {/* WorkforceOS Logo */}
       {showLogo && (
         <div className="mb-4">
-          <AutoForceLogo size="sm" variant="icon" animated={false} />
+          <AnimatedAutoForceLogo size="sm" variant="icon" animated={false} />
         </div>
       )}
 

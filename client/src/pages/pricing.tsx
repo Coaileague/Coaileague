@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { Check, X, TrendingUp, Sparkles } from "lucide-react";
 
 interface PricingTier {
@@ -113,11 +113,11 @@ export default function Pricing() {
           <div className="shrink-0">
             {/* Desktop: Show full logo */}
             <div className="hidden sm:block">
-              <AutoForceLogo size="sm" variant="full" />
+              <AnimatedAutoForceLogo size="sm" variant="full" />
             </div>
             {/* Mobile: Show icon only */}
             <div className="block sm:hidden">
-              <AutoForceLogo size="sm" variant="icon" />
+              <AnimatedAutoForceLogo size="sm" variant="icon" />
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -436,7 +436,7 @@ export default function Pricing() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <AutoForceLogo size="sm" variant="icon" />
+              <AnimatedAutoForceLogo size="sm" variant="icon" />
               <span className="text-xs sm:text-sm">© 2025 AutoForce™ by Drill Consulting 360. Enterprise-grade workforce automation.</span>
             </div>
             <div className="flex gap-4 sm:gap-6 text-xs text-gray-600">

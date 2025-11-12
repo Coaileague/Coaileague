@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle } from "lucide-react";
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 
 interface TermsDialogProps {
   open: boolean;
@@ -50,7 +50,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
           <div className="flex items-center gap-4">
             {/* AutoForce Logo */}
             <div className="flex items-center justify-center">
-              <AutoForceLogo size="md" variant="icon" />
+              <AnimatedAutoForceLogo size="md" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-2xl font-black text-white">

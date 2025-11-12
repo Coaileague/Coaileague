@@ -104,7 +104,7 @@ export default function SalesDashboard() {
           <Card className="hover-elevate">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500" />
+              <DollarSign className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${totalPipelineValue.toLocaleString()}</div>
@@ -193,7 +193,7 @@ export default function SalesDashboard() {
                           <div className="text-sm text-muted-foreground">{deal.companyName}</div>
                         </div>
                         <div className="text-right ml-4">
-                          <div className="font-bold text-green-600">
+                          <div className="font-bold text-blue-600">
                             ${deal.estimatedValue ? parseFloat(deal.estimatedValue.toString()).toLocaleString() : '0'}
                           </div>
                           <div className="text-xs text-muted-foreground">{deal.probability}% prob</div>
@@ -251,7 +251,7 @@ export default function SalesDashboard() {
                         </div>
                         <div className="text-right ml-4">
                           {rfp.estimatedValue && (
-                            <div className="font-bold text-green-600 mb-1">
+                            <div className="font-bold text-blue-600 mb-1">
                               ${parseFloat(rfp.estimatedValue.toString()).toLocaleString()}
                             </div>
                           )}
@@ -303,7 +303,7 @@ export default function SalesDashboard() {
                         </div>
                         <div className="text-right ml-4">
                           {lead.estimatedValue && (
-                            <div className="font-bold text-green-600 mb-1">
+                            <div className="font-bold text-blue-600 mb-1">
                               ${parseFloat(lead.estimatedValue.toString()).toLocaleString()}
                             </div>
                           )}

@@ -99,7 +99,7 @@ export function PageHeader({
               
               {/* Center: Title & Description */}
               <div className="flex flex-col items-center justify-center text-center">
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight whitespace-nowrap" style={{ color: '#0B4DFF' }}>
+                <h1 className="text-2xl sm:text-3xl font-semibold text-primary tracking-tight whitespace-nowrap">
                   {title}
                 </h1>
                 {description && (

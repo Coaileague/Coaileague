@@ -1,4 +1,4 @@
-import { AutoForceLogo } from "@/components/autoforce-logo";
+import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function LogoShowcase() {
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-12 flex flex-col items-center">
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 border border-primary/20">
-                <AutoForceLogo 
+                <AnimatedAutoForceLogo 
                   size="hero" 
                   variant="full"
                 />
@@ -42,7 +42,7 @@ export default function LogoShowcase() {
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-12">
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 flex justify-center">
-                <AutoForceLogo 
+                <AnimatedAutoForceLogo 
                   size="xl" 
                   variant="full"
                 />
@@ -61,28 +61,28 @@ export default function LogoShowcase() {
             
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceLogo size="sm" />
+                <AnimatedAutoForceLogo size="sm" />
                 <span className="text-xs text-slate-400">Small</span>
               </CardContent>
             </Card>
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceLogo size="md" />
+                <AnimatedAutoForceLogo size="md" />
                 <span className="text-xs text-slate-400">Medium</span>
               </CardContent>
             </Card>
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceLogo size="lg" />
+                <AnimatedAutoForceLogo size="lg" />
                 <span className="text-xs text-slate-400">Large</span>
               </CardContent>
             </Card>
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceLogo size="xl" />
+                <AnimatedAutoForceLogo size="xl" />
                 <span className="text-xs text-slate-400">Extra Large</span>
               </CardContent>
             </Card>
@@ -96,21 +96,21 @@ export default function LogoShowcase() {
             
             <Card className="bg-slate-950 border-slate-800">
               <CardContent className="p-8 flex flex-col items-center">
-                <AutoForceLogo size="lg" />
+                <AnimatedAutoForceLogo size="lg" />
                 <span className="text-xs text-slate-500 mt-4">Dark Background</span>
               </CardContent>
             </Card>
 
             <Card className="bg-white border-slate-200">
               <CardContent className="p-8 flex flex-col items-center">
-                <AutoForceLogo size="lg" />
+                <AnimatedAutoForceLogo size="lg" />
                 <span className="text-xs text-slate-500 mt-4">Light Background</span>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-slate-950 to-slate-900 border-primary">
               <CardContent className="p-8 flex flex-col items-center">
-                <AutoForceLogo size="lg" />
+                <AnimatedAutoForceLogo size="lg" />
                 <span className="text-xs text-primary mt-4">Emerald Background</span>
               </CardContent>
             </Card>
