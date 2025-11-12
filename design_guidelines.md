@@ -22,33 +22,44 @@
 
 ---
 
-## Color System - Professional Fortune 500 Palette
+## Color System - AutoForce™ Professional Palette
 
-### Professional Tones (NO Bright/Glowy Colors)
-- **Muted Evergreen**: hsl(158, 34%, 32%) #2F6F5E - Primary actions, professional accents
-- **Steel Blue**: hsl(210, 32%, 42%) - Secondary actions, supporting elements
-- **Professional Teal**: hsl(162, 29%, 45%) #4E9F87 - Accents, highlights, data points
-- **Neutral Gray**: hsl(213, 16%, 86%) - Borders, dividers, subtle elements
+### Primary Brand Colors - Vibrant Emerald Theme
+- **Emerald Primary**: #10b981 - rgb(16, 185, 129) - Primary actions, CTAs
+- **Emerald Dark**: #059669 - rgb(5, 150, 105) - Hover states, emphasis
+- **Cyan Accent**: #06b6d4 - rgb(6, 182, 212) - Secondary accents, highlights
+- **Logo Gradient**: linear-gradient(135deg, #10b981 0%, #06b6d4 100%) - Brand identity
+- **CTA Gradient**: linear-gradient(135deg, #10b981 0%, #059669 100%) - Primary buttons
 
-### Light Mode - Clean & Professional
-- **Background**: hsl(210, 20%, 98%) #F3F5F7 - Professional canvas (not pure white)
-- **Card Surface**: hsl(210, 12%, 96%) #E8ECEF - Elevated panels
-- **Border**: hsl(213, 16%, 86%) #CFD5DD - Subtle borders
-- **Text Primary**: hsl(217, 33%, 12%) #151D26 - Strong readable text
-- **Text Secondary**: hsl(215, 16%, 47%) - Muted descriptions
+### Page Backgrounds - Light & Professional
+- **Hero/Landing Background**: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) - Light blue gradient
+- **App Background**: #ffffff - Clean white for application pages
+- **Card Surface**: #ffffff - White elevated panels
+- **Input Background**: #f8fafc - Subtle gray for form fields
+- **Hover Background**: #f1f5f9 - Interactive elements
 
-### Dark Mode - Professional Graphite
-- **Background**: hsl(217, 28%, 14%) - Professional dark
-- **Card Surface**: hsl(215, 24%, 18%) - Elevated panels
-- **Sidebar**: hsl(217, 28%, 12%) - Deep graphite sidebar
-- **Border**: hsl(215, 20%, 25%) - Subtle dark borders
-- **Text Primary**: hsl(210, 20%, 96%) - Clean light text
+### Text Hierarchy
+- **Primary Text**: #1e293b - rgb(30, 41, 59) - Headlines, important content
+- **Secondary Text**: #334155 - rgb(51, 65, 85) - Body text, labels
+- **Muted Text**: #64748b - rgb(100, 116, 139) - Descriptions, metadata
+- **Placeholder Text**: #94a3b8 - rgb(148, 163, 184) - Input placeholders
 
-### Status Colors (Subdued, Professional)
-- **Success**: Muted evergreen hsl(158, 34%, 32%)
-- **Warning**: Subdued amber hsl(38, 72%, 48%)
-- **Error**: Professional red hsl(0, 65%, 52%)
-- **Info**: Professional teal hsl(162, 29%, 45%)
+### Borders & Dividers
+- **Primary Border**: #e2e8f0 - rgb(226, 232, 240) - Card borders, dividers
+- **Input Border**: #e2e8f0 - 2px solid borders
+- **Focus Ring**: rgba(16, 185, 129, 0.1) - Input focus state
+
+### Shadows - Soft & Professional
+- **Card Shadow**: 0 20px 60px rgba(0, 0, 0, 0.1) - Login/signup cards
+- **Button Shadow**: 0 4px 16px rgba(16, 185, 129, 0.3) - Primary buttons
+- **Button Hover Shadow**: 0 6px 24px rgba(16, 185, 129, 0.4) - Button hover state
+- **Logo Shadow**: 0 8px 24px rgba(16, 185, 129, 0.3) - Brand elements
+
+### Status Colors (Clear & Vibrant)
+- **Success**: #10b981 - Emerald green for success states
+- **Warning**: #f59e0b - Amber for warnings
+- **Error**: #ef4444 - Red for errors
+- **Info**: #06b6d4 - Cyan for information
 
 ---
 
