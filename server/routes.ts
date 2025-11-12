@@ -12651,6 +12651,107 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // ============================================================================
+  // CHAT TICKET OPERATIONS - RBAC Filtered Support Tickets
+  // ============================================================================
+  
+  app.get('/api/chat/tickets/:id', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { mapTicketStatusToHeaderStatus, calculateSLARemaining } = await import('@shared/helpdeskUtils');
+      
+      const ticketId = req.params.id;
+      const user = req.user!;
+      
+      const employee = await storage.getEmployeeByUserId(user.id);
+      const workspaceId = employee?.workspaceId || '0';
+      
+      const ticket = await storage.getSupportTicket(ticketId, workspaceId);
+      
+      if (!ticket) {
+        return res.status(404).json({ error: 'Ticket not found' });
+      }
+      
+      const isStaff = employee && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((employee as any).platformRole || '');
+      
+      if (!isStaff) {
+        if (ticket.employeeId !== employee?.id && ticket.clientId !== employee?.id) {
+          return res.status(404).json({ error: 'Ticket not found' });
+        }
+      }
+      
+      let assignedAgent: string | undefined;
+      if (ticket.assignedTo) {
+        const agent = await storage.getEmployeeById(ticket.assignedTo);
+        assignedAgent = agent ? `${agent.firstName} ${agent.lastName}` : undefined;
+      }
+      
+      const viewModel = {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: mapTicketStatusToHeaderStatus(ticket),
+        priority: (ticket.priority || 'normal'),
+        assignedAgent,
+        slaRemaining: calculateSLARemaining(ticket.createdAt!, (ticket.priority || 'normal')),
+        subject: ticket.subject,
+        description: ticket.description,
+        workspaceId: ticket.workspaceId,
+        createdAt: ticket.createdAt!,
+      };
+      
+      res.json(viewModel);
+    } catch (error: any) {
+      console.error('Error fetching chat ticket:', error);
+      res.status(500).json({ error: 'Failed to fetch ticket' });
+    }
+  });
+  
+  app.get('/api/chat/tickets', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { mapTicketStatusToHeaderStatus, calculateSLARemaining } = await import('@shared/helpdeskUtils');
+      
+      const user = req.user!;
+      
+      const employee = await storage.getEmployeeByUserId(user.id);
+      const workspaceId = employee?.workspaceId || '0';
+      
+      let tickets = await storage.getSupportTickets(workspaceId);
+      
+      const isStaff = employee && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((employee as any).platformRole || '');
+      
+      if (!isStaff) {
+        tickets = tickets.filter(t => t.employeeId === employee?.id || t.clientId === employee?.id);
+      }
+      
+      const viewModels = await Promise.all(
+        tickets.map(async (ticket) => {
+          let assignedAgent: string | undefined;
+          if (ticket.assignedTo) {
+            const agent = await storage.getEmployeeById(ticket.assignedTo);
+            assignedAgent = agent ? `${agent.firstName} ${agent.lastName}` : undefined;
+          }
+          
+          return {
+            id: ticket.id,
+            ticketNumber: ticket.ticketNumber,
+            status: mapTicketStatusToHeaderStatus(ticket),
+            priority: (ticket.priority || 'normal'),
+            assignedAgent,
+            slaRemaining: calculateSLARemaining(ticket.createdAt!, (ticket.priority || 'normal')),
+            subject: ticket.subject,
+            description: ticket.description,
+            workspaceId: ticket.workspaceId,
+            createdAt: ticket.createdAt!,
+          };
+        })
+      );
+      
+      res.json(viewModels);
+    } catch (error: any) {
+      console.error('Error fetching chat tickets:', error);
+      res.status(500).json({ error: 'Failed to fetch tickets' });
+    }
+  });
+
   // Get HelpDesk queue data - All authenticated users can view
   app.get('/api/helpdesk/queue', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {

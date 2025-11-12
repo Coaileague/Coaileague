@@ -2,15 +2,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Clock, MessageCircle, AlertCircle, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import type { TicketViewModel } from "@shared/helpdeskUtils";
 
 type TicketStatus = 'new' | 'assigned' | 'investigating' | 'waiting_user' | 'resolved' | 'escalated';
 
 interface ProgressHeaderProps {
-  status: TicketStatus;
+  status?: TicketStatus;
   assignedAgent?: string;
   slaRemaining?: number;
   priority?: 'low' | 'normal' | 'high' | 'urgent';
   ticketId?: string;
+  fetchLiveData?: boolean;
   className?: string;
 }
 
@@ -66,13 +69,26 @@ const priorityConfig = {
 };
 
 export function HelpDeskProgressHeader({
-  status,
-  assignedAgent,
-  slaRemaining,
-  priority = 'normal',
+  status: propStatus,
+  assignedAgent: propAssignedAgent,
+  slaRemaining: propSlaRemaining,
+  priority: propPriority = 'normal',
   ticketId,
+  fetchLiveData = false,
   className
 }: ProgressHeaderProps) {
+  const { data: ticketData } = useQuery<TicketViewModel>({
+    queryKey: ['/api/chat/tickets', ticketId],
+    enabled: fetchLiveData && !!ticketId,
+    refetchInterval: 30000,
+  });
+  
+  const status = (ticketData?.status || propStatus || 'new') as TicketStatus;
+  const assignedAgent = ticketData?.assignedAgent || propAssignedAgent;
+  const slaRemaining = ticketData?.slaRemaining ?? propSlaRemaining;
+  const priority = (ticketData?.priority || propPriority) as 'low' | 'normal' | 'high' | 'urgent';
+  const displayTicketId = ticketData?.ticketNumber || ticketId;
+  
   const config = statusConfig[status];
   const Icon = config.icon;
 
@@ -87,9 +103,9 @@ export function HelpDeskProgressHeader({
                 <span className={cn("font-semibold text-sm", config.color)} data-testid="status-label">
                   {config.label}
                 </span>
-                {ticketId && (
+                {displayTicketId && (
                   <span className="text-xs text-muted-foreground">
-                    #{ticketId.slice(-8)}
+                    #{typeof displayTicketId === 'string' && displayTicketId.length > 8 ? displayTicketId.slice(-8) : displayTicketId}
                   </span>
                 )}
               </div>
