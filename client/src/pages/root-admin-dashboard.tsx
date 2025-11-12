@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { TimeGreeting } from "@/components/time-greeting";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -291,11 +292,11 @@ export default function RootAdminDashboard() {
             </div>
           </div>
 
-          {/* Desktop Header - Reduced Padding */}
-          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-white/80 backdrop-blur-sm p-3 sm:p-4 border-2 border-gray-200 shadow-md">
-            {/* Logo and Title */}
-            <div className="relative z-10 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
+          {/* Desktop Header - Centered Layout */}
+          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-3 sm:p-4 border-2 border-gray-200 dark:border-slate-700 shadow-md">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+              {/* Logo and Title - Centered on Large Screens */}
+              <div className="flex items-start gap-3 lg:col-start-2 lg:flex-col lg:items-center lg:text-center">
                 <div className="transform hover:scale-105 transition-transform duration-300">
                   <AnimatedAutoForceLogo size="lg" variant="icon" />
                 </div>
@@ -314,8 +315,8 @@ export default function RootAdminDashboard() {
                 </div>
               </div>
               
-              {/* Actions */}
-              <div className="flex items-center gap-2">
+              {/* Actions - Right Aligned */}
+              <div className="flex items-center justify-end gap-2 lg:col-start-3">
                 {/* Notifications Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -357,6 +358,9 @@ export default function RootAdminDashboard() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                
+                {/* Theme Toggle */}
+                <ThemeToggle />
               </div>
             </div>
           </div>
