@@ -19,6 +19,7 @@ import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
 import { shouldRunBiweekly, seedAnchor, advanceAnchor, detectAnchorDrift } from './utils/scheduling';
 import { storage } from '../storage';
 import { executeIdempotencyCheck, updateIdempotencyResult } from './autonomy/helpers';
+import { runWebSocketConnectionCleanup } from './wsConnectionCleanup';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -262,6 +263,11 @@ const SCHEDULER_CONFIG = {
     enabled: true,
     schedule: '*/5 * * * *', // Every 5 minutes
     description: 'Auto-close expired shift rooms based on autoCloseAt timestamp'
+  },
+  wsConnectionCleanup: {
+    enabled: true,
+    schedule: '*/5 * * * *', // Every 5 minutes
+    description: 'Auto-close orphaned WebSocket connections (>5min) and purge stale records (>24h)'
   }
 };
 
@@ -1254,6 +1260,16 @@ export function startAutonomousScheduler() {
     console.log(`   ${SCHEDULER_CONFIG.roomAutoClose.description}\n`);
   }
 
+  // 6. WebSocket Connection Cleanup (Every 5 minutes)
+  if (SCHEDULER_CONFIG.wsConnectionCleanup.enabled) {
+    cron.schedule(SCHEDULER_CONFIG.wsConnectionCleanup.schedule, () => {
+      runWebSocketConnectionCleanup();
+    });
+    console.log('✅ WebSocket Connection Cleanup:');
+    console.log(`   Schedule: ${SCHEDULER_CONFIG.wsConnectionCleanup.schedule} (every 5 minutes)`);
+    console.log(`   ${SCHEDULER_CONFIG.wsConnectionCleanup.description}\n`);
+  }
+
   isSchedulerRunning = true;
 
   console.log('╔════════════════════════════════════════════════╗');
@@ -1270,4 +1286,5 @@ export const manualTriggers = {
   payroll: runAutomaticPayrollProcessing,
   cleanup: runIdempotencyKeyCleanup,
   roomAutoClose: runRoomAutoClose,
+  wsConnectionCleanup: runWebSocketConnectionCleanup,
 };
