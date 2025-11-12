@@ -83,7 +83,6 @@ import Disputes from "@/pages/disputes";
 import MyAuditRecord from "@/pages/my-audit-record";
 import FileGrievance from "@/pages/file-grievance";
 import ReviewDisputes from "@/pages/review-disputes";
-import CommunicationOS from "@/pages/communication-os";
 import CommOS from "@/pages/comm-os";
 import CommOSOnboarding from "@/pages/comm-os-onboarding";
 import QueryOS from "@/pages/query-os";
@@ -379,7 +378,6 @@ function AppContent() {
                 <Route path="/my-audit-record" component={MyAuditRecord} />
                 <Route path="/file-grievance" component={FileGrievance} />
                 <Route path="/review-disputes" component={ReviewDisputes} />
-                <Route path="/communication" component={CommunicationOS} />
                 <Route path="/comm-os" component={CommOS} />
                 <Route path="/comm-os/onboarding" component={CommOSOnboarding} />
                 <Route path="/query-os" component={QueryOS} />
