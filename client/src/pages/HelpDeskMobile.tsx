@@ -1164,19 +1164,14 @@ export default function ModernMobileChat() {
         ) : (
           <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-600 shadow-md flex items-center justify-center">
-                <WFLogoCompact size={16} className="text-white" />
-              </div>
-              <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
-                helpDeskRoom?.status === 'open' ? 'bg-muted/30' : 'bg-red-500'
-              }`}></div>
+              <AnimatedAutoForceLogo variant="icon" size="sm" className="scale-75" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-gray-900 font-bold text-sm break-words">Help Desk</h2>
+              <h2 className="text-gray-900 font-bold text-sm break-words">AutoForce™ HelpDesk</h2>
               <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
                 <Users size={10} />
                 <span>{onlineUsers.length} online</span>
-                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-blue-500 text-blue-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
+                <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
               </div>
             </div>
             <Button
