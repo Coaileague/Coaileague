@@ -22,7 +22,7 @@ const messageRateLimits = new Map<string, MessageRateLimit>();
 // Constants
 const MESSAGE_RATE_WINDOW = 60 * 1000; // 1 minute
 const MESSAGE_RATE_LIMIT = 30; // 30 messages per minute
-const MAX_CONCURRENT_CONNECTIONS = 3; // 3 concurrent WebSocket connections per user
+const MAX_CONCURRENT_CONNECTIONS = 20; // 20 concurrent WebSocket connections per user (increased for multi-tab support)
 
 /**
  * Check if user has exceeded message rate limit (30 messages/minute)

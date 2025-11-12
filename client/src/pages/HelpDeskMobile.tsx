@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -48,6 +49,7 @@ export default function ModernMobileChat() {
   const { toast } = useToast();
   const { playSound } = useChatSounds();
   const { showTransition, hideTransition } = useTransition();
+  const [, navigate] = useLocation();
   
   // Keyboard-aware mobile input handling
   useEffect(() => {
