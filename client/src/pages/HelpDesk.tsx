@@ -166,6 +166,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   } = useChatroomWebSocket(
     user?.id || `guest-${sessionId}`, // Use sessionId for guests so WebSocket connects
     userName,
+    MAIN_ROOM_ID, // Default conversation ID for main chatroom
     (request) => {
       // When staff requests secure info, open the dialog
       setSecureRequest({
@@ -996,7 +997,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                     <div className="flex items-start gap-1.5 sm:gap-2 min-w-0">
                       {/* Avatar Icon - Compact, hidden on very small screens */}
                       <div className="hidden xs:block flex-shrink-0 mt-0.5">
-                        {getUserTypeIcon((msg as any).userType || 'guest', role, displayName)}
+                        {getUserTypeIcon((msg as any).userType || 'guest', role, actualName)}
                       </div>
                       
                       <div className="flex-1 min-w-0 overflow-hidden">
