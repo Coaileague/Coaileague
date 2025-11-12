@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 import {
   MessageSquare, Users, Clock, CheckCircle, AlertCircle,
   Mic, MicOff, ExternalLink, Bot, Sparkles, TrendingUp,
@@ -93,9 +94,17 @@ export default function SupportDashboard() {
   };
 
   return (
-    <ScrollArea className="h-full w-full">
-      <div className="flex flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto pb-8">
-        {/* Branded Header with Large Logo */}
+    <>
+      {/* Universal Loading Overlay with Hogwash Messages */}
+      <ProgressLoadingOverlay 
+        isVisible={isLoading}
+        scenario="dashboardLoading"
+        status="loading"
+      />
+      
+      <ScrollArea className="h-full w-full">
+        <div className="flex flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto pb-8">
+          {/* Branded Header with Large Logo */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 sm:p-8 border border-indigo-500/20">
           {/* Animated gradient orbs */}
           <div className="absolute top-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
@@ -343,5 +352,6 @@ export default function SupportDashboard() {
       </Card>
       </div>
     </ScrollArea>
+    </>
   );
 }

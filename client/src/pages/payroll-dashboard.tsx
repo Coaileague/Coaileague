@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2, DollarSign, CheckCircle, Clock, Play, Users } from "lucide-react";
+import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 
 interface PayrollRun {
   id: string;
@@ -184,6 +185,13 @@ export default function PayrollDashboard() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
+      {/* Universal Loading Overlay with Hogwash Messages */}
+      <ProgressLoadingOverlay 
+        isVisible={isLoading}
+        scenario="dashboardLoading"
+        status="loading"
+      />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
