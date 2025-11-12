@@ -1199,7 +1199,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         </div>
                       </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="bg-white border-slate-300 w-64">
+                    <ContextMenuContent className="bg-white shadow-xl border-2 border-emerald-600/30 w-72">
                       {isStaff && u.role !== 'bot' && (userPlatformRole === 'root_admin' || u.role !== 'root_admin') ? (
                         <>
                           <div className="px-2 py-1.5 text-xs font-bold text-slate-700 border-b border-slate-200">
@@ -1830,7 +1830,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border border-white/10 text-white">
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-emerald-600/30 text-white [&>button]:text-white [&>button]:opacity-100 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-emerald-600">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
               <AutoForceLogo size="sm" variant="icon" />

@@ -13,7 +13,7 @@ const ABUSE_PATTERNS = [
   /\bb+i+t+c+h+\w*/gi,
   /\bd+a+m+n+\w*/gi,
   /\bc+r+a+p+\w*/gi,
-  /\bh+e+l+l+\w*/gi,
+  /\bh+e+l+l+\b/gi,
   
   // Slurs and hate speech (basic detection)
   /\bn+i+g+g+\w*/gi,
