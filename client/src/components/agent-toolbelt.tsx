@@ -6,6 +6,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -149,67 +152,61 @@ export function AgentToolbelt({
           <DropdownMenuSeparator />
 
           {/* Macros */}
-          <DropdownMenuItem asChild>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="w-full flex items-center px-2 py-1.5 cursor-pointer hover:bg-accent">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Insert Macro
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="left" className="w-56">
-                {macros.map(macro => (
-                  <DropdownMenuItem 
-                    key={macro.id}
-                    onClick={() => handleMacro(macro.text)}
-                    data-testid={`macro-${macro.id}`}
-                  >
-                    {macro.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Insert Macro
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {macros.map(macro => (
+                <DropdownMenuItem 
+                  key={macro.id}
+                  onClick={() => handleMacro(macro.text)}
+                  data-testid={`macro-${macro.id}`}
+                >
+                  {macro.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
 
           {/* Request Files */}
-          <DropdownMenuItem asChild>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="w-full flex items-center px-2 py-1.5 cursor-pointer hover:bg-accent">
-                <Camera className="w-4 h-4 mr-2" />
-                Request File
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="left" className="w-56">
-                <DropdownMenuItem onClick={() => handleRequestFile('screenshot')} data-testid="request-screenshot">
-                  Screenshot
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRequestFile('log')} data-testid="request-log">
-                  Log File
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRequestFile('file')} data-testid="request-file">
-                  General File
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Camera className="w-4 h-4 mr-2" />
+              Request File
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              <DropdownMenuItem onClick={() => handleRequestFile('screenshot')} data-testid="request-screenshot">
+                Screenshot
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleRequestFile('log')} data-testid="request-log">
+                Log File
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleRequestFile('file')} data-testid="request-file">
+                General File
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
 
           {/* KB Links */}
-          <DropdownMenuItem asChild>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="w-full flex items-center px-2 py-1.5 cursor-pointer hover:bg-accent">
-                <LinkIcon className="w-4 h-4 mr-2" />
-                Send KB Link
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="left" className="w-56">
-                {kbArticles.map(article => (
-                  <DropdownMenuItem 
-                    key={article.id}
-                    onClick={() => handleKBLink(article)}
-                    data-testid={`kb-${article.id}`}
-                  >
-                    {article.title}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <LinkIcon className="w-4 h-4 mr-2" />
+              Send KB Link
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {kbArticles.map(article => (
+                <DropdownMenuItem 
+                  key={article.id}
+                  onClick={() => handleKBLink(article)}
+                  data-testid={`kb-${article.id}`}
+                >
+                  {article.title}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
 
           <DropdownMenuSeparator />
 
