@@ -483,7 +483,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     // Bot gets special amber Sparkles icon (matching mobile chat)
     if (role === 'bot') {
       return (
-        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-600 ring-2 ring-amber-500/50">
+        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 ring-2 ring-blue-500/50">
           <Sparkles size={14} className="text-white" />
         </div>
       );
@@ -535,10 +535,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   // Get status indicator - Extra Compact
   const getStatusIndicator = (status: string) => {
     switch (status) {
-      case 'online': return <div className="w-1.5 h-1.5 bg-muted/30 rounded-full animate-pulse shadow-sm" />;
-      case 'away': return <div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-sm" />;
-      case 'busy': return <div className="w-1.5 h-1.5 bg-rose-500 rounded-full shadow-sm" />;
-      default: return <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full" />;
+      case 'online': return <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shadow-sm" />;
+      case 'away': return <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full shadow-sm" />;
+      case 'busy': return <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-sm" />;
+      default: return <div className="w-1.5 h-1.5 bg-gray-500 rounded-full" />;
     }
   };
 
@@ -575,9 +575,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     if (!roleText) return null;
     
     const isBot = role === 'bot';
-    // Smaller superscript (text-[9px]) but still visible with space separation
+    // Smaller superscript (text-[9px]) but still visible with space separation - BLUE THEME
     return (
-      <sup className={`text-[9px] font-semibold ml-1 ${isBot ? 'text-amber-500' : 'text-emerald-500'}`}>
+      <sup className={`text-[9px] font-semibold ml-1 ${isBot ? 'text-blue-400' : 'text-blue-500'}`}>
         ({roleText})
       </sup>
     );
@@ -605,11 +605,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       // Determine if it's a bot for styling
       const isBot = roleText === 'BOT AI';
       
-      // Add the username with superscript role - HARDCODED smaller but visible
+      // Add the username with superscript role - BLUE THEME for visibility
       parts.push(
         <span key={key++} className="font-semibold">
           {userName}
-          <sup className={`text-[9px] font-semibold ml-1 ${isBot ? 'text-amber-500' : 'text-emerald-500'}`}>
+          <sup className={`text-[9px] font-semibold ml-1 ${isBot ? 'text-blue-400' : 'text-blue-500'}`}>
             ({roleText})
           </sup>
         </span>
@@ -628,34 +628,34 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'root_admin': return 'text-emerald-600 font-bold';  // Root admin
-      case 'bot': return 'text-amber-500 font-bold';  // Bot
-      case 'deputy_admin': return 'text-emerald-600 font-bold';
-      case 'support_manager': return 'text-green-600 font-bold';
-      case 'sysop': return 'text-cyan-600 font-bold';
-      default: return 'text-foreground font-semibold';  // Regular users
+      case 'root_admin': return 'text-blue-600 font-bold';  // Root admin
+      case 'bot': return 'text-blue-500 font-bold';  // Bot
+      case 'deputy_admin': return 'text-blue-600 font-bold';
+      case 'support_manager': return 'text-blue-600 font-bold';
+      case 'sysop': return 'text-blue-600 font-bold';
+      default: return 'text-white font-semibold';  // Regular users - white for visibility
     }
   };
 
-  // Get message bubble color - Unified, aesthetically pleasing design with good contrast
+  // Get message bubble color - Blue visibility scheme with proper contrast
   const getMessageBubbleColor = (senderType: string, role: string, isSelf: boolean) => {
     if (isSelf) {
-      // Support staff own messages - professional card with design tokens
-      return 'bg-card border border-border shadow-md text-foreground';
+      // Support staff own messages - blue theme with white text
+      return 'bg-blue-600 border border-blue-700 shadow-md text-white dark:bg-blue-700 dark:border-blue-800';
     }
     
-    // Bot messages - warm amber/cream background with dark mode support
+    // Bot messages - lighter blue for distinction
     if (role === 'bot' || senderType === 'bot') {
-      return 'bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 shadow-sm dark:from-amber-950/50 dark:to-yellow-950/30 dark:border-amber-700';
+      return 'bg-blue-100 border border-blue-300 shadow-sm text-blue-900 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-100';
     }
     
-    // Staff messages - professional card with emerald accent
+    // Staff messages - blue theme with white text
     if (role === 'root_admin' || role === 'deputy_admin' || role === 'support_manager' || role === 'sysop') {
-      return 'bg-card border border-primary/30 shadow-sm text-foreground';
+      return 'bg-blue-500 border border-blue-600 shadow-sm text-white dark:bg-blue-600 dark:border-blue-700';
     }
     
-    // Customer/regular messages - professional card with design tokens
-    return 'bg-card border border-border shadow-md text-foreground';
+    // Customer/regular messages - darker blue background with white text
+    return 'bg-blue-700 border border-blue-800 shadow-md text-white dark:bg-blue-800 dark:border-blue-900';
   };
 
   const isStaff = user && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((user as any).platformRole);
@@ -885,40 +885,40 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 relative">
       {/* Seasonal Animated Background */}
       <SeasonalBackground enabled={seasonalAnimationsEnabled} />
       
-      {/* CLEAN MOBILE-FIRST HEADER - No overlapping elements */}
-      <header className="relative z-50 bg-muted border-b border-border flex-shrink-0">
-        <div className="flex items-center justify-between px-3 py-2 gap-2">
-          {/* Left: Logo + Title */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-green-600 shadow-md flex items-center justify-center flex-shrink-0">
+      {/* CLEAN MOBILE-FIRST HEADER - CENTERED ALIGNMENT */}
+      <header className="relative z-50 bg-slate-800 border-b border-blue-600 flex-shrink-0">
+        <div className="flex items-center justify-center px-3 py-2 gap-2 relative">
+          {/* Centered: Logo + Title */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg flex items-center justify-center flex-shrink-0">
               <span className="text-white font-black text-sm">AF</span>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-foreground font-bold text-sm sm:text-base truncate">HelpDesk</h1>
-              <p className="text-muted-foreground text-[10px] sm:text-xs truncate">Live support chat</p>
+            <div>
+              <h1 className="text-blue-400 font-bold text-sm sm:text-base text-center">HelpDesk</h1>
+              <p className="text-blue-300 text-[10px] sm:text-xs text-center">Live support chat</p>
             </div>
           </div>
 
-          {/* Right: Exit Chat Room Button */}
+          {/* Right: Exit Chat Room Button - Absolute positioned */}
           <Button
             onClick={() => navigate('/dashboard')}
             variant="ghost"
             size="icon"
-            className="h-10 w-10 flex-shrink-0"
+            className="h-10 w-10 flex-shrink-0 absolute right-3"
             data-testid="button-exit-chatroom"
             title="Exit Chat Room"
           >
-            <X className="w-5 h-5 text-foreground dark:text-foreground hover:text-primary" />
+            <X className="w-5 h-5 text-blue-400 hover:text-blue-300" />
           </Button>
         </div>
 
-        {/* Queue Status Bar - Subtle info strip */}
-        <div className="bg-muted/50 px-3 py-1.5 border-t border-border">
-          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs text-muted-foreground">
+        {/* Queue Status Bar - Blue info strip */}
+        <div className="bg-blue-950/40 px-3 py-1.5 border-t border-blue-700">
+          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs text-blue-300">
             <span className="flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="truncate">{uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length} agents online</span>
@@ -943,10 +943,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       {/* Main Layout - Responsive: Stacked (mobile) vs 3-column (desktop) */}
       <main className="flex flex-col md:flex-row flex-grow overflow-y-auto md:overflow-hidden w-full relative z-10">
         {/* CENTER COLUMN: Chat Area - Mobile-first with proper scroll */}
-        <section className="flex-grow flex flex-col bg-muted/80 backdrop-blur-md relative md:border-r-2 border-border shadow-inner min-h-0">
+        <section className="flex-grow flex flex-col bg-slate-900/80 backdrop-blur-md relative md:border-r-2 border-blue-700 shadow-inner min-h-0">
           {/* Progress Header - Only visible to staff */}
           {isStaff && (
-            <div className="px-4 py-3 border-b border-border bg-muted/70">
+            <div className="px-4 py-3 border-b border-blue-700 bg-slate-800/70">
               <HelpDeskProgressHeader
                 status={ticketStatus}
                 assignedAgent={userName}
@@ -970,7 +970,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
                     <div key={idx} className="flex justify-center my-1">
-                      <span className="text-[10px] font-mono text-muted-foreground italic bg-muted px-2 py-0.5 rounded-full border border-border flex items-center gap-1.5">
+                      <span className="text-[10px] font-mono text-blue-600 dark:text-blue-300 italic bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
                         <WFLogoCompact size={10} />
                         <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
                       </span>
@@ -979,7 +979,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 }
 
                 // Regular messages - ALL left-aligned with modern bubbles
-                const displayName = msg.senderName || userName || 'User';
+                // SHOW ACTUAL NAME, not role - use firstName if available
+                const actualName = msg.senderName || (user as any)?.firstName || userName || 'User';
                 const bubbleColor = getMessageBubbleColor(msg.senderType || 'customer', role, isSelf);
                 const nameColor = getRoleColor(role);
 
@@ -995,18 +996,18 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         {/* Header: Name with inline superscript role badge + Timestamp */}
                         <div className="flex items-center gap-1 sm:gap-1.5 mb-1 flex-wrap min-w-0">
                           <span className={`text-xs font-bold ${nameColor} truncate`}>
-                            {role === 'bot' ? 'HelpOS' : displayName.split('(')[0].trim()}
+                            {role === 'bot' ? 'HelpOS' : actualName.split('(')[0].trim()}
                             {/* Role badge as inline superscript like mathematical notation */}
                             {getRoleIcon(role)}
                           </span>
-                          <span className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
+                          <span className="text-[10px] text-blue-500 dark:text-blue-400 ml-auto flex-shrink-0">
                             {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                         
                         {/* Message Content - Mobile-safe wrapping with overflow protection */}
                         <div 
-                          className="text-foreground text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
+                          className="text-white dark:text-blue-100 text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
                           dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
                         />
                       </div>
@@ -1832,12 +1833,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-emerald-600/30 text-white [&>button]:text-slate-400 [&>button]:opacity-100 [&>button]:hover:text-white [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-emerald-600">
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-blue-600/30 text-white [&>button]:text-slate-400 [&>button]:opacity-100 [&>button]:hover:text-white [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
               <AutoForceLogo size="sm" variant="icon" />
               <div className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-cyan-400" />
+                <Info className="w-5 h-5 text-blue-400" />
                 User Profile & Diagnostics
               </div>
             </DialogTitle>
@@ -1855,7 +1856,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   <div className="space-y-4">
                     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-md">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-600 to-green-600 shadow-md flex items-center justify-center ring-2 ring-gray-200">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 shadow-md flex items-center justify-center ring-2 ring-blue-200">
                           <Users size={24} className="text-white" />
                         </div>
                         <div>
@@ -1900,28 +1901,28 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 ) : (selectedUserId.startsWith('helpbot') || selectedUserId.startsWith('system_')) ? (
                   /* Bot/System user information */
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-lg p-4">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center ring-2 ring-amber-500/50">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-blue-500/50">
                           <Sparkles size={24} className="text-white" />
                         </div>
                         <div>
                           <h3 className="text-white font-bold text-lg">
                             {selectedUserId.startsWith('helpbot') ? 'HelpOS™' : 'System Bot'}
                           </h3>
-                          <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-amber-500/30 mt-1">
+                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 mt-1">
                             System-Generated AI Assistant
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-amber-200 text-sm">
+                      <p className="text-blue-200 text-sm">
                         AI-powered customer support assistant designed to provide instant responses and assistance.
                       </p>
                     </div>
 
                     <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                       <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-cyan-400" />
+                        <Zap className="w-4 h-4 text-blue-400" />
                         Capabilities
                       </h4>
                       <ul className="space-y-2">
@@ -1944,10 +1945,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                       </ul>
                     </div>
 
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-amber-300 text-xs">
+                        <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-blue-300 text-xs">
                           This is an automated system. For sensitive issues, request human support agent.
                         </span>
                       </div>
@@ -1961,7 +1962,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                       <>
                         <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                           <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                            <Info className="w-4 h-4 text-cyan-400" />
+                            <Info className="w-4 h-4 text-blue-400" />
                             User Details
                           </h4>
                           <div className="space-y-3">
@@ -2032,15 +2033,15 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                               </div>
                               <div>
                                 <span className="text-slate-400 text-xs block mb-1">Active</span>
-                                <span className="text-amber-400 text-lg font-bold">{userContext.metrics.activeTickets || 0}</span>
+                                <span className="text-blue-400 text-lg font-bold">{userContext.metrics.activeTickets || 0}</span>
                               </div>
                               <div>
                                 <span className="text-slate-400 text-xs block mb-1">Resolved</span>
-                                <span className="text-primary text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
+                                <span className="text-blue-500 text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
                               </div>
                               <div>
                                 <span className="text-slate-400 text-xs block mb-1">Resolution Rate</span>
-                                <span className="text-cyan-400 text-lg font-bold">{userContext.metrics.resolutionRate || 0}%</span>
+                                <span className="text-blue-300 text-lg font-bold">{userContext.metrics.resolutionRate || 0}%</span>
                               </div>
                             </div>
                           </div>
@@ -2121,7 +2122,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 <div className="mb-4 flex justify-center">
                   <AutoForceLogo size="lg" variant="icon" className="opacity-75" />
                 </div>
-                <div className="w-12 h-12 mx-auto mb-4 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-slate-400 text-sm font-medium">Loading user information...</p>
                 <p className="text-slate-500 text-xs mt-1">Powered by AutoForce™</p>
               </div>
