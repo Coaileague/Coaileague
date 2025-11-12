@@ -263,12 +263,12 @@ export default function RootAdminDashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Animated background gradient orbs - Hidden on mobile for performance */}
       <div className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-slate-900/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-slate-900/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-100/30 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-100/30 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-200/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       {/* Main Content - More compact on mobile */}
@@ -276,10 +276,10 @@ export default function RootAdminDashboard() {
         {/* Branded Header - Compact on mobile, full on desktop */}
         <div className="sm:mb-6">
           {/* Mobile Header - Very compact */}
-          <div className="sm:hidden relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 p-3 border border-primary/20">
+          <div className="sm:hidden relative overflow-hidden rounded-lg bg-white/80 backdrop-blur-sm p-3 border-2 border-gray-200 shadow-md">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <h1 className="text-base font-bold text-white truncate">
+                <h1 className="text-base font-bold text-gray-900 truncate">
                   Platform Command
                 </h1>
                 {personalData && (
@@ -292,18 +292,18 @@ export default function RootAdminDashboard() {
           </div>
 
           {/* Desktop Header - Reduced Padding */}
-          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 p-3 sm:p-4 border border-primary/20 backdrop-blur-xl bg-white/5">
+          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-white/80 backdrop-blur-sm p-3 sm:p-4 border-2 border-gray-200 shadow-md">
             {/* Logo and Title */}
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="transform hover:scale-105 transition-transform duration-300">
-                  <AnimatedAutoForceLogo size="lg" variant="icon" lightMode={true} />
+                  <AnimatedAutoForceLogo size="lg" variant="icon" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-blue-200 bg-clip-text text-transparent">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
                     Platform Command Center
                   </h1>
-                  <p className="text-slate-400 text-xs sm:text-sm">
+                  <p className="text-gray-600 text-xs sm:text-sm">
                     {getRoleTitle()}
                   </p>
                   <TimeGreeting 
@@ -322,7 +322,7 @@ export default function RootAdminDashboard() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative text-white hover:bg-white/10"
+                      className="relative"
                       data-testid="button-notifications-desktop"
                     >
                       <Bell className="h-5 w-5" />
@@ -365,11 +365,11 @@ export default function RootAdminDashboard() {
         {/* Desktop: 2-Column Grid | Mobile: Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* Quick Access Menu - Organized by Categories (Registry-Based) */}
-          <Card className="border-primary/20 bg-gradient-to-br from-slate-900/50 via-slate-900/30 to-slate-900/50 backdrop-blur-sm">
+          <Card className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 shadow-md">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-                <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white">Quick Access</h2>
+                <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-gray-900">Quick Access</h2>
               </div>
 
               {/* Support & Helpdesk Tools */}
@@ -384,7 +384,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-primary/20 hover:border-primary/80/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -396,7 +396,7 @@ export default function RootAdminDashboard() {
                           data-testid={action.testId}
                         >
                           <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
-                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                          <span className="text-[10px] font-medium leading-tight text-gray-900">{action.label}</span>
                         </Button>
                       );
                     })}
@@ -416,7 +416,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-blue-500/20 hover:border-blue-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -428,7 +428,7 @@ export default function RootAdminDashboard() {
                           data-testid={action.testId}
                         >
                           <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
-                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                          <span className="text-[10px] font-medium leading-tight text-gray-900">{action.label}</span>
                         </Button>
                       );
                     })}
@@ -448,7 +448,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-primary/20 hover:border-blue-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -460,7 +460,7 @@ export default function RootAdminDashboard() {
                           data-testid={action.testId}
                         >
                           <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
-                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                          <span className="text-[10px] font-medium leading-tight text-gray-900">{action.label}</span>
                         </Button>
                       );
                     })}
@@ -471,7 +471,7 @@ export default function RootAdminDashboard() {
               {/* Core Features */}
               {coreActions.length > 0 && (
                 <div>
-                  <h3 className="text-[10px] sm:text-xs font-semibold text-slate-400/70 mb-2 uppercase tracking-wider">Core Features</h3>
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Core Features</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {coreActions.map((action) => {
                       const Icon = action.icon;
@@ -480,7 +480,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-slate-800/30 border-slate-500/20 hover:border-slate-400/40"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -492,7 +492,7 @@ export default function RootAdminDashboard() {
                           data-testid={action.testId}
                         >
                           <Icon className={`h-4 w-4 ${action.color} shrink-0`} />
-                          <span className="text-[10px] font-medium leading-tight text-white">{action.label}</span>
+                          <span className="text-[10px] font-medium leading-tight text-gray-900">{action.label}</span>
                         </Button>
                       );
                     })}
@@ -503,7 +503,7 @@ export default function RootAdminDashboard() {
           </Card>
 
           {/* 🔐 ADMIN CONTROLS - User & Workspace Management */}
-          <Card className="border-primary/20 bg-gradient-to-br from-slate-900/50 via-red-950/10 to-slate-900/50 backdrop-blur-sm">
+          <Card className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 shadow-md">
             <CardHeader className="pb-3 pt-3 px-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <ShieldAlert className="h-4 w-4 text-red-400" />
@@ -525,23 +525,23 @@ export default function RootAdminDashboard() {
                     placeholder="Search users (min 3 chars)..."
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="pl-10 bg-slate-800/50 border-primary/30 h-8 text-sm"
+                    className="pl-10 bg-white border-2 border-gray-200 h-8 text-sm"
                     data-testid="input-user-search"
                   />
                 </div>
 
                 {userSearchResults && (userSearchResults as any[]).length > 0 && (
-                  <ScrollArea className="h-[160px] border border-primary/20 rounded-lg bg-slate-800/30 p-2">
+                  <ScrollArea className="h-[160px] border-2 border-gray-200 rounded-lg bg-gray-50 p-2 shadow-sm">
                     <div className="space-y-1.5">
                       {(userSearchResults as any[]).map((user: any) => (
                         <div
                           key={user.id}
-                          className="flex items-center justify-between p-2 rounded-lg hover-elevate border border-slate-700 bg-slate-800/50"
+                          className="flex items-center justify-between p-2 rounded-lg hover-elevate border-2 border-gray-200 bg-white shadow-sm"
                           data-testid={`user-result-${user.id}`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-medium text-white truncate">
+                              <p className="text-xs font-medium text-gray-900 truncate">
                                 {user.firstName} {user.lastName}
                               </p>
                               <Badge variant="secondary" className="text-[10px] px-1 py-0">
@@ -566,7 +566,7 @@ export default function RootAdminDashboard() {
                 )}
 
               {selectedUser && (
-                <div className="border border-primary/30 rounded-lg p-4 bg-slate-950/20">
+                <div className="border-2 border-gray-200 rounded-lg p-4 bg-white/80 backdrop-blur-sm shadow-md">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold text-primary">Managing: {selectedUser.firstName} {selectedUser.lastName}</h4>
                     <Button
@@ -582,11 +582,11 @@ export default function RootAdminDashboard() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
                         <span className="text-muted-foreground">Email:</span>
-                        <p className="text-white font-medium">{selectedUser.email}</p>
+                        <p className="text-gray-900 font-medium">{selectedUser.email}</p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">User ID:</span>
-                        <p className="text-white font-mono text-[10px]">{selectedUser.id}</p>
+                        <p className="text-gray-900 font-mono text-[10px]">{selectedUser.id}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -626,23 +626,23 @@ export default function RootAdminDashboard() {
                     placeholder="Search workspaces (min 3 chars)..."
                     value={workspaceSearchQuery}
                     onChange={(e) => setWorkspaceSearchQuery(e.target.value)}
-                    className="pl-10 bg-slate-800/50 border-orange-500/30 h-8 text-sm"
+                    className="pl-10 bg-white border-2 border-gray-200 h-8 text-sm"
                     data-testid="input-workspace-search"
                   />
                 </div>
 
                 {workspaceSearchResults && (workspaceSearchResults as any[]).length > 0 && (
-                  <ScrollArea className="h-[160px] border border-orange-500/20 rounded-lg bg-slate-800/30 p-2">
+                  <ScrollArea className="h-[160px] border-2 border-gray-200 rounded-lg bg-gray-50 p-2 shadow-sm">
                     <div className="space-y-1.5">
                       {(workspaceSearchResults as any[]).map((workspace: any) => (
                         <div
                           key={workspace.id}
-                          className="flex items-center justify-between p-2 rounded-lg hover-elevate border border-slate-700 bg-slate-800/50"
+                          className="flex items-center justify-between p-2 rounded-lg hover-elevate border-2 border-gray-200 bg-white shadow-sm"
                           data-testid={`workspace-result-${workspace.id}`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-medium text-white truncate">{workspace.name}</p>
+                              <p className="text-xs font-medium text-gray-900 truncate">{workspace.name}</p>
                               {workspace.isSuspended && (
                                 <Badge variant="destructive" className="text-[10px] px-1 py-0">Suspended</Badge>
                               )}
@@ -671,7 +671,7 @@ export default function RootAdminDashboard() {
                 )}
 
               {selectedWorkspace && (
-                <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-950/20">
+                <div className="border-2 border-gray-200 rounded-lg p-4 bg-white/80 backdrop-blur-sm shadow-md">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold text-orange-300">Managing: {selectedWorkspace.name}</h4>
                     <Button
@@ -698,7 +698,7 @@ export default function RootAdminDashboard() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Workspace ID:</span>
-                        <p className="text-white font-mono text-[10px] break-all">{selectedWorkspace.id}</p>
+                        <p className="text-gray-900 font-mono text-[10px] break-all">{selectedWorkspace.id}</p>
                       </div>
                     </div>
                     
