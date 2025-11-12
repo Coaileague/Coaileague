@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Scenario-based configuration type
-export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync";
+export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync" | "dashboardLoading";
 
 export interface ScenarioConfig {
   messages: string[];
@@ -116,6 +116,25 @@ const SCENARIO_CONFIGS: Record<ProgressScenario, ScenarioConfig> = {
       "Untangling data spaghetti 🍝",
       "Convincing databases to cooperate 🤝",
       "Sync complete ✓",
+    ],
+  },
+  dashboardLoading: {
+    title: "Loading Dashboard",
+    duration: 3000,
+    messages: [
+      "Assembling dashboard widgets 📊",
+      "Loading analytics modules 📈",
+      "Fetching workspace metrics 🎯",
+      "Initializing quick actions ⚡",
+      "Compiling system statistics 💻",
+      "Rendering performance charts 📉",
+      "Calibrating metrics (the good kind) 🔧",
+      "Waking up the analytics hamsters 🐹",
+      "Polishing those beautiful graphs ✨",
+      "Counting all the important numbers 🔢",
+      "Organizing chaos into insights 🌪️",
+      "Persuading data to look pretty 🎨",
+      "Dashboard ready ✓",
     ],
   },
 };

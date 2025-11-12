@@ -12,6 +12,7 @@ import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { useTransition } from "@/contexts/transition-context";
 import { MobileLoading } from "@/components/mobile-loading";
+import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -234,8 +235,18 @@ export default function Dashboard() {
     return <Badge variant="outline" className={`text-xs ${badge.className}`}>{badge.label}</Badge>;
   };
 
+  // Show loading overlay while dashboard data is loading
+  const isLoadingDashboard = isLoading || accessLoading;
+
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden w-full max-w-full">
+      {/* Universal Loading Overlay with Hogwash Messages */}
+      <ProgressLoadingOverlay 
+        isVisible={isLoadingDashboard}
+        scenario="dashboardLoading"
+        status="loading"
+      />
+      
       {/* Professional subtle background - NO bright glowing orbs */}
 
       <div className="relative z-10 mobile-safe-container max-w-7xl mx-auto">
