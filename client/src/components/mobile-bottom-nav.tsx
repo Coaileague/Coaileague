@@ -45,7 +45,7 @@ export function MobileBottomNav() {
   return (
     <nav 
       className={cn(
-        "mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-card/95 border-t border-border backdrop-blur-xl",
+        "mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 border-t-2 border-gray-200 dark:border-slate-700 backdrop-blur-xl shadow-lg",
         "md:hidden z-50",
         isIOS && "mobile-safe-area-bottom"
       )}
@@ -72,11 +72,11 @@ export function MobileBottomNav() {
             >
               <div className={cn(
                 "relative flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300",
-                isActive && "bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30"
+                isActive && "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-2 border-blue-200 dark:border-blue-700 shadow-md shadow-blue-200/50 dark:shadow-blue-800/50"
               )}>
                 <Icon className={cn(
                   "h-5 w-5 transition-all duration-300",
-                  isActive ? "text-white dark:text-white scale-110" : "text-muted-foreground"
+                  isActive ? "text-blue-600 dark:text-blue-400 scale-110 font-bold" : "text-gray-600 dark:text-gray-400"
                 )} />
                 {item.badge && item.badge > 0 && (
                   <Badge 
@@ -89,7 +89,7 @@ export function MobileBottomNav() {
               </div>
               <span className={cn(
                 "text-[10px] font-medium transition-all duration-300",
-                isActive ? "text-foreground font-bold" : "text-muted-foreground"
+                isActive ? "text-blue-600 dark:text-blue-400 font-bold" : "text-gray-600 dark:text-gray-400"
               )}>
                 {item.label}
               </span>
@@ -100,7 +100,7 @@ export function MobileBottomNav() {
       {/* iOS-style home indicator (only on iOS) */}
       {isIOS && (
         <div className="flex justify-center pb-1.5">
-          <div className="w-28 h-1 bg-foreground/20 rounded-full" />
+          <div className="w-28 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
         </div>
       )}
     </nav>

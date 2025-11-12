@@ -10,13 +10,13 @@ function FeatureCard({ icon: Icon, label, href }: { icon: typeof MessageSquare; 
   return (
     <a
       href={href}
-      className="card rounded-2xl bg-card border flex flex-col justify-center items-center gap-2 hover-elevate active-elevate-2 transition p-3"
+      className="card rounded-2xl bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 shadow-sm flex flex-col justify-center items-center gap-2 hover-elevate active-elevate-2 transition p-3"
       data-testid={`card-${label.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      <div className="p-2 rounded-xl bg-muted border">
-        <Icon className="w-5 h-5 text-primary" />
+      <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-700">
+        <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
       </div>
-      <div className="text-xs text-center px-2 leading-tight font-medium">
+      <div className="text-xs text-center px-2 leading-tight font-medium text-gray-900 dark:text-white">
         {label}
       </div>
     </a>
@@ -52,37 +52,37 @@ export default function MobileDashboard() {
   const displayRole = workspaceRole || user?.platformRole;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <AppShellMobile title="Quick Access" showBack={false}>
         {/* Welcome Card */}
-        <Card className="mb-4">
+        <Card className="mb-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 flex items-center justify-center text-white dark:text-white font-bold shadow-md">
                 {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-base truncate">
+                <CardTitle className="text-base truncate text-gray-900 dark:text-white">
                   Welcome, {displayName}!
                 </CardTitle>
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
                   {displayExternalId && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-external-id">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-external-id">
                       {displayExternalId}
                     </Badge>
                   )}
                   {displayRole && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-role">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300" data-testid="badge-role">
                       {displayRole.replace(/_/g, ' ')}
                     </Badge>
                   )}
                   {orgId && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-org-id">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-org-id">
                       {orgId}
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">
                   {user?.email || "Loading..."}
                 </p>
               </div>
@@ -91,8 +91,8 @@ export default function MobileDashboard() {
         </Card>
 
         {/* Support & Help Desk Section */}
-        <section className="rounded-2xl bg-card border p-4 mb-4">
-          <div className="text-xs tracking-wide text-primary font-semibold mb-3 uppercase">
+        <section className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md p-4 mb-4">
+          <div className="text-xs tracking-wide text-blue-600 dark:text-blue-400 font-semibold mb-3 uppercase">
             Support & Helpdesk
           </div>
           <div className="grid gap-3 grid-cols-2 grid-auto-3">
@@ -104,8 +104,8 @@ export default function MobileDashboard() {
         </section>
 
         {/* Platform Management Section */}
-        <section className="rounded-2xl border bg-card p-4 mb-4">
-          <div className="text-sm font-semibold mb-3">
+        <section className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md p-4 mb-4">
+          <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">
             Platform Management
           </div>
           <div className="grid gap-3 grid-cols-2 grid-auto-3">
@@ -117,8 +117,8 @@ export default function MobileDashboard() {
         </section>
 
         {/* Core Features Section */}
-        <section className="rounded-2xl border bg-card p-4 mb-20">
-          <div className="text-sm font-semibold mb-3">
+        <section className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md p-4 mb-20">
+          <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">
             Core Features
           </div>
           <div className="grid gap-3 grid-cols-2 grid-auto-3">
