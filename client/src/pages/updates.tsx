@@ -84,6 +84,7 @@ export default function Updates() {
       <PageHeader
         title="Product Updates"
         description="Latest features, improvements, and announcements"
+        align="center"
       />
 
       <div className="mt-6 space-y-4">

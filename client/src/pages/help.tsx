@@ -73,6 +73,7 @@ export default function Help() {
       <PageHeader
         title="Help Center"
         description="Find answers and learn how to use AutoForce™"
+        align="center"
       />
 
       <div className="mt-6 space-y-6">
