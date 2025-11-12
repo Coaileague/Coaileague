@@ -12663,18 +12663,26 @@ Keep it professional, actionable, and under 250 words.`;
       const user = req.user!;
       
       const employee = await storage.getEmployeeByUserId(user.id);
-      const workspaceId = employee?.workspaceId || '0';
       
+      if (!employee || !employee.workspaceId) {
+        return res.status(403).json({ error: 'Forbidden - No workspace access' });
+      }
+      
+      const workspaceId = employee.workspaceId;
       const ticket = await storage.getSupportTicket(ticketId, workspaceId);
       
       if (!ticket) {
         return res.status(404).json({ error: 'Ticket not found' });
       }
       
+      if (ticket.workspaceId !== workspaceId) {
+        return res.status(404).json({ error: 'Ticket not found' });
+      }
+      
       const isStaff = employee && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((employee as any).platformRole || '');
       
       if (!isStaff) {
-        if (ticket.employeeId !== employee?.id && ticket.clientId !== employee?.id) {
+        if (ticket.employeeId !== employee.id && ticket.clientId !== employee.id) {
           return res.status(404).json({ error: 'Ticket not found' });
         }
       }
@@ -12712,14 +12720,23 @@ Keep it professional, actionable, and under 250 words.`;
       const user = req.user!;
       
       const employee = await storage.getEmployeeByUserId(user.id);
-      const workspaceId = employee?.workspaceId || '0';
       
+      if (!employee || !employee.workspaceId) {
+        return res.status(403).json({ error: 'Forbidden - No workspace access' });
+      }
+      
+      const workspaceId = employee.workspaceId;
       let tickets = await storage.getSupportTickets(workspaceId);
       
       const isStaff = employee && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((employee as any).platformRole || '');
       
       if (!isStaff) {
-        tickets = tickets.filter(t => t.employeeId === employee?.id || t.clientId === employee?.id);
+        tickets = tickets.filter(t => 
+          t.workspaceId === workspaceId && 
+          (t.employeeId === employee.id || t.clientId === employee.id)
+        );
+      } else {
+        tickets = tickets.filter(t => t.workspaceId === workspaceId);
       }
       
       const viewModels = await Promise.all(
