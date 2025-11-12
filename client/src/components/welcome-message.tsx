@@ -21,7 +21,7 @@ export function WelcomeMessage() {
 
   return (
     <div 
-      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary/10 to-green-500/10 border border-primary/20"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary/10 to-blue-500/10 border border-primary/20"
       data-testid="welcome-message"
     >
       <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-accent text-white shrink-0">

@@ -71,7 +71,7 @@ export default function Login() {
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
                 <span className="text-white font-black text-lg">AF</span>
               </div>
               <div>

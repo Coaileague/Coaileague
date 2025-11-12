@@ -24,7 +24,7 @@ export default function Homepage() {
       subtitle: 'Integrates with Gusto & QuickBooks',
       description: 'Syncs time entries, calculates wages, and processes payroll automatically through your existing Gusto or QuickBooks subscription. Zero manual data entry.',
       stats: '100% payroll accuracy',
-      color: 'green',
+      color: 'blue',
       savings: 'Cut payroll costs by 60%'
     },
     {

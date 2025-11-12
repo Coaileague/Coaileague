@@ -619,7 +619,7 @@ export default function SmartScheduleOS() {
           <Button
             variant="default"
             size="sm"
-            className="whitespace-nowrap flex-shrink-0 touch-manipulation min-h-9 bg-green-600 hover:bg-green-700"
+            className="whitespace-nowrap flex-shrink-0 touch-manipulation min-h-9 bg-blue-600 hover:bg-blue-700"
             data-testid="button-publish-schedule"
             onClick={() => toast({ title: "Publish Schedule", description: "Schedule publishing coming soon!" })}
           >
