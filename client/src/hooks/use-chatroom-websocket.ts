@@ -54,13 +54,21 @@ interface OnlineUser {
 }
 
 interface WebSocketMessage {
-  type: 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_removed' | 'command_ack';
+  type: 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_removed' | 'command_ack' | 'read_receipt' | 'participants_update';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
   isTyping?: boolean;
   typingUserName?: string;
   typingUserIsStaff?: boolean;
+  // Read receipt fields
+  messageId?: string;
+  readBy?: string;
+  readByName?: string;
+  readAt?: string;
+  // Participant fields
+  participants?: OnlineUser[];
+  conversationId?: string;
   // HelpDesk error fields
   requiresTicket?: boolean;
   roomStatus?: string;
@@ -119,6 +127,9 @@ export function useChatroomWebSocket(
   const [customBannerMessage, setCustomBannerMessage] = useState<string | null>(null);
   const [justGotVoice, setJustGotVoice] = useState(false);
   const [isSilenced, setIsSilenced] = useState(false);
+  // Premium chat features
+  const [readReceipts, setReadReceipts] = useState<Map<string, { readBy: string; readByName: string; readAt: Date }>>(new Map());
+  const [conversationParticipants, setConversationParticipants] = useState<Map<string, OnlineUser[]>>(new Map());
   // HelpDesk access control state
   const [requiresTicket, setRequiresTicket] = useState(false);
   const [roomStatus, setRoomStatus] = useState<string | null>(null);
@@ -400,6 +411,32 @@ export function useChatroomWebSocket(
                 setMessages((prev) => [...prev, data.message as ChatMessage]);
               }
               break;
+
+            case 'read_receipt':
+              // Handle read receipts - track who read which message
+              if (data.messageId && data.readBy && data.readByName) {
+                setReadReceipts((prev) => {
+                  const next = new Map(prev);
+                  next.set(data.messageId!, {
+                    readBy: data.readBy!,
+                    readByName: data.readByName!,
+                    readAt: data.readAt ? new Date(data.readAt) : new Date(),
+                  });
+                  return next;
+                });
+              }
+              break;
+
+            case 'participants_update':
+              // Handle conversation participant updates
+              if (data.conversationId && data.participants) {
+                setConversationParticipants((prev) => {
+                  const next = new Map(prev);
+                  next.set(data.conversationId!, data.participants!);
+                  return next;
+                });
+              }
+              break;
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -651,5 +688,8 @@ export function useChatroomWebSocket(
     clearAccessError,
     // Banner updates
     customBannerMessage,
+    // Premium chat features
+    readReceipts,
+    conversationParticipants,
   };
 }
