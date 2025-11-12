@@ -39,97 +39,236 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: hsl(222.2 84% 4.9%);
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       }
       
       #initial-loader.loaded {
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.3s ease-out;
+        transition: opacity 0.4s ease-out;
       }
       
       .loader-content {
         width: 90vw;
-        max-width: 400px;
+        max-width: 420px;
         padding: 0 24px;
       }
       
-      .loader-title {
-        text-align: center;
-        margin-bottom: 32px;
+      .loader-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        gap: 12px;
       }
       
-      .loader-title h1 {
-        font-size: clamp(24px, 5vw, 32px);
+      .loader-logo-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-weight: 700;
-        color: hsl(210 40% 98%);
-        margin: 0 0 8px 0;
+        font-size: 18px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
       }
       
-      .loader-title p {
-        font-size: 14px;
-        color: hsl(215 20.2% 65.1%);
+      .loader-logo h1 {
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         margin: 0;
       }
       
+      .loader-bar-container {
+        position: relative;
+        margin-bottom: 16px;
+      }
+      
       .loader-bar {
-        height: 12px;
-        background: hsl(217.2 32.6% 17.5%);
+        height: 10px;
+        background: rgba(30, 41, 59, 0.6);
         border-radius: 999px;
         overflow: hidden;
-        margin-bottom: 12px;
-        border: 1px solid hsl(217.2 32.6% 20%);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        position: relative;
       }
       
-      .loader-bar-fill {
+      /* Animation Type 1: Gradient Wave */
+      .loader-bar-fill.style-wave {
         height: 100%;
-        background: linear-gradient(90deg, hsl(210 32% 42%), hsl(204 40% 52%), hsl(210 32% 42%));
+        background: linear-gradient(90deg, 
+          #10b981 0%, 
+          #06b6d4 25%, 
+          #10b981 50%, 
+          #06b6d4 75%, 
+          #10b981 100%);
         background-size: 200% 100%;
-        animation: loading-shimmer 1.5s linear infinite;
+        animation: wave-shimmer 2s ease-in-out infinite;
         width: 0%;
-        transition: width 0.3s ease-out;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
       }
       
-      @keyframes loading-shimmer {
+      /* Animation Type 2: Pulse Glow */
+      .loader-bar-fill.style-pulse {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+        width: 0%;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: pulse-glow 1.5s ease-in-out infinite;
+      }
+      
+      /* Animation Type 3: Shimmer Sweep */
+      .loader-bar-fill.style-shimmer {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+        width: 0%;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .loader-bar-fill.style-shimmer::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, 
+          transparent 0%, 
+          rgba(255, 255, 255, 0.3) 50%, 
+          transparent 100%);
+        animation: shimmer-sweep 2s ease-in-out infinite;
+      }
+      
+      /* Animation Type 4: Particles */
+      .loader-bar-fill.style-particles {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+        width: 0%;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.6), inset 0 0 8px rgba(6, 182, 212, 0.4);
+        animation: particles-float 1.8s ease-in-out infinite;
+      }
+      
+      /* Animation Type 5: Neon Flow */
+      .loader-bar-fill.style-neon {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #10b981 100%);
+        background-size: 200% 100%;
+        width: 0%;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: neon-flow 2.2s linear infinite;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+      }
+      
+      @keyframes wave-shimmer {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
       }
       
+      @keyframes pulse-glow {
+        0%, 100% { 
+          box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+          filter: brightness(1);
+        }
+        50% { 
+          box-shadow: 0 0 16px rgba(6, 182, 212, 0.6);
+          filter: brightness(1.2);
+        }
+      }
+      
+      @keyframes shimmer-sweep {
+        0% { left: -100%; }
+        100% { left: 200%; }
+      }
+      
+      @keyframes particles-float {
+        0%, 100% { 
+          filter: brightness(1) saturate(1);
+        }
+        33% { 
+          filter: brightness(1.15) saturate(1.1);
+        }
+        66% { 
+          filter: brightness(0.95) saturate(0.95);
+        }
+      }
+      
+      @keyframes neon-flow {
+        0% { background-position: 0% 0; }
+        100% { background-position: 200% 0; }
+      }
+      
+      .loader-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        padding: 0 4px;
+      }
+      
+      .loader-percentage {
+        font-size: 13px;
+        font-weight: 600;
+        color: #10b981;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.5px;
+      }
+      
+      .loader-label {
+        font-size: 11px;
+        color: #64748b;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      
       .loader-message {
         text-align: center;
-        min-height: 48px;
+        min-height: 52px;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 8px;
+        margin-top: 16px;
       }
       
       .loader-message p {
         font-size: 14px;
         font-weight: 500;
-        color: hsl(210 32% 42%);
+        color: #94a3b8;
         margin: 0;
-        animation: text-bounce 1.5s ease-in-out infinite;
+        animation: text-fade 1.2s ease-in-out infinite;
       }
       
-      @keyframes text-bounce {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-3px); }
+      @keyframes text-fade {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
       }
       
       .bouncing-dots {
         display: inline-flex;
-        gap: 2px;
+        gap: 3px;
       }
       
       .bouncing-dots span {
-        width: 6px;
-        height: 6px;
-        background: hsl(210 32% 42%);
+        width: 5px;
+        height: 5px;
+        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
         border-radius: 50%;
         display: inline-block;
-        animation: dot-bounce 1.4s ease-in-out infinite;
+        animation: dot-bounce 1.2s ease-in-out infinite;
       }
       
       .bouncing-dots span:nth-child(1) {
@@ -137,11 +276,11 @@
       }
       
       .bouncing-dots span:nth-child(2) {
-        animation-delay: 0.2s;
+        animation-delay: 0.15s;
       }
       
       .bouncing-dots span:nth-child(3) {
-        animation-delay: 0.4s;
+        animation-delay: 0.3s;
       }
       
       @keyframes dot-bounce {
@@ -150,7 +289,7 @@
           opacity: 1;
         }
         30% {
-          transform: translateY(-8px);
+          transform: translateY(-6px);
           opacity: 0.7;
         }
       }
@@ -160,16 +299,18 @@
     <!-- Static HTML loader - appears INSTANTLY before React -->
     <div id="initial-loader">
       <div class="loader-content">
-        <div class="loader-title">
+        <div class="loader-logo">
+          <div class="loader-logo-icon">AF</div>
           <h1>AutoForce™</h1>
-          <p>Authenticating</p>
         </div>
-        <div class="loader-bar">
-          <div class="loader-bar-fill" id="loader-bar-fill"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding: 0 4px;">
-          <span id="loader-percentage" style="font-size: 12px; font-weight: 600; color: hsl(210 32% 42%); font-family: 'JetBrains Mono', monospace;">0%</span>
-          <span style="font-size: 11px; color: hsl(215 20.2% 65.1%); font-family: 'JetBrains Mono', monospace;">Loading...</span>
+        <div class="loader-bar-container">
+          <div class="loader-bar">
+            <div class="loader-bar-fill" id="loader-bar-fill"></div>
+          </div>
+          <div class="loader-stats">
+            <span class="loader-percentage" id="loader-percentage">0%</span>
+            <span class="loader-label">Loading</span>
+          </div>
         </div>
         <div class="loader-message">
           <p id="loader-text">Initializing workspace</p>
@@ -185,77 +326,113 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Animate loader with random techy messages -->
+    <!-- Animate loader with randomized styles and realistic messages -->
     <script>
       (function() {
         var messages = [
-          "Initializing workspace...",
-          "Connecting to AutoForce™...",
-          "Establishing secure connection...",
-          "Loading modules...",
-          "Authenticating session...",
-          "Verifying credentials...",
-          "Syncing data...",
-          "Configuring environment...",
-          "Preparing dashboard...",
-          "Optimizing performance...",
-          "Building interface...",
-          "Loading components...",
-          "Almost there...",
-          "Finalizing..."
+          "Initializing workspace",
+          "Connecting to AutoForce™",
+          "Establishing secure connection",
+          "Loading modules",
+          "Authenticating session",
+          "Verifying credentials",
+          "Syncing data",
+          "Configuring environment",
+          "Preparing dashboard",
+          "Optimizing performance",
+          "Building interface",
+          "Loading components",
+          "Finalizing setup",
+          "Almost ready"
         ];
         
-        var progressSteps = [
-          { progress: 10, duration: 500 },
-          { progress: 30, duration: 600 },
-          { progress: 55, duration: 700 },
-          { progress: 70, duration: 650 },
-          { progress: 87, duration: 600 },
-          { progress: 95, duration: 700 },
-          { progress: 99, duration: 800 }
-        ];
+        // Randomized animation styles
+        var animationStyles = ['style-wave', 'style-pulse', 'style-shimmer', 'style-particles', 'style-neon'];
+        var selectedStyle = animationStyles[Math.floor(Math.random() * animationStyles.length)];
         
-        var currentStep = 0;
-        var currentMessage = 0;
         var barFill = document.getElementById('loader-bar-fill');
         var percentageText = document.getElementById('loader-percentage');
         var messageText = document.getElementById('loader-text');
         
-        function updateLoader() {
-          if (currentStep < progressSteps.length) {
-            var step = progressSteps[currentStep];
-            barFill.style.width = step.progress + '%';
-            percentageText.textContent = step.progress + '%';
+        // Apply random animation style
+        barFill.className = 'loader-bar-fill ' + selectedStyle;
+        
+        // Smooth progression with realistic timing
+        var currentProgress = 0;
+        var targetProgress = 0;
+        var currentMessage = 0;
+        var isComplete = false;
+        
+        // Progress milestones with variable durations
+        var milestones = [
+          { target: 15, duration: 400 + Math.random() * 200 },
+          { target: 32, duration: 500 + Math.random() * 250 },
+          { target: 48, duration: 550 + Math.random() * 200 },
+          { target: 63, duration: 500 + Math.random() * 300 },
+          { target: 78, duration: 450 + Math.random() * 250 },
+          { target: 89, duration: 600 + Math.random() * 200 },
+          { target: 96, duration: 550 + Math.random() * 300 }
+        ];
+        
+        var currentMilestone = 0;
+        
+        function smoothProgress() {
+          if (isComplete) return;
+          
+          if (currentProgress < targetProgress) {
+            currentProgress += 0.5;
+            barFill.style.width = currentProgress + '%';
+            percentageText.textContent = Math.floor(currentProgress) + '%';
+            requestAnimationFrame(smoothProgress);
+          } else if (currentMilestone < milestones.length) {
+            // Move to next milestone
+            var milestone = milestones[currentMilestone];
+            targetProgress = milestone.target;
+            currentMilestone++;
             
-            // Rotate through messages
+            // Update message
             messageText.textContent = messages[currentMessage];
             currentMessage = (currentMessage + 1) % messages.length;
             
-            currentStep++;
-            setTimeout(updateLoader, step.duration);
+            setTimeout(smoothProgress, milestone.duration);
           }
         }
         
-        // Start animation immediately
-        setTimeout(updateLoader, 100);
+        // Start smooth progression
+        setTimeout(smoothProgress, 150);
         
-        // Hide loader once React loads
+        // Complete loading when React is ready
         window.addEventListener('load', function() {
-          setTimeout(function() {
-            barFill.style.width = '100%';
-            percentageText.textContent = '100%';
-            messageText.textContent = 'Complete!';
-            
-            setTimeout(function() {
-              var loader = document.getElementById('initial-loader');
-              if (loader) {
-                loader.classList.add('loaded');
-                setTimeout(function() {
-                  loader.remove();
-                }, 300);
-              }
-            }, 200);
-          }, 100);
+          if (isComplete) return;
+          isComplete = true;
+          
+          // Jump to 100%
+          targetProgress = 100;
+          
+          function finalProgress() {
+            if (currentProgress < 100) {
+              currentProgress += 2;
+              barFill.style.width = currentProgress + '%';
+              percentageText.textContent = Math.floor(currentProgress) + '%';
+              requestAnimationFrame(finalProgress);
+            } else {
+              barFill.style.width = '100%';
+              percentageText.textContent = '100%';
+              messageText.textContent = 'Ready!';
+              
+              setTimeout(function() {
+                var loader = document.getElementById('initial-loader');
+                if (loader) {
+                  loader.classList.add('loaded');
+                  setTimeout(function() {
+                    loader.remove();
+                  }, 400);
+                }
+              }, 250);
+            }
+          }
+          
+          setTimeout(finalProgress, 100);
         });
       })();
     </script>
