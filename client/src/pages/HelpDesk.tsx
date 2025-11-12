@@ -1833,16 +1833,16 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-blue-600/30 text-white [&>button]:text-slate-400 [&>button]:opacity-100 [&>button]:hover:text-white [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 border-gray-200 text-gray-900 [&>button]:text-gray-500 [&>button]:opacity-100 [&>button]:hover:text-gray-900 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl text-white">
+            <DialogTitle className="flex items-center gap-3 text-xl text-gray-900">
               <AnimatedAutoForceLogo size="sm" variant="icon" />
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-blue-400" />
                 User Profile & Diagnostics
               </div>
             </DialogTitle>
-            <DialogDescription className="text-slate-300">
+            <DialogDescription className="text-gray-600">
               {isStaff ? 'Complete user information and diagnostics' : 'Basic user information'}
             </DialogDescription>
           </DialogHeader>
@@ -1860,7 +1860,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                           <Users size={24} className="text-white" />
                         </div>
                         <div>
-                          <h3 className="text-white font-bold text-lg">
+                          <h3 className="text-gray-900 font-bold text-lg">
                             {userContext.user.firstName} {userContext.user.lastName}
                           </h3>
                           <Badge variant="secondary" className="bg-muted/20 text-primary border-primary/30 mt-1">
@@ -1873,16 +1873,16 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                       </p>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
-                          <span className="text-slate-300">Email:</span>
-                          <span className="text-white">{userContext.user.email}</span>
+                          <span className="text-gray-600">Email:</span>
+                          <span className="text-gray-900">{userContext.user.email}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-300">Role:</span>
-                          <span className="text-white">{userContext.user.platformRole}</span>
+                          <span className="text-gray-600">Role:</span>
+                          <span className="text-gray-900">{userContext.user.platformRole}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-300">User ID:</span>
-                          <span className="text-white font-mono text-xs">{userContext.user.id}</span>
+                          <span className="text-gray-600">User ID:</span>
+                          <span className="text-gray-900 font-mono text-xs">{userContext.user.id}</span>
                         </div>
                       </div>
                     </div>
@@ -1907,40 +1907,40 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                           <Sparkles size={24} className="text-white" />
                         </div>
                         <div>
-                          <h3 className="text-white font-bold text-lg">
+                          <h3 className="text-gray-900 font-bold text-lg">
                             {selectedUserId.startsWith('helpbot') ? 'HelpOS™' : 'System Bot'}
                           </h3>
-                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 mt-1">
+                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
                             System-Generated AI Assistant
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-blue-200 text-sm">
+                      <p className="text-blue-800 text-sm">
                         AI-powered customer support assistant designed to provide instant responses and assistance.
                       </p>
                     </div>
 
-                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                      <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-gray-900 font-semibold text-sm mb-3 flex items-center gap-2">
                         <Zap className="w-4 h-4 text-blue-400" />
                         Capabilities
                       </h4>
                       <ul className="space-y-2">
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-300 text-xs">24/7 instant customer support</span>
+                          <span className="text-gray-600 text-xs">24/7 instant customer support</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-300 text-xs">Automated ticket creation and routing</span>
+                          <span className="text-gray-600 text-xs">Automated ticket creation and routing</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-300 text-xs">Context-aware responses</span>
+                          <span className="text-gray-600 text-xs">Context-aware responses</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-300 text-xs">Human escalation when needed</span>
+                          <span className="text-gray-600 text-xs">Human escalation when needed</span>
                         </li>
                       </ul>
                     </div>
@@ -1960,35 +1960,35 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                     {isStaff ? (
                       /* Full information for support staff */
                       <>
-                        <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                          <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-gray-900 font-semibold text-sm mb-3 flex items-center gap-2">
                             <Info className="w-4 h-4 text-blue-400" />
                             User Details
                           </h4>
                           <div className="space-y-3">
                             <div>
-                              <span className="text-slate-400 text-xs block mb-1">Full Name</span>
-                              <span className="text-white text-sm font-medium">
+                              <span className="text-gray-600 text-xs block mb-1">Full Name</span>
+                              <span className="text-gray-900 text-sm font-medium">
                                 {userContext.user.firstName} {userContext.user.lastName}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-400 text-xs block mb-1">User ID</span>
-                              <span className="text-white font-mono text-xs">{userContext.user.id}</span>
+                              <span className="text-gray-600 text-xs block mb-1">User ID</span>
+                              <span className="text-gray-900 font-mono text-xs">{userContext.user.id}</span>
                             </div>
                             <div>
-                              <span className="text-slate-400 text-xs block mb-1">Email</span>
-                              <span className="text-white text-sm">{userContext.user.email || 'Not Available'}</span>
+                              <span className="text-gray-600 text-xs block mb-1">Email</span>
+                              <span className="text-gray-900 text-sm">{userContext.user.email || 'Not Available'}</span>
                             </div>
                             <div>
-                              <span className="text-slate-400 text-xs block mb-1">Platform Role</span>
+                              <span className="text-gray-600 text-xs block mb-1">Platform Role</span>
                               <Badge variant="secondary" className="text-xs">
                                 {userContext.user.platformRole || 'guest'}
                               </Badge>
                             </div>
                             <div>
-                              <span className="text-slate-400 text-xs block mb-1">Account Created</span>
-                              <span className="text-slate-300 text-xs">
+                              <span className="text-gray-600 text-xs block mb-1">Account Created</span>
+                              <span className="text-gray-600 text-xs">
                                 {userContext.user.createdAt ? new Date(userContext.user.createdAt).toLocaleDateString() : 'N/A'}
                               </span>
                             </div>
@@ -1996,25 +1996,25 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         </div>
 
                         {userContext.workspace && (
-                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                            <h4 className="text-white font-semibold text-sm mb-3">Workspace Info</h4>
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h4 className="text-gray-900 font-semibold text-sm mb-3">Workspace Info</h4>
                             <div className="space-y-3">
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Workspace</span>
-                                <span className="text-white text-sm">{userContext.workspace.name}</span>
+                                <span className="text-gray-600 text-xs block mb-1">Workspace</span>
+                                <span className="text-gray-900 text-sm">{userContext.workspace.name}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Serial Number</span>
-                                <span className="text-white font-mono text-xs">{userContext.workspace.serialNumber}</span>
+                                <span className="text-gray-600 text-xs block mb-1">Serial Number</span>
+                                <span className="text-gray-900 font-mono text-xs">{userContext.workspace.serialNumber}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Subscription</span>
+                                <span className="text-gray-600 text-xs block mb-1">Subscription</span>
                                 <Badge variant="outline" className="text-xs">
                                   {userContext.workspace.subscriptionTier || 'Free'}
                                 </Badge>
                               </div>
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Role</span>
+                                <span className="text-gray-600 text-xs block mb-1">Role</span>
                                 <Badge variant="secondary" className="text-xs">
                                   {userContext.workspace.role || 'member'}
                                 </Badge>
@@ -2024,24 +2024,24 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         )}
 
                         {userContext.metrics && (
-                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                            <h4 className="text-white font-semibold text-sm mb-3">Support Metrics</h4>
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h4 className="text-gray-900 font-semibold text-sm mb-3">Support Metrics</h4>
                             <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Total Tickets</span>
-                                <span className="text-white text-lg font-bold">{userContext.metrics.totalTickets || 0}</span>
+                                <span className="text-gray-600 text-xs block mb-1">Total Tickets</span>
+                                <span className="text-gray-900 text-lg font-bold">{userContext.metrics.totalTickets || 0}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Active</span>
-                                <span className="text-blue-400 text-lg font-bold">{userContext.metrics.activeTickets || 0}</span>
+                                <span className="text-gray-600 text-xs block mb-1">Active</span>
+                                <span className="text-blue-600 text-lg font-bold">{userContext.metrics.activeTickets || 0}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Resolved</span>
-                                <span className="text-blue-500 text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
+                                <span className="text-gray-600 text-xs block mb-1">Resolved</span>
+                                <span className="text-blue-600 text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 text-xs block mb-1">Resolution Rate</span>
-                                <span className="text-blue-300 text-lg font-bold">{userContext.metrics.resolutionRate || 0}%</span>
+                                <span className="text-gray-600 text-xs block mb-1">Resolution Rate</span>
+                                <span className="text-blue-600 text-lg font-bold">{userContext.metrics.resolutionRate || 0}%</span>
                               </div>
                             </div>
                           </div>
@@ -2055,7 +2055,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                             });
                             setShowUserProfile(false);
                           }}
-                          className="w-full bg-muted/20 hover:bg-muted/30 border border-primary/30 text-white"
+                          className="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-gray-900"
                           data-testid="button-user-history"
                         >
                           <History className="w-4 h-4 mr-2" />
@@ -2064,24 +2064,24 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                       </>
                     ) : (
                       /* Limited information for regular users */
-                      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                        <h4 className="text-white font-semibold text-sm mb-3">Basic Info</h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-gray-900 font-semibold text-sm mb-3">Basic Info</h4>
                         <div className="space-y-3">
                           <div>
-                            <span className="text-slate-400 text-xs block mb-1">Name</span>
-                            <span className="text-white text-sm">
+                            <span className="text-gray-600 text-xs block mb-1">Name</span>
+                            <span className="text-gray-900 text-sm">
                               {userContext.user.firstName} {userContext.user.lastName}
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-400 text-xs block mb-1">Status</span>
+                            <span className="text-gray-600 text-xs block mb-1">Status</span>
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-muted/30 animate-pulse" />
+                              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                               <span className="text-primary text-sm">Online</span>
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 p-3 bg-muted/10 border border-primary/30 rounded-lg">
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <p className="text-primary text-xs">
                             <Info className="w-3 h-3 inline mr-1" />
                             Full user details are only visible to support staff
@@ -2094,15 +2094,15 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   /* Error state - user not found or error loading */
                   <div className="text-center py-8">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-                    <p className="text-red-400 text-sm font-semibold">
+                    <p className="text-red-600 text-sm font-semibold">
                       {(userContextError as any)?.error || 'User information not available'}
                     </p>
                     {(userContextError as any)?.suggestion && (
-                      <p className="text-slate-400 text-xs mt-2">{(userContextError as any).suggestion}</p>
+                      <p className="text-gray-600 text-xs mt-2">{(userContextError as any).suggestion}</p>
                     )}
                     {(userContextError as any)?.userId && (
-                      <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                        <p className="text-red-300 text-xs">
+                      <div className="mt-3 bg-red-50 border border-red-300 rounded-lg p-3">
+                        <p className="text-red-700 text-xs">
                           <strong>User ID:</strong> {(userContextError as any).userId}
                         </p>
                       </div>
@@ -2111,8 +2111,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 ) : (
                   /* Fallback - No data */
                   <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                    <p className="text-slate-400 text-sm">No user information available</p>
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-600 text-sm">No user information available</p>
                   </div>
                 )}
               </div>
@@ -2123,14 +2123,14 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   <AnimatedAutoForceLogo size="lg" variant="icon" className="opacity-75" />
                 </div>
                 <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-slate-400 text-sm font-medium">Loading user information...</p>
-                <p className="text-slate-500 text-xs mt-1">Powered by AutoForce™</p>
+                <p className="text-gray-600 text-sm font-medium">Loading user information...</p>
+                <p className="text-gray-600 text-xs mt-1">Powered by AutoForce™</p>
               </div>
             )}
           </div>
           
           <DialogFooter>
-            <Button onClick={() => setShowUserProfile(false)} variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20" data-testid="button-close-profile">
+            <Button onClick={() => setShowUserProfile(false)} variant="outline" className="bg-blue-50 text-gray-900 border-gray-200 hover:bg-blue-100" data-testid="button-close-profile">
               Close
             </Button>
           </DialogFooter>
