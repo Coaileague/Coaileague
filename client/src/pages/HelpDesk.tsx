@@ -903,14 +903,14 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             </div>
           </div>
 
-          {/* Right: Clear Close Button */}
+          {/* Right: Exit Chat Room Button */}
           <Button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             variant="ghost"
             size="icon"
             className="h-10 w-10 flex-shrink-0"
-            data-testid="button-close-helpdesk"
-            title="Close and return home"
+            data-testid="button-exit-chatroom"
+            title="Exit Chat Room"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -1528,7 +1528,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           open={showTutorial}
           onClose={() => setShowTutorial(false)}
           title="HelpDesk Tutorial"
-          description="Welcome to WorkforceOS HelpDesk! Here's how to use the system: 1) Use the command buttons to quickly access features. 2) Type /help to see all available commands. 3) Staff will assist you shortly. 4) Use the chat to describe your issue clearly."
+          description="Welcome to AutoForce™ HelpDesk! Here's how to use the system: 1) Use the command buttons to quickly access features. 2) Type /help to see all available commands. 3) Staff will assist you shortly. 4) Use the chat to describe your issue clearly."
           confirmLabel="Got it!"
           onConfirm={() => setShowTutorial(false)}
         />

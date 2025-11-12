@@ -4,12 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
-import { showLoginTransition, showErrorTransition, showSuccessTransition } from "@/lib/transition-utils";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { showSuccessTransition, showErrorTransition } from "@/lib/transition-utils";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -39,7 +37,6 @@ export default function CustomLogin() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     
-    // Show login transition with scenario-based messages
     transition.showTransition({
       status: "loading",
       scenario: "login",
@@ -60,10 +57,8 @@ export default function CustomLogin() {
         throw new Error(result.message || "Login failed");
       }
 
-      // Invalidate auth query to refresh user state
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
-      // Show success transition with redirect
       showSuccessTransition(
         transition,
         "Login Successful!",
@@ -71,7 +66,6 @@ export default function CustomLogin() {
         `Welcome back, ${data.email.split('@')[0]}!`
       );
     } catch (error: any) {
-      // Show error transition
       showErrorTransition(
         transition,
         "Login Failed",
@@ -89,150 +83,241 @@ export default function CustomLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-gradient p-4">
-      <div className="w-full max-w-md space-y-8">
-        {/* Logo and Branding */}
-        <div className="flex flex-col items-center gap-4">
-          <AnimatedAutoForceLogo variant="full" size="lg" />
-        </div>
+    <div 
+      className="min-h-screen flex items-center justify-center p-5"
+      style={{
+        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
+      }}
+    >
+      <div 
+        className="w-full max-w-[460px] animate-[fadeInUp_0.6s_ease]"
+        style={{
+          animation: 'fadeInUp 0.6s ease'
+        }}
+      >
+        {/* White Login Card */}
+        <div 
+          className="bg-white rounded-3xl p-12 max-sm:p-8 max-sm:px-6"
+          style={{
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          {/* Logo Section */}
+          <div className="text-center mb-10">
+            {/* AF Logo with Gradient */}
+            <div 
+              className="w-20 h-20 max-sm:w-16 max-sm:h-16 rounded-[20px] inline-flex items-center justify-center text-[32px] max-sm:text-2xl font-bold text-white mb-4"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              AF
+            </div>
 
-        {/* Login Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
+            {/* Brand Name */}
+            <div className="text-[28px] max-sm:text-2xl font-bold mb-2" style={{ color: '#1e293b' }}>
+              AUTO
+              <span 
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                FORCE
+              </span>
+            </div>
+
+            {/* Tagline */}
+            <div className="text-sm" style={{ color: '#64748b' }}>
+              Autonomous Workforce Management Solutions
+            </div>
+          </div>
+
+          {/* Login Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1e293b' }}>
+              Sign In
+            </h1>
+            <p className="text-sm" style={{ color: '#64748b' }}>
               Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
+            </p>
+          </div>
+
+          {/* Login Form */}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium" style={{ color: '#334155' }}>
+                      Email
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="email"
+                        placeholder="you@company.com"
+                        disabled={isLoading}
+                        data-testid="input-email"
+                        className="w-full px-4 py-3.5 rounded-xl text-[15px] border-2 transition-all"
+                        style={{
+                          background: '#f8fafc',
+                          borderColor: '#e2e8f0',
+                          color: '#1e293b'
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium" style={{ color: '#334155' }}>
+                      Password
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
                         <Input
                           {...field}
-                          type="email"
-                          placeholder="you@company.com"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
                           disabled={isLoading}
-                          data-testid="input-email"
+                          data-testid="input-password"
+                          className="w-full px-4 py-3.5 rounded-xl text-[15px] border-2 transition-all pr-12"
+                          style={{
+                            background: '#f8fafc',
+                            borderColor: '#e2e8f0',
+                            color: '#1e293b'
+                          }}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <button
+                          type="button"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-lg transition-colors"
+                          style={{ color: '#64748b' }}
+                          onClick={() => setShowPassword(!showPassword)}
+                          data-testid="button-toggle-password"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            {...field}
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
-                            disabled={isLoading}
-                            data-testid="input-password"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                            onClick={() => setShowPassword(!showPassword)}
-                            data-testid="button-toggle-password"
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                  data-testid="button-login"
+              {/* Forgot Password Link */}
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setLocation("/reset-password")}
+                  className="text-sm transition-colors"
+                  style={{ color: '#10b981' }}
+                  data-testid="link-reset-password"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center w-full">
+                  Forgot your password?
+                </button>
+              </div>
+
+              {/* Sign In Button */}
               <button
-                onClick={() => setLocation("/reset-password")}
-                className="text-primary hover:text-primary dark:text-primary dark:hover:text-primary hover:underline"
-                data-testid="link-reset-password"
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl text-white text-base font-semibold transition-all duration-300 disabled:opacity-70"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 4px 16px rgba(16, 185, 129, 0.3)',
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                }}
+                data-testid="button-login"
               >
-                Forgot your password?
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Signing in...
+                  </span>
+                ) : (
+                  "Sign In"
+                )}
               </button>
-            </div>
-            <div className="text-sm text-center text-gray-600 dark:text-gray-400 w-full">
+            </form>
+          </Form>
+
+          {/* Footer Links */}
+          <div className="text-center mt-6">
+            <p className="text-sm mb-2" style={{ color: '#64748b' }}>
               Don't have an account?{" "}
               <button
                 onClick={() => setLocation("/register")}
-                className="text-primary hover:text-primary dark:text-primary dark:hover:text-primary hover:underline font-medium"
+                className="font-medium transition-colors"
+                style={{ color: '#10b981' }}
                 data-testid="link-register"
               >
                 Sign up
               </button>
-            </div>
-            <div className="border-t pt-4 w-full">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setLocation("/")}
-                data-testid="button-back-home"
-              >
-                Back to Home
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+            </p>
+          </div>
 
-        {/* Demo Access */}
-        <Card className="bg-card border-primary/20">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Want to see it in action?
-              </p>
-              <Button
-                variant="outline"
-                className="w-full border-primary/50 hover:bg-muted/30 dark:hover:bg-primary"
-                onClick={() => window.location.href = "/api/demo-login"}
-                data-testid="button-demo"
-              >
-                Try Demo Account
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Demo Section */}
+          <div 
+            className="mt-8 p-5 rounded-xl text-center border-2"
+            style={{
+              background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+              borderColor: '#10b981'
+            }}
+          >
+            <p className="text-sm font-medium mb-3" style={{ color: '#065f46' }}>
+              Want to see it in action?
+            </p>
+            <button
+              onClick={() => window.location.href = "/api/demo-login"}
+              className="px-6 py-2.5 bg-white rounded-lg text-sm font-semibold transition-all duration-300 border-2"
+              style={{
+                color: '#10b981',
+                borderColor: '#10b981'
+              }}
+              data-testid="button-demo"
+            >
+              Try Demo Account
+            </button>
+          </div>
+
+          {/* Back to Home */}
+          <div className="mt-8 pt-6 text-center border-t" style={{ borderColor: '#e2e8f0' }}>
+            <button
+              onClick={() => setLocation("/")}
+              className="text-sm transition-colors"
+              style={{ color: '#64748b' }}
+              data-testid="button-back-home"
+            >
+              ← Back to Home
+            </button>
+          </div>
+        </div>
       </div>
+
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

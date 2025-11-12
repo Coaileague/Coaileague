@@ -980,6 +980,16 @@ export default function ModernMobileChat() {
                   URGENT
                 </Badge>
               )}
+              <Button
+                onClick={() => navigate('/dashboard')}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                data-testid="button-exit-chatroom-mobile"
+                title="Exit Chat Room"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-slate-400">
               <div className="flex items-center gap-1">
@@ -1012,6 +1022,16 @@ export default function ModernMobileChat() {
                 <Circle className={`w-1.5 h-1.5 ${isConnected ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'} animate-pulse`} />
               </div>
             </div>
+            <Button
+              onClick={() => navigate('/dashboard')}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 flex-shrink-0"
+              data-testid="button-exit-chatroom-mobile"
+              title="Exit Chat Room"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
         )}
       </div>
