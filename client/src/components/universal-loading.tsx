@@ -1,5 +1,4 @@
 import { AnimatedAutoForceLogo } from "./animated-autoforce-logo";
-import { Loader2 } from "lucide-react";
 
 interface UniversalLoadingProps {
   message?: string;

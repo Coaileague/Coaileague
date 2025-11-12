@@ -67,7 +67,7 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Wordmark - just text
+  // Wordmark - just text with AutoForce blue
   if (variant === "wordmark") {
     return (
       <div 
@@ -78,7 +78,8 @@ export function AutoForceAFLogo({
           AUTO
         </span>
         <span 
-          className="text-2xl sm:text-3xl font-bold tracking-tight text-primary"
+          className="text-2xl sm:text-3xl font-bold tracking-tight"
+          style={{ color: '#0B4DFF' }}
         >
           FORCE
         </span>
@@ -117,7 +118,7 @@ export function AutoForceAFLogo({
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
           <span className="text-slate-900 dark:text-white">AUTO</span>
-          <span className="text-primary">FORCE</span>
+          <span style={{ color: '#0B4DFF' }}>FORCE</span>
           <span className="text-xs align-super text-slate-900 dark:text-white">™</span>
         </div>
         <div className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-400 font-medium tracking-wide mt-0.5">
