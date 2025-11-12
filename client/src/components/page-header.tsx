@@ -43,9 +43,9 @@ export function PageHeader({
     <div className={cn("border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10", className)}>
       <div className={cn(
         "mx-auto px-4 sm:px-6 py-3 sm:py-4",
-        isCentered ? "w-full" : "container max-w-7xl"
+        isCentered ? "max-w-5xl" : "container max-w-7xl"
       )}>
-        {/* Breadcrumbs */}
+        {/* Breadcrumbs - Only for left-aligned headers */}
         {breadcrumbs.length > 0 && !isCentered && (
           <Breadcrumb className="mb-2">
             <BreadcrumbList>
@@ -92,7 +92,7 @@ export function PageHeader({
         {/* Header Content */}
         {isCentered ? (
           // Centered Layout: Three-column grid for true centering with max-width
-          <div className="max-w-5xl mx-auto w-full">
+          <div className="w-full">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
               {/* Left spacer */}
               <div></div>
