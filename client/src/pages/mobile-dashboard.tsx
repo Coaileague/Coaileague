@@ -111,7 +111,7 @@ export default function MobileDashboard() {
           <div className="grid gap-3 grid-cols-2 grid-auto-3">
             <FeatureCard icon={Calendar} label="Schedule" href="/schedule-grid" />
             <FeatureCard icon={Clock} label="Time Tracking" href="/time-tracking" />
-            <FeatureCard icon={MessageSquare} label="CommOS&trade;" href="/communication-os" />
+            <FeatureCard icon={MessageSquare} label="CommOS&trade;" href="/comm-os" />
             {isStaff && <FeatureCard icon={Shield} label="Admin" href="/dashboard" />}
           </div>
         </section>

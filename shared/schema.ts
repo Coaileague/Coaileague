@@ -3882,6 +3882,38 @@ export const messageReadReceipts = pgTable("message_read_receipts", {
   messageUserIdx: uniqueIndex("message_read_receipts_unique").on(table.messageId, table.userId),
 }));
 
+// Chat Macros - Quick response templates for support agents
+export const chatMacros = pgTable("chat_macros", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Macro details
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  shortcut: varchar("shortcut"), // e.g., "/welcome", "/refund"
+  category: varchar("category").notNull(), // 'greeting', 'closing', 'technical', 'billing'
+  
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("chat_macros_workspace_idx").on(table.workspaceId),
+  index("chat_macros_category_idx").on(table.category),
+  uniqueIndex("chat_macros_shortcut_unique").on(table.workspaceId, table.shortcut),
+]);
+
+// Typing Indicators - Track real-time typing status (ephemeral)
+export const typingIndicators = pgTable("typing_indicators", {
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userName: varchar("user_name").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+}, (table) => ({
+  primaryKey: uniqueIndex("typing_indicators_unique").on(table.conversationId, table.userId),
+  conversationIdx: index("typing_indicators_conversation_idx").on(table.conversationId),
+}));
+
 export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
   id: true,
   createdAt: true,
@@ -3903,6 +3935,16 @@ export const insertMessageReadReceiptSchema = createInsertSchema(messageReadRece
   readAt: true,
 });
 
+export const insertChatMacroSchema = createInsertSchema(chatMacros).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTypingIndicatorSchema = createInsertSchema(typingIndicators).omit({
+  startedAt: true,
+});
+
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
@@ -3911,6 +3953,10 @@ export type InsertMessageReaction = z.infer<typeof insertMessageReactionSchema>;
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type InsertMessageReadReceipt = z.infer<typeof insertMessageReadReceiptSchema>;
 export type MessageReadReceipt = typeof messageReadReceipts.$inferSelect;
+export type InsertChatMacro = z.infer<typeof insertChatMacroSchema>;
+export type ChatMacro = typeof chatMacros.$inferSelect;
+export type InsertTypingIndicator = z.infer<typeof insertTypingIndicatorSchema>;
+export type TypingIndicator = typeof typingIndicators.$inferSelect;
 
 // ============================================================================
 // COMMOS™ WORKROOM UPGRADE - FILE UPLOADS, EVENTS, VOICE
