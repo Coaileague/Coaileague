@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
+import { useNavigationProtection } from "@/hooks/use-navigation-protection";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
@@ -177,6 +178,11 @@ export default function ModernMobileChat() {
     isSilenced, justGotVoice
   } = useChatroomWebSocket(userId || `guest-${sessionId}`, userName); // Use sessionId for guests so WebSocket connects
 
+  // Navigation protection - prevent accidental disconnects from live chat
+  useNavigationProtection({
+    currentRoute: '/mobile-chat',
+    shouldProtect: isConnected || messages.length > 0,
+  });
 
   // Show loading transition on initial load
   useEffect(() => {

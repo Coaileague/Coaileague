@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
+import { useNavigationProtection } from "@/hooks/use-navigation-protection";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -174,6 +175,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       });
     }
   );
+
+  // Navigation protection - prevent accidental disconnects from live chat
+  useNavigationProtection({
+    currentRoute: '/chat',
+    shouldProtect: isConnected || messages.length > 0,
+  });
 
   // Enhanced connection state tracking
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | 'denied'>('disconnected');
