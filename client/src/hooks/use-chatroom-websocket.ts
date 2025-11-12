@@ -140,6 +140,7 @@ export function useChatroomWebSocket(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false); // Track if connection is in progress
+  const isManualSwitchRef = useRef(false); // Track if we're manually switching conversations
   const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastConnectAttemptRef = useRef<number>(0);
   const MIN_RECONNECT_INTERVAL = 1000; // Minimum 1 second between attempts
@@ -195,6 +196,7 @@ export function useChatroomWebSocket(
         setError(null);
         reconnectAttemptsRef.current = 0;
         isConnectingRef.current = false; // Connection established
+        isManualSwitchRef.current = false; // Reset flag after successful connection
 
         // Join the specified conversation
         ws.send(JSON.stringify({
@@ -449,6 +451,12 @@ export function useChatroomWebSocket(
         setIsConnected(false);
         isConnectingRef.current = false; // Reset connection flag
 
+        // Skip auto-reconnect if this is a manual conversation switch
+        if (isManualSwitchRef.current) {
+          console.log('⚠️ Skipping auto-reconnect (manual conversation switch)');
+          return;
+        }
+
         // Check if we've exceeded max retry attempts
         if (reconnectAttemptsRef.current >= MAX_RETRIES) {
           console.error(`❌ Failed to connect after ${MAX_RETRIES} attempts`);
@@ -482,7 +490,7 @@ export function useChatroomWebSocket(
       setError(err instanceof Error ? err.message : 'Failed to connect');
       isConnectingRef.current = false; // Reset on error
     }
-  }, [userId, conversationId]);
+  }, [userId, conversationId, userName]);
 
   // Send a message
   const sendMessage = useCallback((messageText: string, senderName: string, senderType: 'customer' | 'support' | 'system' = 'support') => {
@@ -593,9 +601,28 @@ export function useChatroomWebSocket(
     }
   }, []);
 
-  // Connect on mount and when userId changes
+  // Connect on mount and when userId or conversationId changes
   useEffect(() => {
     if (userId) {
+      // If switching conversations, close existing connection first
+      if (wsRef.current) {
+        const state = wsRef.current.readyState;
+        if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
+          console.log(`🔌 Closing WebSocket for conversation switch to: ${conversationId}`);
+          isManualSwitchRef.current = true; // Set flag to suppress auto-reconnect
+          wsRef.current.close();
+          wsRef.current = null;
+          isConnectingRef.current = false;
+        }
+      }
+      
+      // Clear state for new conversation
+      setMessages([]);
+      setOnlineUsers([]);
+      setConversationParticipants(new Map());
+      setReadReceipts(new Map());
+      
+      // Connect to new conversation (flag will be reset in onopen)
       connect();
     }
 
@@ -616,7 +643,7 @@ export function useChatroomWebSocket(
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]); // Only userId - connect is stable enough via refs
+  }, [userId, conversationId]); // Reconnect when either userId or conversationId changes
 
   // Clear access error state (call after successful ticket verification)
   const clearAccessError = useCallback(() => {

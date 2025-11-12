@@ -3517,6 +3517,34 @@ export function setupWebSocket(server: Server) {
         const clients = conversationClients.get(ws.conversationId);
         if (clients) {
           clients.delete(ws);
+          
+          // Broadcast updated participants list after user leaves
+          const participants = [];
+          for (const client of Array.from(clients)) {
+            if (client.userId && client.readyState === WebSocket.OPEN) {
+              const userRole = await storage.getUserPlatformRole(client.userId).catch(() => null);
+              participants.push({
+                id: client.userId,
+                name: client.userName || 'User',
+                role: userRole || 'guest',
+                status: client.userStatus || 'online',
+                userType: client.userType || 'guest'
+              });
+            }
+          }
+
+          const participantsPayload = JSON.stringify({
+            type: 'participants_update',
+            conversationId: ws.conversationId,
+            participants: participants,
+          });
+
+          clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(participantsPayload);
+            }
+          });
+          
           if (clients.size === 0) {
             conversationClients.delete(ws.conversationId);
           }
