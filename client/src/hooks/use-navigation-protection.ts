@@ -46,10 +46,13 @@ export function useNavigationProtection({
   const [location, setLocation] = useLocation();
   const [shouldWarnOnNavigation, setShouldWarnOnNavigation] = useState(false);
   const currentLocationRef = useRef(location);
+  const hasSetupPopstateRef = useRef(false);
+  const shouldWarnRef = useRef(shouldProtect);
 
-  // Track if we should warn on navigation
+  // Track if we should warn on navigation (use both state and ref)
   useEffect(() => {
     setShouldWarnOnNavigation(shouldProtect);
+    shouldWarnRef.current = shouldProtect;
   }, [shouldProtect]);
 
   // LAYER 1: Warn before page unload (refresh, close tab, external navigation)
@@ -72,24 +75,35 @@ export function useNavigationProtection({
   // LAYER 2: Prevent accidental back button navigation
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
-      if (shouldWarnOnNavigation) {
+      // Use ref to get current value without recreating listener
+      if (shouldWarnRef.current) {
         const shouldLeave = window.confirm(warningMessage);
         if (!shouldLeave) {
-          e.preventDefault();
-          window.history.pushState(null, '', window.location.href);
+          // User cancelled - re-push forward to stay on protected page
+          window.history.pushState(null, '', currentRoute);
+        } else {
+          // User confirmed - temporarily disable guard and navigate back to skip sentinel entry
+          shouldWarnRef.current = false;
+          setShouldWarnOnNavigation(false);
+          // Go back one more time to reach the actual previous page (skips our sentinel)
+          setTimeout(() => window.history.back(), 0);
         }
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     
-    // Push state ONCE on mount to enable popstate detection (avoid history pollution)
-    window.history.pushState(null, '', window.location.href);
+    // Push sentinel state ONCE on initial setup only
+    if (!hasSetupPopstateRef.current) {
+      window.history.pushState(null, '', currentRoute);
+      hasSetupPopstateRef.current = true;
+    }
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [shouldWarnOnNavigation, warningMessage]);
+    // Only re-setup if currentRoute changes, not on every shouldWarnOnNavigation change
+  }, [currentRoute, warningMessage]);
 
   // LAYER 3: Intercept in-app navigation attempts (Wouter route changes, sidebar links)
   useEffect(() => {
