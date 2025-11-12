@@ -324,6 +324,7 @@ export interface IStorage {
   getCustomerReportAccessByToken(token: string): Promise<CustomerReportAccess | undefined>;
   trackCustomerReportAccess(accessId: string): Promise<void>;
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  getSupportTicket(id: string, workspaceId: string): Promise<SupportTicket | undefined>;
   getSupportTickets(workspaceId: string): Promise<SupportTicket[]>;
   updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
   
@@ -1652,6 +1653,15 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return newTicket;
+  }
+  
+  async getSupportTicket(id: string, workspaceId: string): Promise<SupportTicket | undefined> {
+    const [ticket] = await db
+      .select()
+      .from(supportTickets)
+      .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId)));
+    
+    return ticket;
   }
   
   async getSupportTickets(workspaceId: string): Promise<SupportTicket[]> {
