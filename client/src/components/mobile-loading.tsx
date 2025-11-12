@@ -40,7 +40,7 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
           <AFCoreScan progress={animatedProgress} size="lg" />
           
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="text-2xl font-bold text-orange-500">
+            <div className="text-2xl font-bold text-emerald-500">
               {Math.round(animatedProgress)}%
             </div>
             <div className="text-sm text-white/70 font-medium">
@@ -59,7 +59,7 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
         <AFCoreScan progress={animatedProgress} size="lg" />
         
         <div className="flex flex-col items-center gap-1 text-center">
-          <div className="text-xl font-bold text-orange-500">
+          <div className="text-xl font-bold text-emerald-500">
             {Math.round(animatedProgress)}%
           </div>
           <div className="text-xs text-muted-foreground">

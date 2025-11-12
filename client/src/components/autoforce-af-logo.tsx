@@ -38,7 +38,7 @@ export function AutoForceAFLogo({
     hero: "text-2xl"
   };
 
-  // Icon only - AF circular badge with AutoForce blue branding
+  // Icon only - AF circular badge with AutoForce emerald/cyan branding
   if (variant === "icon") {
     return (
       <div 
@@ -49,7 +49,7 @@ export function AutoForceAFLogo({
           className
         )}
         style={{
-          background: 'linear-gradient(135deg, #0B4DFF 0%, #5FA5FF 100%)',
+          background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
         }}
         data-testid="autoforce-af-logo-icon"
       >
@@ -67,7 +67,7 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Wordmark - just text with AutoForce blue
+  // Wordmark - just text with AutoForce emerald
   if (variant === "wordmark") {
     return (
       <div 
@@ -79,7 +79,7 @@ export function AutoForceAFLogo({
         </span>
         <span 
           className="text-2xl sm:text-3xl font-bold tracking-tight"
-          style={{ color: '#0B4DFF' }}
+          style={{ color: '#10b981' }}
         >
           FORCE
         </span>
@@ -88,7 +88,7 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Full - AF badge + text with AutoForce blue branding
+  // Full - AF badge + text with AutoForce emerald/cyan branding
   return (
     <div 
       className={cn("flex items-center gap-3", className)}
@@ -101,7 +101,7 @@ export function AutoForceAFLogo({
           animated && "animate-pulse-slow"
         )}
         style={{
-          background: 'linear-gradient(135deg, #0B4DFF 0%, #5FA5FF 100%)',
+          background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
         }}
       >
         {/* Neural ring overlay */}
@@ -118,7 +118,7 @@ export function AutoForceAFLogo({
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
           <span className="text-slate-900 dark:text-white">AUTO</span>
-          <span style={{ color: '#0B4DFF' }}>FORCE</span>
+          <span style={{ color: '#10b981' }}>FORCE</span>
           <span className="text-xs align-super text-slate-900 dark:text-white">™</span>
         </div>
         <div className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-400 font-medium tracking-wide mt-0.5">
