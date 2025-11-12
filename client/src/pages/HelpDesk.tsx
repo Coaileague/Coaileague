@@ -73,13 +73,13 @@ import { AgentToolbelt } from "@/components/agent-toolbelt";
 import { TicketContextPanel } from "@/components/ticket-context-panel";
 import { sanitizeMessage } from "@/lib/sanitize";
 
-const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+const MAIN_ROOM_ID = 'main-chatroom-autoforce';
 
 interface HelpDeskProps {
   forceMobileLayout?: boolean; // Force mobile layout regardless of screen size
 }
 
-// Desktop IRC/MSN-style 3-column chatroom with WorkforceOS blue branding
+// Desktop IRC/MSN-style 3-column chatroom with AutoForce™ professional branding
 // Can also be forced to mobile layout for /mobilechat route
 export function HelpDesk(props?: HelpDeskProps & any) {
   const { forceMobileLayout = false } = props || {};
@@ -469,9 +469,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   };
 
 
-  // Get user type icon - WorkforceOS logo ONLY for staff, avatars for users
+  // Get user type icon - AutoForce™ logo ONLY for staff, avatars for users
   const getUserTypeIcon = (userType: string, role: string, userName: string = 'User') => {
-    // ROOT ADMIN - Detailed WorkforceOS logo (COMPACT SIZE)
+    // ROOT ADMIN - Detailed AutoForce™ logo (COMPACT SIZE)
     if (role === 'root_admin') {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
@@ -489,7 +489,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       );
     }
     
-    // ALL STAFF (deputy_admin, support_manager, sysop) - WorkforceOS logo (COMPACT SIZE)
+    // ALL STAFF (deputy_admin, support_manager, sysop) - AutoForce™ logo (COMPACT SIZE)
     if (['deputy_admin', 'support_manager', 'sysop'].includes(role)) {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
@@ -961,7 +961,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
             <div className="space-y-2">
 
-              {/* Chat Messages - Modern bubbles with WorkforceOS blue */}
+              {/* Chat Messages - Modern bubbles with AutoForce™ professional styling */}
               {messages.map((msg, idx) => {
                 const isSelf = msg.senderId === user?.id;
                 const role = (msg as any).role || 'guest';
@@ -1168,10 +1168,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                     <ContextMenuTrigger>
                       <div 
                         className={`
-                          flex items-center gap-1.5 p-1 rounded-lg cursor-pointer transition-all border
+                          flex items-center gap-1.5 p-1.5 rounded-lg cursor-pointer transition-all border
                           ${selectedUserId === u.id 
-                            ? 'bg-muted/50/90 shadow-sm border-primary/80/70' 
-                            : 'bg-amber-50/90 hover:bg-amber-100/95 border-slate-200/50 hover:border-primary/50'
+                            ? 'bg-slate-100 shadow-sm border-emerald-600/50 ring-1 ring-emerald-200' 
+                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-slate-300'
                           }
                         `}
                         onClick={() => setSelectedUserId(u.id)}
@@ -1182,7 +1182,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                           {getStatusIndicator(u.status || 'online')}
                         </div>
                         
-                        {/* User Type Icon - WorkforceOS Logo for staff, Avatar for users */}
+                        {/* User Type Icon - AutoForce™ Logo for staff, Avatar for users */}
                         <div className="flex-shrink-0">
                           {getUserTypeIcon(u.userType || 'guest', u.role, u.name)}
                         </div>
@@ -1199,7 +1199,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         </div>
                       </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="bg-white shadow-xl border-2 border-emerald-600/30 w-72">
+                    <ContextMenuContent className="bg-white shadow-lg border-2 border-slate-200 w-72 z-50">
                       {isStaff && u.role !== 'bot' && (userPlatformRole === 'root_admin' || u.role !== 'root_admin') ? (
                         <>
                           <div className="px-2 py-1.5 text-xs font-bold text-slate-700 border-b border-slate-200">
@@ -1830,7 +1830,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-emerald-600/30 text-white [&>button]:text-white [&>button]:opacity-100 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-emerald-600">
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900 border-2 border-emerald-600/30 text-white [&>button]:text-slate-400 [&>button]:opacity-100 [&>button]:hover:text-white [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-emerald-600">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-white">
               <AutoForceLogo size="sm" variant="icon" />
@@ -2114,7 +2114,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 )}
               </div>
             ) : (
-              /* Loading state with WorkforceOS branding */
+              /* Loading state with AutoForce™ branding */
               <div className="text-center py-8">
                 <div className="mb-4 flex justify-center">
                   <AutoForceLogo size="lg" variant="icon" className="opacity-75" />
