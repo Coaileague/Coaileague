@@ -76,6 +76,7 @@ import PayrollDashboard from "@/pages/payroll-dashboard";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
 import MobileChatPage from "@/pages/mobile-chat";
+import PremiumMobileChat from "@/pages/PremiumMobileChat";
 import EngagementDashboard from "@/pages/engagement-dashboard";
 import EmployeeEngagement from "@/pages/engagement-employee";
 import AnalyticsReportsPage from "@/pages/analytics-reports";
@@ -257,7 +258,7 @@ function AppContent() {
 
   // Check if on mobile chat, HelpDesk, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
-  const isMobileChat = window.location.pathname === '/mobile-chat';
+  const isMobileChat = window.location.pathname === '/mobile-chat' || window.location.pathname === '/premium-chat';
   const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
 
   // Show minimal loading state during auth check to prevent routing issues
@@ -277,6 +278,7 @@ function AppContent() {
         {/* Consolidated chat routes - redirect to main chat */}
         <Route path="/chat" component={HelpDesk} />
         <Route path="/mobile-chat" component={MobileChatPage} /> {/* Guest access for mobile */}
+        <Route path="/premium-chat" component={PremiumMobileChat} /> {/* Premium mobile chat */}
         <Route path="/live-chat"><Redirect to="/chat" /></Route>
         <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
         <Route path="/support/chat"><Redirect to="/chat" /></Route>
@@ -450,6 +452,7 @@ function AppContent() {
                 {/* Consolidated Chat Routes - ONLY 2 versions */}
                 <Route path="/chat" component={HelpDesk} /> {/* Desktop chat with Gemini AI */}
                 <Route path="/mobile-chat" component={MobileChatPage} /> {/* Mobile optimized */}
+                <Route path="/premium-chat" component={PremiumMobileChat} /> {/* Premium mobile chat with advanced features */}
                 
                 {/* Redirect legacy chat routes to unified /chat */}
                 <Route path="/support/chat"><Redirect to="/chat" /></Route>
