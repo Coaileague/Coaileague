@@ -239,24 +239,27 @@ export default function Dashboard() {
       {/* Professional subtle background - NO bright glowing orbs */}
 
       <div className="relative z-10 mobile-safe-container max-w-7xl mx-auto">
-        {/* Branded Header with Logo */}
+        {/* Branded Header with Logo - Centered on Desktop */}
         <div className="mb-8">
           <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="transform hover:scale-105 transition-transform duration-300">
-                <AnimatedAutoForceLogo variant="full" size="md" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-1 break-words" data-testid="text-welcome">
-                  Welcome back, {firstName}
-                </h2>
-                <p className="text-muted-foreground text-sm sm:text-base">
-                  {workspaceRole === 'org_owner' ? '🎯 Manage your entire workforce with AutoForce™' : 
-                   workspaceRole === 'org_admin' ? '🏢 Administer your organization' :
-                   workspaceRole === 'department_manager' ? '📊 Oversee your team performance' :
-                   workspaceRole === 'supervisor' ? '👥 Lead your team to success' :
-                   '⏰ Track your time and tasks'}
-                </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+              {/* Logo and Title - Centered on Large Screens */}
+              <div className="flex items-start gap-3 lg:col-start-2 lg:flex-col lg:items-center lg:text-center">
+                <div className="transform hover:scale-105 transition-transform duration-300">
+                  <AnimatedAutoForceLogo variant="full" size="md" />
+                </div>
+                <div>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-1 break-words" data-testid="text-welcome">
+                    Welcome back, {firstName}
+                  </h2>
+                  <p className="text-muted-foreground text-sm sm:text-base">
+                    {workspaceRole === 'org_owner' ? 'Manage your entire workforce with AutoForce™' : 
+                     workspaceRole === 'org_admin' ? 'Administer your organization' :
+                     workspaceRole === 'department_manager' ? 'Oversee your team performance' :
+                     workspaceRole === 'supervisor' ? 'Lead your team to success' :
+                     'Track your time and tasks'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
