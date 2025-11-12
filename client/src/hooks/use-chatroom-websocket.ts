@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { ChatMessage } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-const MAIN_ROOM_ID = 'main-chatroom-workforceos';
 const MAX_RETRIES = 5; // Maximum reconnection attempts before giving up
 
 // IRC-style command ID generator
@@ -11,7 +10,7 @@ function generateCommandId(): string {
 }
 
 // Helper to create properly typed system messages
-function createSystemMessage(message: string, conversationId: string = MAIN_ROOM_ID): ChatMessage {
+function createSystemMessage(message: string, conversationId: string): ChatMessage {
   return {
     id: `system-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     createdAt: new Date(),
@@ -114,6 +113,7 @@ interface ConnectionFailedCallback {
 export function useChatroomWebSocket(
   userId: string | undefined, 
   userName: string = 'User',
+  conversationId: string = 'main-chatroom-workforceos', // Default to main room for backward compatibility
   onSecureRequest?: SecureRequestCallback,
   onConnectionFailed?: ConnectionFailedCallback
 ) {
@@ -196,10 +196,10 @@ export function useChatroomWebSocket(
         reconnectAttemptsRef.current = 0;
         isConnectingRef.current = false; // Connection established
 
-        // Join the main chatroom
+        // Join the specified conversation
         ws.send(JSON.stringify({
           type: 'join_conversation',
-          conversationId: MAIN_ROOM_ID,
+          conversationId: conversationId,
           userId: userId,
         }));
       };
@@ -251,7 +251,7 @@ export function useChatroomWebSocket(
               // Handle system messages (e.g., help command response)
               if (data.message && typeof data.message === 'string') {
                 const msgText: string = data.message;
-                setMessages((prev) => [...prev, createSystemMessage(msgText)]);
+                setMessages((prev) => [...prev, createSystemMessage(msgText, conversationId)]);
               }
               break;
 
@@ -375,7 +375,8 @@ export function useChatroomWebSocket(
             case 'spectator_released':
               // User was released from hold/spectator mode
               setMessages((prev) => [...prev, createSystemMessage(
-                `${(data as any).releasedBy} has released you from hold. You can now chat.`
+                `${(data as any).releasedBy} has released you from hold. You can now chat.`,
+                conversationId
               )]);
               break;
 
@@ -396,7 +397,7 @@ export function useChatroomWebSocket(
               if (secureData.file) secureDataSummary += `📎 File uploaded: ${secureData.file.name || 'document'}\n`;
 
               setMessages((prev) => [...prev, {
-                ...createSystemMessage(secureDataSummary.trim()),
+                ...createSystemMessage(secureDataSummary.trim(), conversationId),
                 senderName: 'SecureChannel' // Override for secure data messages
               }]);
               break;
@@ -481,7 +482,7 @@ export function useChatroomWebSocket(
       setError(err instanceof Error ? err.message : 'Failed to connect');
       isConnectingRef.current = false; // Reset on error
     }
-  }, [userId]);
+  }, [userId, conversationId]);
 
   // Send a message
   const sendMessage = useCallback((messageText: string, senderName: string, senderType: 'customer' | 'support' | 'system' = 'support') => {
@@ -492,12 +493,12 @@ export function useChatroomWebSocket(
 
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
-      conversationId: MAIN_ROOM_ID,
+      conversationId: conversationId,
       message: messageText,
       senderName: senderName,
       senderType: senderType,
     }));
-  }, []);
+  }, [conversationId]);
 
   // Send typing indicator
   const sendTyping = useCallback((isTyping: boolean) => {
