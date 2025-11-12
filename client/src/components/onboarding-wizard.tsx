@@ -24,7 +24,7 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "welcome",
     family: "overview",
-    title: "Welcome to WorkforceOS™",
+    title: "Welcome to AutoForce™",
     description: "The complete workforce optimization platform built for modern enterprises",
     icon: Sparkles,
     features: [
@@ -38,7 +38,7 @@ const onboardingSteps: OnboardingStep[] = [
     id: "os-families",
     family: "overview",
     title: "4 OS Families Overview",
-    description: "WorkforceOS organizes features into 4 logical families for easy navigation",
+    description: "AutoForce™ organizes features into 4 logical families for easy navigation",
     icon: Sparkles,
     features: [
       "📡 Communication & Collaboration - Team chat, DMs, support",
@@ -221,8 +221,8 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "completion",
     family: "overview",
-    title: "🎉 Tour Complete!",
-    description: "You're ready to start using WorkforceOS",
+    title: "Tour Complete!",
+    description: "You're ready to start using AutoForce™",
     icon: CheckCircle2,
     features: [
       "Click any OS Family in the sidebar to explore modules",
@@ -295,8 +295,8 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
         platformProgress: getFamilyProgress("platform")
       });
       toast({
-        title: "🎉 Onboarding complete!",
-        description: "You've completed the platform tour. Welcome to WorkforceOS!",
+        title: "Onboarding complete!",
+        description: "You've completed the platform tour. Welcome to AutoForce™!",
       });
       onClose();
     } catch (error) {

@@ -334,7 +334,7 @@ export default function RootAdminPortal() {
       // Send helpbot welcome message
       setTimeout(() => {
         apiRequest(`/api/chat/conversations/${data.id}/messages`, "POST", {
-          message: `Welcome to WorkforceOS Live Support! ${data.isSilenced ? "You're in the waiting queue. A support agent will grant you voice shortly." : "You have full access to chat. How can we help you today?"}`,
+          message: `Welcome to AutoForce™ Live Support! ${data.isSilenced ? "You're in the waiting queue. A support agent will grant you voice shortly." : "You have full access to chat. How can we help you today?"}`,
           messageType: "system",
           senderType: "bot",
           senderName: "HelpBot",
