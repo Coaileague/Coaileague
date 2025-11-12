@@ -464,7 +464,7 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                               </span>
                               <Badge
                                 variant="outline"
-                                className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 ml-auto flex-shrink-0"
+                                className="text-[10px] px-1.5 py-0 border-blue-500/50 text-blue-600 dark:text-blue-400 ml-auto flex-shrink-0"
                               >
                                 {route.badge}
                               </Badge>
@@ -485,7 +485,7 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                                 {route.description}
                               </p>
                             )}
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                               Requires {route.badge} tier or higher
                             </p>
                           </TooltipContent>

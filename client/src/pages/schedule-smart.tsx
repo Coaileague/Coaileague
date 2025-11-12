@@ -296,10 +296,10 @@ export default function SmartScheduleOS() {
     const role = getEmployeeRole(employeeId);
     const roleColors: Record<string, string> = {
       'Rigger': 'bg-blue-600',
-      'SysOp': 'bg-primary',
-      'Manager': 'bg-purple-600',
-      'Technician': 'bg-amber-600',
-      'Operator': 'bg-cyan-600',
+      'SysOp': 'bg-blue-700',
+      'Manager': 'bg-blue-500',
+      'Technician': 'bg-blue-400',
+      'Operator': 'bg-blue-300',
     };
     return roleColors[role] || 'bg-slate-600';
   };

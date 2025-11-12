@@ -75,17 +75,17 @@ export default function RoleManagement() {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'owner':
-        return <Crown className="h-4 w-4 text-yellow-500" />;
+        return <Crown className="h-4 w-4 text-blue-600" />;
       case 'manager':
         return <Briefcase className="h-4 w-4 text-blue-500" />;
       case 'hr_manager':
-        return <ClipboardList className="h-4 w-4 text-purple-500" />;
+        return <ClipboardList className="h-4 w-4 text-blue-400" />;
       case 'supervisor':
-        return <Shield className="h-4 w-4 text-green-500" />;
+        return <Shield className="h-4 w-4 text-blue-500" />;
       case 'employee':
-        return <UserIcon className="h-4 w-4 text-gray-500" />;
+        return <UserIcon className="h-4 w-4 text-slate-500" />;
       default:
-        return <UserIcon className="h-4 w-4 text-gray-500" />;
+        return <UserIcon className="h-4 w-4 text-slate-500" />;
     }
   };
 
