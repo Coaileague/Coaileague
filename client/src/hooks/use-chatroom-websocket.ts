@@ -110,6 +110,25 @@ interface ConnectionFailedCallback {
   (attemptCount: number): void;
 }
 
+// Helper function to check if an event belongs to the active conversation
+function isForActiveConversation(
+  activeConversationId: string,
+  data: WebSocketMessage,
+  message?: ChatMessage | string
+): boolean {
+  // For message objects, prefer message.conversationId
+  if (message && typeof message !== 'string' && 'conversationId' in message) {
+    return message.conversationId === activeConversationId;
+  }
+  // For metadata events, check data.conversationId
+  if (data.conversationId) {
+    return data.conversationId === activeConversationId;
+  }
+  // If no conversationId is present, reject to prevent cross-room bleed (strict security)
+  console.warn('[Chat Security] Event received without conversationId - rejecting to prevent cross-room data bleed', data.type);
+  return false;
+}
+
 export function useChatroomWebSocket(
   userId: string | undefined, 
   userName: string = 'User',
@@ -212,12 +231,28 @@ export function useChatroomWebSocket(
 
           switch (data.type) {
             case 'conversation_history':
-              // Clear chat on join - start fresh, don't show old messages
-              setMessages([]);
+              // Load conversation history for the active room
+              if (data.messages && Array.isArray(data.messages)) {
+                // Filter messages for active conversation and normalize timestamps
+                const filtered = data.messages
+                  .filter(msg => isForActiveConversation(conversationId, data, msg))
+                  .map(msg => ({
+                    ...msg,
+                    createdAt: msg.createdAt instanceof Date ? msg.createdAt : new Date(msg.createdAt),
+                  }));
+                setMessages(filtered);
+              } else {
+                // No history available - start with empty state
+                setMessages([]);
+              }
               break;
 
             case 'new_message':
               if (data.message && typeof data.message !== 'string') {
+                // Filter by conversationId to prevent message bleed
+                if (!isForActiveConversation(conversationId, data, data.message as ChatMessage)) {
+                  break;
+                }
                 setMessages((prev) => [...prev, data.message as ChatMessage]);
               }
               break;
@@ -225,6 +260,10 @@ export function useChatroomWebSocket(
             case 'private_message':
               // Handle private DMs (e.g., HelpOS welcome messages)
               if (data.message && typeof data.message !== 'string') {
+                // Filter by conversationId to prevent message bleed
+                if (!isForActiveConversation(conversationId, data, data.message as ChatMessage)) {
+                  break;
+                }
                 setMessages((prev) => [...prev, data.message as ChatMessage]);
               }
               break;
@@ -252,14 +291,25 @@ export function useChatroomWebSocket(
             case 'system_message':
               // Handle system messages (e.g., help command response)
               if (data.message && typeof data.message === 'string') {
+                // Filter by conversationId to prevent message bleed
+                if (!isForActiveConversation(conversationId, data)) {
+                  break;
+                }
                 const msgText: string = data.message;
-                setMessages((prev) => [...prev, createSystemMessage(msgText, conversationId)]);
+                // Use payload's conversationId if available, otherwise use hook parameter
+                const messageConvId = data.conversationId || conversationId;
+                setMessages((prev) => [...prev, createSystemMessage(msgText, messageConvId)]);
               }
               break;
 
             case 'user_typing':
               // Handle typing indicators - show who is typing (not yourself)
               if (data.userId && data.userId !== userId && data.isTyping !== undefined) {
+                // Filter by conversationId to prevent cross-room typing indicators
+                if (!isForActiveConversation(conversationId, data)) {
+                  break;
+                }
+                
                 if (data.isTyping && data.typingUserName) {
                   // Set typing user info for display
                   setTypingUserInfo({
@@ -301,6 +351,10 @@ export function useChatroomWebSocket(
 
             case 'voice_granted':
               // User was granted voice permission
+              // Filter by conversationId to prevent cross-room moderation bleed
+              if (!isForActiveConversation(conversationId, data)) {
+                break;
+              }
               setIsSilenced(false);
               setJustGotVoice(true);
               setTimeout(() => setJustGotVoice(false), 5000);
@@ -308,6 +362,10 @@ export function useChatroomWebSocket(
 
             case 'voice_removed':
               // User was silenced/put in spectator mode
+              // Filter by conversationId to prevent cross-room moderation bleed
+              if (!isForActiveConversation(conversationId, data)) {
+                break;
+              }
               setIsSilenced(true);
               setJustGotVoice(false);
               break;
@@ -334,6 +392,10 @@ export function useChatroomWebSocket(
 
             case 'user_list_update':
               // Handle real-time user presence updates
+              // Filter by conversationId to prevent cross-room roster bleed
+              if (!isForActiveConversation(conversationId, data)) {
+                break;
+              }
               if (data.users && Array.isArray(data.users)) {
                 // Deduplicate users by ID - keep only the last occurrence of each user
                 const uniqueUsersMap = new Map<string, OnlineUser>();
@@ -347,13 +409,20 @@ export function useChatroomWebSocket(
               break;
 
             case 'status_change':
+              // Filter by conversationId to prevent cross-room status updates
               if (data.message && typeof data.message !== 'string') {
-                setMessages((prev) => [...prev, data.message as ChatMessage]);
+                if (isForActiveConversation(conversationId, data, data.message as ChatMessage)) {
+                  setMessages((prev) => [...prev, data.message as ChatMessage]);
+                }
               }
               break;
 
             case 'kicked':
               // User has been kicked from chat
+              // Filter by conversationId to prevent cross-room kick events
+              if (!isForActiveConversation(conversationId, data)) {
+                break;
+              }
               const kickMessage = typeof data.message === 'string' ? data.message : 'You have been removed from the chat';
               setError(kickMessage);
               setIsConnected(false);
@@ -384,6 +453,10 @@ export function useChatroomWebSocket(
 
             case 'secure_data_received':
               // Staff received secure data from a user - show in chat as formatted message
+              // Filter by conversationId to prevent message bleed
+              if (!isForActiveConversation(conversationId, data)) {
+                break;
+              }
               const secureData = (data as any).data;
               let secureDataSummary = `🔒 Secure Data from ${(data as any).fromUser}:\n`;
 
@@ -398,26 +471,37 @@ export function useChatroomWebSocket(
               if (secureData.description) secureDataSummary += `📝 Description: ${secureData.description}\n`;
               if (secureData.file) secureDataSummary += `📎 File uploaded: ${secureData.file.name || 'document'}\n`;
 
+              const messageConvId = data.conversationId || conversationId;
               setMessages((prev) => [...prev, {
-                ...createSystemMessage(secureDataSummary.trim(), conversationId),
+                ...createSystemMessage(secureDataSummary.trim(), messageConvId),
                 senderName: 'SecureChannel' // Override for secure data messages
               }]);
               break;
 
             case 'banner_update':
               // Staff updated the announcement banner
+              // Filter by conversationId to prevent cross-room updates
+              if (!isForActiveConversation(conversationId, data)) {
+                break;
+              }
               if (data.bannerMessage) {
                 setCustomBannerMessage(data.bannerMessage);
               }
               // Also add the update notification to chat
               if (data.message && typeof data.message !== 'string') {
-                setMessages((prev) => [...prev, data.message as ChatMessage]);
+                if (isForActiveConversation(conversationId, data, data.message as ChatMessage)) {
+                  setMessages((prev) => [...prev, data.message as ChatMessage]);
+                }
               }
               break;
 
             case 'read_receipt':
               // Handle read receipts - track who read which message
               if (data.messageId && data.readBy && data.readByName) {
+                // Filter by conversationId to prevent cross-room read receipt bleed
+                if (!isForActiveConversation(conversationId, data)) {
+                  break;
+                }
                 setReadReceipts((prev) => {
                   const next = new Map(prev);
                   next.set(data.messageId!, {
@@ -433,6 +517,10 @@ export function useChatroomWebSocket(
             case 'participants_update':
               // Handle conversation participant updates
               if (data.conversationId && data.participants) {
+                // Filter by conversationId - only update if it matches active conversation
+                if (!isForActiveConversation(conversationId, data)) {
+                  break;
+                }
                 setConversationParticipants((prev) => {
                   const next = new Map(prev);
                   next.set(data.conversationId!, data.participants!);
@@ -520,12 +608,13 @@ export function useChatroomWebSocket(
 
     wsRef.current.send(JSON.stringify({
       type: 'typing',
+      conversationId: conversationId, // Include conversationId for proper scoping
       userId: userId,
       userName: userName,
       isStaff: isStaff,
       isTyping: isTyping,
     }));
-  }, [userId, userName, onlineUsers]);
+  }, [userId, userName, onlineUsers, conversationId]);
 
   // Send status change
   const sendStatusChange = useCallback((status: 'online' | 'away' | 'busy') => {
@@ -604,9 +693,21 @@ export function useChatroomWebSocket(
   // Connect on mount and when userId or conversationId changes
   useEffect(() => {
     if (userId) {
-      // If switching conversations, close existing connection first
+      // If switching conversations, send leave_conversation and close existing connection
       if (wsRef.current) {
         const state = wsRef.current.readyState;
+        if (state === WebSocket.OPEN) {
+          // Send explicit leave_conversation to prevent stale socket events
+          console.log(`📤 Leaving previous conversation before switching to: ${conversationId}`);
+          try {
+            wsRef.current.send(JSON.stringify({
+              type: 'leave_conversation',
+              userId: userId,
+            }));
+          } catch (err) {
+            console.warn('Failed to send leave_conversation:', err);
+          }
+        }
         if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
           console.log(`🔌 Closing WebSocket for conversation switch to: ${conversationId}`);
           isManualSwitchRef.current = true; // Set flag to suppress auto-reconnect

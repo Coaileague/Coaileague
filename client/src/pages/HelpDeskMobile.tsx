@@ -3,13 +3,16 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useNavigationProtection } from "@/hooks/use-navigation-protection";
 import { useChatSounds } from "@/hooks/use-chat-sounds";
+import { MessageBubble, TypingIndicator, ParticipantDrawer, MacrosDrawer } from "@/components/chat";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
 import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
@@ -22,7 +25,7 @@ import {
   UserCheck, FileText, Camera, PenTool, Info, ArrowRight, Sparkles,
   Ban, AlertTriangle, Timer, UserX, TrendingUp, Key, Mail, ListChecks,
   Tag, ClipboardList, History, Zap, MessageCircle, ArrowUpCircle, Star,
-  Eye, UserCog, RefreshCw, PackageCheck, FileSearch
+  Eye, UserCog, RefreshCw, PackageCheck, FileSearch, Paperclip, Loader2
 } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
 import { sanitizeMessage } from "@/lib/sanitize";
@@ -34,6 +37,13 @@ interface OnlineUser {
   status: 'online';
 }
 
+// Available conversations for multi-room support
+const AVAILABLE_CONVERSATIONS = [
+  { id: 'main-chatroom-workforceos', name: 'General Support', description: 'Main support room' },
+  { id: 'premium-support', name: 'Premium Support', description: 'For premium members' },
+  { id: 'technical-support', name: 'Technical Help', description: 'Technical issues' },
+];
+
 export default function ModernMobileChat() {
   const [messageText, setMessageText] = useState("");
   const [showQuickResponses, setShowQuickResponses] = useState(false);
@@ -44,9 +54,22 @@ export default function ModernMobileChat() {
   const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);
   const [showFABs, setShowFABs] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  
+  // Premium features state
+  const [selectedConversationId, setSelectedConversationId] = useState('main-chatroom-workforceos');
+  const [conversationSelectorOpen, setConversationSelectorOpen] = useState(false);
+  const [macrosOpen, setMacrosOpen] = useState(false);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { toast } = useToast();
   const { playSound } = useChatSounds();
   const { showTransition, hideTransition } = useTransition();
@@ -172,11 +195,17 @@ export default function ModernMobileChat() {
     staleTime: 30000,
   });
 
-  // Use WebSocket for real-time messaging
+  // Use WebSocket for real-time messaging with dynamic conversation support
   const { 
     messages, sendMessage, sendRawMessage, kickUser, silenceUser, giveVoice, onlineUsers, isConnected,
-    isSilenced, justGotVoice
-  } = useChatroomWebSocket(userId || `guest-${sessionId}`, userName); // Use sessionId for guests so WebSocket connects
+    isSilenced, justGotVoice,
+    // Premium features
+    sendTyping, readReceipts, conversationParticipants, typingUserInfo, error
+  } = useChatroomWebSocket(
+    userId || `guest-${sessionId}`, 
+    userName,
+    selectedConversationId  // Dynamic conversation switching
+  );
 
   // Navigation protection - prevent accidental disconnects from live chat
   useNavigationProtection({
@@ -207,6 +236,109 @@ export default function ModernMobileChat() {
       });
     }
   }, [justGotVoice, toast]);
+
+  // Premium Features: Typing Handler
+  const handleTyping = (text: string) => {
+    setMessageText(text);
+    
+    if (!isTyping && text.length > 0) {
+      setIsTyping(true);
+      sendTyping(true);
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      sendTyping(false);
+    }, 2000);
+  };
+
+  // Premium Features: File Upload Handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const MAX_FILES = 5;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+    if (selectedFiles.length + files.length > MAX_FILES) {
+      toast({
+        title: "Too many files",
+        description: `Maximum ${MAX_FILES} files allowed`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const validFiles = files.filter(file => {
+      if (file.size > MAX_SIZE) {
+        toast({
+          title: "File too large",
+          description: `${file.name} exceeds 10MB limit`,
+          variant: "destructive"
+        });
+        return false;
+      }
+      return true;
+    });
+
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFiles = async (): Promise<string[]> => {
+    if (selectedFiles.length === 0) return [];
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach(file => formData.append('files', file));
+
+      const response = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json() as { uploadedFiles: Array<{ id: string; filename: string; storageUrl: string }> };
+      return data.uploadedFiles.map(f => f.storageUrl);
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload files",
+        variant: "destructive"
+      });
+      return [];
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Premium Features: Conversation Switching
+  const selectedConversation = AVAILABLE_CONVERSATIONS.find(c => c.id === selectedConversationId) 
+    || AVAILABLE_CONVERSATIONS[0];
+
+  const handleConversationSwitch = (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    setConversationSelectorOpen(false);
+    toast({
+      title: "Switched conversation",
+      description: `Now in: ${AVAILABLE_CONVERSATIONS.find(c => c.id === conversationId)?.name}`,
+    });
+  };
+
+  // Premium Features: Macro Handler
+  const handleMacroSelect = (macroText: string) => {
+    setMessageText(macroText);
+    setMacrosOpen(false);
+  };
 
   // Role-based permission system
   const hasPermission = (requiredRoles: string[]) => {
@@ -572,7 +704,7 @@ export default function ModernMobileChat() {
     };
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     // Guard: Don't send if disconnected or silenced
     if (!isConnected || isSilenced) {
       if (isSilenced) {
@@ -586,11 +718,28 @@ export default function ModernMobileChat() {
     }
     
     const trimmedMessage = messageText.trim();
-    if (trimmedMessage) {
+    if (!trimmedMessage && selectedFiles.length === 0) return;
+
+    // Upload files first if any selected
+    if (selectedFiles.length > 0) {
+      const uploadedUrls = await uploadFiles();
+      if (uploadedUrls.length > 0) {
+        const fileMessage = uploadedUrls.map((url, i) => `File ${i + 1}: ${url}`).join('\n');
+        const fullMessage = trimmedMessage 
+          ? `${trimmedMessage}\n\nAttached files:\n${fileMessage}`
+          : `Attached files:\n${fileMessage}`;
+        
+        sendMessage(fullMessage, userName, isStaff ? 'support' : 'customer');
+      }
+      setSelectedFiles([]);
+    } else if (trimmedMessage) {
       sendMessage(trimmedMessage, userName, isStaff ? 'support' : 'customer');
-      setMessageText('');
-      playSound('send');
     }
+    
+    setMessageText('');
+    setIsTyping(false);
+    sendTyping(false);
+    playSound('send');
   };
 
   const handleUserSelect = (user: OnlineUser) => {
@@ -1128,6 +1277,12 @@ export default function ModernMobileChat() {
             </div>
           </div>
         )})}
+        
+        {/* Typing Indicator - Premium Feature */}
+        {typingUserInfo && (
+          <TypingIndicator userName={typingUserInfo.name} isStaff={typingUserInfo.isStaff} />
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
       
@@ -1356,12 +1511,63 @@ export default function ModernMobileChat() {
           </div>
         )}
         
+        {/* File Upload Preview */}
+        {selectedFiles.length > 0 && (
+          <div className="mb-2 flex gap-2 overflow-x-auto pb-2">
+            {selectedFiles.map((file, index) => (
+              <div key={index} className="relative flex-shrink-0 bg-white/10 rounded-lg p-2 pr-8">
+                <div className="text-xs text-white truncate max-w-[120px]">{file.name}</div>
+                <div className="text-[10px] text-slate-400">{(file.size / 1024).toFixed(1)}KB</div>
+                <button
+                  onClick={() => removeFile(index)}
+                  className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-full hover:bg-red-600 transition-colors"
+                  data-testid={`button-remove-file-${index}`}
+                >
+                  <X className="w-3 h-3 text-white" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
+          {/* File Upload & Macros - Staff Only */}
+          {isStaff && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                data-testid="input-file"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!isConnected || isUploading}
+                className="tap p-3 min-h-[44px] min-w-[44px] rounded-full bg-white/10 backdrop-blur-sm text-white border border-white/10 hover-elevate active-elevate-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                data-testid="button-attach-file"
+                title="Attach files"
+              >
+                {isUploading ? <Loader2 size={20} className="animate-spin" /> : <Paperclip size={20} />}
+              </button>
+              <button
+                onClick={() => setMacrosOpen(true)}
+                disabled={!isConnected}
+                className="tap p-3 min-h-[44px] min-w-[44px] rounded-full bg-white/10 backdrop-blur-sm text-white border border-white/10 hover-elevate active-elevate-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                data-testid="button-macros"
+                title="Quick macros"
+              >
+                <Zap size={20} />
+              </button>
+            </>
+          )}
+
           <div className="flex-1 relative">
             <input
               type="text"
               value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
+              onChange={(e) => handleTyping(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -1376,9 +1582,9 @@ export default function ModernMobileChat() {
 
           <button
             onClick={handleSend}
-            disabled={!isConnected || !messageText.trim() || isSilenced}
+            disabled={!isConnected || (!messageText.trim() && selectedFiles.length === 0) || isSilenced}
             className={`tap p-3 min-h-[44px] min-w-[44px] rounded-full text-white transition-all ${
-              isConnected && messageText.trim() && !isSilenced
+              isConnected && (messageText.trim() || selectedFiles.length > 0) && !isSilenced
                 ? 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/50 active:scale-95'
                 : 'bg-slate-600 cursor-not-allowed opacity-50'
             }`}
@@ -1399,6 +1605,22 @@ export default function ModernMobileChat() {
           setDiagnosticsUserId(null);
         }}
         variant="mobile"
+      />
+
+      {/* Premium Features: MacrosDrawer - Staff Only */}
+      {isStaff && (
+        <MacrosDrawer 
+          open={macrosOpen} 
+          onOpenChange={setMacrosOpen} 
+          onSelectMacro={handleMacroSelect} 
+        />
+      )}
+
+      {/* Premium Features: ParticipantDrawer */}
+      <ParticipantDrawer 
+        open={participantsOpen} 
+        onOpenChange={setParticipantsOpen} 
+        participants={conversationParticipants.get(selectedConversationId) || onlineUsers} 
       />
     </div>
   );
