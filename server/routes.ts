@@ -68,6 +68,7 @@ import {
   insertSupportTicketSchema,
   insertChatConversationSchema,
   insertChatMessageSchema,
+  insertChatMacroSchema,
   clients,
   employees,
   supportRegistry,
@@ -86,6 +87,8 @@ import {
   termsAcknowledgments,
   chatAgreementAcceptances,
   chatMessages,
+  chatMacros,
+  typingIndicators,
   turnoverRiskScores,
   costVariancePredictions,
   customRules,
@@ -12515,6 +12518,266 @@ Keep it professional, actionable, and under 250 words.`;
         available: false,
         message: "Failed to check AI status" 
       });
+    }
+  });
+
+  // ============================================================================
+  // CHAT MACROS & TYPING INDICATORS (Premium Chat Features)
+  // ============================================================================
+
+  // Get all chat macros for workspace - Support agents only
+  app.get('/api/chat/macros', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // RBAC: Only support agents can access macros
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Support agent access required" });
+      }
+      
+      // Get workspace for the user (optional workspaceId query param for platform staff)
+      const workspaceId = req.query.workspaceId as string | undefined;
+      let workspace;
+      
+      if (workspaceId) {
+        // Platform staff can query any workspace
+        workspace = await storage.getWorkspaceById(workspaceId);
+      } else {
+        // Default to user's own workspace
+        workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                          await storage.getWorkspaceByMembership(userId);
+      }
+      
+      // Return BOTH workspace-specific macros AND global macros
+      const macros = await db
+        .select()
+        .from(chatMacros)
+        .where(
+          workspace?.id 
+            ? or(
+                eq(chatMacros.workspaceId, workspace.id),
+                sql`${chatMacros.workspaceId} IS NULL`
+              )
+            : sql`${chatMacros.workspaceId} IS NULL`
+        )
+        .orderBy(chatMacros.category, chatMacros.title);
+      
+      res.json(macros);
+    } catch (error: any) {
+      console.error("Error fetching chat macros:", error);
+      res.status(500).json({ message: "Failed to fetch chat macros" });
+    }
+  });
+
+  // Create new chat macro - Support agents only
+  app.post('/api/chat/macros', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // RBAC: Only support agents can create macros
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Support agent access required" });
+      }
+      
+      // Validate request body (workspaceId can be explicitly provided or auto-detected)
+      const validatedData = insertChatMacroSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      
+      // Determine target workspace
+      let targetWorkspaceId = validatedData.workspaceId;
+      
+      if (!targetWorkspaceId) {
+        // Auto-detect workspace if not provided
+        const workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                          await storage.getWorkspaceByMembership(userId);
+        targetWorkspaceId = workspace?.id || null;
+      } else {
+        // Validate workspace exists if explicitly provided
+        const workspace = await storage.getWorkspaceById(targetWorkspaceId);
+        if (!workspace) {
+          return res.status(404).json({ message: "Workspace not found" });
+        }
+      }
+      
+      // Check for duplicate shortcut in target workspace scope
+      if (validatedData.shortcut) {
+        const existing = await db
+          .select()
+          .from(chatMacros)
+          .where(
+            and(
+              targetWorkspaceId 
+                ? eq(chatMacros.workspaceId, targetWorkspaceId)
+                : sql`${chatMacros.workspaceId} IS NULL`,
+              eq(chatMacros.shortcut, validatedData.shortcut)
+            )
+          )
+          .limit(1);
+        
+        if (existing.length > 0) {
+          return res.status(409).json({ message: "A macro with this shortcut already exists in this workspace" });
+        }
+      }
+      
+      // Create the macro with explicit workspace assignment
+      const [macro] = await db
+        .insert(chatMacros)
+        .values({
+          ...validatedData,
+          workspaceId: targetWorkspaceId,
+        })
+        .returning();
+      
+      res.status(201).json(macro);
+    } catch (error: any) {
+      console.error("Error creating chat macro:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid macro data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create chat macro" });
+    }
+  });
+
+  // Delete chat macro - Support agents only
+  app.delete('/api/chat/macros/:id', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      // RBAC: Only support agents can delete macros
+      const platformRole = await storage.getUserPlatformRole(userId);
+      if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
+        return res.status(403).json({ message: "Unauthorized - Support agent access required" });
+      }
+      
+      // Get workspace for the user
+      const workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                        await storage.getWorkspaceByMembership(userId);
+      
+      // Verify macro exists and belongs to user's workspace
+      const macro = await db
+        .select()
+        .from(chatMacros)
+        .where(eq(chatMacros.id, id))
+        .limit(1);
+      
+      if (!macro.length) {
+        return res.status(404).json({ message: "Macro not found" });
+      }
+      
+      // Verify workspace ownership (or null for global)
+      if (macro[0].workspaceId && macro[0].workspaceId !== workspace?.id) {
+        return res.status(403).json({ message: "Unauthorized - Cannot delete macros from other workspaces" });
+      }
+      
+      // Delete the macro
+      await db.delete(chatMacros).where(eq(chatMacros.id, id));
+      
+      res.json({ message: "Macro deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting chat macro:", error);
+      res.status(500).json({ message: "Failed to delete chat macro" });
+    }
+  });
+
+  // Start typing indicator
+  app.post('/api/chat/conversations/:id/typing', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = req.user!;
+      const { id: conversationId } = req.params;
+      
+      // SECURITY: Verify conversation exists and user is a participant
+      const conversation = await storage.getChatConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // SECURITY: Verify user is a participant in this conversation
+      const isParticipant = conversation.participantIds?.includes(userId);
+      if (!isParticipant && conversation.creatorId !== userId) {
+        return res.status(403).json({ message: "Unauthorized - Not a participant in this conversation" });
+      }
+      
+      // SECURITY: Verify workspace alignment (if conversation is workspace-scoped)
+      if (conversation.workspaceId) {
+        const workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                          await storage.getWorkspaceByMembership(userId);
+        
+        if (!workspace || workspace.id !== conversation.workspaceId) {
+          return res.status(403).json({ message: "Unauthorized - Conversation belongs to different workspace" });
+        }
+      }
+      
+      // Upsert typing indicator (overwrite if exists)
+      await db
+        .insert(typingIndicators)
+        .values({
+          conversationId,
+          userId,
+          userName: user.displayName || user.username || "Anonymous",
+        })
+        .onConflictDoUpdate({
+          target: [typingIndicators.conversationId, typingIndicators.userId],
+          set: {
+            startedAt: sql`NOW()`,
+            userName: user.displayName || user.username || "Anonymous",
+          },
+        });
+      
+      res.json({ message: "Typing indicator started" });
+    } catch (error: any) {
+      console.error("Error starting typing indicator:", error);
+      res.status(500).json({ message: "Failed to start typing indicator" });
+    }
+  });
+
+  // Stop typing indicator
+  app.delete('/api/chat/conversations/:id/typing', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id: conversationId } = req.params;
+      
+      // SECURITY: Verify conversation exists and user is a participant
+      const conversation = await storage.getChatConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // SECURITY: Verify user is a participant in this conversation
+      const isParticipant = conversation.participantIds?.includes(userId);
+      if (!isParticipant && conversation.creatorId !== userId) {
+        return res.status(403).json({ message: "Unauthorized - Not a participant in this conversation" });
+      }
+      
+      // SECURITY: Verify workspace alignment (if conversation is workspace-scoped)
+      if (conversation.workspaceId) {
+        const workspace = await storage.getWorkspaceByOwnerId(userId) || 
+                          await storage.getWorkspaceByMembership(userId);
+        
+        if (!workspace || workspace.id !== conversation.workspaceId) {
+          return res.status(403).json({ message: "Unauthorized - Conversation belongs to different workspace" });
+        }
+      }
+      
+      // Delete typing indicator
+      await db
+        .delete(typingIndicators)
+        .where(
+          and(
+            eq(typingIndicators.conversationId, conversationId),
+            eq(typingIndicators.userId, userId)
+          )
+        );
+      
+      res.json({ message: "Typing indicator stopped" });
+    } catch (error: any) {
+      console.error("Error stopping typing indicator:", error);
+      res.status(500).json({ message: "Failed to stop typing indicator" });
     }
   });
 
