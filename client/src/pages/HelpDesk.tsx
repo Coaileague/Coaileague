@@ -2121,7 +2121,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 </div>
                 <div className="w-12 h-12 mx-auto mb-4 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-slate-400 text-sm font-medium">Loading user information...</p>
-                <p className="text-slate-500 text-xs mt-1">Powered by WorkforceOS™</p>
+                <p className="text-slate-500 text-xs mt-1">Powered by AutoForce™</p>
               </div>
             )}
           </div>
