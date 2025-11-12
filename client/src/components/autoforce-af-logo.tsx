@@ -38,19 +38,31 @@ export function AutoForceAFLogo({
     hero: "text-2xl"
   };
 
-  // Icon only - AF circular badge
+  // Icon only - AF circular badge with AutoForce blue branding
   if (variant === "icon") {
     return (
       <div 
         className={cn(
-          "flex items-center justify-center shrink-0 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
+          "relative flex items-center justify-center shrink-0 rounded-full shadow-lg",
           badgeSizes[size],
           animated && "animate-pulse-slow",
           className
         )}
+        style={{
+          background: 'linear-gradient(135deg, #0B4DFF 0%, #5FA5FF 100%)',
+        }}
         data-testid="autoforce-af-logo-icon"
       >
-        <span className="text-white font-black">AF</span>
+        {/* Neural ring overlay - subtle concentric circles */}
+        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+        <div className="absolute inset-2 rounded-full border border-white/5" />
+        
+        {/* AF with lightning bolt styling */}
+        <div className="relative flex items-center gap-0.5">
+          <span className="text-white font-black tracking-tighter">A</span>
+          <Zap className="w-3 h-3 text-[#E2E8F0] fill-current" />
+          <span className="text-white font-black tracking-tighter">F</span>
+        </div>
       </div>
     );
   }
@@ -75,7 +87,7 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Full - AF badge + text
+  // Full - AF badge + text with AutoForce blue branding
   return (
     <div 
       className={cn("flex items-center gap-3", className)}
@@ -83,12 +95,24 @@ export function AutoForceAFLogo({
     >
       <div 
         className={cn(
-          "shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
+          "relative shrink-0 flex items-center justify-center rounded-full shadow-lg",
           badgeSizes[size],
           animated && "animate-pulse-slow"
         )}
+        style={{
+          background: 'linear-gradient(135deg, #0B4DFF 0%, #5FA5FF 100%)',
+        }}
       >
-        <span className="text-white font-black">AF</span>
+        {/* Neural ring overlay */}
+        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+        <div className="absolute inset-2 rounded-full border border-white/5" />
+        
+        {/* AF with lightning bolt */}
+        <div className="relative flex items-center gap-0.5">
+          <span className="text-white font-black tracking-tighter">A</span>
+          <Zap className="w-4 h-4 text-[#E2E8F0] fill-current" />
+          <span className="text-white font-black tracking-tighter">F</span>
+        </div>
       </div>
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">

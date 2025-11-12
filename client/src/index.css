@@ -2317,3 +2317,29 @@ html, body {
 [data-radix-toast-viewport] {
   z-index: 3000;
 }
+
+/* ============================================================================
+   AUTOFORCE™ WAVE LOADING ANIMATION
+   Blue + Silver wave effect for loading states
+   ============================================================================ */
+
+@keyframes wave-loading {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+.animate-wave-loading {
+  animation: wave-loading 2s ease-in-out infinite;
+}
+
+/* Reduced motion fallback - static shimmer */
+@media (prefers-reduced-motion: reduce) {
+  .animate-wave-loading {
+    animation: none;
+    background: linear-gradient(90deg, #0B4DFF 0%, #E2E8F0 50%, #0B4DFF 100%);
+  }
+}

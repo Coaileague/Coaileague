@@ -29,15 +29,27 @@ export function UniversalLoading({
         data-testid="universal-loading-fullscreen"
       >
         <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
-          {/* New Animated AutoForce™ Gear Logo */}
+          {/* New Animated AutoForce™ Logo with Lightning */}
           <AnimatedAutoForceLogo 
             variant="full" 
             size={logoSize} 
             animated={true} 
           />
           
+          {/* AutoForce Blue + Silver Wave Animation */}
+          <div className="w-full max-w-sm">
+            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full animate-wave-loading"
+                style={{
+                  background: 'linear-gradient(90deg, #0B4DFF 0%, #E2E8F0 25%, #0B4DFF 50%, #E2E8F0 75%, #0B4DFF 100%)',
+                  backgroundSize: '200% 100%',
+                }}
+              />
+            </div>
+          </div>
+          
           <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-white/90 font-medium w-full justify-center px-4`}>
-            <Loader2 className={`${spinnerSize} sm:h-5 sm:w-5 animate-spin text-blue-400 flex-shrink-0`} />
             <span className="text-center break-words">{message}</span>
           </div>
         </div>
@@ -48,16 +60,28 @@ export function UniversalLoading({
   return (
     <div className="flex flex-col items-center justify-center p-4 sm:p-8 min-h-[200px] w-full" data-testid="universal-loading">
       <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
-        {/* New Animated AutoForce™ Gear Logo */}
+        {/* AutoForce™ Logo with Lightning Bolt */}
         <AnimatedAutoForceLogo 
           variant="icon" 
           size={logoSize} 
           animated={true} 
         />
         
-        <div className={`flex items-center gap-2 sm:gap-3 ${textSize} text-muted-foreground w-full justify-center px-4`}>
-          <Loader2 className={`${spinnerSize} animate-spin text-blue-500 flex-shrink-0`} />
-          <span className="text-center break-words">{message}</span>
+        {/* AutoForce Blue + Silver Wave Animation */}
+        <div className="w-full max-w-xs">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full animate-wave-loading"
+              style={{
+                background: 'linear-gradient(90deg, #0B4DFF 0%, #E2E8F0 25%, #0B4DFF 50%, #E2E8F0 75%, #0B4DFF 100%)',
+                backgroundSize: '200% 100%',
+              }}
+            />
+          </div>
+        </div>
+        
+        <div className={`${textSize} text-muted-foreground w-full text-center px-4`}>
+          <span className="break-words">{message}</span>
         </div>
       </div>
     </div>
