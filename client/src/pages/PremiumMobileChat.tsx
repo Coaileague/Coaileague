@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 import { MessageBubble, TypingIndicator, ParticipantDrawer, MacrosDrawer } from "@/components/chat";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
@@ -26,6 +27,7 @@ const AVAILABLE_CONVERSATIONS = [
 ];
 
 export default function PremiumMobileChat() {
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [messageText, setMessageText] = useState("");
@@ -36,9 +38,11 @@ export default function PremiumMobileChat() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState('main-chatroom-workforceos');
   const [conversationSelectorOpen, setConversationSelectorOpen] = useState(false);
+  const [shouldWarnOnNavigation, setShouldWarnOnNavigation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentLocationRef = useRef(location);
 
   const isStaff = user?.platformRole &&
     ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes(user.platformRole);
@@ -71,6 +75,71 @@ export default function PremiumMobileChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Track if we should warn on navigation
+  useEffect(() => {
+    setShouldWarnOnNavigation(isConnected || messages.length > 0);
+  }, [isConnected, messages.length]);
+
+  // SUPERIOR NAVIGATION PROTECTION - Prevent accidental disconnects
+  useEffect(() => {
+    // Warn before page unload (refresh, close tab, external navigation)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (shouldWarnOnNavigation) {
+        e.preventDefault();
+        e.returnValue = 'You are currently in a chat session. Leaving will disconnect you from support. Are you sure?';
+        return e.returnValue;
+      }
+    };
+
+    // Prevent accidental back button navigation
+    const handlePopState = (e: PopStateEvent) => {
+      if (shouldWarnOnNavigation) {
+        const shouldLeave = window.confirm(
+          'You are currently connected to live chat support. Navigating away will disconnect you.\n\nAre you sure you want to leave?'
+        );
+        if (!shouldLeave) {
+          e.preventDefault();
+          window.history.pushState(null, '', window.location.href);
+        }
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Push state ONCE on mount to enable popstate detection (avoid history pollution)
+    window.history.pushState(null, '', window.location.href);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [shouldWarnOnNavigation]);
+
+  // Intercept in-app navigation attempts (Wouter route changes)
+  useEffect(() => {
+    if (location !== currentLocationRef.current) {
+      // Location changed
+      if (shouldWarnOnNavigation && location !== '/premium-chat') {
+        const shouldLeave = window.confirm(
+          'You are currently connected to live chat support. Navigating away will disconnect you.\n\nAre you sure you want to leave?'
+        );
+        if (!shouldLeave) {
+          // Prevent navigation by restoring previous location
+          setLocation(currentLocationRef.current);
+        } else {
+          // Allow navigation - update ref
+          currentLocationRef.current = location;
+        }
+      } else {
+        // No warning needed or user stayed on chat page
+        currentLocationRef.current = location;
+      }
+    }
+  }, [location, shouldWarnOnNavigation, setLocation]);
 
   const handleTyping = (text: string) => {
     setMessageText(text);
