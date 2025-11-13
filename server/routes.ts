@@ -4282,13 +4282,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SCHEDULEOS™ AI - TOGGLE & USAGE-BASED BILLING
   // ============================================================================
   
-  // In-memory AI toggle state per workspace
-  const scheduleosAiEnabled = new Map<string, boolean>();
-  
-  // Toggle SmartSchedule AI (Managers/Admins only)
+  // Toggle SmartSchedule AI (Managers/Admins only) - Persists to DB
   app.post('/api/scheduleos/ai/toggle', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { enabled, workspaceId } = req.body;
+      const userId = req.user.claims.sub;
       
       if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });
@@ -4299,8 +4297,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workspace not found" });
       }
       
-      scheduleosAiEnabled.set(workspaceId, enabled);
-      console.log(`🤖 SmartSchedule AI ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${workspace.name}`);
+      // Read actual prior state for accurate audit trail
+      const priorEnabled = workspace.feature_scheduleos_enabled ?? false;
+      
+      // Transaction: Persist to database + audit log atomically
+      const { billingAuditLog } = await import("@shared/schema");
+      await db.transaction(async (tx) => {
+        // Update workspace state
+        const activationTimestamp = enabled ? new Date() : null;
+        await tx.update(workspaces).set({
+          feature_scheduleos_enabled: enabled,
+          scheduleosActivatedAt: enabled ? activationTimestamp : null, // Clear when disabled
+          scheduleosActivatedBy: enabled ? userId : null, // Clear when disabled
+        }).where(eq(workspaces.id, workspaceId));
+        
+        // Log feature toggle in audit log with accurate prior state
+        await tx.insert(billingAuditLog).values({
+          workspaceId,
+          eventType: 'feature_toggled',
+          eventCategory: 'feature',
+          actorType: 'user',
+          actorId: userId,
+          description: `${enabled ? 'Enabled' : 'Disabled'} SmartSchedule AI automation`,
+          relatedEntityType: 'feature',
+          relatedEntityId: 'scheduleos_ai',
+          previousState: { enabled: priorEnabled }, // Actual prior state
+          newState: { enabled }, // New state
+          metadata: {
+            feature: 'scheduleos_ai',
+            workspaceName: workspace.name,
+            activatedAt: activationTimestamp, // Use same timestamp
+            priorActivatedAt: workspace.scheduleosActivatedAt,
+            priorActivatedBy: workspace.scheduleosActivatedBy,
+          },
+        });
+      });
+      
+      console.log(`🤖 SmartSchedule AI ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${workspace.name} by user: ${userId}`);
       
       res.json({ success: true, enabled, message: `SmartSchedule AI ${enabled ? 'enabled' : 'disabled'}`, workspaceId, workspaceName: workspace.name });
     } catch (error: any) {
@@ -4309,7 +4342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get SmartSchedule AI status
+  // Get SmartSchedule AI status - Reads from DB
   app.get('/api/scheduleos/ai/status', isAuthenticated, async (req: any, res) => {
     try {
       const { workspaceId } = req.query;
@@ -4318,7 +4351,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspace = await storage.getWorkspace(workspaceId as string);
       if (!workspace) return res.status(404).json({ message: "Workspace not found" });
       
-      res.json({ enabled: scheduleosAiEnabled.get(workspaceId as string) ?? false, workspaceId, workspaceName: workspace.name });
+      // Read from database - actual persisted state
+      const enabled = workspace.feature_scheduleos_enabled ?? false;
+      
+      res.json({ enabled, workspaceId, workspaceName: workspace.name });
     } catch (error: any) {
       res.status(500).json({ message: "Failed to get AI status" });
     }
@@ -4333,7 +4369,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspace = await storage.getWorkspace(userWorkspace.workspaceId);
       if (!workspace) return res.status(404).json({ message: "Workspace not found" });
       
-      const aiEnabled = scheduleosAiEnabled.get(workspace.id) ?? false;
+      // Read from database - actual persisted state
+      const aiEnabled = workspace.feature_scheduleos_enabled ?? false;
       if (!aiEnabled) return res.status(403).json({ message: "SmartSchedule AI is disabled" });
 
       // PAYMENT GATING: Check subscription tier or à la carte add-on
@@ -4730,7 +4767,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspace = await storage.getWorkspace(userWorkspace.workspaceId);
       if (!workspace) return res.status(404).json({ message: "Workspace not found" });
       
-      const aiEnabled = scheduleosAiEnabled.get(workspace.id) ?? false;
+      // Read from database - actual persisted state
+      const aiEnabled = workspace.feature_scheduleos_enabled ?? false;
       if (!aiEnabled) return res.status(403).json({ message: "SmartSchedule AI is disabled" });
       
       const { serviceCoverageRequests, workspaceAiUsage } = await import("@shared/schema");

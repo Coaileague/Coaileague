@@ -40,7 +40,7 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import Dashboard from "@/pages/dashboard";
 import MobileDashboard from "@/pages/mobile-dashboard";
 import { Redirect } from "wouter";
-import SmartScheduleOS from "@/pages/schedule-grid";
+import SmartScheduleOS from "@/pages/schedule-smart";
 import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
