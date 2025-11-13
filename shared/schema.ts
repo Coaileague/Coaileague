@@ -1324,6 +1324,7 @@ export type TimeEntryApprovalAudit = typeof timeEntryApprovalAudit.$inferSelect;
 // ============================================================================
 
 export const shiftOrderPriorityEnum = pgEnum('shift_order_priority', ['normal', 'high', 'urgent']);
+export const shiftOrderPhotoFrequencyEnum = pgEnum('shift_order_photo_frequency', ['hourly', 'per_shift', 'per_task', 'at_completion', 'custom']);
 
 // Shift Orders (Post Orders) - Special instructions/tasks for shifts
 export const shiftOrders = pgTable("shift_orders", {
@@ -1338,6 +1339,12 @@ export const shiftOrders = pgTable("shift_orders", {
 
   // Requirements
   requiresAcknowledgment: boolean("requires_acknowledgment").default(true),
+  requiresSignature: boolean("requires_signature").default(false),
+  requiresPhotos: boolean("requires_photos").default(false),
+  
+  // Photo requirements
+  photoFrequency: shiftOrderPhotoFrequencyEnum("photo_frequency"),
+  photoInstructions: text("photo_instructions"),
 
   // Metadata
   createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -1364,6 +1371,10 @@ export const shiftOrderAcknowledgments = pgTable("shift_order_acknowledgments", 
   // Acknowledgment details
   acknowledgedAt: timestamp("acknowledged_at").defaultNow(),
   notes: text("notes"), // Optional employee notes
+  
+  // Signature (if required)
+  signatureUrl: varchar("signature_url"), // Object storage URL for signature image
+  signedAt: timestamp("signed_at"),
 }, (table) => [
   // Prevent duplicate acknowledgments
   uniqueIndex("unique_acknowledgment").on(table.shiftOrderId, table.employeeId)
@@ -1376,6 +1387,33 @@ export const insertShiftOrderAcknowledgmentSchema = createInsertSchema(shiftOrde
 
 export type InsertShiftOrderAcknowledgment = z.infer<typeof insertShiftOrderAcknowledgmentSchema>;
 export type ShiftOrderAcknowledgment = typeof shiftOrderAcknowledgments.$inferSelect;
+
+// Shift Order Photos - Photo evidence for post orders
+export const shiftOrderPhotos = pgTable("shift_order_photos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  shiftOrderId: varchar("shift_order_id").notNull().references(() => shiftOrders.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Photo details
+  photoUrl: varchar("photo_url").notNull(), // Object storage URL
+  takenAt: timestamp("taken_at").notNull(), // When photo was taken
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  notes: text("notes"), // Optional description/context
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("shift_order_photos_workspace_idx").on(table.workspaceId),
+  index("shift_order_photos_order_idx").on(table.shiftOrderId),
+]);
+
+export const insertShiftOrderPhotoSchema = createInsertSchema(shiftOrderPhotos).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertShiftOrderPhoto = z.infer<typeof insertShiftOrderPhotoSchema>;
+export type ShiftOrderPhoto = typeof shiftOrderPhotos.$inferSelect;
 
 // ============================================================================
 // INVOICING & BILLING TABLES
