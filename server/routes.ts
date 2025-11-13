@@ -605,6 +605,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HELPOS™ AI SUPPORT SYSTEM
   // ============================================================================
 
+  // HelpOS™ escalation endpoint - Guest info capture and conversation creation
+  app.post('/api/support/escalate', chatMessageLimiter, async (req, res) => {
+    try {
+      const { conversationId, guestName, guestEmail, issue, sessionId } = req.body;
+      
+      if (!conversationId || !guestName || !guestEmail || !issue) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Generate a guest token for authentication (simple JWT-like structure)
+      const guestToken = crypto.randomBytes(32).toString('hex');
+      
+      // Store guest token in database or session (for now, we'll just return it)
+      // In production, you'd want to store this in a table with expiration
+      
+      console.log('[HelpOS] Guest escalation:', {
+        conversationId,
+        guestName,
+        guestEmail,
+        guestToken: guestToken.substring(0, 16) + '...'
+      });
+      
+      // Return escalation details
+      res.json({
+        conversationId,
+        ticketNumber: conversationId, // Use conversationId as ticket number for now
+        guestToken,
+        success: true
+      });
+    } catch (error) {
+      console.error('[HelpOS] Escalation error:', error);
+      res.status(500).json({ 
+        error: 'Failed to complete escalation',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // HelpOS™ bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
   app.post('/api/support/helpos-chat', chatMessageLimiter, async (req, res) => {
     try {

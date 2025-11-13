@@ -30,6 +30,7 @@ interface QuickAction {
 }
 
 export function FloatingSupportChat() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -45,6 +46,14 @@ export function FloatingSupportChat() {
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
+  const [pendingEscalation, setPendingEscalation] = useState<any>(null);
+  const [guestInfo, setGuestInfo] = useState<GuestInfo>({
+    name: '',
+    email: '',
+    issue: ''
+  });
+  const [isEscalating, setIsEscalating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -140,37 +149,48 @@ export function FloatingSupportChat() {
       
       setIsTyping(false);
 
-      // Handle escalation to live helpdesk - route user to universal HelpDesk
+      // Handle escalation to live helpdesk - show guest form if not logged in
       if (data.escalated && data.conversationId) {
-        console.log('[HelpOS] ✅ ESCALATION TRIGGERED - Routing to live HelpDesk:', {
-          conversationId: data.conversationId,
-          ticketNumber: data.ticketNumber,
-          escalationReason: data.escalationReason
-        });
-        
-        // Store conversation details in sessionStorage for HelpDesk to pick up
-        sessionStorage.setItem('helpos_escalation', JSON.stringify({
+        console.log('[HelpOS] ✅ ESCALATION TRIGGERED:', {
           conversationId: data.conversationId,
           ticketNumber: data.ticketNumber,
           escalationReason: data.escalationReason,
-          timestamp: new Date().toISOString()
-        }));
+          isAuthenticated: !!user
+        });
         
-        // Show brief confirmation message
-        const escalationMessage: Message = {
-          id: messages.length + 2,
-          type: 'bot',
-          text: `✅ ${data.message}\n\n🎫 Ticket #${data.ticketNumber} created.\n\n🔄 Connecting you to live support...`,
-          timestamp: new Date(),
-          isEscalation: true
-        };
-        setMessages(prev => [...prev, escalationMessage]);
+        // If user is logged in, route directly to HelpDesk
+        if (user) {
+          sessionStorage.setItem('helpos_escalation', JSON.stringify({
+            conversationId: data.conversationId,
+            ticketNumber: data.ticketNumber,
+            escalationReason: data.escalationReason,
+            timestamp: new Date().toISOString()
+          }));
+          
+          const escalationMessage: Message = {
+            id: messages.length + 2,
+            type: 'bot',
+            text: `✅ ${data.message}\n\n🎫 Ticket #${data.ticketNumber} created.\n\n🔄 Connecting you to live support...`,
+            timestamp: new Date(),
+            isEscalation: true
+          };
+          setMessages(prev => [...prev, escalationMessage]);
+          
+          setTimeout(() => {
+            setIsOpen(false);
+            setLocation(`/chat?conversationId=${data.conversationId}`);
+          }, 1500);
+          return;
+        }
         
-        // Auto-close floating chat and navigate to live HelpDesk after brief delay
-        setTimeout(() => {
-          setIsOpen(false);
-          setLocation(`/chat?conversationId=${data.conversationId}`);
-        }, 1500);
+        // Guest user - show info capture form before escalating
+        setPendingEscalation({
+          conversationId: data.conversationId,
+          ticketNumber: data.ticketNumber,
+          escalationReason: data.escalationReason,
+          botMessage: data.message
+        });
+        setShowGuestDialog(true);
         return;
       }
 
@@ -216,6 +236,56 @@ export function FloatingSupportChat() {
 
   const handleQuickAction = (value: string) => {
     setInputValue(value);
+  };
+
+  const handleGuestFormSubmit = async () => {
+    if (!guestInfo.name || !guestInfo.email || !guestInfo.issue) {
+      return;
+    }
+    
+    setIsEscalating(true);
+    
+    try {
+      // Call dedicated escalation endpoint with guest info
+      const response = await fetch('/api/support/escalate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: pendingEscalation.conversationId,
+          guestName: guestInfo.name,
+          guestEmail: guestInfo.email,
+          issue: guestInfo.issue,
+          sessionId
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to escalate to live support');
+      }
+      
+      const data = await response.json();
+      console.log('[HelpOS] Escalation complete:', data);
+      
+      // Store guest token and conversation details
+      sessionStorage.setItem('helpos_escalation', JSON.stringify({
+        conversationId: data.conversationId,
+        ticketNumber: data.ticketNumber,
+        guestToken: data.guestToken,
+        guestName: guestInfo.name,
+        guestEmail: guestInfo.email,
+        timestamp: new Date().toISOString()
+      }));
+      
+      // Close dialog and chat, navigate to HelpDesk
+      setShowGuestDialog(false);
+      setIsOpen(false);
+      setLocation(`/chat?conversationId=${data.conversationId}&guestToken=${data.guestToken}`);
+    } catch (error) {
+      console.error('[HelpOS] Escalation error:', error);
+      alert('Failed to connect to live support. Please try again.');
+    } finally {
+      setIsEscalating(false);
+    }
   };
 
   return (
@@ -420,6 +490,77 @@ export function FloatingSupportChat() {
           )}
         </div>
       )}
+      
+      {/* Guest Info Capture Dialog - For unauthenticated users */}
+      <Dialog open={showGuestDialog} onOpenChange={setShowGuestDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect to Live Support</DialogTitle>
+            <DialogDescription>
+              {pendingEscalation?.ticketNumber && (
+                <span className="block mb-2 font-semibold text-blue-600 dark:text-blue-400">
+                  🎫 Ticket #{pendingEscalation.ticketNumber}
+                </span>
+              )}
+              Please provide your contact information so our support team can assist you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-name">Your Name</Label>
+              <Input
+                id="guest-name"
+                placeholder="John Doe"
+                value={guestInfo.name}
+                onChange={(e) => setGuestInfo(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-guest-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-email">Email Address</Label>
+              <Input
+                id="guest-email"
+                type="email"
+                placeholder="john@example.com"
+                value={guestInfo.email}
+                onChange={(e) => setGuestInfo(prev => ({ ...prev, email: e.target.value }))}
+                data-testid="input-guest-email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-issue">Brief Description of Issue</Label>
+              <Textarea
+                id="guest-issue"
+                placeholder="Describe what you need help with..."
+                rows={3}
+                value={guestInfo.issue}
+                onChange={(e) => setGuestInfo(prev => ({ ...prev, issue: e.target.value }))}
+                data-testid="input-guest-issue"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowGuestDialog(false)}
+              disabled={isEscalating}
+              data-testid="button-cancel-escalation"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleGuestFormSubmit}
+              disabled={!guestInfo.name || !guestInfo.email || !guestInfo.issue || isEscalating}
+              className="bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500"
+              data-testid="button-submit-escalation"
+            >
+              {isEscalating ? 'Connecting...' : 'Connect to Live Support'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
