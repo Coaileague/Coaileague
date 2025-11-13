@@ -196,7 +196,7 @@ export const workspaces = pgTable("workspaces", {
   // ============================================================================
 
   // Feature Toggles (ROOT can enable/disable individual OS modules)
-  feature_scheduleos_enabled: boolean("feature_scheduleos_enabled").default(true),
+  feature_scheduleos_enabled: boolean("feature_scheduleos_enabled").default(false), // AI automation defaults OFF - must be explicitly activated
   feature_timeos_enabled: boolean("feature_timeos_enabled").default(true),
   feature_payrollos_enabled: boolean("feature_payrollos_enabled").default(false), // In dev
   feature_billos_enabled: boolean("feature_billos_enabled").default(true),

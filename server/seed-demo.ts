@@ -77,9 +77,8 @@ export async function seedDemoWorkspace() {
   const createdEmployees = [demoUserEmployee]; // Include demo user in employees list
   for (const emp of employeeData) {
     const [employee] = await db.insert(employees).values({
-      workspaceId: DEMO_WORKSPACE_ID,
       ...emp,
-      isActive: true,
+      workspaceId: DEMO_WORKSPACE_ID,
     }).returning();
     createdEmployees.push(employee);
   }
@@ -141,101 +140,69 @@ export async function seedDemoWorkspace() {
 
   console.log("✅ Created sample paycheck for demo user");
 
-  // 6. Create sample shifts (10 total - mix of past and future)
+  // 6. Create CATEGORIZED shifts for THIS WEEK (colorful Sling-style schedule)
   const now = new Date();
+  // Helper: Get start of current week (Sunday) and create Date for specific day/hour
+  const getStartOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  
+  const createShiftDate = (baseDate: Date, dayOffset: number, hour: number, minute: number = 0) => {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + dayOffset);
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+  
+  const weekStart = getStartOfWeek(now);
   const shiftsData = [
-    // Past shifts (for completed work)
-    {
-      employeeId: createdEmployees[0].id,
-      clientId: createdClients[0].id,
-      title: "System Installation",
-      description: "Install and configure new server system",
-      startTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).setHours(9, 0, 0),
-      endTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).setHours(17, 0, 0),
-      status: "completed",
-    },
-    {
-      employeeId: createdEmployees[1].id,
-      clientId: createdClients[1].id,
-      title: "Consultation Session",
-      description: "Strategy planning and implementation review",
-      startTime: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).setHours(10, 0, 0),
-      endTime: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).setHours(15, 0, 0),
-      status: "completed",
-    },
-    {
-      employeeId: createdEmployees[2].id,
-      clientId: createdClients[2].id,
-      title: "Field Service",
-      description: "On-site equipment maintenance",
-      startTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).setHours(8, 0, 0),
-      endTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).setHours(12, 0, 0),
-      status: "completed",
-    },
-    {
-      employeeId: createdEmployees[3].id,
-      clientId: createdClients[1].id,
-      title: "Network Diagnostics",
-      description: "Troubleshoot network connectivity issues",
-      startTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).setHours(9, 0, 0),
-      endTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).setHours(13, 0, 0),
-      status: "completed",
-    },
-    {
-      employeeId: createdEmployees[4].id,
-      clientId: createdClients[2].id,
-      title: "Security Audit",
-      description: "Comprehensive security assessment",
-      startTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).setHours(10, 0, 0),
-      endTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).setHours(16, 0, 0),
-      status: "completed",
-    },
-    // Current/upcoming shifts
-    {
-      employeeId: createdEmployees[0].id,
-      clientId: createdClients[0].id,
-      title: "Follow-up Service",
-      description: "Post-installation check and adjustments",
-      startTime: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).setHours(9, 0, 0),
-      endTime: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).setHours(13, 0, 0),
-      status: "scheduled",
-    },
-    {
-      employeeId: createdEmployees[1].id,
-      clientId: createdClients[1].id,
-      title: "Training Session",
-      description: "Staff training on new procedures",
-      startTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).setHours(13, 0, 0),
-      endTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).setHours(17, 0, 0),
-      status: "scheduled",
-    },
-    {
-      employeeId: createdEmployees[2].id,
-      clientId: createdClients[2].id,
-      title: "Equipment Upgrade",
-      description: "Hardware replacement and testing",
-      startTime: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).setHours(8, 0, 0),
-      endTime: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).setHours(12, 0, 0),
-      status: "scheduled",
-    },
-    {
-      employeeId: createdEmployees[3].id,
-      clientId: createdClients[0].id,
-      title: "Quarterly Review",
-      description: "System performance review and optimization",
-      startTime: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).setHours(14, 0, 0),
-      endTime: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).setHours(17, 0, 0),
-      status: "scheduled",
-    },
-    {
-      employeeId: createdEmployees[4].id,
-      clientId: createdClients[1].id,
-      title: "Emergency Support",
-      description: "On-call emergency technical support",
-      startTime: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).setHours(9, 0, 0),
-      endTime: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).setHours(17, 0, 0),
-      status: "scheduled",
-    },
+    // Sunday (Day 0)
+    {employeeId: createdEmployees[0].id, clientId: createdClients[0].id, title: "Tech Support", category: "tech_support", startTime: createShiftDate(weekStart, 0, 9), endTime: createShiftDate(weekStart, 0, 17), status: "scheduled"},
+    {employeeId: createdEmployees[1].id, clientId: createdClients[1].id, title: "Field Ops", category: "field_ops", startTime: createShiftDate(weekStart, 0, 13), endTime: createShiftDate(weekStart, 0, 20), status: "scheduled"},
+    {employeeId: createdEmployees[2].id, clientId: createdClients[2].id, title: "Security", category: "security", startTime: createShiftDate(weekStart, 0, 22), endTime: createShiftDate(weekStart, 1, 6), status: "scheduled"},
+    
+    // Monday (Day 1)
+    {employeeId: createdEmployees[0].id, clientId: createdClients[0].id, title: "Healthcare", category: "healthcare", startTime: createShiftDate(weekStart, 1, 8), endTime: createShiftDate(weekStart, 1, 16), status: "scheduled"},
+    {employeeId: createdEmployees[1].id, clientId: createdClients[1].id, title: "Training", category: "training", startTime: createShiftDate(weekStart, 1, 10), endTime: createShiftDate(weekStart, 1, 14), status: "scheduled"},
+    {employeeId: createdEmployees[2].id, clientId: createdClients[0].id, title: "Security", category: "security", startTime: createShiftDate(weekStart, 1, 14), endTime: createShiftDate(weekStart, 1, 22), status: "scheduled"},
+    {employeeId: createdEmployees[3].id, clientId: createdClients[2].id, title: "Admin", category: "admin", startTime: createShiftDate(weekStart, 1, 9), endTime: createShiftDate(weekStart, 1, 17), status: "scheduled"},
+    
+    // Tuesday (Day 2)
+    {employeeId: createdEmployees[0].id, clientId: createdClients[2].id, title: "Admin", category: "admin", startTime: createShiftDate(weekStart, 2, 9), endTime: createShiftDate(weekStart, 2, 17), status: "scheduled"},
+    {employeeId: createdEmployees[3].id, clientId: createdClients[1].id, title: "Emergency", category: "emergency", startTime: createShiftDate(weekStart, 2, 0), endTime: createShiftDate(weekStart, 2, 8), status: "scheduled"},
+    {employeeId: createdEmployees[4].id, clientId: createdClients[0].id, title: "Tech Support", category: "tech_support", startTime: createShiftDate(weekStart, 2, 13), endTime: createShiftDate(weekStart, 2, 21), status: "scheduled"},
+    {employeeId: createdEmployees[1].id, clientId: createdClients[1].id, title: "Field Ops", category: "field_ops", startTime: createShiftDate(weekStart, 2, 8), endTime: createShiftDate(weekStart, 2, 16), status: "scheduled"},
+    
+    // Wednesday (Day 3)
+    {employeeId: createdEmployees[1].id, clientId: createdClients[2].id, title: "Field Ops", category: "field_ops", startTime: createShiftDate(weekStart, 3, 7), endTime: createShiftDate(weekStart, 3, 15), status: "scheduled"},
+    {employeeId: createdEmployees[2].id, clientId: createdClients[1].id, title: "Healthcare", category: "healthcare", startTime: createShiftDate(weekStart, 3, 8), endTime: createShiftDate(weekStart, 3, 16), status: "scheduled"},
+    {employeeId: createdEmployees[3].id, clientId: createdClients[0].id, title: "Training", category: "training", startTime: createShiftDate(weekStart, 3, 10), endTime: createShiftDate(weekStart, 3, 14), status: "scheduled"},
+    {employeeId: createdEmployees[4].id, clientId: createdClients[2].id, title: "Admin", category: "admin", startTime: createShiftDate(weekStart, 3, 9), endTime: createShiftDate(weekStart, 3, 17), status: "scheduled"},
+    {employeeId: createdEmployees[0].id, clientId: createdClients[1].id, title: "Tech Support", category: "tech_support", startTime: createShiftDate(weekStart, 3, 13), endTime: createShiftDate(weekStart, 3, 21), status: "scheduled"},
+    
+    // Thursday (Day 4)
+    {employeeId: createdEmployees[0].id, clientId: createdClients[1].id, title: "Security", category: "security", startTime: createShiftDate(weekStart, 4, 6), endTime: createShiftDate(weekStart, 4, 14), status: "scheduled"},
+    {employeeId: createdEmployees[4].id, clientId: createdClients[2].id, title: "Admin", category: "admin", startTime: createShiftDate(weekStart, 4, 9), endTime: createShiftDate(weekStart, 4, 17), status: "scheduled"},
+    {employeeId: createdEmployees[1].id, clientId: createdClients[0].id, title: "Tech Support", category: "tech_support", startTime: createShiftDate(weekStart, 4, 12), endTime: createShiftDate(weekStart, 4, 20), status: "scheduled"},
+    {employeeId: createdEmployees[2].id, clientId: createdClients[1].id, title: "Healthcare", category: "healthcare", startTime: createShiftDate(weekStart, 4, 8), endTime: createShiftDate(weekStart, 4, 16), status: "scheduled"},
+    {employeeId: createdEmployees[3].id, clientId: createdClients[2].id, title: "Training", category: "training", startTime: createShiftDate(weekStart, 4, 14), endTime: createShiftDate(weekStart, 4, 18), status: "scheduled"},
+    
+    // Friday (Day 5)
+    {employeeId: createdEmployees[2].id, clientId: createdClients[1].id, title: "Field Ops", category: "field_ops", startTime: createShiftDate(weekStart, 5, 8), endTime: createShiftDate(weekStart, 5, 16), status: "scheduled"},
+    {employeeId: createdEmployees[3].id, clientId: createdClients[2].id, title: "Healthcare", category: "healthcare", startTime: createShiftDate(weekStart, 5, 10), endTime: createShiftDate(weekStart, 5, 18), status: "scheduled"},
+    {employeeId: createdEmployees[0].id, clientId: createdClients[0].id, title: "Emergency", category: "emergency", startTime: createShiftDate(weekStart, 5, 18), endTime: createShiftDate(weekStart, 6, 2), status: "scheduled"},
+    {employeeId: createdEmployees[1].id, clientId: createdClients[1].id, title: "Tech Support", category: "tech_support", startTime: createShiftDate(weekStart, 5, 9), endTime: createShiftDate(weekStart, 5, 17), status: "scheduled"},
+    {employeeId: createdEmployees[4].id, clientId: createdClients[0].id, title: "Admin", category: "admin", startTime: createShiftDate(weekStart, 5, 9), endTime: createShiftDate(weekStart, 5, 17), status: "scheduled"},
+    
+    // Saturday (Day 6)
+    {employeeId: createdEmployees[4].id, clientId: createdClients[1].id, title: "Security", category: "security", startTime: createShiftDate(weekStart, 6, 6), endTime: createShiftDate(weekStart, 6, 14), status: "scheduled"},
+    {employeeId: createdEmployees[1].id, clientId: createdClients[0].id, title: "Training", category: "training", startTime: createShiftDate(weekStart, 6, 10), endTime: createShiftDate(weekStart, 6, 14), status: "scheduled"},
+    {employeeId: createdEmployees[2].id, clientId: createdClients[2].id, title: "Field Ops", category: "field_ops", startTime: createShiftDate(weekStart, 6, 8), endTime: createShiftDate(weekStart, 6, 16), status: "scheduled"},
+    {employeeId: createdEmployees[0].id, clientId: createdClients[1].id, title: "Healthcare", category: "healthcare", startTime: createShiftDate(weekStart, 6, 12), endTime: createShiftDate(weekStart, 6, 20), status: "scheduled"},
   ];
 
   const createdShifts = [];
@@ -245,15 +212,17 @@ export async function seedDemoWorkspace() {
       employeeId: shift.employeeId,
       clientId: shift.clientId,
       title: shift.title,
-      description: shift.description,
+      category: shift.category as any, // CRITICAL: Set category for colorful theming
+      description: `${shift.category.replace('_', ' ')} shift`,
       startTime: new Date(shift.startTime),
       endTime: new Date(shift.endTime),
       status: shift.status as any,
+      aiGenerated: false,
     }).returning();
     createdShifts.push(createdShift);
   }
 
-  console.log(`✅ Created ${createdShifts.length} shifts`);
+  console.log(`✅ Created ${createdShifts.length} CATEGORIZED shifts for current week`);
 
   // 6. Create time entries for completed shifts (5 total)
   const timeEntriesData = [
