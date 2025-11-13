@@ -31,8 +31,11 @@ interface QuickAction {
 
 export function FloatingSupportChat() {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Hide floating chat on certain pages to avoid conflicts
+  const shouldHide = location === '/chat' || location.startsWith('/chat');
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -288,13 +291,18 @@ export function FloatingSupportChat() {
     }
   };
 
+  // Don't render on HelpDesk page or other chat pages
+  if (shouldHide) {
+    return null;
+  }
+  
   return (
     <>
       {/* Chat Bubble Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-[15000] group"
+          className="fixed bottom-20 sm:bottom-6 right-6 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-[15000] group"
           aria-label="Open support chat"
           data-testid="button-open-support-chat"
         >
