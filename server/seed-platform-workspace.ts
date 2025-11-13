@@ -9,12 +9,11 @@ export const ROOT_USER_ID = 'root-user-00000000';
 export async function seedPlatformWorkspace() {
   console.log('Creating AutoForce Platform workspace for anonymous HelpOS users...');
 
-  // Ensure root user exists
+  // Ensure root user exists (CRITICAL: Throw if missing to fail-fast)
   const rootUser = await db.select().from(users).where(eq(users.id, ROOT_USER_ID)).limit(1);
   
   if (!rootUser.length) {
-    console.log('⚠️  Root user not found. Please run seed-root-user.ts first.');
-    return { success: false };
+    throw new Error('CRITICAL: Root user not found. Cannot create platform workspace without root user. Run seedRootUser() first.');
   }
 
   // Create Platform workspace for anonymous users

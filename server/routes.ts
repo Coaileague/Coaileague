@@ -3,6 +3,23 @@
 
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+
+// ============================================================================
+// PLATFORM WORKSPACE SEEDING LOCK
+// ============================================================================
+// Prevents concurrent runtime seeding attempts from racing and violating FK constraints
+let platformWorkspaceSeedingInProgress = false;
+const platformWorkspaceSeedLock = {
+  async acquire(): Promise<void> {
+    while (platformWorkspaceSeedingInProgress) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+    }
+    platformWorkspaceSeedingInProgress = true;
+  },
+  release(): void {
+    platformWorkspaceSeedingInProgress = false;
+  }
+};
 import { storage } from "./storage";
 import { db, pool } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -733,13 +750,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // DEFENSIVE: Ensure platform workspace exists before escalation (runtime fallback)
         if (workspaceId === PLATFORM_WORKSPACE_ID) {
-          const existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
+          let existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
           if (!existingWorkspace) {
-            console.log('[HelpOS] Platform workspace missing - seeding now (runtime fallback)');
-            const { seedRootUser } = await import('./seed-root-user');
-            const { seedPlatformWorkspace } = await import('./seed-platform-workspace');
-            await seedRootUser();
-            await seedPlatformWorkspace();
+            console.log('[HelpOS] Platform workspace missing - acquiring lock for runtime seeding...');
+            try {
+              await platformWorkspaceSeedLock.acquire();
+              
+              // Re-check after acquiring lock (another request may have seeded it)
+              existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
+              if (!existingWorkspace) {
+                console.log('[HelpOS] Seeding platform workspace (runtime fallback)');
+                const { seedRootUser } = await import('./seed-root-user');
+                const { seedPlatformWorkspace } = await import('./seed-platform-workspace');
+                await seedRootUser();
+                await seedPlatformWorkspace();
+                
+                // Verify workspace was created
+                existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
+                if (!existingWorkspace) {
+                  throw new Error('CRITICAL: Platform workspace seeding failed - workspace still missing after seed attempt');
+                }
+                console.log('[HelpOS] ✅ Platform workspace seeded successfully');
+              } else {
+                console.log('[HelpOS] Platform workspace was created by concurrent request');
+              }
+            } finally {
+              platformWorkspaceSeedLock.release();
+            }
           }
         }
         
