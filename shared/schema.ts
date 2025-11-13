@@ -9687,3 +9687,79 @@ export const analyticsStatsSchema = z.object({
 });
 
 export type AnalyticsStats = z.infer<typeof analyticsStatsSchema>;
+
+// ============================================================================
+// HELPOS™ AI SUPPORT SYSTEM
+// ============================================================================
+
+// HelpOS™ AI chat sessions - Track AI-powered support conversations
+export const helposAiSessions = pgTable("helpos_ai_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Session metadata
+  conversationId: varchar("conversation_id").references(() => chatConversations.id, { onDelete: 'set null' }), // Links to chat if escalated
+  supportTicketId: varchar("support_ticket_id").references(() => supportTickets.id, { onDelete: 'set null' }), // Created on escalation
+  
+  // Status tracking
+  status: varchar("status").notNull().default("active"), // 'active', 'resolved', 'escalated', 'closed'
+  failedAttempts: integer("failed_attempts").default(0), // Tracks unsuccessful troubleshooting attempts
+  
+  // Escalation data
+  escalationReason: varchar("escalation_reason"), // 'failed_attempts', 'critical_keyword', 'user_request'
+  aiSummary: text("ai_summary"), // AI-generated conversation summary for human agent
+  recommendedFix: text("recommended_fix"), // AI's suggested solution for agent
+  escalatedAt: timestamp("escalated_at"),
+  
+  // Issue categorization
+  detectedIssueCategory: varchar("detected_issue_category"), // 'login', 'schedule', 'timesheet', 'reports', etc.
+  detectedSentiment: varchar("detected_sentiment"), // 'positive', 'neutral', 'frustrated', 'angry'
+  
+  // Session lifecycle
+  lastInteractionAt: timestamp("last_interaction_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // Auto-delete after 1 year for compliance
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("helpos_sessions_workspace_idx").on(table.workspaceId),
+  index("helpos_sessions_user_idx").on(table.userId),
+  index("helpos_sessions_status_idx").on(table.status),
+  index("helpos_sessions_expires_idx").on(table.expiresAt), // For cleanup jobs
+]);
+
+export const insertHelposAiSessionSchema = createInsertSchema(helposAiSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHelposAiSession = z.infer<typeof insertHelposAiSessionSchema>;
+export type HelposAiSession = typeof helposAiSessions.$inferSelect;
+
+// HelpOS™ AI transcript entries - Audit trail for AI conversations (1-year retention)
+export const helposAiTranscriptEntries = pgTable("helpos_ai_transcript_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => helposAiSessions.id, { onDelete: 'cascade' }),
+  
+  // Message content
+  role: varchar("role").notNull(), // 'user', 'assistant', 'system'
+  content: text("content").notNull(), // Message text
+  
+  // Metadata
+  messageType: varchar("message_type").default("text"), // 'text', 'quick_action', 'escalation_notice'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("helpos_transcripts_session_idx").on(table.sessionId),
+  index("helpos_transcripts_created_idx").on(table.createdAt), // For chronological retrieval
+]);
+
+export const insertHelposAiTranscriptEntrySchema = createInsertSchema(helposAiTranscriptEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertHelposAiTranscriptEntry = z.infer<typeof insertHelposAiTranscriptEntrySchema>;
+export type HelposAiTranscriptEntry = typeof helposAiTranscriptEntries.$inferSelect;
