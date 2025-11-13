@@ -46,7 +46,7 @@ export function MobileNav({ onMore }: MobileNavProps) {
         <NavItem icon={Home} label="Home" href="/mobile-dashboard" />
         <NavItem icon={Calendar} label="Schedule" sublabel="shifts" href="/schedule-grid" />
         <NavItem icon={Clock} label="Time" sublabel="track" href="/time-tracking" />
-        <NavItem icon={MessageSquare} label="Chat" sublabel="help" href="/mobile-chat" />
+        <NavItem icon={MessageSquare} label="Chat" sublabel="help" href="/chat" />
         <button
           onClick={onMore || (() => setLocation("/workspace"))}
           className="tap flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg transition-all min-h-[48px] min-w-[56px] text-gray-600 dark:text-gray-400 hover-elevate active-elevate-2"
