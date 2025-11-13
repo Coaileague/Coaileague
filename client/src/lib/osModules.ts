@@ -606,9 +606,9 @@ export const platformSupportModule: OSModule = {
     {
       id: 'root-admin-dashboard',
       label: 'Control Center',
-      href: '/root-admin-dashboard',
+      href: '/dashboard', // Universal dashboard for all roles
       icon: Shield,
-      description: 'Unified Root Administrator Control Center',
+      description: 'Unified Control Center & Dashboard',
       familyId: 'platform',
       badge: 'Root',
       isPrimary: true,

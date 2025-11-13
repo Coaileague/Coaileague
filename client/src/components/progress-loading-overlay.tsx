@@ -283,7 +283,7 @@ export function ProgressLoadingOverlay({
               <h2 className="text-2xl sm:text-3xl font-bold mb-2">
                 AutoForce™
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm" style={{ color: "#06b6d4" }}>
                 {effectiveTitle}
               </p>
             </motion.div>
@@ -296,12 +296,12 @@ export function ProgressLoadingOverlay({
               className="mb-6"
             >
               {/* Progress background */}
-              <div className="h-3 sm:h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+              <div className="h-3 sm:h-4 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", borderColor: "rgba(16, 185, 129, 0.3)" }}>
                 <motion.div
                   className="h-full bg-[length:200%_100%]"
                   style={{ 
                     width: `${progress}%`,
-                    background: "linear-gradient(90deg, hsl(210, 32%, 42%), hsl(204, 40%, 52%), hsl(210, 32%, 42%))"
+                    background: "linear-gradient(90deg, #10b981, #06b6d4, #10b981)"
                   }}
                   animate={{
                     backgroundPosition: ["0% 0%", "100% 0%"],
@@ -316,10 +316,10 @@ export function ProgressLoadingOverlay({
 
               {/* Percentage */}
               <div className="flex justify-between items-center mt-2 px-1">
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-xs font-mono" style={{ color: "#10b981" }}>
                   {Math.round(progress)}%
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs" style={{ color: "#06b6d4" }}>
                   {status === "success" ? "Complete" : status === "error" ? "Error" : "Loading"}
                 </span>
               </div>
@@ -350,7 +350,7 @@ export function ProgressLoadingOverlay({
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className="text-sm sm:text-base font-semibold"
-                  style={{ color: "hsl(210, 32%, 42%)" }}
+                  style={{ color: "#10b981" }}
                 >
                   ✓ {scenario === "login" ? "Login Successful!" : scenario === "logout" ? "Logged Out!" : "Complete!"}
                 </motion.p>
@@ -363,7 +363,7 @@ export function ProgressLoadingOverlay({
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                     className="text-sm sm:text-base font-medium text-center"
-                    style={{ color: "hsl(210, 32%, 42%)" }}
+                    style={{ color: "#06b6d4" }}
                   >
                     {messages[messageIndex]}
                   </motion.p>

@@ -330,7 +330,7 @@ function AppContent() {
               
               <Switch>
                 <Route path="/">
-                  {isMobile ? <MobileDashboard /> : (isRootAdmin ? <RootAdminDashboard /> : <Dashboard />)}
+                  {isMobile ? <MobileDashboard /> : <Dashboard />}
                 </Route>
                 <Route path="/login">
                   <Redirect to="/dashboard" />
@@ -340,7 +340,10 @@ function AppContent() {
                 </Route>
                 <Route path="/mobile-dashboard" component={MobileDashboard} />
                 <Route path="/dashboard">
-                  {isMobile ? <MobileDashboard /> : (isRootAdmin ? <RootAdminDashboard /> : <Dashboard />)}
+                  {isMobile ? <MobileDashboard /> : <Dashboard />}
+                </Route>
+                <Route path="/root-admin-dashboard">
+                  <Redirect to="/dashboard" />
                 </Route>
                 <Route path="/schedule" component={SmartScheduleOS} />
                 <Route path="/sales" component={SalesDashboard} />
