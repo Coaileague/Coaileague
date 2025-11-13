@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import {
   DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
   Plus, Calendar, Users, Target, BarChart3, PieChart, LineChart,
@@ -110,7 +110,7 @@ export default function BudgetOS() {
   };
 
   if (authLoading || budgetsLoading) {
-    return <MobileLoading fullScreen message="Loading BudgetOS™..." />;
+    return <ResponsiveLoading fullScreen message="Loading BudgetOS™..." />;
   }
 
   const totalBudgeted = budgets.reduce((sum, b) => sum + b.totalAmount, 0);

@@ -28,7 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
@@ -366,7 +366,7 @@ export default function Settings() {
   };
 
   if (isLoading || !isAuthenticated) {
-    return <MobileLoading fullScreen message="Loading Settings..." />;
+    return <ResponsiveLoading fullScreen message="Loading Settings..." />;
   }
 
   const pageContent = (

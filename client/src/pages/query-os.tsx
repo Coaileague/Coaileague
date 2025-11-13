@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import { useLocation } from "wouter";
 import {
   Search, User, Activity, Clock, MapPin, Shield, AlertTriangle,
@@ -154,7 +154,7 @@ export default function QueryOS() {
   });
 
   if (authLoading) {
-    return <MobileLoading fullScreen message="Loading QueryOS™..." />;
+    return <ResponsiveLoading fullScreen message="Loading QueryOS™..." />;
   }
 
   if (!isAuthorized) {

@@ -12,7 +12,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { useTransition } from "@/contexts/transition-context";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import { useLoadingManager } from "@/contexts/loading-manager";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -221,7 +221,7 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading]);
 
   if (isLoading || !isAuthenticated) {
-    return <MobileLoading fullScreen message="Loading Dashboard..." />;
+    return <ResponsiveLoading fullScreen message="Loading Dashboard..." />;
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
@@ -286,8 +286,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden w-full max-w-full">
-      {/* Show mobile loading for initial auth check */}
-      {isLoadingDashboard && <MobileLoading />}
+      {/* Show responsive loading for initial auth check */}
+      {isLoadingDashboard && <ResponsiveLoading />}
       
       {/* Professional subtle background - NO bright glowing orbs */}
 

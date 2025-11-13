@@ -22,7 +22,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { SwipeToDelete } from "@/components/swipe-to-delete";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -117,7 +117,7 @@ export default function Employees() {
   }, [isAuthenticated, authLoading, toast]);
 
   if (authLoading || !isAuthenticated) {
-    return <MobileLoading fullScreen message="Loading Employees..." />;
+    return <ResponsiveLoading fullScreen message="Loading Employees..." />;
   }
 
   const getInitials = (firstName: string, lastName: string) => {

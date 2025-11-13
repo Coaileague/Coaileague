@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper, MobilePageHeader } from "@/components/mobile-page-wrapper";
 import { MobileBottomSheet } from "@/components/mobile-bottom-sheet";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
@@ -331,7 +331,7 @@ export default function PrivateMessages() {
   };
 
   if (authLoading) {
-    return <MobileLoading fullScreen message="Loading Messages..." />;
+    return <ResponsiveLoading fullScreen message="Loading Messages..." />;
   }
 
   const filteredConversations = conversations.filter((conv) =>

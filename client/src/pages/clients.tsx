@@ -21,7 +21,7 @@ import {
   Calendar,
   Briefcase,
 } from "lucide-react";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import {
   Dialog,
   DialogContent,
@@ -127,7 +127,7 @@ export default function Clients() {
   }, [isAuthenticated, authLoading, toast]);
 
   if (authLoading || !isAuthenticated) {
-    return <MobileLoading fullScreen message="Loading Clients..." />;
+    return <ResponsiveLoading fullScreen message="Loading Clients..." />;
   }
 
   const getInitials = (firstName: string, lastName: string) => {
