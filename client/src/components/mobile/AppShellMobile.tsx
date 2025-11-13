@@ -41,9 +41,9 @@ export function AppShellMobile({ children, title, showBack = true }: AppShellMob
         {children}
       </main>
 
-      {/* Floating support button */}
+      {/* Floating support button - Links to universal HelpDesk chat */}
       <a
-        href="/support"
+        href="/chat"
         className="fixed right-4 z-40 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-3 shadow-xl hover-elevate active-elevate-2"
         style={{ bottom: 'calc(var(--bottom-nav-h) + 1rem + env(safe-area-inset-bottom))' }}
         data-testid="button-float-support"
