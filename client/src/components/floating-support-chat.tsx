@@ -88,6 +88,12 @@ export function FloatingSupportChat() {
           content: m.text
         }));
 
+      console.log('[HelpOS] Sending request:', { 
+        message: query, 
+        sessionId, 
+        historyLength: conversationHistory.length 
+      });
+
       const response = await fetch('/api/support/helpos-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,11 +105,16 @@ export function FloatingSupportChat() {
         })
       });
 
+      console.log('[HelpOS] Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('Failed to get HelpOS™ response');
+        const errorText = await response.text();
+        console.error('[HelpOS] Error response body:', errorText);
+        throw new Error(`HelpOS API Error: ${response.status} - ${errorText.substring(0, 100)}`);
       }
 
       const data = await response.json();
+      console.log('[HelpOS] Success response:', data);
       
       // Store sessionId for conversation continuity
       if (data.sessionId && !sessionId) {
@@ -135,13 +146,24 @@ export function FloatingSupportChat() {
 
       setMessages(prev => [...prev, botMessage]);
     } catch (error: any) {
-      console.error('HelpOS chat error:', error);
+      console.error('[HelpOS] FULL ERROR:', error);
+      console.error('[HelpOS] Error type:', typeof error);
+      console.error('[HelpOS] Error keys:', Object.keys(error));
+      console.error('[HelpOS] Error message:', error?.message);
+      console.error('[HelpOS] Error stack:', error?.stack);
+      
       setIsTyping(false);
-      const errorDetails = error.message || error.toString();
+      
+      const errorDetails = error?.message 
+        ? error.message 
+        : error?.toString 
+        ? error.toString() 
+        : 'Unknown error - check browser console for details';
+      
       const errorMessage: Message = {
         id: messages.length + 2,
         type: 'bot',
-        text: `I apologize, but I'm having trouble connecting right now. Please try again or contact our support team directly.\n\nError: ${errorDetails}`,
+        text: `I apologize, but I'm having trouble connecting right now. Please try again or contact our support team directly.\n\n🔍 Debug Info: ${errorDetails}`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
