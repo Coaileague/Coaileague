@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Scenario-based configuration type
 export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync" | "dashboardLoading";
@@ -157,6 +158,7 @@ export function ProgressLoadingOverlay({
   duration,
   messages: customMessages,
 }: ProgressLoadingOverlayProps) {
+  const isMobile = useIsMobile();
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
   const [showError, setShowError] = useState(false);
@@ -274,20 +276,20 @@ export function ProgressLoadingOverlay({
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 backdrop-blur-sm"
         >
           <div className="w-[90vw] max-w-md px-6">
-            {/* Title with Logo */}
+            {/* Title with Logo - Responsive sizing */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-center mb-8 flex flex-col items-center"
+              className="text-center mb-6 sm:mb-8 flex flex-col items-center"
             >
-              <AutoForceAFLogo variant="icon" size="lg" animated={true} className="mb-4" />
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-2xl sm:text-3xl font-bold text-foreground">AUTO</span>
-                <span className="text-2xl sm:text-3xl font-bold" style={{ color: '#3b82f6' }}>FORCE</span>
+              <AutoForceAFLogo variant="icon" size={isMobile ? "md" : "lg"} animated={true} className="mb-3 sm:mb-4" />
+              <div className="flex items-baseline gap-1 mb-1 sm:mb-2">
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">AUTO</span>
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold" style={{ color: '#3b82f6' }}>FORCE</span>
                 <span className="text-xs align-super text-muted-foreground">™</span>
               </div>
-              <p className="text-sm font-medium" style={{ color: "#22d3ee" }}>
+              <p className="text-xs sm:text-sm font-medium" style={{ color: "#22d3ee" }}>
                 {effectiveTitle}
               </p>
             </motion.div>
@@ -297,10 +299,10 @@ export function ProgressLoadingOverlay({
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mb-6"
+              className="mb-4 sm:mb-6"
             >
               {/* Progress background */}
-              <div className="h-3 sm:h-4 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", borderColor: "rgba(59, 130, 246, 0.3)" }}>
+              <div className="h-2 sm:h-3 md:h-4 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", borderColor: "rgba(59, 130, 246, 0.3)" }}>
                 <motion.div
                   className="h-full bg-[length:200%_100%]"
                   style={{ 
@@ -318,62 +320,66 @@ export function ProgressLoadingOverlay({
                 />
               </div>
 
-              {/* Percentage */}
-              <div className="flex justify-between items-center mt-2 px-1">
-                <span className="text-xs font-mono" style={{ color: "#3b82f6" }}>
-                  {Math.round(progress)}%
-                </span>
-                <span className="text-xs" style={{ color: "#22d3ee" }}>
-                  {status === "success" ? "Complete" : status === "error" ? "Error" : "Loading"}
-                </span>
-              </div>
-            </motion.div>
-
-            {/* Dynamic Status Messages */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="h-12 flex items-center justify-center"
-            >
-              {showError ? (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-center"
-                >
-                  <p className="text-sm sm:text-base text-red-400 font-semibold mb-1">
-                    Credentials Denied
-                  </p>
-                  <p className="text-xs text-red-300/80">
-                    {errorMessage}
-                  </p>
-                </motion.div>
-              ) : status === "success" ? (
-                <motion.p
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-sm sm:text-base font-semibold"
-                  style={{ color: "#3b82f6" }}
-                >
-                  {scenario === "login" ? "Login Successful" : scenario === "logout" ? "Logged Out" : "Complete"}
-                </motion.p>
-              ) : (
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={messageIndex}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-sm sm:text-base font-medium text-center"
-                    style={{ color: "#22d3ee" }}
-                  >
-                    {messages[messageIndex]}
-                  </motion.p>
-                </AnimatePresence>
+              {/* Percentage - Hidden on mobile */}
+              {!isMobile && (
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-xs font-mono" style={{ color: "#3b82f6" }}>
+                    {Math.round(progress)}%
+                  </span>
+                  <span className="text-xs" style={{ color: "#22d3ee" }}>
+                    {status === "success" ? "Complete" : status === "error" ? "Error" : "Loading"}
+                  </span>
+                </div>
               )}
             </motion.div>
+
+            {/* Dynamic Status Messages - Hidden on mobile */}
+            {!isMobile && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="h-12 flex items-center justify-center"
+              >
+                {showError ? (
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="text-center"
+                  >
+                    <p className="text-sm sm:text-base text-red-400 font-semibold mb-1">
+                      Credentials Denied
+                    </p>
+                    <p className="text-xs text-red-300/80">
+                      {errorMessage}
+                    </p>
+                  </motion.div>
+                ) : status === "success" ? (
+                  <motion.p
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="text-sm sm:text-base font-semibold"
+                    style={{ color: "#3b82f6" }}
+                  >
+                    {scenario === "login" ? "Login Successful" : scenario === "logout" ? "Logged Out" : "Complete"}
+                  </motion.p>
+                ) : (
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={messageIndex}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-sm sm:text-base font-medium text-center"
+                      style={{ color: "#22d3ee" }}
+                    >
+                      {messages[messageIndex]}
+                    </motion.p>
+                  </AnimatePresence>
+                )}
+              </motion.div>
+            )}
 
             {/* Decorative elements */}
             <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
