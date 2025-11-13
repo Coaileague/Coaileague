@@ -46,6 +46,7 @@ import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from 
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
 import { queueManager } from './services/helpOsQueue';
 import { HelpOSAI } from './helpos-ai';
+import { helposService } from './services/helposService';
 import { seedAnchor } from './services/utils/scheduling';
 import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
@@ -596,6 +597,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error submitting feedback:', error);
       res.status(500).json({ message: 'Failed to submit feedback' });
+    }
+  });
+
+  // ============================================================================
+  // HELPOS™ AI SUPPORT SYSTEM
+  // ============================================================================
+
+  // HelpOS™ bubble chat - Customer-facing AI chat
+  app.post('/api/support/helpos-chat', requireAuth, chatMessageLimiter, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { message, sessionId, conversationHistory } = req.body;
+      const { db } = await import("./db");
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: 'Message is required' });
+      }
+
+      const userId = authReq.user!.id;
+      const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
+      
+      // Get user details for chat context
+      const user = await storage.getUser(userId);
+      const userName = user?.email || 'User';
+
+      const response = await helposService.bubbleAgent_reply({
+        workspaceId,
+        userId,
+        userName,
+        userMessage: message,
+        sessionId,
+        conversationHistory: conversationHistory || [],
+        db: db as any,
+      });
+
+      res.json(response);
+    } catch (error: any) {
+      console.error('HelpOS™ chat error:', error);
+      res.status(500).json({ message: error.message || 'Failed to process HelpOS™ chat' });
+    }
+  });
+
+  // HelpOS™ staff copilot - AI suggestions for support agents
+  app.post('/api/support/helpos-copilot', requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { message, chatHistory, userContext } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: 'Message is required' });
+      }
+
+      const userId = authReq.user!.id;
+      const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
+
+      const suggestion = await helposService.staffCopilot_suggestResponse({
+        workspaceId,
+        userMessage: message,
+        chatHistory: chatHistory || [],
+        userContext,
+      });
+
+      res.json({ suggestion });
+    } catch (error: any) {
+      console.error('HelpOS™ copilot error:', error);
+      res.status(500).json({ message: error.message || 'Failed to generate suggestion' });
     }
   });
 
