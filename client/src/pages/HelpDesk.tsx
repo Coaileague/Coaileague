@@ -1134,8 +1134,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           </div>
         </section>
 
-        {/* RIGHT COLUMN: User List or Context Panel - Hidden on mobile, visible on desktop */}
-        <section className="hidden md:flex min-w-[280px] max-w-[320px] w-auto bg-muted border-l border-border flex-col flex-shrink-0">
+        {/* RIGHT COLUMN: User List or Context Panel - Only render on desktop for better mobile performance */}
+        {!shouldUseMobileLayout && (
+        <section className="min-w-[280px] max-w-[320px] w-auto bg-muted border-l border-border flex flex-col flex-shrink-0">
           
           {/* Header with toggle */}
           <div className="px-3 py-2 border-b border-border flex-shrink-0 bg-muted/50">
@@ -1492,6 +1493,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             </ScrollArea>
           )}
         </section>
+        )}
       </main>
 
       {/* Secure Request Dialog - Opens when staff requests secure info from user */}
