@@ -222,7 +222,7 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading]);
 
   if (isLoading || !isAuthenticated) {
-    return <ResponsiveLoading fullScreen message="Loading Dashboard..." />;
+    return <ResponsiveLoading message="Loading Dashboard..." />;
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
@@ -495,7 +495,7 @@ export default function Dashboard() {
         {/* Organization Auditor Panel - Read-Only Financial, Payroll & Compliance Data */}
         {workspaceRole === 'auditor' && (
           <ResponsiveSection>
-          <div className="space-y-6">
+            <div className="space-y-6">
             <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-950/20 dark:to-cyan-950/20 border-2 border-emerald-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-emerald-600 dark:bg-emerald-700 rounded-lg">
@@ -561,11 +561,14 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          </ResponsiveSection>
         )}
 
+        {/* Platform-Level Role Panels */}
+        <ResponsiveSection>
         {/* Platform Auditor / Compliance Officer Panel - Platform-Wide Compliance Oversight */}
         {platformRole === 'compliance_officer' && (
-          <div className="mb-8 space-y-6">
+          <div className="space-y-6">
             <div className="bg-gradient-to-br from-cyan-50 to-teal-50 dark:from-cyan-950/20 dark:to-teal-950/20 border-2 border-cyan-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-cyan-600 dark:bg-cyan-700 rounded-lg">
@@ -775,7 +778,7 @@ export default function Dashboard() {
 
         {/* Root Admin Panel - Full Platform Control */}
         {platformRole === 'root_admin' && (
-          <div className="mb-8 space-y-6">
+          <div className="space-y-6">
             <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border-2 border-red-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-red-600 dark:bg-red-700 rounded-lg">
@@ -845,7 +848,7 @@ export default function Dashboard() {
 
         {/* Deputy Admin Panel - Platform Management Support */}
         {platformRole === 'deputy_admin' && (
-          <div className="mb-8 space-y-6">
+          <div className="space-y-6">
             <div className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-violet-950/20 border-2 border-indigo-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-indigo-600 dark:bg-indigo-700 rounded-lg">
@@ -915,7 +918,7 @@ export default function Dashboard() {
 
         {/* SysOp Panel - Infrastructure & Operations */}
         {platformRole === 'sysop' && (
-          <div className="mb-8 space-y-6">
+          <div className="space-y-6">
             <div className="bg-gradient-to-br from-slate-50 to-zinc-50 dark:from-slate-950/20 dark:to-zinc-950/20 border-2 border-slate-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-slate-600 dark:bg-slate-700 rounded-lg">
@@ -981,8 +984,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          </ResponsiveSection>
         )}
+        </ResponsiveSection>
 
         {/* Notification Center Section - Professional Style */}
         <ResponsiveSection>
@@ -1146,6 +1149,7 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        </div>
         </ResponsiveSection>
       </DashboardShell>
     </div>
