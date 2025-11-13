@@ -651,8 +651,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage,
       });
 
+      console.log('[HelpOS] Response from bubbleAgent:', {
+        shouldEscalate: response.shouldEscalate,
+        escalationReason: response.escalationReason,
+        messagePreview: (typeof response.message === 'string') ? response.message.substring(0, 100) : 'N/A'
+      });
+
       // Handle escalation to live helpdesk
       if (response.shouldEscalate && response.escalationReason) {
+        console.log('[HelpOS] ✅ ESCALATING TO LIVE CHAT:', {
+          reason: response.escalationReason,
+          userId,
+          userName,
+          workspaceId
+        });
         // Get AI summary from session
         const session = await storage.getHelposSession(response.sessionId, workspaceId);
         const aiSummary = session?.aiSummary || 'No summary available';
@@ -681,6 +693,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         });
 
+        console.log('[HelpOS] ✅ Escalation complete, returning to client:', {
+          escalated: true,
+          ticketNumber: escalationData.ticketNumber,
+          conversationId: escalationData.conversationId
+        });
+
         return res.json({
           ...response,
           escalated: true,
@@ -689,6 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log('[HelpOS] No escalation needed, returning normal response');
       res.json(response);
     } catch (error: any) {
       console.error('HelpOS™ chat error:', error);

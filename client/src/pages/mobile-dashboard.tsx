@@ -57,32 +57,38 @@ export default function MobileDashboard() {
         {/* Welcome Card */}
         <Card className="mb-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 flex items-center justify-center text-white dark:text-white font-bold shadow-md">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 flex items-center justify-center text-white dark:text-white font-bold shadow-md">
                 {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-base truncate text-gray-900 dark:text-white">
-                  Welcome, {displayName}!
+                {/* Name and Welcome - Two Lines for Mobile */}
+                <CardTitle className="text-sm leading-tight text-gray-900 dark:text-white" data-testid="text-welcome">
+                  Welcome,
                 </CardTitle>
-                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                <p className="text-base font-bold leading-tight text-gray-900 dark:text-white mt-0.5" data-testid="text-user-name">
+                  {displayName}
+                </p>
+                {/* Badges - Allow Wrapping */}
+                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                   {displayExternalId && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-external-id">
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-external-id">
                       {displayExternalId}
                     </Badge>
                   )}
                   {displayRole && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300" data-testid="badge-role">
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300" data-testid="badge-role">
                       {displayRole.replace(/_/g, ' ')}
                     </Badge>
                   )}
                   {orgId && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-org-id">
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-org-id">
                       {orgId}
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">
+                {/* Email - Smaller, Wrapped */}
+                <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-1.5 break-all leading-tight" data-testid="text-email">
                   {user?.email || "Loading..."}
                 </p>
               </div>

@@ -61,7 +61,7 @@ export function FloatingSupportChat() {
     { icon: "🔐", text: "Login Help", value: "I can't log in to my account" },
     { icon: "📅", text: "Schedule Help", value: "How do I view my schedule?" },
     { icon: "⏰", text: "Time Tracking", value: "Help with clock in/out" },
-    { icon: "📊", text: "Reports", value: "I need help creating a report" }
+    { icon: "👤", text: "Talk to Human", value: "I need to speak with a live support agent" }
   ];
 
   const handleSend = async () => {
@@ -91,7 +91,8 @@ export function FloatingSupportChat() {
       console.log('[HelpOS] Sending request:', { 
         message: query, 
         sessionId, 
-        historyLength: conversationHistory.length 
+        historyLength: conversationHistory.length,
+        isEscalationRequest: /talk to (a )?human|speak to agent|escalate|transfer|live support/i.test(query)
       });
 
       const response = await fetch('/api/support/helpos-chat', {
@@ -114,10 +115,16 @@ export function FloatingSupportChat() {
       }
 
       const data = await response.json();
-      console.log('[HelpOS] Success response:', data);
+      console.log('[HelpOS] Success response:', {
+        ...data,
+        hasEscalated: !!data.escalated,
+        hasConversationId: !!data.conversationId,
+        hasTicketNumber: !!data.ticketNumber
+      });
       
       // Store sessionId for conversation continuity
       if (data.sessionId && !sessionId) {
+        console.log('[HelpOS] Setting sessionId:', data.sessionId);
         setSessionId(data.sessionId);
       }
       
@@ -125,6 +132,11 @@ export function FloatingSupportChat() {
 
       // Handle escalation to live helpdesk - keep user in HelpOS chat
       if (data.escalated && data.conversationId) {
+        console.log('[HelpOS] ✅ ESCALATION TRIGGERED:', {
+          conversationId: data.conversationId,
+          ticketNumber: data.ticketNumber,
+          escalationReason: data.escalationReason
+        });
         const escalationMessage: Message = {
           id: messages.length + 2,
           type: 'bot',
@@ -187,7 +199,7 @@ export function FloatingSupportChat() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-50 group"
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-[15000] group"
           aria-label="Open support chat"
           data-testid="button-open-support-chat"
         >
@@ -207,7 +219,7 @@ export function FloatingSupportChat() {
       {isOpen && (
         <div 
           className={cn(
-            "fixed bottom-6 right-6 bg-background dark:bg-card rounded-2xl shadow-2xl z-50 flex flex-col transition-all duration-300 border border-border",
+            "fixed bottom-6 right-6 bg-background dark:bg-card rounded-2xl shadow-2xl z-[15000] flex flex-col transition-all duration-300 border border-border",
             isMinimized ? 'h-16 w-80' : 'h-[600px] w-96',
             "max-w-[calc(100vw-3rem)] max-h-[calc(100vh-3rem)]",
             "sm:w-96 sm:h-[600px]",

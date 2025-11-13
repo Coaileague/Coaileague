@@ -99,7 +99,7 @@ export function MobileChatLayout({
 
     if (isBot) {
       return (
-        <div key={msg.id} className="py-2 px-3 bg-blue-500/10 border-l-2 border-blue-500">
+        <div key={msg.id} className="py-2 px-3 bg-blue-500/10 rounded-lg">
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-3.5 h-3.5">
               <AutoForceLogo />

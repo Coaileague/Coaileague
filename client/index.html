@@ -62,26 +62,32 @@
       }
       
       .loader-logo-icon {
-        width: 48px;
-        height: 48px;
+        width: clamp(32px, 10vw, 48px);
+        height: clamp(32px, 10vw, 48px);
         border-radius: 10px;
-        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 700;
-        font-size: 20px;
+        font-size: clamp(14px, 4vw, 20px);
         color: white;
       }
       
       .loader-logo h1 {
-        font-size: 28px;
+        font-size: clamp(20px, 6vw, 28px);
         font-weight: 700;
-        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin: 0;
+      }
+      
+      @media (max-width: 640px) {
+        .loader-logo {
+          gap: 8px;
+        }
       }
     </style>
   </head>
