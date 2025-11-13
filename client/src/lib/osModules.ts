@@ -721,7 +721,13 @@ export function selectSidebarFamilies(
     module.routes.forEach(route => {
       // Check exclusion filter FIRST - before adding to allRoutes
       if (route.excludeForCapabilities && route.excludeForCapabilities.length > 0) {
-        const shouldExclude = route.excludeForCapabilities.some(cap => hasCapability(role, cap));
+        const shouldExclude = route.excludeForCapabilities.some(cap => {
+          // Platform staff get effective support_dashboard capability
+          if (cap === 'support_dashboard' && isPlatformStaff) {
+            return true;
+          }
+          return hasCapability(role, cap);
+        });
         if (shouldExclude) {
           return; // Skip this route - user has an excluded capability
         }
