@@ -11656,6 +11656,26 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // DEMO WORKSPACE REFRESH - Idempotent data repopulation for testing
+  app.post('/api/admin/demo-workspace/refresh', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log("🔧 [DEBUG] Starting demo workspace refresh...");
+      const { refreshDemoData } = await import("./seed-demo");
+      console.log("🔧 [DEBUG] Imported refreshDemoData function");
+      const result = await refreshDemoData();
+      console.log("🔧 [DEBUG] Refresh completed:", result);
+      
+      res.json({ 
+        success: true, 
+        message: "Demo workspace refreshed successfully",
+        ...result 
+      });
+    } catch (error) {
+      console.error("❌ Error refreshing demo workspace:", error);
+      res.status(500).json({ message: "Failed to refresh demo workspace", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // ACCOUNT CONTROL ACTIONS - Suspend/Freeze/Lock accounts
   
   // Suspend account (general suspension)
