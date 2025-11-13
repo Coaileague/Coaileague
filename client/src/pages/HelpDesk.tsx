@@ -35,7 +35,6 @@ import {
   Timer, UserX, TrendingUp, Key, Mail, ListChecks, Tag, ClipboardList,
   History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch
 } from "lucide-react";
-import { WFLogoCompact } from "@/components/wf-logo";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
@@ -84,7 +83,20 @@ interface HelpDeskProps {
 // Desktop IRC/MSN-style 3-column chatroom with AutoForce™ professional branding
 // Can also be forced to mobile layout for /mobilechat route
 export function HelpDesk(props?: HelpDeskProps & any) {
+  // Auto-detect mobile layout based on viewport width
+  const [isMobileView, setIsMobileView] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 768); // md breakpoint
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   const { forceMobileLayout = false } = props || {};
+  const shouldUseMobileLayout = forceMobileLayout || isMobileView;
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation(); // For navigation buttons
@@ -1000,7 +1012,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   return (
                     <div key={idx} className="flex justify-center my-1">
                       <span className="text-[10px] font-mono text-blue-600 dark:text-blue-300 italic bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
-                        <WFLogoCompact size={10} />
+                        <Zap className="w-3 h-3 text-blue-500" />
                         <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
                       </span>
                     </div>
@@ -1666,7 +1678,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <WFLogoCompact className="h-8 w-auto" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
               <div>
                 <DialogTitle>Change Room Status</DialogTitle>
                 <DialogDescription>

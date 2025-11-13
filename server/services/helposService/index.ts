@@ -300,14 +300,18 @@ class HelpOSService {
         workspaceId,
         userId,
         status: 'active' as const,
-        detectedIssueCategory: detectedCategory,
-        detectedSentiment: detectedSentiment,
+        detectedIssueCategory: detectedCategory || null,
+        detectedSentiment: detectedSentiment || null,
         failedAttempts: 0,
         createdAt: new Date(),
+        updatedAt: null,
         lastInteractionAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        supportTicketId: null,
+        conversationId: null,
         escalationReason: null,
         aiSummary: null,
+        recommendedFix: null,
         escalatedAt: null
       };
     }
