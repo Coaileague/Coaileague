@@ -21,6 +21,8 @@ import { LeaderRoute } from "@/components/leader-route";
 import { PlatformAdminRoute } from "@/components/platform-admin-route";
 import { DemoBanner } from "@/components/demo-banner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GlobalErrorBoundary } from "@/components/errors/GlobalErrorBoundary";
+import { ServiceHealthProvider } from "@/contexts/ServiceHealthContext";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
@@ -486,28 +488,30 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
+    <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <OverlayControllerProvider>
-          <LoadingManagerProvider>
-            <ThemeProvider defaultTheme="dark">
-              <WorkspaceThemeProvider>
-                <TransitionProvider>
-                <AppBootOverlay />
-                <TooltipProvider>
-                  <ResponsiveAppFrame>
-                    <AppContent />
-                    <FloatingSupportChat />
-                    <ReenableChatButton />
-                    <Toaster />
-                  </ResponsiveAppFrame>
-                </TooltipProvider>
-                </TransitionProvider>
-              </WorkspaceThemeProvider>
-            </ThemeProvider>
-          </LoadingManagerProvider>
-        </OverlayControllerProvider>
+        <ServiceHealthProvider>
+          <OverlayControllerProvider>
+            <LoadingManagerProvider>
+              <ThemeProvider defaultTheme="dark">
+                <WorkspaceThemeProvider>
+                  <TransitionProvider>
+                  <AppBootOverlay />
+                  <TooltipProvider>
+                    <ResponsiveAppFrame>
+                      <AppContent />
+                      <FloatingSupportChat />
+                      <ReenableChatButton />
+                      <Toaster />
+                    </ResponsiveAppFrame>
+                  </TooltipProvider>
+                  </TransitionProvider>
+                </WorkspaceThemeProvider>
+              </ThemeProvider>
+            </LoadingManagerProvider>
+          </OverlayControllerProvider>
+        </ServiceHealthProvider>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </GlobalErrorBoundary>
   );
 }
