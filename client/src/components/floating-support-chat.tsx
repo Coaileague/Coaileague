@@ -2,8 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, X, MessageCircle, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Message {
   id: number;
@@ -11,6 +15,12 @@ interface Message {
   text: string;
   timestamp: Date;
   isEscalation?: boolean;
+}
+
+interface GuestInfo {
+  name: string;
+  email: string;
+  issue: string;
 }
 
 interface QuickAction {
@@ -130,22 +140,37 @@ export function FloatingSupportChat() {
       
       setIsTyping(false);
 
-      // Handle escalation to live helpdesk - keep user in HelpOS chat
+      // Handle escalation to live helpdesk - route user to universal HelpDesk
       if (data.escalated && data.conversationId) {
-        console.log('[HelpOS] ✅ ESCALATION TRIGGERED:', {
+        console.log('[HelpOS] ✅ ESCALATION TRIGGERED - Routing to live HelpDesk:', {
           conversationId: data.conversationId,
           ticketNumber: data.ticketNumber,
           escalationReason: data.escalationReason
         });
+        
+        // Store conversation details in sessionStorage for HelpDesk to pick up
+        sessionStorage.setItem('helpos_escalation', JSON.stringify({
+          conversationId: data.conversationId,
+          ticketNumber: data.ticketNumber,
+          escalationReason: data.escalationReason,
+          timestamp: new Date().toISOString()
+        }));
+        
+        // Show brief confirmation message
         const escalationMessage: Message = {
           id: messages.length + 2,
           type: 'bot',
-          text: `${data.message}\n\n🎫 Ticket #${data.ticketNumber} created. Our support team has been notified and will respond shortly.\n\nYou can continue chatting here or [click here to view in full chat →](/chat/${data.conversationId})`,
+          text: `✅ ${data.message}\n\n🎫 Ticket #${data.ticketNumber} created.\n\n🔄 Connecting you to live support...`,
           timestamp: new Date(),
           isEscalation: true
         };
         setMessages(prev => [...prev, escalationMessage]);
-        // Stay in HelpOS mini chat - user can manually navigate to live chat if desired
+        
+        // Auto-close floating chat and navigate to live HelpDesk after brief delay
+        setTimeout(() => {
+          setIsOpen(false);
+          setLocation(`/chat?conversationId=${data.conversationId}`);
+        }, 1500);
         return;
       }
 
