@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 
 // Scenario-based configuration type
 export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync" | "dashboardLoading";
@@ -12,7 +13,55 @@ export interface ScenarioConfig {
   title: string;
 }
 
-// Scenario-based message catalogs with creative workflow messages
+// Mobile-specific: Professional, personalized messages (NO "hogwash" - real system messages)
+function getMobileMessages(scenario: ProgressScenario, userName?: string): string[] {
+  const firstName = userName?.split(' ')[0] || 'there';
+  
+  const mobileMessages: Record<ProgressScenario, string[]> = {
+    login: [
+      `Welcome back, ${firstName}`,
+      "Securing your connection...",
+      "Loading your workspace...",
+      "Preparing your dashboard...",
+      "Almost ready...",
+    ],
+    logout: [
+      `See you soon, ${firstName}`,
+      "Signing you out securely...",
+      "Clearing session data...",
+      "Logout complete",
+    ],
+    heavyOperation: [
+      "Processing your request...",
+      "Analyzing data...",
+      "Finalizing...",
+      "Complete",
+    ],
+    aiProcessing: [
+      `${firstName}, AI is working...`,
+      "Analyzing patterns...",
+      "Generating insights...",
+      "Almost done...",
+      "Complete",
+    ],
+    dataSync: [
+      "Syncing your data...",
+      "Updating records...",
+      "Finalizing sync...",
+      "Complete",
+    ],
+    dashboardLoading: [
+      `Loading your dashboard, ${firstName}...`,
+      "Fetching latest data...",
+      "Preparing widgets...",
+      "Almost ready...",
+    ],
+  };
+  
+  return mobileMessages[scenario];
+}
+
+// Desktop: Fun, creative workflow messages with "hogwash" allowed
 const SCENARIO_CONFIGS: Record<ProgressScenario, ScenarioConfig> = {
   login: {
     title: "Signing In",
@@ -159,16 +208,22 @@ export function ProgressLoadingOverlay({
   messages: customMessages,
 }: ProgressLoadingOverlayProps) {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
   const [showError, setShowError] = useState(false);
   const [errorMessage] = useState("Operation failed. Please try again.");
 
+  // Get user's first name for personalization
+  const userName = user?.firstName || user?.email?.split('@')[0] || 'there';
+
   // Get scenario configuration
   const config = SCENARIO_CONFIGS[scenario];
   const effectiveTitle = title || config.title;
   const effectiveDuration = duration || config.duration || 3500;
-  const messages = customMessages || config.messages;
+  
+  // MOBILE: Use personalized, real messages. DESKTOP: Use fun creative messages
+  const messages = customMessages || (isMobile ? getMobileMessages(scenario, userName) : config.messages);
 
   useEffect(() => {
     if (!isVisible) {
@@ -333,53 +388,51 @@ export function ProgressLoadingOverlay({
               )}
             </motion.div>
 
-            {/* Dynamic Status Messages - Hidden on mobile */}
-            {!isMobile && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="h-12 flex items-center justify-center"
-              >
-                {showError ? (
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-center"
-                  >
-                    <p className="text-sm sm:text-base text-red-400 font-semibold mb-1">
-                      Credentials Denied
-                    </p>
-                    <p className="text-xs text-red-300/80">
-                      {errorMessage}
-                    </p>
-                  </motion.div>
-                ) : status === "success" ? (
+            {/* Dynamic Status Messages - MOBILE: Personalized messages shown, DESKTOP: Fun messages */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="h-12 flex items-center justify-center"
+            >
+              {showError ? (
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-center"
+                >
+                  <p className="text-sm sm:text-base text-red-400 font-semibold mb-1">
+                    Credentials Denied
+                  </p>
+                  <p className="text-xs text-red-300/80">
+                    {errorMessage}
+                  </p>
+                </motion.div>
+              ) : status === "success" ? (
+                <motion.p
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-sm sm:text-base font-semibold"
+                  style={{ color: "#3b82f6" }}
+                >
+                  {scenario === "login" ? "Login Successful" : scenario === "logout" ? "Logged Out" : "Complete"}
+                </motion.p>
+              ) : (
+                <AnimatePresence mode="wait">
                   <motion.p
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-sm sm:text-base font-semibold"
-                    style={{ color: "#3b82f6" }}
+                    key={messageIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-sm sm:text-base font-medium text-center px-4"
+                    style={{ color: "#22d3ee" }}
                   >
-                    {scenario === "login" ? "Login Successful" : scenario === "logout" ? "Logged Out" : "Complete"}
+                    {messages[messageIndex]}
                   </motion.p>
-                ) : (
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={messageIndex}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.3 }}
-                      className="text-sm sm:text-base font-medium text-center"
-                      style={{ color: "#22d3ee" }}
-                    >
-                      {messages[messageIndex]}
-                    </motion.p>
-                  </AnimatePresence>
-                )}
-              </motion.div>
-            )}
+                </AnimatePresence>
+              )}
+            </motion.div>
 
             {/* Decorative elements */}
             <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
