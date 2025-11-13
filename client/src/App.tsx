@@ -79,7 +79,6 @@ import LogoShowcaseV2 from "@/pages/logo-showcase-v2";
 import PayrollDashboard from "@/pages/payroll-dashboard";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
-import MobileChatPage from "@/pages/mobile-chat";
 import EngagementDashboard from "@/pages/engagement-dashboard";
 import EmployeeEngagement from "@/pages/engagement-employee";
 import AnalyticsReportsPage from "@/pages/analytics-reports";
@@ -280,9 +279,9 @@ function AppContent() {
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
-        {/* Consolidated chat routes - ONLY 2 UNIVERSAL CLIENTS */}
-        <Route path="/chat" component={HelpDesk} /> {/* Desktop chat with Gemini AI */}
-        <Route path="/mobile-chat" component={MobileChatPage} /> {/* Universal mobile chat with all premium features */}
+        {/* Consolidated chat routes - ONE UNIVERSAL CHAT */}
+        <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
+        <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
         <Route path="/live-chat"><Redirect to="/chat" /></Route>
         <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
         <Route path="/support/chat"><Redirect to="/chat" /></Route>
@@ -455,9 +454,9 @@ function AppContent() {
                 <Route path="/support/tickets" component={CustomerSupport} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />
-                {/* Consolidated Chat Routes - ONLY 2 UNIVERSAL CLIENTS */}
-                <Route path="/chat" component={HelpDesk} /> {/* Desktop chat with Gemini AI */}
-                <Route path="/mobile-chat" component={MobileChatPage} /> {/* Universal mobile chat with all premium features */}
+                {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT */}
+                <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
+                <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
                 
                 {/* Redirect legacy chat routes to unified /chat */}
                 <Route path="/support/chat"><Redirect to="/chat" /></Route>
