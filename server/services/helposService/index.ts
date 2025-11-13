@@ -43,8 +43,17 @@ class GeminiProvider implements AIProvider {
       parts: [{ text: msg.content }]
     }));
 
+    // CRITICAL FIX: Ensure history always starts with 'user' role
+    // Gemini requires first message in history to be from user
+    const history = chatHistory.slice(0, -1); // All except last message
+    
+    // Filter out history if it doesn't start with user role
+    const validHistory = history.length > 0 && history[0].role !== 'user' 
+      ? [] 
+      : history;
+
     const chat = model.startChat({
-      history: chatHistory.slice(0, -1), // All except last message
+      history: validHistory,
       generationConfig: {
         maxOutputTokens: options.maxTokens || 1024,
         temperature: 0.7,
@@ -416,9 +425,9 @@ Be helpful, empathetic, and solution-oriented.`;
     // Create support ticket
     const ticket = await storage.createSupportTicket({
       workspaceId,
-      requestorId: userId,
-      requestorEmail: userEmail,
-      category: 'helpdesk_escalation',
+      type: 'support',
+      employeeId: userId,
+      requestedBy: `${userName} (${userEmail})`,
       subject: `HelpOS™ Escalation - ${escalationReason}`,
       description: `**Escalation Reason:** ${escalationReason}\n\n**AI Summary:**\n${aiSummary}\n\n**Full Conversation:**\n${conversationContext}`,
       priority: escalationReason === 'critical_keyword' ? 'urgent' : 'normal',
