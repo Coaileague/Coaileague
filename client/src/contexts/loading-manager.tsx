@@ -37,6 +37,24 @@ export function LoadingManagerProvider({ children }: { children: React.ReactNode
   const [queue, setQueue] = useState<LoadingRequest[]>([]);
   const scenarioIndexRef = useRef(0);
   const requestCounterRef = useRef(0);
+  const [isBootComplete, setIsBootComplete] = useState(false);
+
+  // Mark boot as complete when HTML loader finishes
+  useEffect(() => {
+    // Wait for static HTML loader to complete (it removes itself)
+    const checkBootComplete = () => {
+      const htmlLoader = document.getElementById('initial-loader');
+      if (!htmlLoader) {
+        setIsBootComplete(true);
+      } else {
+        // Check again in 100ms
+        setTimeout(checkBootComplete, 100);
+      }
+    };
+    
+    // Start checking after a small delay
+    setTimeout(checkBootComplete, 500);
+  }, []);
 
   // Load last used scenario index from sessionStorage
   useEffect(() => {
@@ -60,6 +78,12 @@ export function LoadingManagerProvider({ children }: { children: React.ReactNode
 
   // Begin loading - returns request ID
   const beginLoading = useCallback((options?: { scenario?: ProgressScenario; minDuration?: number }) => {
+    // SUPPRESS during initial boot - let HTML loader handle it
+    if (!isBootComplete) {
+      console.log('[LoadingManager] Suppressed during boot - using HTML loader');
+      return `suppressed-${++requestCounterRef.current}`;
+    }
+
     const id = `loading-${++requestCounterRef.current}`;
     const scenario = options?.scenario || getNextScenario();
     const minDuration = options?.minDuration || MIN_DISPLAY_TIME_MS;
@@ -95,10 +119,15 @@ export function LoadingManagerProvider({ children }: { children: React.ReactNode
     }
 
     return id;
-  }, [activeRequest, getNextScenario, overlayController]);
+  }, [activeRequest, getNextScenario, overlayController, isBootComplete]);
 
   // End loading - enforces minimum display time
   const endLoading = useCallback((id: string) => {
+    // Skip suppressed requests
+    if (id.startsWith('suppressed-')) {
+      return;
+    }
+
     if (activeRequest?.id === id) {
       // Pass minDuration to controller so it enforces timing from visibleSince
       overlayController.hideOverlay(activeRequest.overlayId, activeRequest.minDuration || MIN_DISPLAY_TIME_MS);

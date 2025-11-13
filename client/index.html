@@ -171,6 +171,23 @@
         box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
       }
       
+      /* Animation Type 6: Aurora Gradient */
+      .loader-bar-fill.style-aurora {
+        height: 100%;
+        background: linear-gradient(90deg, 
+          #10b981 0%, 
+          #06b6d4 20%, 
+          #3b82f6 40%, 
+          #8b5cf6 60%, 
+          #06b6d4 80%, 
+          #10b981 100%);
+        background-size: 300% 100%;
+        width: 0%;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: aurora-shift 3s ease-in-out infinite;
+        box-shadow: 0 0 18px rgba(59, 130, 246, 0.5);
+      }
+      
       @keyframes wave-shimmer {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
@@ -207,6 +224,12 @@
       @keyframes neon-flow {
         0% { background-position: 0% 0; }
         100% { background-position: 200% 0; }
+      }
+      
+      @keyframes aurora-shift {
+        0% { background-position: 0% 0; }
+        50% { background-position: 150% 0; }
+        100% { background-position: 300% 0; }
       }
       
       .loader-stats {
@@ -346,8 +369,8 @@
           "Almost ready"
         ];
         
-        // Randomized animation styles
-        var animationStyles = ['style-wave', 'style-pulse', 'style-shimmer', 'style-particles', 'style-neon'];
+        // Randomized animation styles (6 variants)
+        var animationStyles = ['style-wave', 'style-pulse', 'style-shimmer', 'style-particles', 'style-neon', 'style-aurora'];
         var selectedStyle = animationStyles[Math.floor(Math.random() * animationStyles.length)];
         
         var barFill = document.getElementById('loader-bar-fill');
