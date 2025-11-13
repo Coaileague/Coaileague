@@ -452,8 +452,8 @@ export default function Homepage() {
             <div>
               <h4 className="font-bold mb-4">Legal</h4>
               <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors" data-testid="footer-link-privacy">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors" data-testid="footer-link-terms">Terms of Service</a></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors" data-testid="footer-link-privacy">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors" data-testid="footer-link-terms">Terms of Service</Link></li>
               </ul>
             </div>
           </div>

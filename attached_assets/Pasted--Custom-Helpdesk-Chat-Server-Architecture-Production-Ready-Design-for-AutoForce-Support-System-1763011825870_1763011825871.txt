@@ -1,0 +1,751 @@
+# Custom Helpdesk Chat Server Architecture
+## Production-Ready Design for AutoForce™ Support System
+
+---
+
+## 🏗️ ARCHITECTURE OVERVIEW
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER                          │
+├─────────────────────────────────────────────────────────────┤
+│  Web Widget    │    Mobile App    │    Agent Dashboard      │
+│  (React)       │    (React Native)│    (React Admin)        │
+└────────┬────────────────┬──────────────────┬────────────────┘
+         │                │                  │
+         └────────────────┼──────────────────┘
+                          │
+                   WebSocket Connection
+                          │
+┌─────────────────────────▼───────────────────────────────────┐
+│                    API GATEWAY LAYER                         │
+├─────────────────────────────────────────────────────────────┤
+│  • Authentication (JWT)                                      │
+│  • Rate Limiting (Redis)                                     │
+│  • Load Balancing (Nginx)                                    │
+│  • SSL Termination                                           │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+         ┌────────────────┼────────────────┐
+         │                │                │
+┌────────▼────────┐ ┌────▼──────┐ ┌──────▼──────────┐
+│  WebSocket      │ │   REST     │ │  GraphQL API    │
+│  Server         │ │   API      │ │  (Optional)     │
+│  (Socket.io)    │ │  (Express) │ │  (Apollo)       │
+└────────┬────────┘ └────┬──────┘ └──────┬──────────┘
+         │               │                │
+         └───────────────┼────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                   BUSINESS LOGIC LAYER                       │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐   │
+│  │  AI Router   │  │  Queue       │  │  Notification   │   │
+│  │  (Claude API)│  │  Manager     │  │  Service        │   │
+│  └──────────────┘  └──────────────┘  └─────────────────┘   │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐   │
+│  │  Conversation│  │  Analytics   │  │  File Upload    │   │
+│  │  Manager     │  │  Tracker     │  │  Handler        │   │
+│  └──────────────┘  └──────────────┘  └─────────────────┘   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────────┐
+│                      DATA LAYER                              │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐   │
+│  │  PostgreSQL  │  │  Redis       │  │  S3 / MinIO     │   │
+│  │  (Main DB)   │  │  (Cache/Pub) │  │  (File Storage) │   │
+│  └──────────────┘  └──────────────┘  └─────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎯 TECH STACK (Best-in-Class)
+
+### **Backend**
+- **Node.js 20+** (LTS) - Fast, scalable, great for real-time
+- **Express.js** - REST API framework
+- **Socket.io 4.x** - WebSocket library (best for real-time chat)
+- **TypeScript** - Type safety, better code quality
+- **Bull Queue** - Background job processing (email, notifications)
+- **Prisma ORM** - Type-safe database queries
+
+### **Database**
+- **PostgreSQL 15+** - Main database (conversations, users, messages)
+- **Redis 7+** - Session management, pub/sub, caching, queue
+- **S3 / MinIO** - File uploads (screenshots, documents)
+
+### **Authentication**
+- **JWT** - Stateless authentication
+- **bcrypt** - Password hashing
+- **Passport.js** - Auth strategies (optional for OAuth)
+
+### **Real-Time Communication**
+- **Socket.io** - WebSocket with fallbacks (polling)
+- **Redis Adapter** - Multi-server Socket.io scaling
+
+### **Frontend**
+- **React 18+** - UI framework
+- **Tailwind CSS** - Styling
+- **Zustand / Redux** - State management
+- **Socket.io-client** - WebSocket connection
+
+---
+
+## 📊 DATABASE SCHEMA
+
+```sql
+-- Users (Customers & Agents)
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL, -- 'customer', 'agent', 'admin'
+  avatar_url TEXT,
+  online_status VARCHAR(20) DEFAULT 'offline', -- 'online', 'offline', 'away'
+  last_seen TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Conversations
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID REFERENCES users(id),
+  assigned_agent_id UUID REFERENCES users(id),
+  status VARCHAR(50) DEFAULT 'open', -- 'open', 'pending', 'resolved', 'closed'
+  priority VARCHAR(20) DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
+  channel VARCHAR(50) DEFAULT 'web', -- 'web', 'mobile', 'email'
+  ai_confidence_score DECIMAL(5,2),
+  issue_category VARCHAR(100),
+  metadata JSONB, -- Custom fields
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  resolved_at TIMESTAMP,
+  first_response_time INTEGER, -- seconds
+  resolution_time INTEGER -- seconds
+);
+
+-- Messages
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES users(id),
+  sender_type VARCHAR(20) NOT NULL, -- 'customer', 'agent', 'bot'
+  content TEXT NOT NULL,
+  content_type VARCHAR(50) DEFAULT 'text', -- 'text', 'image', 'file', 'system'
+  attachments JSONB, -- [{url, filename, size, type}]
+  metadata JSONB, -- AI decision data, etc.
+  read_by JSONB DEFAULT '[]', -- [user_id, user_id]
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- AI Decisions Log
+CREATE TABLE ai_decisions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id),
+  decision_type VARCHAR(100), -- 'route', 'response', 'escalate'
+  confidence_score DECIMAL(5,2),
+  input_data JSONB,
+  output_data JSONB,
+  human_override BOOLEAN DEFAULT false,
+  override_reason TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Agent Performance
+CREATE TABLE agent_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID REFERENCES users(id),
+  date DATE NOT NULL,
+  conversations_handled INTEGER DEFAULT 0,
+  avg_response_time INTEGER, -- seconds
+  avg_resolution_time INTEGER, -- seconds
+  customer_satisfaction DECIMAL(3,2), -- 1-5 rating
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(agent_id, date)
+);
+
+-- Canned Responses
+CREATE TABLE canned_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  category VARCHAR(100),
+  shortcut VARCHAR(50), -- e.g., '/login-help'
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tags
+CREATE TABLE tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) UNIQUE NOT NULL,
+  color VARCHAR(7), -- hex color
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Conversation Tags (many-to-many)
+CREATE TABLE conversation_tags (
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (conversation_id, tag_id)
+);
+
+-- Indexes for performance
+CREATE INDEX idx_conversations_customer ON conversations(customer_id);
+CREATE INDEX idx_conversations_agent ON conversations(assigned_agent_id);
+CREATE INDEX idx_conversations_status ON conversations(status);
+CREATE INDEX idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX idx_messages_created ON messages(created_at DESC);
+CREATE INDEX idx_ai_decisions_conversation ON ai_decisions(conversation_id);
+```
+
+---
+
+## 🔌 WEBSOCKET EVENT ARCHITECTURE
+
+### **Client → Server Events**
+
+```javascript
+// Connection
+socket.emit('authenticate', { token: 'jwt_token' });
+
+// Messaging
+socket.emit('message:send', {
+  conversationId: 'uuid',
+  content: 'Hello, I need help',
+  contentType: 'text'
+});
+
+// Typing indicators
+socket.emit('typing:start', { conversationId: 'uuid' });
+socket.emit('typing:stop', { conversationId: 'uuid' });
+
+// Read receipts
+socket.emit('message:read', { 
+  conversationId: 'uuid',
+  messageId: 'uuid'
+});
+
+// Agent actions
+socket.emit('conversation:assign', { 
+  conversationId: 'uuid',
+  agentId: 'uuid'
+});
+socket.emit('conversation:resolve', { conversationId: 'uuid' });
+socket.emit('conversation:tag', { 
+  conversationId: 'uuid',
+  tags: ['billing', 'urgent']
+});
+```
+
+### **Server → Client Events**
+
+```javascript
+// Connection status
+socket.on('authenticated', (userData) => {});
+socket.on('error', (error) => {});
+
+// New messages
+socket.on('message:new', (message) => {
+  // Display in chat UI
+});
+
+// Typing indicators
+socket.on('typing:start', ({ conversationId, user }) => {});
+socket.on('typing:stop', ({ conversationId, user }) => {});
+
+// Conversation updates
+socket.on('conversation:assigned', (data) => {});
+socket.on('conversation:resolved', (data) => {});
+socket.on('conversation:status_change', (data) => {});
+
+// Agent availability
+socket.on('agent:online', (agent) => {});
+socket.on('agent:offline', (agent) => {});
+
+// AI events
+socket.on('ai:processing', ({ conversationId }) => {});
+socket.on('ai:response', ({ conversationId, message, confidence }) => {});
+socket.on('ai:escalate', ({ conversationId, reason, summary }) => {});
+```
+
+---
+
+## 🤖 AI INTEGRATION WORKFLOW
+
+```javascript
+// AI Decision Engine
+class AIRouter {
+  async processMessage(conversationId, message) {
+    // 1. Analyze message intent
+    const intent = await this.analyzeIntent(message);
+    
+    // 2. Check confidence threshold
+    const confidence = await this.calculateConfidence(conversationId);
+    
+    // 3. Decide action
+    if (confidence >= 95) {
+      // Full autonomy - AI responds directly
+      return await this.generateAIResponse(conversationId, intent);
+    } 
+    else if (confidence >= 75) {
+      // Supervised - AI suggests, agent approves
+      return await this.suggestResponse(conversationId, intent);
+    } 
+    else {
+      // Training - Escalate to human immediately
+      return await this.escalateToHuman(conversationId, intent);
+    }
+  }
+  
+  async escalateToHuman(conversationId, intent) {
+    // 1. Find available agent
+    const agent = await this.findBestAgent(intent.category);
+    
+    // 2. Create handoff summary
+    const summary = await this.generateHandoffSummary(conversationId);
+    
+    // 3. Assign conversation
+    await this.assignConversation(conversationId, agent.id);
+    
+    // 4. Notify agent
+    socket.to(agent.socketId).emit('conversation:new', {
+      conversationId,
+      summary,
+      aiConfidence: intent.confidence,
+      recommendedActions: summary.recommendations
+    });
+    
+    // 5. Notify customer
+    socket.to(conversationId).emit('ai:escalate', {
+      message: 'Connecting you with a live agent...',
+      estimatedWaitTime: await this.getAverageWaitTime()
+    });
+  }
+}
+```
+
+---
+
+## 📁 PROJECT STRUCTURE
+
+```
+helpdesk-chat-server/
+├── src/
+│   ├── config/
+│   │   ├── database.ts          # DB connection
+│   │   ├── redis.ts             # Redis connection
+│   │   └── socket.ts            # Socket.io config
+│   │
+│   ├── models/                  # Database models (Prisma)
+│   │   ├── user.ts
+│   │   ├── conversation.ts
+│   │   └── message.ts
+│   │
+│   ├── routes/                  # REST API routes
+│   │   ├── auth.ts              # Login, register
+│   │   ├── conversations.ts     # CRUD operations
+│   │   ├── messages.ts          # Message history
+│   │   └── agents.ts            # Agent management
+│   │
+│   ├── sockets/                 # WebSocket handlers
+│   │   ├── chat.ts              # Chat events
+│   │   ├── presence.ts          # Online/offline status
+│   │   └── typing.ts            # Typing indicators
+│   │
+│   ├── services/                # Business logic
+│   │   ├── aiRouter.ts          # AI decision engine
+│   │   ├── conversationManager.ts
+│   │   ├── queueManager.ts      # Background jobs
+│   │   ├── notificationService.ts
+│   │   └── analyticsTracker.ts
+│   │
+│   ├── middleware/
+│   │   ├── auth.ts              # JWT verification
+│   │   ├── rateLimit.ts         # Rate limiting
+│   │   └── errorHandler.ts      # Error handling
+│   │
+│   ├── utils/
+│   │   ├── logger.ts            # Winston logging
+│   │   ├── validation.ts        # Input validation
+│   │   └── helpers.ts           # Utility functions
+│   │
+│   ├── types/                   # TypeScript types
+│   │   ├── socket.ts
+│   │   └── api.ts
+│   │
+│   ├── app.ts                   # Express app setup
+│   └── server.ts                # Entry point
+│
+├── prisma/
+│   ├── schema.prisma            # Database schema
+│   └── migrations/              # DB migrations
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+│
+├── .env.example
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 🚀 KEY FEATURES TO IMPLEMENT
+
+### **Phase 1: Core Chat (Week 1)**
+- ✅ WebSocket connection handling
+- ✅ Real-time messaging
+- ✅ Conversation creation/management
+- ✅ User authentication (JWT)
+- ✅ Message persistence
+- ✅ Basic agent dashboard
+
+### **Phase 2: AI Integration (Week 2)**
+- ✅ Claude API integration
+- ✅ AI confidence scoring
+- ✅ Automatic routing (AI vs Human)
+- ✅ Escalation workflow
+- ✅ Handoff summaries
+- ✅ AI decision logging
+
+### **Phase 3: Agent Features (Week 3)**
+- ✅ Typing indicators
+- ✅ Read receipts
+- ✅ Canned responses
+- ✅ Conversation assignment
+- ✅ Internal notes
+- ✅ Tag system
+- ✅ Agent status (online/offline/away)
+
+### **Phase 4: Advanced Features (Week 4)**
+- ✅ File uploads
+- ✅ Rich media support
+- ✅ Queue management
+- ✅ Analytics dashboard
+- ✅ Email notifications
+- ✅ Mobile push notifications
+- ✅ Conversation search
+
+### **Phase 5: Scaling (Week 5-6)**
+- ✅ Multi-server Socket.io (Redis adapter)
+- ✅ Load balancing
+- ✅ Rate limiting
+- ✅ Monitoring (Datadog/New Relic)
+- ✅ Backup/restore
+- ✅ Performance optimization
+
+---
+
+## ⚡ PERFORMANCE OPTIMIZATIONS
+
+### **1. Message Pagination**
+```javascript
+// Load only last 50 messages initially
+const messages = await prisma.message.findMany({
+  where: { conversationId },
+  orderBy: { createdAt: 'desc' },
+  take: 50,
+  skip: page * 50
+});
+```
+
+### **2. Redis Caching**
+```javascript
+// Cache online users
+redis.sadd('online_users', userId);
+redis.expire('online_users', 300); // 5 minutes
+
+// Cache conversation metadata
+redis.setex(`conversation:${id}`, 3600, JSON.stringify(data));
+```
+
+### **3. Database Indexing**
+```sql
+-- Speed up common queries
+CREATE INDEX idx_messages_conversation_created 
+  ON messages(conversation_id, created_at DESC);
+
+CREATE INDEX idx_conversations_status_updated 
+  ON conversations(status, updated_at DESC);
+```
+
+### **4. Connection Pooling**
+```javascript
+// PostgreSQL connection pool
+const pool = new Pool({
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000
+});
+```
+
+### **5. Lazy Loading**
+- Load chat history on scroll
+- Compress images before upload
+- Use CDN for static assets
+- Implement message batching (send multiple at once)
+
+---
+
+## 🔒 SECURITY BEST PRACTICES
+
+### **1. Authentication**
+```javascript
+// JWT with short expiration
+const token = jwt.sign(
+  { userId, role }, 
+  process.env.JWT_SECRET,
+  { expiresIn: '1h' }
+);
+
+// Refresh token mechanism
+const refreshToken = jwt.sign(
+  { userId }, 
+  process.env.REFRESH_SECRET,
+  { expiresIn: '7d' }
+);
+```
+
+### **2. Input Validation**
+```javascript
+// Sanitize all inputs
+import { z } from 'zod';
+
+const messageSchema = z.object({
+  conversationId: z.string().uuid(),
+  content: z.string().min(1).max(5000),
+  contentType: z.enum(['text', 'image', 'file'])
+});
+```
+
+### **3. Rate Limiting**
+```javascript
+// Prevent spam
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 messages per minute
+  message: 'Too many messages, please slow down'
+});
+```
+
+### **4. XSS Prevention**
+```javascript
+// Escape HTML in messages
+import DOMPurify from 'isomorphic-dompurify';
+
+const sanitizedContent = DOMPurify.sanitize(message.content);
+```
+
+### **5. File Upload Security**
+```javascript
+// Validate file types and size
+const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+const maxSize = 10 * 1024 * 1024; // 10MB
+
+if (!allowedTypes.includes(file.mimetype)) {
+  throw new Error('Invalid file type');
+}
+```
+
+---
+
+## 📊 MONITORING & LOGGING
+
+### **Logging Strategy**
+```javascript
+import winston from 'winston';
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
+
+// Log every message
+logger.info('Message sent', {
+  conversationId,
+  userId,
+  messageLength: content.length,
+  timestamp: new Date()
+});
+```
+
+### **Metrics to Track**
+```javascript
+// Key metrics
+{
+  "active_connections": 1247,
+  "messages_per_second": 23.4,
+  "avg_response_time_ms": 145,
+  "ai_confidence_avg": 87.3,
+  "escalation_rate": 0.08,
+  "customer_satisfaction": 4.6
+}
+```
+
+---
+
+## 🔄 DEPLOYMENT WORKFLOW
+
+### **Development Environment**
+```bash
+# Local setup
+docker-compose up -d  # PostgreSQL + Redis
+npm run dev           # Hot reload
+```
+
+### **Production Deployment**
+```bash
+# Build
+npm run build
+
+# Run with PM2 (process manager)
+pm2 start dist/server.js -i max  # Cluster mode
+
+# Or use Docker
+docker build -t autoforce-chat .
+docker run -p 3000:3000 autoforce-chat
+```
+
+### **CI/CD Pipeline**
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: docker build -t autoforce-chat .
+      - run: docker push autoforce-chat
+      - run: kubectl apply -f k8s/
+```
+
+---
+
+## 💰 COST ESTIMATES
+
+### **Infrastructure (Monthly)**
+```
+AWS EC2 (t3.large):        $70
+RDS PostgreSQL (db.t3.medium): $50
+ElastiCache Redis:         $40
+S3 Storage:                $10
+CloudFront CDN:            $20
+Load Balancer:             $25
+------------------------
+TOTAL:                     ~$215/month
+```
+
+### **Development Time**
+```
+Phase 1 (Core):            40 hours
+Phase 2 (AI):              30 hours
+Phase 3 (Agent Features):  35 hours
+Phase 4 (Advanced):        40 hours
+Phase 5 (Scaling):         25 hours
+------------------------
+TOTAL:                     170 hours (~4-6 weeks)
+```
+
+---
+
+## 🎯 SCALING STRATEGY
+
+### **Single Server (0-1K concurrent users)**
+- 1x EC2 instance
+- 1x PostgreSQL RDS
+- 1x Redis instance
+
+### **Multi-Server (1K-10K concurrent users)**
+```
+            Load Balancer
+                  │
+      ┌───────────┼───────────┐
+      │           │           │
+   Server 1   Server 2   Server 3
+      │           │           │
+      └───────────┼───────────┘
+                  │
+         Redis (Pub/Sub)
+                  │
+            PostgreSQL
+```
+
+### **Enterprise Scale (10K+ concurrent users)**
+- Kubernetes cluster (auto-scaling)
+- PostgreSQL read replicas
+- Redis Cluster
+- CDN for static assets
+- Message queue (Bull/RabbitMQ)
+
+---
+
+## ✅ TESTING STRATEGY
+
+### **Unit Tests**
+```javascript
+describe('AIRouter', () => {
+  it('should escalate when confidence < 75%', async () => {
+    const result = await aiRouter.processMessage(convId, message);
+    expect(result.action).toBe('escalate');
+  });
+});
+```
+
+### **Integration Tests**
+```javascript
+describe('Chat Flow', () => {
+  it('should send message and receive response', async () => {
+    const socket = io('http://localhost:3000');
+    socket.emit('message:send', { content: 'Hello' });
+    const response = await waitForEvent(socket, 'message:new');
+    expect(response.content).toBeDefined();
+  });
+});
+```
+
+### **Load Testing**
+```javascript
+// Artillery.io config
+artillery run --target http://localhost:3000 \
+  --phases "[ { duration: 60, arrivalRate: 100 } ]"
+```
+
+---
+
+## 🚀 READY TO BUILD?
+
+This architecture gives you:
+- ✅ **Production-ready** design
+- ✅ **Scalable** to 10K+ concurrent users
+- ✅ **Secure** with JWT, rate limiting, validation
+- ✅ **Fast** with Redis caching and optimized queries
+- ✅ **AI-native** with built-in confidence scoring
+- ✅ **Observable** with logging and metrics
+
+**Next Step:** Want me to build the actual code? I can create:
+1. Full backend server (Socket.io + Express + Prisma)
+2. Chat widget frontend (React)
+3. Agent dashboard (React)
+4. Docker compose setup
+5. Deployment scripts
+
+Let me know which piece you want first! 🔥

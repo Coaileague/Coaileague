@@ -35,6 +35,8 @@ import CustomRegister from "@/pages/custom-register";
 import Pricing from "@/pages/pricing";
 import Contact from "@/pages/contact";
 import Support from "@/pages/support";
+import TermsOfService from "@/pages/terms-of-service";
+import PrivacyPolicy from "@/pages/privacy-policy";
 import Dashboard from "@/pages/dashboard";
 import MobileDashboard from "@/pages/mobile-dashboard";
 import { Redirect } from "wouter";
@@ -276,6 +278,8 @@ function AppContent() {
         <Route path="/pricing" component={Pricing} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
+        <Route path="/terms" component={TermsOfService} />
+        <Route path="/privacy" component={PrivacyPolicy} />
         {/* Consolidated chat routes - ONLY 2 UNIVERSAL CLIENTS */}
         <Route path="/chat" component={HelpDesk} /> {/* Desktop chat with Gemini AI */}
         <Route path="/mobile-chat" component={MobileChatPage} /> {/* Universal mobile chat with all premium features */}
@@ -449,6 +453,8 @@ function AppContent() {
                 <Route path="/pricing" component={Pricing} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/support/tickets" component={CustomerSupport} />
+                <Route path="/terms" component={TermsOfService} />
+                <Route path="/privacy" component={PrivacyPolicy} />
                 {/* Consolidated Chat Routes - ONLY 2 UNIVERSAL CLIENTS */}
                 <Route path="/chat" component={HelpDesk} /> {/* Desktop chat with Gemini AI */}
                 <Route path="/mobile-chat" component={MobileChatPage} /> {/* Universal mobile chat with all premium features */}
