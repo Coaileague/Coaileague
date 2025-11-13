@@ -4145,10 +4145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Generate AI Schedule with billing
-  app.post('/api/scheduleos/generate-schedule', isAuthenticated, requireManager, async (req: any, res) => {
-
-
+  // Generate AI Schedule with Smart Approval (99% AI, 1% Human Governance)
+  app.post('/api/scheduleos/smart-generate', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
@@ -4159,18 +4157,243 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const aiEnabled = scheduleosAiEnabled.get(workspace.id) ?? false;
       if (!aiEnabled) return res.status(403).json({ message: "SmartSchedule AI is disabled" });
       
-      const { ScheduleOSAI } = await import("./ai/scheduleos");
-      const result = await (new ScheduleOSAI()).generateSchedule({ workspaceId: workspace.id, weekStartDate: new Date(req.body.weekStartDate), clientIds: req.body.clientIds, shiftRequirements: req.body.shiftRequirements });
+      // Validate request body
+      const { openShiftIds, constraints } = req.body;
+      if (!openShiftIds || !Array.isArray(openShiftIds) || openShiftIds.length === 0) {
+        return res.status(400).json({ message: "openShiftIds array is required" });
+      }
       
-      const tokens = 2000 + (result.shiftsGenerated * 50);
-      const cost = (tokens / 1000) * 0.045 * 4;
+      // Fetch unassigned shifts (published or draft without employeeId)
+      const openShifts = await db.select().from(shifts).where(
+        and(
+          eq(shifts.workspaceId, workspace.id),
+          inArray(shifts.id, openShiftIds),
+          isNull(shifts.employeeId)
+        )
+      );
       
-      const { workspaceAiUsage } = await import("@shared/schema");
-      const [log] = await db.insert(workspaceAiUsage).values({ workspaceId: workspace.id, feature: 'smart_schedule_ai', operation: 'generate_schedule', requestId: `sched-${Date.now()}`, tokensUsed: tokens, model: 'gpt-4', providerCostUsd: ((tokens/1000)*0.045).toFixed(6), markupPercentage: "300", clientChargeUsd: cost.toFixed(6), status: 'pending', billingPeriod: new Date().toISOString().slice(0,7), inputData: req.body, outputData: { shiftsGenerated: result.shiftsGenerated } }).returning();
+      if (openShifts.length === 0) {
+        return res.status(404).json({ message: "No open shifts found" });
+      }
       
-      res.json({ ...result, billing: { aiUsageId: log.id, tokensUsed: tokens, costUsd: parseFloat(cost.toFixed(2)) } });
+      const availableEmployees = await db.select().from(employees).where(
+        eq(employees.workspaceId, workspace.id)
+      );
+      
+      // Call Gemini AI via scheduleSmartAI service
+      const { scheduleSmartAI } = await import("./services/scheduleSmartAI");
+      const aiResponse = await scheduleSmartAI({
+        openShifts,
+        availableEmployees,
+        workspaceId: workspace.id,
+        userId,
+        constraints,
+      });
+      
+      // Billing already tracked inside scheduleSmartAI via usageMeteringService
+      const { scheduleProposals } = await import("@shared/schema");
+      
+      // Decision: Auto-approve if confidence >= 95%, otherwise save proposal
+      if (aiResponse.overallConfidence >= 95) {
+        // AUTO-APPROVE: Apply shifts immediately in a transaction
+        const shiftIdsCreated: string[] = [];
+        
+        await db.transaction(async (tx) => {
+          for (const assignment of aiResponse.assignments) {
+            await tx.update(shifts).set({
+              employeeId: assignment.employeeId,
+              status: 'scheduled',
+              updatedAt: new Date(),
+            }).where(eq(shifts.id, assignment.shiftId));
+            shiftIdsCreated.push(assignment.shiftId);
+          }
+          
+          // Save proposal with auto_approved status
+          const [proposal] = await tx.insert(scheduleProposals).values({
+            workspaceId: workspace.id,
+            createdBy: userId,
+            aiResponse: aiResponse as any,
+            confidence: aiResponse.overallConfidence,
+            status: 'auto_approved',
+            approvedBy: userId, // System auto-approval
+            approvedAt: new Date(),
+            disclaimerAcknowledged: true, // Auto-approved schedules bypass disclaimer
+            shiftIdsCreated,
+          }).returning();
+          
+          console.log(`✅ ScheduleOS™ AUTO-APPROVED: ${aiResponse.overallConfidence}% confidence - ${shiftIdsCreated.length} shifts assigned`);
+          
+          res.json({
+            applied: true,
+            proposalId: proposal.id,
+            confidence: aiResponse.overallConfidence,
+            assignmentsApplied: aiResponse.assignments.length,
+            summary: aiResponse.summary,
+            message: `AI auto-approved schedule with ${aiResponse.overallConfidence}% confidence. ${shiftIdsCreated.length} shifts assigned.`,
+          });
+        });
+      } else {
+        // REQUIRES HUMAN APPROVAL: Save proposal as pending
+        const [proposal] = await db.insert(scheduleProposals).values({
+          workspaceId: workspace.id,
+          createdBy: userId,
+          aiResponse: aiResponse as any,
+          confidence: aiResponse.overallConfidence,
+          status: 'pending',
+        }).returning();
+        
+        console.log(`⏸️ ScheduleOS™ PENDING REVIEW: ${aiResponse.overallConfidence}% confidence - ${aiResponse.assignments.length} assignments await approval`);
+        
+        res.json({
+          applied: false,
+          proposalId: proposal.id,
+          needsApproval: true,
+          confidence: aiResponse.overallConfidence,
+          assignmentsProposed: aiResponse.assignments.length,
+          summary: aiResponse.summary,
+          confidenceFactors: aiResponse.confidenceFactors,
+          message: `AI schedule requires human approval (${aiResponse.overallConfidence}% confidence). Review proposal to continue.`,
+        });
+      }
     } catch (error: any) {
+      console.error("ScheduleOS™ Smart Generate Error:", error);
       res.status(500).json({ message: error.message || "Failed to generate schedule" });
+    }
+  });
+  
+  // Get Schedule Proposal Details
+  app.get('/api/scheduleos/proposals/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { scheduleProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(scheduleProposals).where(
+        and(
+          eq(scheduleProposals.id, id),
+          eq(scheduleProposals.workspaceId, userWorkspace.workspaceId)
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found" });
+      }
+      
+      res.json(proposal);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch proposal" });
+    }
+  });
+  
+  // Approve Schedule Proposal
+  app.patch('/api/scheduleos/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { disclaimerAcknowledged } = req.body;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      // Validate disclaimer for confidence < 100%
+      const { scheduleProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(scheduleProposals).where(
+        and(
+          eq(scheduleProposals.id, id),
+          eq(scheduleProposals.workspaceId, userWorkspace.workspaceId),
+          eq(scheduleProposals.status, 'pending')
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found or already processed" });
+      }
+      
+      if (proposal.confidence < 100 && !disclaimerAcknowledged) {
+        return res.status(400).json({ message: "Legal disclaimer must be acknowledged for proposals with <100% confidence" });
+      }
+      
+      // Apply shifts from proposal in a transaction
+      const aiResponse = proposal.aiResponse as any;
+      const shiftIdsCreated: string[] = [];
+      
+      await db.transaction(async (tx) => {
+        for (const assignment of aiResponse.assignments) {
+          await tx.update(shifts).set({
+            employeeId: assignment.employeeId,
+            status: 'scheduled',
+            updatedAt: new Date(),
+          }).where(eq(shifts.id, assignment.shiftId));
+          shiftIdsCreated.push(assignment.shiftId);
+        }
+        
+        // Update proposal status
+        await tx.update(scheduleProposals).set({
+          status: 'approved',
+          approvedBy: userId,
+          approvedAt: new Date(),
+          disclaimerAcknowledged: disclaimerAcknowledged || false,
+          disclaimerAcknowledgedBy: disclaimerAcknowledged ? userId : null,
+          disclaimerAcknowledgedAt: disclaimerAcknowledged ? new Date() : null,
+          shiftIdsCreated,
+          updatedAt: new Date(),
+        }).where(eq(scheduleProposals.id, id));
+        
+        console.log(`✅ ScheduleOS™ APPROVED by ${userId}: ${shiftIdsCreated.length} shifts assigned`);
+        
+        res.json({
+          success: true,
+          proposalId: id,
+          shiftsCreated: shiftIdsCreated.length,
+          message: `Schedule approved. ${shiftIdsCreated.length} shifts assigned to employees.`,
+        });
+      });
+    } catch (error: any) {
+      console.error("ScheduleOS™ Approval Error:", error);
+      res.status(500).json({ message: error.message || "Failed to approve proposal" });
+    }
+  });
+  
+  // Reject Schedule Proposal
+  app.patch('/api/scheduleos/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { scheduleProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(scheduleProposals).where(
+        and(
+          eq(scheduleProposals.id, id),
+          eq(scheduleProposals.workspaceId, userWorkspace.workspaceId),
+          eq(scheduleProposals.status, 'pending')
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found or already processed" });
+      }
+      
+      await db.update(scheduleProposals).set({
+        status: 'rejected',
+        rejectedBy: userId,
+        rejectedAt: new Date(),
+        rejectionReason: reason || 'No reason provided',
+        updatedAt: new Date(),
+      }).where(eq(scheduleProposals.id, id));
+      
+      console.log(`❌ ScheduleOS™ REJECTED by ${userId}: Proposal ${id}`);
+      
+      res.json({
+        success: true,
+        proposalId: id,
+        message: 'Schedule proposal rejected. No shifts were modified.',
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to reject proposal" });
     }
   });
   

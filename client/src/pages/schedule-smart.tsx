@@ -40,6 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScheduleOSPanel } from "@/components/scheduleos-panel";
+import { ScheduleProposalDrawer } from "@/components/schedule-proposal-drawer";
 import { 
   Plus,
   Copy,
@@ -94,6 +95,10 @@ export default function SmartScheduleOS() {
   
   // AI Controls state
   const [aiEnabled, setAiEnabled] = useState(false);
+  
+  // Proposal drawer state
+  const [proposalDrawerOpen, setProposalDrawerOpen] = useState(false);
+  const [currentProposalId, setCurrentProposalId] = useState<string | null>(null);
   
   // Swipe handlers for mobile navigation
   const swipeHandlers = useSwipe({
@@ -269,13 +274,72 @@ export default function SmartScheduleOS() {
     toggleAiMutation.mutate(checked);
   };
 
+  // Smart AI Generate mutation (99% AI, 1% Human Governance)
+  const smartGenerateMutation = useMutation({
+    mutationFn: async () => {
+      // Get all unassigned shifts (published or draft without employeeId)
+      const openShifts = shifts.filter(s => !s.employeeId && (s.status === 'published' || s.status === 'draft'));
+      if (openShifts.length === 0) {
+        throw new Error("No unassigned shifts to schedule. Create shifts or publish them first.");
+      }
+
+      const res = await apiRequest("POST", "/api/scheduleos/smart-generate", {
+        openShiftIds: openShifts.map(s => s.id),
+        constraints: {
+          balanceWorkload: true,
+          preferExperience: true,
+        },
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.applied) {
+        // Auto-approved (confidence >= 95%)
+        queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+        toast({
+          title: "Schedule Auto-Approved",
+          description: data.message || `AI generated schedule with ${data.confidence}% confidence`,
+        });
+      } else {
+        // Requires approval (confidence < 95%)
+        setCurrentProposalId(data.proposalId);
+        setProposalDrawerOpen(true);
+        toast({
+          title: "Review Required",
+          description: data.message || `AI schedule needs approval (${data.confidence}% confidence)`,
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate AI schedule",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSmartGenerate = () => {
+    if (!aiEnabled) {
+      toast({
+        title: "AI Disabled",
+        description: "Enable SmartSchedule AI to generate schedules",
+        variant: "destructive",
+      });
+      return;
+    }
+    smartGenerateMutation.mutate();
+  };
+
   // Helper functions - hoisted above useMemo to avoid temporal dead zone
-  const getEmployeeName = (employeeId: string) => {
+  const getEmployeeName = (employeeId: string | null) => {
+    if (!employeeId) return "Unassigned";
     const employee = employees.find(e => e.id === employeeId);
     return employee ? `${employee.firstName} ${employee.lastName}` : "Unknown";
   };
 
-  const getEmployeeRole = (employeeId: string) => {
+  const getEmployeeRole = (employeeId: string | null) => {
+    if (!employeeId) return "";
     const employee = employees.find(e => e.id === employeeId);
     return employee?.role || "Employee";
   };
@@ -292,7 +356,8 @@ export default function SmartScheduleOS() {
     return client?.address || null;
   };
 
-  const getRoleColor = (employeeId: string) => {
+  const getRoleColor = (employeeId: string | null) => {
+    if (!employeeId) return 'bg-slate-400';
     const role = getEmployeeRole(employeeId);
     const roleColors: Record<string, string> = {
       'Rigger': 'bg-blue-600',
@@ -597,10 +662,20 @@ export default function SmartScheduleOS() {
                 size="sm"
                 className="whitespace-nowrap flex-shrink-0 touch-manipulation min-h-9 bg-primary"
                 data-testid="button-generate-schedule"
-                onClick={() => toast({ title: "Generate Schedule", description: "AI schedule generation coming soon!" })}
+                onClick={handleSmartGenerate}
+                disabled={smartGenerateMutation.isPending || !aiEnabled}
               >
-                <Sparkles className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Generate</span>
+                {smartGenerateMutation.isPending ? (
+                  <>
+                    <Sparkles className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-pulse" />
+                    <span className="text-xs sm:text-sm">Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="text-xs sm:text-sm">Generate</span>
+                  </>
+                )}
               </Button>
 
               <Button
@@ -1109,6 +1184,22 @@ export default function SmartScheduleOS() {
         </Dialog>
       )}
       </div>
+
+      {/* Schedule Proposal Review Drawer */}
+      <ScheduleProposalDrawer
+        open={proposalDrawerOpen}
+        onClose={() => {
+          setProposalDrawerOpen(false);
+          setCurrentProposalId(null);
+        }}
+        proposalId={currentProposalId}
+        onApproved={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+        }}
+        onRejected={() => {
+          // Proposal rejected, no action needed
+        }}
+      />
     </DndProvider>
   );
 }
