@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { ProgressLoadingOverlay, type ProgressScenario } from "@/components/progress-loading-overlay";
+import { type ProgressScenario } from "@/components/progress-loading-overlay";
+import { useOverlayController } from "./overlay-controller";
 
 // Scenario rotation order
 const SCENARIO_ROTATION: ProgressScenario[] = [
@@ -16,6 +17,7 @@ const MIN_DISPLAY_TIME_MS = 2500;
 
 interface LoadingRequest {
   id: string;
+  overlayId: string; // Track overlay controller ID
   scenario?: ProgressScenario;
   minDuration?: number;
   startTime: number;
@@ -30,6 +32,7 @@ interface LoadingManagerContextValue {
 const LoadingManagerContext = createContext<LoadingManagerContextValue | null>(null);
 
 export function LoadingManagerProvider({ children }: { children: React.ReactNode }) {
+  const overlayController = useOverlayController();
   const [activeRequest, setActiveRequest] = useState<LoadingRequest | null>(null);
   const [queue, setQueue] = useState<LoadingRequest[]>([]);
   const scenarioIndexRef = useRef(0);
@@ -63,10 +66,25 @@ export function LoadingManagerProvider({ children }: { children: React.ReactNode
     
     const request: LoadingRequest = {
       id,
+      overlayId: '', // Will be set below
       scenario,
       minDuration,
       startTime: Date.now(),
     };
+
+    // Show overlay via shared controller with normal priority
+    // onActivate callback resets startTime when overlay actually becomes visible
+    const overlayId = overlayController.showOverlay({
+      status: "loading",
+      scenario,
+      priority: "normal", // Normal priority - transitions take precedence
+      onActivate: () => {
+        // Reset timer when overlay becomes visible (handles queued overlays)
+        setActiveRequest(prev => prev?.id === id ? { ...prev, startTime: Date.now() } : prev);
+      }
+    });
+    
+    request.overlayId = overlayId;
 
     // If no active request, make this one active immediately
     if (!activeRequest) {
@@ -77,37 +95,30 @@ export function LoadingManagerProvider({ children }: { children: React.ReactNode
     }
 
     return id;
-  }, [activeRequest, getNextScenario]);
+  }, [activeRequest, getNextScenario, overlayController]);
 
   // End loading - enforces minimum display time
   const endLoading = useCallback((id: string) => {
     if (activeRequest?.id === id) {
-      const elapsed = Date.now() - activeRequest.startTime;
-      const remaining = Math.max(0, (activeRequest.minDuration || MIN_DISPLAY_TIME_MS) - elapsed);
-
-      setTimeout(() => {
-        setActiveRequest(null);
-        // Process queue
-        setQueue((prev) => {
-          if (prev.length > 0) {
-            const [next, ...rest] = prev;
-            setActiveRequest(next);
-            return rest;
-          }
-          return prev;
-        });
-      }, remaining);
+      // Pass minDuration to controller so it enforces timing from visibleSince
+      overlayController.hideOverlay(activeRequest.overlayId, activeRequest.minDuration || MIN_DISPLAY_TIME_MS);
+      
+      // Immediately process queue (controller will handle timing)
+      setActiveRequest(null);
+      setQueue((prev) => {
+        if (prev.length > 0) {
+          const [next, ...rest] = prev;
+          setActiveRequest(next);
+          return rest;
+        }
+        return prev;
+      });
     }
-  }, [activeRequest]);
+  }, [activeRequest, overlayController]);
 
   return (
     <LoadingManagerContext.Provider value={{ beginLoading, endLoading, isLoading: !!activeRequest }}>
       {children}
-      <ProgressLoadingOverlay
-        isVisible={!!activeRequest}
-        scenario={activeRequest?.scenario || "login"}
-        status="loading"
-      />
     </LoadingManagerContext.Provider>
   );
 }

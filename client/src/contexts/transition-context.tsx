@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import { ProgressLoadingOverlay, ProgressScenario } from "@/components/progress-loading-overlay";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from "react";
+import { ProgressScenario } from "@/components/progress-loading-overlay";
+import { useOverlayController } from "./overlay-controller";
 
 export type TransitionStatus = "loading" | "success" | "error" | "info";
 
@@ -21,40 +22,59 @@ interface TransitionContextType {
 const TransitionContext = createContext<TransitionContextType | undefined>(undefined);
 
 export function TransitionProvider({ children }: { children: ReactNode }) {
-  const [isVisible, setIsVisible] = useState(false);
+  const overlayController = useOverlayController();
   const [options, setOptions] = useState<TransitionOptions>({
     status: "loading",
     message: "Loading...",
   });
+  const activeOverlayIdRef = useRef<string | null>(null);
 
   const showTransition = useCallback((opts?: TransitionOptions) => {
-    setOptions({
-      status: "loading",
+    const newOptions = {
+      status: "loading" as const,
       message: "Loading...",
       ...opts
+    };
+    setOptions(newOptions);
+
+    // Show overlay via shared controller with high priority
+    const id = overlayController.showOverlay({
+      status: newOptions.status || "loading",
+      scenario: newOptions.scenario,
+      title: newOptions.message,
+      duration: newOptions.duration,
+      priority: "high", // Transitions are high priority
+      onComplete: newOptions.onComplete
     });
-    setIsVisible(true);
-  }, []);
+    
+    activeOverlayIdRef.current = id;
+  }, [overlayController]);
 
   const hideTransition = useCallback(() => {
-    setIsVisible(false);
-  }, []);
+    if (activeOverlayIdRef.current) {
+      overlayController.hideOverlay(activeOverlayIdRef.current);
+      activeOverlayIdRef.current = null;
+    }
+  }, [overlayController]);
 
   const updateTransition = useCallback((opts: TransitionOptions) => {
     setOptions(prev => ({ ...prev, ...opts }));
-  }, []);
-
-  const handleComplete = useCallback(() => {
-    if (options.onComplete) {
-      options.onComplete();
+    
+    if (activeOverlayIdRef.current) {
+      overlayController.updateOverlay(activeOverlayIdRef.current, {
+        status: opts.status || "loading",
+        scenario: opts.scenario,
+        title: opts.message,
+        duration: opts.duration,
+        onComplete: opts.onComplete
+      });
     }
-    hideTransition();
-  }, [options, hideTransition]);
+  }, [overlayController]);
 
-  // Auto-hide and trigger onComplete after duration
-  // Triggers on: success/error states, OR loading state with explicit duration
+  // Auto-hide is handled by OverlayController via duration parameter
+  // This effect just ensures hideTransition is called for success/error states
   useEffect(() => {
-    if (!isVisible) return;
+    if (!activeOverlayIdRef.current) return;
     
     const shouldAutoHide = 
       options.status === "success" || 
@@ -63,23 +83,16 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     
     if (shouldAutoHide) {
       const timer = setTimeout(() => {
-        handleComplete();
+        hideTransition();
       }, options.duration || 2000);
       
       return () => clearTimeout(timer);
     }
-  }, [isVisible, options.status, options.duration, handleComplete]);
+  }, [options.status, options.duration, hideTransition]);
 
   return (
     <TransitionContext.Provider value={{ showTransition, hideTransition, updateTransition }}>
       {children}
-      <ProgressLoadingOverlay
-        isVisible={isVisible}
-        status={options.status}
-        scenario={options.scenario}
-        title={options.message}
-        duration={options.duration}
-      />
     </TransitionContext.Provider>
   );
 }

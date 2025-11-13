@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, MessageCircle, Minimize2, Sparkles } from 'lucide-react';
+import { Send, Bot, User, X, MessageCircle, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,7 @@ export function FloatingSupportChat() {
     {
       id: 1,
       type: 'bot',
-      text: "👋 Hi! I'm your AutoForce™ Support Assistant. I'm here to help you resolve issues quickly. What can I help you with today?",
+      text: "👋 Hi! I'm HelpOS™, your AutoForce™ Support Assistant. I'm here to help you resolve issues quickly. What can I help you with today?",
       timestamp: new Date()
     }
   ]);
@@ -112,21 +112,17 @@ export function FloatingSupportChat() {
       
       setIsTyping(false);
 
-      // Handle escalation to live helpdesk
+      // Handle escalation to live helpdesk - keep user in HelpOS chat
       if (data.escalated && data.conversationId) {
         const escalationMessage: Message = {
           id: messages.length + 2,
           type: 'bot',
-          text: `${data.message}\n\n🎫 Ticket #${data.ticketNumber} created.\n\nRedirecting you to live support chat...`,
+          text: `${data.message}\n\n🎫 Ticket #${data.ticketNumber} created. Our support team has been notified and will respond shortly.\n\nYou can continue chatting here or [click here to view in full chat →](/chat/${data.conversationId})`,
           timestamp: new Date(),
           isEscalation: true
         };
         setMessages(prev => [...prev, escalationMessage]);
-
-        // Redirect to live helpdesk after 2 seconds
-        setTimeout(() => {
-          setLocation(`/support/chat/${data.conversationId}`);
-        }, 2000);
+        // Stay in HelpOS mini chat - user can manually navigate to live chat if desired
         return;
       }
 
@@ -199,11 +195,14 @@ export function FloatingSupportChat() {
           <div className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-4 py-3 rounded-t-2xl flex items-center justify-between shadow-md">
             <div className="flex items-center space-x-3">
               <div className="bg-white rounded-full p-1.5">
-                <Sparkles className="w-5 h-5 text-blue-500" />
+                <Bot className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <h2 className="font-bold text-sm">AutoForce™ AI Support</h2>
-                <div className="flex items-center space-x-1.5">
+                <h2 className="font-bold text-sm">
+                  HelpOS<span className="text-[0.6rem] align-super">™</span> <span className="text-xs font-normal">(Bot)</span>
+                </h2>
+                <p className="text-xs text-blue-50">AutoForce™ Support Assistant</p>
+                <div className="flex items-center space-x-1.5 mt-0.5">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span className="text-xs text-blue-50">Online</span>
                 </div>

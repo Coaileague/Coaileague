@@ -11,6 +11,7 @@ import { PeekRailNav } from "@/components/peek-rail-nav";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
+import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { TransitionProvider } from "@/contexts/transition-context";
 import { LoadingManagerProvider } from "@/contexts/loading-manager";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -119,7 +120,7 @@ import Error404 from "@/pages/error-404";
 import Error500 from "@/pages/error-500";
 import IntegrationsPage from "@/pages/integrations-page";
 import OversightHub from "@/pages/oversight-hub";
-import { FloatingChatButton } from "@/components/floating-chat-button";
+import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Sparkles } from "lucide-react";
@@ -342,9 +343,6 @@ function AppContent() {
                 <Route path="/dashboard">
                   {isMobile ? <MobileDashboard /> : <Dashboard />}
                 </Route>
-                <Route path="/root-admin-dashboard">
-                  <Redirect to="/dashboard" />
-                </Route>
                 <Route path="/schedule" component={SmartScheduleOS} />
                 <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
@@ -485,23 +483,25 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <LoadingManagerProvider>
-          <ThemeProvider defaultTheme="dark">
-            <WorkspaceThemeProvider>
-              <TransitionProvider>
-              <AppBootOverlay />
-              <TooltipProvider>
-                <ResponsiveAppFrame>
-                  <AppContent />
-                  <FloatingChatButton />
-                  <ReenableChatButton />
-                  <Toaster />
-                </ResponsiveAppFrame>
-              </TooltipProvider>
-              </TransitionProvider>
-            </WorkspaceThemeProvider>
-          </ThemeProvider>
-        </LoadingManagerProvider>
+        <OverlayControllerProvider>
+          <LoadingManagerProvider>
+            <ThemeProvider defaultTheme="dark">
+              <WorkspaceThemeProvider>
+                <TransitionProvider>
+                <AppBootOverlay />
+                <TooltipProvider>
+                  <ResponsiveAppFrame>
+                    <AppContent />
+                    <FloatingSupportChat />
+                    <ReenableChatButton />
+                    <Toaster />
+                  </ResponsiveAppFrame>
+                </TooltipProvider>
+                </TransitionProvider>
+              </WorkspaceThemeProvider>
+            </ThemeProvider>
+          </LoadingManagerProvider>
+        </OverlayControllerProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
