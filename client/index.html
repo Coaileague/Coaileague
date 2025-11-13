@@ -386,15 +386,16 @@
         var currentMessage = 0;
         var isComplete = false;
         
-        // Progress milestones with variable durations
+        // Progress milestones with variable durations (slowed for better UX)
         var milestones = [
-          { target: 15, duration: 400 + Math.random() * 200 },
-          { target: 32, duration: 500 + Math.random() * 250 },
-          { target: 48, duration: 550 + Math.random() * 200 },
-          { target: 63, duration: 500 + Math.random() * 300 },
-          { target: 78, duration: 450 + Math.random() * 250 },
-          { target: 89, duration: 600 + Math.random() * 200 },
-          { target: 96, duration: 550 + Math.random() * 300 }
+          { target: 12, duration: 600 + Math.random() * 300 },
+          { target: 25, duration: 700 + Math.random() * 350 },
+          { target: 38, duration: 750 + Math.random() * 300 },
+          { target: 52, duration: 700 + Math.random() * 400 },
+          { target: 65, duration: 650 + Math.random() * 350 },
+          { target: 78, duration: 700 + Math.random() * 300 },
+          { target: 88, duration: 800 + Math.random() * 300 },
+          { target: 96, duration: 750 + Math.random() * 400 }
         ];
         
         var currentMilestone = 0;
@@ -421,8 +422,8 @@
           }
         }
         
-        // Start smooth progression
-        setTimeout(smoothProgress, 150);
+        // Start smooth progression (delayed for better mobile UX)
+        setTimeout(smoothProgress, 300);
         
         // Complete loading when React is ready
         window.addEventListener('load', function() {
@@ -434,7 +435,7 @@
           
           function finalProgress() {
             if (currentProgress < 100) {
-              currentProgress += 2;
+              currentProgress += 1; // Slower increment (was 2)
               barFill.style.width = currentProgress + '%';
               percentageText.textContent = Math.floor(currentProgress) + '%';
               requestAnimationFrame(finalProgress);
@@ -443,19 +444,20 @@
               percentageText.textContent = '100%';
               messageText.textContent = 'Ready!';
               
+              // Longer delay before fadeout for satisfying completion
               setTimeout(function() {
                 var loader = document.getElementById('initial-loader');
                 if (loader) {
                   loader.classList.add('loaded');
                   setTimeout(function() {
                     loader.remove();
-                  }, 400);
+                  }, 600); // Increased fade duration
                 }
-              }, 250);
+              }, 500); // Increased hold at 100%
             }
           }
           
-          setTimeout(finalProgress, 100);
+          setTimeout(finalProgress, 200); // Slight delay before final push
         });
       })();
     </script>
