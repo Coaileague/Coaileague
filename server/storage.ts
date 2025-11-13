@@ -1754,7 +1754,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(helposAiTranscriptEntries)
       .where(eq(helposAiTranscriptEntries.sessionId, sessionId))
-      .orderBy(helposAiTranscriptEntries.timestamp);
+      .orderBy(helposAiTranscriptEntries.createdAt);
   }
   
   // ============================================================================
