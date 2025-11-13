@@ -11277,6 +11277,26 @@ Keep it professional, actionable, and under 250 words.`;
     await getPlatformStats(req, res);
   });
 
+  // Universal analytics stats for dashboard (works for both workspace and platform users)
+  app.get('/api/analytics/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getAnalyticsStats } = await import("./services/analyticsStats");
+      const bustCache = req.query.bust === 'true';
+      
+      // Determine scope: platform staff get platform-wide stats, others get workspace-scoped
+      const isPlatformStaff = (req.user as any)?.platformRole && 
+        ['root_admin', 'sysop', 'deputy_admin', 'support_agent', 'support_manager'].includes((req.user as any).platformRole);
+      
+      const workspaceId = isPlatformStaff ? null : (req.user as any)?.currentWorkspaceId || null;
+      
+      const stats = await getAnalyticsStats(workspaceId, bustCache);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching analytics stats:", error);
+      res.status(500).json({ message: "Failed to fetch analytics statistics" });
+    }
+  });
+
   // Personal staff data (assigned tickets, etc.)
   app.get('/api/platform/personal-data', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {

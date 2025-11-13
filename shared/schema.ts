@@ -9640,3 +9640,50 @@ export const insertTombstoneSchema = createInsertSchema(tombstones).omit({
 
 export type InsertTombstone = z.infer<typeof insertTombstoneSchema>;
 export type Tombstone = typeof tombstones.$inferSelect;
+
+// ============================================================================
+// ANALYTICS STATS SCHEMA - Universal Dashboard Metrics
+// ============================================================================
+
+export const analyticsStatsSchema = z.object({
+  summary: z.object({
+    totalWorkspaces: z.number(),
+    totalCustomers: z.number(),
+    activeEmployees: z.number(),
+    monthlyRevenue: z.object({
+      amount: z.number(),
+      currency: z.string().default('USD'),
+      previousMonth: z.number(),
+      delta: z.number(),
+    }),
+    activeSubscriptions: z.number(),
+  }),
+  workspace: z.object({
+    id: z.string(),
+    name: z.string(),
+    tier: z.string(),
+    activeEmployees: z.number(),
+    activeClients: z.number(),
+    upcomingShifts: z.number(),
+  }).optional(),
+  support: z.object({
+    openTickets: z.number(),
+    unresolvedEscalations: z.number(),
+    avgFirstResponseHours: z.number(),
+    liveChats: z.object({
+      active: z.number(),
+      staffOnline: z.number(),
+    }),
+  }),
+  system: z.object({
+    cpu: z.number(),
+    memory: z.number(),
+    database: z.object({
+      status: z.enum(['healthy', 'degraded']),
+    }),
+    uptimeSeconds: z.number(),
+    updatedAt: z.string(),
+  }),
+});
+
+export type AnalyticsStats = z.infer<typeof analyticsStatsSchema>;

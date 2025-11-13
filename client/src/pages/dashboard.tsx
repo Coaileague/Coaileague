@@ -79,8 +79,37 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  // Fetch workspace stats
-  const { data: stats } = useQuery({
+  // Fetch workspace stats with typed response
+  const { data: stats } = useQuery<{
+    summary: {
+      totalWorkspaces: number;
+      totalCustomers: number;
+      activeEmployees: number;
+      monthlyRevenue: { amount: number; currency: string; previousMonth: number; delta: number };
+      activeSubscriptions: number;
+    };
+    workspace?: {
+      id: string;
+      name: string;
+      tier: string;
+      activeEmployees: number;
+      activeClients: number;
+      upcomingShifts: number;
+    };
+    support: {
+      openTickets: number;
+      unresolvedEscalations: number;
+      avgFirstResponseHours: number;
+      liveChats: { active: number; staffOnline: number };
+    };
+    system: {
+      cpu: number;
+      memory: number;
+      database: { status: string };
+      uptimeSeconds: number;
+      updatedAt: string;
+    };
+  }>({
     queryKey: ['/api/analytics/stats'],
     enabled: isAuthenticated,
   });
@@ -132,11 +161,11 @@ export default function Dashboard() {
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      beginLoading({ scenario: 'dataSync' });
+      const loadingId = beginLoading({ scenario: 'dataSync' });
       try {
         return await apiRequest(`/api/notifications/${id}/read`, 'PATCH');
       } finally {
-        endLoading();
+        endLoading(loadingId);
       }
     },
     onSuccess: () => {
@@ -147,11 +176,11 @@ export default function Dashboard() {
   // Delete notification
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
-      beginLoading({ scenario: 'dataSync' });
+      const loadingId = beginLoading({ scenario: 'dataSync' });
       try {
         return await apiRequest(`/api/notifications/${id}`, 'DELETE');
       } finally {
-        endLoading();
+        endLoading(loadingId);
       }
     },
     onSuccess: () => {
@@ -162,11 +191,11 @@ export default function Dashboard() {
   // Mark all as read
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      beginLoading({ scenario: 'dataSync' });
+      const loadingId = beginLoading({ scenario: 'dataSync' });
       try {
         return await apiRequest('/api/notifications/mark-all-read', 'POST');
       } finally {
-        endLoading();
+        endLoading(loadingId);
       }
     },
     onSuccess: () => {
@@ -196,9 +225,9 @@ export default function Dashboard() {
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
-  const totalEmployees = (stats as any)?.totalEmployees || 0;
-  const activeToday = (stats as any)?.activeToday || 0;
-  const totalRevenue = (stats as any)?.totalRevenue || 0;
+  const totalEmployees = stats?.summary.activeEmployees || 0;
+  const activeToday = allEmployees?.filter((emp: any) => emp.status === 'active').length || 0;
+  const totalRevenue = stats?.summary.monthlyRevenue.amount || 0;
 
   // Use WebSocket unread count if available
   const unreadCount = isConnected && wsUnreadCount !== undefined 
@@ -385,7 +414,9 @@ export default function Dashboard() {
               </div>
             </div>
             <p className="text-muted-foreground text-sm mb-2">Total Revenue</p>
-            <p className="text-4xl font-bold text-foreground">${(totalRevenue / 1000).toFixed(1)}K</p>
+            <p className="text-4xl font-bold text-foreground">
+              ${totalRevenue >= 1000 ? `${(totalRevenue / 1000).toFixed(1)}K` : totalRevenue.toFixed(2)}
+            </p>
           </div>
         </div>
 
