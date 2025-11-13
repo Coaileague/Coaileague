@@ -1,0 +1,396 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User, X, MessageCircle, Minimize2 } from 'lucide-react';
+
+const AISupportChat = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      type: 'bot',
+      text: "👋 Hi! I'm your AutoForce™ Support Assistant. I'm here to help you resolve issues quickly. What can I help you with today?",
+      timestamp: new Date()
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [conversationStage, setConversationStage] = useState('initial');
+  const [userIssue, setUserIssue] = useState(null);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (!isOpen && messages.length > 1) {
+      setUnreadCount(prev => prev + 1);
+    }
+  }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+    }
+  }, [isOpen]);
+
+  const knowledgeBase = {
+    login: {
+      keywords: ['login', 'password', 'sign in', 'access', 'forgot password', 'cant log in', "can't log in"],
+      solutions: [
+        "Let me help you with login issues. First, let's try these steps:",
+        "1. Clear your browser cache and cookies",
+        "2. Try using an incognito/private window",
+        "3. Make sure Caps Lock is off",
+        "4. Click 'Forgot Password?' to reset your password",
+        "\nDid any of these steps help resolve your issue?"
+      ]
+    },
+    schedule: {
+      keywords: ['schedule', 'shift', 'calendar', 'time off', 'availability', 'roster'],
+      solutions: [
+        "I can help with scheduling! Here's how:",
+        "📅 To view your schedule: Go to Dashboard → My Schedule",
+        "🔄 To request a shift swap: Click on the shift → 'Request Swap'",
+        "🏖️ To request time off: Navigate to Time Off → New Request",
+        "\nIs there a specific scheduling action you need help with?"
+      ]
+    },
+    timesheet: {
+      keywords: ['timesheet', 'clock in', 'clock out', 'hours', 'time tracking', 'punch'],
+      solutions: [
+        "Let me help you with time tracking:",
+        "⏰ To clock in/out: Use the Clock In button on your dashboard or mobile app",
+        "📊 To view timesheets: Go to Time Tracking → My Timesheets",
+        "✏️ To correct entries: Click on the entry → 'Request Correction'",
+        "\nAre you having trouble with a specific time tracking feature?"
+      ]
+    },
+    employee: {
+      keywords: ['add employee', 'new employee', 'user', 'staff', 'team member', 'remove employee'],
+      solutions: [
+        "For employee management:",
+        "➕ To add an employee: Go to Employees → Add New Employee",
+        "✏️ To edit employee info: Find employee → Click Edit",
+        "🔐 To manage permissions: Employee Profile → Roles & Permissions",
+        "\nWhat specific employee management task do you need help with?"
+      ]
+    },
+    reports: {
+      keywords: ['report', 'analytics', 'export', 'data', 'dashboard', 'metrics'],
+      solutions: [
+        "I can guide you through reporting:",
+        "📈 To generate reports: Go to Reports → Select Report Type",
+        "💾 To export data: Open report → Click 'Export' → Choose format (PDF/Excel)",
+        "📊 Custom reports: Reports → Create Custom Report",
+        "\nWhich type of report are you looking for?"
+      ]
+    }
+  };
+
+  const detectIssueCategory = (text) => {
+    const lowerText = text.toLowerCase();
+    for (const [category, data] of Object.entries(knowledgeBase)) {
+      if (data.keywords.some(keyword => lowerText.includes(keyword))) {
+        return category;
+      }
+    }
+    return null;
+  };
+
+  const generateBotResponse = async (userMessage) => {
+    setIsTyping(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const category = detectIssueCategory(userMessage);
+    let response = '';
+
+    if (conversationStage === 'initial' && category) {
+      setUserIssue(category);
+      setConversationStage('troubleshooting');
+      response = knowledgeBase[category].solutions.join('\n');
+    } else if (conversationStage === 'troubleshooting') {
+      const lowerMessage = userMessage.toLowerCase();
+      
+      if (lowerMessage.includes('yes') || lowerMessage.includes('worked') || lowerMessage.includes('fixed') || lowerMessage.includes('resolved')) {
+        response = "🎉 Great! I'm glad I could help resolve your issue. Is there anything else you need assistance with?";
+        setConversationStage('resolved');
+        setAttemptCount(0);
+      } else if (lowerMessage.includes('no') || lowerMessage.includes('still') || lowerMessage.includes('not working')) {
+        setAttemptCount(prev => prev + 1);
+        
+        if (attemptCount >= 2) {
+          response = "I understand this issue needs more attention. Let me connect you with a live support agent who can provide personalized assistance.\n\n🔄 Preparing handoff to human agent...\n\n**Conversation Summary for Agent:**\n- Issue Category: " + (userIssue || 'General Support') + "\n- Troubleshooting Attempts: " + (attemptCount + 1) + "\n- Status: Unresolved\n\n**Recommended Actions:**\n- Review account settings\n- Check for system-wide issues\n- Consider screenshare session\n\nAn agent will be with you shortly!";
+          setConversationStage('escalated');
+        } else {
+          response = "I see. Let me try another approach:\n\n" +
+            "• Have you tried accessing from a different device or browser?\n" +
+            "• Are you getting any specific error messages?\n" +
+            "• When did this issue first start?\n\n" +
+            "Please share any additional details that might help me assist you better.";
+        }
+      } else {
+        response = "Thanks for that information. Could you tell me more about what's happening? For example:\n" +
+          "• What exactly happens when you try?\n" +
+          "• Any error messages you're seeing?\n" +
+          "• Has this worked before?";
+      }
+    } else if (conversationStage === 'resolved') {
+      const newCategory = detectIssueCategory(userMessage);
+      if (newCategory) {
+        setUserIssue(newCategory);
+        setConversationStage('troubleshooting');
+        setAttemptCount(0);
+        response = knowledgeBase[newCategory].solutions.join('\n');
+      } else if (lowerMessage.includes('no') || lowerMessage.includes('thank')) {
+        response = "You're welcome! Feel free to reach out anytime you need help. Have a great day! 😊";
+      } else {
+        response = "I'd be happy to help with that! Could you please describe the issue you're experiencing?";
+        setConversationStage('initial');
+      }
+    } else {
+      response = "I want to make sure I understand your issue correctly. Are you having trouble with:\n\n" +
+        "🔐 Login/Access\n" +
+        "📅 Scheduling\n" +
+        "⏰ Time Tracking\n" +
+        "👥 Employee Management\n" +
+        "📊 Reports/Analytics\n" +
+        "🆘 Something else\n\n" +
+        "Please let me know which area you need help with!";
+    }
+
+    setIsTyping(false);
+    
+    const botMessage = {
+      id: messages.length + 1,
+      type: 'bot',
+      text: response,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, botMessage]);
+  };
+
+  const handleSend = async () => {
+    if (inputValue.trim() === '') return;
+
+    const userMessage = {
+      id: messages.length + 1,
+      type: 'user',
+      text: inputValue,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+
+    await generateBotResponse(inputValue);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const quickActions = [
+    { icon: "🔐", text: "Login Help", value: "I can't log in to my account" },
+    { icon: "📅", text: "View Schedule", value: "How do I view my schedule?" },
+    { icon: "⏰", text: "Clock In/Out", value: "Help with time tracking" },
+    { icon: "📊", text: "Generate Report", value: "I need help creating a report" }
+  ];
+
+  return (
+    <>
+      {/* Chat Bubble Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-50 group"
+          aria-label="Open chat"
+        >
+          <MessageCircle className="w-7 h-7" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+              {unreadCount}
+            </span>
+          )}
+          <span className="absolute right-full mr-3 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Need help? Chat with us!
+          </span>
+        </button>
+      )}
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div className={`fixed bottom-6 right-6 bg-white rounded-2xl shadow-2xl z-50 flex flex-col transition-all duration-300 ${
+          isMinimized ? 'h-16 w-80' : 'h-[600px] w-96 max-w-[calc(100vw-3rem)]'
+        } max-h-[calc(100vh-3rem)]`}
+        style={{
+          '@media (max-width: 640px)': {
+            width: 'calc(100vw - 2rem)',
+            height: isMinimized ? '4rem' : 'calc(100vh - 2rem)',
+            bottom: '1rem',
+            right: '1rem'
+          }
+        }}>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 rounded-t-2xl flex items-center justify-between shadow-md">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white rounded-full p-1.5">
+                <Bot className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-sm">AutoForce™ Support</h2>
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-100">Online</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setIsMinimized(!isMinimized)}
+                className="hover:bg-blue-500 p-1.5 rounded-lg transition-colors"
+                aria-label="Minimize"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="hover:bg-blue-500 p-1.5 rounded-lg transition-colors"
+                aria-label="Close chat"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {!isMinimized && (
+            <>
+              {/* Messages Container */}
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gray-50">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`flex items-start space-x-2 max-w-[85%] ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                      <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${
+                        message.type === 'user' ? 'bg-blue-600' : 'bg-gradient-to-br from-purple-500 to-blue-500'
+                      }`}>
+                        {message.type === 'user' ? (
+                          <User className="w-4 h-4 text-white" />
+                        ) : (
+                          <Bot className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <div className={`rounded-2xl px-3 py-2 ${
+                        message.type === 'user' 
+                          ? 'bg-blue-600 text-white rounded-tr-sm' 
+                          : 'bg-white shadow-sm rounded-tl-sm'
+                      }`}>
+                        <p className="whitespace-pre-line text-sm leading-relaxed">{message.text}</p>
+                        <span className={`text-xs mt-1 block ${message.type === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                        <div className="flex space-x-1.5">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Quick Actions */}
+              {messages.length === 1 && (
+                <div className="px-4 pb-3 bg-gray-50">
+                  <p className="text-xs text-gray-600 mb-2 font-medium">Quick Actions:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {quickActions.map((action, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setInputValue(action.value);
+                        }}
+                        className="bg-white hover:bg-blue-50 border border-gray-200 rounded-lg p-2 text-left transition-all hover:border-blue-300 hover:shadow-sm"
+                      >
+                        <span className="text-lg mb-0.5 block">{action.icon}</span>
+                        <span className="text-xs font-medium text-gray-700">{action.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Input Area */}
+              <div className="bg-white border-t border-gray-200 px-4 py-3 rounded-b-2xl">
+                <div className="flex items-end space-x-2">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type your message..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={inputValue.trim() === ''}
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Powered by AI • Typically replies in seconds
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Mobile Responsive Styles */}
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .fixed.bottom-6.right-6 {
+            width: calc(100vw - 2rem);
+            right: 1rem;
+            left: 1rem;
+          }
+          .fixed.bottom-6.right-6.h-\\[600px\\] {
+            height: calc(100vh - 2rem);
+          }
+        }
+      `}</style>
+    </>
+  );
+};
+
+export default AISupportChat;
