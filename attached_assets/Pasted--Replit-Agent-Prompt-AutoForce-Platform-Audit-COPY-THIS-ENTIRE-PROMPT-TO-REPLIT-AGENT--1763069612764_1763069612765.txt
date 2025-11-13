@@ -1,0 +1,559 @@
+# Replit Agent Prompt - AutoForce™ Platform Audit
+
+## 🎯 COPY THIS ENTIRE PROMPT TO REPLIT AGENT
+
+---
+
+```
+I need you to audit my AutoForce™ workforce management SaaS platform at:
+https://work-force-os-DrillConsult360.replit.app
+
+PLATFORM OVERVIEW:
+AutoForce™ is an autonomous workforce management system that uses AI (Gemini) to automate scheduling, payroll, and invoicing with a graduated confidence scoring system (0-100%). The system starts with human oversight and graduates to full autonomy at 95%+ confidence.
+
+CORE FEATURES TO AUDIT:
+1. Autonomous Scheduling with Employee Scoring
+2. AI Payroll Processing with Guardrails
+3. AI Invoicing Automation
+4. Customer Subscription & Onboarding Flow
+5. AI Confidence Scoring & Handoff System
+
+---
+
+PLEASE ANALYZE EACH FEATURE AND IDENTIFY GAPS:
+
+===========================================
+FEATURE 1: AUTONOMOUS SCHEDULING
+===========================================
+
+Current Implementation (what I have):
+- Employee database
+- Schedule creation interface
+- [DESCRIBE WHAT EXISTS]
+
+What I Need:
+✓ AI-powered schedule optimization that considers:
+  - Employee availability and preferences
+  - Skill matching for shifts
+  - Labor cost optimization
+  - Overtime prevention
+  - Labor law compliance (breaks, max hours)
+  
+✓ Conflict detection and resolution:
+  - Double-booking prevention
+  - Understaffing alerts
+  - Overstaffing optimization
+  
+✓ Employee scoring system that tracks:
+  - Attendance reliability (% on-time)
+  - Shift completion rate
+  - Performance ratings
+  - Skill certifications
+  - Seniority/experience
+  
+✓ AI confidence scoring for scheduling decisions:
+  - <75%: Flag for human approval
+  - 75-94%: AI suggests, human approves
+  - 95-100%: Fully autonomous
+  
+GAPS TO FILL:
+- [ ] What's missing from the scheduling logic?
+- [ ] Is the employee scoring system complete?
+- [ ] Are AI guardrails properly implemented?
+- [ ] Can the system handle shift swaps, time-off requests?
+- [ ] Is there real-time conflict detection?
+- [ ] Does it calculate labor costs accurately?
+
+ACTION NEEDED: Audit the scheduling module and list every missing component with specific implementation steps.
+
+===========================================
+FEATURE 2: AI PAYROLL PROCESSING
+===========================================
+
+Current Implementation (what I have):
+- Employee hours tracking
+- [DESCRIBE WHAT EXISTS]
+
+What I Need:
+✓ Automated payroll calculation:
+  - Regular hours calculation
+  - Overtime calculation (1.5x, 2x rates)
+  - Holiday pay
+  - Bonus/commission tracking
+  - Deductions (taxes, benefits, garnishments)
+  
+✓ Tax withholding calculation:
+  - Federal income tax (W-4 based)
+  - State income tax (all 50 states)
+  - Social Security (6.2%)
+  - Medicare (1.45%)
+  - State unemployment tax
+  
+✓ Compliance validation:
+  - Minimum wage check (federal + state)
+  - Overtime law compliance (FLSA)
+  - Child labor law checks
+  - Paid sick leave requirements
+  
+✓ AI guardrails:
+  - Flag payroll changes > $10,000
+  - Validate against historical averages
+  - Detect anomalies (sudden spikes)
+  - Require approval for wage rate changes
+  
+✓ Integration with payroll providers:
+  - Gusto API connection
+  - ADP integration
+  - QuickBooks Payroll sync
+  
+GAPS TO FILL:
+- [ ] Is tax calculation accurate for all states?
+- [ ] Are overtime rules properly coded?
+- [ ] Is there validation against labor laws?
+- [ ] Can it handle complex deductions?
+- [ ] Does it integrate with external payroll systems?
+- [ ] Is there an audit trail for every payroll run?
+
+ACTION NEEDED: Review payroll processing logic and identify every missing calculation, validation, and integration point.
+
+===========================================
+FEATURE 3: AI INVOICING AUTOMATION
+===========================================
+
+Current Implementation (what I have):
+- Invoice creation
+- [DESCRIBE WHAT EXISTS]
+
+What I Need:
+✓ Automated invoice generation:
+  - Track billable hours/services
+  - Calculate line items
+  - Apply tax rates by jurisdiction
+  - Add late fees automatically
+  - Generate PDF invoices
+  
+✓ Usage-based billing for AI services:
+  - Count AI decisions (scheduling, payroll, etc.)
+  - Track human oversight hours
+  - Measure cost savings delivered
+  - Calculate commission on savings
+  
+✓ Payment processing:
+  - Stripe integration
+  - Auto-charge on due date
+  - Failed payment retry (3 attempts)
+  - Dunning emails
+  - Account suspension logic
+  
+✓ Invoice delivery:
+  - Email invoices automatically
+  - Customer portal for invoice history
+  - Downloadable PDFs
+  - Payment receipts
+  
+GAPS TO FILL:
+- [ ] Is usage tracking implemented?
+- [ ] Can it handle complex pricing tiers?
+- [ ] Is Stripe integration complete?
+- [ ] Are invoices automatically sent?
+- [ ] Is there tax calculation by location?
+- [ ] Can customers view invoice history?
+
+ACTION NEEDED: Audit invoicing system and list missing billing logic, payment processing, and delivery mechanisms.
+
+===========================================
+FEATURE 4: CUSTOMER ONBOARDING FLOW
+===========================================
+
+Current Implementation (what I have):
+- Sign-up page
+- [DESCRIBE WHAT EXISTS]
+
+What I Need:
+✓ Multi-step onboarding wizard:
+  Step 1: Account creation (email, password, company info)
+  Step 2: Company setup (size, industry, time zone)
+  Step 3: Employee import (CSV upload or manual entry)
+  Step 4: Schedule configuration (business hours, shift types)
+  Step 5: Payroll settings (pay frequency, tax info)
+  Step 6: AI preferences (confidence thresholds, approval workflows)
+  Step 7: Payment method (Stripe subscription)
+  Step 8: Test run (sample AI decisions for review)
+  
+✓ Subscription management:
+  - Choose pricing tier (Starter/Pro/Enterprise)
+  - Enter payment details
+  - Start free trial (14 days)
+  - Upgrade/downgrade plans
+  - Cancel subscription
+  
+✓ User roles & permissions:
+  - Admin (full access)
+  - Manager (approve AI decisions, view reports)
+  - Employee (view schedule, request time-off)
+  - Agent (customer support access)
+  
+✓ Email verification & notifications:
+  - Welcome email
+  - Email confirmation link
+  - Onboarding progress emails
+  - Setup completion notification
+  
+GAPS TO FILL:
+- [ ] Is there a complete onboarding wizard?
+- [ ] Can customers import employees easily?
+- [ ] Is subscription management functional?
+- [ ] Are user roles properly implemented?
+- [ ] Does it send onboarding emails?
+- [ ] Is there a trial period mechanism?
+
+ACTION NEEDED: Review customer onboarding and identify every missing step, feature, and automation.
+
+===========================================
+FEATURE 5: AI CONFIDENCE SCORING & HANDOFF
+===========================================
+
+Current Implementation (what I have):
+- Basic AI decision tracking
+- [DESCRIBE WHAT EXISTS]
+
+What I Need:
+✓ Confidence score calculation (0-100%):
+  Formula: Historical Accuracy (40%) + Compliance Rate (30%) + 
+           Client Satisfaction (20%) + System Stability (10%)
+  
+✓ Real-time confidence tracking:
+  - Per customer confidence score
+  - Per decision type confidence
+  - Trending over time (improving or degrading)
+  
+✓ Graduated autonomy levels:
+  - 0-74%: Training Phase (1% human approval)
+  - 75-94%: Supervised Phase (10% spot checks)
+  - 95-100%: Autonomous Phase (post-execution audits)
+  
+✓ Handoff system:
+  - AI detects low confidence decision
+  - Generates summary of conversation/issue
+  - Recommends actions for human review
+  - Routes to appropriate approver
+  - Tracks human override decisions
+  - Learns from corrections
+  
+✓ Dashboard display:
+  - Show current confidence score
+  - Progress bar to next autonomy level
+  - Days until graduation
+  - Recent AI decisions (approved/rejected)
+  - Human override statistics
+  
+GAPS TO FILL:
+- [ ] Is confidence scoring formula implemented?
+- [ ] Does it track accuracy over time?
+- [ ] Are autonomy levels properly enforced?
+- [ ] Is there a handoff summary generator?
+- [ ] Can humans override AI decisions?
+- [ ] Does AI learn from corrections?
+- [ ] Is there a confidence dashboard?
+
+ACTION NEEDED: Audit AI scoring and handoff system. List every missing component of the confidence tracking and graduated autonomy system.
+
+===========================================
+CROSS-CUTTING CONCERNS
+===========================================
+
+✓ Database Schema:
+- [ ] Are all tables properly designed?
+- [ ] Are relationships correctly defined?
+- [ ] Are indexes optimized for queries?
+- [ ] Is there proper data validation?
+
+✓ API Architecture:
+- [ ] Are REST endpoints properly structured?
+- [ ] Is there proper error handling?
+- [ ] Are responses consistent?
+- [ ] Is there rate limiting?
+
+✓ Authentication & Security:
+- [ ] Is JWT authentication implemented?
+- [ ] Are passwords properly hashed?
+- [ ] Is there role-based access control?
+- [ ] Are API keys secured?
+
+✓ AI Integration:
+- [ ] Is Gemini API properly integrated?
+- [ ] Are guardrails enforced on all decisions?
+- [ ] Is there proper error handling?
+- [ ] Are API costs being tracked?
+
+✓ Testing:
+- [ ] Are there unit tests for core logic?
+- [ ] Are integration tests covering API endpoints?
+- [ ] Is there end-to-end testing?
+
+===========================================
+DELIVERABLES I NEED FROM YOU
+===========================================
+
+1. COMPREHENSIVE GAP ANALYSIS:
+   - List every missing feature by category
+   - Prioritize: Critical, High, Medium, Low
+   - Estimate complexity: Simple (1-2 days), Medium (3-5 days), Complex (1-2 weeks)
+
+2. IMPLEMENTATION ROADMAP:
+   - Week-by-week plan to fill all gaps
+   - Dependencies between features
+   - Suggested order of implementation
+
+3. CODE REVIEW:
+   - Review existing code quality
+   - Identify bugs and security issues
+   - Suggest refactoring opportunities
+
+4. DATABASE SCHEMA REVIEW:
+   - Show current schema
+   - Recommend improvements
+   - Provide migration scripts
+
+5. TESTING STRATEGY:
+   - What needs to be tested
+   - Test coverage recommendations
+   - Automated testing setup
+
+6. DEPLOYMENT CHECKLIST:
+   - What's needed before production launch
+   - Environment variable configuration
+   - Monitoring and logging setup
+
+===========================================
+OUTPUT FORMAT I WANT
+===========================================
+
+Please provide your analysis in this format:
+
+## FEATURE 1: AUTONOMOUS SCHEDULING
+### ✅ What's Working:
+- [List implemented features]
+
+### ❌ Critical Gaps (Must Fix Before Launch):
+- [ ] Gap 1: Description
+  - Why it's critical
+  - Implementation steps
+  - Estimated time: X days
+  
+### ⚠️ Important Gaps (Should Fix Soon):
+- [ ] Gap 2: Description
+  
+### 💡 Nice-to-Have Improvements:
+- [ ] Enhancement 1: Description
+
+---
+
+Repeat this format for ALL 5 features + cross-cutting concerns.
+
+Then provide:
+
+## 🚀 30-DAY LAUNCH PLAN
+Week 1: [Tasks]
+Week 2: [Tasks]
+Week 3: [Tasks]
+Week 4: [Tasks]
+
+## 💻 CODE CHANGES NEEDED
+File: /path/to/file.js
+Change: [Description]
+```javascript
+// Code to add/modify
+```
+
+===========================================
+ADDITIONAL CONTEXT
+===========================================
+
+Target Market: Small to medium businesses (20-500 employees)
+Industries: Hospitality, Healthcare, Retail, Construction
+
+Key Differentiator: Graduated AI autonomy system that builds trust over time
+
+Revenue Model: 
+- Usage-based pricing per AI decision
+- Subscription tiers (Starter $499, Pro $1,299, Enterprise custom)
+- Commission on cost savings delivered (10-15%)
+
+Compliance Requirements:
+- FLSA (Fair Labor Standards Act)
+- GDPR (data privacy)
+- SOC 2 (security standards)
+- State labor laws (all 50 states)
+
+Tech Stack:
+- Frontend: [SPECIFY: React, Vue, etc.]
+- Backend: [SPECIFY: Node.js, Python, etc.]
+- Database: [SPECIFY: PostgreSQL, MongoDB, etc.]
+- AI: Gemini API
+- Hosting: Replit
+
+===========================================
+START THE AUDIT NOW
+===========================================
+
+Please begin by:
+1. Analyzing the codebase at https://work-force-os-DrillConsult360.replit.app
+2. Reviewing all files and database schema
+3. Testing functionality of each feature
+4. Generating the comprehensive gap analysis
+
+I need this completed ASAP so I can start filling gaps and launch to customers within 30 days.
+
+Be thorough, be specific, and prioritize ruthlessly. I need to know exactly what's missing and what to build next.
+```
+
+---
+
+## 📋 SUPPORTING DOCUMENTS TO PROVIDE REPLIT
+
+After Replit Agent completes the audit, provide these additional context documents:
+
+### **Document 1: Sample Data**
+```
+Provide sample:
+- 10 employee records
+- 1 week of schedule data
+- 1 payroll period of hours
+- 5 customer profiles
+
+This helps Replit test functionality with realistic data
+```
+
+### **Document 2: Business Rules**
+```
+SCHEDULING RULES:
+- Minimum 8 hours between shifts
+- Maximum 40 hours per week (before overtime)
+- No more than 6 consecutive days
+- Required break: 30 min per 6 hours worked
+
+PAYROLL RULES:
+- Overtime: 1.5x after 40 hours/week
+- Double-time: Sundays and holidays
+- Minimum wage: Federal $7.25 (or state minimum if higher)
+- Pay frequency: Bi-weekly (every 2 weeks)
+
+BILLING RULES:
+- Base fee: $499/month
+- AI decisions: $0.10 each
+- Overage charges apply after tier limits
+- Invoice due: 15 days after issue date
+```
+
+### **Document 3: Current Tech Stack**
+```
+Tell Replit exactly what you're using:
+- Frontend framework: [React/Vue/Vanilla JS]
+- Backend: [Node.js/Python/Ruby]
+- Database: [PostgreSQL/MySQL/MongoDB]
+- Authentication: [JWT/OAuth/Sessions]
+- Current integrations: [List any]
+```
+
+---
+
+## 🎯 WHAT TO DO AFTER REPLIT RESPONDS
+
+### **Step 1: Prioritize Gaps**
+```
+Review Replit's gap analysis and categorize:
+
+MUST HAVE (Block launch):
+- Payment processing
+- User authentication
+- Basic scheduling
+- Payroll calculation
+
+SHOULD HAVE (Launch without, add week 2):
+- Advanced AI features
+- Integrations
+- Mobile responsive
+
+NICE TO HAVE (Backlog):
+- Advanced analytics
+- White-label options
+```
+
+### **Step 2: Create Implementation Tickets**
+```
+For each gap, create a task:
+- Title: "Implement Stripe subscription management"
+- Description: Replit's recommendation
+- Priority: Critical
+- Estimate: 3 days
+- Assignee: You or contractor
+```
+
+### **Step 3: Ask Replit to Build**
+```
+After prioritizing, ask Replit Agent:
+
+"Based on your gap analysis, please implement the following in order of priority:
+
+1. [Critical Gap #1]
+   - Implement the code changes you recommended
+   - Add necessary database tables
+   - Create API endpoints
+   - Add frontend UI
+
+2. [Critical Gap #2]
+   - [Same detailed request]
+
+Build one feature at a time, test it, then move to the next.
+Start with #1 now."
+```
+
+---
+
+## 🚀 EXPECTED TIMELINE
+
+### **If Replit Agent Works Well:**
+- Gap Analysis: 1-2 hours
+- Critical gaps filled: 1-2 weeks (with Replit building)
+- Testing & polish: 3-5 days
+- **Total: 2-3 weeks to launch-ready**
+
+### **If You Need to Build Manually:**
+- Gap Analysis: 1-2 hours
+- Critical gaps filled: 3-4 weeks (you coding)
+- Testing & polish: 1 week
+- **Total: 4-5 weeks to launch-ready**
+
+---
+
+## 💡 PRO TIPS FOR WORKING WITH REPLIT AGENT
+
+1. **Be Specific:** Don't say "fix scheduling." Say "implement conflict detection that prevents double-booking with a database query that checks overlapping shift times."
+
+2. **One Thing at a Time:** Ask for 1 feature, test it, then ask for the next. Don't overwhelm with 20 tasks at once.
+
+3. **Provide Examples:** Show sample input/output for complex features.
+
+4. **Iterate:** If Replit's first attempt isn't perfect, give feedback and ask for refinement.
+
+5. **Test Everything:** Don't assume it works. Test each feature with real data.
+
+---
+
+## 🎯 ULTIMATE GOAL
+
+**At the end of this process, you should have:**
+
+✅ Complete gap analysis document
+✅ Prioritized feature list
+✅ Working customer onboarding flow
+✅ Functional scheduling with AI
+✅ Payroll processing with guardrails
+✅ Invoice generation and payment processing
+✅ AI confidence scoring system
+✅ Admin dashboard showing everything
+✅ No critical bugs
+✅ Ready to onboard first paying customer
+
+**COPY THE PROMPT ABOVE → PASTE TO REPLIT AGENT → START TODAY** 🚀
