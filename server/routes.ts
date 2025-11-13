@@ -609,7 +609,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const authReq = req as AuthenticatedRequest;
       const { message, sessionId, conversationHistory } = req.body;
-      const { db } = await import("./db");
       
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: 'Message is required' });
@@ -629,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userMessage: message,
         sessionId,
         conversationHistory: conversationHistory || [],
-        db: db as any,
+        storage,
       });
 
       res.json(response);

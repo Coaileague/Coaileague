@@ -4,7 +4,8 @@
  */
 
 import OpenAI from 'openai';
-import type { HelposAiSession } from '@shared/schema';
+import type { HelposAiSession, InsertHelposAiSession, InsertHelposAiTranscriptEntry } from '@shared/schema';
+import type { IStorage } from '../../storage';
 import { usageMeteringService } from '../billing/usageMetering';
 
 // ============================================================================
@@ -201,7 +202,7 @@ class HelpOSService {
     userMessage: string;
     sessionId?: string;
     conversationHistory?: Array<{ role: string; content: string }>;
-    db: any;
+    storage: IStorage;
   }): Promise<{
     sessionId: string;
     message: string;
@@ -210,7 +211,7 @@ class HelpOSService {
     detectedCategory?: string;
     detectedSentiment?: string;
   }> {
-    const { workspaceId, userId, userName, userMessage, sessionId, conversationHistory = [], db } = params;
+    const { workspaceId, userId, userName, userMessage, sessionId, conversationHistory = [], storage } = params;
 
     // Detect issue category and sentiment
     const detectedCategory = this.detectIssueCategory(userMessage);
@@ -222,13 +223,7 @@ class HelpOSService {
     let currentFailedAttempts = 0;
 
     if (sessionId) {
-      const [existingSession] = await db
-        .select()
-        .from(db.schema.helposAiSessions)
-        .where(db.eq(db.schema.helposAiSessions.id, sessionId))
-        .limit(1);
-      
-      session = existingSession || null;
+      session = await storage.getHelposSession(sessionId, workspaceId) || null;
       currentFailedAttempts = session?.failedAttempts || 0;
     }
 
@@ -236,19 +231,16 @@ class HelpOSService {
       const oneYearFromNow = new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
-      const [newSession] = await db
-        .insert(db.schema.helposAiSessions)
-        .values({
-          workspaceId,
-          userId,
-          status: 'active',
-          detectedIssueCategory: detectedCategory,
-          detectedSentiment: detectedSentiment,
-          expiresAt: oneYearFromNow,
-        })
-        .returning();
+      const sessionData: InsertHelposAiSession = {
+        workspaceId,
+        userId,
+        status: 'active',
+        detectedIssueCategory: detectedCategory,
+        detectedSentiment: detectedSentiment,
+        expiresAt: oneYearFromNow,
+      };
       
-      session = newSession;
+      session = await storage.createHelposSession(sessionData);
     }
 
     if (!session) {
@@ -256,11 +248,12 @@ class HelpOSService {
     }
 
     // Store user message in transcript
-    await db.insert(db.schema.helposAiTranscriptEntries).values({
+    const userTranscript: InsertHelposAiTranscriptEntry = {
       sessionId: session.id,
       role: 'user',
       content: userMessage,
-    });
+    };
+    await storage.createHelposTranscript(userTranscript);
 
     // Check if user is asking for human help
     const wantsHumanHelp = /talk to (a )?human|speak to agent|escalate|transfer/i.test(userMessage);
@@ -276,26 +269,23 @@ class HelpOSService {
       const aiSummary = await this.generateCaseSummary(fullHistory, workspaceId);
 
       // Update session with escalation data
-      await db
-        .update(db.schema.helposAiSessions)
-        .set({
-          status: 'escalated',
-          escalationReason,
-          aiSummary,
-          escalatedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(db.eq(db.schema.helposAiSessions.id, session.id));
+      await storage.updateHelposSession(session.id, workspaceId, {
+        status: 'escalated',
+        escalationReason,
+        aiSummary,
+        escalatedAt: new Date(),
+      });
 
       const escalationMessage = `I understand this requires human assistance. I'm connecting you with our support team now. They'll have full context of our conversation and will help you shortly.`;
 
       // Store escalation message in transcript
-      await db.insert(db.schema.helposAiTranscriptEntries).values({
+      const escalationTranscript: InsertHelposAiTranscriptEntry = {
         sessionId: session.id,
         role: 'assistant',
         content: escalationMessage,
         messageType: 'escalation_notice',
-      });
+      };
+      await storage.createHelposTranscript(escalationTranscript);
 
       return {
         sessionId: session.id,
@@ -349,20 +339,17 @@ Be helpful, empathetic, and solution-oriented.`;
     }
 
     // Store AI response in transcript
-    await db.insert(db.schema.helposAiTranscriptEntries).values({
+    const aiTranscript: InsertHelposAiTranscriptEntry = {
       sessionId: session.id,
       role: 'assistant',
       content: aiResponse,
-    });
+    };
+    await storage.createHelposTranscript(aiTranscript);
 
     // Update session timestamp
-    await db
-      .update(db.schema.helposAiSessions)
-      .set({
-        lastInteractionAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(db.eq(db.schema.helposAiSessions.id, session.id));
+    await storage.updateHelposSession(session.id, workspaceId, {
+      lastInteractionAt: new Date(),
+    });
 
     return {
       sessionId: session.id,
