@@ -45,62 +45,75 @@ export function MobileBottomNav() {
   return (
     <nav 
       className={cn(
-        "mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 border-t-2 border-gray-200 dark:border-slate-700 backdrop-blur-xl shadow-lg",
+        "mobile-bottom-nav fixed bottom-0 left-0 right-0 backdrop-blur-2xl shadow-2xl border-t",
+        "bg-white/90 dark:bg-slate-900/90 border-gray-200/50 dark:border-slate-700/50",
         "md:hidden z-50",
         isIOS && "mobile-safe-area-bottom"
       )}
       data-testid="mobile-bottom-nav"
     >
-      <div className="flex items-center justify-around h-16 px-1">
+      <div className="flex items-stretch justify-around px-2 py-1.5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const itemPath = getFeatureRoute(item.feature, platform);
           const isActive = location === itemPath || (itemPath !== '/dashboard' && location.startsWith(itemPath));
           
           return (
-            <Button
+            <button
               key={item.feature}
-              variant="ghost"
-              size="icon"
               onClick={() => handleNavigation(item.feature)}
               className={cn(
-                "mobile-touch-target relative flex flex-col items-center justify-center gap-1 w-full rounded-xl transition-all duration-300",
-                "hover-elevate active-elevate-2 mobile-active-state",
-                isActive && "scale-105"
+                "mobile-touch-target relative flex flex-col items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all duration-300",
+                "active:scale-95 flex-1 min-w-0",
+                isActive ? "scale-105" : "scale-100"
               )}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
-              <div className={cn(
-                "relative flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300",
-                isActive && "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-2 border-blue-200 dark:border-blue-700 shadow-md shadow-blue-200/50 dark:shadow-blue-800/50"
-              )}>
-                <Icon className={cn(
-                  "h-5 w-5 transition-all duration-300",
-                  isActive ? "text-blue-600 dark:text-blue-400 scale-110 font-bold" : "text-gray-600 dark:text-gray-400"
-                )} />
+              {/* Active indicator - Modern top bar */}
+              {isActive && (
+                <div 
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full"
+                  style={{ 
+                    background: 'linear-gradient(90deg, #3b82f6 0%, #22d3ee 100%)'
+                  }}
+                />
+              )}
+              
+              <div className="relative flex items-center justify-center">
+                <Icon 
+                  className={cn(
+                    "transition-all duration-300",
+                    isActive ? "h-7 w-7" : "h-6 w-6",
+                    isActive ? "text-blue-600 dark:text-cyan-400 drop-shadow-md" : "text-gray-500 dark:text-gray-400"
+                  )} 
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
                 {item.badge && item.badge > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-[10px] flex items-center justify-center rounded-full"
+                  <div 
+                    className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1.5 text-[10px] font-bold flex items-center justify-center rounded-full text-white shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
                   >
                     {item.badge > 99 ? "99+" : item.badge}
-                  </Badge>
+                  </div>
                 )}
               </div>
+              
               <span className={cn(
-                "text-[10px] font-medium transition-all duration-300",
-                isActive ? "text-blue-600 dark:text-blue-400 font-bold" : "text-gray-600 dark:text-gray-400"
+                "text-[11px] font-semibold transition-all duration-300 truncate w-full text-center",
+                isActive ? "opacity-100" : "opacity-70",
+                isActive ? "text-blue-600 dark:text-cyan-400" : "text-gray-600 dark:text-gray-400"
               )}>
                 {item.label}
               </span>
-            </Button>
+            </button>
           );
         })}
       </div>
+      
       {/* iOS-style home indicator (only on iOS) */}
       {isIOS && (
-        <div className="flex justify-center pb-1.5">
-          <div className="w-28 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+        <div className="flex justify-center pb-1 pt-0.5">
+          <div className="w-24 h-1 bg-gray-400 dark:bg-gray-600 rounded-full opacity-40" />
         </div>
       )}
     </nav>
