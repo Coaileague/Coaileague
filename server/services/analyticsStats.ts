@@ -119,15 +119,15 @@ export async function getAnalyticsStats(
       : db.select({ count: count() }).from(supportTickets)
           .where(sql`${supportTickets.status} IN ('open', 'in_progress')`),
     
-    // Unresolved escalations
+    // Unresolved escalations (where resolvedAt is null)
     workspaceId
       ? db.select({ count: count() }).from(escalationTickets)
           .where(and(
             eq(escalationTickets.workspaceId, workspaceId),
-            eq(escalationTickets.resolved, false)
+            sql`${escalationTickets.resolvedAt} IS NULL`
           ))
       : db.select({ count: count() }).from(escalationTickets)
-          .where(eq(escalationTickets.resolved, false)),
+          .where(sql`${escalationTickets.resolvedAt} IS NULL`),
     
     // Upcoming shifts (next 7 days)
     workspaceId

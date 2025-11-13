@@ -586,7 +586,7 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link
-                        href="/platform-admin"
+                        href="/dashboard"
                         className="flex items-center cursor-pointer"
                         data-testid="link-platform-admin"
                       >

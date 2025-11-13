@@ -705,7 +705,7 @@ export function selectSidebarFamilies(
   // Collect all routes from all modules
   const allRoutes: OSModuleRoute[] = [];
   
-  // Add platform support module routes for staff
+  // Add platform support module routes for staff ONLY
   if (isPlatformStaff) {
     platformSupportModule.routes.forEach(route => {
       allRoutes.push({
