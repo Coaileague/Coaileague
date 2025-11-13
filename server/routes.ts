@@ -655,23 +655,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Support both authenticated and anonymous users
       const isAuthenticated = !!authReq.user?.id;
-      const userId = isAuthenticated ? authReq.user!.id : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // For anonymous users, use a default public workspace or create temporary one
+      // For anonymous users, derive a stable userId from sessionId to prevent session hijacking
+      // This ensures anonymous users can only access their own sessions
+      const userId = isAuthenticated 
+        ? authReq.user!.id 
+        : sessionId 
+          ? `anon-${sessionId}` // Stable anonymous ID based on session
+          : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // New anonymous user
+      
+      // For anonymous users, use a default public workspace
       const workspaceId = isAuthenticated 
         ? (await resolveWorkspaceForUser(authReq.user!.id, req.body.workspaceId)).workspaceId
         : 'helpos-anonymous-workspace';
       
-      // SECURITY: Validate session ownership to prevent cross-workspace data access
+      // SECURITY: Validate session ownership to prevent cross-user access
+      // For ALL requests with sessionId, validate the session belongs to this user
       if (sessionId) {
         const existingSession = await storage.getHelposSession(sessionId, workspaceId);
-        if (!existingSession) {
-          return res.status(403).json({ message: 'Invalid session or unauthorized access' });
+        if (existingSession) {
+          // Session exists - verify it belongs to this user
+          if (existingSession.userId !== userId) {
+            console.error('[HelpOS] Session hijacking attempt:', {
+              sessionId,
+              expectedUserId: userId,
+              actualUserId: existingSession.userId,
+              isAuthenticated
+            });
+            return res.status(403).json({ message: 'Unauthorized: Session does not belong to this user' });
+          }
         }
-        // Verify session belongs to this user
-        if (existingSession.userId !== userId) {
-          return res.status(403).json({ message: 'Unauthorized: Session does not belong to this user' });
-        }
+        // If session doesn't exist, it will be created by bubbleAgent_reply
       }
       
       // Get user details for chat context
@@ -701,9 +715,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           reason: response.escalationReason,
           userId,
           userName,
-          workspaceId
+          workspaceId,
+          isAuthenticated
         });
-        // Get AI summary from session
+        
+        // For anonymous users, don't create support ticket yet
+        // Just return escalation flag - ticket will be created when they submit guest form
+        if (!isAuthenticated) {
+          console.log('[HelpOS] Anonymous escalation - no ticket created yet');
+          return res.json({
+            ...response,
+            escalated: true,
+            conversationId: response.sessionId, // Use session ID as conversation ID for now
+            ticketNumber: `GUEST-${Date.now()}`, // Temporary ticket number
+          });
+        }
+        
+        // For authenticated users, create full support ticket
         const session = await storage.getHelposSession(response.sessionId, workspaceId);
         const aiSummary = session?.aiSummary || 'No summary available';
 

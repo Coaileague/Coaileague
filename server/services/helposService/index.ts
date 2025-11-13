@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { HelposAiSession, InsertHelposAiSession, InsertHelposAiTranscriptEntry } from '@shared/schema';
 import type { IStorage } from '../../storage';
 import { usageMeteringService } from '../billing/usageMetering';
+import crypto from 'crypto';
 
 // ============================================================================
 // AI PROVIDER - Gemini 2.0 Flash (Cost-Effective & Smart)
@@ -349,7 +350,7 @@ class HelpOSService {
       }
 
       const escalationMessage = isAnonymous 
-        ? `I understand this requires human assistance. Please sign up or log in to connect with our support team and create a support ticket.`
+        ? `I understand this requires human assistance. Let me connect you with our support team. Please provide your contact information so they can help you.`
         : `I understand this requires human assistance. I'm connecting you with our support team now. They'll have full context of our conversation and will help you shortly.`;
 
       // Store escalation message in transcript (skip for anonymous)
@@ -366,8 +367,8 @@ class HelpOSService {
       return {
         sessionId: session.id,
         message: escalationMessage,
-        shouldEscalate: !isAnonymous, // Anonymous users can't escalate
-        escalationReason: isAnonymous ? undefined : escalationReason,
+        shouldEscalate: true, // Allow both authenticated and anonymous users to escalate
+        escalationReason,
         detectedCategory,
         detectedSentiment,
       };
@@ -464,9 +465,15 @@ Be helpful, empathetic, and solution-oriented.`;
       .map(t => `${t.role.toUpperCase()}: ${t.content}`)
       .join('\n\n');
 
+    // Generate unique ticket number (TKT-timestamp-random format)
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const ticketNumber = `TKT-${timestamp}-${random}`;
+
     // Create support ticket
     const ticket = await storage.createSupportTicket({
       workspaceId,
+      ticketNumber,
       type: 'support',
       employeeId: userId,
       requestedBy: `${userName} (${userEmail})`,
