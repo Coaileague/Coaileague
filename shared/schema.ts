@@ -896,6 +896,9 @@ export const clients = pgTable("clients", {
   isActive: boolean("is_active").default(true),
   notes: text("notes"),
 
+  // Visual branding (for schedule display)
+  color: varchar("color").default("#3b82f6"), // Brand color for calendar display (vibrant blue default)
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -915,6 +918,18 @@ export type Client = typeof clients.$inferSelect;
 
 export const shiftStatusEnum = pgEnum('shift_status', ['draft', 'published', 'scheduled', 'in_progress', 'completed', 'cancelled']);
 
+// Shift category for visual theming (matches homepage preview colors)
+export const shiftCategoryEnum = pgEnum('shift_category', [
+  'general',        // Default - uses client/employee color
+  'tech_support',   // Royal blue (#3b82f6)
+  'field_ops',      // Vibrant blue (#2563eb)
+  'healthcare',     // Sky blue (#0ea5e9)
+  'training',       // Blue (#1d4ed8)
+  'emergency',      // Magenta/Purple (#a855f7)
+  'admin',          // Purple (#8b5cf6)
+  'security',       // Teal/Cyan (#14b8a6)
+]);
+
 // Shifts (Scheduled time blocks)
 export const shifts = pgTable("shifts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -925,6 +940,7 @@ export const shifts = pgTable("shifts", {
   // Shift details
   title: varchar("title"),
   description: text("description"),
+  category: shiftCategoryEnum("category").default("general"), // Visual theme category for colorful scheduling
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
 
