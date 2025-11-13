@@ -8,6 +8,30 @@ import { eq } from "drizzle-orm";
 const DEMO_USER_ID = "demo-user-00000000";
 const DEMO_WORKSPACE_ID = "demo-workspace-00000000";
 
+export { DEMO_USER_ID, DEMO_WORKSPACE_ID };
+
+export async function refreshDemoData() {
+  console.log("🔄 Refreshing demo workspace data...");
+
+  // Delete dependent data in correct FK order (transaction-safe)
+  await db.delete(payrollEntries).where(eq(payrollEntries.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(payrollRuns).where(eq(payrollRuns.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(invoiceLineItems).where(eq(invoiceLineItems.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(invoices).where(eq(invoices.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(timeEntries).where(eq(timeEntries.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(shifts).where(eq(shifts.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(employees).where(eq(employees.workspaceId, DEMO_WORKSPACE_ID));
+  await db.delete(clients).where(eq(clients.workspaceId, DEMO_WORKSPACE_ID));
+
+  console.log("✅ Cleared existing demo data");
+
+  // Re-create all data (employees, clients, shifts, etc.)
+  await populateDemoData();
+
+  console.log("✅ Demo workspace refresh complete!");
+  return { userId: DEMO_USER_ID, workspaceId: DEMO_WORKSPACE_ID };
+}
+
 export async function seedDemoWorkspace() {
   console.log("🌱 Seeding demo workspace...");
 
@@ -49,7 +73,15 @@ export async function seedDemoWorkspace() {
 
   console.log("✅ Created demo workspace");
 
-  // 3. Create employee record for the demo user (so they can see their own paychecks)
+  // 3. Populate with data
+  await populateDemoData();
+
+  console.log("🎉 Demo workspace seeded successfully!");
+  return { userId: DEMO_USER_ID, workspaceId: DEMO_WORKSPACE_ID };
+}
+
+async function populateDemoData() {
+  // Create employee record for the demo user (so they can see their own paychecks)
   const [demoUserEmployee] = await db.insert(employees).values({
     workspaceId: DEMO_WORKSPACE_ID,
     userId: DEMO_USER_ID, // CRITICAL: Link employee to user for paycheck access
