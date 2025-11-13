@@ -45,7 +45,7 @@ export function HelpOsAiTester() {
       setAiResponse(data.reply || "No response from AI");
       toast({
         title: "✅ HelpOS™ AI Responding",
-        description: "Gemini 2.0 Flash is working!",
+        description: "Smart AI is working!",
       });
     },
     onError: (error: any) => {
@@ -83,7 +83,7 @@ export function HelpOsAiTester() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5" style={{ color: "#3b82f6" }} />
-              Test HelpOS™ AI (Gemini 2.0 Flash)
+              Test HelpOS™ Smart AI
             </DialogTitle>
             <DialogDescription>
               Send a test message to verify HelpOS™ AI is working correctly
@@ -111,7 +111,7 @@ export function HelpOsAiTester() {
                   {testAiMutation.isPending ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Gemini is thinking...</span>
+                      <span>AI is thinking...</span>
                     </div>
                   ) : (
                     <div className="whitespace-pre-wrap text-sm">

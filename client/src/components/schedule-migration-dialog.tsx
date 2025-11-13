@@ -182,7 +182,7 @@ export function ScheduleMigrationDialog() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" style={{ color: "#3b82f6" }} />
-            Schedule Migration - Gemini Vision AI
+            Schedule Migration - Smart AI
           </DialogTitle>
           <DialogDescription>
             Upload a PDF or screenshot from Deputy, WhenIWork, GetSling, or any other scheduling app.

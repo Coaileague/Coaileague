@@ -106,7 +106,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li><strong>Payment Processing:</strong> Stripe (credit card processing)</li>
               <li><strong>Cloud Infrastructure:</strong> Replit, Google Cloud (hosting and storage)</li>
-              <li><strong>AI Services:</strong> Google Gemini API (AI decision-making)</li>
+              <li><strong>AI Services:</strong> Third-party AI providers (scheduling automation and support)</li>
               <li><strong>Email Delivery:</strong> Resend (transactional emails)</li>
               <li><strong>Analytics:</strong> Anonymous usage analytics (no personal data shared)</li>
             </ul>
