@@ -925,6 +925,105 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     return documentRequests.get(targetUserId)?.has(requestType) || false;
   };
 
+  // MOBILE-OPTIMIZED CHAT - Simplified UI for mobile devices
+  if (shouldUseMobileLayout) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-900 relative">
+        {/* Simple Mobile Header */}
+        <header className="bg-slate-800 border-b border-blue-600 flex-shrink-0 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
+                <span className="text-white font-black text-sm">AF</span>
+              </div>
+              <div>
+                <h1 className="text-blue-400 font-bold text-sm">HelpDesk</h1>
+                <p className="text-blue-300 text-[10px]">Live support</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate('/mobile-dashboard')}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              data-testid="button-exit-mobile-chat"
+            >
+              <X className="w-4 h-4 text-blue-400" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Messages Area - Mobile */}
+        <ScrollArea className="flex-1 bg-slate-900/80 p-3">
+          <div className="space-y-2 pb-20">
+            {messages.map((msg, idx) => {
+              const isSelf = msg.senderId === user?.id;
+              
+              // System messages
+              if (msg.senderType === 'system' || msg.isSystemMessage) {
+                return (
+                  <div key={idx} className="flex justify-center my-1">
+                    <span className="text-[10px] font-mono text-blue-400 italic bg-blue-950/30 px-2 py-0.5 rounded-full border border-blue-800 flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-blue-500" />
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
+                    </span>
+                  </div>
+                );
+              }
+
+              // Regular messages - Simple mobile bubbles
+              return (
+                <div key={idx} className={`flex ${isSelf ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 ${
+                    isSelf 
+                      ? 'bg-blue-600 text-white rounded-br-sm' 
+                      : 'bg-slate-800 text-white rounded-bl-sm'
+                  }`}>
+                    {!isSelf && (
+                      <div className="text-[10px] text-blue-300 mb-0.5 font-semibold">
+                        {msg.senderName}
+                      </div>
+                    )}
+                    <div className="text-sm" dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
+                    <div className="text-[9px] text-white/50 mt-0.5">
+                      {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Input Area - Mobile */}
+        <div className="bg-slate-800 border-t border-blue-600 p-3">
+          <form onSubmit={handleSendMessage} className="flex gap-2">
+            <Input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 bg-slate-900 border-slate-700 text-white text-sm"
+              data-testid="input-mobile-message"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!inputMessage.trim()}
+              className="bg-blue-600 hover:bg-blue-700 h-10 w-10"
+              data-testid="button-mobile-send"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // DESKTOP LAYOUT - Full featured IRC-style chat
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 relative">
       {/* Seasonal Animated Background */}
