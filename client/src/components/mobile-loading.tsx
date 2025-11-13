@@ -10,9 +10,19 @@ interface MobileLoadingProps {
 /**
  * Mobile-optimized loading screen with AF Core Scan
  * Shows during page transitions and data loading
+ * MOBILE: Clean animation only - NO percentage, NO messages
  */
 export function MobileLoading({ message = "Loading AutoForce™...", fullScreen = false, progress }: MobileLoadingProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile viewport
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (progress !== undefined) {
@@ -35,37 +45,43 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
         className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl px-4"
         data-testid="mobile-loading-fullscreen"
       >
-        <div className="flex flex-col items-center gap-8 w-full max-w-md">
+        <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
           {/* AF Core Scan - Radial Progress with A→AF */}
-          <AFCoreScan progress={animatedProgress} size="lg" />
+          <AFCoreScan progress={animatedProgress} size={isMobile ? "md" : "lg"} />
           
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="text-2xl font-bold" style={{ color: '#3b82f6' }}>
-              {Math.round(animatedProgress)}%
+          {/* Mobile: NO percentage or messages, Desktop: Show everything */}
+          {!isMobile && (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="text-2xl font-bold" style={{ color: '#3b82f6' }}>
+                {Math.round(animatedProgress)}%
+              </div>
+              <div className="text-sm text-white/70 font-medium">
+                {message}
+              </div>
             </div>
-            <div className="text-sm text-white/70 font-medium">
-              {message}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 min-h-[200px] w-full" data-testid="mobile-loading">
-      <div className="flex flex-col items-center gap-6 w-full max-w-md">
-        {/* AF Core Scan */}
-        <AFCoreScan progress={animatedProgress} size="lg" />
+    <div className="flex flex-col items-center justify-center p-6 sm:p-8 min-h-[200px] w-full" data-testid="mobile-loading">
+      <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
+        {/* AF Core Scan - Smaller on mobile */}
+        <AFCoreScan progress={animatedProgress} size={isMobile ? "md" : "lg"} />
         
-        <div className="flex flex-col items-center gap-1 text-center">
-          <div className="text-xl font-bold" style={{ color: '#3b82f6' }}>
-            {Math.round(animatedProgress)}%
+        {/* Mobile: NO percentage or messages, Desktop: Show everything */}
+        {!isMobile && (
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="text-xl font-bold" style={{ color: '#3b82f6' }}>
+              {Math.round(animatedProgress)}%
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {message}
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground">
-            {message}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
