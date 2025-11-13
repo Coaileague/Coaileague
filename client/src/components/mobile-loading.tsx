@@ -1,4 +1,5 @@
 import { AFCoreScan } from "./loading-indicators";
+import { IsometricLoader } from "./isometric-loader";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
@@ -72,8 +73,8 @@ export function MobileLoading({ message, fullScreen = false, progress }: MobileL
         data-testid="mobile-loading-fullscreen"
       >
         <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
-          {/* AF Core Scan - Radial Progress with A→AF */}
-          <AFCoreScan progress={animatedProgress} size={isMobile ? "md" : "lg"} />
+          {/* Isometric 3D Tech Loading Animation */}
+          <IsometricLoader size={isMobile ? "md" : "lg"} />
           
           {/* Progress Bar - Visible on BOTH mobile and desktop */}
           <div className="w-full space-y-3">
@@ -114,8 +115,8 @@ export function MobileLoading({ message, fullScreen = false, progress }: MobileL
   return (
     <div className="flex flex-col items-center justify-center p-6 sm:p-8 min-h-[200px] w-full" data-testid="mobile-loading">
       <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
-        {/* AF Core Scan - Smaller on mobile */}
-        <AFCoreScan progress={animatedProgress} size={isMobile ? "md" : "lg"} />
+        {/* Isometric 3D Tech Loading Animation */}
+        <IsometricLoader size={isMobile ? "md" : "lg"} />
         
         {/* Progress Bar - Visible on BOTH mobile and desktop */}
         <div className="w-full space-y-2">

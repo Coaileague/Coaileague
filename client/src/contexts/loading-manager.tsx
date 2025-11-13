@@ -91,6 +91,12 @@ export function LoadingManagerProvider({ children }: { children: React.ReactNode
       console.log('[LoadingManager] Suppressed during boot - using HTML loader');
       return `suppressed-${++requestCounterRef.current}`;
     }
+    
+    // SUPPRESS on homepage (public landing page) - instant load
+    if (window.location.pathname === '/' || window.location.pathname === '/homepage') {
+      console.log('[LoadingManager] Suppressed on homepage - no loading overlay');
+      return `suppressed-homepage-${++requestCounterRef.current}`;
+    }
 
     const id = `loading-${++requestCounterRef.current}`;
     const scenario = options?.scenario || getNextScenario();
