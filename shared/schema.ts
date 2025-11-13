@@ -1107,6 +1107,52 @@ export const insertPublishedScheduleSchema = createInsertSchema(publishedSchedul
 export type InsertPublishedSchedule = z.infer<typeof insertPublishedScheduleSchema>;
 export type PublishedSchedule = typeof publishedSchedules.$inferSelect;
 
+// Schedule Proposals - AI-generated schedules awaiting approval (99% AI, 1% Human Governance)
+export const scheduleProposals = pgTable("schedule_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Proposal metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  
+  // AI response (full ScheduleSmartResponse from Gemini)
+  aiResponse: jsonb("ai_response").notNull(), // Contains assignments, confidence, summary
+  confidence: integer("confidence").notNull(), // 0-100 (duplicated for query convenience)
+  
+  // Approval workflow
+  status: varchar("status").default("pending"), // 'pending', 'approved', 'rejected', 'auto_approved'
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Legal disclaimer acknowledgment
+  disclaimerAcknowledged: boolean("disclaimer_acknowledged").default(false),
+  disclaimerAcknowledgedBy: varchar("disclaimer_acknowledged_by").references(() => users.id),
+  disclaimerAcknowledgedAt: timestamp("disclaimer_acknowledged_at"),
+  
+  // Billing linkage
+  aiUsageLogId: varchar("ai_usage_log_id").references(() => workspaceAiUsage.id),
+  
+  // Learning mechanism (track post-approval edits)
+  shiftIdsCreated: text("shift_ids_created").array(), // Shifts actually created from this proposal
+  editedAfterApproval: boolean("edited_after_approval").default(false),
+  editCount: integer("edit_count").default(0),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertScheduleProposalSchema = createInsertSchema(scheduleProposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertScheduleProposal = z.infer<typeof insertScheduleProposalSchema>;
+export type ScheduleProposal = typeof scheduleProposals.$inferSelect;
+
 // Shift Templates (Reusable shift patterns)
 export const shiftTemplates = pgTable("shift_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
