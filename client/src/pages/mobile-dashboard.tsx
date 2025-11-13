@@ -1,6 +1,5 @@
 import { MessageSquare, HelpCircle, Mail, Shield, Calendar, Clock, Users, LayoutDashboard } from "lucide-react";
 import { AppShellMobile } from "@/components/mobile/AppShellMobile";
-import { MobileNav } from "@/components/mobile/MobileNav";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -135,9 +134,6 @@ export default function MobileDashboard() {
           </div>
         </section>
       </AppShellMobile>
-
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
     </div>
   );
 }
