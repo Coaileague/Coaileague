@@ -116,7 +116,7 @@ export function BrandedErrorPage({
           Need help? Contact{" "}
           <button 
             onClick={() => setLocation("/support")}
-            className="text-indigo-400 hover:underline"
+            className="text-emerald-700 dark:text-emerald-400 hover:underline"
             data-testid="link-contact-support"
           >
             WorkforceOS Support

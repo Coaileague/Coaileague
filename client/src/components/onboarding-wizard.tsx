@@ -382,11 +382,11 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
               <div className="text-lg font-black">{getFamilyProgress("communication")}%</div>
             </div>
             <div className="text-center p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-              <div className="text-xs font-bold text-indigo-400">Operations</div>
+              <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Operations</div>
               <div className="text-lg font-black">{getFamilyProgress("operations")}%</div>
             </div>
             <div className="text-center p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-              <div className="text-xs font-bold text-violet-400">Growth</div>
+              <div className="text-xs font-bold text-cyan-700 dark:text-cyan-400">Growth</div>
               <div className="text-lg font-black">{getFamilyProgress("growth")}%</div>
             </div>
             <div className="text-center p-2 rounded-lg bg-red-500/10 border border-red-500/20">

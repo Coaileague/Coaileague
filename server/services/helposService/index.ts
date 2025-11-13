@@ -1,47 +1,86 @@
 /**
  * HelpOS™ - Unified AI Support System
  * Dual-persona architecture: bubbleAgent (customer-facing) and staffCopilot (agent assistance)
+ * Powered by Gemini 2.0 Flash for cost-effective, intelligent support
  */
 
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { HelposAiSession, InsertHelposAiSession, InsertHelposAiTranscriptEntry } from '@shared/schema';
 import type { IStorage } from '../../storage';
 import { usageMeteringService } from '../billing/usageMetering';
 
 // ============================================================================
-// AI PROVIDER
+// AI PROVIDER - Gemini 2.0 Flash (Cost-Effective & Smart)
 // ============================================================================
 
 interface AIProvider {
-  chat(messages: Array<{ role: string; content: string }>, options?: { maxTokens?: number }): Promise<{ content: string; tokensUsed: number }>;
+  chat(messages: Array<{ role: string; content: string }>, options?: { maxTokens?: number; workspaceId?: string; userId?: string }): Promise<{ content: string; tokensUsed: number }>;
 }
 
-class OpenAIProvider implements AIProvider {
-  private client: OpenAI;
+class GeminiProvider implements AIProvider {
+  private genAI: GoogleGenerativeAI | null;
   private model: string;
 
   constructor() {
-    this.client = new OpenAI({
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
-    });
-    this.model = 'gpt-3.5-turbo'; // Cost-effective model
+    const apiKey = process.env.GEMINI_API_KEY;
+    this.genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+    this.model = 'gemini-2.0-flash-exp'; // Cost-effective, fast, and intelligent
   }
 
-  async chat(messages: Array<{ role: string; content: string }>, options: { maxTokens?: number } = {}): Promise<{ content: string; tokensUsed: number }> {
-    const completion = await this.client.chat.completions.create({
-      model: this.model,
-      messages: messages.map(msg => ({
-        role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content
-      })),
-      max_completion_tokens: options.maxTokens || 500,
-      temperature: 0.7
+  async chat(messages: Array<{ role: string; content: string }>, options: { maxTokens?: number; workspaceId?: string; userId?: string } = {}): Promise<{ content: string; tokensUsed: number }> {
+    if (!this.genAI) {
+      throw new Error("Gemini API key not configured");
+    }
+
+    const model = this.genAI.getGenerativeModel({ model: this.model });
+
+    // Convert messages to Gemini format (system + user/model history)
+    const systemMessage = messages.find(m => m.role === 'system');
+    const conversationMessages = messages.filter(m => m.role !== 'system');
+    
+    const chatHistory = conversationMessages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    const chat = model.startChat({
+      history: chatHistory.slice(0, -1), // All except last message
+      generationConfig: {
+        maxOutputTokens: options.maxTokens || 1024,
+        temperature: 0.7,
+      },
+      systemInstruction: systemMessage?.content,
     });
 
+    const lastMessage = conversationMessages[conversationMessages.length - 1];
+    const result = await chat.sendMessage(lastMessage.content);
+    const response = result.response;
+    
+    // Record token usage for billing
+    const usage = response.usageMetadata;
+    const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
+    
+    if (totalTokens > 0 && options.workspaceId) {
+      await usageMeteringService.recordUsage({
+        workspaceId: options.workspaceId,
+        userId: options.userId,
+        featureKey: 'helpos_gemini_support',
+        usageType: 'token',
+        usageAmount: totalTokens,
+        usageUnit: 'tokens',
+        activityType: 'helpos_chat',
+        metadata: {
+          model: this.model,
+          promptTokens: usage?.promptTokenCount,
+          completionTokens: usage?.candidatesTokenCount,
+        }
+      });
+      console.log(`💎 HelpOS™ Gemini - ${totalTokens} tokens - Workspace: ${options.workspaceId}`);
+    }
+
     return {
-      content: completion.choices[0]?.message?.content || '',
-      tokensUsed: completion.usage?.total_tokens || 0
+      content: response.text(),
+      tokensUsed: totalTokens
     };
   }
 }
@@ -131,7 +170,7 @@ class HelpOSService {
   private provider: AIProvider;
 
   constructor() {
-    this.provider = new OpenAIProvider();
+    this.provider = new GeminiProvider(); // AutoForce™ AI Brain - Gemini 2.0 Flash
   }
 
   detectIssueCategory(message: string): string | undefined {
@@ -161,7 +200,7 @@ class HelpOSService {
     return CRITICAL_KEYWORDS.some(keyword => lowerMessage.includes(keyword));
   }
 
-  async generateCaseSummary(conversationHistory: Array<{ role: string; content: string }>, workspaceId: string): Promise<string> {
+  async generateCaseSummary(conversationHistory: Array<{ role: string; content: string }>, workspaceId: string, userId?: string): Promise<string> {
     const messages = [
       {
         role: 'system',
@@ -173,20 +212,8 @@ class HelpOSService {
       }
     ];
 
-    const { content, tokensUsed } = await this.provider.chat(messages, { maxTokens: 300 });
-
-    // Record usage
-    if (tokensUsed > 0) {
-      await usageMeteringService.recordUsage({
-        workspaceId,
-        featureKey: 'helpdesk_ai_summary',
-        usageType: 'token',
-        usageAmount: tokensUsed,
-        usageUnit: 'tokens',
-        activityType: 'case_summary',
-        metadata: { model: 'gpt-3.5-turbo' }
-      });
-    }
+    // Gemini provider handles billing automatically
+    const { content } = await this.provider.chat(messages, { maxTokens: 300, workspaceId, userId });
 
     return content;
   }

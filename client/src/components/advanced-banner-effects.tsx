@@ -499,7 +499,7 @@ const iconMap = {
 export function AnimatedIconCarousel({ 
   icons = ['sparkles', 'star', 'zap'],
   size = 24,
-  colors = ['text-yellow-400', 'text-blue-400', 'text-purple-400'],
+  colors = ['text-yellow-400', 'text-blue-400', 'text-emerald-700 dark:text-emerald-400'],
   interval = 2000
 }: {
   icons?: Array<keyof typeof iconMap>;

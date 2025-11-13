@@ -151,7 +151,7 @@ export function AppSidebar() {
                                 route.badge === 'Root' 
                                   ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
                                   : route.badge === 'Enterprise' 
-                                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                  ? 'bg-purple-500/20 text-emerald-700 dark:text-emerald-400 border border-purple-500/30'
                                   : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                               }`}>
                                 {route.badge}

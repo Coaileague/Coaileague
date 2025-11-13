@@ -48,7 +48,7 @@ export function MiniAdBanner({ onDismiss }: MiniBannerProps) {
       title: "Premium Features",
       subtitle: "Unlock all WorkforceOS capabilities",
       gradient: "from-indigo-500 via-purple-500 to-pink-500",
-      iconColor: "text-purple-300",
+      iconColor: "text-emerald-700 dark:text-emerald-400",
       badge: "SAVE 40%"
     }
   ];

@@ -115,7 +115,7 @@ export function DesktopChatLayout({
           </UserContextMenu>
           {/* Private Message Indicator with Glow Effect */}
           {isPrivate && (
-            <span className="text-[10px] font-bold text-purple-400 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 animate-pulse-glow" data-testid="badge-private-message-desktop">
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 animate-pulse-glow" data-testid="badge-private-message-desktop">
               whispered
             </span>
           )}

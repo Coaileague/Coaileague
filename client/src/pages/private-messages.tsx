@@ -431,7 +431,7 @@ export default function PrivateMessages() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium truncate">{conv.recipientName}</span>
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                           whispered
                         </Badge>
                       </div>
@@ -507,7 +507,7 @@ export default function PrivateMessages() {
                 <div>
                   <h3 className="font-semibold">{currentConversation?.recipientName}</h3>
                   <div className="flex items-center gap-1">
-                    <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                    <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                       <Lock className="h-2.5 w-2.5 mr-1" />
                       whispered
                     </Badge>

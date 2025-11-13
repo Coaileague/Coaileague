@@ -19,7 +19,7 @@ export function DashboardPreview() {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <Card className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
-            <Users className="h-4 w-4 text-indigo-400" />
+            <Users className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
           </div>
           <div className="text-xs text-slate-300">Total Employees</div>
           <div className="text-2xl font-bold text-white">142</div>
@@ -35,7 +35,7 @@ export function DashboardPreview() {
 
         <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/5 border-purple-500/20 p-3">
           <div className="flex items-center justify-between mb-2">
-            <Clock className="h-4 w-4 text-purple-400" />
+            <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
           </div>
           <div className="text-xs text-slate-300">Active Today</div>
           <div className="text-2xl font-bold text-white">98</div>

@@ -416,7 +416,7 @@ export function UserManagementPanel() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-indigo-300 hover:text-indigo-100"
+                        className="text-foreground hover:text-indigo-100"
                         data-testid={`button-view-user-${user.id}`}
                       >
                         <Edit className="h-4 w-4" />

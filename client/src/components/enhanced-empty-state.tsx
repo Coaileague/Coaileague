@@ -33,7 +33,7 @@ export function EnhancedEmptyState({
     purple: {
       gradient: "from-purple-500/20 via-purple-400/10 to-transparent",
       iconBg: "bg-purple-500/20",
-      iconColor: "text-purple-400",
+      iconColor: "text-emerald-700 dark:text-emerald-400",
       glow: "shadow-purple-500/30",
     },
     professional: {

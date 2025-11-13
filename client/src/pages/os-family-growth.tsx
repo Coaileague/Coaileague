@@ -55,7 +55,7 @@ export default function GrowthFamilyPage() {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/20 to-pink-500/20 border border-violet-500/30">
-              <Sparkles className="h-12 w-12 text-violet-400" />
+              <Sparkles className="h-12 w-12 text-cyan-700 dark:text-cyan-400" />
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">

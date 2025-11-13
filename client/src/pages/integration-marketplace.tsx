@@ -34,10 +34,10 @@ const categoryIcons = {
 const categoryColors = {
   accounting: "bg-muted/10 text-blue-700 dark:text-blue-400",
   erp: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  crm: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  crm: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
   hris: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
   communication: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
-  productivity: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
+  productivity: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
   analytics: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
   storage: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   custom: "bg-gray-500/10 text-gray-700 dark:text-gray-400",

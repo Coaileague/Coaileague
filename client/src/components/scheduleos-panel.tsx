@@ -104,7 +104,7 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
     return (
       <Card className="border-indigo-500/30">
         <CardContent className="py-8 flex justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-emerald-700 dark:text-emerald-400" />
         </CardContent>
       </Card>
     );
@@ -116,7 +116,7 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
       <Card className="border-indigo-500/30">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-indigo-400" />
+            <Sparkles className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
             <CardTitle className="text-lg">ScheduleOS™ AI Auto-Scheduling</CardTitle>
             <Badge className="ml-auto bg-gradient-to-r from-indigo-600 to-purple-600">Active</Badge>
           </div>
@@ -128,11 +128,11 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
           {/* AI Features */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-indigo-400" />
+              <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
               <span>30-second generation</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Users className="h-4 w-4 text-indigo-400" />
+              <Users className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
               <span>Performance-based</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -192,7 +192,7 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
       <Card className="border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-indigo-400" />
+            <Sparkles className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
             <CardTitle className="text-lg">ScheduleOS™ AI - Free Trial</CardTitle>
             <Badge variant="outline" className="ml-auto bg-blue-500/10 text-blue-500 border-blue-500/30">
               <Calendar className="h-3 w-3 mr-1" />
@@ -301,9 +301,9 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
     <Card className="border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-indigo-400" />
+          <Sparkles className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
           <CardTitle className="text-lg">ScheduleOS™ AI Auto-Scheduling</CardTitle>
-          <Badge variant="outline" className="ml-auto bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+          <Badge variant="outline" className="ml-auto bg-indigo-500/10 text-emerald-700 dark:text-emerald-400 border-indigo-500/30">
             AI Powered
           </Badge>
         </div>
@@ -315,11 +315,11 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
         {/* AI Features */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-indigo-400" />
+            <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
             <span>30-second generation</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4 text-indigo-400" />
+            <Users className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
             <span>Performance-based</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -333,8 +333,8 @@ export function ScheduleOSPanel({ weekStartDate, onScheduleGenerated }: Schedule
         </div>
 
         <div className="p-3 rounded-md bg-indigo-500/10 border border-indigo-500/30">
-          <p className="text-sm text-indigo-400 font-medium">🎉 Start Your Free Trial</p>
-          <p className="text-xs text-indigo-400/80 mt-1">
+          <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">🎉 Start Your Free Trial</p>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400/80 mt-1">
             7 days free • No credit card required • Activate with payment after trial
           </p>
         </div>
