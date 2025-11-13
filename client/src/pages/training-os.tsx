@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import {
   GraduationCap, BookOpen, Award, Play, CheckCircle2, Clock,
   Plus, Search, Filter, TrendingUp, Users, Calendar, FileText,
@@ -151,7 +151,7 @@ export default function TrainingOS() {
   });
 
   if (authLoading) {
-    return <MobileLoading fullScreen message="Loading TrainingOS™..." />;
+    return <ResponsiveLoading fullScreen message="Loading TrainingOS™..." />;
   }
 
   const filteredCourses = courses.filter((course) => {

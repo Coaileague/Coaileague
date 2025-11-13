@@ -17,7 +17,7 @@ import { AlertCircle, TrendingUp, TrendingDown, Users, Heart, MessageSquare, Awa
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 
 interface EmployeeHealthScore {
   id: string;
@@ -193,7 +193,7 @@ export default function EngagementDashboard() {
   if (loadingHealthScores || loadingBenchmarks || loadingRecognitions) {
     return (
       <div className="h-full flex items-center justify-center">
-        <MobileLoading message="Loading engagement data..." />
+        <ResponsiveLoading message="Loading engagement data..." />
       </div>
     );
   }

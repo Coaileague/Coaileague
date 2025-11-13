@@ -26,7 +26,7 @@ import { Clock, Play, Square, Calendar, DollarSign, User, Building2, Download, F
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "wouter";
@@ -527,7 +527,7 @@ export default function TimeTracking() {
   };
 
   if (isLoading || !isAuthenticated) {
-    return <MobileLoading fullScreen message="Loading Time Clock..." />;
+    return <ResponsiveLoading fullScreen message="Loading Time Clock..." />;
   }
 
   const pageContent = (

@@ -18,7 +18,7 @@ import { AlertCircle, CheckCircle, Clock, FileText, Scale, User, Calendar, Eye, 
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MobileLoading, LoadingCard } from "@/components/mobile-loading";
+import { ResponsiveLoading, LoadingCard } from "@/components/responsive-loading";
 
 export default function DisputesPage() {
   const { user } = useAuth();
@@ -152,7 +152,7 @@ export default function DisputesPage() {
     return (
       <div className="h-full flex flex-col">
         <div className="flex-1 flex items-center justify-center">
-          <MobileLoading message="Loading disputes..." />
+          <ResponsiveLoading message="Loading disputes..." />
         </div>
       </div>
     );

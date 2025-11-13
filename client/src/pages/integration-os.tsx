@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MobileLoading } from "@/components/mobile-loading";
+import { ResponsiveLoading } from "@/components/responsive-loading";
 import {
   Plug, Plus, Search, CheckCircle2, XCircle, AlertCircle, Settings,
   Key, Webhook, FileText, ExternalLink, Copy, Trash2, ToggleLeft,
@@ -186,7 +186,7 @@ export default function IntegrationOS() {
   });
 
   if (authLoading) {
-    return <MobileLoading fullScreen message="Loading IntegrationOS™..." />;
+    return <ResponsiveLoading fullScreen message="Loading IntegrationOS™..." />;
   }
 
   const categories = Array.from(new Set(marketplace.map((i) => i.category)));
