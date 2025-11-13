@@ -99,24 +99,8 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     }
   }, [overlayController]);
 
-  // Auto-hide is handled by OverlayController via duration parameter
-  // This effect just ensures hideTransition is called for success/error states
-  useEffect(() => {
-    if (!activeOverlayIdRef.current) return;
-    
-    const shouldAutoHide = 
-      options.status === "success" || 
-      options.status === "error" ||
-      (options.status === "loading" && options.duration !== undefined);
-    
-    if (shouldAutoHide) {
-      const timer = setTimeout(() => {
-        hideTransition();
-      }, options.duration || 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [options.status, options.duration, hideTransition]);
+  // OverlayController owns all dismissal logic via duration/onComplete
+  // TransitionContext no longer uses setTimeout to avoid racing with controller
 
   return (
     <TransitionContext.Provider value={{ showTransition, hideTransition, updateTransition }}>
