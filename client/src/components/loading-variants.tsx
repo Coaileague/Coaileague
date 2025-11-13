@@ -25,7 +25,7 @@ export function DesktopLoadingVariant1({ progress: externalProgress, message }: 
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900/95 dark:via-indigo-950/95 dark:to-slate-900/95 backdrop-blur-xl px-4">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900/95 dark:via-indigo-950/95 dark:to-slate-900/95 backdrop-blur-xl px-4">
       <div className="flex flex-col items-center gap-8 w-full max-w-md">
         <IsometricLoader size="lg" />
         
@@ -69,7 +69,7 @@ export function DesktopLoadingVariant2({ progress: externalProgress, message }: 
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 dark:from-indigo-950/95 dark:via-purple-950/95 dark:to-slate-900/95 backdrop-blur-xl px-4">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 dark:from-indigo-950/95 dark:via-purple-950/95 dark:to-slate-900/95 backdrop-blur-xl px-4">
       <div className="flex flex-col items-center gap-8 w-full max-w-md">
         <div className="relative w-48 h-48">
           {/* Background circle */}
@@ -138,7 +138,7 @@ export function DesktopLoadingVariant3({ progress: externalProgress, message }: 
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 dark:from-slate-900/95 dark:via-cyan-950/95 dark:to-teal-950/95 backdrop-blur-xl px-4">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 dark:from-slate-900/95 dark:via-cyan-950/95 dark:to-teal-950/95 backdrop-blur-xl px-4">
       <div className="flex flex-col items-center gap-8 w-full max-w-md">
         {/* Floating Icons */}
         <div className="relative w-full h-32">
@@ -206,7 +206,7 @@ export function MobileLoadingVariant1({ progress: externalProgress, message }: L
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl px-4">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl px-4">
       <div className="flex flex-col items-center gap-6 w-full max-w-sm">
         <div className="relative w-36 h-36">
           <svg className="w-full h-full -rotate-90">
@@ -257,7 +257,7 @@ export function MobileLoadingVariant2({ progress: externalProgress, message }: L
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-xl px-6">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-xl px-6">
       <div className="flex flex-col items-center gap-8 w-full max-w-sm">
         <motion.div
           animate={{ rotate: 360 }}
@@ -300,7 +300,7 @@ export function MobileLoadingVariant3({ progress: externalProgress, message }: L
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-cyan-900/95 via-teal-900/95 to-slate-900/95 backdrop-blur-xl px-6">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-cyan-900/95 via-teal-900/95 to-slate-900/95 backdrop-blur-xl px-6">
       <div className="flex flex-col items-center gap-8 w-full max-w-sm">
         {/* Animated Dots */}
         <div className="flex gap-3">

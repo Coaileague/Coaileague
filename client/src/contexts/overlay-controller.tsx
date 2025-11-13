@@ -4,7 +4,8 @@
  */
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
-import { ProgressLoadingOverlay, ProgressScenario } from "@/components/progress-loading-overlay";
+import { ResponsiveLoading } from "@/components/responsive-loading";
+import type { ProgressScenario } from "@/components/progress-loading-overlay";
 
 export type OverlayStatus = "loading" | "success" | "error" | "info";
 export type OverlayPriority = "critical" | "high" | "normal";
@@ -172,14 +173,9 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
     <OverlayControllerContext.Provider value={{ showOverlay, hideOverlay, updateOverlay, isModalActive, registerModal, unregisterModal, tryActivate }}>
       {children}
       {/* Single overlay instance - only one can be visible at a time */}
-      {activeOverlay && (
-        <ProgressLoadingOverlay
-          isVisible={true}
-          status={activeOverlay.status}
-          scenario={activeOverlay.scenario}
-          title={activeOverlay.title}
-          duration={activeOverlay.duration}
-        />
+      {/* Uses 6 universal loading variants (3 desktop + 3 mobile) with simulated progress */}
+      {activeOverlay && activeOverlay.status === "loading" && (
+        <ResponsiveLoading />
       )}
     </OverlayControllerContext.Provider>
   );
