@@ -44,6 +44,7 @@ import {
   payrollRuns,
   payrollEntries,
   abuseViolations,
+  serviceIncidentReports,
   leaderActions,
   escalationTickets,
   internalBids,
@@ -74,6 +75,8 @@ import {
   type UpsertUser,
   type AbuseViolation,
   type InsertAbuseViolation,
+  type ServiceIncidentReport,
+  type InsertServiceIncidentReport,
   type Workspace,
   type InsertWorkspace,
   type WorkspaceTheme,
@@ -463,6 +466,13 @@ export interface IStorage {
   getUserViolationCount(userId: string): Promise<number>;
   isUserBanned(userId: string): Promise<boolean>;
   getBanInfo(userId: string): Promise<{ isBanned: boolean; bannedUntil: Date | null; reason: string | null }>;
+  
+  // Service incident operations (Error Handling)
+  createServiceIncidentReport(report: InsertServiceIncidentReport): Promise<ServiceIncidentReport>;
+  getServiceIncidentReport(id: string, workspaceId: string): Promise<ServiceIncidentReport | undefined>;
+  getServiceIncidentReportsByWorkspace(workspaceId: string, limit?: number): Promise<ServiceIncidentReport[]>;
+  getServiceIncidentReportsByService(serviceKey: string, workspaceId?: string, limit?: number): Promise<ServiceIncidentReport[]>;
+  updateServiceIncidentReport(id: string, workspaceId: string, data: Partial<InsertServiceIncidentReport>): Promise<ServiceIncidentReport | undefined>;
   
   // BillOS™ operations (Financial Automation - extends existing invoice/payroll)
   // Client billing rates
@@ -3106,6 +3116,70 @@ export class DatabaseStorage implements IStorage {
       bannedUntil: ban.bannedUntil,
       reason: ban.banReason,
     };
+  }
+
+  // ============================================================================
+  // SERVICE INCIDENT OPERATIONS (Error Handling)
+  // ============================================================================
+
+  async createServiceIncidentReport(report: InsertServiceIncidentReport): Promise<ServiceIncidentReport> {
+    const [created] = await db
+      .insert(serviceIncidentReports)
+      .values(report)
+      .returning();
+    return created;
+  }
+
+  async getServiceIncidentReport(id: string, workspaceId: string): Promise<ServiceIncidentReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(serviceIncidentReports)
+      .where(
+        and(
+          eq(serviceIncidentReports.id, id),
+          eq(serviceIncidentReports.workspaceId, workspaceId)
+        )
+      );
+    return report;
+  }
+
+  async getServiceIncidentReportsByWorkspace(workspaceId: string, limit: number = 100): Promise<ServiceIncidentReport[]> {
+    return await db
+      .select()
+      .from(serviceIncidentReports)
+      .where(eq(serviceIncidentReports.workspaceId, workspaceId))
+      .orderBy(desc(serviceIncidentReports.createdAt))
+      .limit(limit);
+  }
+
+  async getServiceIncidentReportsByService(serviceKey: string, workspaceId?: string, limit: number = 100): Promise<ServiceIncidentReport[]> {
+    const conditions = workspaceId
+      ? and(
+          eq(serviceIncidentReports.serviceKey, serviceKey),
+          eq(serviceIncidentReports.workspaceId, workspaceId)
+        )
+      : eq(serviceIncidentReports.serviceKey, serviceKey);
+
+    return await db
+      .select()
+      .from(serviceIncidentReports)
+      .where(conditions)
+      .orderBy(desc(serviceIncidentReports.createdAt))
+      .limit(limit);
+  }
+
+  async updateServiceIncidentReport(id: string, workspaceId: string, data: Partial<InsertServiceIncidentReport>): Promise<ServiceIncidentReport | undefined> {
+    const [updated] = await db
+      .update(serviceIncidentReports)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(serviceIncidentReports.id, id),
+          eq(serviceIncidentReports.workspaceId, workspaceId)
+        )
+      )
+      .returning();
+    return updated;
   }
 
   // ============================================================================

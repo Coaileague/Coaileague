@@ -22173,6 +22173,12 @@ Respond with valid JSON array only.`
     }
   });
 
+  // ============================================================================
+  // SERVICE HEALTH & INCIDENT REPORTING ROUTES
+  // ============================================================================
+  const { registerHealthRoutes } = await import("./routes/health");
+  registerHealthRoutes(app, requireAuth);
+
   // Return the server we created at the top with WebSocket
   return server;
 }
