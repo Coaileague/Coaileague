@@ -13,6 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useSwipe } from "@/hooks/use-touch-swipe";
+import { useIdentity } from "@/hooks/useIdentity";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -139,6 +140,11 @@ export default function SmartScheduleOS() {
   const { data: workspace } = useQuery<any>({
     queryKey: ["/api/workspace"],
   });
+
+  // RBAC - Check workspace role for automation controls
+  const { workspaceRole, isLoading: identityLoading } = useIdentity();
+  const canUseAutomation = !identityLoading && ['org_owner', 'org_admin', 'manager', 'support_agent'].includes(workspaceRole || '');
+  const isUnauthorized = !identityLoading && workspaceRole && !canUseAutomation;
 
   // AI Status Query
   const { data: aiStatus } = useQuery<{ enabled: boolean; workspaceId: string; workspaceName: string }>({
@@ -662,7 +668,7 @@ export default function SmartScheduleOS() {
             <span className="text-xs sm:text-sm">Templates</span>
           </Button>
 
-          {aiEnabled && (
+          {aiEnabled && (canUseAutomation || identityLoading) && (
             <>
               <Button
                 variant="default"
@@ -670,7 +676,7 @@ export default function SmartScheduleOS() {
                 className="whitespace-nowrap flex-shrink-0 touch-manipulation min-h-9 bg-primary"
                 data-testid="button-generate-schedule"
                 onClick={handleSmartGenerate}
-                disabled={smartGenerateMutation.isPending || !aiEnabled}
+                disabled={smartGenerateMutation.isPending || !aiEnabled || identityLoading || !canUseAutomation}
               >
                 {smartGenerateMutation.isPending ? (
                   <>
@@ -691,6 +697,7 @@ export default function SmartScheduleOS() {
                 className="whitespace-nowrap flex-shrink-0 touch-manipulation min-h-9"
                 data-testid="button-request-service"
                 onClick={() => toast({ title: "Request Service", description: "Service coverage finder coming soon!" })}
+                disabled={identityLoading || !canUseAutomation}
               >
                 <Send className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="text-xs sm:text-sm">Request Service</span>
@@ -709,18 +716,29 @@ export default function SmartScheduleOS() {
             <span className="text-xs sm:text-sm">Publish</span>
           </Button>
 
-          <div className="flex items-center gap-2 ml-auto pl-3 border-l border-border">
-            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
-              <Bot className={`h-4 w-4 ${aiEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className="text-xs font-medium">SmartSchedule AI</span>
-              <Switch
-                checked={aiEnabled}
-                onCheckedChange={handleAiToggle}
-                disabled={toggleAiMutation.isPending || !workspace?.id}
-                data-testid="switch-ai-toggle"
-              />
+          {(canUseAutomation || identityLoading) && (
+            <div className="flex items-center gap-2 ml-auto pl-3 border-l border-border">
+              <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
+                <Bot className={`h-4 w-4 ${aiEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className="text-xs font-medium">SmartSchedule AI</span>
+                <Switch
+                  checked={aiEnabled}
+                  onCheckedChange={handleAiToggle}
+                  disabled={toggleAiMutation.isPending || !workspace?.id || identityLoading || !canUseAutomation}
+                  data-testid="switch-ai-toggle"
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {isUnauthorized && (
+            <div className="ml-auto pl-3 border-l border-border">
+              <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
+                <Bot className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">View-only access</span>
+              </div>
+            </div>
+          )}
 
           <Button 
             variant="outline" 
