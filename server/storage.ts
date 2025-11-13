@@ -125,6 +125,12 @@ import {
   type InsertSupportRoom,
   type SupportTicketAccess,
   type InsertSupportTicketAccess,
+  helposAiSessions,
+  helposAiTranscriptEntries,
+  type HelposAiSession,
+  type InsertHelposAiSession,
+  type HelposAiTranscriptEntry,
+  type InsertHelposAiTranscriptEntry,
   type AuditLog,
   type InsertAuditLog,
   type FeatureFlag,
@@ -327,6 +333,14 @@ export interface IStorage {
   getSupportTicket(id: string, workspaceId: string): Promise<SupportTicket | undefined>;
   getSupportTickets(workspaceId: string): Promise<SupportTicket[]>;
   updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
+  
+  // HelpOS™ AI Support System
+  createHelposSession(session: InsertHelposAiSession): Promise<HelposAiSession>;
+  getHelposSession(id: string, workspaceId: string): Promise<HelposAiSession | undefined>;
+  getHelposSessionsByUser(userId: string, workspaceId: string): Promise<HelposAiSession[]>;
+  updateHelposSession(id: string, workspaceId: string, data: Partial<InsertHelposAiSession>): Promise<HelposAiSession | undefined>;
+  createHelposTranscript(entry: InsertHelposAiTranscriptEntry): Promise<HelposAiTranscriptEntry>;
+  getHelposTranscripts(sessionId: string): Promise<HelposAiTranscriptEntry[]>;
   
   // Audit Log operations (Security & Compliance)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -1680,6 +1694,67 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+  
+  // ============================================================================
+  // HELPOS™ AI SUPPORT SYSTEM
+  // ============================================================================
+  
+  async createHelposSession(input: InsertHelposAiSession): Promise<HelposAiSession> {
+    const [session] = await db
+      .insert(helposAiSessions)
+      .values(input)
+      .returning();
+
+    return session;
+  }
+
+  async getHelposSession(id: string, workspaceId: string): Promise<HelposAiSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(helposAiSessions)
+      .where(and(eq(helposAiSessions.id, id), eq(helposAiSessions.workspaceId, workspaceId)));
+
+    return session;
+  }
+
+  async getHelposSessionsByUser(userId: string, workspaceId: string): Promise<HelposAiSession[]> {
+    return db
+      .select()
+      .from(helposAiSessions)
+      .where(and(eq(helposAiSessions.userId, userId), eq(helposAiSessions.workspaceId, workspaceId)))
+      .orderBy(desc(helposAiSessions.createdAt));
+  }
+
+  async updateHelposSession(
+    id: string,
+    workspaceId: string,
+    data: Partial<InsertHelposAiSession>,
+  ): Promise<HelposAiSession | undefined> {
+    const [updated] = await db
+      .update(helposAiSessions)
+      .set(data)
+      .where(and(eq(helposAiSessions.id, id), eq(helposAiSessions.workspaceId, workspaceId)))
+      .returning();
+
+    return updated;
+  }
+
+  async createHelposTranscript(entry: InsertHelposAiTranscriptEntry): Promise<HelposAiTranscriptEntry> {
+    const [transcript] = await db
+      .insert(helposAiTranscriptEntries)
+      .values(entry)
+      .returning();
+
+    return transcript;
+  }
+
+  async getHelposTranscripts(sessionId: string): Promise<HelposAiTranscriptEntry[]> {
+    return db
+      .select()
+      .from(helposAiTranscriptEntries)
+      .where(eq(helposAiTranscriptEntries.sessionId, sessionId))
+      .orderBy(helposAiTranscriptEntries.timestamp);
   }
   
   // ============================================================================
