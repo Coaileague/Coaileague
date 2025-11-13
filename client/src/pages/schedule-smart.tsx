@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Shift, Employee, Client } from "@shared/schema";
+import { getShiftTheme } from "@/lib/shift-theme";
 
 // Setup moment localizer for react-big-calendar
 const localizer = momentLocalizer(moment);
@@ -357,19 +358,6 @@ export default function SmartScheduleOS() {
     return client?.address || null;
   };
 
-  const getRoleColor = (employeeId: string | null) => {
-    if (!employeeId) return 'bg-slate-400';
-    const role = getEmployeeRole(employeeId);
-    const roleColors: Record<string, string> = {
-      'Rigger': 'bg-blue-600',
-      'SysOp': 'bg-blue-700',
-      'Manager': 'bg-blue-500',
-      'Technician': 'bg-blue-400',
-      'Operator': 'bg-blue-300',
-    };
-    return roleColors[role] || 'bg-slate-600';
-  };
-
   // Conflict detection (overlapping shifts + short turnaround)
   const detectConflict = useCallback((shift: Shift, allShifts: Shift[]) => {
     const shiftStart = new Date(shift.startTime);
@@ -417,14 +405,32 @@ export default function SmartScheduleOS() {
     }));
   }, [shifts, employees, detectConflict]);
 
-  // Custom event style getter
+  // Custom event style getter with vibrant theme colors
   const eventStyleGetter = (event: any) => {
     const shiftEvent = event as ShiftEvent;
-    const baseColor = getRoleColor(shiftEvent.employeeId);
+    const shift = shifts.find(s => s.id === shiftEvent.id);
     const hasConflict = shiftEvent.hasConflict;
     
+    if (!shift) {
+      return { className: 'bg-slate-400 text-white rounded-md px-2 py-1 text-sm font-medium cursor-pointer' };
+    }
+    
+    // Get vibrant theme from getShiftTheme helper
+    const employee = employees.find(e => e.id === shift.employeeId);
+    const client = clients.find(c => c.id === shift.clientId);
+    const theme = getShiftTheme(shift, client, employee);
+    
     return {
-      className: `${hasConflict ? 'bg-red-600 border-2 border-red-400' : baseColor} text-white rounded-md px-2 py-1 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity`,
+      style: hasConflict ? {
+        backgroundColor: '#dc2626',
+        borderColor: '#ef4444',
+        color: '#ffffff',
+      } : {
+        backgroundColor: theme.backgroundColor,
+        borderColor: theme.borderColor,
+        color: theme.textColor,
+      },
+      className: `rounded-md px-2 py-1 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity ${hasConflict ? 'border-2' : ''}`,
     };
   };
 
@@ -935,7 +941,7 @@ export default function SmartScheduleOS() {
                     const employee = employees.find(e => e.id === shift.employeeId);
                     const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
                     const duration = moment(shift.endTime).diff(moment(shift.startTime), 'hours', true);
-                    const roleColor = getRoleColor(shift.employeeId);
+                    const theme = getShiftTheme(shift, client, employee);
                     
                     return (
                       <button
@@ -944,7 +950,12 @@ export default function SmartScheduleOS() {
                           setSelectedShift(shift);
                           setIsShiftPopoverOpen(true);
                         }}
-                        className={`w-full text-left p-3 rounded-lg ${roleColor.replace('bg-', 'bg-')} bg-opacity-90 text-white shadow-sm`}
+                        style={{
+                          backgroundColor: theme.backgroundColor,
+                          borderColor: theme.borderColor,
+                          color: theme.textColor,
+                        }}
+                        className="w-full text-left p-3 rounded-lg shadow-sm border-2"
                         data-testid={`shift-card-${shift.id}`}
                       >
                         <div className="flex items-start justify-between mb-1">
@@ -1090,8 +1101,8 @@ export default function SmartScheduleOS() {
           <DialogContent className="w-[95vw] max-w-full sm:max-w-md h-[90vh] sm:h-auto overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className={`${getRoleColor(selectedShift.employeeId)} text-white`}>
+                <Avatar className="h-10 w-10" style={{ backgroundColor: getShiftTheme(selectedShift, clients.find(c => c.id === selectedShift.clientId), employees.find(e => e.id === selectedShift.employeeId)).backgroundColor }}>
+                  <AvatarFallback className="text-white">
                     {getEmployeeName(selectedShift.employeeId).substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
