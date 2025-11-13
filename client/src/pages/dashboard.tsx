@@ -47,7 +47,7 @@ interface WorkspaceHealth {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading: accessLoading } = useWorkspaceAccess();
+  const { workspaceRole, subscriptionTier, isPlatformStaff, platformRole, isLoading: accessLoading } = useWorkspaceAccess();
   const { showTransition, hideTransition } = useTransition();
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread' | 'read'>('all');
 
@@ -268,6 +268,8 @@ export default function Dashboard() {
                      workspaceRole === 'org_admin' ? 'Administer your organization' :
                      workspaceRole === 'department_manager' ? 'Oversee your team performance' :
                      workspaceRole === 'supervisor' ? 'Lead your team to success' :
+                     workspaceRole === 'auditor' ? 'Audit financial, payroll, and compliance data' :
+                     workspaceRole === 'contractor' ? 'Access your assigned projects and tasks' :
                      'Track your time and tasks'}
                   </p>
                 </div>
@@ -438,6 +440,146 @@ export default function Dashboard() {
             </TooltipProvider>
           ))}
         </div>
+
+        {/* Organization Auditor Panel - Read-Only Financial, Payroll & Compliance Data */}
+        {workspaceRole === 'auditor' && (
+          <div className="mb-8 space-y-6">
+            <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-950/20 dark:to-cyan-950/20 border-2 border-emerald-500/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-emerald-600 dark:bg-emerald-700 rounded-lg">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground lg:text-center">Organization Audit Dashboard</h3>
+                  <p className="text-sm text-muted-foreground lg:text-center">Read-only access to financial, payroll, and compliance data</p>
+                </div>
+              </div>
+
+              {/* Auditor Quick Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">Invoices</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">View Only</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Access invoice records</p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Payroll</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">View Only</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Review payroll data</p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-400 lg:text-center">Compliance</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">View Only</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Audit compliance logs</p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="w-4 h-4 text-slate-700 dark:text-slate-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400 lg:text-center">Audit Logs</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">View Only</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Access audit trail</p>
+                </div>
+              </div>
+
+              {/* Auditor Access Notice */}
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 lg:text-center">Auditor Access Level</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 lg:text-center">
+                      You have read-only access to financial records, payroll data, compliance documentation, and audit logs. 
+                      Use the navigation menu to access Invoices, Payroll, Audit Logs, and Policies sections.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Platform Auditor / Compliance Officer Panel - Platform-Wide Compliance Oversight */}
+        {platformRole === 'compliance_officer' && (
+          <div className="mb-8 space-y-6">
+            <div className="bg-gradient-to-br from-cyan-50 to-teal-50 dark:from-cyan-950/20 dark:to-teal-950/20 border-2 border-cyan-500/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-cyan-600 dark:bg-cyan-700 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground lg:text-center">Platform Compliance & AI Oversight</h3>
+                  <p className="text-sm text-muted-foreground lg:text-center">Platform-wide compliance monitoring, audits, and AI governance</p>
+                </div>
+              </div>
+
+              {/* Platform Auditor Quick Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Compliance Heatmap</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">Monitor</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Platform compliance status</p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bell className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-400 lg:text-center">AI Oversight</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">Review</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">AI governance queue</p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">Policy Attestations</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">Audit</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Policy compliance tracking</p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-slate-700 dark:text-slate-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400 lg:text-center">Data Retention</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground lg:text-center">Configure</p>
+                  <p className="text-xs text-muted-foreground mt-1 lg:text-center">Retention policies</p>
+                </div>
+              </div>
+
+              {/* Platform Auditor Access Notice */}
+              <div className="bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-cyan-900 dark:text-cyan-100 lg:text-center">Compliance Officer Access</p>
+                    <p className="text-xs text-cyan-700 dark:text-cyan-300 mt-1 lg:text-center">
+                      You have platform-wide compliance oversight including audit trail reviews, AI governance monitoring, 
+                      policy attestation tracking, and data retention management across all workspaces.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Notification Center Section - Professional Style */}
         <div className="bg-card border border-border rounded-lg p-6 sm:p-8">
