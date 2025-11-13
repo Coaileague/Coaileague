@@ -47,6 +47,7 @@ import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePen
 import { queueManager } from './services/helpOsQueue';
 import { HelpOSAI } from './helpos-ai';
 import { helposService } from './services/helposService';
+import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
 import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
@@ -4146,6 +4147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Generate AI Schedule with billing
   app.post('/api/scheduleos/generate-schedule', isAuthenticated, requireManager, async (req: any, res) => {
+
+
     try {
       const userId = req.user.claims.sub;
       const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
@@ -4615,6 +4618,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging shift:", error);
       res.status(500).json({ message: "Failed to acknowledge shift" });
+    }
+  });
+
+  // ============================================================================
+  // SCHEDULEOS™ SMART AI - Auto-Schedule Employees to Open Shifts
+  // ============================================================================
+  
+  // Zod schema for schedule-smart-ai request validation
+  const scheduleSmartAIRequestSchema = z.object({
+    openShiftIds: z.array(z.string()).min(1, "At least one shift ID is required"),
+    availableEmployeeIds: z.array(z.string()).min(1, "At least one employee ID is required"),
+    constraints: z.object({
+      maxShiftsPerEmployee: z.number().int().positive().optional(),
+      requiredSkills: z.array(z.string()).optional(),
+      preferExperience: z.boolean().optional(),
+      balanceWorkload: z.boolean().optional()
+    }).optional()
+  });
+
+  app.post('/api/schedule-smart-ai', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    const user = req.user!;
+    const workspaceId = user.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: "No workspace selected" });
+    }
+
+    try {
+      if (!isScheduleSmartAvailable()) {
+        return res.status(503).json({ error: "AI scheduling unavailable - Gemini API not configured" });
+      }
+
+      // Validate request body with Zod
+      const validationResult = scheduleSmartAIRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request body", 
+          details: validationResult.error.errors 
+        });
+      }
+
+      const { openShiftIds, availableEmployeeIds, constraints } = validationResult.data;
+
+      // Fetch open shifts
+      const openShifts = await db.select()
+        .from(shifts)
+        .where(
+          and(
+            eq(shifts.workspaceId, workspaceId),
+            inArray(shifts.id, openShiftIds),
+            isNull(shifts.employeeId)
+          )
+        );
+
+      if (openShifts.length === 0) {
+        return res.status(404).json({ error: "No open shifts found" });
+      }
+
+      // Fetch available employees
+      const availableEmployees = await db.select()
+        .from(employees)
+        .where(
+          and(
+            eq(employees.workspaceId, workspaceId),
+            inArray(employees.id, availableEmployeeIds)
+          )
+        );
+
+      if (availableEmployees.length === 0) {
+        return res.status(404).json({ error: "No available employees found" });
+      }
+
+      // Call ScheduleOS™ AI Engine
+      const aiResponse = await scheduleSmartAI({
+        openShifts,
+        availableEmployees,
+        workspaceId,
+        userId: user.id,
+        constraints
+      });
+
+      console.log(`🧠 ScheduleOS™ AI - ${aiResponse.assignments.length} assignments suggested for workspace ${workspaceId}`);
+
+      res.json({
+        success: true,
+        data: aiResponse
+      });
+    } catch (error: any) {
+      console.error('ScheduleOS™ AI error:', error);
+      res.status(500).json({ error: error.message || 'AI scheduling failed' });
     }
   });
 

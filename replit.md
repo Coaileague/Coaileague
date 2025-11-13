@@ -38,12 +38,13 @@ The platform features a professional aesthetic using Deep Charcoal, Platinum neu
 -   **Partner API Usage Tracking**: Middleware-based tracking system with caller-supplied deterministic IDs for idempotency.
 -   **Cost Aggregation & Billing**: Automated cost calculation and Stripe invoice generation, aggregating AI usage and partner API costs per workspace with tier-based markup rates.
 -   **Partner OAuth Integration**: Secure OAuth 2.0 implementation for QuickBooks Online and Gusto, featuring AES-256-GCM encryption, PKCE, CSRF protection, auto-refresh logic, and multi-tenant isolation.
+-   **Unified Gemini AI Brain**: AutoForce™ uses Google Gemini 2.0 Flash Exp as the single AI provider for all autonomous features. **HelpOS™** (customer support AI) and **ScheduleOS™ Smart AI** (auto-scheduling engine) both leverage Gemini for cost-effective, intelligent automation. Automatic usage billing via `usageMeteringService` tracks tokens per workspace with feature keys `helpos_gemini_support` and `scheduleos_smart_ai`. Replaces previous OpenAI dependency for better economics and performance.
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)
 -   **ORM**: Drizzle ORM
 -   **Payment Processing**: Stripe Connect
 -   **Email**: Resend
--   **AI**: OpenAI (GPT-3.5-turbo, GPT-4, GPT-4-turbo, GPT-4o), Google Gemini (2.0 Flash Exp).
--   **Constraint Solving**: TypeScript greedy constraint solver for ScheduleOS™.
+-   **AI**: Google Gemini (2.0 Flash Exp) - Unified AI brain for HelpOS™ support and ScheduleOS™ smart scheduling.
+-   **Constraint Solving**: TypeScript greedy constraint solver for ScheduleOS™ manual scheduling.
 -   **Financial Integrations**: QuickBooks Online (QBO) for invoicing, Gusto for payroll.
