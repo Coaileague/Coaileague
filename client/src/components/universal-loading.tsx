@@ -35,13 +35,13 @@ export function UniversalLoading({
             animated={true} 
           />
           
-          {/* AutoForce Emerald + Cyan Wave Animation */}
+          {/* AutoForce Blue + Cyan Wave Animation */}
           <div className="w-full max-w-sm">
             <div className="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden">
               <div 
                 className="h-full animate-wave-loading"
                 style={{
-                  background: 'linear-gradient(90deg, #10b981 0%, #06b6d4 25%, #10b981 50%, #06b6d4 75%, #10b981 100%)',
+                  background: 'linear-gradient(90deg, #3b82f6 0%, #22d3ee 25%, #3b82f6 50%, #22d3ee 75%, #3b82f6 100%)',
                   backgroundSize: '200% 100%',
                 }}
               />
@@ -66,13 +66,13 @@ export function UniversalLoading({
           animated={true} 
         />
         
-        {/* AutoForce Emerald + Cyan Wave Animation */}
+        {/* AutoForce Blue + Cyan Wave Animation */}
         <div className="w-full max-w-xs">
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
               className="h-full animate-wave-loading"
               style={{
-                background: 'linear-gradient(90deg, #10b981 0%, #06b6d4 25%, #10b981 50%, #06b6d4 75%, #10b981 100%)',
+                background: 'linear-gradient(90deg, #3b82f6 0%, #22d3ee 25%, #3b82f6 50%, #22d3ee 75%, #3b82f6 100%)',
                 backgroundSize: '200% 100%',
               }}
             />

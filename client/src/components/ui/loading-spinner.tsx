@@ -23,7 +23,7 @@ export function LoadingSpinner({ size = "md", className, text }: LoadingSpinnerP
             sizeClasses[size]
           )}
           style={{
-            borderTopColor: "hsl(158, 34%, 32%)", // Professional Muted Evergreen (NO glow)
+            borderTopColor: "#3b82f6", // Blue-500 for new branding
             animation: "spin 0.8s linear infinite",
           }}
         />
