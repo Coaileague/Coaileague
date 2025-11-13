@@ -58,18 +58,26 @@ class GeminiProvider implements AIProvider {
         maxOutputTokens: options.maxTokens || 1024,
         temperature: 0.7,
       },
-      systemInstruction: systemMessage?.content,
+      // Gemini systemInstruction must be properly formatted
+      ...(systemMessage && {
+        systemInstruction: {
+          parts: [{ text: systemMessage.content }],
+          role: 'user'
+        }
+      })
     });
 
     const lastMessage = conversationMessages[conversationMessages.length - 1];
     const result = await chat.sendMessage(lastMessage.content);
     const response = result.response;
     
-    // Record token usage for billing
+    // Record token usage for billing (skip for anonymous users)
     const usage = response.usageMetadata;
     const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
     
-    if (totalTokens > 0 && options.workspaceId) {
+    const isAnonymousWorkspace = options.workspaceId === 'helpos-anonymous-workspace';
+    
+    if (totalTokens > 0 && options.workspaceId && !isAnonymousWorkspace) {
       await usageMeteringService.recordUsage({
         workspaceId: options.workspaceId,
         userId: options.userId,
@@ -85,6 +93,8 @@ class GeminiProvider implements AIProvider {
         }
       });
       console.log(`💎 HelpOS™ Gemini - ${totalTokens} tokens - Workspace: ${options.workspaceId}`);
+    } else if (isAnonymousWorkspace) {
+      console.log(`💎 HelpOS™ Gemini - ${totalTokens} tokens - Anonymous User (not billed)`);
     }
 
     return {
@@ -258,12 +268,15 @@ class HelpOSService {
     let session: HelposAiSession | null = null;
     let currentFailedAttempts = 0;
 
-    if (sessionId) {
+    // For anonymous users (workspaceId='helpos-anonymous-workspace'), don't persist sessions
+    const isAnonymous = workspaceId === 'helpos-anonymous-workspace';
+
+    if (sessionId && !isAnonymous) {
       session = await storage.getHelposSession(sessionId, workspaceId) || null;
       currentFailedAttempts = session?.failedAttempts || 0;
     }
 
-    if (!session) {
+    if (!session && !isAnonymous) {
       const oneYearFromNow = new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
@@ -278,18 +291,39 @@ class HelpOSService {
       
       session = await storage.createHelposSession(sessionData);
     }
+    
+    // For anonymous users, create in-memory session
+    if (isAnonymous && !session) {
+      session = {
+        id: `anon-session-${Date.now()}`,
+        workspaceId,
+        userId,
+        status: 'active' as const,
+        detectedIssueCategory: detectedCategory,
+        detectedSentiment: detectedSentiment,
+        failedAttempts: 0,
+        createdAt: new Date(),
+        lastInteractionAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        escalationReason: null,
+        aiSummary: null,
+        escalatedAt: null
+      };
+    }
 
     if (!session) {
       throw new Error('Failed to create or retrieve HelpOS session');
     }
 
-    // Store user message in transcript
-    const userTranscript: InsertHelposAiTranscriptEntry = {
-      sessionId: session.id,
-      role: 'user',
-      content: userMessage,
-    };
-    await storage.createHelposTranscript(userTranscript);
+    // Store user message in transcript (skip for anonymous)
+    if (!isAnonymous) {
+      const userTranscript: InsertHelposAiTranscriptEntry = {
+        sessionId: session.id,
+        role: 'user',
+        content: userMessage,
+      };
+      await storage.createHelposTranscript(userTranscript);
+    }
 
     // Check if user is asking for human help
     const wantsHumanHelp = /talk to (a )?human|speak to agent|escalate|transfer/i.test(userMessage);
@@ -304,30 +338,36 @@ class HelpOSService {
       const fullHistory = [...conversationHistory, { role: 'user', content: userMessage }];
       const aiSummary = await this.generateCaseSummary(fullHistory, workspaceId);
 
-      // Update session with escalation data
-      await storage.updateHelposSession(session.id, workspaceId, {
-        status: 'escalated',
-        escalationReason,
-        aiSummary,
-        escalatedAt: new Date(),
-      });
+      // Update session with escalation data (skip for anonymous)
+      if (!isAnonymous) {
+        await storage.updateHelposSession(session.id, workspaceId, {
+          status: 'escalated',
+          escalationReason,
+          aiSummary,
+          escalatedAt: new Date(),
+        });
+      }
 
-      const escalationMessage = `I understand this requires human assistance. I'm connecting you with our support team now. They'll have full context of our conversation and will help you shortly.`;
+      const escalationMessage = isAnonymous 
+        ? `I understand this requires human assistance. Please sign up or log in to connect with our support team and create a support ticket.`
+        : `I understand this requires human assistance. I'm connecting you with our support team now. They'll have full context of our conversation and will help you shortly.`;
 
-      // Store escalation message in transcript
-      const escalationTranscript: InsertHelposAiTranscriptEntry = {
-        sessionId: session.id,
-        role: 'assistant',
-        content: escalationMessage,
-        messageType: 'escalation_notice',
-      };
-      await storage.createHelposTranscript(escalationTranscript);
+      // Store escalation message in transcript (skip for anonymous)
+      if (!isAnonymous) {
+        const escalationTranscript: InsertHelposAiTranscriptEntry = {
+          sessionId: session.id,
+          role: 'assistant',
+          content: escalationMessage,
+          messageType: 'escalation_notice',
+        };
+        await storage.createHelposTranscript(escalationTranscript);
+      }
 
       return {
         sessionId: session.id,
         message: escalationMessage,
-        shouldEscalate: true,
-        escalationReason,
+        shouldEscalate: !isAnonymous, // Anonymous users can't escalate
+        escalationReason: isAnonymous ? undefined : escalationReason,
         detectedCategory,
         detectedSentiment,
       };
@@ -361,8 +401,8 @@ Be helpful, empathetic, and solution-oriented.`;
 
     const { content: aiResponse, tokensUsed } = await this.provider.chat(messages);
 
-    // Record usage
-    if (tokensUsed > 0) {
+    // Record usage (skip for anonymous users)
+    if (tokensUsed > 0 && !isAnonymous) {
       await usageMeteringService.recordUsage({
         workspaceId,
         featureKey: 'helpdesk_ai_chat',
@@ -374,18 +414,20 @@ Be helpful, empathetic, and solution-oriented.`;
       });
     }
 
-    // Store AI response in transcript
-    const aiTranscript: InsertHelposAiTranscriptEntry = {
-      sessionId: session.id,
-      role: 'assistant',
-      content: aiResponse,
-    };
-    await storage.createHelposTranscript(aiTranscript);
+    // Store AI response in transcript (skip for anonymous)
+    if (!isAnonymous) {
+      const aiTranscript: InsertHelposAiTranscriptEntry = {
+        sessionId: session.id,
+        role: 'assistant',
+        content: aiResponse,
+      };
+      await storage.createHelposTranscript(aiTranscript);
 
-    // Update session timestamp
-    await storage.updateHelposSession(session.id, workspaceId, {
-      lastInteractionAt: new Date(),
-    });
+      // Update session timestamp
+      await storage.updateHelposSession(session.id, workspaceId, {
+        lastInteractionAt: new Date(),
+      });
+    }
 
     return {
       sessionId: session.id,

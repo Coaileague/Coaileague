@@ -605,8 +605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HELPOS™ AI SUPPORT SYSTEM
   // ============================================================================
 
-  // HelpOS™ bubble chat - Customer-facing AI chat
-  app.post('/api/support/helpos-chat', requireAuth, chatMessageLimiter, async (req, res) => {
+  // HelpOS™ bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
+  app.post('/api/support/helpos-chat', chatMessageLimiter, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const { message, sessionId, conversationHistory } = req.body;
@@ -615,8 +615,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Message is required' });
       }
 
-      const userId = authReq.user!.id;
-      const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
+      // Support both authenticated and anonymous users
+      const isAuthenticated = !!authReq.user?.id;
+      const userId = isAuthenticated ? authReq.user!.id : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // For anonymous users, use a default public workspace or create temporary one
+      const workspaceId = isAuthenticated 
+        ? (await resolveWorkspaceForUser(authReq.user!.id, req.body.workspaceId)).workspaceId
+        : 'helpos-anonymous-workspace';
       
       // SECURITY: Validate session ownership to prevent cross-workspace data access
       if (sessionId) {
@@ -631,8 +637,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get user details for chat context
-      const user = await storage.getUser(userId);
-      const userName = user?.email || 'User';
+      const user = isAuthenticated ? await storage.getUser(userId) : null;
+      const userName = user?.email || (isAuthenticated ? 'User' : 'Guest');
       const userEmail = user?.email || '';
 
       const response = await helposService.bubbleAgent_reply({

@@ -134,12 +134,14 @@ export function FloatingSupportChat() {
       };
 
       setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('HelpOS chat error:', error);
       setIsTyping(false);
+      const errorDetails = error.message || error.toString();
       const errorMessage: Message = {
         id: messages.length + 2,
         type: 'bot',
-        text: "I apologize, but I'm having trouble connecting right now. Please try again or contact our support team directly.",
+        text: `I apologize, but I'm having trouble connecting right now. Please try again or contact our support team directly.\n\nError: ${errorDetails}`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
