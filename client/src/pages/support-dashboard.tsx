@@ -7,7 +7,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 import {
   MessageSquare, Users, Clock, CheckCircle, AlertCircle,
   Mic, MicOff, ExternalLink, Bot, Sparkles, TrendingUp,
@@ -95,13 +94,6 @@ export default function SupportDashboard() {
 
   return (
     <>
-      {/* Universal Loading Overlay with Hogwash Messages */}
-      <ProgressLoadingOverlay 
-        isVisible={isLoading}
-        scenario="dashboardLoading"
-        status="loading"
-      />
-      
       <ScrollArea className="h-full w-full">
         <div className="flex flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto pb-8">
           {/* Branded Header with Large Logo */}

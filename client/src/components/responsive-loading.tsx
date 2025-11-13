@@ -9,9 +9,12 @@ import {
   MobileLoadingVariant3,
 } from "./loading-variants";
 
+export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync" | "dashboardLoading";
+
 interface ResponsiveLoadingProps {
   message?: string;
   progress?: number;
+  scenario?: ProgressScenario;
 }
 
 // Desktop variants pool
@@ -44,7 +47,7 @@ const MOBILE_VARIANTS = [
  * 
  * Use this for auth gates, access loading, and page-level loading states
  */
-export function ResponsiveLoading({ message, progress }: ResponsiveLoadingProps) {
+export function ResponsiveLoading({ message, progress, scenario }: ResponsiveLoadingProps) {
   const isMobile = useIsMobile();
   const [VariantComponent, setVariantComponent] = useState(() => 
     isMobile ? MOBILE_VARIANTS[0] : DESKTOP_VARIANTS[0]
@@ -57,13 +60,29 @@ export function ResponsiveLoading({ message, progress }: ResponsiveLoadingProps)
     setVariantComponent(() => variants[randomIndex]);
   }, [isMobile]);
   
+  // Scenario-based default message (variants can override with their own messages)
+  const defaultMessage = scenario ? getScenarioMessage(scenario) : undefined;
+  
   // All variants are fullscreen by design
-  return <VariantComponent message={message} progress={progress} />;
+  return <VariantComponent message={message || defaultMessage} progress={progress} />;
+}
+
+// Get scenario-based message
+function getScenarioMessage(scenario: ProgressScenario): string {
+  const messages: Record<ProgressScenario, string> = {
+    login: "Signing in...",
+    logout: "Signing out...",
+    heavyOperation: "Processing...",
+    aiProcessing: "AI working...",
+    dataSync: "Synchronizing...",
+    dashboardLoading: "Loading dashboard...",
+  };
+  return messages[scenario];
 }
 
 /**
  * Fullscreen variant alias for backwards compatibility
  */
-export function ResponsiveLoadingFullscreen({ message, progress }: ResponsiveLoadingProps) {
-  return <ResponsiveLoading message={message} progress={progress} />;
+export function ResponsiveLoadingFullscreen({ message, progress, scenario }: ResponsiveLoadingProps) {
+  return <ResponsiveLoading message={message} progress={progress} scenario={scenario} />;
 }

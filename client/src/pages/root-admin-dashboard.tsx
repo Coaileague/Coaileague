@@ -22,7 +22,6 @@ import {
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { TimeGreeting } from "@/components/time-greeting";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -269,13 +268,6 @@ export default function RootAdminDashboard() {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Universal Loading Overlay with Hogwash Messages */}
-      <ProgressLoadingOverlay 
-        isVisible={isLoadingDashboard}
-        scenario="dashboardLoading"
-        status="loading"
-      />
-      
       {/* Animated background gradient orbs - Hidden on mobile for performance */}
       <div className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-100/30 rounded-full filter blur-3xl animate-pulse"></div>
