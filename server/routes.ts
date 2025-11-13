@@ -674,28 +674,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HelpOS™ bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
   app.post('/api/support/helpos-chat', chatMessageLimiter, async (req, res) => {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const authReq = req as any; // Need 'any' to access both session and user
       const { message, sessionId, conversationHistory } = req.body;
       
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: 'Message is required' });
       }
 
-      // Support both authenticated and anonymous users
-      const isAuthenticated = !!authReq.user?.id;
+      // Support both auth systems: Custom auth (session) and Replit Auth (OIDC)
+      let userId: string | null = null;
+      let isAuthenticated = false;
+      
+      // Try custom auth first (session-based)
+      if (authReq.session?.userId) {
+        userId = authReq.session.userId;
+        isAuthenticated = true;
+      }
+      // Try Replit Auth (OIDC)
+      else if (authReq.isAuthenticated?.() && authReq.user?.claims?.sub) {
+        userId = authReq.user.claims.sub;
+        isAuthenticated = true;
+      }
       
       // For anonymous users, derive a stable userId from sessionId to prevent session hijacking
       // This ensures anonymous users can only access their own sessions
-      const userId = isAuthenticated 
-        ? authReq.user!.id 
-        : sessionId 
+      if (!isAuthenticated) {
+        userId = sessionId 
           ? `anon-${sessionId}` // Stable anonymous ID based on session
           : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // New anonymous user
+      }
       
       // For anonymous users, use AutoForce Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
       const workspaceId = isAuthenticated 
-        ? (await resolveWorkspaceForUser(authReq.user!.id, req.body.workspaceId)).workspaceId
+        ? (await resolveWorkspaceForUser(userId!, req.body.workspaceId)).workspaceId
         : PLATFORM_WORKSPACE_ID;
       
       // SECURITY: Validate session ownership to prevent cross-user access
@@ -787,7 +799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ticketNumber = `GUEST-${Date.now()}`;
           const conversation = await storage.createChatConversation({
             workspaceId,
-            customerId: userId,
+            customerId: null, // Anonymous users don't have user records - FK allows null
             customerName: userName || 'Guest',
             customerEmail: userEmail || 'guest@anonymous',
             subject: `HelpOS™ Escalation - ${response.escalationReason}`,
