@@ -1,5 +1,7 @@
 import { AFCoreScan } from "./loading-indicators";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { motion } from "framer-motion";
 
 interface MobileLoadingProps {
   message?: string;
@@ -7,14 +9,34 @@ interface MobileLoadingProps {
   progress?: number;
 }
 
+// Personalized loading messages for mobile users
+function getMobileLoadingMessage(progress: number, userName?: string): string {
+  const firstName = userName?.split(' ')[0] || userName || 'there';
+  
+  if (progress < 20) {
+    return `Welcome back, ${firstName}...`;
+  } else if (progress < 40) {
+    return "Securing your connection...";
+  } else if (progress < 60) {
+    return "Loading your workspace...";
+  } else if (progress < 80) {
+    return "Preparing your dashboard...";
+  } else if (progress < 95) {
+    return "Almost ready...";
+  } else {
+    return "Complete!";
+  }
+}
+
 /**
  * Mobile-optimized loading screen with AF Core Scan
  * Shows during page transitions and data loading
- * MOBILE: Clean animation only - NO percentage, NO messages
+ * MOBILE: Real progress bar + percentage + personalized messages for user satisfaction
  */
-export function MobileLoading({ message = "Loading AutoForce™...", fullScreen = false, progress }: MobileLoadingProps) {
+export function MobileLoading({ message, fullScreen = false, progress }: MobileLoadingProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Detect mobile viewport
@@ -39,6 +61,10 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
     }
   }, [progress]);
 
+  // Get personalized message based on progress
+  const userName = user?.firstName || user?.email?.split('@')[0];
+  const personalizedMessage = message || getMobileLoadingMessage(animatedProgress, userName);
+
   if (fullScreen) {
     return (
       <div 
@@ -49,17 +75,37 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
           {/* AF Core Scan - Radial Progress with A→AF */}
           <AFCoreScan progress={animatedProgress} size={isMobile ? "md" : "lg"} />
           
-          {/* Mobile: NO percentage or messages, Desktop: Show everything */}
-          {!isMobile && (
+          {/* Progress Bar - Visible on BOTH mobile and desktop */}
+          <div className="w-full space-y-3">
+            {/* Horizontal progress bar */}
+            <div className="h-2 sm:h-3 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", borderColor: "rgba(59, 130, 246, 0.3)" }}>
+              <motion.div
+                className="h-full bg-[length:200%_100%]"
+                style={{ 
+                  width: `${animatedProgress}%`,
+                  background: "linear-gradient(90deg, #3b82f6, #22d3ee, #3b82f6)"
+                }}
+                animate={{
+                  backgroundPosition: ["0% 0%", "100% 0%"],
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+            </div>
+
+            {/* Percentage and message - NOW visible on mobile */}
             <div className="flex flex-col items-center gap-2 text-center">
-              <div className="text-2xl font-bold" style={{ color: '#3b82f6' }}>
+              <div className="text-2xl font-bold" style={{ color: '#3b82f6' }} data-testid="loading-percentage">
                 {Math.round(animatedProgress)}%
               </div>
-              <div className="text-sm text-white/70 font-medium">
-                {message}
+              <div className="text-sm text-white/70 font-medium" data-testid="loading-message">
+                {personalizedMessage}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     );
@@ -71,17 +117,37 @@ export function MobileLoading({ message = "Loading AutoForce™...", fullScreen 
         {/* AF Core Scan - Smaller on mobile */}
         <AFCoreScan progress={animatedProgress} size={isMobile ? "md" : "lg"} />
         
-        {/* Mobile: NO percentage or messages, Desktop: Show everything */}
-        {!isMobile && (
+        {/* Progress Bar - Visible on BOTH mobile and desktop */}
+        <div className="w-full space-y-2">
+          {/* Horizontal progress bar */}
+          <div className="h-2 sm:h-3 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", borderColor: "rgba(59, 130, 246, 0.3)" }}>
+            <motion.div
+              className="h-full bg-[length:200%_100%]"
+              style={{ 
+                width: `${animatedProgress}%`,
+                background: "linear-gradient(90deg, #3b82f6, #22d3ee, #3b82f6)"
+              }}
+              animate={{
+                backgroundPosition: ["0% 0%", "100% 0%"],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+            />
+          </div>
+
+          {/* Percentage and message - NOW visible on mobile */}
           <div className="flex flex-col items-center gap-1 text-center">
-            <div className="text-xl font-bold" style={{ color: '#3b82f6' }}>
+            <div className="text-xl font-bold" style={{ color: '#3b82f6' }} data-testid="loading-percentage">
               {Math.round(animatedProgress)}%
             </div>
-            <div className="text-xs text-muted-foreground">
-              {message}
+            <div className="text-xs text-muted-foreground" data-testid="loading-message">
+              {personalizedMessage}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

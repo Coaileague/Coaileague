@@ -375,17 +375,15 @@ export function ProgressLoadingOverlay({
                 />
               </div>
 
-              {/* Percentage - Hidden on mobile */}
-              {!isMobile && (
-                <div className="flex justify-between items-center mt-2 px-1">
-                  <span className="text-xs font-mono" style={{ color: "#3b82f6" }}>
-                    {Math.round(progress)}%
-                  </span>
-                  <span className="text-xs" style={{ color: "#22d3ee" }}>
-                    {status === "success" ? "Complete" : status === "error" ? "Error" : "Loading"}
-                  </span>
-                </div>
-              )}
+              {/* Percentage - NOW visible on mobile AND desktop */}
+              <div className="flex justify-between items-center mt-2 px-1">
+                <span className="text-xs font-mono" style={{ color: "#3b82f6" }} data-testid="progress-percentage">
+                  {Math.round(progress)}%
+                </span>
+                <span className="text-xs" style={{ color: "#22d3ee" }} data-testid="progress-status">
+                  {status === "success" ? "Complete" : status === "error" ? "Error" : "Loading"}
+                </span>
+              </div>
             </motion.div>
 
             {/* Dynamic Status Messages - MOBILE: Personalized messages shown, DESKTOP: Fun messages */}
