@@ -4156,6 +4156,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const aiEnabled = scheduleosAiEnabled.get(workspace.id) ?? false;
       if (!aiEnabled) return res.status(403).json({ message: "SmartSchedule AI is disabled" });
+
+      // PAYMENT GATING: Check subscription tier or à la carte add-on
+      const hasSmartScheduleAccess = 
+        workspace.subscriptionTier === 'professional' || 
+        workspace.subscriptionTier === 'enterprise' ||
+        workspace.enabledAddons?.includes('smart_schedule_ai');
+
+      if (!hasSmartScheduleAccess) {
+        return res.status(402).json({ 
+          message: "Smart Schedule AI requires Professional/Enterprise tier or à la carte add-on",
+          requiresUpgrade: true,
+          currentTier: workspace.subscriptionTier,
+          upgradeOptions: ['professional', 'enterprise', 'addon:smart_schedule_ai']
+        });
+      }
+
+      // PAYMENT GATING: Verify active billing (credit card on file OR prepay balance)
+      if (workspace.subscriptionStatus !== 'active') {
+        return res.status(402).json({ 
+          message: "Active subscription required. Please update payment method or add prepay balance.",
+          requiresPayment: true,
+          subscriptionStatus: workspace.subscriptionStatus
+        });
+      }
       
       // Validate request body
       const { openShiftIds, constraints } = req.body;
