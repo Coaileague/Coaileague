@@ -207,6 +207,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
   
   // ============================================================================
+  // STARTUP: SEED ROOT USER AND PLATFORM WORKSPACE
+  // ============================================================================
+  // CRITICAL: These resources MUST exist for anonymous HelpOS to function
+  // Let errors bubble up to fail fast rather than continue without platform workspace
+  const { seedRootUser } = await import("./seed-root-user");
+  await seedRootUser();
+  
+  const { seedPlatformWorkspace } = await import("./seed-platform-workspace");
+  await seedPlatformWorkspace();
+  
+  // ============================================================================
   // HEALTH CHECK ENDPOINT (for Render and monitoring)
   // ============================================================================
   app.get('/health', async (_req, res) => {
@@ -664,10 +675,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `anon-${sessionId}` // Stable anonymous ID based on session
           : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // New anonymous user
       
-      // For anonymous users, use a default public workspace
+      // For anonymous users, use AutoForce Platform workspace
+      const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
       const workspaceId = isAuthenticated 
         ? (await resolveWorkspaceForUser(authReq.user!.id, req.body.workspaceId)).workspaceId
-        : 'helpos-anonymous-workspace';
+        : PLATFORM_WORKSPACE_ID;
       
       // SECURITY: Validate session ownership to prevent cross-user access
       // For ALL requests with sessionId, validate the session belongs to this user
@@ -718,6 +730,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           workspaceId,
           isAuthenticated
         });
+        
+        // DEFENSIVE: Ensure platform workspace exists before escalation (runtime fallback)
+        if (workspaceId === PLATFORM_WORKSPACE_ID) {
+          const existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
+          if (!existingWorkspace) {
+            console.log('[HelpOS] Platform workspace missing - seeding now (runtime fallback)');
+            const { seedRootUser } = await import('./seed-root-user');
+            const { seedPlatformWorkspace } = await import('./seed-platform-workspace');
+            await seedRootUser();
+            await seedPlatformWorkspace();
+          }
+        }
         
         // For anonymous users, create a basic conversation record so WebSocket can join
         if (!isAuthenticated) {
@@ -1128,6 +1152,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure root user exists with platform role
       const { seedRootUser } = await import("./seed-root-user");
       await seedRootUser();
+      
+      // Seed Platform workspace for anonymous HelpOS users
+      const { seedPlatformWorkspace } = await import("./seed-platform-workspace");
+      await seedPlatformWorkspace();
       
       const rootUser = await storage.getUser(ROOT_USER_ID);
       if (!rootUser) {
