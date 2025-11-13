@@ -19,8 +19,8 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
-    <!-- Theme Color - Emergency Green -->
-    <meta name="theme-color" content="#10b981" />
+    <!-- Theme Color - Blue -->
+    <meta name="theme-color" content="#3b82f6" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a" />
     
     <!-- Apple Touch Icons -->
@@ -31,12 +31,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/print-styles.css" media="print">
     <style>
-      /* Minimal loading screen - fast fade for public pages */
+      /* Universal loading screen with 6 randomized animations */
       #initial-loader {
         position: fixed;
         inset: 0;
         z-index: 99999;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         background: #0f172a;
@@ -53,12 +54,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        animation: fade-in 0.4s ease-out;
-      }
-      
-      @keyframes fade-in {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        margin-bottom: 32px;
       }
       
       .loader-logo-icon {
@@ -84,36 +80,224 @@
         margin: 0;
       }
       
+      /* Animation container */
+      .loader-animation {
+        width: 100px;
+        height: 100px;
+        position: relative;
+      }
+      
+      /* Animation 1: Spinning Dots Circle */
+      .anim-spinning-dots {
+        animation: rotate 2s linear infinite;
+      }
+      .anim-spinning-dots .dot {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: linear-gradient(135deg, #3b82f6, #22d3ee);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        margin: -6px 0 0 -6px;
+      }
+      .anim-spinning-dots .dot:nth-child(1) { transform: rotate(0deg) translate(40px); }
+      .anim-spinning-dots .dot:nth-child(2) { transform: rotate(60deg) translate(40px); }
+      .anim-spinning-dots .dot:nth-child(3) { transform: rotate(120deg) translate(40px); }
+      .anim-spinning-dots .dot:nth-child(4) { transform: rotate(180deg) translate(40px); }
+      .anim-spinning-dots .dot:nth-child(5) { transform: rotate(240deg) translate(40px); }
+      .anim-spinning-dots .dot:nth-child(6) { transform: rotate(300deg) translate(40px); }
+      
+      /* Animation 2: Pulsing Waves */
+      .anim-waves .wave {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 80px;
+        height: 80px;
+        margin: -40px 0 0 -40px;
+        border: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: wave-pulse 1.5s ease-out infinite;
+      }
+      .anim-waves .wave:nth-child(2) { animation-delay: 0.5s; }
+      .anim-waves .wave:nth-child(3) { animation-delay: 1s; }
+      
+      /* Animation 3: Bouncing Bars */
+      .anim-bars {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .anim-bars .bar {
+        width: 8px;
+        height: 40px;
+        background: linear-gradient(180deg, #3b82f6, #22d3ee);
+        border-radius: 4px;
+        animation: bar-bounce 1.2s ease-in-out infinite;
+      }
+      .anim-bars .bar:nth-child(1) { animation-delay: 0s; }
+      .anim-bars .bar:nth-child(2) { animation-delay: 0.15s; }
+      .anim-bars .bar:nth-child(3) { animation-delay: 0.3s; }
+      .anim-bars .bar:nth-child(4) { animation-delay: 0.45s; }
+      .anim-bars .bar:nth-child(5) { animation-delay: 0.6s; }
+      
+      /* Animation 4: Orbiting Planets */
+      .anim-orbit {
+        position: relative;
+      }
+      .anim-orbit .center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        background: linear-gradient(135deg, #3b82f6, #22d3ee);
+        border-radius: 50%;
+      }
+      .anim-orbit .planet {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 10px;
+        height: 10px;
+        margin: -5px 0 0 -5px;
+        background: #22d3ee;
+        border-radius: 50%;
+        animation: orbit 3s linear infinite;
+      }
+      .anim-orbit .planet:nth-child(2) { animation-delay: -1s; }
+      .anim-orbit .planet:nth-child(3) { animation-delay: -2s; }
+      
+      /* Animation 5: Flip Square */
+      .anim-flip-square {
+        perspective: 200px;
+      }
+      .anim-flip-square .square {
+        width: 60px;
+        height: 60px;
+        margin: 20px auto;
+        background: linear-gradient(135deg, #3b82f6, #22d3ee);
+        border-radius: 8px;
+        animation: flip-square 2s ease-in-out infinite;
+      }
+      
+      /* Animation 6: DNA Helix */
+      .anim-dna {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+      }
+      .anim-dna .strand {
+        width: 8px;
+        height: 60px;
+        background: linear-gradient(180deg, #3b82f6, #22d3ee);
+        border-radius: 4px;
+        animation: dna-wave 1.5s ease-in-out infinite;
+      }
+      .anim-dna .strand:nth-child(1) { animation-delay: 0s; }
+      .anim-dna .strand:nth-child(2) { animation-delay: 0.2s; }
+      .anim-dna .strand:nth-child(3) { animation-delay: 0.4s; }
+      .anim-dna .strand:nth-child(4) { animation-delay: 0.6s; }
+      
+      /* Keyframes */
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      @keyframes wave-pulse {
+        0% { transform: scale(0.5); opacity: 1; }
+        100% { transform: scale(1.5); opacity: 0; }
+      }
+      
+      @keyframes bar-bounce {
+        0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+        50% { transform: scaleY(1); opacity: 1; }
+      }
+      
+      @keyframes orbit {
+        from { transform: rotate(0deg) translateX(35px) rotate(0deg); }
+        to { transform: rotate(360deg) translateX(35px) rotate(-360deg); }
+      }
+      
+      @keyframes flip-square {
+        0%, 100% { transform: rotateY(0deg) rotateX(0deg); }
+        25% { transform: rotateY(180deg) rotateX(0deg); }
+        50% { transform: rotateY(180deg) rotateX(180deg); }
+        75% { transform: rotateY(0deg) rotateX(180deg); }
+      }
+      
+      @keyframes dna-wave {
+        0%, 100% { transform: translateY(-15px); }
+        50% { transform: translateY(15px); }
+      }
+      
       @media (max-width: 640px) {
         .loader-logo {
           gap: 8px;
+          margin-bottom: 24px;
+        }
+        .loader-animation {
+          width: 80px;
+          height: 80px;
         }
       }
     </style>
   </head>
   <body>
-    <!-- Minimal loader - fast fade for public pages -->
+    <!-- Universal loader with randomized animations -->
     <div id="initial-loader">
       <div class="loader-logo">
         <div class="loader-logo-icon">AF</div>
         <h1>AutoForce™</h1>
       </div>
+      <div class="loader-animation" id="animation-container"></div>
     </div>
     
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Fast fade loader script -->
+    <!-- Randomized animation loader script -->
     <script>
-      window.addEventListener('load', function() {
-        var loader = document.getElementById('initial-loader');
-        if (loader) {
-          loader.classList.add('loaded');
-          setTimeout(function() {
-            loader.remove();
-          }, 300);
+      (function() {
+        // 6 animation templates
+        var animations = [
+          // 1. Spinning Dots
+          '<div class="anim-spinning-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>',
+          // 2. Pulsing Waves
+          '<div class="anim-waves"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>',
+          // 3. Bouncing Bars
+          '<div class="anim-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>',
+          // 4. Orbiting Planets
+          '<div class="anim-orbit"><div class="center"></div><div class="planet"></div><div class="planet"></div><div class="planet"></div></div>',
+          // 5. Flip Square
+          '<div class="anim-flip-square"><div class="square"></div></div>',
+          // 6. DNA Helix
+          '<div class="anim-dna"><div class="strand"></div><div class="strand"></div><div class="strand"></div><div class="strand"></div></div>'
+        ];
+        
+        // Randomly select animation
+        var randomIndex = Math.floor(Math.random() * animations.length);
+        var container = document.getElementById('animation-container');
+        if (container) {
+          container.innerHTML = animations[randomIndex];
         }
-      });
+        
+        // Fade out loader when page loads
+        window.addEventListener('load', function() {
+          var loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.classList.add('loaded');
+            setTimeout(function() {
+              loader.remove();
+            }, 300);
+          }
+        });
+      })();
     </script>
   </body>
 </html>

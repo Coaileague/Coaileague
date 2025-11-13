@@ -1266,7 +1266,11 @@ export default function ModernMobileChat() {
                 </span>
               </div>
               <div 
-                className="text-sm text-slate-200 leading-relaxed break-words whitespace-pre-wrap"
+                className={`text-sm leading-relaxed break-words whitespace-pre-wrap ${
+                  msg.senderType === 'bot' 
+                    ? 'bg-blue-500/10 rounded-lg px-3 py-2 text-slate-200' 
+                    : 'text-slate-200'
+                }`}
                 dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
               />
             </div>

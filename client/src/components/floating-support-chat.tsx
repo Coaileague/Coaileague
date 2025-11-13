@@ -219,28 +219,27 @@ export function FloatingSupportChat() {
       {isOpen && (
         <div 
           className={cn(
-            "fixed bottom-6 right-6 bg-background dark:bg-card rounded-2xl shadow-2xl z-[15000] flex flex-col transition-all duration-300 border border-border",
+            "fixed bg-background dark:bg-card shadow-2xl z-[15000] flex flex-col transition-all duration-300 border border-border",
             isMinimized ? 'h-16 w-80' : 'h-[600px] w-96',
-            "max-w-[calc(100vw-3rem)] max-h-[calc(100vh-3rem)]",
-            "sm:w-96 sm:h-[600px]",
-            "max-sm:w-[calc(100vw-2rem)] max-sm:h-[calc(100vh-2rem)] max-sm:right-4 max-sm:bottom-4"
+            "max-sm:inset-4 max-sm:w-auto max-sm:h-auto max-sm:rounded-2xl",
+            "sm:bottom-6 sm:right-6 sm:w-96 sm:h-[600px] sm:rounded-2xl"
           )}
           data-testid="support-chat-window"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-4 py-3 rounded-t-2xl flex items-center justify-between shadow-md">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white rounded-full p-1.5">
-                <Bot className="w-5 h-5 text-blue-500" />
+          <div className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-3 py-2.5 sm:px-4 sm:py-3 rounded-t-2xl flex items-center justify-between shadow-md">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="bg-white rounded-full p-1 sm:p-1.5 flex-shrink-0">
+                <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
-              <div>
-                <h2 className="font-bold text-sm">
-                  HelpOS<span className="text-[0.6rem] align-super">™</span> <span className="text-xs font-normal">(Bot)</span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-bold text-xs sm:text-sm truncate">
+                  HelpOS<span className="text-[0.5rem] sm:text-[0.6rem] align-super">™</span> <span className="text-[10px] sm:text-xs font-normal">(Bot)</span>
                 </h2>
-                <p className="text-xs text-blue-50">AutoForce™ Support Assistant</p>
-                <div className="flex items-center space-x-1.5 mt-0.5">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-blue-50">Online</span>
+                <p className="text-[10px] sm:text-xs text-blue-50 truncate">AutoForce™ Support</p>
+                <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-[10px] sm:text-xs text-blue-50">Online</span>
                 </div>
               </div>
             </div>
@@ -274,26 +273,26 @@ export function FloatingSupportChat() {
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={cn(
-                      "flex items-start space-x-2 max-w-[85%]",
+                      "flex items-start space-x-1.5 sm:space-x-2 max-w-[85%]",
                       message.type === 'user' && 'flex-row-reverse space-x-reverse'
                     )}>
                       <div className={cn(
-                        "flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center",
+                        "flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center",
                         message.type === 'user' 
                           ? 'bg-blue-500' 
                           : 'bg-gradient-to-br from-blue-500 to-cyan-400'
                       )}>
                         {message.type === 'user' ? (
-                          <User className="w-4 h-4 text-white" />
+                          <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                         ) : (
-                          <Bot className="w-4 h-4 text-white" />
+                          <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                         )}
                       </div>
                       <div className={cn(
-                        "rounded-2xl px-3 py-2",
+                        "px-3 py-2",
                         message.type === 'user' 
-                          ? 'bg-blue-500 text-white rounded-tr-sm' 
-                          : 'bg-card dark:bg-background shadow-sm rounded-tl-sm border border-border'
+                          ? 'bg-blue-500 text-white rounded-2xl rounded-tr-sm' 
+                          : 'bg-blue-500/10 rounded-2xl rounded-tl-sm'
                       )}>
                         <p className="whitespace-pre-line text-sm leading-relaxed">{message.text}</p>
                         <span className={cn(
@@ -309,11 +308,11 @@ export function FloatingSupportChat() {
 
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="flex items-start space-x-2">
-                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
-                        <Bot className="w-4 h-4 text-white" />
+                    <div className="flex items-start space-x-1.5 sm:space-x-2">
+                      <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
+                        <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                       </div>
-                      <div className="bg-card dark:bg-background rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-border">
+                      <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-3 py-2 sm:px-4 sm:py-3">
                         <div className="flex space-x-1.5">
                           <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
                           <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
@@ -327,11 +326,28 @@ export function FloatingSupportChat() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick Actions */}
+              {/* Quick Actions - Horizontal scroll on mobile, grid on desktop */}
               {messages.length === 1 && (
-                <div className="px-4 pb-3 bg-muted/30">
+                <div className="px-4 pb-3 bg-muted/30 border-b border-border">
                   <p className="text-xs text-muted-foreground mb-2 font-medium">Quick Actions:</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Mobile: Horizontal scrollable */}
+                  <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+                    {quickActions.map((action, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickAction(action.value)}
+                        className="flex-shrink-0 h-auto py-2 px-3 snap-start min-w-[140px]"
+                        data-testid={`button-quick-action-${index}`}
+                      >
+                        <span className="text-lg mr-2">{action.icon}</span>
+                        <span className="text-xs font-medium whitespace-nowrap">{action.text}</span>
+                      </Button>
+                    ))}
+                  </div>
+                  {/* Desktop: Grid layout */}
+                  <div className="hidden sm:grid grid-cols-2 gap-2">
                     {quickActions.map((action, index) => (
                       <Button
                         key={index}

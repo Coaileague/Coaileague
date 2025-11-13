@@ -1,4 +1,4 @@
-import { Home, Calendar, Clock, MessageSquare, MoreHorizontal } from "lucide-react";
+import { Home, Calendar, Clock, MessageSquare, Menu } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface MobileNavProps {
@@ -10,11 +10,13 @@ export function MobileNav({ onMore }: MobileNavProps) {
 
   const NavItem = ({ 
     icon: Icon, 
-    label, 
+    label,
+    sublabel,
     href 
   }: { 
     icon: typeof Home; 
-    label: string; 
+    label: string;
+    sublabel?: string;
     href: string 
   }) => {
     const isActive = location === href;
@@ -22,33 +24,36 @@ export function MobileNav({ onMore }: MobileNavProps) {
     return (
       <button
         onClick={() => setLocation(href)}
-        className={`tap flex flex-col items-center gap-1 text-[11px] transition-colors ${
+        className={`tap flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg transition-all min-h-[48px] min-w-[56px] ${
           isActive 
-            ? 'text-blue-600 dark:text-blue-400 font-bold' 
-            : 'text-gray-600 dark:text-gray-400 active:text-blue-600 dark:active:text-blue-400'
+            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30' 
+            : 'text-gray-600 dark:text-gray-400 hover-elevate active-elevate-2'
         }`}
         data-testid={`nav-${label.toLowerCase()}`}
       >
-        <Icon className="w-5 h-5" />
-        <span className="truncate max-w-[72px]">{label}</span>
+        <Icon className={`${isActive ? 'w-6 h-6' : 'w-5 h-5'} transition-all`} strokeWidth={isActive ? 2.5 : 2} />
+        <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>{label}</span>
+        {sublabel && (
+          <span className="text-[8px] text-muted-foreground opacity-75">{sublabel}</span>
+        )}
       </button>
     );
   };
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t-2 border-gray-200 dark:border-slate-700 shadow-lg pb-safe">
-      <div className="mx-auto max-w-screen-md flex justify-around py-2 px-2">
+    <nav className="fixed bottom-0 inset-x-0 z-50 bg-background/98 dark:bg-card/98 backdrop-blur-md border-t border-border shadow-2xl pb-safe">
+      <div className="mx-auto max-w-screen-md flex justify-around items-center py-1.5 px-3 gap-1">
         <NavItem icon={Home} label="Home" href="/mobile-dashboard" />
-        <NavItem icon={Calendar} label="Schedule" href="/schedule-grid" />
-        <NavItem icon={Clock} label="Time" href="/time-tracking" />
-        <NavItem icon={MessageSquare} label="Chat" href="/mobile-chat" />
+        <NavItem icon={Calendar} label="Schedule" sublabel="shifts" href="/schedule-grid" />
+        <NavItem icon={Clock} label="Time" sublabel="track" href="/time-tracking" />
+        <NavItem icon={MessageSquare} label="Chat" sublabel="help" href="/mobile-chat" />
         <button
           onClick={onMore || (() => setLocation("/workspace"))}
-          className="tap flex flex-col items-center gap-1 text-[11px] text-gray-600 dark:text-gray-400 active:text-blue-600 dark:active:text-blue-400"
+          className="tap flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg transition-all min-h-[48px] min-w-[56px] text-gray-600 dark:text-gray-400 hover-elevate active-elevate-2"
           data-testid="nav-more"
         >
-          <MoreHorizontal className="w-5 h-5" />
-          <span>More</span>
+          <Menu className="w-5 h-5" strokeWidth={2} />
+          <span className="text-[10px] font-medium">Menu</span>
         </button>
       </div>
     </nav>
