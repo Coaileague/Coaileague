@@ -49,7 +49,7 @@ export function AutoForceAFLogo({
           className
         )}
         style={{
-          background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)',
         }}
         data-testid="autoforce-af-logo-icon"
       >
@@ -79,7 +79,7 @@ export function AutoForceAFLogo({
         </span>
         <span 
           className="text-2xl sm:text-3xl font-bold tracking-tight"
-          style={{ color: '#10b981' }}
+          style={{ color: '#3b82f6' }}
         >
           FORCE
         </span>
@@ -101,7 +101,7 @@ export function AutoForceAFLogo({
           animated && "animate-pulse-slow"
         )}
         style={{
-          background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)',
         }}
       >
         {/* Neural ring overlay */}
@@ -118,7 +118,7 @@ export function AutoForceAFLogo({
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
           <span className="text-slate-900 dark:text-white">AUTO</span>
-          <span style={{ color: '#10b981' }}>FORCE</span>
+          <span style={{ color: '#3b82f6' }}>FORCE</span>
           <span className="text-xs align-super text-slate-900 dark:text-white">™</span>
         </div>
         <div className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-400 font-medium tracking-wide mt-0.5">

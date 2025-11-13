@@ -1,5 +1,5 @@
-// Reference: shadcn sidebar documentation
-import { Calendar, Users, UserCircle, Settings, LogOut, Lock, ChevronUp, Building2, Bell, HelpCircle, Shield } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,30 +20,35 @@ import { selectSidebarFamilies } from "@/lib/osModules";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
   const transition = useTransition();
+  const { state } = useSidebar();
+
+  // Get sidebar families with RBAC filtering
+  const families = isLoading 
+    ? [] 
+    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+
+  // Track expanded sections - Initialize platform as open, others closed
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    families.forEach(family => {
+      initial[family.id] = family.id === 'platform'; // Only platform expanded by default
+    });
+    return initial;
+  });
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     if (!firstName && !lastName) return "U";
@@ -58,204 +64,159 @@ export function AppSidebar() {
     } catch (error) {
       console.error("Logout error:", error);
     }
-
     showLogoutTransition(transition);
   };
 
-  // Get sidebar families with RBAC filtering
-  const families = isLoading 
-    ? [] 
-    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
-
   return (
-    <Sidebar variant="floating" collapsible="offcanvas" className="sidebar-glass z-50">
-      <SidebarHeader className="p-4 border-b border-white/[0.08] bg-gradient-to-br from-background/80 to-muted/20">
-        <Link href="/dashboard" className="flex items-center justify-center" data-testid="link-dashboard-logo">
-          <AnimatedAutoForceLogo variant="icon" size="md" animated={true} />
+    <Sidebar variant="floating" collapsible="offcanvas" className="bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 shadow-2xl">
+      {/* Header */}
+      <SidebarHeader className="p-6 border-b border-slate-700/50">
+        <Link href="/dashboard" className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
+          {state === 'collapsed' ? (
+            <div className="w-12 h-12 flex items-center justify-center">
+              <AutoForceAFLogo variant="icon" size="md" animated={false} />
+            </div>
+          ) : (
+            <>
+              <div className="w-12 h-12 shrink-0">
+                <AutoForceAFLogo variant="icon" size="md" animated={false} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold leading-tight">
+                  <span className="text-white">AUTO </span>
+                  <span className="text-blue-400">FORCE</span>
+                  <span className="text-xs text-slate-400 ml-1">™</span>
+                </h1>
+                <p className="text-xs text-slate-400">Workforce Management</p>
+              </div>
+            </>
+          )}
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-4 overflow-y-auto">
+      {/* Navigation */}
+      <SidebarContent className="p-4 space-y-2">
         {families.map((family) => (
           <SidebarGroup key={family.id}>
-            <SidebarGroupLabel className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-2">
-              {family.label}
+            {/* Section Header */}
+            <SidebarGroupLabel asChild>
+              <button
+                onClick={() => toggleSection(family.id)}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+                data-testid={`toggle-section-${family.id}`}
+              >
+                <span className="tracking-wider">{family.label}</span>
+                {expandedSections[family.id] ? 
+                  <ChevronDown size={14} /> : 
+                  <ChevronRight size={14} />
+                }
+              </button>
             </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-0.5">
-                {/* Accessible routes */}
-                {family.routes.map((route) => (
-                  <SidebarMenuItem key={route.id}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={location === route.href}
-                      data-testid={`link-${route.id}`}
-                      className="hover-elevate active-elevate-2 h-9 px-3 group"
-                    >
-                      <Link href={route.href} className="flex items-center gap-3 w-full">
-                        <route.icon className={`h-4 w-4 shrink-0 transition-colors ${
-                          location === route.href 
-                            ? 'text-primary' 
-                            : 'text-muted-foreground group-hover:text-primary'
-                        }`} />
-                        <span className={`text-sm leading-tight font-medium transition-colors ${
-                          location === route.href
-                            ? 'text-primary'
-                            : 'text-foreground group-hover:text-primary'
-                        }`}>
-                          {route.label}
-                        </span>
-                        {route.badge && (
-                          <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
-                            {route.badge}
-                          </Badge>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-                
-                {/* Locked routes (tier upgrade prompts) */}
-                {family.locked.map((route) => (
-                  <SidebarMenuItem key={`locked-${route.id}`}>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton 
-                            disabled
-                            data-testid={`link-locked-${route.id}`}
-                            className="h-9 px-3 group opacity-50 cursor-not-allowed"
+
+            {/* Section Items */}
+            {expandedSections[family.id] && (
+              <SidebarGroupContent>
+                <SidebarMenu className="mt-1 space-y-1">
+                  {family.routes.map((route) => {
+                    const Icon = route.icon;
+                    const isActive = location === route.href;
+                    return (
+                      <SidebarMenuItem key={route.id}>
+                        <SidebarMenuButton asChild isActive={isActive}>
+                          <Link 
+                            href={route.href}
+                            className="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all duration-200 hover:translate-x-1"
+                            data-testid={`link-${route.id}`}
                           >
-                            <div className="flex items-center gap-3 w-full">
-                              <route.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              <span className="text-sm leading-tight font-medium text-muted-foreground">
-                                {route.label}
-                              </span>
-                              <div className="ml-auto flex items-center gap-1">
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/50 text-blue-600 dark:text-blue-400">
-                                  {route.badge}
-                                </Badge>
-                                <Lock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                              </div>
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                              isActive 
+                                ? 'bg-blue-600/30' 
+                                : 'bg-slate-800/50 group-hover:bg-blue-600/20'
+                            }`}>
+                              <Icon size={18} className={`transition-colors ${
+                                isActive 
+                                  ? 'text-blue-400' 
+                                  : 'text-slate-400 group-hover:text-blue-400'
+                              }`} />
                             </div>
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs">
-                          <p className="font-medium">{route.label}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {route.description}
-                          </p>
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                            Requires {route.badge} tier or higher
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+                            <span className={`flex-1 text-sm font-medium transition-colors ${
+                              isActive 
+                                ? 'text-white' 
+                                : 'text-slate-200 group-hover:text-white'
+                            }`}>
+                              {route.label}
+                            </span>
+                            {route.badge && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                route.badge === 'Root' 
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                  : route.badge === 'Enterprise' 
+                                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                              }`}>
+                                {route.badge}
+                              </span>
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+
+                  {/* Locked routes */}
+                  {family.locked.map((route) => {
+                    const Icon = route.icon;
+                    return (
+                      <SidebarMenuItem key={`locked-${route.id}`}>
+                        <div 
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-50 cursor-not-allowed"
+                          data-testid={`link-locked-${route.id}`}
+                        >
+                          <div className="w-9 h-9 bg-slate-800/50 rounded-lg flex items-center justify-center">
+                            <Icon size={18} className="text-slate-400" />
+                          </div>
+                          <span className="flex-1 text-sm text-slate-200 font-medium">
+                            {route.label}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            {route.badge || 'Locked'}
+                          </span>
+                        </div>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
           </SidebarGroup>
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-white/[0.08]">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start p-3 h-auto hover-elevate active-elevate-2"
-              data-testid="button-profile-menu"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <Avatar className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 dark:from-red-600 dark:to-red-800">
-                  <AvatarImage src={user?.profileImageUrl || undefined} className="object-cover rounded-xl" />
-                  <AvatarFallback className="text-sm font-black rounded-xl bg-gradient-to-br from-red-500 to-red-700 dark:from-red-600 dark:to-red-800 text-white dark:text-white">
-                    {getInitials(user?.firstName, user?.lastName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col overflow-hidden flex-1 text-left">
-                  <span className="text-sm font-bold truncate" data-testid="text-user-name">
-                    {user?.firstName || user?.lastName 
-                      ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
-                      : "User"}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate" data-testid="text-user-email">
-                    {user?.email || ""}
-                  </span>
-                </div>
-                <ChevronUp className="h-4 w-4 ml-auto flex-shrink-0 opacity-60" />
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="end" className="w-64">
-            <DropdownMenuLabel className="font-semibold">
+      {/* User Profile */}
+      <SidebarFooter className="p-4 border-t border-slate-700/50">
+        <div 
+          onClick={handleLogout}
+          className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer group"
+          data-testid="button-logout"
+        >
+          <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400">
+            <AvatarImage src={user?.profileImageUrl || undefined} className="object-cover rounded-lg" />
+            <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 text-white font-bold">
+              {getInitials(user?.firstName, user?.lastName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white truncate" data-testid="text-user-name">
               {user?.firstName || user?.lastName 
                 ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
-                : "Account"}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile" className="flex items-center cursor-pointer" data-testid="link-profile">
-                <UserCircle className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/unavailability" className="flex items-center cursor-pointer" data-testid="link-unavailability">
-                <Calendar className="mr-2 h-4 w-4" />
-                <span>Unavailability</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/employees" className="flex items-center cursor-pointer" data-testid="link-employees">
-                <Users className="mr-2 h-4 w-4" />
-                <span>Employees</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings" className="flex items-center cursor-pointer" data-testid="link-account-settings">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Account</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings" className="flex items-center cursor-pointer" data-testid="link-settings">
-                <Shield className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/create-org" className="flex items-center cursor-pointer" data-testid="link-create-org">
-                <Building2 className="mr-2 h-4 w-4" />
-                <span>Create new org</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/updates" className="flex items-center cursor-pointer" data-testid="link-updates">
-                <Bell className="mr-2 h-4 w-4" />
-                <span>Product updates</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/help" className="flex items-center cursor-pointer" data-testid="link-help">
-                <HelpCircle className="mr-2 h-4 w-4" />
-                <span>Help Center</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleLogout}
-              className="text-red-600 dark:text-red-400 cursor-pointer"
-              data-testid="button-logout"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                : "User"}
+            </p>
+            <p className="text-xs text-slate-400 truncate" data-testid="text-user-email">
+              {user?.email || ""}
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-slate-400 group-hover:text-slate-200 transition-colors" />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

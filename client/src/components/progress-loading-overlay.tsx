@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 
 // Scenario-based configuration type
 export type ProgressScenario = "login" | "logout" | "heavyOperation" | "aiProcessing" | "dataSync" | "dashboardLoading";
@@ -16,125 +17,125 @@ const SCENARIO_CONFIGS: Record<ProgressScenario, ScenarioConfig> = {
     title: "Signing In",
     duration: 3500,
     messages: [
-      "Connecting to AutoForce™ ⚡",
-      "Establishing secure connection 🔒",
-      "Verifying credentials 🔐",
-      "Validating session token ✨",
-      "Credentials accepted ✓",
-      "Loading workspace preferences 📋",
-      "Syncing user permissions 🎯",
-      "Initializing dashboard modules 📊",
-      "Configuring workspace settings ⚙️",
-      "Loading recent activity 📈",
-      "Preparing your workspace 🚀",
-      "Verifying access controls 🛡️",
-      "Calibrating neural pathways 🧠",
-      "Quantum-entangling your session 🔬",
-      "Compiling enterprise magic ✨",
-      "Defragmenting productivity matrix 💫",
-      "Aligning autonomous systems 🎰",
-      "Finalizing authentication 🏁",
-      "Almost there... hang tight! 🎉",
+      "Connecting to AutoForce platform...",
+      "Establishing secure connection",
+      "Verifying credentials",
+      "Validating session token",
+      "Credentials accepted",
+      "Loading workspace preferences",
+      "Syncing user permissions",
+      "Initializing dashboard modules",
+      "Configuring workspace settings",
+      "Loading recent activity",
+      "Preparing your workspace",
+      "Verifying access controls",
+      "Calibrating neural pathways",
+      "Quantum-entangling your session",
+      "Compiling enterprise magic",
+      "Defragmenting productivity matrix",
+      "Aligning autonomous systems",
+      "Finalizing authentication",
+      "Almost there... hang tight!",
     ],
   },
   logout: {
     title: "Signing Out",
     duration: 3000,
     messages: [
-      "Closing active sessions 🔌",
-      "Clearing cached credentials 🧹",
-      "Invalidating session tokens 🚫",
-      "Saving workspace state 💾",
-      "Cleaning up temporary data 🗑️",
-      "Removing access tokens 🔓",
-      "Signing you out securely 🛡️",
-      "Terminating active connections 📡",
-      "Saving final preferences 📝",
-      "Clearing local cache 🧽",
-      "Wiping fingerprints from the mainframe 🕵️",
-      "De-ionizing quantum traces 🔬",
-      "Powering down neural engines 🧠",
-      "Goodbye! Come back soon 👋",
+      "Closing active sessions",
+      "Clearing cached credentials",
+      "Invalidating session tokens",
+      "Saving workspace state",
+      "Cleaning up temporary data",
+      "Removing access tokens",
+      "Signing you out securely",
+      "Terminating active connections",
+      "Saving final preferences",
+      "Clearing local cache",
+      "Wiping fingerprints from the mainframe",
+      "De-ionizing quantum traces",
+      "Powering down neural engines",
+      "Goodbye! Come back soon",
     ],
   },
   heavyOperation: {
     title: "Processing",
     duration: 4000,
     messages: [
-      "Processing request 🔄",
-      "Analyzing data patterns 🔍",
-      "Optimizing database queries ⚡",
-      "Synchronizing records 🔄",
-      "Validating data integrity ✅",
-      "Computing analytics 📊",
-      "Generating insights 💡",
-      "Applying business rules 📜",
-      "Updating indexes 📚",
-      "Crunching big numbers 🔢",
-      "Consulting the oracle database 🔮",
-      "Reticulating splines 📐",
-      "Finalizing operations ⚙️",
-      "Complete ✓",
+      "Processing request...",
+      "Analyzing data patterns",
+      "Optimizing database queries",
+      "Synchronizing records",
+      "Validating data integrity",
+      "Computing analytics",
+      "Generating insights",
+      "Applying business rules",
+      "Updating indexes",
+      "Crunching big numbers",
+      "Consulting the oracle database",
+      "Reticulating splines",
+      "Finalizing operations",
+      "Complete",
     ],
   },
   aiProcessing: {
     title: "AI Automation",
     duration: 5000,
     messages: [
-      "Initializing AI engine 🤖",
-      "Loading neural network 🧠",
-      "Analyzing patterns with ML 🔬",
-      "Training models on dataset 📚",
-      "Running predictive algorithms 🎯",
-      "Optimizing parameters ⚙️",
-      "Processing natural language 💬",
-      "Computing recommendations 💡",
-      "Generating AI predictions 🔮",
-      "Validating AI results ✅",
-      "Teaching robots to dream 🌙",
-      "Feeding the neural hamsters 🐹",
-      "Awakening the machine spirits 👻",
-      "Consulting with Skynet (kidding!) 🤖",
-      "Finalizing AI automation 🏁",
-      "Complete ✓",
+      "Initializing AI engine",
+      "Loading neural network",
+      "Analyzing patterns with ML",
+      "Training models on dataset",
+      "Running predictive algorithms",
+      "Optimizing parameters",
+      "Processing natural language",
+      "Computing recommendations",
+      "Generating AI predictions",
+      "Validating AI results",
+      "Teaching robots to dream",
+      "Feeding the neural hamsters",
+      "Awakening the machine spirits",
+      "Consulting with Skynet (kidding!)",
+      "Finalizing AI automation",
+      "Complete",
     ],
   },
   dataSync: {
     title: "Synchronizing",
     duration: 3500,
     messages: [
-      "Connecting to data sources 📡",
-      "Fetching latest updates 📥",
-      "Synchronizing changes 🔄",
-      "Validating data consistency ✅",
-      "Resolving conflicts 🤝",
-      "Updating local cache 💾",
-      "Committing transactions 📝",
-      "Verifying sync status 🔍",
-      "Refreshing indexes 📚",
-      "Harmonizing data dimensions 🌌",
-      "Untangling data spaghetti 🍝",
-      "Convincing databases to cooperate 🤝",
-      "Sync complete ✓",
+      "Connecting to data sources",
+      "Fetching latest updates",
+      "Synchronizing changes",
+      "Validating data consistency",
+      "Resolving conflicts",
+      "Updating local cache",
+      "Committing transactions",
+      "Verifying sync status",
+      "Refreshing indexes",
+      "Harmonizing data dimensions",
+      "Untangling data spaghetti",
+      "Convincing databases to cooperate",
+      "Sync complete",
     ],
   },
   dashboardLoading: {
     title: "Loading Dashboard",
     duration: 3000,
     messages: [
-      "Assembling dashboard widgets 📊",
-      "Loading analytics modules 📈",
-      "Fetching workspace metrics 🎯",
-      "Initializing quick actions ⚡",
-      "Compiling system statistics 💻",
-      "Rendering performance charts 📉",
-      "Calibrating metrics (the good kind) 🔧",
-      "Waking up the analytics hamsters 🐹",
-      "Polishing those beautiful graphs ✨",
-      "Counting all the important numbers 🔢",
-      "Organizing chaos into insights 🌪️",
-      "Persuading data to look pretty 🎨",
-      "Dashboard ready ✓",
+      "Assembling dashboard widgets",
+      "Loading analytics modules",
+      "Fetching workspace metrics",
+      "Initializing quick actions",
+      "Compiling system statistics",
+      "Rendering performance charts",
+      "Calibrating metrics (the good kind)",
+      "Waking up the analytics hamsters",
+      "Polishing those beautiful graphs",
+      "Counting all the important numbers",
+      "Organizing chaos into insights",
+      "Persuading data to look pretty",
+      "Dashboard ready",
     ],
   },
 };
@@ -273,17 +274,20 @@ export function ProgressLoadingOverlay({
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 backdrop-blur-sm"
         >
           <div className="w-[90vw] max-w-md px-6">
-            {/* Title */}
+            {/* Title with Logo */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-center mb-8"
+              className="text-center mb-8 flex flex-col items-center"
             >
-              <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-                AutoForce™
-              </h2>
-              <p className="text-sm" style={{ color: "#06b6d4" }}>
+              <AutoForceAFLogo variant="icon" size="lg" animated={true} className="mb-4" />
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-2xl sm:text-3xl font-bold text-foreground">AUTO</span>
+                <span className="text-2xl sm:text-3xl font-bold" style={{ color: '#3b82f6' }}>FORCE</span>
+                <span className="text-xs align-super text-muted-foreground">™</span>
+              </div>
+              <p className="text-sm font-medium" style={{ color: "#22d3ee" }}>
                 {effectiveTitle}
               </p>
             </motion.div>
@@ -296,12 +300,12 @@ export function ProgressLoadingOverlay({
               className="mb-6"
             >
               {/* Progress background */}
-              <div className="h-3 sm:h-4 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", borderColor: "rgba(16, 185, 129, 0.3)" }}>
+              <div className="h-3 sm:h-4 rounded-full overflow-hidden border-2" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", borderColor: "rgba(59, 130, 246, 0.3)" }}>
                 <motion.div
                   className="h-full bg-[length:200%_100%]"
                   style={{ 
                     width: `${progress}%`,
-                    background: "linear-gradient(90deg, #10b981, #06b6d4, #10b981)"
+                    background: "linear-gradient(90deg, #3b82f6, #22d3ee, #3b82f6)"
                   }}
                   animate={{
                     backgroundPosition: ["0% 0%", "100% 0%"],
@@ -316,10 +320,10 @@ export function ProgressLoadingOverlay({
 
               {/* Percentage */}
               <div className="flex justify-between items-center mt-2 px-1">
-                <span className="text-xs font-mono" style={{ color: "#10b981" }}>
+                <span className="text-xs font-mono" style={{ color: "#3b82f6" }}>
                   {Math.round(progress)}%
                 </span>
-                <span className="text-xs" style={{ color: "#06b6d4" }}>
+                <span className="text-xs" style={{ color: "#22d3ee" }}>
                   {status === "success" ? "Complete" : status === "error" ? "Error" : "Loading"}
                 </span>
               </div>
@@ -339,7 +343,7 @@ export function ProgressLoadingOverlay({
                   className="text-center"
                 >
                   <p className="text-sm sm:text-base text-red-400 font-semibold mb-1">
-                    ✗ Credentials Denied
+                    Credentials Denied
                   </p>
                   <p className="text-xs text-red-300/80">
                     {errorMessage}
@@ -350,9 +354,9 @@ export function ProgressLoadingOverlay({
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className="text-sm sm:text-base font-semibold"
-                  style={{ color: "#10b981" }}
+                  style={{ color: "#3b82f6" }}
                 >
-                  ✓ {scenario === "login" ? "Login Successful!" : scenario === "logout" ? "Logged Out!" : "Complete!"}
+                  {scenario === "login" ? "Login Successful" : scenario === "logout" ? "Logged Out" : "Complete"}
                 </motion.p>
               ) : (
                 <AnimatePresence mode="wait">
@@ -363,7 +367,7 @@ export function ProgressLoadingOverlay({
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                     className="text-sm sm:text-base font-medium text-center"
-                    style={{ color: "#06b6d4" }}
+                    style={{ color: "#22d3ee" }}
                   >
                     {messages[messageIndex]}
                   </motion.p>
