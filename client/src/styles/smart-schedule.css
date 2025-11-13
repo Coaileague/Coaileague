@@ -173,13 +173,70 @@
 .rbc-event {
   border: none !important;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  border-radius: 0.25rem;
+  border-radius: 0.375rem;
   padding: 0.125rem 0.25rem;
   transition: transform 0.15s, box-shadow 0.15s;
   font-size: 0.625rem;
   min-height: 1.5rem; /* Touch-friendly minimum */
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  font-weight: 600;
+  border: 2px solid transparent;
+}
+
+/* Vibrant Category Colors - Matching Homepage Preview */
+.shift-tech-support {
+  background-color: #3b82f6 !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.shift-field-ops {
+  background-color: #2563eb !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+.shift-healthcare {
+  background-color: #0ea5e9 !important;
+  border-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.shift-training {
+  background-color: #1d4ed8 !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+.shift-emergency {
+  background-color: #a855f7 !important;
+  border-color: #9333ea !important;
+  color: #ffffff !important;
+}
+
+.shift-admin {
+  background-color: #8b5cf6 !important;
+  border-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+.shift-security {
+  background-color: #14b8a6 !important;
+  border-color: #0d9488 !important;
+  color: #ffffff !important;
+}
+
+.shift-draft {
+  background-color: #94a3b8 !important;
+  border-color: #64748b !important;
+  color: #ffffff !important;
+}
+
+.shift-open {
+  background-color: #cbd5e1 !important;
+  border-color: #94a3b8 !important;
+  color: #1e293b !important;
 }
 
 @media (min-width: 640px) {
