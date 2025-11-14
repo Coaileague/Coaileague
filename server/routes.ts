@@ -28,6 +28,7 @@ import authRoutes from "./authRoutes"; // Custom auth routes
 import { billingRouter } from "./billing-api"; // Billing API routes
 import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
+import timeosRouter from "./timeos-routes"; // TimeOS™ - Universal Time Tracking
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -1049,6 +1050,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Partner Integration OAuth routes (QuickBooks, Gusto)
   app.use('/api/integrations', integrationRouter);
+
+  // Register TimeOS™ - Universal Time Tracking & Clock System
+  app.use('/api/timeos', timeosRouter);
 
   // Register DispatchOS™ routes (GPS tracking, incident management, CAD operations)
   const dispatchRouter = (await import('./routes/dispatch')).default;
