@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { 
   Calendar, Clock, Users, Edit2, Trash2, Plus, Download, Bot, 
   CheckCircle, AlertCircle, BarChart3, X, Building, Shield,
@@ -26,7 +26,7 @@ interface MobileScheduleProps {
 }
 
 export default function MobileSchedule({ weekStart, weekEnd, onWeekChange }: MobileScheduleProps) {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { employee: currentEmployee } = useEmployee();
   const { shifts, employees, getEmployee, getEmployeeColor, isLoading, pendingShiftsCount, openShiftsCount, totalScheduledHours } = useScheduleData({ weekStart, weekEnd });
   const { approveShift, rejectShift, deleteShift } = useShiftActions();
@@ -175,9 +175,25 @@ export default function MobileSchedule({ weekStart, weekEnd, onWeekChange }: Mob
           </div>
 
           <div className="text-center mb-2">
-            <div className="text-xs opacity-90">Today</div>
-            <div className="text-sm font-bold">
-              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            <div className="text-xs opacity-90">Week</div>
+            <div className="flex items-center justify-center space-x-2">
+              <button 
+                onClick={() => onWeekChange('prev')} 
+                className="p-1 hover:bg-white hover:bg-opacity-20 rounded active:scale-95"
+                data-testid="button-prev-week"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180" />
+              </button>
+              <div className="text-sm font-bold">
+                {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </div>
+              <button 
+                onClick={() => onWeekChange('next')} 
+                className="p-1 hover:bg-white hover:bg-opacity-20 rounded active:scale-95"
+                data-testid="button-next-week"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -238,7 +254,7 @@ export default function MobileSchedule({ weekStart, weekEnd, onWeekChange }: Mob
             </button>
 
             <button
-              onClick={() => navigate('/workflow-approvals')}
+              onClick={() => setLocation('/workflow-approvals')}
               className="bg-card rounded-lg p-3 shadow-sm border active:scale-95 hover-elevate"
               data-testid="button-action-workflow"
             >

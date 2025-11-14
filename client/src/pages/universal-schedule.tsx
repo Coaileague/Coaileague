@@ -35,6 +35,7 @@ import {
   CheckSquare, MapPin, Menu, Sparkles
 } from 'lucide-react';
 import type { Shift, Employee, Client, ShiftOrder } from '@shared/schema';
+import MobileSchedule from '@/components/MobileSchedule';
 
 // Post order template data (will be pre-created in database)
 const POST_ORDER_TEMPLATES = [
@@ -447,6 +448,15 @@ export default function UniversalSchedule() {
     return !shift.employeeId;
   };
 
+  // Helper for week navigation
+  const handleWeekChange = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      goToPreviousWeek();
+    } else {
+      goToNextWeek();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -458,6 +468,18 @@ export default function UniversalSchedule() {
     );
   }
 
+  // Mobile: Render dedicated mobile schedule component
+  if (isMobile) {
+    return (
+      <MobileSchedule 
+        weekStart={weekStart} 
+        weekEnd={weekEnd} 
+        onWeekChange={handleWeekChange}
+      />
+    );
+  }
+
+  // Desktop: Render grid-based schedule
   return (
     <DndContext
       sensors={isTouchDevice ? [] : sensors}
