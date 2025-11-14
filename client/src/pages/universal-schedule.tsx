@@ -92,10 +92,133 @@ interface ShiftFormData {
   location: string;
 }
 
+// Draggable Employee Component (Memoized for performance)
+const DraggableEmployee = ({ employee, isSelected, onSelect, getEmployeeColor }: {
+  employee: Employee;
+  isSelected: boolean;
+  onSelect: () => void;
+  getEmployeeColor: (id: string) => string;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: employee.id,
+    data: { type: 'employee', employee }
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    opacity: isDragging ? 0.5 : 1
+  } : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      onClick={onSelect}
+      className={`p-3 rounded-lg border-2 cursor-grab active:cursor-grabbing transition-all ${
+        isSelected ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
+      } ${isDragging ? 'z-50' : ''}`}
+      data-testid={`employee-card-${employee.id}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: getEmployeeColor(employee.id) }}
+          />
+          <span className="font-medium text-sm">{employee.firstName} {employee.lastName}</span>
+        </div>
+        {employee.performanceScore && (
+          <span className="text-xs font-bold text-green-600">{employee.performanceScore}</span>
+        )}
+      </div>
+      <div className="text-xs text-muted-foreground">{employee.role || 'Employee'}</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        ${employee.hourlyRate?.toString() || '0'}/hr
+      </div>
+    </div>
+  );
+};
+
+// Droppable Slot Component (Memoized for performance)
+const DroppableSlot = ({ day, hour, children, onClick }: {
+  day: number;
+  hour: number;
+  children: React.ReactNode;
+  onClick: () => void;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `slot-${day}-${hour}`,
+    data: { day, hour }
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={onClick}
+      className={`relative h-16 border-b cursor-pointer transition-colors group ${
+        isOver ? 'bg-primary/10 border-primary/40' : 'hover:bg-primary/5'
+      }`}
+      data-testid={`grid-cell-${day}-${hour}`}
+    >
+      {children}
+    </div>
+  );
+};
+
 export default function UniversalSchedule() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { employee: currentEmployee } = useEmployee();
+  
+  // Detect touch device for drag-and-drop (disable on mobile per architect)
+  const isTouchDevice = useMemo(() => 
+    'ontouchstart' in window || navigator.maxTouchPoints > 0
+  , []);
+  
+  // Configure sensors for drag-and-drop (only on desktop)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
+  
+  // Drag-and-drop handler
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    
+    const employeeId = active.id as string;
+    const { day, hour } = over.data.current as { day: number; hour: number };
+    
+    // Calculate date from day index
+    const shiftDate = new Date(weekStart);
+    shiftDate.setDate(shiftDate.getDate() + day);
+    
+    // Calculate clock times (default 8-hour shift)
+    const clockInHour = hour.toString().padStart(2, '0');
+    const clockOutHour = Math.min(hour + 8, 23).toString().padStart(2, '0');
+    
+    // Prefill shift form and open modal
+    setShiftForm({
+      ...shiftForm,
+      employeeId,
+      clockIn: `${clockInHour}:00`,
+      clockOut: `${clockOutHour}:00`,
+      isOpenShift: false
+    });
+    setModalPosition({ day, hour });
+    setShowShiftModal(true);
+    
+    toast({
+      title: 'Shift Draft Created',
+      description: 'Review and save shift details',
+    });
+  };
   
   // State management
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -327,9 +450,14 @@ export default function UniversalSchedule() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Desktop Employee Sidebar */}
-      {!isMobile && (
+    <DndContext
+      sensors={isTouchDevice ? [] : sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex h-screen bg-background">
+        {/* Desktop Employee Sidebar */}
+        {!isMobile && (
         <div className="w-64 bg-card border-r flex flex-col">
           <div className="p-4 border-b">
             <h2 className="text-lg font-bold">Employees</h2>
@@ -339,33 +467,13 @@ export default function UniversalSchedule() {
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-2">
               {employees.map(employee => (
-                <div
+                <DraggableEmployee
                   key={employee.id}
-                  onClick={() => setSelectedEmployee(employee)}
-                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedEmployee?.id === employee.id
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                  data-testid={`employee-card-${employee.id}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getEmployeeColor(employee.id) }}
-                      />
-                      <span className="font-medium text-sm">{employee.firstName} {employee.lastName}</span>
-                    </div>
-                    {employee.performanceScore && (
-                      <span className="text-xs font-bold text-green-600">{employee.performanceScore}</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{employee.role || 'Employee'}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    ${employee.hourlyRate?.toString() || '0'}/hr
-                  </div>
-                </div>
+                  employee={employee}
+                  isSelected={selectedEmployee?.id === employee.id}
+                  onSelect={() => setSelectedEmployee(employee)}
+                  getEmployeeColor={getEmployeeColor}
+                />
               ))}
             </div>
           </ScrollArea>
@@ -521,18 +629,18 @@ export default function UniversalSchedule() {
                 <div key={day} className="relative border-r last:border-r-0">
                   {/* Hour grid lines with plus icons */}
                   {hours.map(hour => (
-                    <div
+                    <DroppableSlot
                       key={hour}
-                      className="h-16 border-b hover:bg-primary/5 cursor-pointer transition-colors group relative"
+                      day={dayIndex}
+                      hour={hour}
                       onClick={() => handleGridClick(dayIndex, hour)}
-                      data-testid={`grid-cell-${dayIndex}-${hour}`}
                     >
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="bg-primary rounded-full p-1">
                           <Plus className="w-4 h-4 text-primary-foreground" />
                         </div>
                       </div>
-                    </div>
+                    </DroppableSlot>
                   ))}
 
                   {/* Shifts - render all shifts for this day */}
@@ -868,5 +976,6 @@ export default function UniversalSchedule() {
         </DialogContent>
       </Dialog>
     </div>
+    </DndContext>
   );
 }
