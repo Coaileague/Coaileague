@@ -1,56 +1,59 @@
 import crypto from 'crypto';
 
-// Generate HMAC-signed response token for contractor offers
-// Format: {offerId}:{timestamp}:{hmac}
-export function generateResponseToken(offerId: string): string {
-  const secret = process.env.SESSION_SECRET || 'fallback-secret-change-me';
-  const timestamp = Date.now().toString();
-  const payload = `${offerId}:${timestamp}`;
+/**
+ * SECURITY FIX: Opaque token system with workspace binding
+ * 
+ * Old design (VULNERABLE):
+ * - Token format: {offerId}:{timestamp}:{hmac}
+ * - Exposed offerId in plaintext (brute-force risk)
+ * - No workspace binding (cross-tenant replay possible)
+ * 
+ * New design (SECURE):
+ * - Token format: opaque UUID
+ * - Stored in database (shift_offers.responseToken)
+ * - Validated via database lookup with workspace check
+ * - Prevents cross-tenant replay (token tied to specific workspace)
+ */
+
+// Generate opaque response token (cryptographically random UUID)
+export function generateResponseToken(): string {
+  // Generate 16 random bytes and format as UUID v4
+  const randomBytes = crypto.randomBytes(16);
   
-  const hmac = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
+  // Set version (4) and variant bits per RFC 4122
+  randomBytes[6] = (randomBytes[6] & 0x0f) | 0x40; // version 4
+  randomBytes[8] = (randomBytes[8] & 0x3f) | 0x80; // variant 10
   
-  return `${payload}:${hmac}`;
+  // Format as UUID string
+  const hex = randomBytes.toString('hex');
+  return [
+    hex.substring(0, 8),
+    hex.substring(8, 12),
+    hex.substring(12, 16),
+    hex.substring(16, 20),
+    hex.substring(20, 32)
+  ].join('-');
 }
 
-// Validate response token and extract offer ID
-export function validateResponseToken(token: string): { 
+/**
+ * Validate response token via database lookup
+ * 
+ * IMPORTANT: This function only validates token format.
+ * Caller MUST verify workspace scoping via database query.
+ * 
+ * @param token - Opaque UUID token
+ * @returns Validation result (format check only)
+ */
+export function validateResponseTokenFormat(token: string): { 
   valid: boolean; 
-  offerId: string | null;
   error?: string;
 } {
-  try {
-    const parts = token.split(':');
-    if (parts.length !== 3) {
-      return { valid: false, offerId: null, error: 'Invalid token format' };
-    }
-    
-    const [offerId, timestamp, receivedHmac] = parts;
-    const secret = process.env.SESSION_SECRET || 'fallback-secret-change-me';
-    const payload = `${offerId}:${timestamp}`;
-    
-    // Verify HMAC
-    const expectedHmac = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
-    
-    if (receivedHmac !== expectedHmac) {
-      return { valid: false, offerId: null, error: 'Invalid signature' };
-    }
-    
-    // Check token age (valid for 30 days max)
-    const tokenAge = Date.now() - parseInt(timestamp);
-    const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-    
-    if (tokenAge > maxAge) {
-      return { valid: false, offerId: null, error: 'Token expired' };
-    }
-    
-    return { valid: true, offerId };
-  } catch (error) {
-    return { valid: false, offerId: null, error: 'Token validation failed' };
+  // Validate UUID format (8-4-4-4-12 hex pattern)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  
+  if (!uuidRegex.test(token)) {
+    return { valid: false, error: 'Invalid token format' };
   }
+  
+  return { valid: true };
 }

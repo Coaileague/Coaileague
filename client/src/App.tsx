@@ -43,6 +43,7 @@ import Dashboard from "@/pages/dashboard";
 import MobileDashboard from "@/pages/mobile-dashboard";
 import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
+import UniversalScheduleMobile from "@/pages/universal-schedule-mobile";
 import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
@@ -348,7 +349,10 @@ function AppContent() {
                 <Route path="/dashboard">
                   {isMobile ? <MobileDashboard /> : <Dashboard />}
                 </Route>
-                <Route path="/schedule" component={UniversalSchedule} />
+                <Route path="/schedule">
+                  {isMobile ? <UniversalScheduleMobile /> : <UniversalSchedule />}
+                </Route>
+                <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
                 <Route path="/employees" component={Employees} />

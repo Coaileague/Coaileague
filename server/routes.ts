@@ -4336,7 +4336,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const offeredRate = parseFloat(contractor.minHourlyRate) * 1.1; // 10% markup
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-        // Create offer first to get ID, then update with token
+        // SECURITY FIX: Generate opaque UUID token FIRST (no offerId exposure!)
+        const responseToken = generateResponseToken();
+
+        // Create offer with token included (single atomic operation - cleaner than UPDATE after INSERT)
         const offer = await db.insert(shiftOffers).values({
           shiftRequestId: shiftRequest[0].id,
           shiftId,
@@ -4346,13 +4349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           matchReasons: matchReasons,
           status: "pending",
           expiresAt,
+          responseToken, // Token already generated (opaque UUID - no offerId exposure)
         }).returning();
-        
-        // Generate and update response token
-        const responseToken = generateResponseToken(offer[0].id);
-        await db.update(shiftOffers)
-          .set({ responseToken })
-          .where(eq(shiftOffers.id, offer[0].id));
 
         offers.push({
           offerId: offer[0].id,
@@ -4403,17 +4401,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid action. Must be 'accept' or 'decline'" });
       }
       
-      // Validate token
-      const { validateResponseToken } = await import('./utils/contractorTokens');
-      const validation = validateResponseToken(token);
+      // SECURITY FIX 1: Validate token format (opaque UUID)
+      const { validateResponseTokenFormat } = await import('./utils/contractorTokens');
+      const formatValidation = validateResponseTokenFormat(token);
       
-      if (!validation.valid || validation.offerId !== offerId) {
-        return res.status(403).json({ message: validation.error || "Invalid or expired token" });
+      if (!formatValidation.valid) {
+        console.warn(`[Security] Invalid token format attempt: offer ${offerId}`);
+        return res.status(403).json({ message: formatValidation.error || "Invalid token" });
       }
       
       console.log(`[Contractor Response] Offer ${offerId} - Action: ${action}`);
       
-      // SECURITY FIX: Get offer with workspace validation to prevent cross-tenant attacks
+      // SECURITY FIX 2: Database lookup with token AND workspace validation (prevents cross-tenant replay)
       const offerResult = await db
         .select({
           offer: shiftOffers,
@@ -4423,20 +4422,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(shiftOffers)
         .innerJoin(shiftRequests, eq(shiftOffers.shiftRequestId, shiftRequests.id))
         .innerJoin(shifts, eq(shiftOffers.shiftId, shifts.id))
-        .where(eq(shiftOffers.id, offerId))
+        .where(and(
+          eq(shiftOffers.id, offerId),
+          eq(shiftOffers.responseToken, token), // Token must match (prevents replay with wrong token)
+          eq(shifts.workspaceId, shiftRequests.workspaceId) // Workspace consistency (referential integrity check)
+        ))
         .limit(1);
       
       if (!offerResult || offerResult.length === 0) {
-        return res.status(404).json({ message: "Offer not found" });
+        console.warn(`[Security] Invalid offer/token combination: offer ${offerId}`);
+        return res.status(404).json({ message: "Offer not found or invalid token" });
       }
       
       const { offer: currentOffer, request: shiftRequest, shift } = offerResult[0];
       const workspaceId = shiftRequest.workspaceId;
       
-      // SECURITY: Verify workspace consistency (prevent cross-tenant token replay)
+      // Additional workspace consistency validation (defense in depth)
       if (shift.workspaceId !== workspaceId) {
-        console.error(`[Security] Cross-tenant token replay attempt detected: offer ${offerId}`);
-        return res.status(403).json({ message: "Invalid workspace" });
+        console.error(`[Security] Cross-tenant data inconsistency detected: offer ${offerId}`);
+        return res.status(403).json({ message: "Data integrity violation" });
       }
       
       // Check offer status
@@ -4449,9 +4453,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check expiry
       if (new Date() > new Date(currentOffer.expiresAt)) {
+        // Mark expired atomically
         await db.update(shiftOffers)
-          .set({ status: 'expired', respondedAt: new Date() })
-          .where(eq(shiftOffers.id, offerId));
+          .set({ 
+            status: 'expired', 
+            respondedAt: new Date(),
+            responseToken: null // SECURITY FIX 3: Invalidate token
+          })
+          .where(and(
+            eq(shiftOffers.id, offerId),
+            eq(shiftOffers.responseToken, token) // Ensure token still matches
+          ));
         
         return res.status(400).json({ message: "Offer has expired" });
       }
@@ -4460,22 +4472,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (action === 'accept') {
         // Use Drizzle transaction to ensure all-or-nothing atomicity
         const result = await db.transaction(async (tx) => {
-          // 1. Update offer status with optimistic concurrency check
+          // 1. Update offer status with optimistic concurrency check + token invalidation
           const updateResult = await tx.update(shiftOffers)
             .set({ 
               status: 'accepted', 
               respondedAt: new Date(),
-              onboardingStarted: true
+              onboardingStarted: true,
+              responseToken: null // SECURITY FIX 3: Invalidate token (single-use)
             })
             .where(and(
               eq(shiftOffers.id, offerId),
-              eq(shiftOffers.status, 'pending') // Optimistic lock - prevent double acceptance
+              eq(shiftOffers.status, 'pending'), // Optimistic lock - prevent double acceptance
+              eq(shiftOffers.responseToken, token) // Token must still match (prevent concurrent use)
             ))
             .returning();
           
-          // Verify update succeeded (no row updated = race condition)
+          // SECURITY FIX 4: Verify update succeeded (validate row count to prevent silent failures)
           if (!updateResult || updateResult.length === 0) {
-            throw new Error('Offer was already accepted or modified by another process');
+            throw new Error('Offer was already accepted, token invalid, or concurrent modification detected');
           }
           
           // 2. Create contractor assignment
@@ -4500,9 +4514,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(shifts.workspaceId, workspaceId) // Workspace guard
             ));
           
-          // 4. Decline all other pending offers for this shift (atomic cascade)
+          // 4. Decline all other pending offers for this shift (atomic cascade + token invalidation)
           await tx.update(shiftOffers)
-            .set({ status: 'declined', respondedAt: new Date() })
+            .set({ 
+              status: 'declined', 
+              respondedAt: new Date(),
+              responseToken: null // Invalidate tokens on auto-decline
+            })
             .where(and(
               eq(shiftOffers.shiftId, currentOffer.shiftId),
               eq(shiftOffers.status, 'pending'),
@@ -4548,30 +4566,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // ACTION: DECLINE
+      // ACTION: DECLINE - TRANSACTION with workspace guards and token invalidation
       if (action === 'decline') {
-        await db.update(shiftOffers)
-          .set({ status: 'declined', respondedAt: new Date() })
-          .where(eq(shiftOffers.id, offerId));
-        
-        // Check if all offers for this shift are now declined/expired
-        const allOffers = await db.select().from(shiftOffers).where(eq(shiftOffers.shiftId, currentOffer.shiftId));
-        const pendingCount = allOffers.filter(o => o.status === 'pending').length;
-        
-        if (pendingCount === 0) {
-          // All offers declined/expired - mark request as exhausted
-          await db.update(shiftRequests)
+        // Use Drizzle transaction for atomic decline workflow
+        await db.transaction(async (tx) => {
+          // 1. Update offer status with token invalidation
+          const updateResult = await tx.update(shiftOffers)
             .set({ 
-              status: 'all_declined',
-              completedAt: new Date()
+              status: 'declined', 
+              respondedAt: new Date(),
+              responseToken: null // SECURITY FIX 3: Invalidate token (single-use)
             })
-            .where(eq(shiftRequests.id, currentOffer.shiftRequestId));
+            .where(and(
+              eq(shiftOffers.id, offerId),
+              eq(shiftOffers.status, 'pending'), // Optimistic lock
+              eq(shiftOffers.responseToken, token) // Token must still match
+            ))
+            .returning();
           
-          console.log(`[Contractor Response] All offers declined for shift ${currentOffer.shiftId}`);
-          // TODO: Notify manager to re-run search or expand criteria
-        }
+          // SECURITY FIX 4: Verify update succeeded
+          if (!updateResult || updateResult.length === 0) {
+            throw new Error('Offer was already declined, token invalid, or concurrent modification detected');
+          }
+          
+          // 2. Check if all offers for this shift are now declined/expired
+          const allOffers = await tx
+            .select()
+            .from(shiftOffers)
+            .where(eq(shiftOffers.shiftId, currentOffer.shiftId));
+          
+          const pendingCount = allOffers.filter(o => o.status === 'pending').length;
+          
+          // 3. If no pending offers remain, mark request as exhausted
+          if (pendingCount === 0) {
+            await tx.update(shiftRequests)
+              .set({ 
+                status: 'all_declined',
+                completedAt: new Date()
+              })
+              .where(and(
+                eq(shiftRequests.id, currentOffer.shiftRequestId),
+                eq(shiftRequests.workspaceId, workspaceId) // Workspace guard
+              ));
+            
+            console.log(`[Contractor Response] All offers declined for shift ${currentOffer.shiftId}`);
+            // TODO: Notify manager to re-run search or expand criteria
+          }
+        });
         
-        res.json({
+        return res.json({
           success: true,
           action: 'declined',
           message: "Offer declined. Thank you for your response."
