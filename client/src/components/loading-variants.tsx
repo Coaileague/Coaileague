@@ -11,14 +11,14 @@ import { IsometricLoader } from "./isometric-loader";
 import { Cpu, Zap, Database } from "lucide-react";
 
 interface LoadingVariantProps {
-  progress?: number;
+  externalProgress?: number;
   message?: string;
 }
 
 /**
  * DESKTOP VARIANT 1: Isometric Cubes with Horizontal Progress Bar
  */
-export function DesktopLoadingVariant1({ progress: externalProgress, message }: LoadingVariantProps) {
+export function DesktopLoadingVariant1({ externalProgress, message }: LoadingVariantProps) {
   const { progress, message: displayMessage } = useLoadingState({
     externalProgress,
     customMessage: message,
@@ -59,7 +59,7 @@ export function DesktopLoadingVariant1({ progress: externalProgress, message }: 
 /**
  * DESKTOP VARIANT 2: Circular Progress with Pulsing Icons
  */
-export function DesktopLoadingVariant2({ progress: externalProgress, message }: LoadingVariantProps) {
+export function DesktopLoadingVariant2({ externalProgress, message }: LoadingVariantProps) {
   const { progress, message: displayMessage } = useLoadingState({
     externalProgress,
     customMessage: message,
@@ -131,7 +131,7 @@ export function DesktopLoadingVariant2({ progress: externalProgress, message }: 
 /**
  * DESKTOP VARIANT 3: Wave Animation with Floating Icons
  */
-export function DesktopLoadingVariant3({ progress: externalProgress, message }: LoadingVariantProps) {
+export function DesktopLoadingVariant3({ externalProgress, message }: LoadingVariantProps) {
   const { progress, message: displayMessage } = useLoadingState({
     externalProgress,
     customMessage: message,
@@ -196,7 +196,7 @@ export function DesktopLoadingVariant3({ progress: externalProgress, message }: 
 /**
  * MOBILE VARIANT 1: Compact Circular Progress
  */
-export function MobileLoadingVariant1({ progress: externalProgress, message }: LoadingVariantProps) {
+export function MobileLoadingVariant1({ externalProgress, message }: LoadingVariantProps) {
   const { progress, message: displayMessage, userName } = useLoadingState({
     externalProgress,
     customMessage: message,
@@ -250,7 +250,7 @@ export function MobileLoadingVariant1({ progress: externalProgress, message }: L
 /**
  * MOBILE VARIANT 2: Minimalist Horizontal Bar
  */
-export function MobileLoadingVariant2({ progress: externalProgress, message }: LoadingVariantProps) {
+export function MobileLoadingVariant2({ externalProgress, message }: LoadingVariantProps) {
   const { progress, message: displayMessage, userName } = useLoadingState({
     externalProgress,
     customMessage: message,
@@ -293,7 +293,7 @@ export function MobileLoadingVariant2({ progress: externalProgress, message }: L
 /**
  * MOBILE VARIANT 3: Dots Animation
  */
-export function MobileLoadingVariant3({ progress: externalProgress, message }: LoadingVariantProps) {
+export function MobileLoadingVariant3({ externalProgress, message }: LoadingVariantProps) {
   const { progress, message: displayMessage, userName } = useLoadingState({
     externalProgress,
     customMessage: message,

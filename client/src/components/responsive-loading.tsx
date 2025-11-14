@@ -64,7 +64,7 @@ export function ResponsiveLoading({ message, progress, scenario }: ResponsiveLoa
   const defaultMessage = scenario ? getScenarioMessage(scenario) : undefined;
   
   // All variants are fullscreen by design
-  return <VariantComponent message={message || defaultMessage} progress={progress} />;
+  return <VariantComponent message={message || defaultMessage} externalProgress={progress} />;
 }
 
 // Get scenario-based message
@@ -86,3 +86,6 @@ function getScenarioMessage(scenario: ProgressScenario): string {
 export function ResponsiveLoadingFullscreen({ message, progress, scenario }: ResponsiveLoadingProps) {
   return <ResponsiveLoading message={message} progress={progress} scenario={scenario} />;
 }
+
+// For backwards compatibility - old prop name still supported
+export { ResponsiveLoading as UniversalLoading };
