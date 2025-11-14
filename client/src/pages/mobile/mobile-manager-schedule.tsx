@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import type { Shift, Employee as EmployeeType, Client } from '@shared/schema';
 import { 
   Calendar, Clock, Users, Edit2, Trash2, Plus, Download, Bot, 
   CheckCircle, AlertCircle, BarChart3, X, MessageSquare, ChevronLeft,
@@ -9,32 +12,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useEmployee } from '@/hooks/useEmployee';
-
-interface Shift {
-  id: number;
-  employeeId: number | null;
-  date: Date;
-  startHour: number;
-  duration: number;
-  status: string;
-  position: string;
-  client: string;
-  approvalStatus: string;
-  isOpenShift?: boolean;
-  aiGenerated?: boolean;
-}
-
-interface Employee {
-  id: number;
-  name: string;
-  position: string;
-  score: number;
-  hourlyRate: number;
-  color: string;
-}
+import { useToast } from '@/hooks/use-toast';
+import MobileLoading from '@/components/mobile-loading';
 
 const MobileManagerSchedule = () => {
   const { employee: currentUser } = useEmployee();
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -46,88 +29,166 @@ const MobileManagerSchedule = () => {
   const [showApprovals, setShowApprovals] = useState(false);
   const [showShiftDetails, setShowShiftDetails] = useState(false);
 
-  // Mock data - will be replaced with useQuery hooks
-  const employees: Employee[] = [
-    { id: 1, name: 'Sarah Johnson', position: 'Server', score: 95, hourlyRate: 18, color: 'hsl(160 84% 39%)' },
-    { id: 2, name: 'Mike Chen', position: 'Server', score: 92, hourlyRate: 16, color: 'hsl(188 96% 57%)' },
-    { id: 3, name: 'Emily Davis', position: 'Cook', score: 88, hourlyRate: 22, color: 'hsl(160 92% 32%)' },
-    { id: 4, name: 'James Wilson', position: 'Manager', score: 98, hourlyRate: 28, color: 'hsl(215 20% 47%)' },
-    { id: 5, name: 'Lisa Anderson', position: 'Server', score: 85, hourlyRate: 17, color: 'hsl(160 84% 39%)' },
-    { id: 6, name: 'Tom Martinez', position: 'Cook', score: 90, hourlyRate: 20, color: 'hsl(188 96% 57%)' },
-  ];
-
-  // Generate mock shifts for testing date navigation (full week)
-  const getMockShifts = (): Shift[] => {
-    const baseDate = new Date();
-    baseDate.setHours(0, 0, 0, 0);
-    
-    const shifts: Shift[] = [];
-    
-    // Generate shifts for a full week (-7 to +7 days)
-    for (let dayOffset = -7; dayOffset <= 7; dayOffset++) {
-      const date = new Date(baseDate.getTime()); // Clone date properly
-      date.setDate(date.getDate() + dayOffset);
-      
-      const baseId = (dayOffset + 7) * 10; // Unique IDs: 0, 10, 20, ..., 140
-      
-      shifts.push(
-        { id: baseId + 1, employeeId: 1, date: new Date(date), startHour: 9, duration: 8, status: 'confirmed', position: 'Server', client: 'Main Dining', approvalStatus: 'approved' },
-        { id: baseId + 2, employeeId: 2, date: new Date(date), startHour: 17, duration: 6, status: 'confirmed', position: 'Server', client: 'Bar Area', approvalStatus: 'approved' },
-        { id: baseId + 3, employeeId: 3, date: new Date(date), startHour: 10, duration: 8, status: 'pending_approval', position: 'Cook', client: 'Kitchen', approvalStatus: 'pending' },
-        { id: baseId + 4, employeeId: null, date: new Date(date), startHour: 11, duration: 7, status: 'open', position: 'Server', client: 'Main Dining', isOpenShift: true, approvalStatus: 'pending' },
-        { id: baseId + 5, employeeId: 5, date: new Date(date), startHour: 14, duration: 6, status: 'pending_approval', position: 'Server', client: 'Bar Area', approvalStatus: 'pending', aiGenerated: true }
-      );
-    }
-    
-    return shifts;
-  };
+  // Calculate week boundaries for data fetching
+  const weekStart = new Date(currentDate);
+  weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+  weekStart.setHours(0, 0, 0, 0);
   
-  const [shifts, setShifts] = useState<Shift[]>(getMockShifts());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  // Fetch shifts for current week
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
+    queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch shifts');
+      return response.json();
+    },
+  });
+
+  // Fetch employees
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<EmployeeType[]>({
+    queryKey: ['/api/employees'],
+  });
+
+  // Fetch clients
+  const { data: clients = [], isLoading: clientsLoading } = useQuery<Client[]>({
+    queryKey: ['/api/clients'],
+  });
 
   const [pendingApprovals] = useState([
     { id: 1, type: 'time_off', employeeName: 'Sarah Johnson', reason: 'Vacation Request', dates: 'Nov 20-22', status: 'pending' },
     { id: 2, type: 'shift_swap', employeeName: 'Mike Chen', reason: 'Swap with Lisa', date: 'Nov 15', status: 'pending' },
   ]);
 
-  const handleApproveShift = (shiftId: number) => {
-    setShifts(shifts.map(s => 
-      s.id === shiftId ? { ...s, status: 'confirmed', approvalStatus: 'approved' } : s
-    ));
+  // Approve shift mutation
+  const approveShiftMutation = useMutation({
+    mutationFn: async (shiftId: string) => {
+      return await apiRequest(`/api/shifts/${shiftId}`, 'PATCH', { 
+        approvalStatus: 'approved'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      toast({ title: 'Shift approved successfully' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to approve shift', variant: 'destructive' });
+    }
+  });
+
+  // Deny shift mutation
+  const denyShiftMutation = useMutation({
+    mutationFn: async (shiftId: string) => {
+      return await apiRequest(`/api/shifts/${shiftId}`, 'PATCH', { 
+        approvalStatus: 'denied'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      toast({ title: 'Shift denied' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to deny shift', variant: 'destructive' });
+    }
+  });
+
+  // Delete shift mutation
+  const deleteShiftMutation = useMutation({
+    mutationFn: async (shiftId: string) => {
+      return await apiRequest(`/api/shifts/${shiftId}`, 'DELETE', {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      setShowShiftDetails(false);
+      toast({ title: 'Shift deleted successfully' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to delete shift', variant: 'destructive' });
+    }
+  });
+
+  const handleApproveShift = (shiftId: string) => {
+    approveShiftMutation.mutate(shiftId);
   };
 
-  const handleDenyShift = (shiftId: number) => {
-    setShifts(shifts.map(s => 
-      s.id === shiftId ? { ...s, status: 'denied', approvalStatus: 'denied' } : s
-    ));
+  const handleDenyShift = (shiftId: string) => {
+    denyShiftMutation.mutate(shiftId);
   };
 
-  const handleDeleteShift = (shiftId: number) => {
-    setShifts(shifts.filter(s => s.id !== shiftId));
-    setShowShiftDetails(false);
+  const handleDeleteShift = (shiftId: string) => {
+    deleteShiftMutation.mutate(shiftId);
   };
 
+  // Helper: Format hour to 12-hour time
   const formatTime = (hour: number) => {
     return hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
   };
 
-  const getEmployee = (employeeId: number): Employee | undefined => employees.find(e => e.id === employeeId);
-
-  // Helper to compare dates (ignoring time)
+  // Helper: Compare dates (ignoring time)
   const isSameDay = (date1: Date, date2: Date): boolean => {
     return date1.getFullYear() === date2.getFullYear() &&
            date1.getMonth() === date2.getMonth() &&
            date1.getDate() === date2.getDate();
   };
 
-  // Filter shifts for current date
-  const todayShifts = shifts.filter(s => isSameDay(s.date, currentDate)).sort((a, b) => a.startHour - b.startHour);
+  // Helper: Get employee by UUID
+  const getEmployee = (employeeId: string | null): EmployeeType | undefined => 
+    employeeId ? employees.find(e => e.id === employeeId) : undefined;
+
+  // Helper: Get client by UUID  
+  const getClient = (clientId: string | null): Client | undefined =>
+    clientId ? clients.find(c => c.id === clientId) : undefined;
+
+  // Helper: Get employee display name
+  const getEmployeeDisplayName = (employee: EmployeeType): string =>
+    `${employee.firstName} ${employee.lastName}`;
+
+  // Helper: Generate deterministic color from employee ID
+  const getEmployeeColor = (employeeId: string): string => {
+    const colors = [
+      'hsl(160 84% 39%)', // Emerald
+      'hsl(188 96% 57%)', // Cyan
+      'hsl(160 92% 32%)', // Dark emerald
+      'hsl(215 20% 47%)', // Slate
+      'hsl(213 94% 68%)', // Blue
+      'hsl(280 89% 66%)', // Purple
+    ];
+    const hash = employeeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  };
+
+  // Helper: Get shift duration in hours
+  const getShiftDuration = (shift: Shift): number => {
+    const start = new Date(shift.startTime);
+    const end = new Date(shift.endTime);
+    return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  };
+
+  // Filter shifts for current date (using startTime instead of mock date field)
+  const getShiftsForDay = (date: Date) => {
+    return shifts.filter(s => {
+      const shiftDate = new Date(s.startTime);
+      return isSameDay(shiftDate, date);
+    }).sort((a, b) => {
+      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+    });
+  };
+
+  const todayShifts = getShiftsForDay(currentDate);
   const pendingShifts = todayShifts.filter(s => s.approvalStatus === 'pending');
 
-  // Calculate dynamic stats
+  // Calculate dynamic stats (using real payRate and computed duration)
   const totalLaborCost = todayShifts.reduce((total, shift) => {
     const employee = shift.employeeId ? getEmployee(shift.employeeId) : null;
-    if (!employee) return total;
-    return total + (employee.hourlyRate * shift.duration);
+    if (!employee || !employee.payRate) return total;
+    const duration = getShiftDuration(shift);
+    return total + (parseFloat(employee.payRate) * duration);
   }, 0);
 
   // Format current date
@@ -136,6 +197,9 @@ const MobileManagerSchedule = () => {
     day: 'numeric', 
     year: 'numeric' 
   });
+
+  // Combined loading state
+  const isLoading = shiftsLoading || employeesLoading || clientsLoading;
 
   // Check if user is manager/admin
   const isManager = currentUser?.role === 'Manager' || currentUser?.role === 'Admin';
