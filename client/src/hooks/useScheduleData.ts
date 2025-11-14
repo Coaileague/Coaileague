@@ -13,12 +13,17 @@ interface UseScheduleDataProps {
 }
 
 export function useScheduleData({ weekStart, weekEnd }: UseScheduleDataProps) {
+  // Convert Date objects to stable numbers for query key comparison
+  const weekStartTime = weekStart.getTime();
+  const weekEndTime = weekEnd.getTime();
+
   // Fetch shifts for current week with date range filtering
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
-    queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
+    queryKey: ['/api/shifts', weekStartTime, weekEndTime],
     queryFn: async () => {
       const response = await fetch(
-        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`
+        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`,
+        { credentials: 'include' }
       );
       if (!response.ok) throw new Error('Failed to fetch shifts');
       return response.json();
