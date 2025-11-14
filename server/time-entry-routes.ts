@@ -90,7 +90,7 @@ function canApproveTimeEntries(workspaceRole: string): boolean {
 // ============================================================================
 
 /**
- * GET /api/timeos/status - Get current clock status for logged-in employee
+ * GET /api/time-entries/status - Get current clock status for logged-in employee
  * Returns active time entry if clocked in, null if clocked out
  */
 timeEntryRouter.get('/status', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
@@ -147,7 +147,7 @@ timeEntryRouter.get('/status', requireAuth, readLimiter, async (req: Authenticat
 });
 
 /**
- * POST /api/timeos/clock-in - Clock in (start new time entry)
+ * POST /api/time-entries/clock-in - Clock in (start new time entry)
  */
 timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -248,7 +248,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
 });
 
 /**
- * POST /api/timeos/clock-out - Clock out (complete time entry)
+ * POST /api/time-entries/clock-out - Clock out (complete time entry)
  */
 timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -363,7 +363,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
 // ============================================================================
 
 /**
- * POST /api/timeos/break/start - Start a break
+ * POST /api/time-entries/break/start - Start a break
  */
 timeEntryRouter.post('/break/start', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -465,7 +465,7 @@ timeEntryRouter.post('/break/start', requireAuth, mutationLimiter, async (req: A
 });
 
 /**
- * POST /api/timeos/break/end - End a break
+ * POST /api/time-entries/break/end - End a break
  */
 timeEntryRouter.post('/break/end', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -556,7 +556,7 @@ timeEntryRouter.post('/break/end', requireAuth, mutationLimiter, async (req: Aut
 // ============================================================================
 
 /**
- * GET /api/timeos/entries - Get time entries with filtering
+ * GET /api/time-entries - Get time entries with filtering
  * Query params: employeeId, startDate, endDate, status
  */
 timeEntryRouter.get('/entries', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
@@ -632,7 +632,7 @@ timeEntryRouter.get('/entries', requireAuth, readLimiter, async (req: Authentica
 });
 
 /**
- * GET /api/timeos/entries/:id - Get single time entry with breaks and audit log
+ * GET /api/time-entries/:id - Get single time entry with breaks and audit log
  */
 timeEntryRouter.get('/entries/:id', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -698,7 +698,7 @@ timeEntryRouter.get('/entries/:id', requireAuth, readLimiter, async (req: Authen
 // ============================================================================
 
 /**
- * POST /api/timeos/entries/:id/approve - Approve a time entry
+ * POST /api/time-entries/:id/approve - Approve a time entry
  */
 timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -780,7 +780,7 @@ timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole([
 });
 
 /**
- * POST /api/timeos/entries/:id/reject - Reject a time entry
+ * POST /api/time-entries/:id/reject - Reject a time entry
  */
 timeEntryRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
@@ -863,7 +863,7 @@ timeEntryRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['
 // ============================================================================
 
 /**
- * GET /api/timeos/active - Get all currently clocked-in employees (for managers)
+ * GET /api/time-entries/active - Get all currently clocked-in employees (for managers)
  */
 timeEntryRouter.get('/active', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
