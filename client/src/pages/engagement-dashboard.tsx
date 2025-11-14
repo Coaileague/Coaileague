@@ -17,7 +17,6 @@ import { AlertCircle, TrendingUp, TrendingDown, Users, Heart, MessageSquare, Awa
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { ResponsiveLoading } from "@/components/responsive-loading";
 
 interface EmployeeHealthScore {
   id: string;

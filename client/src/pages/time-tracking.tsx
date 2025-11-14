@@ -30,7 +30,6 @@ import {
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "wouter";

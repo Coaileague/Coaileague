@@ -13,8 +13,6 @@ import {
 import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { useTransition } from "@/contexts/transition-context";
-import { ResponsiveLoading } from "@/components/responsive-loading";
-import { useLoadingManager } from "@/contexts/loading-manager";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,6 @@ import {
 } from "@/components/ui/tooltip";
 import { DashboardShell, ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileLoading } from "@/components/mobile-loading";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIdentity } from "@/hooks/useIdentity";
 import { AppShellMobile } from "@/components/mobile/AppShellMobile";
@@ -57,7 +54,6 @@ export default function Dashboard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { workspaceRole, subscriptionTier, isPlatformStaff, platformRole, isLoading: accessLoading } = useWorkspaceAccess();
   const { showTransition, hideTransition } = useTransition();
-  const { beginLoading, endLoading } = useLoadingManager();
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread' | 'read'>('all');
   
   // Mobile detection for responsive UI
@@ -171,11 +167,9 @@ export default function Dashboard() {
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const loadingId = beginLoading({ scenario: 'dataSync' });
       try {
         return await apiRequest(`/api/notifications/${id}/read`, 'PATCH');
       } finally {
-        endLoading(loadingId);
       }
     },
     onSuccess: () => {
@@ -186,11 +180,9 @@ export default function Dashboard() {
   // Delete notification
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
-      const loadingId = beginLoading({ scenario: 'dataSync' });
       try {
         return await apiRequest(`/api/notifications/${id}`, 'DELETE');
       } finally {
-        endLoading(loadingId);
       }
     },
     onSuccess: () => {
@@ -201,11 +193,9 @@ export default function Dashboard() {
   // Mark all as read
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const loadingId = beginLoading({ scenario: 'dataSync' });
       try {
         return await apiRequest('/api/notifications/mark-all-read', 'POST');
       } finally {
-        endLoading(loadingId);
       }
     },
     onSuccess: () => {

@@ -22,7 +22,6 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
-import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { SwipeToDelete } from "@/components/swipe-to-delete";
 import { useIsMobile } from "@/hooks/use-mobile";

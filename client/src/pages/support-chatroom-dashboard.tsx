@@ -31,7 +31,6 @@ import {
   ArrowLeft,
   RefreshCw
 } from 'lucide-react';
-import { ResponsiveLoading } from '@/components/responsive-loading';
 import Error403 from './error-403';
 
 interface ChatRoom {

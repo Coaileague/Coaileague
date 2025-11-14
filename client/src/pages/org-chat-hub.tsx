@@ -25,7 +25,6 @@ import {
   Plus,
   Clock
 } from 'lucide-react';
-import { ResponsiveLoading } from '@/components/responsive-loading';
 
 interface ChatRoom {
   id: string;
