@@ -24,6 +24,7 @@ export default function MobileSchedule() {
   const [showApprovals, setShowApprovals] = useState(false);
   const [showShiftDetails, setShowShiftDetails] = useState(false);
   const [showEmployeeList, setShowEmployeeList] = useState(false);
+  const [viewMode, setViewMode] = useState<'my' | 'full'>('my');
 
   // Fetch employees
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -73,6 +74,44 @@ export default function MobileSchedule() {
       toast({ title: 'Shift deleted' });
     },
   });
+
+  // Helper functions (must be defined before use)
+  const formatTime = (date: Date) => {
+    const hour = new Date(date).getHours();
+    if (hour === 0) return '12a';
+    if (hour < 12) return `${hour}a`;
+    if (hour === 12) return '12p';
+    return `${hour - 12}p`;
+  };
+
+  const getShiftDuration = (shift: Shift) => {
+    const start = new Date(shift.startTime);
+    const end = new Date(shift.endTime);
+    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+  };
+
+  const getEmployee = (id: string) => employees.find(e => e.id === id);
+  
+  const getEmployeeColor = (id: string) => {
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+    const index = employees.findIndex(e => e.id === id);
+    return colors[index % colors.length];
+  };
+
+  function calculateLaborCost() {
+    let total = 0;
+    shifts.forEach(shift => {
+      const emp = shift.employeeId ? getEmployee(shift.employeeId) : null;
+      if (emp && emp.hourlyRate) {
+        total += parseFloat(emp.hourlyRate) * getShiftDuration(shift);
+      }
+    });
+    return `$${(total / 1000).toFixed(1)}k`;
+  }
+
+  function calculateTotalHours() {
+    return shifts.reduce((acc, shift) => acc + getShiftDuration(shift), 0);
+  }
 
   // Calculate pending shifts first (needed for manager tools)
   const pendingShifts = useMemo(() => {
@@ -135,50 +174,27 @@ export default function MobileSchedule() {
     }
   ];
 
-  const formatTime = (date: Date) => {
-    const hour = new Date(date).getHours();
-    if (hour === 0) return '12a';
-    if (hour < 12) return `${hour}a`;
-    if (hour === 12) return '12p';
-    return `${hour - 12}p`;
-  };
+  // Check if user is manager/supervisor
+  const isManagerOrSupervisor = useMemo(() => {
+    if (!currentEmployee || !currentEmployee.workspaceRole) return false;
+    return ['owner', 'admin', 'department_manager', 'supervisor'].includes(currentEmployee.workspaceRole);
+  }, [currentEmployee]);
 
-  const getShiftDuration = (shift: Shift) => {
-    const start = new Date(shift.startTime);
-    const end = new Date(shift.endTime);
-    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-  };
-
-  const getEmployee = (id: string) => employees.find(e => e.id === id);
-  const getEmployeeColor = (id: string) => {
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-    const index = employees.findIndex(e => e.id === id);
-    return colors[index % colors.length];
-  };
-
-  // Get today's shifts
+  // Get today's shifts (filtered by view mode)
   const todayShifts = useMemo(() => {
     const today = new Date();
-    return shifts.filter(s => {
+    let filteredShifts = shifts.filter(s => {
       const shiftDate = new Date(s.startTime);
       return shiftDate.toDateString() === today.toDateString();
     });
-  }, [shifts]);
 
-  function calculateLaborCost() {
-    let total = 0;
-    shifts.forEach(shift => {
-      const emp = shift.employeeId ? getEmployee(shift.employeeId) : null;
-      if (emp && emp.hourlyRate) {
-        total += parseFloat(emp.hourlyRate) * getShiftDuration(shift);
-      }
-    });
-    return `$${(total / 1000).toFixed(1)}k`;
-  }
+    // Filter by view mode for managers/supervisors
+    if (isManagerOrSupervisor && viewMode === 'my') {
+      filteredShifts = filteredShifts.filter(s => s.employeeId === currentEmployee?.id);
+    }
 
-  function calculateTotalHours() {
-    return shifts.reduce((acc, shift) => acc + getShiftDuration(shift), 0);
-  }
+    return filteredShifts;
+  }, [shifts, viewMode, isManagerOrSupervisor, currentEmployee]);
 
   const handleApprove = (shiftId: string) => {
     approveMutation.mutate(shiftId);
@@ -257,6 +273,34 @@ export default function MobileSchedule() {
             <span>{calculateLaborCost().replace('$', '').replace('k', '')}</span>
           </div>
         </div>
+
+        {/* View Mode Tabs (Manager/Supervisor only) */}
+        {isManagerOrSupervisor && (
+          <div className="bg-white bg-opacity-20 px-3 py-2 flex gap-2">
+            <button
+              onClick={() => setViewMode('my')}
+              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'my'
+                  ? 'bg-white text-blue-600'
+                  : 'bg-transparent text-white hover:bg-white hover:bg-opacity-20'
+              }`}
+              data-testid="tab-my-schedule"
+            >
+              My Schedule
+            </button>
+            <button
+              onClick={() => setViewMode('full')}
+              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'full'
+                  ? 'bg-white text-blue-600'
+                  : 'bg-transparent text-white hover:bg-white hover:bg-opacity-20'
+              }`}
+              data-testid="tab-full-schedule"
+            >
+              Full Schedule
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Compact Action Grid */}
@@ -468,9 +512,9 @@ export default function MobileSchedule() {
 
       {/* Approvals Drawer */}
       {showApprovals && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-          <div className="bg-white rounded-t-xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-orange-600 to-yellow-600 text-white p-3 rounded-t-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowApprovals(false)}>
+          <div className="bg-white rounded-t-xl w-full max-h-[70vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-shrink-0 bg-gradient-to-r from-orange-600 to-yellow-600 text-white p-3 rounded-t-xl z-10">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold">Approvals</h2>
@@ -478,7 +522,7 @@ export default function MobileSchedule() {
                 </div>
                 <button 
                   onClick={() => setShowApprovals(false)} 
-                  className="p-1"
+                  className="p-1.5 hover:bg-white hover:bg-opacity-20 rounded-full"
                   data-testid="button-close-approvals"
                 >
                   <X className="w-5 h-5" />
@@ -486,7 +530,7 @@ export default function MobileSchedule() {
               </div>
             </div>
 
-            <div className="p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {pendingShifts.map(shift => {
                 const emp = shift.employeeId ? getEmployee(shift.employeeId) : null;
                 return (
@@ -544,14 +588,14 @@ export default function MobileSchedule() {
 
       {/* Reports Drawer */}
       {showReports && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-          <div className="bg-white rounded-t-xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-t-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowReports(false)}>
+          <div className="bg-white rounded-t-xl w-full max-h-[70vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-t-xl z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold">Reports</h2>
                 <button 
                   onClick={() => setShowReports(false)} 
-                  className="p-1"
+                  className="p-1.5 hover:bg-white hover:bg-opacity-20 rounded-full"
                   data-testid="button-close-reports"
                 >
                   <X className="w-5 h-5" />
@@ -559,7 +603,7 @@ export default function MobileSchedule() {
               </div>
             </div>
 
-            <div className="p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {reports.map(report => {
                 const Icon = report.icon;
                 return (
@@ -595,14 +639,14 @@ export default function MobileSchedule() {
 
       {/* Shift Details */}
       {showShiftDetails && selectedShift && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-          <div className="bg-white rounded-t-xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-t-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowShiftDetails(false)}>
+          <div className="bg-white rounded-t-xl w-full max-h-[70vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-t-xl z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold">Shift Details</h2>
                 <button 
                   onClick={() => setShowShiftDetails(false)} 
-                  className="p-1"
+                  className="p-1.5 hover:bg-white hover:bg-opacity-20 rounded-full"
                   data-testid="button-close-shift-details"
                 >
                   <X className="w-5 h-5" />
@@ -610,7 +654,7 @@ export default function MobileSchedule() {
               </div>
             </div>
 
-            <div className="p-3 space-y-3">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {selectedShift.employeeId && (() => {
                 const emp = getEmployee(selectedShift.employeeId);
                 return emp ? (
@@ -690,9 +734,9 @@ export default function MobileSchedule() {
 
       {/* Employee List Drawer */}
       {showEmployeeList && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-          <div className="bg-white rounded-t-xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white p-3 rounded-t-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowEmployeeList(false)}>
+          <div className="bg-white rounded-t-xl w-full max-h-[70vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white p-3 rounded-t-xl z-10">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold">Team</h2>
@@ -700,7 +744,7 @@ export default function MobileSchedule() {
                 </div>
                 <button 
                   onClick={() => setShowEmployeeList(false)} 
-                  className="p-1"
+                  className="p-1.5 hover:bg-white hover:bg-opacity-20 rounded-full"
                   data-testid="button-close-employees"
                 >
                   <X className="w-5 h-5" />
@@ -708,7 +752,7 @@ export default function MobileSchedule() {
               </div>
             </div>
 
-            <div className="p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {employees.map(emp => (
                 <div 
                   key={emp.id} 
