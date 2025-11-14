@@ -1,0 +1,884 @@
+import React, { useState } from 'react';
+import { Calendar, Clock, Users, Edit2, Trash2, Copy, ChevronLeft, ChevronRight, Plus, Download, Bot, CheckCircle, AlertCircle, Settings, BarChart3, Play, Pause, X, Upload, Camera, MessageSquare, FileText, CheckSquare, MapPin } from 'lucide-react';
+
+const SchedulingSystem = () => {
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [view, setView] = useState('week');
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [aiConfidence, setAiConfidence] = useState(87);
+  const [testRunCount, setTestRunCount] = useState(15);
+  const [manualApprovalMode, setManualApprovalMode] = useState(true);
+  
+  // New modal states
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [modalPosition, setModalPosition] = useState({ day: 0, hour: 0 });
+  const [shiftForm, setShiftForm] = useState({
+    employeeId: null,
+    position: '',
+    clockIn: '',
+    clockOut: '',
+    notes: '',
+    postOrders: [],
+    isOpenShift: false,
+    client: '',
+    location: ''
+  });
+
+  // Post order requirements
+  const availablePostOrders = [
+    {
+      id: 1,
+      title: 'Security Patrol Requirements',
+      description: 'Complete hourly patrols of all assigned areas',
+      requiresAcknowledgment: true,
+      requiresSignature: true,
+      requiresPhotos: true,
+      photoFrequency: 'hourly',
+      photoInstructions: 'Take photos of each checkpoint during patrol'
+    },
+    {
+      id: 2,
+      title: 'Opening Procedures',
+      description: 'Follow all opening checklist items',
+      requiresAcknowledgment: true,
+      requiresSignature: false,
+      requiresPhotos: false
+    },
+    {
+      id: 3,
+      title: 'Closing Procedures',
+      description: 'Complete all closing duties and security checks',
+      requiresAcknowledgment: true,
+      requiresSignature: true,
+      requiresPhotos: true,
+      photoFrequency: 'at_completion',
+      photoInstructions: 'Document all secured areas before leaving'
+    },
+    {
+      id: 4,
+      title: 'Equipment Inspection',
+      description: 'Inspect and document condition of all equipment',
+      requiresAcknowledgment: true,
+      requiresSignature: false,
+      requiresPhotos: true,
+      photoFrequency: 'hourly',
+      photoInstructions: 'Photo evidence of equipment status'
+    }
+  ];
+
+  const employees = [
+    { id: 1, name: 'Sarah Johnson', position: 'Server', score: 95, hourlyRate: 18, certifications: ['Food Handler', 'Alcohol'], color: '#3b82f6' },
+    { id: 2, name: 'Mike Chen', position: 'Server', score: 92, hourlyRate: 16, certifications: ['Food Handler'], color: '#10b981' },
+    { id: 3, name: 'Emily Davis', position: 'Cook', score: 88, hourlyRate: 22, certifications: ['Food Handler', 'ServSafe'], color: '#f59e0b' },
+    { id: 4, name: 'James Wilson', position: 'Manager', score: 98, hourlyRate: 28, certifications: ['Food Handler', 'Alcohol', 'Manager'], color: '#8b5cf6' },
+    { id: 5, name: 'Lisa Anderson', position: 'Server', score: 85, hourlyRate: 17, certifications: ['Food Handler'], color: '#ec4899' },
+    { id: 6, name: 'Tom Martinez', position: 'Cook', score: 90, hourlyRate: 20, certifications: ['Food Handler', 'ServSafe'], color: '#14b8a6' },
+  ];
+
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  const [shifts, setShifts] = useState([
+    { id: 1, employeeId: 1, day: 0, startHour: 9, duration: 8, status: 'confirmed', aiGenerated: false, position: 'Server', client: 'Main Dining', postOrders: [1] },
+    { id: 2, employeeId: 2, day: 0, startHour: 17, duration: 6, status: 'confirmed', aiGenerated: false, position: 'Server', client: 'Bar Area', postOrders: [] },
+    { id: 3, employeeId: 3, day: 1, startHour: 10, duration: 8, status: 'confirmed', aiGenerated: false, position: 'Cook', client: 'Kitchen', postOrders: [2] },
+    { id: 4, employeeId: 4, day: 2, startHour: 8, duration: 10, status: 'confirmed', aiGenerated: false, position: 'Manager', client: 'Full Restaurant', postOrders: [2, 3] },
+    { id: 5, employeeId: null, day: 3, startHour: 11, duration: 7, status: 'open', aiGenerated: false, position: 'Server', client: 'Main Dining', postOrders: [1], isOpenShift: true },
+  ]);
+
+  const [pendingAIChanges, setPendingAIChanges] = useState([
+    { 
+      id: 1, 
+      type: 'new_shift',
+      employee: employees[1],
+      day: 4,
+      startHour: 12,
+      duration: 8,
+      reason: 'High demand forecast for Friday evening',
+      confidence: 92,
+      profitImpact: '+$180'
+    },
+    { 
+      id: 2, 
+      type: 'swap',
+      fromEmployee: employees[0],
+      toEmployee: employees[4],
+      day: 2,
+      startHour: 14,
+      duration: 6,
+      reason: 'Better profit margin (save $3/hour)',
+      confidence: 88,
+      profitImpact: '+$18'
+    }
+  ]);
+
+  const handleGridClick = (dayIndex, hourIndex) => {
+    setModalPosition({ day: dayIndex, hour: hourIndex });
+    setShiftForm({
+      employeeId: null,
+      position: '',
+      clockIn: `${hourIndex.toString().padStart(2, '0')}:00`,
+      clockOut: `${(hourIndex + 8).toString().padStart(2, '0')}:00`,
+      notes: '',
+      postOrders: [],
+      isOpenShift: false,
+      client: '',
+      location: ''
+    });
+    setShowShiftModal(true);
+  };
+
+  const handleCreateShift = () => {
+    const clockInHour = parseInt(shiftForm.clockIn.split(':')[0]);
+    const clockOutHour = parseInt(shiftForm.clockOut.split(':')[0]);
+    const duration = clockOutHour - clockInHour;
+
+    const newShift = {
+      id: shifts.length + 1,
+      employeeId: shiftForm.isOpenShift ? null : shiftForm.employeeId,
+      day: modalPosition.day,
+      startHour: clockInHour,
+      duration: duration,
+      status: shiftForm.isOpenShift ? 'open' : 'confirmed',
+      aiGenerated: false,
+      position: shiftForm.position,
+      client: shiftForm.client,
+      location: shiftForm.location,
+      notes: shiftForm.notes,
+      postOrders: shiftForm.postOrders,
+      isOpenShift: shiftForm.isOpenShift
+    };
+
+    setShifts([...shifts, newShift]);
+    setShowShiftModal(false);
+  };
+
+  const handleAIFillOpenShift = (shiftId) => {
+    // AI logic to fill open shift with best employee
+    const shift = shifts.find(s => s.id === shiftId);
+    const availableEmployees = employees.filter(e => 
+      e.position === shift.position &&
+      !shifts.some(s => s.employeeId === e.id && s.day === shift.day)
+    );
+    
+    if (availableEmployees.length > 0) {
+      // Select highest scoring available employee
+      const bestEmployee = availableEmployees.sort((a, b) => b.score - a.score)[0];
+      
+      setShifts(shifts.map(s => 
+        s.id === shiftId 
+          ? { ...s, employeeId: bestEmployee.id, status: 'confirmed', aiGenerated: true, isOpenShift: false }
+          : s
+      ));
+    }
+  };
+
+  const togglePostOrder = (orderId) => {
+    setShiftForm(prev => ({
+      ...prev,
+      postOrders: prev.postOrders.includes(orderId)
+        ? prev.postOrders.filter(id => id !== orderId)
+        : [...prev.postOrders, orderId]
+    }));
+  };
+
+  const getShiftPosition = (shift) => {
+    const topPercent = (shift.startHour / 24) * 100;
+    const heightPercent = (shift.duration / 24) * 100;
+    return { top: `${topPercent}%`, height: `${heightPercent}%` };
+  };
+
+  const getEmployeeColor = (employeeId) => {
+    const employee = employees.find(e => e.id === employeeId);
+    return employee?.color || '#6b7280';
+  };
+
+  const handleApproveAIChange = (changeId) => {
+    const change = pendingAIChanges.find(c => c.id === changeId);
+    if (change.type === 'new_shift') {
+      const newShift = {
+        id: shifts.length + 1,
+        employeeId: change.employee.id,
+        day: change.day,
+        startHour: change.startHour,
+        duration: change.duration,
+        status: 'confirmed',
+        aiGenerated: true
+      };
+      setShifts([...shifts, newShift]);
+    }
+    setPendingAIChanges(pendingAIChanges.filter(c => c.id !== changeId));
+    setTestRunCount(prev => prev + 1);
+  };
+
+  const handleRejectAIChange = (changeId) => {
+    setPendingAIChanges(pendingAIChanges.filter(c => c.id !== changeId));
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Left Sidebar - Employee List */}
+      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">Employees</h2>
+          <p className="text-sm text-gray-500">{employees.length} active</p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {employees.map(employee => (
+            <div
+              key={employee.id}
+              onClick={() => setSelectedEmployee(employee)}
+              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                selectedEmployee?.id === employee.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: employee.color }}
+                  />
+                  <span className="font-medium text-sm">{employee.name}</span>
+                </div>
+                <span className="text-xs font-bold text-green-600">{employee.score}</span>
+              </div>
+              <div className="text-xs text-gray-600">{employee.position}</div>
+              <div className="text-xs text-gray-500 mt-1">${employee.hourlyRate}/hr</div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {employee.certifications.map(cert => (
+                  <span key={cert} className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                    {cert}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-4 border-t border-gray-200">
+          <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+            <Plus className="w-4 h-4" />
+            <span>Add Employee</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content - Schedule Grid */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Weekly Schedule</h1>
+              <div className="flex items-center space-x-2">
+                <button className="p-2 hover:bg-gray-100 rounded-lg">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm font-medium">Week of Nov 11, 2025</span>
+                <button className="p-2 hover:bg-gray-100 rounded-lg">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center space-x-2">
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </button>
+              <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center space-x-2">
+                <BarChart3 className="w-4 h-4" />
+                <span>Reports</span>
+              </button>
+              <button 
+                onClick={() => setShowAIPanel(!showAIPanel)}
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Bot className="w-4 h-4" />
+                <span>AI Assistant</span>
+              </button>
+            </div>
+          </div>
+
+          {/* AI Status Bar */}
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Bot className="w-5 h-5 text-purple-600" />
+                <span className="font-medium text-gray-900">AI Automation</span>
+                <button
+                  onClick={() => setAutomationEnabled(!automationEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    automationEnabled ? 'bg-green-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    automationEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+              
+              <div className="h-6 w-px bg-gray-300" />
+              
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Confidence:</span>
+                <span className="font-bold text-purple-600">{aiConfidence}%</span>
+                <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all"
+                    style={{ width: `${aiConfidence}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div className="h-6 w-px bg-gray-300" />
+              
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Test Runs:</span>
+                <span className="font-bold text-gray-900">{testRunCount}/20</span>
+              </div>
+            </div>
+
+            {manualApprovalMode && (
+              <div className="flex items-center space-x-2 bg-yellow-100 px-3 py-1 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-yellow-600" />
+                <span className="text-sm font-medium text-yellow-800">Manual Approval Required</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Schedule Grid */}
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            {/* Days Header */}
+            <div className="grid grid-cols-8 border-b border-gray-200 bg-gray-50">
+              <div className="p-3 font-medium text-sm text-gray-600 border-r border-gray-200">
+                Time
+              </div>
+              {days.map(day => (
+                <div key={day} className="p-3 text-center font-medium text-sm text-gray-900 border-r border-gray-200 last:border-r-0">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid Content */}
+            <div className="grid grid-cols-8">
+              {/* Time Column */}
+              <div className="border-r border-gray-200">
+                {hours.map(hour => (
+                  <div key={hour} className="h-16 border-b border-gray-100 p-2 text-xs text-gray-500">
+                    {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day Columns with Shifts */}
+              {days.map((day, dayIndex) => (
+                <div key={day} className="relative border-r border-gray-200 last:border-r-0">
+                  {/* Hour grid lines with plus icons */}
+                  {hours.map(hour => (
+                    <div 
+                      key={hour} 
+                      className="h-16 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors group relative"
+                      onClick={() => handleGridClick(dayIndex, hour)}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-blue-600 rounded-full p-1">
+                          <Plus className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Shifts */}
+                  {shifts
+                    .filter(shift => shift.day === dayIndex)
+                    .map(shift => {
+                      const position = getShiftPosition(shift);
+                      const employee = shift.employeeId ? employees.find(e => e.id === shift.employeeId) : null;
+                      const isOpen = shift.isOpenShift || shift.status === 'open';
+                      
+                      return (
+                        <div
+                          key={shift.id}
+                          className={`absolute left-1 right-1 rounded-lg p-2 cursor-pointer transition-all hover:shadow-lg hover:z-10 group ${
+                            isOpen ? 'border-2 border-dashed border-orange-400' : ''
+                          }`}
+                          style={{
+                            top: position.top,
+                            height: position.height,
+                            backgroundColor: isOpen ? '#fff7ed' : getEmployeeColor(shift.employeeId),
+                            opacity: shift.status === 'pending' ? 0.7 : 1
+                          }}
+                        >
+                          {isOpen ? (
+                            <div>
+                              <div className="text-orange-600 text-xs font-bold flex items-center space-x-1">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>OPEN SHIFT</span>
+                              </div>
+                              <div className="text-gray-700 text-xs font-medium">{shift.position}</div>
+                              <div className="text-gray-600 text-xs">{shift.client}</div>
+                              <div className="text-gray-600 text-xs">
+                                {shift.startHour}:00 - {shift.startHour + shift.duration}:00
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAIFillOpenShift(shift.id);
+                                }}
+                                className="mt-1 bg-purple-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 hover:bg-purple-700"
+                              >
+                                <Bot className="w-3 h-3" />
+                                <span>AI Fill</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-white text-xs font-medium truncate">
+                                {employee?.name}
+                              </div>
+                              <div className="text-white text-xs opacity-90">
+                                {shift.position} - {shift.client}
+                              </div>
+                              <div className="text-white text-xs opacity-90">
+                                {shift.startHour}:00 - {shift.startHour + shift.duration}:00
+                              </div>
+                              {shift.postOrders && shift.postOrders.length > 0 && (
+                                <div className="flex items-center space-x-1 mt-1">
+                                  <FileText className="w-3 h-3 text-white opacity-75" />
+                                  <span className="text-white text-xs opacity-75">
+                                    {shift.postOrders.length} orders
+                                  </span>
+                                </div>
+                              )}
+                              {shift.aiGenerated && (
+                                <div className="absolute top-1 right-1 bg-white rounded-full p-1">
+                                  <Bot className="w-3 h-3 text-purple-600" />
+                                </div>
+                              )}
+                              
+                              {/* Hover actions */}
+                              <div className="absolute top-1 right-1 hidden group-hover:flex space-x-1">
+                                <button className="bg-white rounded p-1 hover:bg-gray-100">
+                                  <Edit2 className="w-3 h-3 text-gray-600" />
+                                </button>
+                                <button className="bg-white rounded p-1 hover:bg-gray-100">
+                                  <Copy className="w-3 h-3 text-gray-600" />
+                                </button>
+                                <button className="bg-white rounded p-1 hover:bg-red-50">
+                                  <Trash2 className="w-3 h-3 text-red-600" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Sidebar - AI Panel */}
+      {showAIPanel && (
+        <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-gray-900">AI Recommendations</h2>
+              <button onClick={() => setShowAIPanel(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">
+              {pendingAIChanges.length} pending changes require approval
+            </p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {pendingAIChanges.map(change => (
+              <div key={change.id} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Bot className="w-5 h-5 text-purple-600" />
+                    <span className="font-medium text-gray-900">
+                      {change.type === 'new_shift' ? 'New Shift Suggested' : 'Shift Swap Suggested'}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs font-medium text-gray-600">Confidence:</span>
+                    <span className="text-xs font-bold text-purple-600">{change.confidence}%</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-3">
+                  {change.type === 'new_shift' ? (
+                    <>
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{change.employee.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{days[change.day]}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{change.startHour}:00 - {change.startHour + change.duration}:00</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm">
+                        <span className="text-gray-600">From:</span>
+                        <span className="ml-2 font-medium">{change.fromEmployee.name}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-600">To:</span>
+                        <span className="ml-2 font-medium">{change.toEmployee.name}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                  <div className="text-xs font-medium text-blue-900 mb-1">AI Reasoning:</div>
+                  <div className="text-xs text-blue-800">{change.reason}</div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-blue-600">Profit Impact:</span>
+                    <span className="text-xs font-bold text-green-600">{change.profitImpact}</span>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleApproveAIChange(change.id)}
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Approve</span>
+                  </button>
+                  <button
+                    onClick={() => handleRejectAIChange(change.id)}
+                    className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2 text-sm"
+                  >
+                    <span>Reject</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {pendingAIChanges.length === 0 && (
+              <div className="text-center py-8">
+                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium">All caught up!</p>
+                <p className="text-sm text-gray-500">No pending AI recommendations</p>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-3">
+              <div className="text-sm font-medium text-gray-900 mb-1">
+                Graduation Progress
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                <span>{testRunCount}/20 successful test runs</span>
+                <span>{Math.round((testRunCount/20)*100)}%</span>
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all"
+                  style={{ width: `${(testRunCount/20)*100}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                {20 - testRunCount} more successful runs until full automation
+              </p>
+            </div>
+
+            <button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors flex items-center justify-center space-x-2">
+              <Play className="w-4 h-4" />
+              <span>Generate AI Schedule for Next Week</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Shift Creation Modal */}
+      {showShiftModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Create New Shift</h2>
+                  <p className="text-blue-100 text-sm mt-1">
+                    {days[modalPosition.day]} at {modalPosition.hour}:00
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowShiftModal(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Open Shift Toggle */}
+              <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Open Shift</h3>
+                      <p className="text-sm text-gray-600">Leave unassigned for AI to fill later</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShiftForm(prev => ({ ...prev, isOpenShift: !prev.isOpenShift }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      shiftForm.isOpenShift ? 'bg-orange-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      shiftForm.isOpenShift ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Employee Selection */}
+              {!shiftForm.isOpenShift && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    Select Employee
+                  </label>
+                  <select
+                    value={shiftForm.employeeId || ''}
+                    onChange={(e) => setShiftForm(prev => ({ ...prev, employeeId: parseInt(e.target.value) }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Choose an employee...</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} - {emp.position} (Score: {emp.score})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Position & Client */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                  <input
+                    type="text"
+                    value={shiftForm.position}
+                    onChange={(e) => setShiftForm(prev => ({ ...prev, position: e.target.value }))}
+                    placeholder="e.g., Server, Cook, Manager"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    Client/Area
+                  </label>
+                  <input
+                    type="text"
+                    value={shiftForm.client}
+                    onChange={(e) => setShiftForm(prev => ({ ...prev, client: e.target.value }))}
+                    placeholder="e.g., Main Dining, Bar"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <MapPin className="w-4 h-4 inline mr-2" />
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={shiftForm.location}
+                  onChange={(e) => setShiftForm(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Specific location or address"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Clock In/Out */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="w-4 h-4 inline mr-2" />
+                    Clock In
+                  </label>
+                  <input
+                    type="time"
+                    value={shiftForm.clockIn}
+                    onChange={(e) => setShiftForm(prev => ({ ...prev, clockIn: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="w-4 h-4 inline mr-2" />
+                    Clock Out
+                  </label>
+                  <input
+                    type="time"
+                    value={shiftForm.clockOut}
+                    onChange={(e) => setShiftForm(prev => ({ ...prev, clockOut: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <FileText className="w-4 h-4 inline mr-2" />
+                  Shift Notes
+                </label>
+                <textarea
+                  value={shiftForm.notes}
+                  onChange={(e) => setShiftForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any special instructions or notes for this shift..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Post Orders */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <FileText className="w-4 h-4 inline mr-2" />
+                  Post Orders (Required Tasks)
+                </label>
+                <div className="space-y-3">
+                  {availablePostOrders.map(order => (
+                    <div
+                      key={order.id}
+                      onClick={() => togglePostOrder(order.id)}
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                        shiftForm.postOrders.includes(order.id)
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-start space-x-3">
+                          <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            shiftForm.postOrders.includes(order.id)
+                              ? 'border-blue-500 bg-blue-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {shiftForm.postOrders.includes(order.id) && (
+                              <CheckCircle className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">{order.title}</h4>
+                            <p className="text-sm text-gray-600 mt-1">{order.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 mt-3 ml-8">
+                        {order.requiresAcknowledgment && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center space-x-1">
+                            <CheckSquare className="w-3 h-3" />
+                            <span>Acknowledgment Required</span>
+                          </span>
+                        )}
+                        {order.requiresSignature && (
+                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded flex items-center space-x-1">
+                            <Edit2 className="w-3 h-3" />
+                            <span>Signature Required</span>
+                          </span>
+                        )}
+                        {order.requiresPhotos && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center space-x-1">
+                            <Camera className="w-3 h-3" />
+                            <span>Photos: {order.photoFrequency}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {order.requiresPhotos && shiftForm.postOrders.includes(order.id) && (
+                        <div className="mt-3 ml-8 p-3 bg-blue-50 border border-blue-200 rounded">
+                          <div className="flex items-start space-x-2">
+                            <Camera className="w-4 h-4 text-blue-600 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-medium text-blue-900">Photo Requirements:</p>
+                              <p className="text-xs text-blue-700 mt-1">{order.photoInstructions}</p>
+                              <div className="flex items-center space-x-2 mt-2">
+                                <MessageSquare className="w-3 h-3 text-blue-600" />
+                                <span className="text-xs text-blue-600">Photos will be sent to supervisor chatroom</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 p-6 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  {shiftForm.postOrders.length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-blue-600" />
+                      <span>{shiftForm.postOrders.length} post order(s) selected</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowShiftModal(false)}
+                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateShift}
+                    disabled={!shiftForm.position || (!shiftForm.isOpenShift && !shiftForm.employeeId)}
+                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Shift</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SchedulingSystem;
