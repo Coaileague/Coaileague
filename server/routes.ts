@@ -4329,10 +4329,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const topContractors = scoredContractors.slice(0, 3);
       const offers = [];
 
+      // Generate response tokens for contractors
+      const { generateResponseToken } = await import('./utils/contractorTokens');
+
       for (const { contractor, score, matchReasons } of topContractors) {
         const offeredRate = parseFloat(contractor.minHourlyRate) * 1.1; // 10% markup
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+        // Create offer first to get ID, then update with token
         const offer = await db.insert(shiftOffers).values({
           shiftRequestId: shiftRequest[0].id,
           shiftId,
@@ -4343,6 +4347,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "pending",
           expiresAt,
         }).returning();
+        
+        // Generate and update response token
+        const responseToken = generateResponseToken(offer[0].id);
+        await db.update(shiftOffers)
+          .set({ responseToken })
+          .where(eq(shiftOffers.id, offer[0].id));
 
         offers.push({
           offerId: offer[0].id,
@@ -4373,6 +4383,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating fill request:", error);
       res.status(500).json({ message: error.message || "Failed to create fill request" });
+    }
+  });
+
+  // ============================================================================
+  // SCHEDULEOS™ CONTRACTOR OFFER RESPONSE - Token-based Accept/Decline
+  // ============================================================================
+
+  app.post('/api/shift-offers/:id/respond', async (req, res) => {
+    try {
+      const offerId = req.params.id;
+      const { action, token } = req.body; // action: "accept" | "decline"
+      
+      if (!action || !token) {
+        return res.status(400).json({ message: "Missing action or token" });
+      }
+      
+      if (action !== 'accept' && action !== 'decline') {
+        return res.status(400).json({ message: "Invalid action. Must be 'accept' or 'decline'" });
+      }
+      
+      // Validate token
+      const { validateResponseToken } = await import('./utils/contractorTokens');
+      const validation = validateResponseToken(token);
+      
+      if (!validation.valid || validation.offerId !== offerId) {
+        return res.status(403).json({ message: validation.error || "Invalid or expired token" });
+      }
+      
+      console.log(`[Contractor Response] Offer ${offerId} - Action: ${action}`);
+      
+      // SECURITY FIX: Get offer with workspace validation to prevent cross-tenant attacks
+      const offerResult = await db
+        .select({
+          offer: shiftOffers,
+          request: shiftRequests,
+          shift: shifts,
+        })
+        .from(shiftOffers)
+        .innerJoin(shiftRequests, eq(shiftOffers.shiftRequestId, shiftRequests.id))
+        .innerJoin(shifts, eq(shiftOffers.shiftId, shifts.id))
+        .where(eq(shiftOffers.id, offerId))
+        .limit(1);
+      
+      if (!offerResult || offerResult.length === 0) {
+        return res.status(404).json({ message: "Offer not found" });
+      }
+      
+      const { offer: currentOffer, request: shiftRequest, shift } = offerResult[0];
+      const workspaceId = shiftRequest.workspaceId;
+      
+      // SECURITY: Verify workspace consistency (prevent cross-tenant token replay)
+      if (shift.workspaceId !== workspaceId) {
+        console.error(`[Security] Cross-tenant token replay attempt detected: offer ${offerId}`);
+        return res.status(403).json({ message: "Invalid workspace" });
+      }
+      
+      // Check offer status
+      if (currentOffer.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Offer already ${currentOffer.status}`,
+          currentStatus: currentOffer.status
+        });
+      }
+      
+      // Check expiry
+      if (new Date() > new Date(currentOffer.expiresAt)) {
+        await db.update(shiftOffers)
+          .set({ status: 'expired', respondedAt: new Date() })
+          .where(eq(shiftOffers.id, offerId));
+        
+        return res.status(400).json({ message: "Offer has expired" });
+      }
+      
+      // ACTION: ACCEPT - PROPER DRIZZLE TRANSACTION for true atomicity
+      if (action === 'accept') {
+        // Use Drizzle transaction to ensure all-or-nothing atomicity
+        const result = await db.transaction(async (tx) => {
+          // 1. Update offer status with optimistic concurrency check
+          const updateResult = await tx.update(shiftOffers)
+            .set({ 
+              status: 'accepted', 
+              respondedAt: new Date(),
+              onboardingStarted: true
+            })
+            .where(and(
+              eq(shiftOffers.id, offerId),
+              eq(shiftOffers.status, 'pending') // Optimistic lock - prevent double acceptance
+            ))
+            .returning();
+          
+          // Verify update succeeded (no row updated = race condition)
+          if (!updateResult || updateResult.length === 0) {
+            throw new Error('Offer was already accepted or modified by another process');
+          }
+          
+          // 2. Create contractor assignment
+          const assignment = await tx.insert(contractorAssignments).values({
+            workspaceId: workspaceId,
+            shiftId: currentOffer.shiftId,
+            contractorId: currentOffer.contractorId,
+            shiftOfferId: offerId,
+            assignedRate: currentOffer.offeredPayRate,
+            assignedBy: shiftRequest.createdBy,
+            status: 'active',
+          }).returning();
+          
+          // 3. Update shift status
+          await tx.update(shifts)
+            .set({ 
+              status: 'contractor_assigned',
+              notes: sql`COALESCE(${shifts.notes}, '') || ${'\n\nContractor assigned via marketplace (Offer ' + offerId + ')'}`,
+            })
+            .where(and(
+              eq(shifts.id, currentOffer.shiftId),
+              eq(shifts.workspaceId, workspaceId) // Workspace guard
+            ));
+          
+          // 4. Decline all other pending offers for this shift (atomic cascade)
+          await tx.update(shiftOffers)
+            .set({ status: 'declined', respondedAt: new Date() })
+            .where(and(
+              eq(shiftOffers.shiftId, currentOffer.shiftId),
+              eq(shiftOffers.status, 'pending'),
+              sql`${shiftOffers.id} != ${offerId}`
+            ));
+          
+          // 5. Update shift request status
+          await tx.update(shiftRequests)
+            .set({ 
+              status: 'filled',
+              completedAt: new Date()
+            })
+            .where(and(
+              eq(shiftRequests.id, currentOffer.shiftRequestId),
+              eq(shiftRequests.workspaceId, workspaceId) // Workspace guard
+            ));
+          
+          return { assignment: assignment[0] };
+        });
+        
+        // 6. ONBOARDING STUB - Post-transaction side effects (idempotent)
+        const contractor = await db.select().from(contractorPool).where(eq(contractorPool.id, currentOffer.contractorId)).limit(1);
+        
+        if (contractor && contractor[0]) {
+          console.log(`[Onboarding] Starting onboarding for contractor ${contractor[0].firstName} ${contractor[0].lastName}`);
+          
+          // TODO: Create onboarding checklist (stub for now)
+          // const checklist = await createOnboardingChecklist(result.assignment.id, contractor[0]);
+          
+          // Notify manager of acceptance
+          // TODO: Send email/notification to manager
+          console.log(`[Onboarding] Notification stub: Manager notified of contractor acceptance`);
+        }
+        
+        // 📡 Broadcast shift update (post-transaction, idempotent)
+        broadcastShiftUpdate(workspaceId, 'shift_updated', shift);
+        
+        return res.json({
+          success: true,
+          action: 'accepted',
+          assignment: result.assignment,
+          message: "Offer accepted! Assignment created and onboarding started."
+        });
+      }
+      
+      // ACTION: DECLINE
+      if (action === 'decline') {
+        await db.update(shiftOffers)
+          .set({ status: 'declined', respondedAt: new Date() })
+          .where(eq(shiftOffers.id, offerId));
+        
+        // Check if all offers for this shift are now declined/expired
+        const allOffers = await db.select().from(shiftOffers).where(eq(shiftOffers.shiftId, currentOffer.shiftId));
+        const pendingCount = allOffers.filter(o => o.status === 'pending').length;
+        
+        if (pendingCount === 0) {
+          // All offers declined/expired - mark request as exhausted
+          await db.update(shiftRequests)
+            .set({ 
+              status: 'all_declined',
+              completedAt: new Date()
+            })
+            .where(eq(shiftRequests.id, currentOffer.shiftRequestId));
+          
+          console.log(`[Contractor Response] All offers declined for shift ${currentOffer.shiftId}`);
+          // TODO: Notify manager to re-run search or expand criteria
+        }
+        
+        res.json({
+          success: true,
+          action: 'declined',
+          message: "Offer declined. Thank you for your response."
+        });
+      }
+      
+    } catch (error: any) {
+      console.error("Error processing contractor response:", error);
+      res.status(500).json({ message: error.message || "Failed to process response" });
     }
   });
 

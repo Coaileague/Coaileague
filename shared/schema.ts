@@ -885,6 +885,9 @@ export const shiftOffers = pgTable("shift_offers", {
   respondedAt: timestamp("responded_at"),
   expiresAt: timestamp("expires_at").notNull(), // Offer expires after X hours
   
+  // Response token (HMAC-signed for stateless contractor authentication)
+  responseToken: varchar("response_token").unique(), // UUID + HMAC for secure one-click responses
+  
   // Onboarding (if accepted)
   onboardingStarted: boolean("onboarding_started").default(false),
   onboardingCompleted: boolean("onboarding_completed").default(false),
@@ -893,7 +896,43 @@ export const shiftOffers = pgTable("shift_offers", {
 }, (table) => [
   index("idx_shift_offers_request").on(table.shiftRequestId),
   index("idx_shift_offers_contractor").on(table.contractorId, table.status),
+  index("idx_shift_offers_token").on(table.responseToken),
 ]);
+
+// Contractor assignments - Keeps contractors separate from employees
+export const contractorAssignments = pgTable("contractor_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  shiftId: varchar("shift_id").notNull().references(() => shifts.id, { onDelete: 'cascade' }),
+  contractorId: varchar("contractor_id").notNull().references(() => contractorPool.id, { onDelete: 'cascade' }),
+  shiftOfferId: varchar("shift_offer_id").notNull().references(() => shiftOffers.id, { onDelete: 'cascade' }),
+  
+  // Assignment details
+  assignedRate: decimal("assigned_rate", { precision: 10, scale: 2 }).notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: varchar("assigned_by"), // User who created the fill request
+  
+  // Status
+  status: varchar("status").default("active"), // "active", "cancelled", "completed"
+  
+  // Onboarding
+  onboardingChecklistId: varchar("onboarding_checklist_id"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_contractor_assignments_shift").on(table.shiftId),
+  index("idx_contractor_assignments_contractor").on(table.contractorId),
+  index("idx_contractor_assignments_workspace").on(table.workspaceId),
+]);
+
+export const insertContractorAssignmentSchema = createInsertSchema(contractorAssignments).omit({
+  id: true,
+  createdAt: true,
+  assignedAt: true,
+});
+export type InsertContractorAssignment = z.infer<typeof insertContractorAssignmentSchema>;
+export type ContractorAssignment = typeof contractorAssignments.$inferSelect;
 
 export const insertShiftOfferSchema = createInsertSchema(shiftOffers).omit({
   id: true,
