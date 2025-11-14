@@ -156,7 +156,30 @@ timeosRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Authent
       return res.status(400).json({ error: 'No workspace selected' });
     }
 
-    const { shiftId, clientId, latitude, longitude, accuracy, notes } = req.body;
+    // Validate request body
+    const clockInSchema = insertTimeEntrySchema.pick({
+      shiftId: true,
+      clientId: true,
+      clockInLatitude: true,
+      clockInLongitude: true,
+      clockInAccuracy: true,
+      notes: true,
+    }).partial();
+
+    const validation = clockInSchema.safeParse({
+      shiftId: req.body.shiftId,
+      clientId: req.body.clientId,
+      clockInLatitude: req.body.latitude,
+      clockInLongitude: req.body.longitude,
+      clockInAccuracy: req.body.accuracy,
+      notes: req.body.notes,
+    });
+
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid input', details: validation.error.errors });
+    }
+
+    const { shiftId, clientId, clockInLatitude: latitude, clockInLongitude: longitude, clockInAccuracy: accuracy, notes } = validation.data;
 
     // Get employee record
     const [employee] = await db.select().from(employees)
@@ -234,7 +257,26 @@ timeosRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Authen
       return res.status(400).json({ error: 'No workspace selected' });
     }
 
-    const { latitude, longitude, accuracy, notes } = req.body;
+    // Validate request body
+    const clockOutSchema = insertTimeEntrySchema.pick({
+      clockOutLatitude: true,
+      clockOutLongitude: true,
+      clockOutAccuracy: true,
+      notes: true,
+    }).partial();
+
+    const validation = clockOutSchema.safeParse({
+      clockOutLatitude: req.body.latitude,
+      clockOutLongitude: req.body.longitude,
+      clockOutAccuracy: req.body.accuracy,
+      notes: req.body.notes,
+    });
+
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid input', details: validation.error.errors });
+    }
+
+    const { clockOutLatitude: latitude, clockOutLongitude: longitude, clockOutAccuracy: accuracy, notes } = validation.data;
 
     // Get employee record
     const [employee] = await db.select().from(employees)
@@ -330,7 +372,23 @@ timeosRouter.post('/break/start', requireAuth, mutationLimiter, async (req: Auth
       return res.status(400).json({ error: 'No workspace selected' });
     }
 
-    const { breakType = 'rest', isPaid = false, notes } = req.body;
+    // Validate request body
+    const startBreakSchema = insertTimeEntryBreakSchema.pick({
+      breakType: true,
+      isPaid: true,
+      notes: true,
+    }).partial().extend({
+      breakType: insertTimeEntryBreakSchema.shape.breakType.default('rest'),
+      isPaid: insertTimeEntryBreakSchema.shape.isPaid.default(false),
+    });
+
+    const validation = startBreakSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid input', details: validation.error.errors });
+    }
+
+    const { breakType, isPaid, notes } = validation.data;
 
     // Get employee record
     const [employee] = await db.select().from(employees)
@@ -650,7 +708,16 @@ timeosRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['ma
     }
 
     const { id } = req.params;
-    const { notes } = req.body;
+    
+    // Validate optional notes field
+    const approveSchema = insertTimeEntrySchema.pick({ notes: true }).partial();
+    const validation = approveSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid input', details: validation.error.errors });
+    }
+
+    const { notes } = validation.data;
 
     // Get time entry
     const [entry] = await db.select().from(timeEntries)
@@ -723,11 +790,16 @@ timeosRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['man
     }
 
     const { id } = req.params;
-    const { reason } = req.body;
+    
+    // Validate rejection reason
+    const rejectSchema = insertTimeEntrySchema.pick({ rejectionReason: true }).required();
+    const validation = rejectSchema.safeParse({ rejectionReason: req.body.reason });
 
-    if (!reason) {
-      return res.status(400).json({ error: 'Rejection reason is required' });
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Rejection reason is required', details: validation.error.errors });
     }
+
+    const { rejectionReason: reason } = validation.data;
 
     // Get time entry
     const [entry] = await db.select().from(timeEntries)
