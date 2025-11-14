@@ -48,6 +48,11 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
 -   **Fill Request Marketplace**: External contractor matching system for shifts, creating `shift_request` records, searching a `contractor_pool`, scoring contractors, and sending `shift_offers` with expiry.
 -   **Universal Responsive Schedule with Drag-and-Drop**: Full-featured scheduling with desktop drag-and-drop via `@dnd-kit/core` and touch-optimized mobile interface. Uses a single `/schedule` route serving desktop or mobile components based on device detection.
 -   **Mobile Schedule Integration**: Complete mobile-first scheduling experience with shared data architecture, including `useScheduleData` and `useShiftActions` hooks. The `MobileSchedule` component offers list-based views, manager tools, approvals, reports, and team drawers with RBAC. Week navigation uses `getTime()` for stable query keys.
+-   **Universal Time Tracking System**: Consolidated time tracking with GPS verification, photo capture, and three-view navigation (Clock, Timesheet, Approvals). Features blue/cyan gradient branding (from-blue-600 to-indigo-600), RBAC-enforced operations, and manager approval workflows. Frontend aligned with backend schema using `clockIn`/`clockOut` fields for consistent data contracts. Auto-selection persists staff identity across clock cycles while managers retain employee dropdown access.
+
+## Recent Changes (November 2025)
+-   **TimeTracker System Enhancements**: Fixed 38 LSP type errors by aligning frontend property names with backend schema (`clockIn`/`clockOut` instead of `clockInTime`/`clockOutTime`). Implemented missing Approvals view with dedicated pending entry filtering, approve/reject controls, and empty state UI. All three navigation tabs (Clock, Timesheet, Approvals) now fully functional and tested end-to-end.
+-   **Boot Overlay Fix**: Resolved blocking interaction issue by simplifying dismissal logic to remove race condition with HTML loader check. Overlay now reliably dismisses after 800ms when progress reaches 100%.
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)
