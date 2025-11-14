@@ -26,6 +26,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom auth
 import authRoutes from "./authRoutes"; // Custom auth routes
 import { billingRouter } from "./billing-api"; // Billing API routes
+import { aiBrainRouter } from "./ai-brain-routes"; // Unified AI Brain System
 import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
@@ -1107,6 +1108,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Universal Time Tracking & Clock System
   app.use('/api/time-entries', timeEntryRouter);
+
+  // Register Unified AI Brain System (cross-org learning, job execution, global patterns)
+  app.use('/api/ai-brain', aiBrainRouter);
 
   // Register DispatchOS™ routes (GPS tracking, incident management, CAD operations)
   const dispatchRouter = (await import('./routes/dispatch')).default;
