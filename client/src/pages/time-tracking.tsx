@@ -538,17 +538,18 @@ export default function TimeTracking() {
 
   // Find active entry for current user
   const activeEntry = timeEntries.find(entry => 
-    !entry.clockOutTime && entry.employeeId === currentEmployee?.id
+    !entry.clockOut && entry.employeeId === currentEmployee?.id
   );
 
-  const onBreak = activeEntry?.currentBreakType !== null && activeEntry?.currentBreakType !== undefined;
-  const clockedInTime = activeEntry?.clockInTime ? new Date(activeEntry.clockInTime) : null;
+  // TODO: Query breaks separately to determine break status
+  const onBreak = false; // Simplified until breaks query is added
+  const clockedInTime = activeEntry?.clockIn ? new Date(activeEntry.clockIn) : null;
   const currentlyClocked = !!activeEntry;
 
   // Calculate today's hours
   const todayHours = timeEntries
     .filter((e: TimeEntry) => {
-      const entryDate = new Date(e.clockInTime).toDateString();
+      const entryDate = new Date(e.clockIn).toDateString();
       const today = new Date().toDateString();
       return entryDate === today && e.employeeId === currentEmployee?.id;
     })
@@ -588,17 +589,17 @@ export default function TimeTracking() {
     }
 
     filtered = filtered.filter(entry => {
-      const entryDate = new Date(entry.clockInTime);
+      const entryDate = new Date(entry.clockIn);
       return entryDate >= startDate && entryDate <= endDate;
     });
 
     // Sort
     switch (sortBy) {
       case "date-desc":
-        filtered.sort((a, b) => new Date(b.clockInTime).getTime() - new Date(a.clockInTime).getTime());
+        filtered.sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime());
         break;
       case "date-asc":
-        filtered.sort((a, b) => new Date(a.clockInTime).getTime() - new Date(b.clockInTime).getTime());
+        filtered.sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
         break;
       case "employee":
         filtered.sort((a, b) => {
@@ -613,7 +614,7 @@ export default function TimeTracking() {
   }, [timeEntries, filterEmployee, filterStatus, dateRange, sortBy, employees]);
 
   const pendingApprovals = timeEntries.filter((e: TimeEntry) => e.status === 'pending').length;
-  const canApprove = workspaceRole === 'manager' || workspaceRole === 'owner';
+  const canApprove = workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor';
 
   if (isLoading) {
     return <ResponsiveLoading />;
@@ -825,7 +826,7 @@ export default function TimeTracking() {
                       <p className="text-xl font-bold text-gray-900">
                         {timeEntries.filter((e: TimeEntry) => 
                           e.employeeId === currentEmployee?.id && 
-                          new Date(e.clockInTime) >= startOfWeek(new Date())
+                          new Date(e.clockIn) >= startOfWeek(new Date())
                         ).reduce((sum: number, e: TimeEntry) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0).toFixed(1)}h
                       </p>
                     </div>
@@ -862,20 +863,21 @@ export default function TimeTracking() {
               </div>
 
               {/* Team Status (for managers) */}
-              {(workspaceRole === 'manager' || workspaceRole === 'owner') && (
+              {(workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor') && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Team Status</h3>
                   <div className="space-y-3">
                     {employees.map((emp: Employee) => {
                       const empActiveEntry = timeEntries.find((e: TimeEntry) => 
-                        e.employeeId === emp.id && !e.clockOutTime
+                        e.employeeId === emp.id && !e.clockOut
                       );
-                      const isOnBreak = empActiveEntry?.currentBreakType !== null;
+                      // TODO: Query breaks separately to determine break status
+                      const isOnBreak = false; // Simplified until breaks query is added
                       const status = empActiveEntry ? (isOnBreak ? 'on_break' : 'clocked_in') : 'clocked_out';
                       
                       const empTodayHours = timeEntries
                         .filter((e: TimeEntry) => {
-                          const entryDate = new Date(e.clockInTime).toDateString();
+                          const entryDate = new Date(e.clockIn).toDateString();
                           const today = new Date().toDateString();
                           return entryDate === today && e.employeeId === emp.id;
                         })
@@ -925,7 +927,7 @@ export default function TimeTracking() {
               {/* Filters */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  {(workspaceRole === 'manager' || workspaceRole === 'owner') && (
+                  {(workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor') && (
                     <Select value={filterEmployee} onValueChange={setFilterEmployee}>
                       <SelectTrigger data-testid="select-filter-employee">
                         <SelectValue placeholder="All Employees" />
@@ -1010,13 +1012,13 @@ export default function TimeTracking() {
                               )}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {format(new Date(entry.clockInTime), 'MMM dd, yyyy')}
+                              {format(new Date(entry.clockIn), 'MMM dd, yyyy')}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {format(new Date(entry.clockInTime), 'h:mm a')}
+                              {format(new Date(entry.clockIn), 'h:mm a')}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {entry.clockOutTime ? format(new Date(entry.clockOutTime), 'h:mm a') : '-'}
+                              {entry.clockOut ? format(new Date(entry.clockOut), 'h:mm a') : '-'}
                             </td>
                             <td className="px-4 py-3">
                               <span className="font-bold text-gray-900">
@@ -1054,7 +1056,7 @@ export default function TimeTracking() {
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <p className="font-bold text-gray-900">{employee?.firstName} {employee?.lastName}</p>
-                            <p className="text-sm text-gray-600">{format(new Date(entry.clockInTime), 'MMM dd, yyyy')}</p>
+                            <p className="text-sm text-gray-600">{format(new Date(entry.clockIn), 'MMM dd, yyyy')}</p>
                           </div>
                           <Badge variant={entry.status === 'approved' ? 'default' : 'secondary'}>
                             {entry.status || 'pending'}
@@ -1065,13 +1067,13 @@ export default function TimeTracking() {
                           <div>
                             <p className="text-gray-600">Clock In</p>
                             <p className="font-medium text-gray-900">
-                              {format(new Date(entry.clockInTime), 'h:mm a')}
+                              {format(new Date(entry.clockIn), 'h:mm a')}
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-600">Clock Out</p>
                             <p className="font-medium text-gray-900">
-                              {entry.clockOutTime ? format(new Date(entry.clockOutTime), 'h:mm a') : '-'}
+                              {entry.clockOut ? format(new Date(entry.clockOut), 'h:mm a') : '-'}
                             </p>
                           </div>
                           <div>
@@ -1119,17 +1121,17 @@ export default function TimeTracking() {
                               </div>
                               <div>
                                 <p className="font-bold text-gray-900">{employee?.firstName} {employee?.lastName}</p>
-                                <p className="text-sm text-gray-600">{format(new Date(entry.clockInTime), 'MMM dd, yyyy')}</p>
+                                <p className="text-sm text-gray-600">{format(new Date(entry.clockIn), 'MMM dd, yyyy')}</p>
                               </div>
                             </div>
 
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
                               <div>
-                                <p className="text-gray-600">In: {format(new Date(entry.clockInTime), 'h:mm a')}</p>
+                                <p className="text-gray-600">In: {format(new Date(entry.clockIn), 'h:mm a')}</p>
                               </div>
                               <div>
                                 <p className="text-gray-600">
-                                  Out: {entry.clockOutTime ? format(new Date(entry.clockOutTime), 'h:mm a') : '-'}
+                                  Out: {entry.clockOut ? format(new Date(entry.clockOut), 'h:mm a') : '-'}
                                 </p>
                               </div>
                               <div>
@@ -1177,6 +1179,122 @@ export default function TimeTracking() {
                       <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-3" />
                       <p className="text-gray-600 font-medium">All caught up!</p>
                       <p className="text-sm text-gray-500">No pending approvals</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Approvals View */}
+          {view === 'approvals' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Pending Approvals</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {pendingApprovals} {pendingApprovals === 1 ? 'entry' : 'entries'} awaiting review
+                    </p>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg">
+                    <CheckCircle className="w-5 h-5 inline mr-2" />
+                    <span className="font-semibold">{pendingApprovals}</span>
+                  </div>
+                </div>
+
+                {/* Pending Entries List */}
+                <div className="space-y-3">
+                  {timeEntries
+                    .filter((entry: TimeEntry) => entry.status === 'pending')
+                    .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())
+                    .map((entry: TimeEntry) => {
+                      const employee = employees.find(e => e.id === entry.employeeId);
+                      const client = clients.find(c => c.id === entry.clientId);
+                      const duration = entry.totalHours 
+                        ? `${parseFloat(entry.totalHours.toString()).toFixed(2)}h`
+                        : 'Ongoing';
+
+                      return (
+                        <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors" data-testid={`approval-entry-${entry.id}`}>
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                  {employee?.firstName?.[0]}{employee?.lastName?.[0]}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{employee?.firstName} {employee?.lastName}</p>
+                                  <p className="text-sm text-gray-600">{format(new Date(entry.clockIn), 'MMM dd, yyyy')}</p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 mt-3">
+                                <div>
+                                  <p className="text-xs text-gray-500">Clock In</p>
+                                  <p className="text-sm font-medium text-gray-900">{format(new Date(entry.clockIn), 'h:mm a')}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500">Clock Out</p>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {entry.clockOut ? format(new Date(entry.clockOut), 'h:mm a') : 'Active'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500">Duration</p>
+                                  <p className="text-sm font-medium text-gray-900">{duration}</p>
+                                </div>
+                                {client && (
+                                  <div>
+                                    <p className="text-xs text-gray-500">Client</p>
+                                    <p className="text-sm font-medium text-gray-900">{client.companyName || `${client.firstName} ${client.lastName}`}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {entry.notes && (
+                                <div className="mt-3 p-2 bg-gray-50 rounded-md">
+                                  <p className="text-xs text-gray-500 mb-1">Notes:</p>
+                                  <p className="text-sm text-gray-700 italic">{entry.notes}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-2 lg:min-w-[120px]">
+                              <Button
+                                onClick={() => approveMutation.mutate(entry.id)}
+                                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-approve-${entry.id}`}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approve
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setRejectingEntryId(entry.id);
+                                  setRejectDialogOpen(true);
+                                }}
+                                className="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700"
+                                disabled={rejectMutation.isPending}
+                                data-testid={`button-reject-${entry.id}`}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {pendingApprovals === 0 && (
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+                        <CheckCircle className="w-10 h-10 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">All Caught Up!</h3>
+                      <p className="text-gray-600">No pending time entries to review</p>
                     </div>
                   )}
                 </div>
@@ -1373,7 +1491,7 @@ export default function TimeTracking() {
                     <SelectItem value="none">No client</SelectItem>
                     {clients.map(client => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.companyName || `${client.firstName} ${client.lastName}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1415,18 +1533,18 @@ export default function TimeTracking() {
                     {employees.find((e: Employee) => e.id === selectedEntry.employeeId)?.firstName}{' '}
                     {employees.find((e: Employee) => e.id === selectedEntry.employeeId)?.lastName}
                   </h4>
-                  <p className="text-sm text-gray-600">{format(new Date(selectedEntry.clockInTime), 'MMMM dd, yyyy')}</p>
+                  <p className="text-sm text-gray-600">{format(new Date(selectedEntry.clockIn), 'MMMM dd, yyyy')}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Clock In</Label>
-                    <p className="text-gray-900 font-medium">{format(new Date(selectedEntry.clockInTime), 'h:mm a')}</p>
+                    <p className="text-gray-900 font-medium">{format(new Date(selectedEntry.clockIn), 'h:mm a')}</p>
                   </div>
                   <div>
                     <Label>Clock Out</Label>
                     <p className="text-gray-900 font-medium">
-                      {selectedEntry.clockOutTime ? format(new Date(selectedEntry.clockOutTime), 'h:mm a') : 'Active'}
+                      {selectedEntry.clockOut ? format(new Date(selectedEntry.clockOut), 'h:mm a') : 'Active'}
                     </p>
                   </div>
                   <div>

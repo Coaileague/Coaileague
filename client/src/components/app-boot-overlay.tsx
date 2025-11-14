@@ -31,22 +31,15 @@ export function AppBootOverlay() {
   }, []);
 
   useEffect(() => {
-    // Only dismiss when progress reaches 100% AND HTML loader is gone
+    // Dismiss when progress reaches 100%
     if (progress >= 100) {
-      const checkDismiss = () => {
-        const htmlLoader = document.getElementById('initial-loader');
-        if (!htmlLoader) {
-          // HTML loader gone, safe to dismiss React overlay
-          console.log('[AppBootOverlay] Boot complete - dismissing overlay');
-          setIsBooting(false);
-        } else {
-          // Check again in 50ms
-          setTimeout(checkDismiss, 50);
-        }
-      };
-      
       // Add small delay to ensure users see "100%" before dismissal
-      setTimeout(checkDismiss, 500);
+      const timer = setTimeout(() => {
+        console.log('[AppBootOverlay] Boot complete - dismissing overlay');
+        setIsBooting(false);
+      }, 800); // 800ms total: show 100% briefly, then dismiss
+      
+      return () => clearTimeout(timer);
     }
   }, [progress]);
 
