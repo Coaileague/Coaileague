@@ -181,6 +181,23 @@ export default function UniversalSchedule() {
   const isManager = workspaceRole === 'manager' || workspaceRole === 'admin' || workspaceRole === 'owner';
   const isAdmin = workspaceRole === 'admin' || workspaceRole === 'owner';
   
+  // Handler for admin-only actions
+  const handleAdminOnlyAction = (actionName: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Admin Access Required",
+        description: `${actionName} is only available to administrators.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    // When implemented: actual action logic goes here
+    toast({
+      title: "Feature Coming Soon",
+      description: `${actionName} will be implemented in a future update.`
+    });
+  };
+  
   // Detect touch device for drag-and-drop (disable on mobile per architect)
   const isTouchDevice = useMemo(() => 
     'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -667,15 +684,33 @@ export default function UniversalSchedule() {
                           Escalation Matrix
                         </Button>
                         {/* Admin-only actions */}
-                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-lock-schedule">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => handleAdminOnlyAction('Lock Schedule')}
+                          data-testid="button-lock-schedule"
+                        >
                           <Shield className="w-4 h-4 mr-2" />
                           Lock Schedule {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
                         </Button>
-                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-override-rules">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => handleAdminOnlyAction('Override Rules')}
+                          data-testid="button-override-rules"
+                        >
                           <Settings className="w-4 h-4 mr-2" />
                           Override Rules {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
                         </Button>
-                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-compliance-audit">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => handleAdminOnlyAction('Compliance Audit')}
+                          data-testid="button-compliance-audit"
+                        >
                           <FileText className="w-4 h-4 mr-2" />
                           Compliance Audit {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
                         </Button>
@@ -705,15 +740,33 @@ export default function UniversalSchedule() {
                           Trigger AI Auto-Fill
                         </Button>
                         {/* Admin-only actions */}
-                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-ai-override-log">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => handleAdminOnlyAction('AI Override Log')}
+                          data-testid="button-ai-override-log"
+                        >
                           <Shield className="w-4 h-4 mr-2" />
                           AI Override Log {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
                         </Button>
-                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-pause-automation">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => handleAdminOnlyAction('Pause Automation')}
+                          data-testid="button-pause-automation"
+                        >
                           <AlertCircle className="w-4 h-4 mr-2 text-yellow-600" />
                           Pause Automation {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
                         </Button>
-                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-manage-rules">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => handleAdminOnlyAction('Manage Org Rules')}
+                          data-testid="button-manage-rules"
+                        >
                           <Settings className="w-4 h-4 mr-2" />
                           Manage Org Rules {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
                         </Button>

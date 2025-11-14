@@ -221,7 +221,11 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading]);
 
   if (isLoading || !isAuthenticated) {
-    return <ResponsiveLoading message="Loading Dashboard..." />;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
@@ -408,8 +412,12 @@ export default function Dashboard() {
   // Desktop UI - full dashboard with detailed stats
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden w-full max-w-full">
-      {/* Show responsive loading for initial auth check */}
-      {isLoadingDashboard && <ResponsiveLoading />}
+      {/* Show loading spinner for initial auth check */}
+      {isLoadingDashboard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      )}
       
       {/* Professional subtle background - NO bright glowing orbs */}
 

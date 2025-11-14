@@ -73,7 +73,6 @@ import HelpDesk from "@/pages/HelpDesk";
 import SupportDashboard from "@/pages/support-dashboard";
 import SalesPortal from "@/pages/sales-portal";
 import LogoShowcase from "@/pages/logo-showcase";
-import LogoShowcaseV2 from "@/pages/logo-showcase-v2";
 import PayrollDashboard from "@/pages/payroll-dashboard";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
@@ -292,7 +291,6 @@ function AppContent() {
         <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
         <Route path="/support/chat"><Redirect to="/chat" /></Route>
         <Route path="/logo-showcase" component={LogoShowcase} />
-        <Route path="/logo-showcase-v2" component={LogoShowcaseV2} />
         <Route path="/onboarding/:token" component={OnboardingPage} />
         <Route path="/pay-invoice/:id" component={PayInvoice} />
         
