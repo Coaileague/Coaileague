@@ -13,7 +13,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
 import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { TransitionProvider } from "@/contexts/transition-context";
-import { LoadingManagerProvider } from "@/contexts/loading-manager";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -26,9 +25,7 @@ import { ServiceHealthProvider } from "@/contexts/ServiceHealthContext";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
-import { MobileLoading } from "@/components/mobile-loading";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { ProgressLoadingOverlay } from "@/components/progress-loading-overlay";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
@@ -270,7 +267,7 @@ function AppContent() {
 
   // Show minimal loading state during auth check to prevent routing issues
   if (isLoading) {
-    return <ProgressLoadingOverlay isVisible={true} title="Authenticating" status="loading" />;
+    return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   }
 
   if (!isAuthenticated) {
@@ -498,23 +495,21 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ServiceHealthProvider>
           <OverlayControllerProvider>
-            <LoadingManagerProvider>
-              <ThemeProvider defaultTheme="dark">
-                <WorkspaceThemeProvider>
-                  <TransitionProvider>
-                  <AppBootOverlay />
-                  <TooltipProvider>
-                    <ResponsiveAppFrame>
-                      <AppContent />
-                      <FloatingSupportChat />
-                      <ReenableChatButton />
-                      <Toaster />
-                    </ResponsiveAppFrame>
-                  </TooltipProvider>
-                  </TransitionProvider>
-                </WorkspaceThemeProvider>
-              </ThemeProvider>
-            </LoadingManagerProvider>
+            <ThemeProvider defaultTheme="dark">
+              <WorkspaceThemeProvider>
+                <TransitionProvider>
+                <AppBootOverlay />
+                <TooltipProvider>
+                  <ResponsiveAppFrame>
+                    <AppContent />
+                    <FloatingSupportChat />
+                    <ReenableChatButton />
+                    <Toaster />
+                  </ResponsiveAppFrame>
+                </TooltipProvider>
+                </TransitionProvider>
+              </WorkspaceThemeProvider>
+            </ThemeProvider>
           </OverlayControllerProvider>
         </ServiceHealthProvider>
       </QueryClientProvider>

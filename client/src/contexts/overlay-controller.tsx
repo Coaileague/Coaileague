@@ -4,7 +4,6 @@
  */
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
-import { ResponsiveLoading, type ProgressScenario } from "@/components/responsive-loading";
 
 export type OverlayStatus = "loading" | "success" | "error" | "info";
 export type OverlayPriority = "critical" | "high" | "normal";

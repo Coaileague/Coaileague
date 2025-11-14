@@ -4,7 +4,7 @@
  */
 
 import express, { Router, Request } from 'express';
-import { requireAuth, AuthenticatedRequest } from './middleware/auth';
+import { requireAuth, AuthenticatedRequest } from './auth';
 import { db } from './db';
 import { aiBrainService } from './services/ai-brain/aiBrainService';
 

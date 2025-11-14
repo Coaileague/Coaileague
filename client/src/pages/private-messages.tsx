@@ -13,10 +13,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ResponsiveLoading } from "@/components/responsive-loading";
 import { MobilePageWrapper, MobilePageHeader } from "@/components/mobile-page-wrapper";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
-import { DataStreamIndicator } from "@/components/loading-indicators";
 import {
   MessageSquare, Send, Search, UserPlus, MoreVertical,
   Eye, Sparkles, CheckCheck, Circle, Lock, Zap,

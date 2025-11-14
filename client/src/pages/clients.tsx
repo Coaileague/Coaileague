@@ -21,7 +21,6 @@ import {
   Calendar,
   Briefcase,
 } from "lucide-react";
-import { ResponsiveLoading } from "@/components/responsive-loading";
 import {
   Dialog,
   DialogContent,

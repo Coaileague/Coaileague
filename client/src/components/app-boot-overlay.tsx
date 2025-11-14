@@ -5,7 +5,6 @@
  * Displays ResponsiveLoading until progress reaches 100% and app finishes initializing
  */
 import { useState, useEffect } from 'react';
-import { ResponsiveLoading } from './responsive-loading';
 
 export function AppBootOverlay() {
   const [isBooting, setIsBooting] = useState(true);

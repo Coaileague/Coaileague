@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ResponsiveLoading } from "@/components/responsive-loading";
 import { useLocation } from "wouter";
 import {
   Search, User, Activity, Clock, MapPin, Shield, AlertTriangle,

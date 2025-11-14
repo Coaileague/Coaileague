@@ -15,7 +15,6 @@ import { Plus, Receipt, DollarSign, MapPin, Calendar, FileText, Upload, X } from
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { ForceFlowBar } from "@/components/loading-indicators";
 
 const expenseFormSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
