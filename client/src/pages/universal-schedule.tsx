@@ -19,7 +19,10 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployee } from '@/hooks/useEmployee';
+import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -32,7 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Calendar, Clock, Users, Edit2, Trash2, Copy, ChevronLeft, ChevronRight, Plus, Download,
   Bot, CheckCircle, AlertCircle, BarChart3, Play, X, Camera, MessageSquare, FileText,
-  CheckSquare, MapPin, Menu, Sparkles
+  CheckSquare, MapPin, Menu, Sparkles, Zap, Bell, Settings, Shield, UserCheck, XCircle
 } from 'lucide-react';
 import type { Shift, Employee, Client, ShiftOrder } from '@shared/schema';
 import MobileSchedule from '@/pages/mobile-schedule';
@@ -172,6 +175,11 @@ export default function UniversalSchedule() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { employee: currentEmployee } = useEmployee();
+  const { workspaceRole } = useWorkspaceAccess();
+  
+  // RBAC permissions
+  const isManager = workspaceRole === 'manager' || workspaceRole === 'admin' || workspaceRole === 'owner';
+  const isAdmin = workspaceRole === 'admin' || workspaceRole === 'owner';
   
   // Detect touch device for drag-and-drop (disable on mobile per architect)
   const isTouchDevice = useMemo(() => 
@@ -622,6 +630,129 @@ export default function UniversalSchedule() {
               </Badge>
             )}
           </div>
+
+          {/* Schedule Tools - RBAC-aware with per-action permissions */}
+          {isManager && (
+            <div className="mt-3 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-sm">Schedule Tools</span>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Shift Governance */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="button-shift-governance">
+                        <UserCheck className="w-4 h-4 mr-1" />
+                        Approvals
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Shift Governance</h4>
+                        <Separator />
+                        {/* Manager-level actions */}
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-approve-shifts">
+                          <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                          Approve Pending Shifts
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-reject-shifts">
+                          <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                          Review Rejections
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-escalations">
+                          <AlertCircle className="w-4 h-4 mr-2 text-orange-600" />
+                          Escalation Matrix
+                        </Button>
+                        {/* Admin-only actions */}
+                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-lock-schedule">
+                          <Shield className="w-4 h-4 mr-2" />
+                          Lock Schedule {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-override-rules">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Override Rules {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-compliance-audit">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Compliance Audit {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Process Automation */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="button-workflows">
+                        <Zap className="w-4 h-4 mr-1" />
+                        Workflows
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Automation & Workflows</h4>
+                        <Separator />
+                        {/* Manager-level actions */}
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-view-workflows">
+                          <FileText className="w-4 h-4 mr-2" />
+                          View Active Workflows
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-trigger-ai-fill">
+                          <Bot className="w-4 h-4 mr-2 text-blue-600" />
+                          Trigger AI Auto-Fill
+                        </Button>
+                        {/* Admin-only actions */}
+                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-ai-override-log">
+                          <Shield className="w-4 h-4 mr-2" />
+                          AI Override Log {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-pause-automation">
+                          <AlertCircle className="w-4 h-4 mr-2 text-yellow-600" />
+                          Pause Automation {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!isAdmin} data-testid="button-manage-rules">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Manage Org Rules {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Communications */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="button-notifications">
+                        <Bell className="w-4 h-4 mr-1" />
+                        Alerts
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Communications</h4>
+                        <Separator />
+                        {/* Manager-level actions */}
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-notification-inbox">
+                          <Bell className="w-4 h-4 mr-2" />
+                          Notification Inbox
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-broadcast">
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Broadcast Update
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" data-testid="button-exception-alerts">
+                          <AlertCircle className="w-4 h-4 mr-2 text-orange-600" />
+                          Exception Alerts
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Schedule Grid */}
