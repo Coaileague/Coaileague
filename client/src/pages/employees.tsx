@@ -117,7 +117,7 @@ export default function Employees() {
   }, [isAuthenticated, authLoading, toast]);
 
   if (authLoading || !isAuthenticated) {
-    return <ResponsiveLoading fullScreen message="Loading Employees..." />;
+    return <ResponsiveLoading message="Loading Employees..." />;
   }
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -279,91 +279,117 @@ export default function Employees() {
                 Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Employee</DialogTitle>
-                <DialogDescription>
-                  Enter employee details to add them to your workspace
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+              <DialogHeader className="space-y-2 pb-3">
+                <DialogTitle className="text-lg sm:text-xl">Add Employee</DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">
+                  Enter employee details
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input 
-                      id="firstName" 
-                      placeholder="John" 
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      data-testid="input-employee-firstname" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input 
-                      id="lastName" 
-                      placeholder="Doe" 
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      data-testid="input-employee-lastname" 
-                    />
-                  </div>
-                </div>
+              <div className="space-y-3 py-2">
+                {/* Basic Info Section */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="john@example.com" 
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    data-testid="input-employee-email" 
-                  />
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Basic Info</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="firstName" className="text-xs">First Name *</Label>
+                      <Input 
+                        id="firstName" 
+                        placeholder="John" 
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                        data-testid="input-employee-firstname"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="lastName" className="text-xs">Last Name *</Label>
+                      <Input 
+                        id="lastName" 
+                        placeholder="Doe" 
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        data-testid="input-employee-lastname"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input 
-                    id="phone" 
-                    placeholder="+1 (555) 123-4567" 
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    data-testid="input-employee-phone" 
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
+
+                {/* Contact Section */}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-xs">Email *</Label>
                     <Input 
-                      id="role" 
-                      placeholder="Technician" 
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      data-testid="input-employee-role" 
+                      id="email" 
+                      type="email" 
+                      placeholder="john@example.com" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      data-testid="input-employee-email"
+                      className="h-9 text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hourlyRate">Hourly Rate</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone" className="text-xs">Phone</Label>
                     <Input 
-                      id="hourlyRate" 
-                      type="number" 
-                      placeholder="25.00" 
-                      value={formData.hourlyRate}
-                      onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                      data-testid="input-employee-rate" 
+                      id="phone" 
+                      placeholder="+1 (555) 123-4567" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      data-testid="input-employee-phone"
+                      className="h-9 text-sm"
                     />
+                  </div>
+                </div>
+
+                {/* Employment Section - Leader/Admin Only */}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Employment Details</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="role" className="text-xs">Position</Label>
+                      <Input 
+                        id="role" 
+                        placeholder="Security Guard" 
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        data-testid="input-employee-role"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hourlyRate" className="text-xs">Hourly Rate ($)</Label>
+                      <Input 
+                        id="hourlyRate" 
+                        type="number" 
+                        placeholder="25.00" 
+                        value={formData.hourlyRate}
+                        onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                        data-testid="input-employee-rate"
+                        className="h-9 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <DialogFooter className="flex-col sm:flex-row gap-2 pt-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsAddDialogOpen(false)}
+                  className="w-full sm:w-auto h-9 text-sm"
+                  data-testid="button-cancel-employee"
+                >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleSubmit}
                   disabled={createMutation.isPending}
                   data-testid="button-save-employee"
+                  className="w-full sm:w-auto h-9 text-sm"
                 >
-                  {createMutation.isPending ? "Saving..." : "Save Employee"}
+                  {createMutation.isPending ? "Saving..." : "Save"}
                 </Button>
               </DialogFooter>
             </DialogContent>

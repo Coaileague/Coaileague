@@ -14,6 +14,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -360,7 +361,7 @@ export default function UniversalSchedule() {
                       <span className="text-xs font-bold text-green-600">{employee.performanceScore}</span>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground">{employee.position || 'Employee'}</div>
+                  <div className="text-xs text-muted-foreground">{employee.role || 'Employee'}</div>
                   <div className="text-xs text-muted-foreground mt-1">
                     ${employee.hourlyRate?.toString() || '0'}/hr
                   </div>
@@ -554,7 +555,7 @@ export default function UniversalSchedule() {
                           top: position.top,
                           height: position.height,
                           backgroundColor: isOpen ? '#fff7ed' : getEmployeeColor(shift.employeeId),
-                          opacity: shift.status === 'pending' ? 0.7 : 1,
+                          opacity: shift.status === 'draft' ? 0.7 : 1,
                           minHeight: '40px'
                         }}
                         data-testid={`shift-${shift.id}`}
@@ -566,7 +567,7 @@ export default function UniversalSchedule() {
                               <span>OPEN SHIFT</span>
                             </div>
                             <div className="text-gray-700 text-xs font-medium truncate">{shift.title}</div>
-                            {client && <div className="text-gray-600 text-xs truncate">{client.name}</div>}
+                            {client && <div className="text-gray-600 text-xs truncate">{client.companyName}</div>}
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -587,7 +588,7 @@ export default function UniversalSchedule() {
                             </div>
                             <div className="text-white text-xs opacity-90 truncate">
                               {shift.title || 'Shift'}
-                              {client && ` - ${client.name}`}
+                              {client && ` - ${client.companyName}`}
                             </div>
                             {shift.aiGenerated && (
                               <div className="absolute top-1 right-1 bg-white rounded-full p-1">
@@ -709,7 +710,7 @@ export default function UniversalSchedule() {
                   <SelectContent>
                     {employees.map(emp => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} - {emp.position || 'Employee'}
+                        {emp.firstName} {emp.lastName} - {emp.role || 'Employee'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -741,7 +742,7 @@ export default function UniversalSchedule() {
                 <SelectContent>
                   {clients.map(client => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                      {client.companyName}
                     </SelectItem>
                   ))}
                 </SelectContent>

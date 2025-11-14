@@ -55,12 +55,20 @@ export default function UniversalScheduleMobile() {
 
   const canManageShifts = workspaceRole === 'leader' || workspaceRole === 'admin';
 
-  // Fetch shifts
+  // Fetch shifts with proper week filtering
+  const weekStart = getWeekStart(currentDate);
+  const weekEnd = getWeekEnd(currentDate);
+  
   const { data: shiftsData = [] } = useQuery({
-    queryKey: ['/api/shifts', { 
-      startDate: getWeekStart(currentDate).toISOString().split('T')[0],
-      endDate: getWeekEnd(currentDate).toISOString().split('T')[0]
-    }],
+    queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch shifts');
+      return response.json();
+    }
   });
   const shifts = shiftsData as Shift[];
 
