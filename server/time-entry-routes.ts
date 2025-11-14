@@ -21,7 +21,7 @@ import { requireAuth } from "./auth";
 import { requireWorkspaceRole, type AuthenticatedRequest } from "./rbac";
 import { readLimiter, mutationLimiter } from "./middleware/rateLimiter";
 
-export const timeosRouter = Router();
+export const timeEntryRouter = Router();
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -93,7 +93,7 @@ function canApproveTimeEntries(workspaceRole: string): boolean {
  * GET /api/timeos/status - Get current clock status for logged-in employee
  * Returns active time entry if clocked in, null if clocked out
  */
-timeosRouter.get('/status', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.get('/status', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -149,7 +149,7 @@ timeosRouter.get('/status', requireAuth, readLimiter, async (req: AuthenticatedR
 /**
  * POST /api/timeos/clock-in - Clock in (start new time entry)
  */
-timeosRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -250,7 +250,7 @@ timeosRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Authent
 /**
  * POST /api/timeos/clock-out - Clock out (complete time entry)
  */
-timeosRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -365,7 +365,7 @@ timeosRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Authen
 /**
  * POST /api/timeos/break/start - Start a break
  */
-timeosRouter.post('/break/start', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/break/start', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -467,7 +467,7 @@ timeosRouter.post('/break/start', requireAuth, mutationLimiter, async (req: Auth
 /**
  * POST /api/timeos/break/end - End a break
  */
-timeosRouter.post('/break/end', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/break/end', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -559,7 +559,7 @@ timeosRouter.post('/break/end', requireAuth, mutationLimiter, async (req: Authen
  * GET /api/timeos/entries - Get time entries with filtering
  * Query params: employeeId, startDate, endDate, status
  */
-timeosRouter.get('/entries', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.get('/entries', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -634,7 +634,7 @@ timeosRouter.get('/entries', requireAuth, readLimiter, async (req: Authenticated
 /**
  * GET /api/timeos/entries/:id - Get single time entry with breaks and audit log
  */
-timeosRouter.get('/entries/:id', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.get('/entries/:id', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -700,7 +700,7 @@ timeosRouter.get('/entries/:id', requireAuth, readLimiter, async (req: Authentic
 /**
  * POST /api/timeos/entries/:id/approve - Approve a time entry
  */
-timeosRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -782,7 +782,7 @@ timeosRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['ma
 /**
  * POST /api/timeos/entries/:id/reject - Reject a time entry
  */
-timeosRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -865,7 +865,7 @@ timeosRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['man
 /**
  * GET /api/timeos/active - Get all currently clocked-in employees (for managers)
  */
-timeosRouter.get('/active', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.get('/active', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {

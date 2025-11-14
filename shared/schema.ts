@@ -1654,11 +1654,13 @@ export const timeEntries = pgTable("time_entries", {
   clockInLongitude: decimal("clock_in_longitude", { precision: 10, scale: 7 }), // GPS lng at clock-in
   clockInAccuracy: decimal("clock_in_accuracy", { precision: 8, scale: 2 }), // GPS accuracy in meters
   clockInIpAddress: varchar("clock_in_ip_address"), // IP address at clock-in
+  clockInPhotoUrl: text("clock_in_photo_url"), // Photo verification at clock-in
 
   clockOutLatitude: decimal("clock_out_latitude", { precision: 10, scale: 7 }), // GPS lat at clock-out
   clockOutLongitude: decimal("clock_out_longitude", { precision: 10, scale: 7 }), // GPS lng at clock-out
   clockOutAccuracy: decimal("clock_out_accuracy", { precision: 8, scale: 2 }), // GPS accuracy in meters
   clockOutIpAddress: varchar("clock_out_ip_address"), // IP address at clock-out
+  clockOutPhotoUrl: text("clock_out_photo_url"), // Photo verification at clock-out
 
   // Job site location (for discrepancy detection)
   jobSiteLatitude: decimal("job_site_latitude", { precision: 10, scale: 7 }),
