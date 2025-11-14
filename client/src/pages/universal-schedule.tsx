@@ -35,6 +35,7 @@ import {
   CheckSquare, MapPin, Menu, Sparkles
 } from 'lucide-react';
 import type { Shift, Employee, Client, ShiftOrder } from '@shared/schema';
+import MobileSchedule from '@/pages/mobile-schedule';
 
 // Post order template data (will be pre-created in database)
 const POST_ORDER_TEMPLATES = [
@@ -467,7 +468,12 @@ export default function UniversalSchedule() {
     );
   }
 
-  // Render grid-based schedule (works on both mobile and desktop)
+  // Mobile: Render mobile schedule
+  if (isMobile) {
+    return <MobileSchedule />;
+  }
+
+  // Desktop: Render grid-based schedule
   return (
     <DndContext
       sensors={isTouchDevice ? [] : sensors}
