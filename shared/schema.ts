@@ -1485,6 +1485,100 @@ export const insertScheduleProposalSchema = createInsertSchema(scheduleProposals
 export type InsertScheduleProposal = z.infer<typeof insertScheduleProposalSchema>;
 export type ScheduleProposal = typeof scheduleProposals.$inferSelect;
 
+// Invoice Proposals - AI-generated invoices awaiting approval (BillOS™ Automation)
+export const invoiceProposals = pgTable("invoice_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Proposal metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  
+  // Invoice period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: 'set null' }),
+  
+  // AI response (invoice line items, amounts, summary)
+  aiResponse: jsonb("ai_response").notNull(), // Contains lineItems, total, taxes, summary
+  confidence: integer("confidence").notNull(), // 0-100 (duplicated for query convenience)
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
+  
+  // Approval workflow
+  status: varchar("status").default("pending"), // 'pending', 'approved', 'rejected', 'auto_approved'
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Invoice tracking (after approval)
+  invoiceIdCreated: varchar("invoice_id_created"), // Invoice ID generated from this proposal
+  syncedToQuickBooks: boolean("synced_to_quickbooks").default(false),
+  quickBooksInvoiceId: varchar("quickbooks_invoice_id"),
+  
+  // Billing linkage
+  aiUsageLogId: varchar("ai_usage_log_id").references(() => workspaceAiUsage.id),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInvoiceProposalSchema = createInsertSchema(invoiceProposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInvoiceProposal = z.infer<typeof insertInvoiceProposalSchema>;
+export type InvoiceProposal = typeof invoiceProposals.$inferSelect;
+
+// Payroll Proposals - AI-generated payroll awaiting approval (OperationsOS™ Automation)
+export const payrollProposals = pgTable("payroll_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Proposal metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  
+  // Pay period
+  payPeriodStart: timestamp("pay_period_start").notNull(),
+  payPeriodEnd: timestamp("pay_period_end").notNull(),
+  
+  // AI response (payroll data, hours, rates, taxes, summary)
+  aiResponse: jsonb("ai_response").notNull(), // Contains employeePayroll, taxes, deductions, summary
+  confidence: integer("confidence").notNull(), // 0-100 (duplicated for query convenience)
+  totalPayrollCost: decimal("total_payroll_cost", { precision: 10, scale: 2 }),
+  employeeCount: integer("employee_count"),
+  
+  // Approval workflow
+  status: varchar("status").default("pending"), // 'pending', 'approved', 'rejected', 'auto_approved'
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Payroll tracking (after approval)
+  payrollRunId: varchar("payroll_run_id"), // Payroll run ID generated from this proposal
+  syncedToGusto: boolean("synced_to_gusto").default(false),
+  gustoPayrollId: varchar("gusto_payroll_id"),
+  
+  // Billing linkage
+  aiUsageLogId: varchar("ai_usage_log_id").references(() => workspaceAiUsage.id),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPayrollProposalSchema = createInsertSchema(payrollProposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPayrollProposal = z.infer<typeof insertPayrollProposalSchema>;
+export type PayrollProposal = typeof payrollProposals.$inferSelect;
+
 // Shift Templates (Reusable shift patterns)
 export const shiftTemplates = pgTable("shift_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

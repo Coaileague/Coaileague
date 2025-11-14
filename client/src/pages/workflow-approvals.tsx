@@ -74,24 +74,87 @@ interface ApprovalStats {
   autoApproved: number;
 }
 
+interface InvoiceProposal {
+  id: string;
+  workspaceId: string;
+  periodStart: string;
+  periodEnd: string;
+  clientId: string | null;
+  aiResponse: {
+    lineItems: Array<{
+      description: string;
+      quantity: number;
+      rate: number;
+      amount: number;
+    }>;
+    summary: string;
+    warnings?: string[];
+    totalAmount: number;
+  };
+  confidence: number;
+  totalAmount: string;
+  status: 'pending' | 'approved' | 'rejected' | 'auto_approved';
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
+interface PayrollProposal {
+  id: string;
+  workspaceId: string;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  aiResponse: {
+    employeePayroll: Array<{
+      employeeId: string;
+      employeeName: string;
+      hours: number;
+      rate: number;
+      grossPay: number;
+      taxes: number;
+      netPay: number;
+    }>;
+    summary: string;
+    warnings?: string[];
+  };
+  confidence: number;
+  totalPayrollCost: string;
+  employeeCount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'auto_approved';
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
 export default function WorkflowApprovals() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { employee } = useEmployee();
   
   const [selectedTab, setSelectedTab] = useState('schedules');
-  const [selectedProposal, setSelectedProposal] = useState<ScheduleProposal | null>(null);
+  const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [proposalType, setProposalType] = useState<'schedule' | 'invoice' | 'payroll'>('schedule');
 
-  // Fetch schedule proposals
+  // Fetch proposals
   const { data: scheduleProposals = [], isLoading: loadingSchedules } = useQuery<ScheduleProposal[]>({
     queryKey: ['/api/scheduleos/proposals'],
   });
+  
+  const { data: invoiceProposals = [], isLoading: loadingInvoices } = useQuery<InvoiceProposal[]>({
+    queryKey: ['/api/invoices/proposals'],
+  });
+  
+  const { data: payrollProposals = [], isLoading: loadingPayroll } = useQuery<PayrollProposal[]>({
+    queryKey: ['/api/payroll/proposals'],
+  });
 
-  // Compute approval stats from proposals
-  const stats: ApprovalStats = useMemo(() => {
+  // Compute stats per tab
+  const scheduleStats: ApprovalStats = useMemo(() => {
     if (!scheduleProposals) return { pending: 0, approved: 0, rejected: 0, autoApproved: 0 };
     return {
       pending: scheduleProposals.filter(p => p.status === 'pending').length,
@@ -100,18 +163,58 @@ export default function WorkflowApprovals() {
       autoApproved: scheduleProposals.filter(p => p.status === 'auto_approved').length,
     };
   }, [scheduleProposals]);
+  
+  const invoiceStats: ApprovalStats = useMemo(() => {
+    if (!invoiceProposals) return { pending: 0, approved: 0, rejected: 0, autoApproved: 0 };
+    return {
+      pending: invoiceProposals.filter(p => p.status === 'pending').length,
+      approved: invoiceProposals.filter(p => p.status === 'approved').length,
+      rejected: invoiceProposals.filter(p => p.status === 'rejected').length,
+      autoApproved: invoiceProposals.filter(p => p.status === 'auto_approved').length,
+    };
+  }, [invoiceProposals]);
+  
+  const payrollStats: ApprovalStats = useMemo(() => {
+    if (!payrollProposals) return { pending: 0, approved: 0, rejected: 0, autoApproved: 0 };
+    return {
+      pending: payrollProposals.filter(p => p.status === 'pending').length,
+      approved: payrollProposals.filter(p => p.status === 'approved').length,
+      rejected: payrollProposals.filter(p => p.status === 'rejected').length,
+      autoApproved: payrollProposals.filter(p => p.status === 'auto_approved').length,
+    };
+  }, [payrollProposals]);
+  
+  // Combined stats for cards
+  const stats: ApprovalStats = useMemo(() => {
+    return {
+      pending: scheduleStats.pending + invoiceStats.pending + payrollStats.pending,
+      approved: scheduleStats.approved + invoiceStats.approved + payrollStats.approved,
+      rejected: scheduleStats.rejected + invoiceStats.rejected + payrollStats.rejected,
+      autoApproved: scheduleStats.autoApproved + invoiceStats.autoApproved + payrollStats.autoApproved,
+    };
+  }, [scheduleStats, invoiceStats, payrollStats]);
 
-  // Approve proposal mutation
+  // Generic mutation for all proposal types
   const approveMutation = useMutation({
-    mutationFn: async ({ id, action, reason }: { id: string; action: 'approve' | 'reject'; reason?: string }) => {
-      return await apiRequest('PATCH', `/api/scheduleos/proposals/${id}/${action}`, { reason });
+    mutationFn: async ({ id, action, reason, type }: { id: string; action: 'approve' | 'reject'; reason?: string; type: 'schedule' | 'invoice' | 'payroll' }) => {
+      const endpoints = {
+        schedule: `/api/scheduleos/proposals/${id}/${action}`,
+        invoice: `/api/invoices/proposals/${id}/${action}`,
+        payroll: `/api/payroll/proposals/${id}/${action}`,
+      };
+      return await apiRequest('PATCH', endpoints[type], { reason });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/scheduleos/proposals'] });
+    onSuccess: (_, variables) => {
+      const queryKeys = {
+        schedule: ['/api/scheduleos/proposals'],
+        invoice: ['/api/invoices/proposals'],
+        payroll: ['/api/payroll/proposals'],
+      };
+      queryClient.invalidateQueries({ queryKey: queryKeys[variables.type] });
       toast({
         title: approvalAction === 'approve' ? 'Proposal Approved' : 'Proposal Rejected',
         description: approvalAction === 'approve' 
-          ? 'Shifts will be created and employees notified'
+          ? 'Changes will be applied automatically'
           : 'AI will generate a new proposal with your feedback',
       });
       setShowApprovalDialog(false);
@@ -127,14 +230,16 @@ export default function WorkflowApprovals() {
     },
   });
 
-  const handleApprove = (proposal: ScheduleProposal) => {
+  const handleApprove = (proposal: any, type: 'schedule' | 'invoice' | 'payroll') => {
     setSelectedProposal(proposal);
+    setProposalType(type);
     setApprovalAction('approve');
     setShowApprovalDialog(true);
   };
 
-  const handleReject = (proposal: ScheduleProposal) => {
+  const handleReject = (proposal: any, type: 'schedule' | 'invoice' | 'payroll') => {
     setSelectedProposal(proposal);
+    setProposalType(type);
     setApprovalAction('reject');
     setShowApprovalDialog(true);
   };
@@ -146,11 +251,18 @@ export default function WorkflowApprovals() {
       id: selectedProposal.id,
       action: approvalAction,
       reason: approvalAction === 'reject' ? rejectionReason : undefined,
+      type: proposalType,
     });
   };
 
-  const pendingProposals = scheduleProposals.filter(p => p.status === 'pending');
-  const recentProposals = scheduleProposals.filter(p => p.status !== 'pending').slice(0, 10);
+  const pendingSchedules = scheduleProposals.filter(p => p.status === 'pending');
+  const recentSchedules = scheduleProposals.filter(p => p.status !== 'pending').slice(0, 10);
+  
+  const pendingInvoices = invoiceProposals.filter(p => p.status === 'pending');
+  const recentInvoices = invoiceProposals.filter(p => p.status !== 'pending').slice(0, 10);
+  
+  const pendingPayroll = payrollProposals.filter(p => p.status === 'pending');
+  const recentPayroll = payrollProposals.filter(p => p.status !== 'pending').slice(0, 10);
 
   // RBAC Check
   const canApprove = employee?.role === 'org_owner' || 
@@ -195,7 +307,7 @@ export default function WorkflowApprovals() {
 
       {/* Stats Cards */}
       <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-4 mb-6`}>
-        <Card>
+        <Card data-testid="card-stat-pending">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
@@ -203,11 +315,11 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.pending || 0}</div>
+            <div className="text-3xl font-bold" data-testid="text-pending-count">{stats?.pending || 0}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-stat-approved">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
@@ -215,11 +327,11 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{stats?.approved || 0}</div>
+            <div className="text-3xl font-bold text-green-600" data-testid="text-approved-count">{stats?.approved || 0}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-stat-rejected">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <XCircle className="w-4 h-4 text-destructive" />
@@ -227,11 +339,11 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-destructive">{stats?.rejected || 0}</div>
+            <div className="text-3xl font-bold text-destructive" data-testid="text-rejected-count">{stats?.rejected || 0}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-stat-auto-approved">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-blue-600" />
@@ -239,7 +351,7 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats?.autoApproved || 0}</div>
+            <div className="text-3xl font-bold text-blue-600" data-testid="text-auto-approved-count">{stats?.autoApproved || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -265,14 +377,14 @@ export default function WorkflowApprovals() {
         <TabsContent value="schedules" className="flex-1 flex flex-col">
           <ScrollArea className="flex-1">
             {loadingSchedules ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-12" data-testid="loading-schedules">
                 <div className="text-center">
                   <Bot className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-3" />
                   <p className="text-muted-foreground">Loading proposals...</p>
                 </div>
               </div>
-            ) : pendingProposals.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
+            ) : pendingSchedules.length === 0 ? (
+              <div className="flex items-center justify-center py-12" data-testid="empty-schedules">
                 <div className="text-center">
                   <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
                   <p className="font-medium">All caught up!</p>
@@ -281,24 +393,25 @@ export default function WorkflowApprovals() {
               </div>
             ) : (
               <div className="space-y-4">
-                <h2 className="text-xl font-bold mb-4">Pending Approvals ({pendingProposals.length})</h2>
+                <h2 className="text-xl font-bold mb-4">Pending Approvals ({pendingSchedules.length})</h2>
                 
-                {pendingProposals.map((proposal) => (
-                  <Card key={proposal.id} className="hover-elevate">
+                {pendingSchedules.map((proposal) => (
+                  <Card key={proposal.id} className="hover-elevate" data-testid={`card-proposal-${proposal.id}`}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-lg flex items-center gap-2">
+                          <CardTitle className="text-lg flex items-center gap-2" data-testid={`text-week-${proposal.id}`}>
                             <Calendar className="w-5 h-5" />
                             Week of {new Date(proposal.weekStartDate).toLocaleDateString()}
                           </CardTitle>
-                          <CardDescription>
+                          <CardDescription data-testid={`text-generated-${proposal.id}`}>
                             Generated {new Date(proposal.createdAt).toLocaleString()}
                           </CardDescription>
                         </div>
                         <Badge 
                           variant={proposal.confidence >= 95 ? "default" : "destructive"}
                           className="flex items-center gap-1"
+                          data-testid={`badge-confidence-${proposal.id}`}
                         >
                           <Bot className="w-3 h-3" />
                           {proposal.confidence}% Confidence
@@ -308,7 +421,7 @@ export default function WorkflowApprovals() {
 
                     <CardContent className="space-y-4">
                       {/* AI Summary */}
-                      <div className="bg-muted/50 rounded-lg p-3">
+                      <div className="bg-muted/50 rounded-lg p-3" data-testid={`text-summary-${proposal.id}`}>
                         <p className="text-sm font-medium mb-1">AI Summary:</p>
                         <p className="text-sm text-muted-foreground">{proposal.aiResponse.summary}</p>
                       </div>
@@ -355,7 +468,7 @@ export default function WorkflowApprovals() {
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
                         <Button
-                          onClick={() => handleReject(proposal)}
+                          onClick={() => handleReject(proposal, 'schedule')}
                           variant="outline"
                           className="flex-1"
                           data-testid={`button-reject-${proposal.id}`}
@@ -364,7 +477,7 @@ export default function WorkflowApprovals() {
                           Reject
                         </Button>
                         <Button
-                          onClick={() => handleApprove(proposal)}
+                          onClick={() => handleApprove(proposal, 'schedule')}
                           className="flex-1 bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
                           data-testid={`button-approve-${proposal.id}`}
                         >
@@ -377,19 +490,19 @@ export default function WorkflowApprovals() {
                 ))}
 
                 {/* Recent History */}
-                {recentProposals.length > 0 && (
+                {recentSchedules.length > 0 && (
                   <div className="mt-8">
                     <h2 className="text-xl font-bold mb-4">Recent History</h2>
                     <div className="space-y-2">
-                      {recentProposals.map((proposal) => (
-                        <Card key={proposal.id} className="bg-muted/30">
+                      {recentSchedules.map((proposal) => (
+                        <Card key={proposal.id} className="bg-muted/30" data-testid={`card-history-${proposal.id}`}>
                           <CardContent className="py-3">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
-                                <p className="text-sm font-medium">
+                                <p className="text-sm font-medium" data-testid={`text-history-week-${proposal.id}`}>
                                   Week of {new Date(proposal.weekStartDate).toLocaleDateString()}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-muted-foreground" data-testid={`text-history-details-${proposal.id}`}>
                                   {proposal.aiResponse.assignments.length} employees • {proposal.confidence}% confidence
                                 </p>
                               </div>
@@ -399,6 +512,7 @@ export default function WorkflowApprovals() {
                                     ? 'default' 
                                     : 'destructive'
                                 }
+                                data-testid={`badge-status-${proposal.id}`}
                               >
                                 {proposal.status === 'auto_approved' ? 'Auto-Approved' : proposal.status}
                               </Badge>
@@ -414,26 +528,186 @@ export default function WorkflowApprovals() {
           </ScrollArea>
         </TabsContent>
 
-        {/* BillOS™ Invoices (Placeholder) */}
+        {/* BillOS™ Invoice Proposals */}
         <TabsContent value="invoices" className="flex-1 flex flex-col">
-          <div className="flex items-center justify-center flex-1">
-            <div className="text-center">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="font-medium">Invoice Approvals</p>
-              <p className="text-sm text-muted-foreground">Coming soon - BillOS™ auto-invoice approval workflow</p>
-            </div>
-          </div>
+          <ScrollArea className="flex-1">
+            {loadingInvoices ? (
+              <div className="flex items-center justify-center py-12" data-testid="loading-invoices">
+                <div className="text-center">
+                  <Bot className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-3" />
+                  <p className="text-muted-foreground">Loading invoice proposals...</p>
+                </div>
+              </div>
+            ) : pendingInvoices.length === 0 ? (
+              <div className="flex items-center justify-center py-12" data-testid="empty-invoices">
+                <div className="text-center">
+                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                  <p className="font-medium">All caught up!</p>
+                  <p className="text-sm text-muted-foreground">No pending invoice approvals</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold mb-4">Pending Approvals ({pendingInvoices.length})</h2>
+                {pendingInvoices.map((proposal) => (
+                  <Card key={proposal.id} className="hover-elevate" data-testid={`card-invoice-${proposal.id}`}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg flex items-center gap-2" data-testid={`text-period-${proposal.id}`}>
+                            <DollarSign className="w-5 h-5" />
+                            {new Date(proposal.periodStart).toLocaleDateString()} - {new Date(proposal.periodEnd).toLocaleDateString()}
+                          </CardTitle>
+                          <CardDescription data-testid={`text-invoice-generated-${proposal.id}`}>
+                            Generated {new Date(proposal.createdAt).toLocaleString()}
+                          </CardDescription>
+                        </div>
+                        <Badge 
+                          variant={proposal.confidence >= 95 ? "default" : "destructive"}
+                          className="flex items-center gap-1"
+                          data-testid={`badge-invoice-confidence-${proposal.id}`}
+                        >
+                          <Bot className="w-3 h-3" />
+                          {proposal.confidence}% Confidence
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-3" data-testid={`text-invoice-summary-${proposal.id}`}>
+                        <p className="text-sm font-medium mb-1">AI Summary:</p>
+                        <p className="text-sm text-muted-foreground">{proposal.aiResponse?.summary || 'No summary available'}</p>
+                      </div>
+                      {proposal.aiResponse?.warnings && proposal.aiResponse.warnings.length > 0 && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-destructive mb-1">Warnings:</p>
+                              <ul className="text-sm text-destructive/90 space-y-1">
+                                {proposal.aiResponse.warnings.map((warning, i) => (
+                                  <li key={i}>• {warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={() => handleReject(proposal, 'invoice')}
+                          variant="outline"
+                          className="flex-1"
+                          data-testid={`button-invoice-reject-${proposal.id}`}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                        <Button
+                          onClick={() => handleApprove(proposal, 'invoice')}
+                          className="flex-1 bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
+                          data-testid={`button-invoice-approve-${proposal.id}`}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve & Generate
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
         </TabsContent>
 
-        {/* PayrollOS™ (Placeholder) */}
+        {/* OperationsOS™ Payroll Proposals */}
         <TabsContent value="payroll" className="flex-1 flex flex-col">
-          <div className="flex items-center justify-center flex-1">
-            <div className="text-center">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="font-medium">Payroll Approvals</p>
-              <p className="text-sm text-muted-foreground">Coming soon - OperationsOS™ auto-payroll approval workflow</p>
-            </div>
-          </div>
+          <ScrollArea className="flex-1">
+            {loadingPayroll ? (
+              <div className="flex items-center justify-center py-12" data-testid="loading-payroll">
+                <div className="text-center">
+                  <Bot className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-3" />
+                  <p className="text-muted-foreground">Loading payroll proposals...</p>
+                </div>
+              </div>
+            ) : pendingPayroll.length === 0 ? (
+              <div className="flex items-center justify-center py-12" data-testid="empty-payroll">
+                <div className="text-center">
+                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                  <p className="font-medium">All caught up!</p>
+                  <p className="text-sm text-muted-foreground">No pending payroll approvals</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold mb-4">Pending Approvals ({pendingPayroll.length})</h2>
+                {pendingPayroll.map((proposal) => (
+                  <Card key={proposal.id} className="hover-elevate" data-testid={`card-payroll-${proposal.id}`}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg flex items-center gap-2" data-testid={`text-pay-period-${proposal.id}`}>
+                            <Users className="w-5 h-5" />
+                            {new Date(proposal.payPeriodStart).toLocaleDateString()} - {new Date(proposal.payPeriodEnd).toLocaleDateString()}
+                          </CardTitle>
+                          <CardDescription data-testid={`text-payroll-generated-${proposal.id}`}>
+                            Generated {new Date(proposal.createdAt).toLocaleString()} • {proposal.employeeCount} employees
+                          </CardDescription>
+                        </div>
+                        <Badge 
+                          variant={proposal.confidence >= 95 ? "default" : "destructive"}
+                          className="flex items-center gap-1"
+                          data-testid={`badge-payroll-confidence-${proposal.id}`}
+                        >
+                          <Bot className="w-3 h-3" />
+                          {proposal.confidence}% Confidence
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-3" data-testid={`text-payroll-summary-${proposal.id}`}>
+                        <p className="text-sm font-medium mb-1">AI Summary:</p>
+                        <p className="text-sm text-muted-foreground">{proposal.aiResponse?.summary || 'No summary available'}</p>
+                      </div>
+                      {proposal.aiResponse?.warnings && proposal.aiResponse.warnings.length > 0 && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-destructive mb-1">Warnings:</p>
+                              <ul className="text-sm text-destructive/90 space-y-1">
+                                {proposal.aiResponse.warnings.map((warning, i) => (
+                                  <li key={i}>• {warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={() => handleReject(proposal, 'payroll')}
+                          variant="outline"
+                          className="flex-1"
+                          data-testid={`button-payroll-reject-${proposal.id}`}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                        <Button
+                          onClick={() => handleApprove(proposal, 'payroll')}
+                          className="flex-1 bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
+                          data-testid={`button-payroll-approve-${proposal.id}`}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve & Process
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
         </TabsContent>
       </Tabs>
 
@@ -442,11 +716,17 @@ export default function WorkflowApprovals() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {approvalAction === 'approve' ? 'Approve Schedule' : 'Reject Schedule'}
+              {approvalAction === 'approve' 
+                ? `Approve ${proposalType === 'schedule' ? 'Schedule' : proposalType === 'invoice' ? 'Invoice' : 'Payroll'}` 
+                : `Reject ${proposalType === 'schedule' ? 'Schedule' : proposalType === 'invoice' ? 'Invoice' : 'Payroll'}`}
             </DialogTitle>
             <DialogDescription>
               {approvalAction === 'approve'
-                ? 'This will create all shifts and notify employees'
+                ? proposalType === 'schedule' 
+                  ? 'This will create all shifts and notify employees'
+                  : proposalType === 'invoice'
+                  ? 'This will generate the invoice and send to client'
+                  : 'This will process payroll for all employees'
                 : 'AI will learn from your feedback and generate a new proposal'}
             </DialogDescription>
           </DialogHeader>

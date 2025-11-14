@@ -5368,6 +5368,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ==================== INVOICE PROPOSALS ====================
+  
+  // List All Invoice Proposals
+  app.get('/api/invoices/proposals', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { invoiceProposals } = await import("@shared/schema");
+      
+      const proposals = await db.select().from(invoiceProposals)
+        .where(eq(invoiceProposals.workspaceId, userWorkspace.workspaceId))
+        .orderBy(desc(invoiceProposals.id))
+        .limit(100);
+      
+      res.json(proposals);
+    } catch (error: any) {
+      console.error("Error fetching invoice proposals:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch proposals" });
+    }
+  });
+  
+  // Approve Invoice Proposal
+  app.patch('/api/invoices/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { invoiceProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(invoiceProposals).where(
+        and(
+          eq(invoiceProposals.id, id),
+          eq(invoiceProposals.workspaceId, userWorkspace.workspaceId),
+          eq(invoiceProposals.status, 'pending')
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found or already processed" });
+      }
+      
+      await db.update(invoiceProposals).set({
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(invoiceProposals.id, id));
+      
+      console.log(`✅ BillOS™ Invoice APPROVED by ${userId}: Proposal ${id}`);
+      
+      res.json({
+        success: true,
+        proposalId: id,
+        message: 'Invoice proposal approved. Invoice will be generated.',
+      });
+    } catch (error: any) {
+      console.error("BillOS™ Invoice Approval Error:", error);
+      res.status(500).json({ message: error.message || "Failed to approve invoice" });
+    }
+  });
+  
+  // Reject Invoice Proposal
+  app.patch('/api/invoices/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { invoiceProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(invoiceProposals).where(
+        and(
+          eq(invoiceProposals.id, id),
+          eq(invoiceProposals.workspaceId, userWorkspace.workspaceId),
+          eq(invoiceProposals.status, 'pending')
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found or already processed" });
+      }
+      
+      await db.update(invoiceProposals).set({
+        status: 'rejected',
+        rejectedBy: userId,
+        rejectedAt: new Date(),
+        rejectionReason: reason || 'No reason provided',
+        updatedAt: new Date(),
+      }).where(eq(invoiceProposals.id, id));
+      
+      console.log(`❌ BillOS™ Invoice REJECTED by ${userId}: Proposal ${id}`);
+      
+      res.json({
+        success: true,
+        proposalId: id,
+        message: 'Invoice proposal rejected.',
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to reject invoice" });
+    }
+  });
+  
+  // ==================== PAYROLL PROPOSALS ====================
+  
+  // List All Payroll Proposals
+  app.get('/api/payroll/proposals', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { payrollProposals } = await import("@shared/schema");
+      
+      const proposals = await db.select().from(payrollProposals)
+        .where(eq(payrollProposals.workspaceId, userWorkspace.workspaceId))
+        .orderBy(desc(payrollProposals.id))
+        .limit(100);
+      
+      res.json(proposals);
+    } catch (error: any) {
+      console.error("Error fetching payroll proposals:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch proposals" });
+    }
+  });
+  
+  // Approve Payroll Proposal
+  app.patch('/api/payroll/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { payrollProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(payrollProposals).where(
+        and(
+          eq(payrollProposals.id, id),
+          eq(payrollProposals.workspaceId, userWorkspace.workspaceId),
+          eq(payrollProposals.status, 'pending')
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found or already processed" });
+      }
+      
+      await db.update(payrollProposals).set({
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(payrollProposals.id, id));
+      
+      console.log(`✅ OperationsOS™ Payroll APPROVED by ${userId}: Proposal ${id}`);
+      
+      res.json({
+        success: true,
+        proposalId: id,
+        message: 'Payroll proposal approved. Payroll will be processed.',
+      });
+    } catch (error: any) {
+      console.error("OperationsOS™ Payroll Approval Error:", error);
+      res.status(500).json({ message: error.message || "Failed to approve payroll" });
+    }
+  });
+  
+  // Reject Payroll Proposal
+  app.patch('/api/payroll/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const userId = req.user.claims.sub;
+      const [userWorkspace] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.userId, userId)).limit(1);
+      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      
+      const { payrollProposals } = await import("@shared/schema");
+      const [proposal] = await db.select().from(payrollProposals).where(
+        and(
+          eq(payrollProposals.id, id),
+          eq(payrollProposals.workspaceId, userWorkspace.workspaceId),
+          eq(payrollProposals.status, 'pending')
+        )
+      ).limit(1);
+      
+      if (!proposal) {
+        return res.status(404).json({ message: "Proposal not found or already processed" });
+      }
+      
+      await db.update(payrollProposals).set({
+        status: 'rejected',
+        rejectedBy: userId,
+        rejectedAt: new Date(),
+        rejectionReason: reason || 'No reason provided',
+        updatedAt: new Date(),
+      }).where(eq(payrollProposals.id, id));
+      
+      console.log(`❌ OperationsOS™ Payroll REJECTED by ${userId}: Proposal ${id}`);
+      
+      res.json({
+        success: true,
+        proposalId: id,
+        message: 'Payroll proposal rejected.',
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to reject payroll" });
+    }
+  });
+  
   // ScheduleOS™ - Migrate schedule from external apps (Deputy, WhenIWork, GetSling)
   app.post('/api/scheduleos/migrate-schedule', isAuthenticated, requireManager, async (req: any, res) => {
     try {
