@@ -42,7 +42,7 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import Dashboard from "@/pages/dashboard";
 import MobileDashboard from "@/pages/mobile-dashboard";
 import { Redirect } from "wouter";
-import SmartScheduleOS from "@/pages/schedule-smart";
+import UniversalSchedule from "@/pages/universal-schedule";
 import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
@@ -348,7 +348,7 @@ function AppContent() {
                 <Route path="/dashboard">
                   {isMobile ? <MobileDashboard /> : <Dashboard />}
                 </Route>
-                <Route path="/schedule" component={SmartScheduleOS} />
+                <Route path="/schedule" component={UniversalSchedule} />
                 <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
                 <Route path="/employees" component={Employees} />

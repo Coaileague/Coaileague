@@ -3767,19 +3767,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       
+      // Extract date range filters from query params
+      const weekStart = req.query.weekStart as string | undefined;
+      const weekEnd = req.query.weekEnd as string | undefined;
+      
       // Check if user is platform staff (root_admin/sysop) for diagnostic access
       const platformRole = await getUserPlatformRole(userId);
       if (platformRole === 'root_admin' || platformRole === 'sysop' || platformRole === 'support_manager') {
         // Platform staff: optional workspace filter for diagnostics
         const requestedWorkspaceId = req.query.workspaceId as string | undefined;
         if (requestedWorkspaceId) {
-          const shifts = await storage.getShiftsByWorkspace(requestedWorkspaceId);
+          let shifts = await storage.getShiftsByWorkspace(requestedWorkspaceId);
+          
+          // Apply date range filter if provided
+          if (weekStart && weekEnd) {
+            const startDate = new Date(weekStart);
+            const endDate = new Date(weekEnd);
+            shifts = shifts.filter(shift => {
+              const shiftStart = new Date(shift.startTime);
+              return shiftStart >= startDate && shiftStart <= endDate;
+            });
+          }
+          
           return res.json(shifts);
         }
         // No workspace specified: return first workspace's shifts (diagnostic mode)
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
-          const shifts = await storage.getShiftsByWorkspace(allWorkspaces[0].id);
+          let shifts = await storage.getShiftsByWorkspace(allWorkspaces[0].id);
+          
+          // Apply date range filter if provided
+          if (weekStart && weekEnd) {
+            const startDate = new Date(weekStart);
+            const endDate = new Date(weekEnd);
+            shifts = shifts.filter(shift => {
+              const shiftStart = new Date(shift.startTime);
+              return shiftStart >= startDate && shiftStart <= endDate;
+            });
+          }
+          
           return res.json(shifts);
         }
         return res.json([]);
@@ -3794,7 +3820,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // All workspace roles can view shifts (owner, manager, admin, supervisor, staff)
-      const shifts = await storage.getShiftsByWorkspace(workspaceId);
+      let shifts = await storage.getShiftsByWorkspace(workspaceId);
+      
+      // Apply date range filter if provided (for weekly schedule view)
+      if (weekStart && weekEnd) {
+        const startDate = new Date(weekStart);
+        const endDate = new Date(weekEnd);
+        shifts = shifts.filter(shift => {
+          const shiftStart = new Date(shift.startTime);
+          return shiftStart >= startDate && shiftStart <= endDate;
+        });
+      }
+      
       res.json(shifts);
     } catch (error) {
       console.error("Error fetching shifts:", error);
@@ -3807,13 +3844,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const workspaceId = req.workspaceId!;
 
+      // Extract post orders array before validation (not part of shift schema)
+      const { postOrders, ...shiftData } = req.body;
+
       // Validate with Zod and enforce workspace ownership
       const validated = insertShiftSchema.parse({
-        ...req.body,
+        ...shiftData,
         workspaceId, // Force workspace from auth, ignore client input
       });
 
       const shift = await storage.createShift(validated);
+      
+      // Create shift orders (post orders) if provided
+      if (postOrders && Array.isArray(postOrders) && postOrders.length > 0) {
+        const POST_ORDER_TEMPLATES = [
+          {
+            id: '1',
+            title: 'Security Patrol Requirements',
+            description: 'Complete hourly patrols of all assigned areas',
+            requiresAcknowledgment: true,
+            requiresSignature: true,
+            requiresPhotos: true,
+            photoFrequency: 'hourly',
+            photoInstructions: 'Take photos of each checkpoint during patrol'
+          },
+          {
+            id: '2',
+            title: 'Opening Procedures',
+            description: 'Follow all opening checklist items',
+            requiresAcknowledgment: true,
+            requiresSignature: false,
+            requiresPhotos: false,
+            photoFrequency: null,
+            photoInstructions: null
+          },
+          {
+            id: '3',
+            title: 'Closing Procedures',
+            description: 'Complete all closing duties and security checks',
+            requiresAcknowledgment: true,
+            requiresSignature: true,
+            requiresPhotos: true,
+            photoFrequency: 'at_completion',
+            photoInstructions: 'Document all secured areas before leaving'
+          },
+          {
+            id: '4',
+            title: 'Equipment Inspection',
+            description: 'Inspect and document condition of all equipment',
+            requiresAcknowledgment: true,
+            requiresSignature: false,
+            requiresPhotos: true,
+            photoFrequency: 'hourly',
+            photoInstructions: 'Photo evidence of equipment status'
+          }
+        ];
+
+        for (const orderId of postOrders) {
+          const template = POST_ORDER_TEMPLATES.find(t => t.id === orderId);
+          if (template) {
+            await db.insert(shiftOrders).values({
+              workspaceId,
+              shiftId: shift.id,
+              title: template.title,
+              description: template.description,
+              requiresAcknowledgment: template.requiresAcknowledgment,
+              requiresSignature: template.requiresSignature,
+              requiresPhotos: template.requiresPhotos,
+              photoFrequency: template.photoFrequency,
+              photoInstructions: template.photoInstructions,
+              createdBy: userId,
+            });
+          }
+        }
+
+        console.log(`📋 Created ${postOrders.length} post orders for shift ${shift.id}`);
+      }
       
       // Send shift assignment email if employee has email
       if (shift.employeeId) {
@@ -3959,6 +4065,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting shift:", error);
       res.status(500).json({ message: "Failed to delete shift" });
+    }
+  });
+
+  // ============================================================================
+  // SCHEDULEOS™ AI FILL - Auto-assign best employee to open shift
+  // ============================================================================
+  
+  app.post('/api/shifts/:id/ai-fill', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const shiftId = req.params.id;
+
+      // Get the open shift
+      const shift = await storage.getShift(shiftId, workspaceId);
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      // Verify it's an open shift
+      if (shift.employeeId || shift.status !== 'open') {
+        return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
+      }
+
+      // Get all employees for this workspace
+      const employees = await storage.getEmployeesByWorkspace(workspaceId);
+      if (employees.length === 0) {
+        return res.status(400).json({ message: "No employees available for assignment" });
+      }
+
+      // Use Smart AI to find best employee
+      const { scheduleSmartAI } = await import('./services/scheduleSmartAI');
+      
+      const result = await scheduleSmartAI({
+        openShifts: [shift],
+        availableEmployees: employees,
+        workspaceId,
+        userId: req.user!.id,
+        constraints: {
+          hardConstraints: {
+            respectAvailability: true,
+            preventDoubleBooking: true,
+            enforceRestPeriods: true,
+            respectTimeOffRequests: true,
+          },
+          softConstraints: {
+            preferExperience: true,
+            balanceWorkload: true,
+            respectPreferences: true,
+          },
+          predictiveMetrics: {
+            enableReliabilityScoring: true,
+            penalizeLateHistory: true,
+            considerAbsenteeismRisk: true,
+          }
+        }
+      });
+
+      // Check if AI found a suitable assignment
+      if (result.assignments.length === 0) {
+        return res.status(400).json({ 
+          message: "Smart AI could not find a suitable employee for this shift",
+          unassignedShifts: result.unassignedShifts,
+          summary: result.summary
+        });
+      }
+
+      const assignment = result.assignments[0];
+
+      // Update shift with AI assignment
+      const updatedShift = await storage.updateShift(shiftId, workspaceId, {
+        employeeId: assignment.employeeId,
+        status: 'draft', // Changed from 'open' to 'draft'
+        aiGenerated: true,
+        aiConfidenceScore: assignment.confidence.toString(),
+      });
+
+      // 📡 REAL-TIME: Broadcast shift update
+      broadcastShiftUpdate(workspaceId, 'shift_updated', updatedShift!);
+
+      // 🔔 NOTIFICATION: Notify assigned employee
+      const employee = employees.find(e => e.id === assignment.employeeId);
+      if (employee?.email && updatedShift) {
+        const startTime = new Date(updatedShift.startTime).toLocaleString('en-US', {
+          dateStyle: 'full',
+          timeStyle: 'short'
+        });
+        const endTime = new Date(updatedShift.endTime).toLocaleString('en-US', {
+          timeStyle: 'short'
+        });
+
+        sendShiftAssignmentEmail(employee.email, {
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          shiftTitle: updatedShift.title || 'Shift',
+          startTime,
+          endTime,
+        }).catch(err => console.error('Failed to send AI assignment email:', err));
+
+        const shiftDate = new Date(updatedShift.startTime).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        await notificationHelpers.createShiftAssignedNotification(
+          { storage, broadcastNotification },
+          {
+            workspaceId,
+            userId: employee.id,
+            shiftId: updatedShift.id,
+            shiftTitle: updatedShift.title || 'Shift',
+            shiftDate,
+            assignedBy: req.user!.id,
+          }
+        ).catch(err => console.error('Failed to create AI assignment notification:', err));
+      }
+
+      res.json({
+        success: true,
+        shift: updatedShift,
+        assignment: {
+          employeeId: assignment.employeeId,
+          employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown',
+          confidence: assignment.confidence,
+          reasoning: assignment.reasoning,
+        },
+        aiConfidence: result.overallConfidence,
+        message: "Smart AI successfully assigned employee to shift"
+      });
+    } catch (error: any) {
+      console.error("Error in AI Fill:", error);
+      res.status(500).json({ message: error.message || "Failed to auto-assign shift" });
     }
   });
 
