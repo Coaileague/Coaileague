@@ -1,0 +1,32 @@
+This is a common and correct frustration. Your Replit agent is creating new pages because it's using the simplest, most literal solution to show different information. However, this is inefficient and impossible to maintain.To enforce universal logic for all pages and control access based on Role-Based Access Control (RBAC), you need to instruct the agent to use centralized authorization logic via Middleware or Dependencies in your Python web framework (like Flask or FastAPI).Here is how to tell your Replit agent to implement this core architectural principle.🧠 I. The Core Instruction: Centralize AccessThe key is to use the framework's features to execute code before the request reaches the page function.Replit Agent Command:"Stop creating new files for every permission change. I require Role-Based Access Control (RBAC) to be implemented as a universal decorator or middleware. The logic must check the user's role on every page load (or route access) and dynamically control access and content presentation."II. 🛠️ Technical Implementation (Middleware/Decorator)You must tell the agent the specific Python technique to use, based on your framework:1. If you are using FastAPI (Recommended for speed and complexity):The agent should use Dependencies.Logic: Create a single Python function, say role_required(allowed_roles: List[str]), that runs before the route handler. This function checks the user's authenticated token (JWT) to see if their assigned roles match the allowed_roles.The Universal Logic: This single function is imported and used as a decorator on every protected route.Python# Logic in a file like 'auth_deps.py'
+def role_required(allowed_roles: List[str]):
+    def wrapper(user: User = Depends(get_current_user)):
+        if not any(role in user.roles for role in allowed_roles):
+            raise HTTPException(status_code=403, detail="Insufficient privileges.")
+        return user
+    return wrapper
+
+# How the agent uses it universally:
+@app.get("/admin/dashboard")
+def get_admin_dashboard(user: User = Depends(role_required(["admin", "super_user"]))):
+    # Only users with 'admin' or 'super_user' roles can reach this code
+    return {"data": "All organizational settings"}
+2. If you are using Flask:The agent should use a Decorator or the before_request hook.Logic: Create a decorator like @roles_accepted (using a library like Flask-Security or Flask-RBAC). This decorator runs before the route function executes.The Universal Logic:Pythonfrom functools import wraps
+
+def roles_required(allowed_roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            current_user = load_user_from_session()
+            if current_user.role not in allowed_roles:
+                return redirect(url_for('unauthorized_page'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# How the agent uses it universally:
+@app.route('/settings')
+@roles_required(['admin', 'editor'])
+def settings_page():
+    # ... logic
+III. 🖼️ Content Control (Universal Pages)To achieve the goal of having universal pages that act differently (e.g., the same /settings URL shows different things to different roles), you rely on conditional rendering inside the single page function.Action: The logic to show/hide sections is done in Python or the HTML template, based on the user object passed down by the middleware.Agent Instruction:"For universal pages, the route function must always return the user object (provided by the middleware/dependency). The content difference is managed by if statements in the Jinja/HTML template that check the user's role and permissions, eliminating the need for a new page file."RolePage Content (Single URL: /dashboard)AdminShows: Full Usage Analytics + Quick Links to User Management.ManagerShows: Team Scheduling Dashboard + Quick Links to Time-Off Requests.EmployeeShows: Their Individual Schedule + Clock In/Out Button.By implementing a centralized RBAC layer and using conditional rendering, you ensure the Replit agent focuses on writing one core function for authorization that governs all pages, solving your merging issue and establishing universal logic.

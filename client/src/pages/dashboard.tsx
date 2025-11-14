@@ -7,7 +7,8 @@ import {
   Users, Activity, DollarSign, 
   FileText, Calendar, Clock, ArrowRight,
   Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail, Lock,
-  Shield, UserCog, Server, Database, MessageCircle, Settings
+  Shield, UserCog, Server, Database, MessageCircle, Settings,
+  HelpCircle, MessageSquare, LayoutDashboard
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
@@ -26,6 +27,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DashboardShell, ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileLoading } from "@/components/mobile-loading";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { useIdentity } from "@/hooks/useIdentity";
+import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 
 interface Notification {
   id: string;
@@ -53,6 +59,9 @@ export default function Dashboard() {
   const { showTransition, hideTransition } = useTransition();
   const { beginLoading, endLoading } = useLoadingManager();
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread' | 'read'>('all');
+  
+  // Mobile detection for responsive UI
+  const isMobile = useIsMobile();
 
   // Get current user and workspace
   const { data: currentUser } = useQuery<{ id: string; email?: string }>({ 
@@ -285,6 +294,128 @@ export default function Dashboard() {
   // Show loading overlay while dashboard data is loading
   const isLoadingDashboard = isLoading || accessLoading;
 
+  // Get identity data for mobile display
+  const { externalId, employeeId, supportCode, orgId, workspaceRole: identityWorkspaceRole } = useIdentity();
+  
+  // Generate display name and initials
+  const displayName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.email?.split('@')[0] || 'User';
+  const initials = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    : user?.email?.[0]?.toUpperCase() || "U";
+  const displayExternalId = employeeId || supportCode || externalId;
+  const displayRole = workspaceRole || user?.platformRole;
+  const isStaff = user?.platformRole &&
+    ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes(user?.platformRole);
+
+  // Mobile UI - simplified feature-card based dashboard
+  if (isMobile) {
+    const FeatureCard = ({ icon: Icon, label, href }: { icon: any; label: string; href: string }) => (
+      <Link
+        href={href}
+        className="card rounded-2xl bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 shadow-sm flex flex-col justify-center items-center gap-2 hover-elevate active-elevate-2 transition p-3"
+        data-testid={`card-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      >
+        <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-700">
+          <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="text-xs text-center px-2 leading-tight font-medium text-gray-900 dark:text-white">
+          {label}
+        </div>
+      </Link>
+    );
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        {isLoadingDashboard && <MobileLoading />}
+        
+        <AppShellMobile title="Dashboard" showBack={false}>
+          <div className="pb-4">
+          {/* Welcome Card */}
+          <Card className="mb-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 flex items-center justify-center text-white font-bold shadow-md">
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-sm leading-tight text-gray-900 dark:text-white" data-testid="text-welcome">
+                    Welcome,
+                  </CardTitle>
+                  <p className="text-base font-bold leading-tight text-gray-900 dark:text-white mt-0.5" data-testid="text-user-name">
+                    {displayName}
+                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {displayExternalId && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-external-id">
+                        {displayExternalId}
+                      </Badge>
+                    )}
+                    {displayRole && (
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300" data-testid="badge-role">
+                        {displayRole.replace(/_/g, ' ')}
+                      </Badge>
+                    )}
+                    {orgId && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" data-testid="badge-org-id">
+                        {orgId}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-1.5 break-all leading-tight" data-testid="text-email">
+                    {user?.email || "Loading..."}
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* Support & Help Desk */}
+          <section className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md p-4 mb-4">
+            <div className="text-xs tracking-wide text-blue-600 dark:text-blue-400 font-semibold mb-3 uppercase">
+              Support & Helpdesk
+            </div>
+            <div className="grid gap-3 grid-cols-2">
+              <FeatureCard icon={MessageCircle} label="Live Chat" href="/chat" />
+              <FeatureCard icon={HelpCircle} label="Help Desk" href="/chat" />
+              <FeatureCard icon={Mail} label="Support" href="/support" />
+              {isStaff && <FeatureCard icon={Shield} label="Admin" href="/dashboard" />}
+            </div>
+          </section>
+
+          {/* Platform Management */}
+          <section className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md p-4 mb-4">
+            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">
+              Platform Management
+            </div>
+            <div className="grid gap-3 grid-cols-2">
+              <FeatureCard icon={Calendar} label="Schedule" href="/schedule" />
+              <FeatureCard icon={Clock} label="Time Tracking" href="/time-tracking" />
+              <FeatureCard icon={MessageSquare} label="CommOS™" href="/comm-os" />
+              <FeatureCard icon={Users} label="Employees" href="/employees" />
+            </div>
+          </section>
+
+          {/* Core Features */}
+          <section className="rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-slate-700 shadow-md p-4 mb-20">
+            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">
+              Core Features
+            </div>
+            <div className="grid gap-3 grid-cols-2">
+              <FeatureCard icon={Users} label="Employees" href="/employees" />
+              <FeatureCard icon={LayoutDashboard} label="Reports" href="/reports" />
+              <FeatureCard icon={DollarSign} label="Billing" href="/billing" />
+              <FeatureCard icon={Calendar} label="Clients" href="/clients" />
+            </div>
+          </section>
+          </div>
+        </AppShellMobile>
+      </div>
+    );
+  }
+
+  // Desktop UI - full dashboard with detailed stats
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden w-full max-w-full">
       {/* Show responsive loading for initial auth check */}

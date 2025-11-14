@@ -55,7 +55,7 @@ export function FloatingSupportChat() {
   // State management with localStorage persistence (browser-safe)
   const [state, setState] = useState<ChatBubbleState>({
     position: { x: 0, y: 0 },
-    isMinimized: false,
+    isMinimized: true,
     isOpen: false
   });
   
@@ -73,7 +73,7 @@ export function FloatingSupportChat() {
               x: Math.max(0, window.innerWidth - 420), 
               y: Math.max(0, window.innerHeight - 620) 
             },
-            isMinimized: false,
+            isMinimized: true,
             isOpen: false
           });
         }
@@ -84,7 +84,7 @@ export function FloatingSupportChat() {
             x: Math.max(0, window.innerWidth - 420), 
             y: Math.max(0, window.innerHeight - 620) 
           },
-          isMinimized: false,
+          isMinimized: true,
           isOpen: false
         });
       }

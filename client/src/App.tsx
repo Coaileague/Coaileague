@@ -40,10 +40,8 @@ import Support from "@/pages/support";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Dashboard from "@/pages/dashboard";
-import MobileDashboard from "@/pages/mobile-dashboard";
 import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
-import MobileManagerSchedule from "@/pages/mobile/mobile-manager-schedule";
 import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
@@ -342,22 +340,16 @@ function AppContent() {
               {!isMobileChat && !isHelpDesk && !isMobile && <PageBreadcrumb />}
               
               <Switch>
-                <Route path="/">
-                  {isMobile ? <MobileDashboard /> : <Dashboard />}
-                </Route>
+                <Route path="/" component={Dashboard} />
                 <Route path="/login">
                   <Redirect to="/dashboard" />
                 </Route>
                 <Route path="/register">
                   <Redirect to="/dashboard" />
                 </Route>
-                <Route path="/mobile-dashboard" component={MobileDashboard} />
-                <Route path="/dashboard">
-                  {isMobile ? <MobileDashboard /> : <Dashboard />}
-                </Route>
-                <Route path="/schedule">
-                  {isMobile ? <MobileManagerSchedule /> : <UniversalSchedule />}
-                </Route>
+                <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
+                <Route path="/dashboard" component={Dashboard} />
+                <Route path="/schedule" component={UniversalSchedule} />
                 <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
