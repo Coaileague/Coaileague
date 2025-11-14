@@ -27,6 +27,7 @@ import {
   PieChart,
   FileBarChart,
   Zap,
+  CheckCircle,
   type LucideIcon,
 } from "lucide-react";
 
