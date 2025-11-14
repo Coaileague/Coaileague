@@ -896,4 +896,5 @@ timeEntryRouter.get('/active', requireAuth, readLimiter, async (req: Authenticat
   }
 });
 
-export default timeosRouter;
+// Note: This is a named export, not default export
+// Used in server/routes.ts as: import { timeEntryRouter } from "./time-entry-routes";

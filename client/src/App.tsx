@@ -44,7 +44,6 @@ import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
 import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
-import TimeOS from "@/pages/timeos";
 import Employees from "@/pages/employees";
 import Clients from "@/pages/clients";
 import Invoices from "@/pages/invoices";
@@ -356,7 +355,6 @@ function AppContent() {
                 <Route path="/workflow-approvals" component={WorkflowApprovals} />
                 <Route path="/sales" component={SalesDashboard} />
                 <Route path="/time-tracking" component={TimeTracking} />
-                <Route path="/timeos" component={TimeOS} />
                 <Route path="/employees" component={Employees} />
                 <Route path="/role-management" component={RoleManagement} />
                 <Route path="/manager-dashboard" component={ManagerDashboard} />
