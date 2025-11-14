@@ -43,6 +43,11 @@ export default function TimeTracking() {
   const [selectedShift, setSelectedShift] = useState<string>("");
   const [now, setNow] = useState(Date.now());
   
+  // Rejection dialog state
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingEntryId, setRejectingEntryId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  
   // GPS and Photo states
   const [gpsData, setGpsData] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -132,6 +137,8 @@ export default function TimeTracking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
       toast({
         title: "Clocked In",
         description: "Time tracking started successfully with GPS verification",
@@ -174,6 +181,8 @@ export default function TimeTracking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
       toast({
         title: "Clocked Out",
         description: "Time entry completed successfully",
@@ -186,6 +195,110 @@ export default function TimeTracking() {
         variant: "destructive",
       });
     },
+  });
+
+  // Break Management Mutations
+  const startBreakMutation = useMutation({
+    mutationFn: async (data: { breakType: 'meal' | 'rest' }) => {
+      return apiRequest("POST", "/api/time-entries/break/start", data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      toast({
+        title: "Break Started",
+        description: `${variables.breakType === 'meal' ? 'Meal' : 'Rest'} break has been started`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start break",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const endBreakMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/time-entries/break/end", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      toast({
+        title: "Break Ended",
+        description: "You have resumed work",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to end break",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Approval Workflow Mutations
+  const approveMutation = useMutation({
+    mutationFn: async (timeEntryId: string) => {
+      return apiRequest("POST", `/api/time-entries/${timeEntryId}/approve`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      toast({
+        title: "Entry Approved",
+        description: "Time entry has been approved successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (data: { timeEntryId: string; reason: string }) => {
+      return apiRequest("POST", `/api/time-entries/${data.timeEntryId}/reject`, { reason: data.reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      toast({
+        title: "Entry Rejected",
+        description: "Time entry has been rejected",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Active Employee Monitoring (Manager-only)
+  const { data: activeEmployees = [] } = useQuery<any[]>({
+    queryKey: ["/api/time-entries/active"],
+    enabled: isAuthenticated && workspaceRole !== 'staff',
+    refetchInterval: 30000, // Refresh every 30 seconds for live monitoring
+  });
+
+  // Current User Status (for My Status card with break controls)
+  const { data: myStatus = null } = useQuery<any>({
+    queryKey: ["/api/time-entries/status"],
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refresh every 10 seconds for live timer
   });
 
   // GPS Capture Function
@@ -774,6 +887,129 @@ export default function TimeTracking() {
       </PageHeader>
 
       <div className="mobile-container p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6">
+        {/* My Status Card - Active Session with Break Controls */}
+        {myStatus && myStatus.entry && (
+          <Card data-testid="card-my-status">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg">My Active Session</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    You are currently clocked in
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 p-3 sm:p-6">
+              {/* Session Info */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>Started: {format(new Date(myStatus.entry.clockIn), "MMM d, h:mm a")}</span>
+                </div>
+                {myStatus.entry.client && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Building2 className="h-4 w-4" />
+                    <span>{myStatus.entry.client}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm font-mono">
+                  <span className="text-2xl font-bold">
+                    {Math.floor((now - new Date(myStatus.entry.clockIn).getTime()) / 3600000)}h {Math.floor(((now - new Date(myStatus.entry.clockIn).getTime()) % 3600000) / 60000)}m
+                  </span>
+                  <span className="text-muted-foreground">elapsed</span>
+                </div>
+                
+                {/* Verification Status */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {myStatus.entry.gpsLatitude && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <MapPin className="h-3 w-3" />
+                      GPS Verified
+                    </Badge>
+                  )}
+                  {myStatus.entry.clockInPhotoUrl && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Camera className="h-3 w-3" />
+                      Photo Captured
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Break Controls */}
+              <div className="border-t pt-4">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Break Management</h4>
+                  
+                  {myStatus.activeBreak ? (
+                    // Active break - show timer and resume button
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {myStatus.activeBreak.breakType === 'meal' ? 'Meal Break' : 'Rest Break'} - In Progress
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-mono">
+                          {Math.floor((now - new Date(myStatus.activeBreak.startTime).getTime()) / 60000)}m break time
+                        </span>
+                      </div>
+                      <Button
+                        onClick={() => endBreakMutation.mutate()}
+                        disabled={endBreakMutation.isPending}
+                        className="w-full"
+                        variant="default"
+                        data-testid="button-end-break"
+                      >
+                        {endBreakMutation.isPending ? "Resuming..." : "Resume Work"}
+                      </Button>
+                    </div>
+                  ) : (
+                    // No active break - show start break buttons
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        onClick={() => startBreakMutation.mutate({ breakType: 'meal' })}
+                        disabled={startBreakMutation.isPending}
+                        variant="outline"
+                        className="w-full"
+                        data-testid="button-start-meal-break"
+                      >
+                        {startBreakMutation.isPending ? "Starting..." : "Meal Break"}
+                      </Button>
+                      <Button
+                        onClick={() => startBreakMutation.mutate({ breakType: 'rest' })}
+                        disabled={startBreakMutation.isPending}
+                        variant="outline"
+                        className="w-full"
+                        data-testid="button-start-rest-break"
+                      >
+                        {startBreakMutation.isPending ? "Starting..." : "Rest Break"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Clock Out Button */}
+              <div className="border-t pt-4">
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => clockOutMutation.mutate({ timeEntryId: myStatus.entry.id })}
+                  disabled={clockOutMutation.isPending}
+                  data-testid="button-clock-out-my-status"
+                >
+                  <Square className="mr-2 h-4 w-4" />
+                  {clockOutMutation.isPending ? "Clocking Out..." : "Clock Out"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Sling-style Filters */}
       <Card>
         <CardContent className="p-3 sm:p-4">
@@ -887,67 +1123,190 @@ export default function TimeTracking() {
         </CardContent>
       </Card>
 
-      {/* Active Time Entries */}
-      {activeTimeEntries.length > 0 && (
-        <Card data-testid="card-active-entries">
+      {/* Pending Approvals - Manager Only */}
+      {workspaceRole !== 'staff' && timeEntries.filter(e => e.approvalStatus === 'pending').length > 0 && (
+        <Card data-testid="card-pending-approvals">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-base sm:text-lg">Pending Approvals</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  {timeEntries.filter(e => e.approvalStatus === 'pending').length} time {timeEntries.filter(e => e.approvalStatus === 'pending').length === 1 ? 'entry' : 'entries'} waiting for approval
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 p-3 sm:p-6">
+            {timeEntries.filter(e => e.approvalStatus === 'pending').map(entry => {
+              const employee = employees.find(e => e.id === entry.employeeId);
+              const client = clients.find(c => c.id === entry.clientId);
+              const hoursWorked = entry.clockOut 
+                ? ((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / 3600000).toFixed(2)
+                : '0.00';
+              
+              return (
+                <Card key={entry.id} className="p-3 sm:p-4" data-testid={`card-pending-entry-${entry.id}`}>
+                  <div className="space-y-3">
+                    {/* Employee Info */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="font-semibold text-sm">{employee?.firstName} {employee?.lastName}</span>
+                          <Badge variant="secondary" className="text-xs">Pending Review</Badge>
+                        </div>
+                        {client && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Building2 className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{client.companyName || `${client.firstName} ${client.lastName}`}</span>
+                          </div>
+                        )}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                          <span>{format(new Date(entry.clockIn), "MMM d, h:mm a")}</span>
+                          <span className="hidden sm:inline">→</span>
+                          <span>{entry.clockOut ? format(new Date(entry.clockOut), "h:mm a") : 'In Progress'}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="font-semibold">{hoursWorked}h</span>
+                        </div>
+                        {entry.notes && (
+                          <p className="text-xs text-muted-foreground italic">{entry.notes}</p>
+                        )}
+                        
+                        {/* Verification Badges */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {entry.gpsLatitude && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <MapPin className="h-3 w-3" />
+                              GPS
+                            </Badge>
+                          )}
+                          {entry.clockInPhotoUrl && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Camera className="h-3 w-3" />
+                              Photo
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Approval Actions */}
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        onClick={() => approveMutation.mutate(entry.id)}
+                        disabled={approveMutation.isPending}
+                        variant="default"
+                        size="sm"
+                        className="flex-1"
+                        data-testid={`button-approve-${entry.id}`}
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        {approveMutation.isPending ? "Approving..." : "Approve"}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setRejectingEntryId(entry.id);
+                          setRejectDialogOpen(true);
+                        }}
+                        disabled={rejectMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        data-testid={`button-reject-${entry.id}`}
+                      >
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Team Monitoring - Manager Only */}
+      {workspaceRole !== 'staff' && activeEmployees.length > 0 && (
+        <Card data-testid="card-active-team">
           <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-base sm:text-lg break-anywhere">Active Time Tracking</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">{activeTimeEntries.length} employee(s) currently clocked in</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Active Team</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  {activeEmployees.length} {activeEmployees.length === 1 ? 'employee' : 'employees'} currently clocked in
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
-            {activeTimeEntries.map(entry => {
-              const employee = employees.find(e => e.id === entry.employeeId);
-              const client = clients.find(c => c.id === entry.clientId);
-              const elapsed = Math.floor((now - new Date(entry.clockIn).getTime()) / 1000 / 60);
-              const hours = Math.floor(elapsed / 60);
-              const minutes = elapsed % 60;
+          <CardContent className="space-y-3 p-3 sm:p-6">
+            {activeEmployees.map((entry: any) => {
+              const hoursElapsed = entry.hoursSoFar ? parseFloat(entry.hoursSoFar).toFixed(2) : '0.00';
               
               return (
-                <Card key={entry.id} className="p-3 sm:p-4 hover-elevate touch-friendly" data-testid={`card-active-entry-${entry.id}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-semibold text-sm sm:text-base break-anywhere">{employee?.firstName} {employee?.lastName}</span>
-                        <Badge variant="outline" className="text-xs">Active</Badge>
+                <Card key={entry.entryId} className="p-3 sm:p-4" data-testid={`card-active-team-${entry.entryId}`}>
+                  <div className="space-y-3">
+                    {/* Employee Info */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="font-semibold text-sm">{entry.employeeName}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {entry.isOnBreak ? 'On Break' : 'Working'}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 shrink-0" />
+                            <span>Started: {format(new Date(entry.clockIn), "h:mm a")}</span>
+                          </div>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="font-mono font-semibold">{hoursElapsed}h elapsed</span>
+                        </div>
+                        
+                        {/* Verification Status */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <MapPin className="h-3 w-3" />
+                            GPS Verified
+                          </Badge>
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Camera className="h-3 w-3" />
+                            Photo Captured
+                          </Badge>
+                        </div>
                       </div>
-                      {client && (
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                          <Building2 className="h-4 w-4 shrink-0" />
-                          <span className="truncate-1">{client.companyName || `${client.firstName} ${client.lastName}`}</span>
-                        </div>
-                      )}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 shrink-0" />
-                          <span className="whitespace-nowrap">Started: {format(new Date(entry.clockIn), "MMM d, h:mm a")}</span>
-                        </div>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="font-mono whitespace-nowrap">{hours}h {minutes}m elapsed</span>
-                      </div>
-                      {entry.hourlyRate && (
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                          <DollarSign className="h-4 w-4 shrink-0" />
-                          <span className="break-anywhere">${entry.hourlyRate}/hr • Estimated: ${(parseFloat(entry.hourlyRate) * (elapsed / 60)).toFixed(2)}</span>
-                        </div>
-                      )}
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="w-full sm:w-auto min-h-[44px] shrink-0"
-                      onClick={() => clockOutMutation.mutate({ timeEntryId: entry.id })}
-                      disabled={clockOutMutation.isPending}
-                      data-testid={`button-clock-out-${entry.id}`}
-                    >
-                      <Square className="mr-2 h-4 w-4" />
-                      <span className="whitespace-nowrap">Clock Out</span>
-                    </Button>
+
+                    {/* Manager Actions */}
+                    <div className="flex gap-2 pt-2 border-t">
+                      {entry.isOnBreak && (
+                        <Button
+                          onClick={() => endBreakMutation.mutate()}
+                          disabled={endBreakMutation.isPending}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          data-testid={`button-end-break-${entry.entryId}`}
+                        >
+                          End Break
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => clockOutMutation.mutate({ timeEntryId: entry.entryId })}
+                        disabled={clockOutMutation.isPending}
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                        data-testid={`button-force-clock-out-${entry.entryId}`}
+                      >
+                        <Square className="mr-2 h-4 w-4" />
+                        Clock Out
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );
@@ -1025,6 +1384,62 @@ export default function TimeTracking() {
           </CardContent>
         </Card>
       )}
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Time Entry</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this time entry. The employee will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">Rejection Reason *</Label>
+              <Textarea
+                id="reject-reason"
+                placeholder="Enter reason for rejection (required)"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={4}
+                data-testid="input-reject-reason"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectReason("");
+                setRejectingEntryId(null);
+              }}
+              data-testid="button-cancel-reject"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (rejectingEntryId && rejectReason.trim()) {
+                  rejectMutation.mutate({ 
+                    timeEntryId: rejectingEntryId, 
+                    reason: rejectReason 
+                  });
+                  setRejectDialogOpen(false);
+                  setRejectReason("");
+                  setRejectingEntryId(null);
+                }
+              }}
+              disabled={!rejectReason.trim() || rejectMutation.isPending}
+              data-testid="button-confirm-reject"
+            >
+              {rejectMutation.isPending ? "Rejecting..." : "Reject Entry"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );
