@@ -4088,18 +4088,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
       }
 
-      // Get all employees for this workspace
-      const employees = await storage.getEmployeesByWorkspace(workspaceId);
-      if (employees.length === 0) {
-        return res.status(400).json({ message: "No employees available for assignment" });
+      // STEP 1: Score employees using weighted algorithm
+      const { scoreEmployeesForShift, getTopCandidates, formatCandidatesForAI } = await import('./services/automation/employeeScoring');
+      
+      console.log(`[AI Fill] Scoring employees for shift ${shiftId}...`);
+      
+      const scoredCandidates = await scoreEmployeesForShift(workspaceId, {
+        shiftId,
+        requiredSkills: shift.requiredSkills || [],
+        requiredCertifications: shift.requiredCertifications || [],
+        maxDistance: 50,
+        maxPayRate: shift.maxPayRate ? parseFloat(shift.maxPayRate) : undefined,
+      });
+
+      if (scoredCandidates.length === 0) {
+        return res.status(400).json({ 
+          message: "No qualified employees available for this shift",
+          details: "All employees filtered out due to availability, credentials, or distance constraints"
+        });
       }
 
-      // Use Smart AI to find best employee
+      console.log(`[AI Fill] Found ${scoredCandidates.length} qualified candidates`);
+      
+      // STEP 2: Get top 5 candidates for Gemini review
+      const topCandidates = getTopCandidates(scoredCandidates, 5);
+      console.log(`[AI Fill] Top candidate scores:`, topCandidates.map(c => ({
+        name: `${c.firstName} ${c.lastName}`,
+        score: (c.compositeScore * 100).toFixed(1) + '%'
+      })));
+
+      // STEP 3: Use Smart AI to find best employee from top candidates
+      // CRITICAL: Use fullEmployee from scored candidates to ensure only vetted employees reach Gemini
+      // This prevents unqualified employees from slipping through after hard filters were applied
       const { scheduleSmartAI } = await import('./services/scheduleSmartAI');
       
+      // Extract vetted employee objects from scored candidates (NO re-fetching!)
+      const vettedEmployees = topCandidates.map(c => c.fullEmployee);
+
       const result = await scheduleSmartAI({
         openShifts: [shift],
-        availableEmployees: employees,
+        availableEmployees: vettedEmployees,
         workspaceId,
         userId: req.user!.id,
         constraints: {
@@ -4119,7 +4147,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             penalizeLateHistory: true,
             considerAbsenteeismRisk: true,
           }
-        }
+        },
+        // Pass scoring context to Gemini
+        scoringContext: formatCandidatesForAI(topCandidates)
       });
 
       // Check if AI found a suitable assignment
@@ -4196,6 +4226,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error in AI Fill:", error);
       res.status(500).json({ message: error.message || "Failed to auto-assign shift" });
+    }
+  });
+
+  // ============================================================================
+  // SCHEDULEOS™ FILL REQUEST MARKETPLACE - External Contractor Matching
+  // ============================================================================
+
+  app.post('/api/shifts/:id/fill-request', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const shiftId = req.params.id;
+      const userId = req.user!.id;
+
+      // Get the open shift
+      const shift = await storage.getShift(shiftId, workspaceId);
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      // Verify it's an open shift
+      if (shift.employeeId || shift.status !== 'open') {
+        return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
+      }
+
+      console.log(`[Fill Request] Searching contractor pool for shift ${shiftId}...`);
+
+      // Create shift request record
+      const shiftRequest = await db.insert(shiftRequests).values({
+        workspaceId,
+        shiftId,
+        requestReason: req.body.reason || "No qualified internal employees available",
+        requiredSkills: shift.requiredSkills || [],
+        preferredSkills: req.body.preferredSkills || [],
+        maxPayRate: shift.maxPayRate || req.body.maxPayRate || "0",
+        maxDistance: req.body.maxDistance || 50,
+        status: "searching",
+        createdBy: userId,
+      }).returning();
+
+      // Search contractor pool
+      const contractors = await db
+        .select()
+        .from(contractorPool)
+        .where(
+          and(
+            eq(contractorPool.isActive, true),
+            gte(contractorPool.maxDistanceWilling, req.body.maxDistance || 50)
+          )
+        );
+
+      if (contractors.length === 0) {
+        await db.update(shiftRequests)
+          .set({ status: "no_matches", completedAt: new Date() })
+          .where(eq(shiftRequests.id, shiftRequest[0].id));
+
+        return res.status(404).json({
+          message: "No contractors found matching criteria",
+          shiftRequestId: shiftRequest[0].id
+        });
+      }
+
+      console.log(`[Fill Request] Found ${contractors.length} potential contractors`);
+
+      // Score contractors (simplified scoring for now)
+      const scoredContractors = contractors.map(contractor => {
+        let score = 0.5; // Base score
+
+        // Distance bonus
+        const maxDist = req.body.maxDistance || 50;
+        if (contractor.maxDistanceWilling && contractor.maxDistanceWilling >= maxDist) {
+          score += 0.2;
+        }
+
+        // Pay rate bonus (lower rate is better for margin)
+        const maxPay = parseFloat(shift.maxPayRate || req.body.maxPayRate || "100");
+        const contractorRate = parseFloat(contractor.minHourlyRate);
+        if (contractorRate <= maxPay) {
+          score += 0.15;
+        }
+
+        // Last minute availability
+        if (contractor.availableForLastMinute) {
+          score += 0.15;
+        }
+
+        return {
+          contractor,
+          score: Math.min(score, 1.0),
+          matchReasons: [
+            contractor.availableForLastMinute && "Available for last-minute shifts",
+            contractorRate <= maxPay && `Rate within budget ($${contractorRate}/hr)`,
+            contractor.maxDistanceWilling >= maxDist && `Willing to travel (${contractor.maxDistanceWilling} miles)`,
+          ].filter(Boolean) as string[]
+        };
+      });
+
+      // Sort by score
+      scoredContractors.sort((a, b) => b.score - a.score);
+
+      // Send offers to top 3 contractors
+      const topContractors = scoredContractors.slice(0, 3);
+      const offers = [];
+
+      for (const { contractor, score, matchReasons } of topContractors) {
+        const offeredRate = parseFloat(contractor.minHourlyRate) * 1.1; // 10% markup
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        const offer = await db.insert(shiftOffers).values({
+          shiftRequestId: shiftRequest[0].id,
+          shiftId,
+          contractorId: contractor.id,
+          offeredPayRate: offeredRate.toString(),
+          matchScore: score.toString(),
+          matchReasons: matchReasons,
+          status: "pending",
+          expiresAt,
+        }).returning();
+
+        offers.push({
+          offerId: offer[0].id,
+          contractorName: `${contractor.firstName} ${contractor.lastName}`,
+          offeredRate,
+          matchScore: (score * 100).toFixed(1) + '%',
+          matchReasons,
+        });
+
+        console.log(`[Fill Request] Sent offer to ${contractor.firstName} ${contractor.lastName} - Score: ${(score * 100).toFixed(1)}%`);
+      }
+
+      // Update shift request with offer count
+      await db.update(shiftRequests)
+        .set({
+          status: "offers_sent",
+          offersCount: offers.length
+        })
+        .where(eq(shiftRequests.id, shiftRequest[0].id));
+
+      res.json({
+        success: true,
+        shiftRequestId: shiftRequest[0].id,
+        offersCount: offers.length,
+        offers,
+        message: `Sent ${offers.length} offers to qualified contractors`
+      });
+    } catch (error: any) {
+      console.error("Error creating fill request:", error);
+      res.status(500).json({ message: error.message || "Failed to create fill request" });
     }
   });
 
