@@ -14,7 +14,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2 } from 'lucide-react';
+import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -115,8 +115,10 @@ export function FloatingSupportChat() {
     }
   }, [state]);
   
-  // Viewport bounds clamping on resize
+  // Viewport bounds clamping on resize (browser only)
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const handleResize = () => {
       const maxX = window.innerWidth - 400;
       const maxY = window.innerHeight - 600;
@@ -150,7 +152,7 @@ export function FloatingSupportChat() {
   };
   
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current || typeof window === 'undefined') return;
     
     const newX = Math.max(0, Math.min(e.clientX - dragStartRef.current.x, window.innerWidth - 400));
     const newY = Math.max(0, Math.min(e.clientY - dragStartRef.current.y, window.innerHeight - 100));
@@ -171,14 +173,20 @@ export function FloatingSupportChat() {
   // Smart routing handler (role-based)
   const handleChatClick = () => {
     if (!user) {
-      // Guest: Stay in FloatingSupportChat AI flow
+      // Guest: Open FloatingSupportChat AI flow
       setState(prev => ({ ...prev, isOpen: true, isMinimized: false }));
-    } else if (platformRole === 'root_admin' || platformRole === 'support' || 
-               platformRole === 'support_manager' || platformRole === 'support_agent') {
-      // Support roles: Navigate to dashboard
+    } else {
+      // Authenticated users: Open chat bubble (support staff and regular users can access their respective dashboards via header navigation)
+      setState(prev => ({ ...prev, isOpen: true, isMinimized: false }));
+    }
+  };
+  
+  // Navigation to dashboards (separate from chat bubble open)
+  const handleNavigateToDashboard = () => {
+    if (platformRole === 'root_admin' || platformRole === 'support' || 
+        platformRole === 'support_manager' || platformRole === 'support_agent') {
       setLocation('/support/chatrooms');
     } else {
-      // Regular users: Navigate to org chatroom
       setLocation('/org-chat');
     }
   };
@@ -331,6 +339,21 @@ export function FloatingSupportChat() {
             </p>
           </div>
           <div className="flex gap-1">
+            {user && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigateToDashboard();
+                }}
+                title={platformRole && ['root_admin', 'support', 'support_manager', 'support_agent'].includes(platformRole) ? "Go to Support Dashboard" : "Go to Team Chat"}
+                data-testid="button-navigate-dashboard"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
