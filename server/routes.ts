@@ -68,7 +68,7 @@ import { HelpOSAI } from './helpos-ai';
 import { helposService } from './services/helposService';
 import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
-import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, type AuthenticatedRequest } from "./rbac";
+import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { 
   insertWorkspaceSchema,
@@ -8286,11 +8286,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ANALYTICS ROUTES
   // ============================================================================
   
-  app.get('/api/analytics', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/analytics', requireAuth, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
-      const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
+      const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
+        return res.status(404).json({ message: "No workspace selected" });
+      }
+      
+      const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
       }
@@ -13101,15 +13105,13 @@ Keep it professional, actionable, and under 250 words.`;
   });
 
   // Universal analytics stats for dashboard (works for both workspace and platform users)
-  app.get('/api/analytics/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/analytics/stats', requireAuth, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
     try {
       const { getAnalyticsStats } = await import("./services/analyticsStats");
       const bustCache = req.query.bust === 'true';
       
-      // FIXED: Always use currentWorkspaceId for consistency with /api/clients and /api/employees
-      // Platform staff can access workspace data like regular users
-      // To see platform-wide stats, use /api/platform/stats instead
-      const workspaceId = (req.user as any)?.currentWorkspaceId || null;
+      // Use workspaceId from middleware - same resolution as /api/clients for consistency
+      const workspaceId = req.workspaceId || null;
       
       const stats = await getAnalyticsStats(workspaceId, bustCache);
       res.json(stats);

@@ -1,0 +1,1455 @@
+# AutoForce™ Universal AI Brain Architecture
+## Complete Specification for Replit
+
+---
+
+## 🧠 SYSTEM OVERVIEW
+
+**The Universal AI Brain is the central intelligence that:**
+- Orchestrates ALL automation logic, reasoning, and decision-making
+- Maintains self-awareness of every task, workflow, and data point across the entire platform
+- Works universally for ALL roles (employees, managers, clients, org leaders, admins)
+- Proactively monitors, advises, and notifies users through HelpOS Bot
+- Keeps everyone in the loop with contextual, role-appropriate communications
+
+---
+
+## 🏗️ TECHNICAL ARCHITECTURE
+
+### Core AI Brain Structure
+```
+/server/ai-brain/
+├── orchestrator.js                # Central controller for all AI operations
+├── universal-context.js           # Maintains awareness of entire system state
+├── reasoning-engine.js            # Logic and decision-making
+├── workflow-manager.js            # Coordinates all automation workflows
+├── role-awareness.js              # Understands user roles and permissions
+├── proactive-monitor.js           # Scans for issues, opportunities, alerts
+├── helpos-bot.js                  # Conversational AI assistant
+└── notification-dispatcher.js     # Smart notification delivery
+
+/server/ai-brain/monitors/
+├── credential-monitor.js          # Tracks expiring licenses, IDs, creds
+├── contract-monitor.js            # Tracks expiring contracts/agreements
+├── shift-monitor.js               # Detects open shifts, scheduling gaps
+├── security-monitor.js            # Password expiry, security alerts
+├── compliance-monitor.js          # Regulatory deadlines, requirements
+├── performance-monitor.js         # System health, anomalies
+└── user-activity-monitor.js       # User engagement, onboarding progress
+
+/server/ai-brain/advisors/
+├── shift-advisor.js               # "Open shifts match your criteria"
+├── compliance-advisor.js          # "Your license expires in 30 days"
+├── security-advisor.js            # "Time to update your password"
+├── opportunity-advisor.js         # "You're eligible for overtime"
+├── system-advisor.js              # "New features available"
+└── workflow-advisor.js            # "Your approval is needed"
+```
+
+---
+
+## 📊 DATABASE SCHEMA FOR AI BRAIN
+
+### 1. Universal Context Store
+```sql
+-- Maintains complete awareness of system state
+CREATE TABLE ai_context (
+  id UUID PRIMARY KEY,
+  context_type VARCHAR(50), -- 'user', 'org', 'workflow', 'task', 'schedule', etc.
+  entity_id UUID,
+  context_data JSONB,       -- Flexible storage for any context
+  last_updated TIMESTAMP,
+  priority_level INT,       -- 1-5, how important is this context
+  INDEX (context_type, entity_id)
+);
+
+-- Example context entries:
+{
+  "context_type": "user",
+  "entity_id": "user-123",
+  "context_data": {
+    "role": "employee",
+    "shift_preferences": ["night", "weekend"],
+    "skills": ["forklift", "inventory"],
+    "certifications": [
+      {"type": "forklift_license", "expires": "2025-03-15"}
+    ],
+    "current_assignments": ["client-abc"],
+    "notification_preferences": {"channel": "sms", "frequency": "important_only"}
+  }
+}
+```
+
+### 2. Monitoring Tasks Registry
+```sql
+-- AI Brain's awareness of what to monitor
+CREATE TABLE monitoring_tasks (
+  id UUID PRIMARY KEY,
+  monitor_type VARCHAR(100),        -- 'credential_expiry', 'contract_expiry', 'open_shifts', etc.
+  target_entity_type VARCHAR(50),   -- 'user', 'org', 'client', 'contract', etc.
+  target_entity_id UUID,
+  monitor_config JSONB,             -- Configuration for this monitoring task
+  check_frequency VARCHAR(50),      -- 'hourly', 'daily', 'weekly', 'realtime'
+  last_checked TIMESTAMP,
+  next_check_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP
+);
+
+-- Example monitoring tasks:
+INSERT INTO monitoring_tasks VALUES
+(uuid(), 'credential_expiry', 'user', 'user-123', 
+ '{"credential_types": ["license", "certification", "id"], "warning_days": 30}',
+ 'daily', NOW(), NOW() + INTERVAL '1 day', true, NOW()),
+
+(uuid(), 'contract_expiry', 'org', 'org-456',
+ '{"contract_types": ["employment", "client_agreement"], "warning_days": 60}',
+ 'weekly', NOW(), NOW() + INTERVAL '7 days', true, NOW()),
+
+(uuid(), 'open_shifts', 'user', 'user-123',
+ '{"shift_preferences": ["night"], "max_distance_miles": 20}',
+ 'hourly', NOW(), NOW() + INTERVAL '1 hour', true, NOW());
+```
+
+### 3. Proactive Alerts Queue
+```sql
+-- What AI Brain discovered and needs to communicate
+CREATE TABLE proactive_alerts (
+  id UUID PRIMARY KEY,
+  alert_type VARCHAR(100),          -- 'credential_expiring', 'shift_available', etc.
+  severity VARCHAR(20),             -- 'info', 'warning', 'urgent', 'critical'
+  target_role VARCHAR(50),          -- 'employee', 'manager', 'org_leader', 'admin'
+  target_user_id UUID,
+  org_id UUID,
+  alert_title VARCHAR(255),
+  alert_message TEXT,
+  alert_data JSONB,                 -- Structured data about the alert
+  recommended_action VARCHAR(500),  -- What user should do
+  action_url VARCHAR(500),          -- Deep link to take action
+  created_at TIMESTAMP,
+  expires_at TIMESTAMP,             -- Some alerts are time-sensitive
+  is_read BOOLEAN DEFAULT false,
+  is_dismissed BOOLEAN DEFAULT false,
+  was_acted_upon BOOLEAN DEFAULT false
+);
+
+-- Example alerts:
+{
+  "alert_type": "license_expiring",
+  "severity": "warning",
+  "target_role": "employee",
+  "target_user_id": "user-123",
+  "alert_title": "Your Forklift License Expires Soon",
+  "alert_message": "Hi John! I noticed your forklift certification expires in 25 days (March 15, 2025). You're currently scheduled for shifts requiring this certification.",
+  "recommended_action": "Schedule a renewal appointment or upload your renewed license",
+  "action_url": "/profile/certifications"
+}
+```
+
+### 4. Notification History
+```sql
+-- Track all communications from AI Brain
+CREATE TABLE notification_history (
+  id UUID PRIMARY KEY,
+  user_id UUID,
+  org_id UUID,
+  notification_type VARCHAR(100),
+  channel VARCHAR(50),              -- 'in_app', 'email', 'sms', 'push', 'slack'
+  title VARCHAR(255),
+  message TEXT,
+  sent_at TIMESTAMP,
+  delivered_at TIMESTAMP,
+  read_at TIMESTAMP,
+  clicked_at TIMESTAMP,
+  was_helpful BOOLEAN,              -- User feedback
+  related_alert_id UUID REFERENCES proactive_alerts(id)
+);
+```
+
+### 5. HelpOS Bot Conversations
+```sql
+-- Track conversations with HelpOS Bot
+CREATE TABLE helpos_conversations (
+  id UUID PRIMARY KEY,
+  user_id UUID,
+  org_id UUID,
+  started_at TIMESTAMP,
+  last_message_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  conversation_context JSONB,       -- Maintain context throughout chat
+  resolved BOOLEAN DEFAULT false,
+  escalated_to_human BOOLEAN DEFAULT false
+);
+
+CREATE TABLE helpos_messages (
+  id UUID PRIMARY KEY,
+  conversation_id UUID REFERENCES helpos_conversations(id),
+  sender VARCHAR(20),               -- 'user' or 'bot'
+  message TEXT,
+  message_data JSONB,               -- Structured data, buttons, etc.
+  sent_at TIMESTAMP,
+  was_helpful BOOLEAN               -- User can rate each response
+);
+```
+
+---
+
+## 🤖 AI BRAIN ORCHESTRATOR IMPLEMENTATION
+
+### Core Orchestrator (orchestrator.js)
+```javascript
+/**
+ * Universal AI Brain Orchestrator
+ * Central intelligence that coordinates all AI operations
+ */
+
+const { Gemini } = require('./gemini-api');
+const UniversalContext = require('./universal-context');
+const WorkflowManager = require('./workflow-manager');
+const ProactiveMonitor = require('./proactive-monitor');
+const NotificationDispatcher = require('./notification-dispatcher');
+const HelpOSBot = require('./helpos-bot');
+
+class AIBrainOrchestrator {
+  constructor() {
+    this.gemini = new Gemini();
+    this.context = new UniversalContext();
+    this.workflows = new WorkflowManager();
+    this.monitor = new ProactiveMonitor();
+    this.notifications = new NotificationDispatcher();
+    this.helpOS = new HelpOSBot();
+    
+    this.initialize();
+  }
+
+  async initialize() {
+    console.log('🧠 AutoForce AI Brain initializing...');
+    
+    // Load complete system context
+    await this.context.loadFullContext();
+    
+    // Start monitoring loops
+    await this.startMonitoring();
+    
+    // Initialize HelpOS Bot
+    await this.helpOS.initialize();
+    
+    console.log('✅ AI Brain online and aware');
+  }
+
+  /**
+   * PROACTIVE MONITORING
+   * Continuously scans for things users need to know
+   */
+  async startMonitoring() {
+    // Run different monitors at different frequencies
+    
+    // REALTIME - Critical immediate alerts
+    setInterval(() => this.monitor.checkCriticalAlerts(), 60000); // Every 1 min
+    
+    // HOURLY - Time-sensitive opportunities
+    setInterval(() => this.monitor.checkHourlyTasks(), 3600000); // Every 1 hour
+    
+    // DAILY - Routine monitoring
+    setInterval(() => this.monitor.checkDailyTasks(), 86400000); // Every 24 hours
+    
+    // WEEKLY - Compliance and maintenance
+    setInterval(() => this.monitor.checkWeeklyTasks(), 604800000); // Every 7 days
+  }
+
+  /**
+   * UNIVERSAL AWARENESS
+   * AI Brain knows about everything in the system
+   */
+  async makeDecision(request) {
+    // 1. Load full context about the request
+    const fullContext = await this.context.getRelevantContext(request);
+    
+    // 2. Use Gemini to reason about the decision
+    const decision = await this.gemini.analyze({
+      request: request,
+      context: fullContext,
+      constraints: this.getConstraints(request),
+      role: request.userRole,
+      org: request.orgId
+    });
+    
+    // 3. Check if approval needed
+    if (this.requiresApproval(decision)) {
+      await this.workflows.createApprovalRequest(decision);
+      await this.notifyApprovers(decision);
+    } else {
+      // 4. Execute if approved or auto-approved
+      await this.executeDecision(decision);
+    }
+    
+    // 5. Learn from the decision
+    await this.context.updateFromDecision(decision);
+    
+    return decision;
+  }
+
+  /**
+   * ROLE-AWARE COMMUNICATION
+   * Different messages for different roles
+   */
+  async communicateToRole(role, message) {
+    const roleConfig = {
+      employee: {
+        tone: 'friendly_helpful',
+        detail_level: 'simple',
+        call_to_action: true
+      },
+      manager: {
+        tone: 'professional_actionable',
+        detail_level: 'moderate',
+        show_metrics: true
+      },
+      org_leader: {
+        tone: 'executive_concise',
+        detail_level: 'strategic',
+        show_business_impact: true
+      },
+      admin: {
+        tone: 'technical_detailed',
+        detail_level: 'comprehensive',
+        show_system_details: true
+      }
+    };
+    
+    const config = roleConfig[role] || roleConfig.employee;
+    
+    return await this.gemini.formatMessage({
+      content: message,
+      ...config
+    });
+  }
+
+  /**
+   * CROSS-SERVICE AWARENESS
+   * AI knows how actions in one area affect others
+   */
+  async analyzeImpact(action) {
+    const impacts = {
+      scheduling: [],
+      payroll: [],
+      invoicing: [],
+      compliance: [],
+      users: []
+    };
+    
+    // Example: If scheduling a shift...
+    if (action.type === 'schedule_shift') {
+      // Check payroll impact
+      const overtimeRisk = await this.context.checkOvertimeRisk(
+        action.employee_id, 
+        action.shift_hours
+      );
+      if (overtimeRisk) {
+        impacts.payroll.push({
+          type: 'overtime',
+          amount: overtimeRisk.estimated_overtime_cost,
+          warning: true
+        });
+      }
+      
+      // Check invoicing impact
+      const billableHours = await this.context.getClientBillingRate(
+        action.client_id
+      );
+      impacts.invoicing.push({
+        type: 'billable_hours',
+        amount: action.shift_hours * billableHours.rate
+      });
+      
+      // Check compliance impact
+      const restPeriod = await this.context.checkRestPeriodCompliance(
+        action.employee_id,
+        action.shift_start
+      );
+      if (!restPeriod.compliant) {
+        impacts.compliance.push({
+          type: 'rest_period_violation',
+          severity: 'high',
+          details: restPeriod.violation
+        });
+      }
+    }
+    
+    return impacts;
+  }
+}
+
+module.exports = AIBrainOrchestrator;
+```
+
+---
+
+## 🔍 PROACTIVE MONITORING SYSTEM
+
+### Proactive Monitor (proactive-monitor.js)
+```javascript
+/**
+ * Proactive Monitoring System
+ * AI Brain constantly scans for things users need to know
+ */
+
+class ProactiveMonitor {
+  constructor(aiBrain) {
+    this.brain = aiBrain;
+    this.db = aiBrain.db;
+  }
+
+  /**
+   * CRITICAL ALERTS - Check every minute
+   */
+  async checkCriticalAlerts() {
+    await Promise.all([
+      this.checkSystemFailures(),
+      this.checkSecurityThreats(),
+      this.checkUrgentApprovals(),
+      this.checkEmergencyContacts()
+    ]);
+  }
+
+  /**
+   * HOURLY TASKS
+   */
+  async checkHourlyTasks() {
+    await Promise.all([
+      this.checkOpenShifts(),
+      this.checkShiftCoverageGaps(),
+      this.checkPendingTimesheets(),
+      this.checkUnassignedTasks()
+    ]);
+  }
+
+  /**
+   * DAILY TASKS
+   */
+  async checkDailyTasks() {
+    await Promise.all([
+      this.checkExpiringCredentials(),
+      this.checkExpiringContracts(),
+      this.checkPasswordExpiry(),
+      this.checkMissingDocuments(),
+      this.checkComplianceDeadlines(),
+      this.checkPayrollReadiness(),
+      this.checkOverdueInvoices()
+    ]);
+  }
+
+  /**
+   * WEEKLY TASKS
+   */
+  async checkWeeklyTasks() {
+    await Promise.all([
+      this.checkUserEngagement(),
+      this.checkSystemHealth(),
+      this.checkDataQuality(),
+      this.checkSecurityUpdates(),
+      this.checkFeatureAdoption()
+    ]);
+  }
+
+  /**
+   * OPEN SHIFTS MATCHING USER CRITERIA
+   */
+  async checkOpenShifts() {
+    // Get all users who want shift notifications
+    const users = await this.db.query(`
+      SELECT u.*, u.shift_preferences
+      FROM users u
+      WHERE u.notification_preferences->>'open_shifts' = 'true'
+      AND u.is_active = true
+    `);
+
+    for (const user of users) {
+      // Find open shifts matching their criteria
+      const matchingShifts = await this.db.query(`
+        SELECT s.*
+        FROM shifts s
+        WHERE s.status = 'open'
+        AND s.required_skills <@ $1  -- User has required skills
+        AND s.shift_type = ANY($2)   -- Matches preferences (day/night/weekend)
+        AND s.start_time > NOW()
+        ORDER BY s.start_time
+        LIMIT 10
+      `, [user.skills, user.shift_preferences.types]);
+
+      if (matchingShifts.length > 0) {
+        await this.createAlert({
+          type: 'shifts_available',
+          userId: user.id,
+          severity: 'info',
+          title: `${matchingShifts.length} Open Shifts Match Your Preferences`,
+          message: this.formatShiftMessage(user, matchingShifts),
+          data: { shifts: matchingShifts },
+          actionUrl: '/shifts/available'
+        });
+      }
+    }
+  }
+
+  formatShiftMessage(user, shifts) {
+    const shiftsList = shifts.slice(0, 3).map(s => 
+      `• ${s.shift_type} shift on ${s.start_date} at ${s.location}`
+    ).join('\n');
+    
+    const moreCount = shifts.length > 3 ? ` and ${shifts.length - 3} more` : '';
+    
+    return `Hi ${user.first_name}! I found shifts that match your preferences:\n\n${shiftsList}${moreCount}\n\nInterested? Claim them before they're filled!`;
+  }
+
+  /**
+   * EXPIRING CREDENTIALS MONITOR
+   */
+  async checkExpiringCredentials() {
+    const expiringCreds = await this.db.query(`
+      SELECT 
+        uc.*,
+        u.first_name,
+        u.role,
+        u.org_id
+      FROM user_credentials uc
+      JOIN users u ON u.id = uc.user_id
+      WHERE uc.expiry_date BETWEEN NOW() AND NOW() + INTERVAL '30 days'
+      AND uc.status = 'active'
+      AND NOT EXISTS (
+        SELECT 1 FROM proactive_alerts pa
+        WHERE pa.alert_type = 'credential_expiring'
+        AND pa.target_user_id = uc.user_id
+        AND pa.alert_data->>'credential_id' = uc.id::text
+        AND pa.created_at > NOW() - INTERVAL '7 days'  -- Don't spam
+      )
+    `);
+
+    for (const cred of expiringCreds) {
+      const daysUntilExpiry = Math.ceil(
+        (new Date(cred.expiry_date) - new Date()) / (1000 * 60 * 60 * 24)
+      );
+
+      await this.createAlert({
+        type: 'credential_expiring',
+        userId: cred.user_id,
+        orgId: cred.org_id,
+        severity: daysUntilExpiry <= 7 ? 'urgent' : 'warning',
+        title: `Your ${cred.credential_type} Expires in ${daysUntilExpiry} Days`,
+        message: `Hi ${cred.first_name}! Your ${cred.credential_type} expires on ${cred.expiry_date}. ${this.getCredentialAdvice(cred)}`,
+        data: { credential_id: cred.id, credential_type: cred.credential_type },
+        recommendedAction: 'Upload renewed credential or schedule renewal',
+        actionUrl: `/profile/credentials/${cred.id}`
+      });
+
+      // Also notify manager if employee is scheduled
+      const scheduledShifts = await this.getUpcomingShiftsRequiringCredential(
+        cred.user_id,
+        cred.credential_type
+      );
+
+      if (scheduledShifts.length > 0) {
+        await this.notifyManager(cred, scheduledShifts, daysUntilExpiry);
+      }
+    }
+  }
+
+  getCredentialAdvice(cred) {
+    const adviceMap = {
+      'drivers_license': 'Visit your local DMV or renew online.',
+      'forklift_certification': 'Contact your training provider for renewal course.',
+      'security_license': 'Check your state licensing board website.',
+      'medical_certification': 'Schedule appointment with approved examiner.'
+    };
+    
+    return adviceMap[cred.credential_type] || 'Please renew before expiration.';
+  }
+
+  /**
+   * EXPIRING CONTRACTS MONITOR
+   */
+  async checkExpiringContracts() {
+    const expiringContracts = await this.db.query(`
+      SELECT 
+        c.*,
+        CASE 
+          WHEN c.contract_type = 'employment' THEN e.first_name || ' ' || e.last_name
+          WHEN c.contract_type = 'client_agreement' THEN cl.company_name
+          WHEN c.contract_type = 'temp_assignment' THEN e.first_name || ' at ' || cl.company_name
+        END as subject_name
+      FROM contracts c
+      LEFT JOIN employees e ON e.id = c.employee_id
+      LEFT JOIN clients cl ON cl.id = c.client_id
+      WHERE c.end_date BETWEEN NOW() AND NOW() + INTERVAL '60 days'
+      AND c.status = 'active'
+      AND c.auto_renew = false
+    `);
+
+    for (const contract of expiringContracts) {
+      const daysUntilExpiry = Math.ceil(
+        (new Date(contract.end_date) - new Date()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Notify org leaders
+      await this.createAlert({
+        type: 'contract_expiring',
+        userId: null, // Goes to org leaders
+        orgId: contract.org_id,
+        severity: daysUntilExpiry <= 14 ? 'urgent' : 'warning',
+        title: `${contract.contract_type} Expires in ${daysUntilExpiry} Days`,
+        message: `${contract.subject_name}'s ${contract.contract_type} expires on ${contract.end_date}. Review and decide on renewal or replacement.`,
+        data: { contract_id: contract.id },
+        recommendedAction: 'Review contract and initiate renewal or termination process',
+        actionUrl: `/contracts/${contract.id}`
+      });
+
+      // If it's an employee contract, also notify the employee
+      if (contract.contract_type === 'employment' && contract.employee_id) {
+        await this.createAlert({
+          type: 'contract_expiring',
+          userId: contract.employee_id,
+          orgId: contract.org_id,
+          severity: 'info',
+          title: `Your Employment Contract Ends Soon`,
+          message: `Hi! Your current employment agreement ends on ${contract.end_date}. Your manager will reach out to discuss renewal.`,
+          data: { contract_id: contract.id },
+          actionUrl: `/profile/contracts`
+        });
+      }
+    }
+  }
+
+  /**
+   * PASSWORD EXPIRY MONITOR
+   */
+  async checkPasswordExpiry() {
+    const usersNeedingPasswordUpdate = await this.db.query(`
+      SELECT u.*
+      FROM users u
+      WHERE u.password_last_changed < NOW() - INTERVAL '90 days'
+      AND u.is_active = true
+      AND NOT EXISTS (
+        SELECT 1 FROM proactive_alerts pa
+        WHERE pa.alert_type = 'password_expiry'
+        AND pa.target_user_id = u.id
+        AND pa.created_at > NOW() - INTERVAL '7 days'
+      )
+    `);
+
+    for (const user of usersNeedingPasswordUpdate) {
+      const daysSinceChange = Math.floor(
+        (new Date() - new Date(user.password_last_changed)) / (1000 * 60 * 60 * 24)
+      );
+
+      await this.createAlert({
+        type: 'password_expiry',
+        userId: user.id,
+        severity: daysSinceChange > 120 ? 'urgent' : 'warning',
+        title: `Time to Update Your Password`,
+        message: `Hi ${user.first_name}! It's been ${daysSinceChange} days since you changed your password. For security, please update it now.`,
+        recommendedAction: 'Change your password',
+        actionUrl: '/settings/security'
+      });
+    }
+  }
+
+  /**
+   * CREATE ALERT
+   */
+  async createAlert(alert) {
+    // Insert into proactive_alerts table
+    const alertId = await this.db.insert('proactive_alerts', {
+      alert_type: alert.type,
+      severity: alert.severity,
+      target_role: alert.role || null,
+      target_user_id: alert.userId || null,
+      org_id: alert.orgId,
+      alert_title: alert.title,
+      alert_message: alert.message,
+      alert_data: alert.data,
+      recommended_action: alert.recommendedAction,
+      action_url: alert.actionUrl,
+      created_at: new Date(),
+      expires_at: alert.expiresAt || null
+    });
+
+    // Dispatch notification via HelpOS Bot
+    await this.brain.helpOS.sendProactiveNotification(alertId, alert);
+
+    return alertId;
+  }
+}
+
+module.exports = ProactiveMonitor;
+```
+
+---
+
+## 💬 HELPOS BOT IMPLEMENTATION
+
+### HelpOS Bot (helpos-bot.js)
+```javascript
+/**
+ * HelpOS Bot - Conversational AI Assistant
+ * Friendly AI that proactively helps users
+ */
+
+const { Gemini } = require('./gemini-api');
+
+class HelpOSBot {
+  constructor(aiBrain) {
+    this.brain = aiBrain;
+    this.gemini = new Gemini();
+    this.db = aiBrain.db;
+  }
+
+  /**
+   * SEND PROACTIVE NOTIFICATION
+   * HelpOS Bot delivers alerts in a friendly way
+   */
+  async sendProactiveNotification(alertId, alert) {
+    const user = await this.db.getUserById(alert.userId);
+    const userPreferences = user.notification_preferences;
+
+    // Format message based on user's role and tone preferences
+    const formattedMessage = await this.formatMessage({
+      user: user,
+      alert: alert,
+      tone: this.getToneForSeverity(alert.severity)
+    });
+
+    // Determine best channel(s) to send notification
+    const channels = this.selectChannels(alert.severity, userPreferences);
+
+    // Send via each channel
+    for (const channel of channels) {
+      await this.sendViaChannel(channel, user, formattedMessage, alert);
+    }
+
+    // Log notification
+    await this.logNotification(alertId, user, channels, formattedMessage);
+  }
+
+  /**
+   * FORMAT MESSAGE BASED ON CONTEXT
+   */
+  async formatMessage({ user, alert, tone }) {
+    const prompt = `
+You are HelpOS Bot, the friendly AI assistant for AutoForce™. You're reaching out to ${user.first_name} (${user.role}) with an important update.
+
+Alert Type: ${alert.type}
+Severity: ${alert.severity}
+Base Message: ${alert.message}
+Recommended Action: ${alert.recommendedAction}
+
+Format this as a natural, ${tone} notification that:
+1. Addresses ${user.first_name} by name
+2. Clearly explains the situation
+3. Provides specific next steps
+4. Includes a helpful tip or context
+5. Ends with encouragement or appreciation
+6. Matches the tone: ${tone}
+
+Keep it concise (2-3 short paragraphs max).
+`;
+
+    const formatted = await this.gemini.complete(prompt);
+    return formatted;
+  }
+
+  getToneForSeverity(severity) {
+    const tones = {
+      'info': 'friendly and helpful',
+      'warning': 'professional but caring',
+      'urgent': 'direct and action-oriented',
+      'critical': 'urgent but not alarming'
+    };
+    return tones[severity] || 'friendly';
+  }
+
+  /**
+   * CHANNEL SELECTION LOGIC
+   */
+  selectChannels(severity, userPreferences) {
+    const channels = [];
+
+    // In-app notification always
+    channels.push('in_app');
+
+    // Add other channels based on severity and preferences
+    if (severity === 'critical') {
+      channels.push('sms');
+      if (userPreferences.push_enabled) channels.push('push');
+    } else if (severity === 'urgent') {
+      if (userPreferences.sms_for_urgent) channels.push('sms');
+      if (userPreferences.push_enabled) channels.push('push');
+    } else if (severity === 'warning') {
+      if (userPreferences.email_enabled) channels.push('email');
+      if (userPreferences.push_enabled) channels.push('push');
+    } else {
+      // info level
+      if (userPreferences.email_digest) {
+        // Add to daily digest instead
+        channels.push('email_digest');
+      }
+    }
+
+    return channels;
+  }
+
+  /**
+   * SEND VIA SPECIFIC CHANNEL
+   */
+  async sendViaChannel(channel, user, message, alert) {
+    switch (channel) {
+      case 'in_app':
+        await this.sendInApp(user.id, message, alert);
+        break;
+      case 'email':
+        await this.sendEmail(user.email, alert.title, message, alert.actionUrl);
+        break;
+      case 'sms':
+        await this.sendSMS(user.phone, message);
+        break;
+      case 'push':
+        await this.sendPushNotification(user.id, alert.title, message);
+        break;
+      case 'slack':
+        if (user.slack_webhook) {
+          await this.sendSlackMessage(user.slack_webhook, message);
+        }
+        break;
+    }
+  }
+
+  async sendInApp(userId, message, alert) {
+    // Create in-app notification
+    await this.db.insert('notifications', {
+      user_id: userId,
+      type: 'helpos_alert',
+      title: alert.title,
+      message: message,
+      action_url: alert.actionUrl,
+      icon: this.getIconForAlertType(alert.type),
+      created_at: new Date(),
+      is_read: false
+    });
+
+    // If user is online, send via WebSocket for realtime delivery
+    if (this.brain.isUserOnline(userId)) {
+      this.brain.websocket.sendToUser(userId, {
+        type: 'helpos_notification',
+        data: {
+          title: alert.title,
+          message: message,
+          actionUrl: alert.actionUrl,
+          severity: alert.severity
+        }
+      });
+    }
+  }
+
+  /**
+   * CONVERSATIONAL INTERFACE
+   * Users can chat with HelpOS Bot
+   */
+  async handleUserMessage(userId, message) {
+    // Get or create conversation
+    let conversation = await this.getActiveConversation(userId);
+    if (!conversation) {
+      conversation = await this.createConversation(userId);
+    }
+
+    // Save user message
+    await this.saveMessage(conversation.id, 'user', message);
+
+    // Get full conversation context
+    const context = await this.getConversationContext(conversation.id);
+
+    // Generate AI response
+    const botResponse = await this.generateResponse(userId, message, context);
+
+    // Save bot response
+    await this.saveMessage(conversation.id, 'bot', botResponse.text, botResponse.data);
+
+    return botResponse;
+  }
+
+  async generateResponse(userId, userMessage, context) {
+    const user = await this.db.getUserById(userId);
+    const systemContext = await this.brain.context.getRelevantContext({ userId });
+
+    const prompt = `
+You are HelpOS Bot, the AI assistant for AutoForce™. You're chatting with ${user.first_name} (${user.role}).
+
+Conversation history:
+${context.messages.map(m => `${m.sender}: ${m.message}`).join('\n')}
+
+User's current message: ${userMessage}
+
+System context about ${user.first_name}:
+- Role: ${user.role}
+- Organization: ${systemContext.org_name}
+- Recent activity: ${JSON.stringify(systemContext.recent_activity)}
+- Pending items: ${JSON.stringify(systemContext.pending_items)}
+
+Respond to ${user.first_name}'s message:
+1. Be helpful, friendly, and natural
+2. Provide specific, actionable information
+3. Reference their role and context when relevant
+4. If you can take an action (like scheduling, checking status), offer to do it
+5. If you need clarification, ask
+6. Keep responses concise unless they ask for detail
+
+Your response:
+`;
+
+    const response = await this.gemini.complete(prompt);
+
+    // Check if user is asking for an action
+    const actionIntent = await this.detectActionIntent(userMessage, response);
+
+    return {
+      text: response,
+      data: actionIntent ? {
+        action: actionIntent.action,
+        parameters: actionIntent.parameters,
+        needsConfirmation: true
+      } : null
+    };
+  }
+
+  async detectActionIntent(userMessage, botResponse) {
+    // Use NLP to detect if user wants HelpOS to do something
+    const prompt = `
+Analyze if this user message is requesting an action:
+"${userMessage}"
+
+Common actions in AutoForce™:
+- check_schedule: View or check schedule
+- request_time_off: Request PTO/vacation
+- view_paycheck: View paystub or payroll info
+- claim_shift: Pick up an open shift
+- swap_shift: Trade shifts with someone
+- update_availability: Change available hours
+- view_invoice: Check invoice status
+- approve_timesheet: Approve employee timesheet
+- run_report: Generate a report
+
+If the message requests an action, return JSON:
+{
+  "hasAction": true,
+  "action": "action_name",
+  "parameters": {extracted parameters}
+}
+
+If not, return: {"hasAction": false}
+`;
+
+    const analysis = await this.gemini.completeJSON(prompt);
+    return analysis.hasAction ? analysis : null;
+  }
+
+  /**
+   * EXAMPLE NOTIFICATIONS FROM HELPOS BOT
+   */
+  getExampleNotifications() {
+    return {
+      shift_available: {
+        title: "Perfect Shift Available!",
+        message: "Hi Sarah! I noticed a night shift opened up at Downtown Location (your favorite!) for this Saturday. It's 10pm-6am and pays your preferred rate. Want to claim it?",
+        tone: "exciting",
+        actionUrl: "/shifts/available/12345"
+      },
+      
+      license_expiring: {
+        title: "Forklift License Expiring Soon",
+        message: "Hey Mike! Your forklift certification expires in 18 days (March 15). You're scheduled for 3 warehouse shifts next month that require this. I can help you find a renewal course nearby - interested?",
+        tone: "helpful",
+        actionUrl: "/profile/certifications"
+      },
+      
+      contract_expiring: {
+        title: "Client Agreement Renewal Due",
+        message: "Hi Jennifer! The service agreement with ABC Manufacturing expires in 45 days. They've been a great client with consistent $12K/month revenue. Should I draft a renewal proposal for your review?",
+        tone: "professional",
+        actionUrl: "/contracts/client-abc"
+      },
+      
+      password_update: {
+        title: "Security Check-In",
+        message: "Hey Alex! It's been 95 days since your last password change. Keeping passwords fresh helps protect your account and sensitive payroll data. Takes just 30 seconds!",
+        tone: "friendly_reminder",
+        actionUrl: "/settings/security"
+      },
+      
+      payroll_ready: {
+        title: "Payroll Ready for Approval",
+        message: "Hi Boss! I've calculated this week's payroll for 47 employees. Total: $128,450.23. Everything looks good - no anomalies detected. Ready for your final review and approval.",
+        tone: "professional",
+        actionUrl: "/approvals/payroll"
+      },
+      
+      schedule_gap: {
+        title: "Coverage Gap Detected",
+        message: "Hey Maria! I noticed Thursday 2-6pm has no coverage at the North Location. Based on availability, I can schedule either John or Sarah. Want me to auto-assign or you prefer to choose?",
+        tone: "helpful",
+        actionUrl: "/schedule/gaps"
+      },
+      
+      system_update: {
+        title: "New Features Available!",
+        message: "Hi team! AutoForce™ just got better! 🎉 New features: voice commands, mobile shift swapping, and faster invoice generation. Check the What's New section to see everything.",
+        tone: "exciting",
+        actionUrl: "/whats-new"
+      },
+      
+      overtime_warning: {
+        title: "Overtime Alert",
+        message: "Hey David! If you work your scheduled Friday shift, you'll hit 44 hours this week (overtime territory). Just a heads up - it'll increase your paycheck but I wanted you to be aware!",
+        tone: "informative",
+        actionUrl: "/schedule/my-schedule"
+      }
+    };
+  }
+}
+
+module.exports = HelpOSBot;
+```
+
+---
+
+## 🔔 UNIVERSAL NOTIFICATION SYSTEM
+
+### Notification Dispatcher (notification-dispatcher.js)
+```javascript
+/**
+ * Smart Notification Delivery
+ * Routes notifications to the right people via the right channels
+ */
+
+class NotificationDispatcher {
+  constructor(aiBrain) {
+    this.brain = aiBrain;
+    this.db = aiBrain.db;
+  }
+
+  /**
+   * ROLE-BASED NOTIFICATION ROUTING
+   */
+  async notifyByRole(role, orgId, notification) {
+    const users = await this.db.query(`
+      SELECT * FROM users
+      WHERE role = $1 AND org_id = $2 AND is_active = true
+    `, [role, orgId]);
+
+    for (const user of users) {
+      await this.brain.helpOS.sendProactiveNotification(null, {
+        ...notification,
+        userId: user.id,
+        orgId: orgId
+      });
+    }
+  }
+
+  /**
+   * NOTIFY ALL ORG LEADERS
+   */
+  async notifyOrgLeaders(orgId, notification) {
+    await this.notifyByRole('org_leader', orgId, notification);
+    await this.notifyByRole('admin', orgId, notification);
+  }
+
+  /**
+   * NOTIFY MANAGERS
+   */
+  async notifyManagers(orgId, notification, filterBy = null) {
+    let query = `
+      SELECT DISTINCT u.* FROM users u
+      WHERE u.role = 'manager' AND u.org_id = $1 AND u.is_active = true
+    `;
+    const params = [orgId];
+
+    // Optional filtering
+    if (filterBy?.department) {
+      query += ` AND u.department = $2`;
+      params.push(filterBy.department);
+    }
+
+    const managers = await this.db.query(query, params);
+
+    for (const manager of managers) {
+      await this.brain.helpOS.sendProactiveNotification(null, {
+        ...notification,
+        userId: manager.id,
+        orgId: orgId
+      });
+    }
+  }
+
+  /**
+   * DIGEST NOTIFICATIONS
+   * Batch non-urgent notifications into a daily/weekly digest
+   */
+  async sendDigest(userId, frequency = 'daily') {
+    const digest = await this.buildDigest(userId, frequency);
+    
+    if (digest.notifications.length === 0) {
+      return; // No notifications to send
+    }
+
+    const subject = `Your ${frequency} AutoForce™ update`;
+    const body = this.formatDigest(digest);
+
+    await this.brain.helpOS.sendEmail(
+      digest.user.email,
+      subject,
+      body
+    );
+
+    // Mark notifications as sent
+    await this.markDigestSent(digest.notifications);
+  }
+
+  async buildDigest(userId, frequency) {
+    const timeframe = frequency === 'daily' ? '24 hours' : '7 days';
+    
+    const notifications = await this.db.query(`
+      SELECT * FROM proactive_alerts
+      WHERE target_user_id = $1
+      AND severity = 'info'
+      AND is_read = false
+      AND created_at > NOW() - INTERVAL '${timeframe}'
+      ORDER BY created_at DESC
+    `, [userId]);
+
+    const user = await this.db.getUserById(userId);
+
+    return { user, notifications };
+  }
+
+  formatDigest(digest) {
+    const sections = {
+      shifts: [],
+      updates: [],
+      reminders: [],
+      opportunities: []
+    };
+
+    // Categorize notifications
+    digest.notifications.forEach(notif => {
+      if (notif.alert_type.includes('shift')) sections.shifts.push(notif);
+      else if (notif.alert_type.includes('update')) sections.updates.push(notif);
+      else if (notif.alert_type.includes('expir')) sections.reminders.push(notif);
+      else sections.opportunities.push(notif);
+    });
+
+    return `
+      <h2>Hi ${digest.user.first_name}! Here's your AutoForce™ update</h2>
+      
+      ${sections.shifts.length > 0 ? `
+        <h3>📅 Available Shifts</h3>
+        ${sections.shifts.map(n => `<p>• ${n.alert_message}</p>`).join('')}
+      ` : ''}
+      
+      ${sections.reminders.length > 0 ? `
+        <h3>⏰ Reminders</h3>
+        ${sections.reminders.map(n => `<p>• ${n.alert_message}</p>`).join('')}
+      ` : ''}
+      
+      ${sections.updates.length > 0 ? `
+        <h3>📢 Updates</h3>
+        ${sections.updates.map(n => `<p>• ${n.alert_message}</p>`).join('')}
+      ` : ''}
+      
+      <p>Thanks for being awesome! 🎉<br>- Your HelpOS Bot</p>
+    `;
+  }
+}
+
+module.exports = NotificationDispatcher;
+```
+
+---
+
+## 🎯 TELLING REPLIT HOW TO BUILD THIS
+
+### Step-by-Step Instructions for Replit
+
+**Phase 1: Set Up AI Brain Foundation**
+```
+"Create the AI Brain orchestrator system for AutoForce™:
+
+1. Create /server/ai-brain/ directory with these core files:
+   - orchestrator.js (main AI controller)
+   - universal-context.js (maintains system awareness)
+   - workflow-manager.js (coordinates workflows)
+   - proactive-monitor.js (scans for alerts)
+   - helpos-bot.js (conversational assistant)
+   - notification-dispatcher.js (sends notifications)
+
+2. In orchestrator.js, implement:
+   - Gemini API integration
+   - makeDecision() method that loads full system context before decisions
+   - analyzeImpact() method that checks how actions affect other services
+   - communicateToRole() method that tailors messages per user role
+   - startMonitoring() method that runs background checks
+
+3. The orchestrator should maintain awareness of:
+   - All users (employees, managers, org leaders, clients)
+   - All schedules and shifts
+   - All payroll data
+   - All invoices and payments
+   - All contracts and agreements
+   - All workflows in progress
+```
+
+**Phase 2: Database Schema**
+```
+"Create database tables for AI Brain awareness:
+
+1. Table: ai_context
+   - Stores complete system state
+   - JSONB column for flexible context data
+   - Index on context_type and entity_id
+
+2. Table: monitoring_tasks
+   - Defines what AI Brain should monitor
+   - Includes check frequency (hourly, daily, weekly)
+   - Stores monitor configuration as JSONB
+
+3. Table: proactive_alerts
+   - Queue of alerts AI discovered
+   - Links to users/orgs
+   - Tracks if read/dismissed/acted upon
+
+4. Table: helpos_conversations
+   - Chat conversations with HelpOS Bot
+   - Maintains conversation context
+
+5. Table: notification_history
+   - All notifications sent
+   - Tracks delivery, read, click events
+```
+
+**Phase 3: Proactive Monitoring**
+```
+"Implement the proactive monitoring system:
+
+1. In proactive-monitor.js, create methods for:
+   - checkOpenShifts() - finds shifts matching user preferences
+   - checkExpiringCredentials() - licenses, IDs, certs expiring soon
+   - checkExpiringContracts() - employment/client agreements ending
+   - checkPasswordExpiry() - users who haven't changed password in 90 days
+   - checkShiftCoverageGaps() - unfilled shifts
+   - checkComplianceDeadlines() - regulatory requirements
+
+2. Each monitor should:
+   - Query database for items needing attention
+   - Create proactive_alerts for findings
+   - Avoid duplicate alerts (check if already alerted recently)
+   - Calculate severity based on urgency
+
+3. Set up monitoring loops in orchestrator:
+   - Critical alerts: every 1 minute
+   - Hourly tasks: every hour
+   - Daily tasks: once per day
+   - Weekly tasks: once per week
+```
+
+**Phase 4: HelpOS Bot**
+```
+"Create HelpOS Bot conversational assistant:
+
+1. In helpos-bot.js, implement:
+   - sendProactiveNotification() - delivers alerts to users
+   - formatMessage() - uses Gemini to create friendly, role-appropriate messages
+   - selectChannels() - chooses best delivery method (in-app, email, SMS, push)
+   - handleUserMessage() - chat interface with users
+   - generateResponse() - AI-powered chat responses with full context
+
+2. HelpOS Bot should:
+   - Address users by first name
+   - Tailor tone based on severity (friendly for info, urgent for critical)
+   - Provide specific actionable steps
+   - Include deep links to take action
+   - Remember conversation context
+
+3. Create example notification templates for:
+   - Shifts available matching criteria
+   - Credentials expiring
+   - Contracts expiring
+   - Password updates needed
+   - System updates
+   - Approval requests
+```
+
+**Phase 5: Universal Notification System**
+```
+"Build the notification delivery system:
+
+1. In notification-dispatcher.js, create:
+   - notifyByRole() - send to all users of a specific role
+   - notifyOrgLeaders() - alert organization leadership
+   - notifyManagers() - alert managers with optional filters
+   - sendDigest() - batch non-urgent notifications into daily/weekly email
+
+2. Support multiple channels:
+   - in_app: WebSocket for realtime + database storage
+   - email: Formatted HTML emails
+   - sms: Text messages via Twilio
+   - push: Mobile push notifications
+   - slack: Slack webhooks
+
+3. Smart routing logic:
+   - Critical → SMS + Push + In-app
+   - Urgent → Push + In-app
+   - Warning → Email + In-app
+   - Info → Add to daily digest
+```
+
+**Phase 6: Role-Aware Communication**
+```
+"Make AI Brain aware of different user roles:
+
+1. Create role configurations in orchestrator.js:
+   - employee: friendly tone, simple detail, actionable
+   - manager: professional tone, moderate detail, show metrics
+   - org_leader: executive tone, strategic detail, business impact
+   - admin: technical tone, comprehensive detail
+
+2. When communicating, AI should:
+   - Load user's role from database
+   - Format message with appropriate tone/detail
+   - Include role-specific information (managers see team metrics, employees see personal data)
+   - Use role-appropriate language
+
+3. Examples:
+   - To employee: "Hi John! You have 3 new shifts available"
+   - To manager: "Team utilization at 87%. 5 open shifts need coverage."
+   - To org leader: "Staffing efficiency up 12% this month. Revenue impact: +$8K"
+```
+
+**Phase 7: Cross-Service Awareness**
+```
+"Implement cross-service intelligence:
+
+1. When AI makes ANY decision, it should:
+   - Call analyzeImpact() to check effects on other services
+   - Example: Scheduling a shift affects payroll (overtime), invoicing (billable hours), compliance (rest periods)
+
+2. In universal-context.js, implement:
+   - loadFullContext() - loads complete system state on startup
+   - getRelevantContext() - retrieves context for a specific request
+   - updateFromDecision() - updates context after AI makes a decision
+
+3. AI Brain should maintain awareness of:
+   - Which employees are qualified for which shifts
+   - Who is approaching overtime
+   - Which clients have which billing rates
+   - What contracts are expiring
+   - What credentials are required for what work
+```
+
+**Phase 8: Integration with Existing Services**
+```
+"Connect AI Brain to all platform services:
+
+1. Onboarding service should call AI Brain when:
+   - New client added → AI schedules kickoff, sets up billing
+   - New employee added → AI provisions systems, schedules training
+
+2. Payroll service should call AI Brain when:
+   - Payroll calculated → AI checks for anomalies, creates approval request
+   - Overtime detected → AI alerts manager and employee
+
+3. Invoicing service should call AI Brain when:
+   - Invoice generated → AI checks for accuracy, sends to client
+   - Payment overdue → AI triggers collections workflow
+
+4. Scheduling service should call AI Brain when:
+   - Schedule created → AI validates coverage, checks compliance
+   - Shift unfilled → AI finds qualified available employees, notifies them
+   - Employee calls out → AI finds replacement, alerts relevant parties
+
+All services should query AI Brain for decisions and report actions back.
+```
+
+---
+
+## 🎬 COMPLETE EXAMPLE WORKFLOW
+
+### Example: Employee's License Expiring
+
+**What Happens:**
+
+1. **AI Brain Detects Issue** (proactive-monitor.js daily check)
+   ```javascript
+   // Found: John's forklift license expires in 20 days
+   // John is scheduled for 3 warehouse shifts requiring this license
+   ```
+
+2. **AI Creates Alert** (proactive-monitor.js)
+   ```javascript
+   createAlert({
+     type: 'credential_expiring',
+     userId: 'john-123',
+     severity: 'warning',
+     title: 'Forklift License Expires Soon',
+     message: 'Base message about expiry',
+     data: { credential_id: 'cert-456', days_until: 20 }
+   })
+   ```
+
+3. **HelpOS Bot Formats Message** (helpos-bot.js)
+   ```
+   "Hi John! I noticed your forklift certification expires in 20 days 
+   (March 15). You're currently scheduled for 3 warehouse shifts next 
+   month that require this certification. 
+   
+   Don't worry - I found a renewal course at Forklift Academy 2 miles 
+   from you. The next class is March 8th. Want me to send you the details?
+   
+   Just upload your renewed license when you're done and I'll update 
+   everything automatically!"
+   ```
+
+4. **Notification Sent** (notification-dispatcher.js)
+   - In-app notification appears
+   - Email sent to John
+   - Push notification to mobile app
+
+5. **Manager Also Notified** (proactive-monitor.js)
+   ```
+   "Hi Sarah! FYI - John's forklift license expires in 20 days. He's 
+   scheduled for 3 shifts requiring it. I've already alerted him. 
+   Just keeping you in the loop!"
+   ```
+
+6. **John Responds** (helpos-bot.js conversation)
+   - John: "Yes, send me the course details"
+   - Bot: "Great! [sends course info]. I'll remind you 2 days before the class."
+
+7. **AI Remembers** (universal-context.js)
+   - Sets reminder for March 6
+   - Tracks John's renewal status
+   - When John uploads new cert, AI updates systems and clears alert
+
+---
+
+## ✅ FINAL CHECKLIST FOR REPLIT
+
+**Tell Replit you need:**
+
+✅ Universal AI Brain that orchestrates all automation
+✅ Self-aware system that knows about all users, schedules, contracts, etc.
+✅ HelpOS Bot for friendly, proactive communication
+✅ Proactive monitoring for credentials, contracts, passwords, shifts, etc.
+✅ Role-aware messaging (different tones for employees vs managers vs leaders)
+✅ Multi-channel notifications (in-app, email, SMS, push, Slack)
+✅ Cross-service impact analysis (how scheduling affects payroll/invoicing)
+✅ Conversational chat interface with HelpOS Bot
+✅ Daily/weekly digest options for non-urgent alerts
+✅ Deep links to take action on every notification
+✅ Complete audit trail of all AI decisions and notifications
+
+This is your complete specification for building a truly intelligent, self-aware AI Brain for AutoForce™! 🧠✨
