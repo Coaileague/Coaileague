@@ -13,8 +13,18 @@ export interface ClientsQueryParams {
 }
 
 export function useClientsTable(params: ClientsQueryParams = {}): UseQueryResult<PaginatedResponse<ClientWithInvoiceCount>> {
+  // Provide stable defaults to prevent unnecessary refetches
+  const queryParams = {
+    page: params.page || 1,
+    limit: params.limit || 10,
+    ...(params.search && { search: params.search }),
+    ...(params.status && params.status !== 'all' && { status: params.status }),
+    ...(params.sort && { sort: params.sort }),
+    ...(params.order && { order: params.order }),
+  };
+  
   return useQuery({
-    queryKey: ["/api/clients", params],
+    queryKey: ["/api/clients", queryParams],
   });
 }
 
@@ -50,7 +60,7 @@ export function useUpdateClient() {
 
 export function useDeleteClient() {
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/clients/${id}`);
     },
     onSuccess: () => {
