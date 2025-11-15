@@ -32,7 +32,8 @@ export async function getAnalyticsStats(
   workspaceId: string | null,
   bustCache: boolean = false
 ): Promise<AnalyticsStats> {
-  const cacheKey = workspaceId || 'platform';
+  // Use distinct cache namespace to avoid collision if a workspace ID is literally "platform"
+  const cacheKey = workspaceId ? `workspace:${workspaceId}` : 'platform';
   
   // Check cache
   if (!bustCache) {
