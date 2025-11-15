@@ -16,6 +16,8 @@ import {
   aiSolutionLibrary,
   aiFeedbackLoops,
   aiSkillRegistry,
+  externalIdentifiers,
+  workspaces,
   type InsertAiBrainJob,
   type AiBrainJob,
   type InsertAiEventStream,
@@ -147,7 +149,13 @@ export class AIBrainService {
       })
       .where(eq(aiBrainJobs.id, job.id));
 
-    console.log(`✅ [AI Brain] Job ${job.id} completed in ${executionTime}ms (confidence: ${confidenceScore?.toFixed(2)})`);
+    // Enhanced logging with external IDs for better audit trails
+    const logMetadata = output?._auditMetadata || {};
+    const orgInfo = logMetadata.orgExternalId 
+      ? `[${logMetadata.orgExternalId}] ${logMetadata.orgName || ''}` 
+      : `workspace: ${job.workspaceId || 'global'}`;
+    
+    console.log(`✅ [AI Brain] Job ${job.id} completed in ${executionTime}ms (confidence: ${confidenceScore?.toFixed(2)}) - ${orgInfo}`);
 
     return {
       jobId: job.id,
@@ -200,6 +208,12 @@ Be concise, professional, and helpful. If you don't know something specific to t
   private async executeScheduleGeneration(job: AiBrainJob): Promise<{ output: any; tokensUsed: number; confidence: number }> {
     const { shifts, employees, constraints } = job.input;
 
+    // Enrich employee data with external IDs for better audit trails
+    const enrichedInput = await this.enrichWithExternalIds(
+      { shifts, employees, constraints },
+      job.workspaceId || undefined
+    );
+
     const systemPrompt = `You are AutoForce™ ScheduleOS AI, an expert at creating optimal employee schedules.
 
 Analyze the provided shifts, employees, and constraints to create an optimal schedule assignment.
@@ -217,7 +231,7 @@ Return a JSON object with:
   "reasoning": "Brief explanation of scheduling decisions"
 }`;
 
-    const userMessage = `Create schedule assignments for:\n\nShifts: ${JSON.stringify(shifts, null, 2)}\n\nEmployees: ${JSON.stringify(employees, null, 2)}\n\nConstraints: ${JSON.stringify(constraints, null, 2)}`;
+    const userMessage = `Create schedule assignments for:\n\nShifts: ${JSON.stringify(enrichedInput.shifts, null, 2)}\n\nEmployees: ${JSON.stringify(enrichedInput.employees, null, 2)}\n\nConstraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
 
     const response = await geminiClient.generate({
       workspaceId: job.workspaceId || undefined,
@@ -230,6 +244,14 @@ Return a JSON object with:
 
     // Parse AI response
     const result = JSON.parse(response.text);
+
+    // Include audit metadata with external IDs
+    result._auditMetadata = {
+      orgExternalId: enrichedInput._orgExternalId,
+      orgName: enrichedInput._orgName,
+      employeeCount: enrichedInput.employees?.length || 0,
+      processedAt: new Date().toISOString()
+    };
 
     return {
       output: result,
@@ -274,6 +296,67 @@ Return a JSON object with:
       tokensUsed: response.tokensUsed,
       confidence: result.confidence || 0.85
     };
+  }
+
+  /**
+   * Enrich employee/org data with human-readable external IDs (EMP-XXXX, ORG-XXXX)
+   * This makes AI audit logs more readable and debuggable
+   */
+  private async enrichWithExternalIds(data: any, workspaceId?: string): Promise<any> {
+    if (!data) return data;
+
+    // Enrich workspace/org info
+    if (workspaceId) {
+      const [orgExtId] = await db
+        .select({ externalId: externalIdentifiers.externalId })
+        .from(externalIdentifiers)
+        .where(
+          and(
+            eq(externalIdentifiers.entityType, 'org'),
+            eq(externalIdentifiers.entityId, workspaceId)
+          )
+        )
+        .limit(1);
+
+      if (orgExtId) {
+        data._orgExternalId = orgExtId.externalId;
+      }
+
+      // Also fetch org name for better context
+      const [workspace] = await db
+        .select({ name: workspaces.name })
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId))
+        .limit(1);
+
+      if (workspace) {
+        data._orgName = workspace.name;
+      }
+    }
+
+    // Enrich employee array if present
+    if (Array.isArray(data.employees)) {
+      for (const emp of data.employees) {
+        if (emp.id) {
+          const [empExtId] = await db
+            .select({ externalId: externalIdentifiers.externalId })
+            .from(externalIdentifiers)
+            .where(
+              and(
+                eq(externalIdentifiers.entityType, 'employee'),
+                eq(externalIdentifiers.entityId, emp.id)
+              )
+            )
+            .limit(1);
+
+          if (empExtId) {
+            emp._externalId = empExtId.externalId;
+          }
+        }
+      }
+    }
+
+    return data;
   }
 
   /**
