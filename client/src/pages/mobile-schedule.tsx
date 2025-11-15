@@ -12,6 +12,7 @@ import { useEmployee } from '@/hooks/useEmployee';
 import { useClientLookup } from '@/hooks/useClients';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { DraggableFloatingPill } from '@/components/draggable-floating-pill';
 import type { Shift, Employee, Client } from '@shared/schema';
 
 export default function MobileSchedule() {
@@ -779,6 +780,32 @@ export default function MobileSchedule() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Draggable Floating Pills - Only show for managers */}
+      {currentEmployee?.workspaceRole === 'manager' && (
+        <>
+          {/* Approvals Pill */}
+          <DraggableFloatingPill
+            storageKey="mobile-schedule-approvals"
+            icon={CheckCircle}
+            label="Approvals"
+            count={pendingShifts.length}
+            colorClass="bg-gradient-to-r from-orange-500 to-amber-500"
+            onClick={() => setShowApprovals(true)}
+            testId="floating-pill-approvals"
+          />
+          
+          {/* Reports Pill */}
+          <DraggableFloatingPill
+            storageKey="mobile-schedule-reports"
+            icon={BarChart3}
+            label="Reports"
+            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600"
+            onClick={() => setShowReports(true)}
+            testId="floating-pill-reports"
+          />
+        </>
       )}
     </div>
   );
