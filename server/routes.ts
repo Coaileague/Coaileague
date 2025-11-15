@@ -3758,6 +3758,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PROTECTED: Lightweight client lookup for dropdowns/selectors (unpaginated)
+  app.get('/api/clients/lookup', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Platform staff accessing for diagnostics
+      if (req.platformRole && (req.platformRole === 'root_admin' || req.platformRole === 'sysop' || req.platformRole === 'support_manager')) {
+        const targetWorkspaceId = req.workspaceId || req.query.workspaceId as string;
+        
+        if (!targetWorkspaceId) {
+          return res.json([]);
+        }
+        
+        const clients = await storage.getClientsByWorkspace(targetWorkspaceId);
+        return res.json(clients);
+      }
+      
+      // Regular workspace manager/owner
+      const workspaceId = req.workspaceId;
+      
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+
+      const clients = await storage.getClientsByWorkspace(workspaceId);
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching clients for lookup:", error);
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
   // PROTECTED: Manager or platform staff
   app.post('/api/clients', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
