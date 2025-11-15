@@ -201,9 +201,12 @@ import {
   insertExpenseReceiptSchema,
   // HelpOS™ - Support Queue Management
   helpOsQueue,
+  // Feature Updates System
+  featureUpdates,
+  featureUpdateReceipts,
 } from "@shared/schema";
 import crypto from "crypto";
-import { sql, eq, and, or, isNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
+import { sql, eq, and, or, isNull, isNotNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { format } from "date-fns";
 import { setupWebSocket } from "./websocket";
@@ -556,32 +559,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all active major feature updates
       const activeUpdates = await db
         .select()
-        .from(schema.featureUpdates)
+        .from(featureUpdates)
         .where(
           and(
-            eq(schema.featureUpdates.status, 'active'),
-            eq(schema.featureUpdates.isMajor, true), // Only show major updates
+            eq(featureUpdates.status, 'active'),
+            eq(featureUpdates.isMajor, true), // Only show major updates
             or(
-              isNull(schema.featureUpdates.releaseAt),
-              lte(schema.featureUpdates.releaseAt, now)
+              isNull(featureUpdates.releaseAt),
+              lte(featureUpdates.releaseAt, now)
             ),
             or(
-              isNull(schema.featureUpdates.expireAt),
-              gte(schema.featureUpdates.expireAt, now)
+              isNull(featureUpdates.expireAt),
+              gte(featureUpdates.expireAt, now)
             )
           )
         )
-        .orderBy(desc(schema.featureUpdates.createdAt));
+        .orderBy(desc(featureUpdates.createdAt));
 
       // Get user's dismissed updates
       const dismissedReceipts = await db
         .select()
-        .from(schema.featureUpdateReceipts)
+        .from(featureUpdateReceipts)
         .where(
           and(
-            eq(schema.featureUpdateReceipts.userId, userId),
-            eq(schema.featureUpdateReceipts.workspaceId, workspaceId),
-            isNotNull(schema.featureUpdateReceipts.dismissedAt)
+            eq(featureUpdateReceipts.userId, userId),
+            eq(featureUpdateReceipts.workspaceId, workspaceId),
+            isNotNull(featureUpdateReceipts.dismissedAt)
           )
         );
 
@@ -620,12 +623,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if receipt already exists
       const existingReceipt = await db
         .select()
-        .from(schema.featureUpdateReceipts)
+        .from(featureUpdateReceipts)
         .where(
           and(
-            eq(schema.featureUpdateReceipts.userId, userId),
-            eq(schema.featureUpdateReceipts.workspaceId, workspaceId),
-            eq(schema.featureUpdateReceipts.featureUpdateId, updateId)
+            eq(featureUpdateReceipts.userId, userId),
+            eq(featureUpdateReceipts.workspaceId, workspaceId),
+            eq(featureUpdateReceipts.featureUpdateId, updateId)
           )
         )
         .limit(1);
@@ -633,14 +636,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingReceipt.length > 0) {
         // Update existing receipt
         await db
-          .update(schema.featureUpdateReceipts)
+          .update(featureUpdateReceipts)
           .set({
             dismissedAt: new Date(),
           })
-          .where(eq(schema.featureUpdateReceipts.id, existingReceipt[0].id));
+          .where(eq(featureUpdateReceipts.id, existingReceipt[0].id));
       } else {
         // Create new receipt
-        await db.insert(schema.featureUpdateReceipts).values({
+        await db.insert(featureUpdateReceipts).values({
           userId,
           workspaceId,
           featureUpdateId: updateId,
