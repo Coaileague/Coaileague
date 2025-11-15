@@ -12,6 +12,7 @@ import {
 import { eq, gte, lte, count, sum, sql, and } from "drizzle-orm";
 import type { AnalyticsStats } from "../../shared/schema";
 import { monitoringService } from "../monitoring";
+import { getAutomationMetrics } from "./automationMetrics";
 
 // Simple in-memory cache with 60s TTL
 interface CacheEntry {
@@ -47,7 +48,7 @@ export async function getAnalyticsStats(
   const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-  // Fetch all stats in parallel
+  // Fetch all stats in parallel (but NOT automation metrics for platform scope)
   const [
     workspacesData,
     employeesData,
@@ -174,6 +175,10 @@ export async function getAnalyticsStats(
     }
   }
 
+  // Fetch automation metrics separately, only for workspace scope
+  // This avoids expensive queries for platform-wide stats and ensures undefined for null workspace
+  const automationMetrics = workspaceId ? await getAutomationMetrics(workspaceId) : undefined;
+
   const stats: AnalyticsStats = {
     summary: {
       totalWorkspaces: workspacesData[0]?.count || 0,
@@ -206,6 +211,8 @@ export async function getAnalyticsStats(
       uptimeSeconds: process.uptime(),
       updatedAt: new Date().toISOString(),
     },
+    // Add automation metrics only for workspace scope (undefined for platform scope)
+    automation: automationMetrics,
   };
 
   // Cache the result

@@ -10381,6 +10381,36 @@ export const analyticsStatsSchema = z.object({
     uptimeSeconds: z.number(),
     updatedAt: z.string(),
   }),
+  automation: z.object({
+    hoursSavedThisMonth: z.number(),
+    hoursSavedAllTime: z.number(),
+    costAvoidanceMonthly: z.number(),
+    costAvoidanceTotal: z.number(),
+    aiSuccessRate: z.number(),
+    avgConfidenceScore: z.number(),
+    autoApprovalRate: z.number(),
+    breakdown: z.object({
+      scheduleOS: z.object({
+        shiftsGenerated: z.number(),
+        hoursSaved: z.number(),
+        successRate: z.number(),
+      }),
+      billOS: z.object({
+        invoicesGenerated: z.number(),
+        hoursSaved: z.number(),
+        successRate: z.number(),
+      }),
+      payrollOS: z.object({
+        payrollsProcessed: z.number(),
+        hoursSaved: z.number(),
+        successRate: z.number(),
+      }),
+    }),
+    trend: z.object({
+      percentChange: z.number(),
+      isImproving: z.boolean(),
+    }),
+  }).optional(),
 });
 
 export type AnalyticsStats = z.infer<typeof analyticsStatsSchema>;
