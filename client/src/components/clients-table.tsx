@@ -241,13 +241,14 @@ export function ClientsTable() {
   const canDelete = employee?.role === 'owner';
 
   // Sync searchInput from URL for deep linking / browser navigation
-  // Only update if different to avoid triggering unnecessary debounce
+  // Depends on location to catch all URL changes (back/forward, external links)
   useEffect(() => {
-    const urlSearch = params.search;
+    const currentParams = new URLSearchParams(location.split('?')[1] || '');
+    const urlSearch = currentParams.get('search') || '';
     if (searchInput !== urlSearch) {
       setSearchInput(urlSearch);
     }
-  }, [params.search]);
+  }, [location]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
