@@ -977,19 +977,19 @@ export default function UniversalSchedule() {
         </div>
       )}
 
-      {/* Shift Creation Modal */}
+      {/* Shift Creation Modal - Compact GetSling-style popup */}
       <Dialog open={showShiftModal} onOpenChange={setShowShiftModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Shift</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="text-lg">New Shift</DialogTitle>
+            <DialogDescription className="text-sm">
               {days[modalPosition.day]} at {modalPosition.hour}:00
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Open Shift Toggle */}
-            <div className="flex items-center space-x-2">
+          <div className="space-y-3">
+            {/* Open Shift Toggle - Compact */}
+            <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
               <Checkbox
                 id="open-shift"
                 checked={shiftForm.isOpenShift}
@@ -998,31 +998,27 @@ export default function UniversalSchedule() {
                 }
                 data-testid="checkbox-open-shift"
               />
-              <Label htmlFor="open-shift" className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-orange-600" />
-                <div>
-                  <div className="font-semibold">Open Shift</div>
-                  <div className="text-xs text-muted-foreground">
-                    AI can auto-fill with best-matched employee
-                  </div>
-                </div>
+              <Label htmlFor="open-shift" className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
+                <span className="font-medium">Open Shift</span>
+                <span className="text-xs text-muted-foreground ml-1">(AI fills)</span>
               </Label>
             </div>
 
             {/* Employee Selection */}
             {!shiftForm.isOpenShift && (
-              <div className="space-y-2">
-                <Label htmlFor="employee">Employee *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="employee" className="text-sm">Employee *</Label>
                 <Select value={shiftForm.employeeId || ''} onValueChange={(value) =>
                   setShiftForm(prev => ({ ...prev, employeeId: value }))
                 }>
-                  <SelectTrigger id="employee" data-testid="select-employee">
+                  <SelectTrigger id="employee" data-testid="select-employee" className="h-9">
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
                     {employees.map(emp => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} - {emp.role || 'Employee'}
+                        {emp.firstName} {emp.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1030,126 +1026,119 @@ export default function UniversalSchedule() {
               </div>
             )}
 
-            {/* Position */}
-            <div className="space-y-2">
-              <Label htmlFor="position">Position *</Label>
-              <Input
-                id="position"
-                value={shiftForm.position}
-                onChange={(e) => setShiftForm(prev => ({ ...prev, position: e.target.value }))}
-                placeholder="e.g., Server, Cook, Manager"
-                data-testid="input-position"
-              />
-            </div>
-
-            {/* Client */}
-            <div className="space-y-2">
-              <Label htmlFor="client">Client/Area</Label>
-              <Select value={shiftForm.clientId} onValueChange={(value) =>
-                setShiftForm(prev => ({ ...prev, clientId: value }))
-              }>
-                <SelectTrigger id="client" data-testid="select-client">
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Position & Client - Side by side */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="position" className="text-sm">Position *</Label>
+                <Input
+                  id="position"
+                  value={shiftForm.position}
+                  onChange={(e) => setShiftForm(prev => ({ ...prev, position: e.target.value }))}
+                  placeholder="Role"
+                  className="h-9"
+                  data-testid="input-position"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="client" className="text-sm">Client</Label>
+                <Select value={shiftForm.clientId} onValueChange={(value) =>
+                  setShiftForm(prev => ({ ...prev, clientId: value }))
+                }>
+                  <SelectTrigger id="client" data-testid="select-client" className="h-9">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map(client => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.companyName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Location */}
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="location" className="text-sm">Location</Label>
               <Input
                 id="location"
                 value={shiftForm.location}
                 onChange={(e) => setShiftForm(prev => ({ ...prev, location: e.target.value }))}
-                placeholder="e.g., Main Dining, Kitchen"
+                placeholder="Area/Site"
+                className="h-9"
                 data-testid="input-location"
               />
             </div>
 
-            {/* Clock In/Out */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="clock-in">Clock In</Label>
+            {/* Clock In/Out - Compact */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="clock-in" className="text-sm">Start</Label>
                 <Input
                   id="clock-in"
                   type="time"
                   value={shiftForm.clockIn}
                   onChange={(e) => setShiftForm(prev => ({ ...prev, clockIn: e.target.value }))}
+                  className="h-9"
                   data-testid="input-clock-in"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="clock-out">Clock Out</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="clock-out" className="text-sm">End</Label>
                 <Input
                   id="clock-out"
                   type="time"
                   value={shiftForm.clockOut}
                   onChange={(e) => setShiftForm(prev => ({ ...prev, clockOut: e.target.value }))}
+                  className="h-9"
                   data-testid="input-clock-out"
                 />
               </div>
             </div>
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Shift Notes</Label>
+            {/* Notes - Compact */}
+            <div className="space-y-1.5">
+              <Label htmlFor="notes" className="text-sm">Notes</Label>
               <Textarea
                 id="notes"
                 value={shiftForm.notes}
                 onChange={(e) => setShiftForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Additional notes or instructions..."
+                placeholder="Instructions..."
+                className="min-h-[60px] text-sm"
                 data-testid="textarea-notes"
               />
             </div>
 
-            {/* Post Orders */}
-            <div className="space-y-2">
-              <Label>Post Orders</Label>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+            {/* Post Orders - Collapsible */}
+            <div className="space-y-1.5">
+              <Label className="text-sm">Post Orders</Label>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {POST_ORDER_TEMPLATES.map(order => {
                   const isSelected = shiftForm.postOrders.includes(order.id);
                   return (
                     <div
                       key={order.id}
-                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                      className={`border rounded-md p-2 cursor-pointer transition-colors ${
                         isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                       }`}
                       onClick={() => togglePostOrder(order.id)}
                       data-testid={`post-order-${order.id}`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Checkbox checked={isSelected} />
-                          <span className="font-medium text-sm">{order.title}</span>
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={isSelected} />
+                        <span className="text-xs font-medium flex-1">{order.title}</span>
+                        <div className="flex gap-1">
+                          {order.requiresAcknowledgment && (
+                            <CheckSquare className="w-3 h-3 text-muted-foreground" />
+                          )}
+                          {order.requiresSignature && (
+                            <FileText className="w-3 h-3 text-muted-foreground" />
+                          )}
+                          {order.requiresPhotos && (
+                            <Camera className="w-3 h-3 text-muted-foreground" />
+                          )}
                         </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">{order.description}</p>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        {order.requiresAcknowledgment && (
-                          <Badge variant="outline" className="gap-1">
-                            <CheckSquare className="w-3 h-3" />
-                            Acknowledgment
-                          </Badge>
-                        )}
-                        {order.requiresSignature && (
-                          <Badge variant="outline" className="gap-1">
-                            <FileText className="w-3 h-3" />
-                            Signature
-                          </Badge>
-                        )}
-                        {order.requiresPhotos && (
-                          <Badge variant="outline" className="gap-1">
-                            <Camera className="w-3 h-3" />
-                            Photos ({order.photoFrequency})
-                          </Badge>
-                        )}
                       </div>
                       {order.photoInstructions && isSelected && (
                         <div className="mt-2 text-xs bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded p-2">

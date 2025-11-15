@@ -230,7 +230,7 @@ export default function Dashboard() {
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
   const totalEmployees = stats?.summary.activeEmployees || 0;
-  const activeToday = allEmployees?.filter((emp: any) => emp.status === 'active').length || 0;
+  const totalClients = stats?.workspace?.activeClients || stats?.summary.totalCustomers || 0;
   const totalRevenue = stats?.summary.monthlyRevenue.amount || 0;
 
   // Use WebSocket unread count if available
@@ -528,15 +528,15 @@ export default function Dashboard() {
             <p className="text-4xl font-bold text-foreground">{totalEmployees}</p>
           </div>
 
-          {/* Active Today Card */}
-          <div className="group bg-card border border-border rounded-lg p-6 hover-elevate active-elevate-2 transition-all duration-200" data-testid="card-active">
+          {/* Total Clients Card */}
+          <div className="group bg-card border border-border rounded-lg p-6 hover-elevate active-elevate-2 transition-all duration-200" data-testid="card-clients">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-muted rounded-lg">
-                <Activity className="w-6 h-6 text-accent" />
+                <Users className="w-6 h-6 text-accent" />
               </div>
             </div>
-            <p className="text-muted-foreground text-sm mb-2">Active Today</p>
-            <p className="text-4xl font-bold text-foreground">{activeToday}</p>
+            <p className="text-muted-foreground text-sm mb-2">Total Clients</p>
+            <p className="text-4xl font-bold text-foreground">{totalClients}</p>
           </div>
 
           {/* Revenue Card */}
