@@ -232,6 +232,64 @@ export const requireManagerOrPlatformStaff: RequestHandler = async (req, res, ne
   next();
 };
 
+/**
+ * Middleware to attach workspace ID to request for ALL authenticated users
+ * Unlike requireManagerOrPlatformStaff, this doesn't check role - just resolves workspace
+ * Use this for endpoints that need workspace scoping but don't require manager permissions
+ */
+export const attachWorkspaceId: RequestHandler = async (req, res, next) => {
+  const authReq = req as AuthenticatedRequest;
+  
+  if (!authReq.user?.id) {
+    return res.status(401).json({ message: 'Unauthorized - Please login' });
+  }
+  
+  const userId = authReq.user.id;
+  
+  // Check platform role first - platform staff can specify workspace via query
+  const platformRole = await getUserPlatformRole(userId);
+  
+  if (platformRole === 'root_admin' || platformRole === 'sysop' || platformRole === 'support_manager') {
+    authReq.platformRole = platformRole;
+    
+    // Platform staff can specify workspace via query/body
+    const requestedWorkspaceId = authReq.body?.workspaceId || authReq.query?.workspaceId || authReq.params?.workspaceId;
+    if (requestedWorkspaceId) {
+      authReq.workspaceId = requestedWorkspaceId as string;
+      return next();
+    }
+    
+    // If no workspace specified, try to get from user's currentWorkspaceId
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (user?.currentWorkspaceId) {
+      authReq.workspaceId = user.currentWorkspaceId;
+      return next();
+    }
+    
+    // Platform staff without workspace - allow (they'll get platform-wide stats)
+    authReq.workspaceId = undefined;
+    return next();
+  }
+  
+  // Regular users - resolve workspace from their membership
+  const requestedWorkspaceId = authReq.body?.workspaceId || authReq.query?.workspaceId || authReq.params?.workspaceId;
+  const resolved = await resolveWorkspaceForUser(userId, requestedWorkspaceId as string | undefined);
+  
+  if (!resolved.workspaceId) {
+    // User has no workspace - this is okay for some endpoints
+    authReq.workspaceId = undefined;
+    authReq.workspaceRole = null;
+    authReq.employeeId = undefined;
+    return next();
+  }
+  
+  authReq.workspaceId = resolved.workspaceId;
+  authReq.workspaceRole = resolved.role || null;
+  authReq.employeeId = resolved.employeeId || undefined;
+  
+  next();
+};
+
 export async function validateManagerAssignment(
   managerId: string,
   employeeId: string,
