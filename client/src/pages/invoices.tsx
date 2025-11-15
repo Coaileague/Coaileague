@@ -612,7 +612,7 @@ export default function Invoices() {
                         </CardContent>
                       </Card>
                       
-                      {autoGenerateResults.errors.length > 0 && (
+                      {autoGenerateResults.errors && autoGenerateResults.errors.length > 0 && (
                         <Card>
                           <CardContent className="p-4">
                             <div className="flex items-center gap-3">
@@ -620,7 +620,7 @@ export default function Invoices() {
                                 <AlertCircle className="h-5 w-5 text-red-500" />
                               </div>
                               <div>
-                                <p className="text-2xl font-bold">{autoGenerateResults.errors.length}</p>
+                                <p className="text-2xl font-bold">{autoGenerateResults.errors?.length || 0}</p>
                                 <p className="text-sm text-muted-foreground">Errors</p>
                               </div>
                             </div>
@@ -630,11 +630,11 @@ export default function Invoices() {
                     </div>
 
                     {/* Generated Invoices List */}
-                    {autoGenerateResults.invoices.length > 0 && (
+                    {autoGenerateResults.invoices && autoGenerateResults.invoices.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="font-semibold">Generated Draft Invoices</h4>
                         <div className="space-y-2">
-                          {autoGenerateResults.invoices.map((item: any, index: number) => (
+                          {autoGenerateResults.invoices?.map((item: any, index: number) => (
                             <Card key={index}>
                               <CardContent className="p-4">
                                 <div className="flex justify-between items-start">
@@ -659,11 +659,11 @@ export default function Invoices() {
                     )}
 
                     {/* Errors List */}
-                    {autoGenerateResults.errors.length > 0 && (
+                    {autoGenerateResults.errors && autoGenerateResults.errors.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="font-semibold text-red-500">Errors</h4>
                         <div className="space-y-2">
-                          {autoGenerateResults.errors.map((error: any, index: number) => (
+                          {autoGenerateResults.errors?.map((error: any, index: number) => (
                             <Card key={index} className="border-red-500/20">
                               <CardContent className="p-3">
                                 <p className="font-medium text-sm">{error.clientName}</p>
