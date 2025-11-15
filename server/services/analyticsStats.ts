@@ -50,10 +50,12 @@ export async function getAnalyticsStats(
   const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
   // Fetch all stats in parallel (but NOT automation metrics for platform scope)
+  // CRITICAL FIX: Fetch BOTH workspace AND platform client counts to prevent data inconsistency
   const [
     workspacesData,
     employeesData,
     clientsData,
+    platformClientsData,
     subscriptionsData,
     currentMonthRevenue,
     previousMonthRevenue,
@@ -72,10 +74,16 @@ export async function getAnalyticsStats(
       ? db.select({ count: count() }).from(employees).where(eq(employees.workspaceId, workspaceId))
       : db.select({ count: count() }).from(employees),
     
-    // Client count
+    // Client count (workspace-scoped when workspaceId provided)
     workspaceId
       ? db.select({ count: count() }).from(clients).where(eq(clients.workspaceId, workspaceId))
       : db.select({ count: count() }).from(clients),
+    
+    // Platform-wide client count (always global, even when workspace-scoped request)
+    // This ensures summary.totalCustomers is always accurate
+    workspaceId
+      ? db.select({ count: count() }).from(clients)
+      : Promise.resolve([{ count: 0 }]), // Avoid duplicate query for platform scope
     
     // Active subscriptions
     workspaceId
@@ -183,7 +191,10 @@ export async function getAnalyticsStats(
   const stats: AnalyticsStats = {
     summary: {
       totalWorkspaces: workspacesData[0]?.count || 0,
-      totalCustomers: clientsData[0]?.count || 0,
+      // CRITICAL FIX: Always use platform-wide count for summary, even when workspace-scoped
+      totalCustomers: workspaceId 
+        ? (platformClientsData[0]?.count || 0)
+        : (clientsData[0]?.count || 0),
       activeEmployees: employeesData[0]?.count || 0,
       monthlyRevenue: {
         amount: currentRevenue,

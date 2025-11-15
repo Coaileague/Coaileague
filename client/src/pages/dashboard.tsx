@@ -246,7 +246,10 @@ export default function Dashboard() {
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
   const totalEmployees = stats?.summary.activeEmployees || 0;
-  const totalClients = stats?.workspace?.activeClients || stats?.summary.totalCustomers || 0;
+  // CRITICAL FIX: Use correct field based on context - no fallbacks to prevent silent inconsistencies
+  // workspace.activeClients = workspace-specific count when in workspace context
+  // summary.totalCustomers = platform-wide count (always accurate after backend fix)
+  const totalClients = stats?.workspace?.activeClients ?? stats?.summary.totalCustomers ?? 0;
   const totalRevenue = stats?.summary.monthlyRevenue.amount || 0;
 
   // Use WebSocket unread count if available
