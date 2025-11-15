@@ -93,9 +93,9 @@ export default function Invoices() {
   } | null>(null);
 
   const autoGenerateMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<{ generated: number; invoices: any[]; errors: any[] }> => {
       const response = await apiRequest("POST", "/api/invoices/auto-generate");
-      return response;
+      return response as { generated: number; invoices: any[]; errors: any[] };
     },
     onSuccess: (data) => {
       setAutoGenerateResults(data);
@@ -864,7 +864,7 @@ export default function Invoices() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        {(invoice.status === 'draft' || invoice.status === 'pending') && (
+                        {invoice.status === 'draft' && (
                           <Button 
                             variant="ghost" 
                             size="sm"
