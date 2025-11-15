@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientLookup } from "@/hooks/useClients";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,9 +57,7 @@ export default function AuditorPortal() {
     queryKey: ["/api/employees"],
   });
 
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-  });
+  const { data: clients = [] } = useClientLookup();
 
   // Calculate financial metrics
   const totalRevenue = invoices

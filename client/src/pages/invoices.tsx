@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useClientLookup } from "@/hooks/useClients";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -121,9 +122,7 @@ export default function Invoices() {
     },
   });
 
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-  });
+  const { data: clients = [] } = useClientLookup();
 
   const { data: unbilledTimeEntries = [] } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries/unbilled", generateFormData.clientId],

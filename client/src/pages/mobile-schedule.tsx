@@ -9,6 +9,7 @@ import {
   XCircle, Eye
 } from 'lucide-react';
 import { useEmployee } from '@/hooks/useEmployee';
+import { useClientLookup } from '@/hooks/useClients';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Shift, Employee, Client } from '@shared/schema';
@@ -31,10 +32,8 @@ export default function MobileSchedule() {
     queryKey: ['/api/employees'],
   });
 
-  // Fetch clients
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ['/api/clients'],
-  });
+  // Fetch clients for dropdown
+  const { data: clients = [] } = useClientLookup();
 
   // Fetch shifts
   const { data: shifts = [] } = useQuery<Shift[]>({

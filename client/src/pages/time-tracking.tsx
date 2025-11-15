@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useClientLookup } from "@/hooks/useClients";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -98,10 +99,7 @@ export default function TimeTracking() {
     enabled: isAuthenticated,
   });
 
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-    enabled: isAuthenticated,
-  });
+  const { data: clients = [] } = useClientLookup();
 
   const { data: shifts = [] } = useQuery<Shift[]>({
     queryKey: ["/api/shifts"],

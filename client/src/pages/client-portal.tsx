@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientLookup } from "@/hooks/useClients";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +47,7 @@ export default function ClientPortal() {
     queryKey: ["/api/invoices"],
   });
 
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-  });
+  const { data: clients = [] } = useClientLookup();
 
   // Find current client based on user email
   const currentClient = clients.find(client => client.email === user?.email);
