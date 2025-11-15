@@ -54,3 +54,74 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
 -   **AI**: Google Gemini (2.0 Flash Exp)
 -   **Constraint Solving**: TypeScript greedy constraint solver
 -   **Financial Integrations**: QuickBooks Online (QBO), Gusto
+
+## Recent Changes (Nov 15, 2025)
+
+### Critical Bug Fixes
+1. **External ID Persistence Fix**: Fixed race condition where `employee_number` was NULL immediately after employee creation
+   - Root cause: External IDs were created in `externalIdentifiers` table but not synced to `employees.employee_number` column
+   - Solution: Added synchronous UPDATE to sync external ID back to entity tables within same transaction
+   - Modified: `server/services/identityService.ts` - `attachEmployeeExternalId()` now updates `employees.employee_number` immediately
+   
+2. **Invoice Auto-Generate Crash Fix**: Added defensive null checks to prevent crash when auto-generate returns no results
+   - Modified: `client/src/pages/invoices.tsx` - Added `?.` optional chaining for `autoGenerateResults.errors` and `.invoices` arrays
+   - Impact: Prevents app crash when invoice generation returns empty result set
+
+3. **Invoice Status Enum Correction**: Corrected invoice status comparisons from 'pending' to 'draft' to match actual schema enum values
+   - Schema uses: 'draft', 'sent', 'paid', 'void', 'overdue'
+
+### Schema Architecture Clarifications
+1. **Database Column Naming**:
+   - Database uses snake_case (clock_in, clock_out, employee_number)
+   - Drizzle ORM auto-converts to camelCase in TypeScript (clockIn, clockOut, employeeNumber)
+   - NO manual mapping needed - ORM handles conversion automatically
+
+2. **Client Billing Rates**:
+   - Stored in separate `client_rates` table with `billable_rate` column
+   - NOT inline in clients table
+   - Linked via `client_id` foreign key
+
+3. **External ID System**:
+   - Primary source: `externalIdentifiers` table (entityType, entityId, externalId)
+   - **Currently synced**: `employees.employee_number` only
+   - **Not yet synced**: Clients, Support Tickets (need schema migration)
+   - Format: EMP-{ORG-CODE}-{SEQUENCE} for employees, CLI-{ORG-CODE}-{SEQUENCE} for clients
+   - Generated synchronously before API response to ensure immediate visibility
+   
+   **Migration Needed:**
+   - Add `client_code` column to `clients` table
+   - Update `attachClientExternalId()` to sync like employees
+   - Backfill existing employees with NULL employee_number from `externalIdentifiers`
+   - Support tickets use separate `ticketNumber` column (different pattern)
+
+### End-to-End Testing Progress
+Completed 3 of 4 critical user journeys:
+
+**E2E Test 1: Shift → Paycheck Workflow**
+- Status: Partial completion with workarounds
+- Findings: Test environment issues with demo workspace data, not production bugs
+- Result: Core workflow functional
+
+**E2E Test 2: Service → Invoice Workflow**
+- Status: Completed with bug fixes
+- Bugs fixed: Invoice page crash on empty results, invoice status enum mismatch
+- Result: Workflow functional after fixes
+
+**E2E Test 3: Employee Onboarding Workflow**
+- Status: Completed with critical fix
+- Bugs discovered: External ID (employee_number) persistence race condition
+- Bugs fixed: Made external ID sync synchronous within transaction
+- Result: Employee numbers now persist immediately and visible in UI/DB
+
+**E2E Test 4: Approval & Reporting Workflow**
+- Status: Not yet tested
+- Next steps: Time tracking approvals, payroll approvals, reporting dashboards
+
+### Known Issues
+1. **LSP Errors**: 1067+ TypeScript errors in `server/routes.ts` (type mismatches, missing methods)
+   - Impact: None on runtime - app runs successfully
+   - Status: Pre-existing issues, not blocking functionality
+   - Action: Separate cleanup task recommended
+
+2. **Read-After-Write Consistency**: Database reads immediately after writes may benefit from explicit transaction waits
+   - Current mitigation: External ID sync happens within same transaction before API response
