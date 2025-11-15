@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { ResponsiveLoading } from "@/components/loading-indicators";
 import { useCreateClient } from "@/hooks/useClients";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
@@ -132,10 +131,6 @@ export default function Clients() {
       return;
     }
   }, [isAuthenticated, authLoading, toast]);
-
-  if (authLoading || !isAuthenticated) {
-    return <ResponsiveLoading fullScreen message="Loading Clients..." />;
-  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">

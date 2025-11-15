@@ -19,6 +19,7 @@ import {
   FileText, Download, Upload, Settings, Edit, Trash2, Eye,
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, Building2
 } from "lucide-react";
+import { MetricsCardsSkeleton, TableSkeleton } from "@/components/loading-indicators/skeletons";
 
 interface Budget {
   id: string;
@@ -108,14 +109,10 @@ export default function BudgetOS() {
     createBudgetMutation.mutate(newBudget);
   };
 
-  if (authLoading || budgetsLoading) {
-    return <ResponsiveLoading fullScreen message="Loading BudgetOS™..." />;
-  }
-
   const totalBudgeted = budgets.reduce((sum, b) => sum + b.totalAmount, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
   const totalRemaining = budgets.reduce((sum, b) => sum + b.remaining, 0);
-  const utilizationRate = (totalSpent / totalBudgeted) * 100;
+  const utilizationRate = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
 
   const selectedBudgetData = budgets.find((b) => b.id === selectedBudget);
 
@@ -143,6 +140,9 @@ export default function BudgetOS() {
       </div>
 
       {/* Overview Stats */}
+      {budgetsLoading ? (
+        <MetricsCardsSkeleton count={4} columns={4} />
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-3">
@@ -199,6 +199,7 @@ export default function BudgetOS() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Main Content */}
       <Tabs defaultValue="budgets" className="space-y-4">
@@ -223,6 +224,15 @@ export default function BudgetOS() {
 
         {/* Budgets Tab */}
         <TabsContent value="budgets" className="space-y-4">
+          {budgetsLoading ? (
+            <TableSkeleton rows={4} columns={3} compact={false} />
+          ) : budgets.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No budgets created yet. Click "New Budget" to get started.
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {budgets.map((budget) => {
               const utilizationPercent = (budget.spent / budget.totalAmount) * 100;
@@ -315,6 +325,7 @@ export default function BudgetOS() {
               );
             })}
           </div>
+          )}
         </TabsContent>
 
         {/* Forecast Tab */}

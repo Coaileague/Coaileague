@@ -184,10 +184,6 @@ export default function IntegrationOS() {
     },
   });
 
-  if (authLoading) {
-    return <ResponsiveLoading fullScreen message="Loading IntegrationOS™..." />;
-  }
-
   const categories = Array.from(new Set(marketplace.map((i) => i.category)));
   const filteredMarketplace = marketplace.filter((integration) => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

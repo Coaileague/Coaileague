@@ -364,10 +364,6 @@ export default function Settings() {
     ]);
   };
 
-  if (isLoading || !isAuthenticated) {
-    return <ResponsiveLoading fullScreen message="Loading Settings..." />;
-  }
-
   const pageContent = (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">

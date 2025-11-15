@@ -149,10 +149,6 @@ export default function TrainingOS() {
     },
   });
 
-  if (authLoading) {
-    return <ResponsiveLoading fullScreen message="Loading TrainingOS™..." />;
-  }
-
   const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.description?.toLowerCase().includes(searchQuery.toLowerCase());

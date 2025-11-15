@@ -613,10 +613,6 @@ export default function TimeTracking() {
   const pendingApprovals = timeEntries.filter((e: TimeEntry) => e.status === 'pending').length;
   const canApprove = workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor';
 
-  if (isLoading) {
-    return <ResponsiveLoading />;
-  }
-
   if (!isAuthenticated) {
     return null;
   }

@@ -474,15 +474,6 @@ export default function ReportsPage() {
     return <Badge variant={config.variant} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
   };
 
-  // Show loading state
-  if (templatesLoading || submissionsLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <ResponsiveLoading message="Loading reports..." />
-      </div>
-    );
-  }
-
   return (
     <div className="h-full overflow-auto mobile-scroll safe-bottom">
       <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
