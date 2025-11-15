@@ -1,0 +1,885 @@
+# AutoForce™ - Complete Build Plan for Replit
+
+## 🎯 System Overview
+**Universal AI-Powered Workforce Automation Platform**
+- **Product Name**: AutoForce™
+- **AI Brain**: Gemini API integration as central decision engine
+- **Core Services**: Onboarding, Payroll, Invoicing, Scheduling
+- **Control Model**: Human-in-the-loop approval system before automation execution
+- **Architecture**: Self-aware, interconnected microservices with universal AI logic
+
+---
+
+## 🏗️ PHASE 1: Core Foundation & AI Brain
+
+### 1.1 Universal AI Brain Setup
+```
+/ai-brain/
+├── gemini-controller.js          # Main Gemini API integration
+├── workflow-engine.js             # Orchestrates all automation workflows
+├── decision-logic.js              # AI decision-making rules
+├── guardrails.js                  # Safety rules & validation
+├── context-manager.js             # Maintains state across all services
+└── approval-queue.js              # Human approval workflow
+```
+
+**Features to Build:**
+- [ ] Gemini API initialization and authentication
+- [ ] Universal context window (maintains awareness of all data)
+- [ ] Multi-step reasoning for complex workflows
+- [ ] Decision tree for when to request human approval
+- [ ] Logging system for all AI decisions
+- [ ] Rollback capability for any automated action
+
+**Guardrails & Rules:**
+- Never execute financial transactions without approval
+- Validate all data before processing
+- Check for conflicts across services (e.g., scheduling vs availability)
+- Enforce compliance rules (tax, labor laws, etc.)
+- Maintain audit trail for all actions
+
+---
+
+## 🏗️ PHASE 2: Universal Pages & UI Framework
+
+### 2.1 Core Page Templates
+```
+/pages/
+├── dashboard.jsx                  # Universal dashboard for all users
+├── approval-center.jsx            # Human approval interface
+├── workflow-builder.jsx           # Visual workflow configuration
+├── entity-manager.jsx             # Universal CRUD for clients/employees
+├── automation-monitor.jsx         # Real-time automation status
+└── settings.jsx                   # System-wide configuration
+```
+
+### 2.2 Component Library (Reusable Across All Services)
+```
+/components/
+├── universal-form.jsx             # Smart form with AI validation
+├── approval-card.jsx              # Standardized approval UI
+├── workflow-step.jsx              # Visual workflow step component
+├── data-table.jsx                 # Universal data grid
+├── ai-assistant-panel.jsx         # Chat interface with Gemini
+├── notification-center.jsx        # Real-time alerts
+└── status-tracker.jsx             # Progress indicators
+```
+
+---
+
+## 🏗️ PHASE 3: Onboarding System
+
+### 3.1 Client Onboarding Workflow
+**Database Schema:**
+```
+clients/
+├── id (unique)
+├── company_name
+├── contact_info
+├── billing_details
+├── service_agreements
+├── onboarding_status
+├── assigned_account_manager
+└── custom_requirements
+```
+
+**Onboarding Steps to Automate:**
+1. **Initial Contact Capture**
+   - [ ] Form submission or API integration
+   - [ ] AI extracts key information from documents/emails
+   - [ ] Creates client record with unique ID
+
+2. **Document Collection**
+   - [ ] AI generates checklist based on service type
+   - [ ] Automated email requests for missing documents
+   - [ ] Document validation (W9, contracts, etc.)
+   - [ ] OCR + AI extraction of data from PDFs
+
+3. **Service Configuration**
+   - [ ] AI recommends service package based on company size/needs
+   - [ ] Generates custom pricing proposal
+   - [ ] Creates service agreement draft
+   - **APPROVAL REQUIRED**: User reviews and approves agreement
+
+4. **System Setup**
+   - [ ] Creates client portal access
+   - [ ] Sets up billing account
+   - [ ] Configures communication preferences
+   - [ ] Assigns account manager
+   - **APPROVAL REQUIRED**: User confirms setup before activation
+
+5. **Kickoff**
+   - [ ] AI schedules kickoff meeting based on calendars
+   - [ ] Sends welcome package
+   - [ ] Creates initial project/service tickets
+   - [ ] Triggers employee onboarding if needed
+
+**Files to Build:**
+```
+/services/onboarding/clients/
+├── client-intake.js               # Form & data capture
+├── document-processor.js          # AI document handling
+├── agreement-generator.js         # Contract creation
+├── setup-automation.js            # Account provisioning
+└── kickoff-scheduler.js           # Meeting coordination
+```
+
+### 3.2 Employee Onboarding Workflow
+**Database Schema:**
+```
+employees/
+├── id (unique)
+├── personal_info
+├── role_details
+├── compensation
+├── benefits_enrollment
+├── tax_forms (W4, state forms)
+├── direct_deposit_info
+├── onboarding_status
+├── assigned_client (if applicable)
+└── training_progress
+```
+
+**Onboarding Steps to Automate:**
+1. **Pre-Boarding**
+   - [ ] Job offer generation and tracking
+   - [ ] Background check status monitoring
+   - [ ] Equipment ordering automation
+   - [ ] Credentials creation (email, systems access)
+
+2. **Document Collection**
+   - [ ] I-9 verification workflow
+   - [ ] W-4 and state tax form processing
+   - [ ] Direct deposit setup
+   - [ ] Benefits enrollment forms
+   - [ ] AI validates all documents for completeness
+   - **APPROVAL REQUIRED**: HR reviews documents before finalizing
+
+3. **System Provisioning**
+   - [ ] Email account creation
+   - [ ] Software license assignment
+   - [ ] Access permissions setup
+   - [ ] Training portal enrollment
+
+4. **Payroll Integration**
+   - [ ] Adds employee to payroll system
+   - [ ] Sets up compensation schedule
+   - [ ] Configures tax withholdings
+   - [ ] Links to time tracking
+   - **APPROVAL REQUIRED**: Payroll admin approves before first pay period
+
+5. **Training & Orientation**
+   - [ ] AI creates personalized training plan
+   - [ ] Schedules orientation sessions
+   - [ ] Tracks completion of required training
+   - [ ] Sends reminders for incomplete items
+
+**Files to Build:**
+```
+/services/onboarding/employees/
+├── offer-management.js            # Job offers
+├── document-collection.js         # I-9, W4, etc.
+├── system-provisioning.js         # Access & accounts
+├── payroll-integration.js         # Connect to payroll
+└── training-scheduler.js          # Onboarding tasks
+```
+
+---
+
+## 🏗️ PHASE 4: Payroll System
+
+### 4.1 Payroll Processing Workflow
+**Database Schema:**
+```
+payroll/
+├── pay_periods/
+│   ├── period_id
+│   ├── start_date
+│   ├── end_date
+│   ├── pay_date
+│   ├── status
+│   └── approval_history
+├── timesheets/
+│   ├── employee_id
+│   ├── period_id
+│   ├── hours_worked
+│   ├── overtime
+│   └── pto_used
+└── pay_runs/
+    ├── run_id
+    ├── employee_id
+    ├── gross_pay
+    ├── deductions
+    ├── net_pay
+    └── tax_withholdings
+```
+
+**Complete Payroll Missions:**
+
+**Mission 1: Time Collection**
+- [ ] Integrate with time tracking systems
+- [ ] AI reviews timesheets for anomalies
+- [ ] Auto-approves standard entries
+- [ ] Flags unusual hours/overtime for review
+- **APPROVAL REQUIRED**: Manager approves flagged timesheets
+
+**Mission 2: Payroll Calculation**
+- [ ] AI calculates gross pay (hourly/salary)
+- [ ] Computes overtime per labor laws
+- [ ] Calculates tax withholdings (federal, state, local)
+- [ ] Processes deductions (benefits, 401k, garnishments)
+- [ ] Computes employer taxes
+- [ ] AI checks for calculation errors
+- **APPROVAL REQUIRED**: Payroll admin reviews totals before processing
+
+**Mission 3: Payment Processing**
+- [ ] Generates ACH file for direct deposits
+- [ ] Creates checks for non-DD employees
+- [ ] AI verifies banking information
+- [ ] Schedules payment for pay date
+- **APPROVAL REQUIRED**: Final "GO" button to release funds
+
+**Mission 4: Tax Compliance**
+- [ ] Files federal tax deposits
+- [ ] Files state tax deposits
+- [ ] Generates quarterly reports (941, state)
+- [ ] Tracks annual limits (Social Security, etc.)
+- [ ] AI monitors for compliance deadlines
+- [ ] Sends alerts before filing deadlines
+- **APPROVAL REQUIRED**: User reviews before filing
+
+**Mission 5: Reporting & Records**
+- [ ] Generates pay stubs
+- [ ] Updates payroll register
+- [ ] Creates GL entries for accounting
+- [ ] Generates management reports
+- [ ] Archives all records per retention rules
+
+**Files to Build:**
+```
+/services/payroll/
+├── time-aggregator.js             # Collect & validate hours
+├── payroll-calculator.js          # All pay calculations
+├── tax-engine.js                  # Tax calculations & filing
+├── payment-processor.js           # ACH & check generation
+├── compliance-monitor.js          # Regulatory tracking
+└── reporting.js                   # All payroll reports
+```
+
+---
+
+## 🏗️ PHASE 5: Invoicing System
+
+### 5.1 Invoicing Workflow
+**Database Schema:**
+```
+invoicing/
+├── invoices/
+│   ├── invoice_id
+│   ├── client_id
+│   ├── invoice_date
+│   ├── due_date
+│   ├── line_items[]
+│   ├── subtotal
+│   ├── tax
+│   ├── total
+│   ├── status
+│   └── payment_history
+├── payment_terms/
+│   ├── client_id
+│   ├── net_days
+│   ├── auto_invoice_schedule
+│   └── late_fee_rules
+└── revenue_recognition/
+    ├── invoice_id
+    ├── recognition_schedule
+    └── gl_entries
+```
+
+**Complete Invoicing Missions:**
+
+**Mission 1: Invoice Generation**
+- [ ] AI monitors billable activities (time, projects, services)
+- [ ] Creates invoice draft automatically
+- [ ] Applies correct billing rates per client agreement
+- [ ] Calculates taxes based on jurisdiction
+- [ ] Applies discounts or credits
+- [ ] Generates professional PDF invoice
+- **APPROVAL REQUIRED**: User reviews invoice before sending
+
+**Mission 2: Invoice Delivery**
+- [ ] Sends invoice via email (automated)
+- [ ] Posts to client portal
+- [ ] Integrates with client's AP system (if available)
+- [ ] AI personalizes email message per client
+- [ ] Logs delivery confirmation
+
+**Mission 3: Payment Tracking**
+- [ ] Monitors for payments received
+- [ ] Auto-matches payments to invoices
+- [ ] Sends thank you email on payment
+- [ ] Updates accounts receivable
+- [ ] Flags partial or overpayments
+- **APPROVAL REQUIRED**: User approves payment application for flagged items
+
+**Mission 4: Collections Management**
+- [ ] Sends automated reminders before due date
+- [ ] Escalates reminders for overdue invoices
+- [ ] AI drafts personalized collection messages
+- [ ] Flags accounts for manual intervention
+- [ ] Tracks collection effectiveness
+- **APPROVAL REQUIRED**: User approves collection actions
+
+**Mission 5: Recurring Billing**
+- [ ] AI identifies recurring service patterns
+- [ ] Auto-generates recurring invoices
+- [ ] Handles subscription billing
+- [ ] Manages contract renewals
+- [ ] Processes usage-based billing
+- **APPROVAL REQUIRED**: User confirms recurring invoice setup
+
+**Mission 6: Financial Reporting**
+- [ ] Aging reports (AR)
+- [ ] Revenue recognition reports
+- [ ] Cash flow forecasting
+- [ ] Client profitability analysis
+- [ ] Tax reports (sales tax collected)
+
+**Files to Build:**
+```
+/services/invoicing/
+├── invoice-generator.js           # Create invoices
+├── billing-engine.js              # Rate calculation & rules
+├── delivery-manager.js            # Send & track invoices
+├── payment-reconciliation.js      # Match payments
+├── collections-automation.js      # AR management
+└── recurring-billing.js           # Subscription handling
+```
+
+---
+
+## 🏗️ PHASE 6: Scheduling System
+
+### 6.1 Scheduling Workflow
+**Database Schema:**
+```
+scheduling/
+├── shifts/
+│   ├── shift_id
+│   ├── employee_id
+│   ├── client_id
+│   ├── date
+│   ├── start_time
+│   ├── end_time
+│   ├── role
+│   ├── status
+│   └── confirmation
+├── availability/
+│   ├── employee_id
+│   ├── recurring_schedule
+│   ├── time_off_requests
+│   └── preferences
+├── requirements/
+│   ├── client_id
+│   ├── coverage_needs
+│   ├── skill_requirements
+│   └── budget_constraints
+└── schedule_templates/
+    ├── template_id
+    ├── pattern
+    └── rules
+```
+
+**Complete Scheduling Missions:**
+
+**Mission 1: Availability Management**
+- [ ] Employees submit availability
+- [ ] AI learns patterns and preferences
+- [ ] Processes time-off requests
+- [ ] Identifies conflicts automatically
+- [ ] Maintains skills/certifications database
+- **APPROVAL REQUIRED**: Manager approves time-off
+
+**Mission 2: Demand Forecasting**
+- [ ] AI analyzes historical data
+- [ ] Predicts staffing needs per client
+- [ ] Factors in seasonality, events, trends
+- [ ] Recommends optimal staffing levels
+- [ ] Alerts to understaffing risks
+
+**Mission 3: Intelligent Scheduling**
+- [ ] AI generates optimal schedules
+- [ ] Balances: employee preferences, skills, labor costs, coverage needs
+- [ ] Respects labor laws (breaks, max hours, overtime)
+- [ ] Minimizes overtime costs
+- [ ] Ensures fair distribution of shifts
+- [ ] Considers commute times/locations
+- **APPROVAL REQUIRED**: Manager reviews schedule before publishing
+
+**Mission 4: Shift Management**
+- [ ] Publishes schedule to employees
+- [ ] Handles shift swap requests
+- [ ] Manages call-offs/absences
+- [ ] AI finds replacement coverage
+- [ ] Sends notifications for changes
+- **APPROVAL REQUIRED**: User approves shift swaps/changes
+
+**Mission 5: Compliance & Tracking**
+- [ ] Enforces break requirements
+- [ ] Tracks hours per employee
+- [ ] Monitors for overtime
+- [ ] Ensures proper rest periods
+- [ ] Generates compliance reports
+
+**Mission 6: Integration with Other Services**
+- [ ] Feeds data to payroll (scheduled vs actual hours)
+- [ ] Updates client billing (scheduled services)
+- [ ] Coordinates with onboarding (new employee start dates)
+- [ ] Self-aware of company-wide capacity
+
+**Files to Build:**
+```
+/services/scheduling/
+├── availability-manager.js        # Employee availability
+├── demand-forecaster.js           # AI prediction engine
+├── schedule-optimizer.js          # AI scheduling algorithm
+├── shift-manager.js               # Real-time shift handling
+├── compliance-checker.js          # Labor law enforcement
+└── schedule-publisher.js          # Communication & updates
+```
+
+---
+
+## 🏗️ PHASE 7: Universal AI Brain Integration
+
+### 7.1 Cross-Service Intelligence
+**The AI must be self-aware across all services. Examples:**
+
+**Scenario 1: New Client Onboarding**
+```
+AI Reasoning:
+1. New client needs 5 employees → Triggers employee onboarding
+2. Service starts in 2 weeks → Schedules employee start dates
+3. Billing is NET-30 → Sets up recurring invoicing
+4. Employees need to be paid → Adds to next payroll cycle
+```
+
+**Scenario 2: Employee Calls In Sick**
+```
+AI Reasoning:
+1. Employee scheduled for shift → Finds replacement from available pool
+2. Replacement works overtime → Adjusts payroll calculation
+3. Client still gets coverage → No invoice impact
+4. Tracks sick time used → Updates PTO balance
+```
+
+**Scenario 3: Client Expands Services**
+```
+AI Reasoning:
+1. Client requests more hours → Identifies staffing gap
+2. No existing employees available → Recommends hiring
+3. Increase in services → Updates invoice amount
+4. More shifts to fill → Rebuilds schedule
+```
+
+### 7.2 Universal Context Manager
+```javascript
+// Pseudo-code for AI context awareness
+const UniversalContext = {
+  clients: [], // All client data
+  employees: [], // All employee data
+  schedules: [], // All scheduling data
+  payroll: [], // All payroll data
+  invoices: [], // All invoice data
+  workflows: [], // Active workflows
+  pendingApprovals: [], // Items awaiting user decision
+}
+
+// AI can query across all data before making decisions
+AI.makeDecision({
+  action: "schedule_shift",
+  context: UniversalContext,
+  constraints: [
+    "employee must be qualified",
+    "employee must be available",
+    "client budget must allow",
+    "overtime rules must be respected"
+  ]
+})
+```
+
+### 7.3 AI Decision-Making Framework
+```
+/ai-brain/decision-framework/
+├── rule-engine.js                 # If-then rule evaluation
+├── constraint-solver.js           # Optimization algorithms
+├── conflict-resolver.js           # Handle contradictions
+├── priority-manager.js            # Rank decisions by importance
+└── learning-module.js             # Improve from user approvals/rejections
+```
+
+---
+
+## 🏗️ PHASE 8: Approval & Control System
+
+### 8.1 Human-in-the-Loop Workflow
+**Approval Triggers:**
+- Financial thresholds (e.g., invoices >$X, payroll >$Y)
+- First-time actions (new client, new employee)
+- AI confidence <95%
+- Policy exceptions
+- Regulatory compliance items
+- User-defined custom triggers
+
+**Approval UI Components:**
+```
+/components/approval-system/
+├── approval-queue.jsx             # List of pending approvals
+├── approval-detail.jsx            # Deep dive on single item
+├── bulk-approval.jsx              # Approve multiple at once
+├── ai-reasoning-panel.jsx         # Show AI's logic
+└── override-controls.jsx          # User can modify AI decision
+```
+
+**Approval Flow:**
+1. AI completes analysis and prepares action
+2. Checks if approval required
+3. If yes → Creates approval request with:
+   - What AI wants to do
+   - Why (reasoning)
+   - Risks/considerations
+   - Recommended action
+4. User reviews and chooses:
+   - Approve → AI executes
+   - Modify → User changes parameters, AI executes
+   - Reject → AI does not execute, learns from feedback
+   - Defer → Saves for later review
+
+### 8.2 Automation Controls
+```
+/settings/automation-rules/
+├── automation-level.js            # Global: Full Auto, Assisted, Manual
+├── service-settings.js            # Per-service automation level
+├── approval-thresholds.js         # $ amounts, confidence levels
+├── notification-preferences.js    # When to alert user
+└── emergency-stop.js              # Kill switch for all automation
+```
+
+**User Control Panel:**
+- [ ] Master automation ON/OFF toggle
+- [ ] Per-service automation controls
+- [ ] Approval threshold settings
+- [ ] Notification preferences
+- [ ] Audit log viewer
+- [ ] AI performance dashboard
+
+---
+
+## 🏗️ PHASE 9: Database Architecture
+
+### 9.1 Core Database Structure
+```
+database/
+├── clients/                       # Client master data
+├── employees/                     # Employee master data
+├── schedules/                     # Scheduling data
+├── payroll/                       # Payroll data
+├── invoices/                      # Invoicing data
+├── workflows/                     # Active automation workflows
+├── approvals/                     # Approval queue
+├── audit_log/                     # All AI actions & decisions
+├── ai_context/                    # AI memory/learning data
+└── system_config/                 # Settings & rules
+```
+
+### 9.2 Key Relationships
+```
+clients ←→ employees (assigned to)
+clients ←→ schedules (coverage for)
+clients ←→ invoices (billed to)
+employees ←→ schedules (assigned to)
+employees ←→ payroll (paid through)
+schedules → payroll (hours worked)
+schedules → invoicing (services delivered)
+```
+
+---
+
+## 🏗️ PHASE 10: API & Integration Layer
+
+### 10.1 External Integrations
+```
+/integrations/
+├── gemini-api/                    # Google Gemini AI
+├── payment-gateways/              # Stripe, PayPal, ACH
+├── accounting/                    # QuickBooks, Xero
+├── time-tracking/                 # Clockify, Toggl
+├── calendar/                      # Google Calendar, Outlook
+├── email/                         # SendGrid, AWS SES
+├── sms/                           # Twilio
+└── document-storage/              # S3, Google Drive
+```
+
+### 10.2 Internal APIs
+```
+/api/
+├── clients/                       # CRUD for clients
+├── employees/                     # CRUD for employees
+├── schedules/                     # Scheduling endpoints
+├── payroll/                       # Payroll endpoints
+├── invoices/                      # Invoicing endpoints
+├── approvals/                     # Approval queue endpoints
+├── ai-brain/                      # AI decision requests
+└── webhooks/                      # Event notifications
+```
+
+---
+
+## 🏗️ PHASE 11: Testing & Validation
+
+### 11.1 AI Testing Framework
+- [ ] Unit tests for each AI decision type
+- [ ] Integration tests for cross-service workflows
+- [ ] Edge case scenarios (conflicts, errors, edge data)
+- [ ] Performance tests (AI response time)
+- [ ] Accuracy metrics (track AI decision quality)
+- [ ] A/B testing for AI improvements
+
+### 11.2 User Acceptance Testing
+- [ ] Complete onboarding flow (client + employee)
+- [ ] End-to-end payroll cycle
+- [ ] Invoice generation and payment
+- [ ] Schedule creation and modifications
+- [ ] Approval workflows
+- [ ] Emergency scenarios (system failures)
+
+---
+
+## 🏗️ PHASE 12: Deployment Checklist
+
+### 12.1 Pre-Launch
+- [ ] All core features implemented
+- [ ] AI brain trained and tested
+- [ ] Approval system functioning
+- [ ] Database migrations complete
+- [ ] Security audit passed
+- [ ] Compliance review complete
+- [ ] Documentation finished
+- [ ] User training materials ready
+
+### 12.2 Launch Configuration
+- [ ] Set initial automation levels (recommend: Assisted mode)
+- [ ] Configure approval thresholds
+- [ ] Set up monitoring and alerts
+- [ ] Enable audit logging
+- [ ] Create admin accounts
+- [ ] Import initial data (clients, employees)
+
+### 12.3 Post-Launch
+- [ ] Monitor AI decision quality
+- [ ] Collect user feedback on approvals
+- [ ] Track automation success rate
+- [ ] Identify areas for AI improvement
+- [ ] Gradually increase automation level as confidence grows
+
+---
+
+## 📋 REPLIT PROJECT STRUCTURE
+
+```
+autoforce/
+├── package.json
+├── .replit
+├── replit.nix
+├── README.md
+│
+├── /server/
+│   ├── index.js                   # Main server file
+│   ├── /ai-brain/                 # Gemini AI integration
+│   ├── /api/                      # API routes
+│   ├── /database/                 # Database models & migrations
+│   ├── /integrations/             # External APIs
+│   ├── /services/                 # Business logic
+│   │   ├── /onboarding/
+│   │   ├── /payroll/
+│   │   ├── /invoicing/
+│   │   └── /scheduling/
+│   └── /utils/                    # Helpers
+│
+├── /client/
+│   ├── /public/
+│   ├── /src/
+│   │   ├── App.jsx                # Main React app
+│   │   ├── /pages/                # Page components
+│   │   ├── /components/           # Reusable components
+│   │   ├── /hooks/                # Custom React hooks
+│   │   ├── /context/              # React context (state)
+│   │   └── /utils/                # Client utilities
+│   └── package.json
+│
+├── /shared/
+│   ├── /types/                    # TypeScript definitions
+│   └── /constants/                # Shared constants
+│
+└── /docs/
+    ├── api-documentation.md
+    ├── ai-decision-guide.md
+    └── user-manual.md
+```
+
+---
+
+## 🚀 BUILD ORDER (Recommended)
+
+**Sprint 1: Foundation (Week 1-2)**
+1. Set up Replit project structure
+2. Initialize database
+3. Build basic auth system
+4. Integrate Gemini API
+5. Create universal dashboard shell
+
+**Sprint 2: AI Brain (Week 3-4)**
+6. Build workflow engine
+7. Create decision-making framework
+8. Implement guardrails
+9. Build approval queue system
+10. Create context manager
+
+**Sprint 3: Onboarding (Week 5-6)**
+11. Client onboarding workflow
+12. Employee onboarding workflow
+13. Document processing
+14. System provisioning automation
+
+**Sprint 4: Payroll (Week 7-9)**
+15. Time collection
+16. Payroll calculations
+17. Tax engine
+18. Payment processing
+19. Compliance monitoring
+
+**Sprint 5: Invoicing (Week 10-11)**
+20. Invoice generation
+21. Payment tracking
+22. Collections automation
+23. Recurring billing
+
+**Sprint 6: Scheduling (Week 12-14)**
+24. Availability management
+25. AI scheduling algorithm
+26. Shift management
+27. Compliance checking
+
+**Sprint 7: Integration & Testing (Week 15-16)**
+28. Cross-service workflows
+29. End-to-end testing
+30. Performance optimization
+31. Security hardening
+
+**Sprint 8: Launch Prep (Week 17-18)**
+32. Documentation
+33. User training
+34. Data migration tools
+35. Go-live!
+
+---
+
+## 🤖 TELLING REPLIT WHAT TO BUILD
+
+### Method 1: Detailed Specifications
+Break down each feature into specific technical requirements:
+
+**Example: Client Onboarding Form**
+```
+"Create a multi-step form component in React that:
+1. Collects company name, contact info, industry
+2. Validates email format and required fields
+3. Shows progress indicator (Step X of Y)
+4. Saves draft automatically every 30 seconds
+5. Submits data to /api/clients/onboard endpoint
+6. Handles success/error states with notifications
+7. Uses Tailwind CSS for styling matching our design system"
+```
+
+### Method 2: User Stories
+Describe functionality from user perspective:
+
+**Example: Payroll Approval**
+```
+"As a payroll administrator, when I navigate to the approval center,
+I want to see a list of pending payroll runs that need approval,
+so that I can review totals, see AI's calculations, and approve or
+modify before funds are released."
+```
+
+### Method 3: Workflow Diagrams
+Provide step-by-step flows:
+
+**Example: Employee Onboarding Workflow**
+```
+1. HR submits new employee info → Form submission
+2. AI creates employee record → Database INSERT
+3. AI generates document checklist → Rule-based logic
+4. System sends email to employee → Email API call
+5. Employee uploads documents → File upload + OCR
+6. AI validates documents → Gemini API analysis
+7. Creates approval request → Approval queue
+8. HR reviews and approves → User action
+9. AI provisions systems → API calls to create accounts
+10. Employee receives welcome email → Triggered notification
+```
+
+### Method 4: Database Schema First
+Define data structure clearly:
+
+**Example: Invoice Schema**
+```sql
+CREATE TABLE invoices (
+  id UUID PRIMARY KEY,
+  client_id UUID REFERENCES clients(id),
+  invoice_number VARCHAR(50) UNIQUE,
+  invoice_date DATE,
+  due_date DATE,
+  subtotal DECIMAL(10,2),
+  tax DECIMAL(10,2),
+  total DECIMAL(10,2),
+  status VARCHAR(20), -- draft, sent, paid, overdue
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
+);
+
+CREATE TABLE invoice_line_items (
+  id UUID PRIMARY KEY,
+  invoice_id UUID REFERENCES invoices(id),
+  description TEXT,
+  quantity DECIMAL(10,2),
+  rate DECIMAL(10,2),
+  amount DECIMAL(10,2)
+);
+```
+
+---
+
+## 🎯 CRITICAL SUCCESS FACTORS
+
+1. **Start Simple, Iterate**: Build one complete workflow first (recommend: Client Onboarding), then expand
+2. **AI Confidence Tracking**: Log every AI decision and accuracy to improve over time
+3. **User Feedback Loop**: Make it easy for users to rate AI decisions
+4. **Fallback to Manual**: Always allow users to override or complete tasks manually
+5. **Security First**: Protect sensitive payroll and financial data with encryption
+6. **Audit Everything**: Maintain complete audit trail for compliance
+7. **Performance Monitoring**: Track AI response times and optimize
+8. **Incremental Automation**: Start with low automation, increase as trust builds
+
+---
+
+## 📞 NEXT STEPS
+
+1. **Set up Replit project** with the recommended structure
+2. **Choose starting point** (recommend: AI Brain + Onboarding)
+3. **Configure Gemini API** access and test basic prompts
+4. **Build MVP approval system** to establish control framework
+5. **Implement one complete workflow** end-to-end
+6. **Test, refine, expand** to other services
+
+This build plan covers everything you need for a fully automated, AI-powered workforce management system with proper human oversight and control!

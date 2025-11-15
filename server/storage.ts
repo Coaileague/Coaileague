@@ -725,6 +725,13 @@ export class DatabaseStorage implements IStorage {
     // Auto-seed default expense categories for new workspace
     await this.seedDefaultExpenseCategories(workspace.id);
     
+    // Generate human-readable external ID (ORG-XXXX) and initialize employee/client sequences
+    // Non-blocking to not delay workspace creation
+    const { ensureOrgIdentifiers } = await import('./services/identityService');
+    ensureOrgIdentifiers(workspace.id, workspace.name).catch(err => 
+      console.error(`[Storage] Failed to attach org external ID for ${workspace.id}:`, err)
+    );
+    
     return workspace;
   }
   
