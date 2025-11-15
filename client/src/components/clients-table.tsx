@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/loading-indicators/skeletons";
 import {
   Table,
   TableBody,
@@ -309,14 +309,19 @@ export function ClientsTable() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex gap-4">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 w-[180px]" />
-          <Skeleton className="h-10 w-[180px]" />
-        </div>
-        <Skeleton className="h-[400px]" />
-      </div>
+      <>
+        <ClientsTableToolbar
+          searchInput={searchInput}
+          onSearchChange={setSearchInput}
+          status={params.status}
+          onStatusChange={(status) => updateParams({ status, page: 1 })}
+          sort={params.sort}
+          onSortChange={(sort) => updateParams({ sort, page: 1 })}
+          order={params.order}
+          onOrderChange={(order) => updateParams({ order })}
+        />
+        <TableSkeleton rows={6} columns={4} showAvatar={true} compact={false} />
+      </>
     );
   }
 

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { SearchPanelSkeleton, PageHeaderSkeleton, TableSkeleton } from "@/components/loading-indicators/skeletons";
 import {
   Search, User, Activity, Clock, MapPin, Shield, AlertTriangle,
   Database, FileText, Key, Settings, RefreshCw, Terminal,
@@ -152,11 +153,6 @@ export default function QueryOS() {
     },
   });
 
-  if (!isAuthorized && !authLoading) {
-    setLocation('/error-403');
-    return null;
-  }
-
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -169,7 +165,17 @@ export default function QueryOS() {
     ? searchResults.find((u) => u.userId === selectedUserId) || userDetail
     : null;
 
-  return (
+  if (!isAuthorized && !authLoading) {
+    setLocation('/error-403');
+    return null;
+  }
+
+  return authLoading ? (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      <PageHeaderSkeleton />
+      <SearchPanelSkeleton />
+    </div>
+  ) : (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">

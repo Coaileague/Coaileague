@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
+import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -364,7 +365,16 @@ export default function Settings() {
     ]);
   };
 
-  const pageContent = (
+  const pageContent = isLoading ? (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div className="space-y-4 sm:space-y-6">
+          <PageHeaderSkeleton />
+          <SettingsCardSkeleton count={4} />
+        </div>
+      </div>
+    </div>
+  ) : (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="space-y-4 sm:space-y-6">

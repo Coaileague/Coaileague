@@ -35,6 +35,7 @@ import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/page-header";
+import { TimelineSkeleton, MetricsCardsSkeleton } from "@/components/loading-indicators/skeletons";
 
 export default function TimeTracking() {
   const { toast } = useToast();
@@ -617,7 +618,24 @@ export default function TimeTracking() {
     return null;
   }
 
-  return (
+  return isLoading ? (
+    <MobilePageWrapper>
+      <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white sticky top-0 z-40 shadow-lg px-4 py-6">
+          <div className="flex items-center space-x-3">
+            <Clock className="w-6 h-6" />
+            <h1 className="text-xl font-bold">TimeTracker</h1>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <MetricsCardsSkeleton count={3} columns={3} />
+          <div className="mt-6">
+            <TimelineSkeleton entries={5} />
+          </div>
+        </div>
+      </div>
+    </MobilePageWrapper>
+  ) : (
     <MobilePageWrapper>
       <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
         {/* Blue/Cyan Gradient Header */}

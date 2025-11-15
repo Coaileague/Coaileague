@@ -21,6 +21,7 @@ import {
   Video, Download, Upload, BarChart3, Target, Star, Trophy,
   AlertCircle, XCircle, Lock, Unlock, Settings, Edit
 } from "lucide-react";
+import { CourseCardSkeleton, MetricsCardsSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 
 interface Course {
   id: string;
@@ -160,7 +161,15 @@ export default function TrainingOS() {
 
   const isAdmin = (user as any)?.workspaceRole === "org_owner" || (user as any)?.platformRole === "root_admin";
 
-  return (
+  return (authLoading || coursesLoading) ? (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      <PageHeaderSkeleton />
+      <div className="mb-6">
+        <MetricsCardsSkeleton count={3} columns={3} />
+      </div>
+      <CourseCardSkeleton count={6} />
+    </div>
+  ) : (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">

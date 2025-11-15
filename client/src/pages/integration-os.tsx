@@ -21,6 +21,7 @@ import {
   Cloud, Zap, Shield, Code, Link as LinkIcon, Eye, EyeOff
 } from "lucide-react";
 import { SiQuickbooks, SiSalesforce, SiSlack } from "react-icons/si";
+import { MarketplaceCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 
 interface Integration {
   id: string;
@@ -200,7 +201,12 @@ export default function IntegrationOS() {
     return <Plug className="h-8 w-8" />;
   };
 
-  return (
+  return (authLoading || marketplaceLoading || connectionsLoading) ? (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      <PageHeaderSkeleton />
+      <MarketplaceCardSkeleton count={6} />
+    </div>
+  ) : (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">

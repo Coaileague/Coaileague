@@ -19,7 +19,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { ResponsiveLoading } from "@/components/loading-indicators";
+import { TableSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 
 const disputeSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
@@ -473,6 +473,19 @@ export default function ReportsPage() {
     const config = variants[status] || { variant: "outline", label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) };
     return <Badge variant={config.variant} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
   };
+
+  if (templatesLoading || submissionsLoading) {
+    return (
+      <div className="h-full overflow-auto mobile-scroll safe-bottom">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          <div className="space-y-3 sm:space-y-4 md:space-y-6">
+            <PageHeaderSkeleton />
+            <TableSkeleton rows={5} columns={4} showAvatar={false} compact={false} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-auto mobile-scroll safe-bottom">
