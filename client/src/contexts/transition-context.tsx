@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from "react";
-import { ProgressScenario } from "@/components/progress-loading-overlay";
+import { type ScenarioType } from "@/components/universal-transition-overlay";
 import { useOverlayController } from "./overlay-controller";
 
 export type TransitionStatus = "loading" | "success" | "error" | "info";
@@ -10,7 +10,7 @@ interface TransitionOptions {
   submessage?: string;
   duration?: number;
   onComplete?: () => void;
-  scenario?: ProgressScenario;
+  scenario?: ScenarioType;
 }
 
 interface TransitionContextType {

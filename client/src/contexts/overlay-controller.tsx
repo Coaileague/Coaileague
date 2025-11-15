@@ -4,7 +4,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
-import { ResponsiveLoading } from "@/components/loading-indicators";
+import { ResponsiveLoading, type ScenarioType, type AnimationType } from "@/components/loading-indicators";
 
 export type OverlayStatus = "loading" | "success" | "error" | "info";
 export type OverlayPriority = "critical" | "high" | "normal";
@@ -14,6 +14,10 @@ interface OverlayRequest {
   priority: OverlayPriority;
   status: OverlayStatus;
   title?: string;
+  submessage?: string;
+  scenario?: ScenarioType;
+  animationType?: AnimationType;
+  progress?: number;
   duration?: number;
   onComplete?: () => void;
   visibleSince?: number; // Timestamp when overlay became visible
@@ -171,9 +175,18 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
     <OverlayControllerContext.Provider value={{ showOverlay, hideOverlay, updateOverlay, isModalActive, registerModal, unregisterModal, tryActivate }}>
       {children}
       {/* Single overlay instance - only one can be visible at a time */}
-      {/* Uses 6 universal loading variants (3 desktop + 3 mobile) with simulated progress */}
+      {/* Uses UniversalTransitionOverlay with multiple animation variants */}
       {activeOverlay && activeOverlay.status === "loading" && (
-        <ResponsiveLoading />
+        <ResponsiveLoading
+          message={activeOverlay.title}
+          submessage={activeOverlay.submessage}
+          scenario={activeOverlay.scenario}
+          animationType={activeOverlay.animationType}
+          progress={activeOverlay.progress}
+          status={activeOverlay.status}
+          duration={activeOverlay.duration}
+          onComplete={activeOverlay.onComplete}
+        />
       )}
     </OverlayControllerContext.Provider>
   );

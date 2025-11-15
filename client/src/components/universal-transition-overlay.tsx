@@ -377,9 +377,9 @@ export function UniversalTransitionOverlay({
   };
 
   const colors = status === "error" || status === "denied" 
-    ? { bg: "from-red-500/20 to-rose-500/20", border: "border-red-500/30", animation: "bg-red-500" }
+    ? { bg: "from-red-500/20 to-rose-500/20", border: "border-red-500/30", text: "text-red-400", animation: "bg-red-500" }
     : status === "success"
-    ? { bg: "from-green-500/20 to-emerald-500/20", border: "border-green-500/30", animation: "bg-green-500" }
+    ? { bg: "from-green-500/20 to-emerald-500/20", border: "border-green-500/30", text: "text-green-400", animation: "bg-green-500" }
     : scenarioColors[scenario];
 
   const config = statusConfig[status];
