@@ -117,10 +117,24 @@ export async function getAutomationMetrics(workspaceId: string | null): Promise<
     prevMonthInvoices.hoursSaved + 
     prevMonthPayrolls.hoursSaved;
   
-  // Calculate trend
-  const percentChange = prevMonthHoursSaved > 0
-    ? ((hoursSavedThisMonth - prevMonthHoursSaved) / prevMonthHoursSaved) * 100
-    : 0;
+  // Calculate trend - handle division by zero with FTC-compliant logic
+  let percentChange = 0;
+  let isImproving = false;
+  
+  if (prevMonthHoursSaved > 0) {
+    // Normal case: calculate percentage change from baseline
+    percentChange = ((hoursSavedThisMonth - prevMonthHoursSaved) / prevMonthHoursSaved) * 100;
+    isImproving = percentChange >= 0;
+  } else if (hoursSavedThisMonth > 0) {
+    // First month of activity: show 0% change to avoid misleading 100% claim
+    // Mark as improving to indicate new positive activity without false ROI claims
+    percentChange = 0;
+    isImproving = true;
+  } else {
+    // No activity in either month: 0% change, not improving
+    percentChange = 0;
+    isImproving = false;
+  }
   
   // Calculate true all-time hours saved from historical data
   const allTimeMetrics = await Promise.all([
@@ -170,7 +184,7 @@ export async function getAutomationMetrics(workspaceId: string | null): Promise<
     },
     trend: {
       percentChange: Math.round(percentChange * 10) / 10,
-      isImproving: percentChange >= 0,
+      isImproving,
     },
   };
 }
@@ -348,7 +362,7 @@ async function getAIJobMetrics(
       avgConfidence: avg(aiBrainJobs.confidenceScore),
       total: count(),
       autoApproved: sql<number>`COUNT(CASE WHEN ${aiBrainJobs.confidenceScore} >= 95 THEN 1 END)`,
-      successful: sql<number>`COUNT(CASE WHEN ${aiBrainJobs.status} = 'success' THEN 1 END)`,
+      successful: sql<number>`COUNT(CASE WHEN ${aiBrainJobs.status} = 'completed' THEN 1 END)`,
       failed: sql<number>`COUNT(CASE WHEN ${aiBrainJobs.status} = 'failed' THEN 1 END)`,
     })
     .from(aiBrainJobs)
