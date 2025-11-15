@@ -152,11 +152,7 @@ export default function QueryOS() {
     },
   });
 
-  if (authLoading) {
-    return <ResponsiveLoading fullScreen message="Loading QueryOS™..." />;
-  }
-
-  if (!isAuthorized) {
+  if (!isAuthorized && !authLoading) {
     setLocation('/error-403');
     return null;
   }
