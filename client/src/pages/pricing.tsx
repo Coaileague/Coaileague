@@ -34,8 +34,8 @@ export default function Pricing() {
         { name: "Email Support (48hr)", included: true },
         { name: "Auto-billing & invoicing", included: false },
         { name: "Auto-payroll processing", included: false },
-        { name: "RecordOS™ - AI Search", included: false },
-        { name: "InsightOS™ - AI Analytics", included: false },
+        { name: "AI-Powered Search", included: false },
+        { name: "AI Analytics", included: false },
       ],
     },
     {
@@ -49,15 +49,15 @@ export default function Pricing() {
       features: [
         { name: "Up to 50 employees", included: true },
         { name: "Smart scheduling & auto-assignment", included: true },
-        { name: "BillOS™ - Auto-billing & invoicing (weekly/bi-weekly)", included: true },
-        { name: "PayrollOS™ - Auto-payroll processing (weekly/bi-weekly)", included: true },
+        { name: "Smart Billing - Auto-billing & invoicing (weekly/bi-weekly)", included: true },
+        { name: "Auto Payroll - Payroll processing (weekly/bi-weekly)", included: true },
         { name: "GPS + photo verification", included: true },
         { name: "Advanced analytics & reporting", included: true },
         { name: "Client portal access", included: true },
         { name: "$15/employee/mo overages", included: true },
         { name: "Priority email support (24hr)", included: true },
-        { name: "RecordOS™ - AI Search", included: false },
-        { name: "InsightOS™ - AI Analytics", included: false },
+        { name: "AI-Powered Search", included: false },
+        { name: "AI Analytics", included: false },
       ],
     },
     {
@@ -70,12 +70,12 @@ export default function Pricing() {
       features: [
         { name: "Up to 150 employees", included: true },
         { name: "Everything in Starter", included: true },
-        { name: "RecordOS™ - AI-Powered Natural Language Search", included: true },
-        { name: "InsightOS™ - Autonomous AI Analytics & Predictions", included: true },
+        { name: "AI-Powered Natural Language Search", included: true },
+        { name: "Autonomous AI Analytics & Predictions", included: true },
         { name: "Predictive scheduling & cost optimization", included: true },
-        { name: "TrainingOS™ - LMS & Certifications", included: true },
+        { name: "Learning Management & Certifications", included: true },
         { name: "Performance Reviews & PTO Management", included: true },
-        { name: "IntegrationOS™ - QuickBooks, Stripe, etc.", included: true },
+        { name: "Integrations - QuickBooks, Stripe, etc.", included: true },
         { name: "$150/mo AI credits included", included: true },
         { name: "$12/employee/mo overages", included: true },
         { name: "Priority Support (8hr)", included: true },
@@ -91,8 +91,8 @@ export default function Pricing() {
       features: [
         { name: "Unlimited employees", included: true },
         { name: "Everything in Professional", included: true },
-        { name: "Advanced RecordOS™ with Custom Data Sources", included: true },
-        { name: "InsightOS™ Premium: Predictive Analytics & Forecasting", included: true },
+        { name: "Advanced AI Search with Custom Data Sources", included: true },
+        { name: "AI Premium: Predictive Analytics & Forecasting", included: true },
         { name: "SOC2-Ready Compliance & Audit Trails", included: true },
         { name: "$500/mo AI credits included", included: true },
         { name: "White-Label Branding Options", included: true },
@@ -347,15 +347,15 @@ export default function Pricing() {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-gray-900">AI Features & Token Usage</h3>
                   <p className="text-sm text-gray-700">
-                    AI-powered features (HelpOS™ Support Bot, TrainingOS™ AI, Smart RFP Analysis, Platform Healing) operate on a <strong className="text-purple-700">customer-pays usage model</strong> to ensure fair pricing as we scale.
+                    AI-powered features (AI Support Bot, AI Training Tutor, Smart RFP Analysis, Platform Healing) operate on a <strong className="text-purple-700">customer-pays usage model</strong> to ensure fair pricing as we scale.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-3 pt-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">HelpOS™ Support Bot</div>
+                      <div className="text-xs font-semibold text-purple-700">AI Support Bot</div>
                       <div className="text-xs text-gray-600">$0.002 per message • ~$0.50 avg per session</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">TrainingOS™ AI Tutor</div>
+                      <div className="text-xs font-semibold text-purple-700">AI Training Tutor</div>
                       <div className="text-xs text-gray-600">$0.003 per interaction • ~$2 avg per course</div>
                     </div>
                     <div className="space-y-1">
@@ -408,7 +408,7 @@ export default function Pricing() {
               },
               {
                 q: "How does AI feature billing work?",
-                a: "AI-powered features (HelpOS™, TrainingOS™, RFP Analysis, Platform Healing) use a customer-pays usage model where you only pay for what you use. Typical costs are very low: $0.002-$0.10 per interaction. Most businesses see $10-$50/month in AI usage, still providing 10-20x ROI compared to traditional solutions. Detailed usage appears on your monthly invoice.",
+                a: "AI-powered features (AI Support, AI Training, RFP Analysis, Platform Healing) use a customer-pays usage model where you only pay for what you use. Typical costs are very low: $0.002-$0.10 per interaction. Most businesses see $10-$50/month in AI usage, still providing 10-20x ROI compared to traditional solutions. Detailed usage appears on your monthly invoice.",
               },
               {
                 q: "What if I need custom features?",
