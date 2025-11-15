@@ -2,26 +2,12 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { ResponsiveLoading } from "@/components/loading-indicators";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useCreateClient } from "@/hooks/useClients";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Plus, 
-  Search,
-  UserCircle,
-  Mail,
-  Phone,
-  FileText,
-  DollarSign,
-  Calendar,
-  Briefcase,
-} from "lucide-react";
+import { ClientsTable } from "@/components/clients-table";
+import { Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,12 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Client } from "@shared/schema";
 
 export default function Clients() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -62,77 +46,7 @@ export default function Clients() {
     billingCycle: "monthly", // weekly, bi-weekly, monthly
   });
 
-  const { data: clients, isLoading } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-    enabled: isAuthenticated,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/clients", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({
-        title: "Success",
-        description: "Client added successfully",
-      });
-      setIsAddDialogOpen(false);
-      setFormData({
-        firstName: "",
-        lastName: "",
-        companyName: "",
-        email: "",
-        phone: "",
-        address: "",
-        billingEmail: "",
-        notes: "",
-        billableRate: "",
-        serviceType: "",
-        billingCycle: "monthly",
-      });
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create client",
-        variant: "destructive",
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, authLoading, toast]);
-
-  if (authLoading || !isAuthenticated) {
-    return <ResponsiveLoading fullScreen message="Loading Clients..." />;
-  }
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  };
+  const createMutation = useCreateClient();
 
   const handleSubmit = () => {
     // Validate required fields
@@ -163,17 +77,69 @@ export default function Clients() {
       return;
     }
 
-    createMutation.mutate(formData);
+    createMutation.mutate(formData, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Client added successfully",
+        });
+        setIsAddDialogOpen(false);
+        setFormData({
+          firstName: "",
+          lastName: "",
+          companyName: "",
+          email: "",
+          phone: "",
+          address: "",
+          billingEmail: "",
+          notes: "",
+          billableRate: "",
+          serviceType: "",
+          billingCycle: "monthly",
+        });
+      },
+      onError: (error: Error) => {
+        if (isUnauthorizedError(error)) {
+          toast({
+            title: "Unauthorized",
+            description: "You are logged out. Logging in again...",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            window.location.href = "/api/login";
+          }, 500);
+          return;
+        }
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create client",
+          variant: "destructive",
+        });
+      },
+    });
   };
 
-  const filteredClients = clients?.filter(client =>
-    `${client.firstName} ${client.lastName} ${client.companyName || ''}`.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  if (authLoading || !isAuthenticated) {
+    return <ResponsiveLoading fullScreen message="Loading Clients..." />;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-clients-title">
@@ -270,8 +236,7 @@ export default function Clients() {
 
                 {/* Billing Information Section */}
                 <div className="border-t pt-4">
-                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
+                  <h3 className="text-sm font-semibold mb-4">
                     Billing Information
                   </h3>
                   
@@ -361,94 +326,7 @@ export default function Clients() {
           </Dialog>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search clients..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            data-testid="input-search-clients"
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <Skeleton className="h-5 w-16" />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredClients.length === 0 && !searchQuery ? (
-          <Card data-testid="card-no-clients">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <UserCircle className="h-16 w-16 text-muted-foreground opacity-20 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No clients yet</h3>
-              <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                Add your first client to start scheduling appointments and generating invoices
-              </p>
-              <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-first-client">
-                <Plus className="mr-2 h-4 w-4" />
-                Add First Client
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredClients.map((client) => (
-              <Card key={client.id} className="hover-elevate" data-testid={`card-client-${client.id}`}>
-                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {getInitials(client.firstName, client.lastName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">
-                      {client.firstName} {client.lastName}
-                    </CardTitle>
-                    {client.companyName && (
-                      <p className="text-xs text-muted-foreground truncate mt-1">
-                        {client.companyName}
-                      </p>
-                    )}
-                  </div>
-                  <Badge variant={client.isActive ? "default" : "secondary"} className="text-xs">
-                    {client.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground truncate">{client.email || "No email"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{client.phone || "No phone"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">0 invoices</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-        </div>
+        <ClientsTable />
       </div>
     </div>
   );
