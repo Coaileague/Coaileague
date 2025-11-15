@@ -263,9 +263,25 @@ function AppContent() {
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
 
-  // Show minimal loading state during auth check to prevent routing issues
+  // Show professional loading state during auth check
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          {/* AutoForce Logo */}
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
+              AutoForce
+            </span>
+            <span className="text-[10px] font-black text-primary align-super">™</span>
+          </div>
+          {/* Spinner */}
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
+          {/* Loading text */}
+          <p className="text-sm text-muted-foreground animate-pulse">Initializing workspace...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
