@@ -29,6 +29,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIdentity } from "@/hooks/useIdentity";
 import { AppShellMobile } from "@/components/mobile/AppShellMobile";
+import { ResponsiveLoading } from "@/components/loading-indicators";
 
 interface Notification {
   id: string;
@@ -322,7 +323,7 @@ export default function Dashboard() {
     
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        {isLoadingDashboard && <MobileLoading />}
+        {isLoadingDashboard && <ResponsiveLoading />}
         
         <AppShellMobile title="Dashboard" showBack={false}>
           <div className="pb-4">

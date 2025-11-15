@@ -13106,11 +13106,10 @@ Keep it professional, actionable, and under 250 words.`;
       const { getAnalyticsStats } = await import("./services/analyticsStats");
       const bustCache = req.query.bust === 'true';
       
-      // Determine scope: platform staff get platform-wide stats, others get workspace-scoped
-      const isPlatformStaff = (req.user as any)?.platformRole && 
-        ['root_admin', 'sysop', 'deputy_admin', 'support_agent', 'support_manager'].includes((req.user as any).platformRole);
-      
-      const workspaceId = isPlatformStaff ? null : (req.user as any)?.currentWorkspaceId || null;
+      // FIXED: Always use currentWorkspaceId for consistency with /api/clients and /api/employees
+      // Platform staff can access workspace data like regular users
+      // To see platform-wide stats, use /api/platform/stats instead
+      const workspaceId = (req.user as any)?.currentWorkspaceId || null;
       
       const stats = await getAnalyticsStats(workspaceId, bustCache);
       res.json(stats);
