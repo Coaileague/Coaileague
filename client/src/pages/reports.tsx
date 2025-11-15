@@ -386,7 +386,7 @@ export default function ReportsPage() {
     setDisputeDialogOpen(true);
   };
 
-  const handleExport = (format: 'csv' | 'pdf') => {
+  const handleExport = (exportFormat: 'csv' | 'pdf') => {
     if (submissions.length === 0) {
       toast({
         title: "No data available",
@@ -400,19 +400,19 @@ export default function ReportsPage() {
       reportNumber: sub.reportNumber || 'N/A',
       template: templates.find(t => t.id === sub.templateId)?.name || 'Unknown',
       status: sub.status || 'Unknown',
-      submittedBy: sub.submittedBy || 'System',
+      employeeId: sub.employeeId || 'N/A',
       submittedAt: sub.submittedAt ? format(new Date(sub.submittedAt), 'yyyy-MM-dd HH:mm') : 'N/A',
       reviewedBy: sub.reviewedBy || '-',
       reviewedAt: sub.reviewedAt ? format(new Date(sub.reviewedAt), 'yyyy-MM-dd HH:mm') : '-',
     }));
 
-    exportReport(format, 'Report Submissions', exportData, {
-      columns: ['reportNumber', 'template', 'status', 'submittedBy', 'submittedAt', 'reviewedBy', 'reviewedAt'],
+    exportReport(exportFormat, 'Report Submissions', exportData, {
+      columns: ['reportNumber', 'template', 'status', 'employeeId', 'submittedAt', 'reviewedBy', 'reviewedAt'],
       columnLabels: {
         reportNumber: 'Report #',
         template: 'Template',
         status: 'Status',
-        submittedBy: 'Submitted By',
+        employeeId: 'Employee ID',
         submittedAt: 'Submitted At',
         reviewedBy: 'Reviewed By',
         reviewedAt: 'Reviewed At',
@@ -426,7 +426,7 @@ export default function ReportsPage() {
       },
     });
 
-    if (format === 'csv') {
+    if (exportFormat === 'csv') {
       toast({
         title: "CSV Export Started",
         description: "Your report submissions are downloading",
