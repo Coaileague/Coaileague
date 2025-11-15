@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useClientLookup } from "@/hooks/useClients";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,9 +79,7 @@ export default function PendingTimeEntries() {
   });
 
   // Fetch all clients for filter dropdown
-  const { data: allClients = [] } = useQuery<Client[]>({
-    queryKey: ['/api/clients'],
-  });
+  const { data: allClients = [] } = useClientLookup();
 
   // Build query params for filters
   const queryParams = new URLSearchParams();

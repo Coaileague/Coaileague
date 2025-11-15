@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployee } from '@/hooks/useEmployee';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
+import { useClientLookup } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
@@ -321,10 +322,8 @@ export default function UniversalSchedule() {
     queryKey: ['/api/employees'],
   });
 
-  // Fetch clients
-  const { data: clients = [], isLoading: clientsLoading } = useQuery<Client[]>({
-    queryKey: ['/api/clients'],
-  });
+  // Fetch clients for dropdown
+  const { data: clients = [], isLoading: clientsLoading } = useClientLookup();
 
   const isLoading = shiftsLoading || employeesLoading || clientsLoading;
 
