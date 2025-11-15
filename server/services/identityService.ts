@@ -204,6 +204,13 @@ export async function attachEmployeeExternalId(
           const parts = existing[0].externalId.split('-');
           const localNumber = parseInt(parts[2], 10);
           console.log(`[Identity] Employee ${employeeId} already has external ID: ${existing[0].externalId}`);
+          
+          // CRITICAL: Sync external ID to employees.employee_number if not already synced
+          await tx
+            .update(employees)
+            .set({ employeeNumber: existing[0].externalId })
+            .where(eq(employees.id, employeeId));
+          
           return { externalId: existing[0].externalId, localNumber };
         }
 
@@ -304,6 +311,13 @@ export async function attachClientExternalId(
           const parts = existing[0].externalId.split('-');
           const localNumber = parseInt(parts[2], 10);
           console.log(`[Identity] Client ${clientId} already has external ID: ${existing[0].externalId}`);
+          
+          // CRITICAL: Sync external ID to clients.client_code if not already synced
+          await tx
+            .update(clients)
+            .set({ clientCode: existing[0].externalId })
+            .where(eq(clients.id, clientId));
+          
           return { externalId: existing[0].externalId, localNumber };
         }
 

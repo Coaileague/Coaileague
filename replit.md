@@ -57,6 +57,30 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
 
 ## Recent Changes (Nov 15, 2025)
 
+### Client External ID Synchronization (Session 2)
+1. **Schema Addition**: Added `client_code` column to `clients` table
+   - Applied via direct SQL: `ALTER TABLE clients ADD COLUMN client_code VARCHAR`
+   - Mirrors `employees.employee_number` pattern for consistency
+   - Column is nullable to support legacy records
+
+2. **Sync Logic Implementation**: Updated `attachClientExternalId()` in `identityService.ts`
+   - Imports `clients` table for direct updates
+   - Synchronously updates `clients.client_code` within same transaction
+   - Pattern: `await tx.update(clients).set({ clientCode: externalId }).where(eq(clients.id, clientId))`
+   - Guarantees immediate visibility in UI and database queries
+
+3. **Backfill Script**: Created `server/scripts/backfill-external-ids.ts`
+   - Populates NULL `employee_number` and `client_code` from `externalIdentifiers` table
+   - Idempotent: Safe to run multiple times
+   - Results: 4 employees + 4 clients updated successfully
+   - Identified: 32 legacy records (20 employees, 12 clients) with no external ID entries
+
+4. **E2E Testing**: Verified client creation with external ID sync
+   - Created test client via UI: "TestClient External"
+   - Confirmed `client_code='CLI-DEMO-00004'` in database
+   - Verified sync: `externalIdentifiers.external_id` matches `clients.client_code`
+   - Result: ✅ Full synchronization working correctly
+
 ### Critical Bug Fixes
 1. **External ID Persistence Fix**: Fixed race condition where `employee_number` was NULL immediately after employee creation
    - Root cause: External IDs were created in `externalIdentifiers` table but not synced to `employees.employee_number` column
@@ -89,16 +113,16 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
 
 3. **External ID System**:
    - Primary source: `externalIdentifiers` table (entityType, entityId, externalId)
-   - **Currently synced**: `employees.employee_number` only
-   - **Not yet synced**: Clients, Support Tickets (need schema migration)
+   - **Fully synced**: `employees.employee_number` and `clients.client_code` ✅
+   - **Not yet synced**: Support Tickets (use separate `ticketNumber` column with different pattern)
    - Format: EMP-{ORG-CODE}-{SEQUENCE} for employees, CLI-{ORG-CODE}-{SEQUENCE} for clients
    - Generated synchronously before API response to ensure immediate visibility
    
-   **Migration Needed:**
-   - Add `client_code` column to `clients` table
-   - Update `attachClientExternalId()` to sync like employees
-   - Backfill existing employees with NULL employee_number from `externalIdentifiers`
-   - Support tickets use separate `ticketNumber` column (different pattern)
+   **Migration Status:**
+   - ✅ `clients.client_code` column added to database (Nov 15, 2025)
+   - ✅ `attachClientExternalId()` updated to sync like employees (Nov 15, 2025)
+   - ✅ Backfill script executed: 4 employees + 4 clients updated (Nov 15, 2025)
+   - 📝 32 legacy records (20 employees, 12 clients) have no external ID entries (test/duplicate data)
 
 ### End-to-End Testing Progress
 ✅ **Completed all 4 critical user journeys:**
