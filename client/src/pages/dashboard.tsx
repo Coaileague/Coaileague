@@ -8,7 +8,7 @@ import {
   FileText, Calendar, Clock, ArrowRight,
   Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail, Lock,
   Shield, UserCog, Server, Database, MessageCircle, Settings,
-  HelpCircle, MessageSquare, LayoutDashboard
+  HelpCircle, MessageSquare, LayoutDashboard, AlertTriangle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
@@ -115,6 +115,21 @@ export default function Dashboard() {
       database: { status: string };
       uptimeSeconds: number;
       updatedAt: string;
+    };
+    automation?: {
+      hoursSavedThisMonth: number;
+      hoursSavedAllTime: number;
+      costAvoidanceMonthly: number;
+      costAvoidanceTotal: number;
+      aiSuccessRate: number;
+      avgConfidenceScore: number;
+      autoApprovalRate: number;
+      breakdown: {
+        scheduleOS: { shiftsGenerated: number; hoursSaved: number; successRate: number };
+        billOS: { invoicesGenerated: number; hoursSaved: number; successRate: number };
+        payrollOS: { payrollsProcessed: number; hoursSaved: number; successRate: number };
+      };
+      trend: { percentChange: number; isImproving: boolean };
     };
   }>({
     queryKey: ['/api/analytics/stats'],
@@ -554,6 +569,97 @@ export default function Dashboard() {
           </div>
         </div>
         </ResponsiveSection>
+
+        {/* Automation Value Metrics - Only show for workspace scope */}
+        {stats?.automation && (
+          <ResponsiveSection>
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-xl p-6 sm:p-8 text-white shadow-lg border-2 border-blue-500 dark:border-blue-600">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2" data-testid="text-automation-title">AutoForce™ Automation Value</h3>
+                  <p className="text-blue-100 text-sm max-w-2xl">
+                    AI-powered automation saving your organization time and money across ScheduleOS™, BillOS™, and PayrollOS™
+                  </p>
+                  <div className="mt-2 text-xs text-blue-200 bg-blue-800/30 dark:bg-blue-900/30 rounded px-2 py-1 inline-flex items-center gap-1.5" data-testid="text-automation-disclaimer">
+                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                    <span>Estimates based on industry averages (SHRM/ADP). Actual value may vary by organization.</span>
+                  </div>
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${stats.automation.trend.isImproving ? 'bg-green-500/20 border border-green-400' : 'bg-yellow-500/20 border border-yellow-400'}`} data-testid="badge-automation-trend">
+                  <span className="text-xs font-semibold">
+                    {stats.automation.trend.isImproving ? '↑' : '↓'} {Math.abs(stats.automation.trend.percentChange).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-hours-saved">
+                  <p className="text-blue-100 text-xs mb-1">Hours Saved This Month</p>
+                  <p className="text-3xl font-bold">{stats.automation.hoursSavedThisMonth.toFixed(1)}</p>
+                  <p className="text-blue-200 text-xs mt-1">{stats.automation.hoursSavedAllTime.toFixed(0)} hrs all-time</p>
+                </div>
+
+                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-cost-avoidance">
+                  <p className="text-blue-100 text-xs mb-1">Cost Avoidance (Monthly)</p>
+                  <p className="text-3xl font-bold">${stats.automation.costAvoidanceMonthly.toLocaleString()}</p>
+                  <p className="text-blue-200 text-xs mt-1">${stats.automation.costAvoidanceTotal.toLocaleString()} total</p>
+                </div>
+
+                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-ai-success">
+                  <p className="text-blue-100 text-xs mb-1">AI Success Rate</p>
+                  <p className="text-3xl font-bold">{(stats.automation.aiSuccessRate * 100).toFixed(1)}%</p>
+                  <p className="text-blue-200 text-xs mt-1">Avg confidence: {(stats.automation.avgConfidenceScore * 100).toFixed(0)}%</p>
+                </div>
+
+                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-auto-approval">
+                  <p className="text-blue-100 text-xs mb-1">Auto-Approval Rate</p>
+                  <p className="text-3xl font-bold">{(stats.automation.autoApprovalRate * 100).toFixed(1)}%</p>
+                  <p className="text-blue-200 text-xs mt-1">High-confidence automation</p>
+                </div>
+              </div>
+
+              {/* System Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10" data-testid="card-schedule-os">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-4 h-4 text-blue-200" />
+                    <h4 className="font-semibold text-sm">ScheduleOS™</h4>
+                  </div>
+                  <p className="text-2xl font-bold mb-1">{stats.automation.breakdown.scheduleOS.shiftsGenerated}</p>
+                  <p className="text-xs text-blue-200">Shifts generated</p>
+                  <div className="mt-2 pt-2 border-t border-white/10">
+                    <p className="text-xs text-blue-200">{stats.automation.breakdown.scheduleOS.hoursSaved.toFixed(1)} hrs saved • {(stats.automation.breakdown.scheduleOS.successRate * 100).toFixed(0)}% success</p>
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10" data-testid="card-bill-os">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-blue-200" />
+                    <h4 className="font-semibold text-sm">BillOS™</h4>
+                  </div>
+                  <p className="text-2xl font-bold mb-1">{stats.automation.breakdown.billOS.invoicesGenerated}</p>
+                  <p className="text-xs text-blue-200">Invoices generated</p>
+                  <div className="mt-2 pt-2 border-t border-white/10">
+                    <p className="text-xs text-blue-200">{stats.automation.breakdown.billOS.hoursSaved.toFixed(1)} hrs saved • {(stats.automation.breakdown.billOS.successRate * 100).toFixed(0)}% success</p>
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10" data-testid="card-payroll-os">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-4 h-4 text-blue-200" />
+                    <h4 className="font-semibold text-sm">PayrollOS™</h4>
+                  </div>
+                  <p className="text-2xl font-bold mb-1">{stats.automation.breakdown.payrollOS.payrollsProcessed}</p>
+                  <p className="text-xs text-blue-200">Payrolls processed</p>
+                  <div className="mt-2 pt-2 border-t border-white/10">
+                    <p className="text-xs text-blue-200">{stats.automation.breakdown.payrollOS.hoursSaved.toFixed(1)} hrs saved • {(stats.automation.breakdown.payrollOS.successRate * 100).toFixed(0)}% success</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ResponsiveSection>
+        )}
 
         {/* Quick Actions Grid - Role-Based Dynamic Cards */}
         <ResponsiveSection>
