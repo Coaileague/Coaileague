@@ -716,11 +716,11 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent className="space-y-8">
-            {/* BillOS™ Invoicing Automation */}
+            {/* Smart Billing Automation */}
             <div className="space-y-4" aria-busy={updateInvoicingMutation.isPending}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold">BillOS™ Invoicing Automation</h3>
+                  <h3 className="text-sm font-semibold">Smart Billing Automation</h3>
                   <p className="text-xs text-muted-foreground">Automatically generate invoices from approved time entries</p>
                 </div>
                 <Switch 
@@ -778,11 +778,11 @@ export default function Settings() {
             
             <Separator />
             
-            {/* PayrollOS™ Payroll Automation */}
+            {/* Auto Payroll Automation */}
             <div className="space-y-4" aria-busy={updatePayrollMutation.isPending}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold">PayrollOS™ Payroll Automation</h3>
+                  <h3 className="text-sm font-semibold">Auto Payroll Automation</h3>
                   <p className="text-xs text-muted-foreground">Automatically process payroll on pay period dates</p>
                 </div>
                 <Switch 
@@ -839,11 +839,11 @@ export default function Settings() {
             
             <Separator />
             
-            {/* ScheduleOS™ Schedule Generation */}
+            {/* AI Scheduling Automation */}
             <div className="space-y-4" aria-busy={updateSchedulingMutation.isPending}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold">ScheduleOS™ Schedule Generation</h3>
+                  <h3 className="text-sm font-semibold">AI Scheduling Automation</h3>
                   <p className="text-xs text-muted-foreground">Automatically generate employee schedules in advance</p>
                 </div>
                 <Switch 

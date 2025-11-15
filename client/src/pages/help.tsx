@@ -38,14 +38,14 @@ const helpArticles: HelpArticle[] = [
   },
   {
     id: "4",
-    title: "Using RecordOS™ Search",
+    title: "Using AI-Powered Search",
     description: "Search your database with natural language queries",
     category: "AI Features",
     icon: Search,
   },
   {
     id: "5",
-    title: "InsightOS™ Analytics",
+    title: "AI Analytics Dashboard",
     description: "Understand AI-generated insights and recommendations",
     category: "AI Features",
     icon: FileText,
