@@ -1,11 +1,11 @@
 /**
  * Autonomous Scheduler Service
  * Runs scheduled jobs for AutoForce™ autonomous operations:
- * - Nightly invoice generation (BillOS™)
- * - Weekly schedule generation (OperationsOS™)
- * - Automatic payroll processing (BillOS™)
+ * - Nightly invoice generation (Smart Billing)
+ * - Weekly schedule generation (AI Scheduling)
+ * - Automatic payroll processing (Auto Payroll)
  * 
- * All automation activities are logged to AuditOS™ for compliance tracking.
+ * All automation activities are logged for compliance tracking.
  */
 
 import cron from 'node-cron';
@@ -149,15 +149,15 @@ async function logAutomationLifecycle<T>(
   const { jobType, workspaceId, workspaceName, runId } = params;
   const startTime = Date.now();
 
-  // Map job types to consolidated OS names
-  const osNameMap = {
-    invoicing: 'BillOS™',
-    scheduling: 'OperationsOS™',
-    payroll: 'BillOS™',
-    idempotency_cleanup: 'AuditOS™',
-    room_auto_close: 'CommOS™',
+  // Map job types to AI Brain feature names
+  const featureNameMap = {
+    invoicing: 'Smart Billing',
+    scheduling: 'AI Scheduling',
+    payroll: 'Auto Payroll',
+    idempotency_cleanup: 'Compliance Auditing',
+    room_auto_close: 'Chat Workrooms',
   };
-  const osName = osNameMap[jobType];
+  const featureName = featureNameMap[jobType];
 
   // Log job start (don't fail if audit logging fails)
   try {
@@ -165,12 +165,12 @@ async function logAutomationLifecycle<T>(
       workspaceId,
       ...AUTOFORCE_AUTOMATION_USER,
       action: 'automation_job_start',
-      actionDescription: `${osName} automation started for ${workspaceName}`,
+      actionDescription: `${featureName} automation started for ${workspaceName}`,
       entityType: 'automation_job',
       entityId: runId,
       metadata: {
         jobType,
-        osName,
+        featureName,
         timestamp: new Date().toISOString(),
       },
     });
@@ -189,12 +189,12 @@ async function logAutomationLifecycle<T>(
         workspaceId,
         ...AUTOFORCE_AUTOMATION_USER,
         action: 'automation_job_complete',
-        actionDescription: `${osName} automation completed for ${workspaceName}`,
+        actionDescription: `${featureName} automation completed for ${workspaceName}`,
         entityType: 'automation_job',
         entityId: runId,
         metadata: {
           jobType,
-          osName,
+          featureName,
           duration,
           timestamp: new Date().toISOString(),
           result: typeof result === 'object' ? result : { value: result },
@@ -214,12 +214,12 @@ async function logAutomationLifecycle<T>(
         workspaceId,
         ...AUTOFORCE_AUTOMATION_USER,
         action: 'automation_job_error',
-        actionDescription: `${osName} automation failed for ${workspaceName}: ${error.message}`,
+        actionDescription: `${featureName} automation failed for ${workspaceName}: ${error.message}`,
         entityType: 'automation_job',
         entityId: runId,
         metadata: {
           jobType,
-          osName,
+          featureName,
           duration,
           error: error.message,
           stack: error.stack?.substring(0, 500), // Truncate stack trace
@@ -1009,7 +1009,7 @@ async function runIdempotencyKeyCleanup() {
  */
 async function runRoomAutoClose() {
   console.log('=================================================');
-  console.log('🤖 COMMOS™ ROOM AUTO-CLOSE - START');
+  console.log('🤖 CHAT WORKROOM AUTO-CLOSE - START');
   console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log('=================================================');
 
@@ -1215,7 +1215,7 @@ export function startAutonomousScheduler() {
     cron.schedule(SCHEDULER_CONFIG.invoicing.schedule, () => {
       runNightlyInvoiceGeneration();
     });
-    console.log('✅ BillOS™ Invoicing Automation:');
+    console.log('✅ Smart Billing Automation:');
     console.log(`   Schedule: ${SCHEDULER_CONFIG.invoicing.schedule} (daily 2 AM)`);
     console.log(`   ${SCHEDULER_CONFIG.invoicing.description}\n`);
   }
@@ -1225,7 +1225,7 @@ export function startAutonomousScheduler() {
     cron.schedule(SCHEDULER_CONFIG.scheduling.schedule, () => {
       runWeeklyScheduleGeneration();
     });
-    console.log('✅ OperationsOS™ Schedule Automation:');
+    console.log('✅ AI Scheduling Automation:');
     console.log(`   Schedule: ${SCHEDULER_CONFIG.scheduling.schedule} (daily 11 PM)`);
     console.log(`   ${SCHEDULER_CONFIG.scheduling.description}\n`);
   }
@@ -1235,7 +1235,7 @@ export function startAutonomousScheduler() {
     cron.schedule(SCHEDULER_CONFIG.payroll.schedule, () => {
       runAutomaticPayrollProcessing();
     });
-    console.log('✅ BillOS™ Payroll Automation:');
+    console.log('✅ Auto Payroll Automation:');
     console.log(`   Schedule: ${SCHEDULER_CONFIG.payroll.schedule} (daily 3 AM)`);
     console.log(`   ${SCHEDULER_CONFIG.payroll.description}\n`);
   }
@@ -1250,12 +1250,12 @@ export function startAutonomousScheduler() {
     console.log(`   ${SCHEDULER_CONFIG.cleanup.description}\n`);
   }
 
-  // 5. CommOS™ Room Auto-Close (Every 5 minutes)
+  // 5. Chat Workroom Auto-Close (Every 5 minutes)
   if (SCHEDULER_CONFIG.roomAutoClose.enabled) {
     cron.schedule(SCHEDULER_CONFIG.roomAutoClose.schedule, () => {
       runRoomAutoClose();
     });
-    console.log('✅ CommOS™ Room Auto-Close:');
+    console.log('✅ Chat Workroom Auto-Close:');
     console.log(`   Schedule: ${SCHEDULER_CONFIG.roomAutoClose.schedule} (every 5 minutes)`);
     console.log(`   ${SCHEDULER_CONFIG.roomAutoClose.description}\n`);
   }
