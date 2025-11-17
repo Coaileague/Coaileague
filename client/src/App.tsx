@@ -348,7 +348,7 @@ function AppContent() {
             )}
 
             {/* Main content area - add padding-top for fixed header (desktop only) */}
-            <main className={`flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-transparent min-h-0 w-full max-w-full ${!isMobileChat && !isHelpDesk && !isMobile ? 'pt-14' : ''}`}>
+            <main className={`flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full ${!isMobileChat && !isHelpDesk && !isMobile ? 'pt-14' : ''}`}>
               {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
               {!isMobileChat && !isHelpDesk && !isMobile && <PageBreadcrumb />}
               

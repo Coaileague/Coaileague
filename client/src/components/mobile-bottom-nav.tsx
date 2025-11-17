@@ -46,7 +46,7 @@ export function MobileBottomNav() {
     <nav 
       className={cn(
         "mobile-bottom-nav fixed bottom-0 left-0 right-0 backdrop-blur-2xl shadow-2xl border-t",
-        "bg-white/90 dark:bg-slate-900/90 border-gray-200/50 dark:border-slate-700/50",
+        "bg-white/90 border-gray-200/50",
         "md:hidden z-50",
         isIOS && "mobile-safe-area-bottom"
       )}
@@ -84,7 +84,7 @@ export function MobileBottomNav() {
                   className={cn(
                     "transition-all duration-300",
                     isActive ? "h-7 w-7" : "h-6 w-6",
-                    isActive ? "text-blue-600 dark:text-blue-400 drop-shadow-md" : "text-gray-500 dark:text-gray-400"
+                    isActive ? "text-blue-600 drop-shadow-md" : "text-gray-500"
                   )} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
@@ -101,7 +101,7 @@ export function MobileBottomNav() {
               <span className={cn(
                 "text-[11px] font-semibold transition-all duration-300 truncate w-full text-center",
                 isActive ? "opacity-100" : "opacity-70",
-                isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"
+                isActive ? "text-blue-600" : "text-gray-600"
               )}>
                 {item.label}
               </span>
@@ -113,7 +113,7 @@ export function MobileBottomNav() {
       {/* iOS-style home indicator (only on iOS) */}
       {isIOS && (
         <div className="flex justify-center pb-1 pt-0.5">
-          <div className="w-24 h-1 bg-gray-400 dark:bg-gray-600 rounded-full opacity-40" />
+          <div className="w-24 h-1 bg-gray-400 rounded-full opacity-40" />
         </div>
       )}
     </nav>
