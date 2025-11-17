@@ -96,26 +96,43 @@ export interface PayrollDecision {
 export class AutomationEngine {
   
   /**
-   * Helper to call Gemini and log the action
+   * Helper to call Gemini with schema validation and fallback handling
    */
-  private async callGemini<T = any>(
-    prompt: string,
-    context: AuditContext,
-    eventType: string,
-    aggregateId: string,
-    aggregateType: string,
-    transactionId?: string
-  ): Promise<GeminiResponse<T>> {
+  private async callGemini<T>({
+    prompt,
+    context,
+    eventType,
+    aggregateId,
+    aggregateType,
+    schema,
+    buildFallback,
+    transactionId,
+    minConfidence = 0.85,
+  }: {
+    prompt: string;
+    context: AuditContext;
+    eventType: string;
+    aggregateId: string;
+    aggregateType: string;
+    schema: any;
+    buildFallback: (details: { reason: string }) => T;
+    transactionId?: string;
+    minConfidence?: number;
+  }): Promise<{
+    decision: T;
+    confidence: number;
+    reasoning: string;
+    model: string;
+    validationStatus: 'success' | 'fallback';
+    tokensUsed?: number;
+  }> {
     const startTime = Date.now();
     
     try {
       // Call Gemini API
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
-      
-      // Parse JSON response
-      const decision = JSON.parse(text) as T;
+      const rawText = response.text();
       
       // Extract usage metadata
       const usageMetadata = (response as any).usageMetadata;
@@ -123,56 +140,110 @@ export class AutomationEngine {
       const promptTokens = usageMetadata?.promptTokenCount || 0;
       const completionTokens = usageMetadata?.candidatesTokenCount || 0;
       
-      const geminiResponse: GeminiResponse<T> = {
-        decision,
-        confidence: (decision as any).confidence || (decision as any).overallConfidence || 0.9,
-        reasoning: (decision as any).reasoning || 'AI decision',
-        model: 'gemini-2.0-flash-exp',
-        tokensUsed,
-        promptTokens,
-        completionTokens,
-      };
+      // Parse and validate JSON response
+      let decision: T;
+      let validationStatus: 'success' | 'fallback' = 'success';
+      let confidence = 0;
+      let reasoning = 'AI decision';
+      
+      try {
+        const parsed = JSON.parse(rawText);
+        const validation = schema.safeParse(parsed);
+        
+        if (!validation.success) {
+          // Validation failed - use fallback
+          decision = buildFallback({ reason: `Schema validation failed: ${validation.error.message}` });
+          validationStatus = 'fallback';
+          confidence = 0;
+          reasoning = 'Validation failed - manual review required';
+          
+          // Log validation failure
+          await auditLogger.logEvent(context, {
+            eventType: `${eventType}_validation_failed`,
+            aggregateId,
+            aggregateType,
+            payload: {
+              rawText: rawText.substring(0, 1000),
+              validationErrors: validation.error.issues,
+              transactionId,
+            },
+          });
+        } else {
+          decision = validation.data;
+          confidence = (decision as any).confidence || (decision as any).overallConfidence || 0.9;
+          reasoning = (decision as any).reasoning || 'AI decision';
+        }
+      } catch (parseError) {
+        // JSON parse failed - use fallback
+        decision = buildFallback({ reason: `JSON parse failed: ${parseError}` });
+        validationStatus = 'fallback';
+        confidence = 0;
+        reasoning = 'Parse failed - manual review required';
+        
+        // Log parse failure
+        await auditLogger.logEvent(context, {
+          eventType: `${eventType}_parse_failed`,
+          aggregateId,
+          aggregateType,
+          payload: {
+            rawText: rawText.substring(0, 1000),
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+            transactionId,
+          },
+        });
+      }
       
       // Log the AI action with full audit trail
-      await auditLogger.logAIAction(
-        context,
-        {
-          eventType,
-          aggregateId,
-          aggregateType,
-          payload: {
-            prompt: prompt.substring(0, 500), // Truncate for storage
-            decision,
-            confidence: geminiResponse.confidence,
-            reasoning: geminiResponse.reasoning,
-            model: 'gemini-2.0-flash-exp',
-            tokensUsed,
-            promptTokens,
-            completionTokens,
-            executionTimeMs: Date.now() - startTime,
-            transactionId,
-          },
-        }
-      );
+      await auditLogger.logAIAction(context, {
+        eventType,
+        aggregateId,
+        aggregateType,
+        payload: {
+          prompt: prompt.substring(0, 500),
+          decision,
+          confidence,
+          reasoning,
+          model: 'gemini-2.0-flash-exp',
+          tokensUsed,
+          promptTokens,
+          completionTokens,
+          executionTimeMs: Date.now() - startTime,
+          validationStatus,
+          transactionId,
+        },
+      });
       
-      return geminiResponse;
+      return {
+        decision,
+        confidence,
+        reasoning,
+        model: 'gemini-2.0-flash-exp',
+        validationStatus,
+        tokensUsed,
+      };
       
     } catch (error) {
-      // Log failed AI action
-      await auditLogger.logEvent(
-        context,
-        {
-          eventType: `${eventType}_failed`,
-          aggregateId,
-          aggregateType,
-          payload: {
-            error: error instanceof Error ? error.message : String(error),
-            prompt: prompt.substring(0, 500),
-            transactionId,
-          },
-        }
-      );
-      throw error;
+      // Gemini API call failed - use fallback
+      const decision = buildFallback({ reason: `Gemini API failed: ${error}` });
+      
+      await auditLogger.logEvent(context, {
+        eventType: `${eventType}_failed`,
+        aggregateId,
+        aggregateType,
+        payload: {
+          error: error instanceof Error ? error.message : String(error),
+          prompt: prompt.substring(0, 500),
+          transactionId,
+        },
+      });
+      
+      return {
+        decision,
+        confidence: 0,
+        reasoning: 'API failed - manual review required',
+        model: 'gemini-2.0-flash-exp',
+        validationStatus: 'fallback',
+      };
     }
   }
 
@@ -195,6 +266,16 @@ export class AutomationEngine {
     }
   ): Promise<{ transactionId: string; decision: ScheduleDecision; eventId: string }> {
     const transactionId = `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Empty data guard
+    if (!params.employees || params.employees.length === 0) {
+      const fallbackDecision = createFallbackScheduleDecision();
+      return {
+        transactionId,
+        decision: fallbackDecision as ScheduleDecision,
+        eventId: transactionId,
+      };
+    }
     
     // Use WAL for transaction safety
     return await auditLogger.executeWithWAL(
@@ -252,15 +333,17 @@ Return ONLY valid JSON (no markdown):
   "requiresApproval": boolean
 }`;
 
-        // Call Gemini
-        const response = await this.callGemini<ScheduleDecision>(
+        // Call Gemini with validation
+        const response = await this.callGemini<ValidatedScheduleDecision>({
           prompt,
           context,
-          'schedule_generated',
+          eventType: 'schedule_generated',
+          aggregateId: transactionId,
+          aggregateType: 'schedule',
+          schema: scheduleDecisionSchema,
+          buildFallback: createFallbackScheduleDecision,
           transactionId,
-          'schedule',
-          transactionId
-        );
+        });
 
         // Register IDs for any new shifts (using transaction ID as base)
         const decision = response.decision;
