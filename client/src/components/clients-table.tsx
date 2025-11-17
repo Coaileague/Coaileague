@@ -237,8 +237,8 @@ export function ClientsTable() {
   const { data, isLoading } = useClientsTable(params);
   const deleteMutation = useDeleteClient();
 
-  const canEdit = employee?.role === 'owner' || employee?.role === 'manager';
-  const canDelete = employee?.role === 'owner';
+  const canEdit = employee?.workspaceRole === 'org_owner' || employee?.workspaceRole === 'manager';
+  const canDelete = employee?.workspaceRole === 'org_owner';
 
   // Sync searchInput from URL for deep linking / browser navigation
   // Depends on location to catch all URL changes (back/forward, external links)

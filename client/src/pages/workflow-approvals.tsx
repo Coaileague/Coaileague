@@ -16,23 +16,24 @@
  * - Delegation system
  */
 
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useEmployee } from '@/hooks/useEmployee';
+import { useWorkflowProposals } from '@/hooks/useWorkflowProposals';
+import { useWorkflowPermissions } from '@/hooks/useWorkflowPermissions';
+import type { ProposalType } from '@/hooks/useWorkflowProposals';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { LockedFeature } from '@/components/LockedFeature';
 import { 
   CheckCircle, XCircle, Clock, Calendar, DollarSign, Users, 
-  Bot, AlertTriangle, FileText, ArrowRight, Sparkles, Shield
+  Bot, AlertTriangle, Sparkles, Shield
 } from 'lucide-react';
 
 interface ScheduleProposal {
@@ -130,146 +131,73 @@ interface PayrollProposal {
 
 export default function WorkflowApprovals() {
   const isMobile = useIsMobile();
-  const { toast } = useToast();
-  const { employee } = useEmployee();
+  
+  // Use shared hooks for data and permissions
+  const {
+    schedules,
+    invoices,
+    payroll,
+    isLoadingSchedules,
+    isLoadingInvoices,
+    isLoadingPayroll,
+    scheduleStats,
+    invoiceStats,
+    payrollStats,
+    totalStats,
+    approveProposal,
+    isApproving,
+  } = useWorkflowProposals();
+  
+  const permissions = useWorkflowPermissions();
   
   const [selectedTab, setSelectedTab] = useState('schedules');
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showApprovalSheet, setShowApprovalSheet] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [proposalType, setProposalType] = useState<'schedule' | 'invoice' | 'payroll'>('schedule');
+  const [proposalType, setProposalType] = useState<ProposalType>('schedule');
 
-  // Fetch proposals
-  const { data: scheduleProposals = [], isLoading: loadingSchedules } = useQuery<ScheduleProposal[]>({
-    queryKey: ['/api/scheduleos/proposals'],
-  });
-  
-  const { data: invoiceProposals = [], isLoading: loadingInvoices } = useQuery<InvoiceProposal[]>({
-    queryKey: ['/api/invoices/proposals'],
-  });
-  
-  const { data: payrollProposals = [], isLoading: loadingPayroll } = useQuery<PayrollProposal[]>({
-    queryKey: ['/api/payroll/proposals'],
-  });
-
-  // Compute stats per tab
-  const scheduleStats: ApprovalStats = useMemo(() => {
-    if (!scheduleProposals) return { pending: 0, approved: 0, rejected: 0, autoApproved: 0 };
-    return {
-      pending: scheduleProposals.filter(p => p.status === 'pending').length,
-      approved: scheduleProposals.filter(p => p.status === 'approved').length,
-      rejected: scheduleProposals.filter(p => p.status === 'rejected').length,
-      autoApproved: scheduleProposals.filter(p => p.status === 'auto_approved').length,
-    };
-  }, [scheduleProposals]);
-  
-  const invoiceStats: ApprovalStats = useMemo(() => {
-    if (!invoiceProposals) return { pending: 0, approved: 0, rejected: 0, autoApproved: 0 };
-    return {
-      pending: invoiceProposals.filter(p => p.status === 'pending').length,
-      approved: invoiceProposals.filter(p => p.status === 'approved').length,
-      rejected: invoiceProposals.filter(p => p.status === 'rejected').length,
-      autoApproved: invoiceProposals.filter(p => p.status === 'auto_approved').length,
-    };
-  }, [invoiceProposals]);
-  
-  const payrollStats: ApprovalStats = useMemo(() => {
-    if (!payrollProposals) return { pending: 0, approved: 0, rejected: 0, autoApproved: 0 };
-    return {
-      pending: payrollProposals.filter(p => p.status === 'pending').length,
-      approved: payrollProposals.filter(p => p.status === 'approved').length,
-      rejected: payrollProposals.filter(p => p.status === 'rejected').length,
-      autoApproved: payrollProposals.filter(p => p.status === 'auto_approved').length,
-    };
-  }, [payrollProposals]);
-  
-  // Combined stats for cards
-  const stats: ApprovalStats = useMemo(() => {
-    return {
-      pending: scheduleStats.pending + invoiceStats.pending + payrollStats.pending,
-      approved: scheduleStats.approved + invoiceStats.approved + payrollStats.approved,
-      rejected: scheduleStats.rejected + invoiceStats.rejected + payrollStats.rejected,
-      autoApproved: scheduleStats.autoApproved + invoiceStats.autoApproved + payrollStats.autoApproved,
-    };
-  }, [scheduleStats, invoiceStats, payrollStats]);
-
-  // Generic mutation for all proposal types
-  const approveMutation = useMutation({
-    mutationFn: async ({ id, action, reason, type }: { id: string; action: 'approve' | 'reject'; reason?: string; type: 'schedule' | 'invoice' | 'payroll' }) => {
-      const endpoints = {
-        schedule: `/api/scheduleos/proposals/${id}/${action}`,
-        invoice: `/api/invoices/proposals/${id}/${action}`,
-        payroll: `/api/payroll/proposals/${id}/${action}`,
-      };
-      return await apiRequest('PATCH', endpoints[type], { reason });
-    },
-    onSuccess: (_, variables) => {
-      const queryKeys = {
-        schedule: ['/api/scheduleos/proposals'],
-        invoice: ['/api/invoices/proposals'],
-        payroll: ['/api/payroll/proposals'],
-      };
-      queryClient.invalidateQueries({ queryKey: queryKeys[variables.type] });
-      toast({
-        title: approvalAction === 'approve' ? 'Proposal Approved' : 'Proposal Rejected',
-        description: approvalAction === 'approve' 
-          ? 'Changes will be applied automatically'
-          : 'AI will generate a new proposal with your feedback',
-      });
-      setShowApprovalDialog(false);
-      setSelectedProposal(null);
-      setRejectionReason('');
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to process approval',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleApprove = (proposal: any, type: 'schedule' | 'invoice' | 'payroll') => {
+  const handleApprove = (proposal: any, type: ProposalType) => {
     setSelectedProposal(proposal);
     setProposalType(type);
     setApprovalAction('approve');
-    setShowApprovalDialog(true);
+    setShowApprovalSheet(true);
   };
 
-  const handleReject = (proposal: any, type: 'schedule' | 'invoice' | 'payroll') => {
+  const handleReject = (proposal: any, type: ProposalType) => {
     setSelectedProposal(proposal);
     setProposalType(type);
     setApprovalAction('reject');
-    setShowApprovalDialog(true);
+    setShowApprovalSheet(true);
   };
 
   const confirmApproval = () => {
     if (!selectedProposal || !approvalAction) return;
     
-    approveMutation.mutate({
+    approveProposal({
       id: selectedProposal.id,
       action: approvalAction,
       reason: approvalAction === 'reject' ? rejectionReason : undefined,
       type: proposalType,
     });
+    
+    setShowApprovalSheet(false);
+    setSelectedProposal(null);
+    setApprovalAction(null);
+    setRejectionReason('');
   };
 
-  const pendingSchedules = scheduleProposals.filter(p => p.status === 'pending');
-  const recentSchedules = scheduleProposals.filter(p => p.status !== 'pending').slice(0, 10);
+  const pendingSchedules = schedules.filter(p => p.status === 'pending');
+  const recentSchedules = schedules.filter(p => p.status !== 'pending').slice(0, 10);
   
-  const pendingInvoices = invoiceProposals.filter(p => p.status === 'pending');
-  const recentInvoices = invoiceProposals.filter(p => p.status !== 'pending').slice(0, 10);
+  const pendingInvoices = invoices.filter(p => p.status === 'pending');
+  const recentInvoices = invoices.filter(p => p.status !== 'pending').slice(0, 10);
   
-  const pendingPayroll = payrollProposals.filter(p => p.status === 'pending');
-  const recentPayroll = payrollProposals.filter(p => p.status !== 'pending').slice(0, 10);
+  const pendingPayroll = payroll.filter(p => p.status === 'pending');
+  const recentPayroll = payroll.filter(p => p.status !== 'pending').slice(0, 10);
 
-  // RBAC Check
-  const canApprove = employee?.role === 'org_owner' || 
-                     employee?.role === 'org_admin' || 
-                     employee?.role === 'department_manager';
-
-  if (!canApprove) {
+  // RBAC Check - Use centralized permissions hook
+  if (!permissions.canViewApprovals) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Card className="max-w-md">
@@ -315,7 +243,7 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold" data-testid="text-pending-count">{stats?.pending || 0}</div>
+            <div className="text-3xl font-bold" data-testid="text-pending-count">{totalStats?.pending || 0}</div>
           </CardContent>
         </Card>
 
@@ -327,7 +255,7 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600" data-testid="text-approved-count">{stats?.approved || 0}</div>
+            <div className="text-3xl font-bold text-green-600" data-testid="text-approved-count">{totalStats?.approved || 0}</div>
           </CardContent>
         </Card>
 
@@ -339,7 +267,7 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-destructive" data-testid="text-rejected-count">{stats?.rejected || 0}</div>
+            <div className="text-3xl font-bold text-destructive" data-testid="text-rejected-count">{totalStats?.rejected || 0}</div>
           </CardContent>
         </Card>
 
@@ -351,7 +279,7 @@ export default function WorkflowApprovals() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600" data-testid="text-auto-approved-count">{stats?.autoApproved || 0}</div>
+            <div className="text-3xl font-bold text-blue-600" data-testid="text-auto-approved-count">{totalStats?.autoApproved || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -376,7 +304,7 @@ export default function WorkflowApprovals() {
         {/* ScheduleOS™ Proposals */}
         <TabsContent value="schedules" className="flex-1 flex flex-col">
           <ScrollArea className="flex-1">
-            {loadingSchedules ? (
+            {isLoadingSchedules ? (
               <div className="flex items-center justify-center py-12" data-testid="loading-schedules">
                 <div className="text-center">
                   <Bot className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-3" />
@@ -530,8 +458,18 @@ export default function WorkflowApprovals() {
 
         {/* BillOS™ Invoice Proposals */}
         <TabsContent value="invoices" className="flex-1 flex flex-col">
+          {permissions.lockedFeatures.invoiceAutomation ? (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <LockedFeature
+                featureName="Invoice Automation"
+                description="Unlock AI-powered invoice generation with automated billing cycles, client notifications, and Stripe integration."
+                requiredTier="Professional"
+                price="$99/mo"
+              />
+            </div>
+          ) : (
           <ScrollArea className="flex-1">
-            {loadingInvoices ? (
+            {isLoadingInvoices ? (
               <div className="flex items-center justify-center py-12" data-testid="loading-invoices">
                 <div className="text-center">
                   <Bot className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-3" />
@@ -604,6 +542,7 @@ export default function WorkflowApprovals() {
                         </Button>
                         <Button
                           onClick={() => handleApprove(proposal, 'invoice')}
+                          disabled={!permissions.canApproveInvoices}
                           className="flex-1 bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
                           data-testid={`button-invoice-approve-${proposal.id}`}
                         >
@@ -617,12 +556,23 @@ export default function WorkflowApprovals() {
               </div>
             )}
           </ScrollArea>
+          )}
         </TabsContent>
 
         {/* OperationsOS™ Payroll Proposals */}
         <TabsContent value="payroll" className="flex-1 flex flex-col">
+          {permissions.lockedFeatures.payrollAutomation ? (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <LockedFeature
+                featureName="Payroll Automation"
+                description="Unlock AI-powered payroll processing with automated calculations, compliance checks, and Gusto integration."
+                requiredTier="Professional"
+                price="$99/mo"
+              />
+            </div>
+          ) : (
           <ScrollArea className="flex-1">
-            {loadingPayroll ? (
+            {isLoadingPayroll ? (
               <div className="flex items-center justify-center py-12" data-testid="loading-payroll">
                 <div className="text-center">
                   <Bot className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-3" />
@@ -695,6 +645,7 @@ export default function WorkflowApprovals() {
                         </Button>
                         <Button
                           onClick={() => handleApprove(proposal, 'payroll')}
+                          disabled={!permissions.canApprovePayroll}
                           className="flex-1 bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
                           data-testid={`button-payroll-approve-${proposal.id}`}
                         >
@@ -708,11 +659,79 @@ export default function WorkflowApprovals() {
               </div>
             )}
           </ScrollArea>
+          )}
         </TabsContent>
       </Tabs>
 
       {/* Approval Dialog */}
-      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+      {isMobile ? (
+        <Sheet open={showApprovalSheet} onOpenChange={setShowApprovalSheet}>
+          <SheetContent side="bottom" className="h-[85vh]">
+            <SheetHeader>
+              <SheetTitle>Review Proposal</SheetTitle>
+              <SheetDescription>
+                {approvalAction === 'approve' ? 'Approve this AI-generated workflow' : 'Reject and provide feedback'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            {approvalAction === 'reject' && (
+              <div className="py-4 space-y-2">
+                <Label htmlFor="rejection-reason-mobile">Reason for Rejection</Label>
+                <Textarea
+                  id="rejection-reason-mobile"
+                  placeholder="e.g., Too many hours for John, Sarah unavailable Friday..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={4}
+                  data-testid="textarea-rejection-reason"
+                />
+                <p className="text-xs text-muted-foreground">
+                  AI will use this feedback to improve the next proposal
+                </p>
+              </div>
+            )}
+            
+            <SheetFooter className="mt-auto space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowApprovalSheet(false)}
+                className="w-full"
+                data-testid="button-cancel-approval"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmApproval}
+                disabled={isApproving || (approvalAction === 'reject' && !rejectionReason.trim())}
+                className={`w-full ${approvalAction === 'approve' 
+                  ? 'bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]'
+                  : ''}`}
+                variant={approvalAction === 'reject' ? 'destructive' : 'default'}
+                data-testid="button-confirm-approval"
+              >
+                {isApproving ? (
+                  'Processing...'
+                ) : (
+                  <>
+                    {approvalAction === 'approve' ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve & Deploy
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Reject
+                      </>
+                    )}
+                  </>
+                )}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={showApprovalSheet} onOpenChange={setShowApprovalSheet}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -751,14 +770,14 @@ export default function WorkflowApprovals() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowApprovalDialog(false)}
+              onClick={() => setShowApprovalSheet(false)}
               data-testid="button-cancel-approval"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmApproval}
-              disabled={approveMutation.isPending || (approvalAction === 'reject' && !rejectionReason.trim())}
+              disabled={isApproving || (approvalAction === 'reject' && !rejectionReason.trim())}
               className={approvalAction === 'approve' 
                 ? 'bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]'
                 : ''
@@ -766,7 +785,7 @@ export default function WorkflowApprovals() {
               variant={approvalAction === 'reject' ? 'destructive' : 'default'}
               data-testid="button-confirm-approval"
             >
-              {approveMutation.isPending ? (
+              {isApproving ? (
                 'Processing...'
               ) : (
                 <>
@@ -787,6 +806,7 @@ export default function WorkflowApprovals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
     </div>
   );
 }
