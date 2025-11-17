@@ -83,7 +83,7 @@ export function WhatsNewBadge() {
           <p>What's New - Feature Updates</p>
         </TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-80 p-0" align="start" side="right" sideOffset={8}>
         <div className="p-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />

@@ -40,10 +40,10 @@ export function WorkspaceSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="w-full justify-between gap-2 px-2"
+          className="max-w-[240px] justify-between gap-2 px-2"
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Avatar className="h-6 w-6">
+            <Avatar className="h-6 w-6 shrink-0">
               <AvatarFallback className="text-xs">
                 {currentWorkspace?.name ? getInitials(currentWorkspace.name) : <Building2 className="h-3 w-3" />}
               </AvatarFallback>
@@ -95,15 +95,6 @@ export function WorkspaceSwitcher() {
         >
           <Settings className="mr-2 h-4 w-4" />
           <span>Workspace Settings</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem
-          onClick={() => setLocation('/settings')}
-          className="cursor-pointer"
-          data-testid="menu-workspace-details"
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          <span>View Details</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
