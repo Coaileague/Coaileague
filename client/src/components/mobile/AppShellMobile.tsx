@@ -20,7 +20,7 @@ export function AppShellMobile({ children, title, showBack = true }: AppShellMob
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-blue-50/30 dark:to-blue-950/30 text-foreground">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-blue-50/30 text-foreground">
       {/* Safe-area header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b-2 border-border shadow-md px-4 py-3 pt-safe flex items-center gap-3">
         {showBack && (
