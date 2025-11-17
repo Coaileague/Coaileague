@@ -325,7 +325,16 @@ export default function Invoices() {
       .reduce((sum, entry) => sum + parseFloat(entry.totalAmount as string || "0"), 0);
   };
 
-  const getStatusColor = (status: string) => {
+  const isPastDue = (invoice: Invoice) => {
+    if (invoice.status === 'paid' || !invoice.dueDate) return false;
+    return new Date(invoice.dueDate) < new Date();
+  };
+
+  const getStatusColor = (status: string, invoice?: Invoice) => {
+    // Check if invoice is overdue first
+    if (invoice && isPastDue(invoice)) {
+      return 'destructive';
+    }
     switch (status) {
       case 'paid': return 'default';
       case 'sent': return 'secondary';
@@ -334,7 +343,11 @@ export default function Invoices() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string, invoice?: Invoice) => {
+    // Show alert icon for past due invoices
+    if (invoice && isPastDue(invoice)) {
+      return <AlertCircle className="h-3 w-3 mr-1" />;
+    }
     switch (status) {
       case 'paid':
         return <CheckCircle2 className="h-3 w-3 mr-1" />;
@@ -347,9 +360,11 @@ export default function Invoices() {
     }
   };
 
-  const isPastDue = (invoice: Invoice) => {
-    if (invoice.status === 'paid' || !invoice.dueDate) return false;
-    return new Date(invoice.dueDate) < new Date();
+  const getStatusText = (invoice: Invoice) => {
+    if (isPastDue(invoice)) {
+      return 'past due';
+    }
+    return invoice.status || 'draft';
   };
 
   const getClientName = (clientId: string) => {
@@ -362,17 +377,20 @@ export default function Invoices() {
     const now = new Date();
     switch (activeTab) {
       case 'open':
-        return invoices.filter(i => i.status === 'draft' || i.status === 'sent');
+        // Open = sent but not paid (excludes drafts - they're internal)
+        return invoices.filter(i => i.status === 'sent');
       case 'paid':
         return invoices.filter(i => i.status === 'paid');
       case 'past_due':
+        // Past due = sent and overdue
         return invoices.filter(i => {
-          if (i.status === 'paid' || !i.dueDate) return false;
+          if (i.status !== 'sent' || !i.dueDate) return false;
           return new Date(i.dueDate) < now;
         });
       case 'due_soon':
+        // Due soon = sent and due within 7 days
         return invoices.filter(i => {
-          if (i.status === 'paid' || !i.dueDate) return false;
+          if (i.status !== 'sent' || !i.dueDate) return false;
           const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           return daysUntilDue <= 7 && daysUntilDue > 0;
         });
@@ -391,16 +409,19 @@ export default function Invoices() {
     const now = new Date();
     const total = invoices.reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
     const paid = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
-    const outstanding = invoices.filter(i => i.status !== 'paid').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    // Outstanding = sent but not paid (excludes drafts)
+    const outstanding = invoices.filter(i => i.status === 'sent').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    // Overdue = sent but past due date
     const overdue = invoices.filter(i => {
-      if (i.status === 'paid' || !i.dueDate) return false;
+      if (i.status !== 'sent' || !i.dueDate) return false;
       return new Date(i.dueDate) < now;
     }).reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
     
     return { total, paid, outstanding, overdue };
   };
 
-  const totals = calculateTotals(filteredInvoices);
+  // Calculate totals from ALL invoices, not just filtered ones
+  const totals = calculateTotals(invoices);
 
   const draftInvoices = invoices.filter(inv => inv.status === "draft");
 
@@ -926,8 +947,8 @@ export default function Invoices() {
               All ({invoices.length})
             </TabsTrigger>
             <TabsTrigger value="open" data-testid="tab-open">
-              <Clock className="h-4 w-4 mr-1" />
-              Open ({invoices.filter(i => i.status === 'draft' || i.status === 'sent').length})
+              <Mail className="h-4 w-4 mr-1" />
+              Open ({invoices.filter(i => i.status === 'sent').length})
             </TabsTrigger>
             <TabsTrigger value="paid" data-testid="tab-paid">
               <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -936,13 +957,14 @@ export default function Invoices() {
             <TabsTrigger value="past_due" data-testid="tab-past-due">
               <AlertCircle className="h-4 w-4 mr-1" />
               Past Due ({invoices.filter(i => {
-                if (i.status === 'paid' || !i.dueDate) return false;
+                if (i.status !== 'sent' || !i.dueDate) return false;
                 return new Date(i.dueDate) < new Date();
               }).length})
             </TabsTrigger>
             <TabsTrigger value="due_soon" data-testid="tab-due-soon">
+              <Clock className="h-4 w-4 mr-1" />
               Due Soon ({invoices.filter(i => {
-                if (i.status === 'paid' || !i.dueDate) return false;
+                if (i.status !== 'sent' || !i.dueDate) return false;
                 const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                 return daysUntilDue <= 7 && daysUntilDue > 0;
               }).length})
@@ -1023,9 +1045,9 @@ export default function Invoices() {
                     </TableCell>
                     <TableCell className="font-semibold">${parseFloat(String(invoice.total || 0)).toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusColor(invoice.status || 'draft')} className="gap-1">
-                        {getStatusIcon(invoice.status || 'draft')}
-                        {invoice.status || 'draft'}
+                      <Badge variant={getStatusColor(invoice.status || 'draft', invoice)} className="gap-1">
+                        {getStatusIcon(invoice.status || 'draft', invoice)}
+                        {getStatusText(invoice)}
                       </Badge>
                     </TableCell>
                     <TableCell>
