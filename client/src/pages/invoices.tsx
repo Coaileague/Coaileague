@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Invoice, Client, TimeEntry } from "@shared/schema";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -354,8 +355,8 @@ export default function Invoices() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <WorkspaceLayout maxWidth="7xl">
+      <div className="w-full">
         <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -892,6 +893,6 @@ export default function Invoices() {
         )}
         </div>
       </div>
-    </div>
+    </WorkspaceLayout>
   );
 }

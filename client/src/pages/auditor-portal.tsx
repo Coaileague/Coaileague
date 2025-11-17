@@ -37,7 +37,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import type { Invoice, TimeEntry, Employee, Client } from "@shared/schema";
-import { DashboardShell, ResponsiveSection } from "@/components/dashboard-shell";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 export default function AuditorPortal() {
   const { user } = useAuth();
@@ -189,8 +189,8 @@ export default function AuditorPortal() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <WorkspaceLayout maxWidth="7xl">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -549,6 +549,6 @@ export default function AuditorPortal() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </WorkspaceLayout>
   );
 }

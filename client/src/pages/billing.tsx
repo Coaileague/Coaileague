@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Workspace } from "@shared/schema";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 export default function Billing() {
   const { user } = useAuth();
@@ -87,9 +88,11 @@ export default function Billing() {
 
   if (workspaceLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" data-testid="loading-spinner" />
-      </div>
+      <WorkspaceLayout>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" data-testid="loading-spinner" />
+        </div>
+      </WorkspaceLayout>
     );
   }
 
@@ -105,7 +108,7 @@ export default function Billing() {
   const StateIcon = stateInfo.icon;
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+    <WorkspaceLayout maxWidth="7xl">
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold" data-testid="text-page-title">Billing & Invoices</h1>
@@ -442,6 +445,6 @@ export default function Billing() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </WorkspaceLayout>
   );
 }
