@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Shield,
 } from "lucide-react";
 import { SwipeToDelete } from "@/components/swipe-to-delete";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -44,8 +45,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import type { Employee } from "@shared/schema";
+import type { Employee, InsertEmployee } from "@shared/schema";
+import { insertEmployeeSchema } from "@shared/schema";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export default function Employees() {
   const { toast } = useToast();
@@ -66,7 +79,6 @@ export default function Employees() {
     role: "",
     hourlyRate: "",
     workspaceRole: "staff", // Default to staff role
-    platformRole: "", // Empty means no platform role
   });
 
   const { data: employees, isLoading } = useQuery<Employee[]>({
@@ -93,7 +105,6 @@ export default function Employees() {
         role: "",
         hourlyRate: "",
         workspaceRole: "staff",
-        platformRole: "",
       });
     },
     onError: (error: Error) => {
@@ -416,36 +427,16 @@ export default function Employees() {
                   </div>
                 )}
 
-                {/* Platform Role Section - Visible to Platform Staff Only */}
+                {/* Platform Role Assignment Info - Support Staff */}
                 {isPlatformStaff && (
                   <div className="space-y-2 pt-2 border-t border-primary/30 bg-primary/5 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3">
                     <div className="flex items-center gap-2">
                       <Shield className="h-3.5 w-3.5 text-primary" />
-                      <div className="text-xs font-semibold text-primary uppercase tracking-wide">Platform Access (Support Staff Only)</div>
+                      <div className="text-xs font-semibold text-primary uppercase tracking-wide">Platform Roles</div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="platformRole" className="text-xs">Platform Role</Label>
-                      <Select 
-                        value={formData.platformRole} 
-                        onValueChange={(value) => setFormData({ ...formData, platformRole: value })}
-                      >
-                        <SelectTrigger className="h-9 text-sm" data-testid="select-platform-role">
-                          <SelectValue placeholder="No platform role (regular user)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">None (Regular User)</SelectItem>
-                          <SelectItem value="support_agent">Support Agent</SelectItem>
-                          <SelectItem value="support_manager">Support Manager</SelectItem>
-                          <SelectItem value="compliance_officer">Compliance Officer</SelectItem>
-                          <SelectItem value="sysop">SysOp (System Operations)</SelectItem>
-                          <SelectItem value="deputy_admin">Deputy Admin</SelectItem>
-                          <SelectItem value="root_admin">Root Admin (Full Authority)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Platform-wide authority for multi-scale support implementation and RBAC management.
-                      </p>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Platform roles (Support, SysOp, Admin, etc.) can be assigned via <strong>User Management</strong> panel after employee account is created. This allows granular RBAC and multi-scale support implementation.
+                    </p>
                   </div>
                 )}
               </div>
