@@ -25,7 +25,8 @@ import {
   Award,
 } from "lucide-react";
 import type { Employee, Shift, TimeEntry } from "@shared/schema";
-import { DashboardShell, ResponsiveSection } from "@/components/dashboard-shell";
+import { ResponsiveSection } from "@/components/dashboard-shell";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 export default function EmployeePortal() {
   const { user } = useAuth();
@@ -85,7 +86,7 @@ export default function EmployeePortal() {
 
   if (!currentEmployee) {
     return (
-      <DashboardShell>
+      <WorkspaceLayout maxWidth="7xl">
         <div className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Employee Profile Not Found</h2>
@@ -93,14 +94,14 @@ export default function EmployeePortal() {
             You need to be registered as an employee to access the portal.
           </p>
         </div>
-      </DashboardShell>
+      </WorkspaceLayout>
     );
   }
 
   const initials = `${currentEmployee.firstName?.[0] || ''}${currentEmployee.lastName?.[0] || ''}`.toUpperCase();
 
   return (
-    <DashboardShell>
+    <WorkspaceLayout maxWidth="7xl">
       <ResponsiveSection spacing="lg">
           <div className="flex items-center gap-4 mb-4">
             <Avatar className="h-16 w-16 border-2 border-primary">
@@ -405,6 +406,6 @@ export default function EmployeePortal() {
           </TabsContent>
         </Tabs>
       </ResponsiveSection>
-    </DashboardShell>
+    </WorkspaceLayout>
   );
 }

@@ -35,7 +35,7 @@ import {
   Download,
 } from "lucide-react";
 import type { Invoice, Client } from "@shared/schema";
-import { DashboardShell, ResponsiveSection } from "@/components/dashboard-shell";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 export default function ClientPortal() {
   const { user } = useAuth();
@@ -143,7 +143,7 @@ export default function ClientPortal() {
 
   if (!currentClient) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
+      <WorkspaceLayout maxWidth="7xl">
         <div className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Client Account Not Found</h2>
@@ -151,14 +151,13 @@ export default function ClientPortal() {
             You need to be registered as a client to access this portal.
           </p>
         </div>
-      </div>
+      </WorkspaceLayout>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
+    <WorkspaceLayout maxWidth="7xl">
       <div className="w-full overflow-x-hidden">
-      <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
@@ -466,7 +465,6 @@ export default function ClientPortal() {
           </TabsContent>
         </Tabs>
       </div>
-      </div>
-    </div>
+    </WorkspaceLayout>
   );
 }

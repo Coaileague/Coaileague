@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2, DollarSign, CheckCircle, Clock, Play, Users } from "lucide-react";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 interface PayrollRun {
   id: string;
@@ -183,12 +184,12 @@ export default function PayrollDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <WorkspaceLayout maxWidth="7xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <DollarSign className="h-8 w-8" />
-            PayrollOS™
+            AI Payroll Processing
           </h1>
           <p className="text-muted-foreground mt-1">
             99% Automated Payroll Processing with 1% Human QC
@@ -616,6 +617,6 @@ export default function PayrollDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </WorkspaceLayout>
   );
 }
