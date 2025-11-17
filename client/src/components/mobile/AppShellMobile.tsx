@@ -1,5 +1,6 @@
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
+import { MobileUserMenu } from "./MobileUserMenu";
 
 interface AppShellMobileProps {
   children: React.ReactNode;
@@ -34,6 +35,7 @@ export function AppShellMobile({ children, title, showBack = true }: AppShellMob
         <div className="flex-1 truncate font-semibold text-base text-gray-900">
           {title || "Dashboard"}
         </div>
+        <MobileUserMenu />
       </header>
 
       {/* Main content with bottom nav spacing */}
