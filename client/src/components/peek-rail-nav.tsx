@@ -226,6 +226,7 @@ export function PeekRailNav({ defaultPinned = false }: PeekRailNavProps) {
           "bg-white",
           "border-r border-gray-200 backdrop-blur-xl",
           "shadow-xl",
+          "hidden md:flex", // Hide on mobile (<768px), show on desktop
           isMobile && "md:relative"
         )}
         style={{
