@@ -70,8 +70,9 @@ export async function seedRootUser() {
   const existingEmployee = await db.select().from(employees)
     .where(eq(employees.userId, ROOT_USER_ID)).limit(1);
   
+  let employeeId: string;
   if (!existingEmployee.length) {
-    await db.insert(employees).values({
+    const [newEmployee] = await db.insert(employees).values({
       workspaceId: OPS_WORKSPACE_ID,
       userId: ROOT_USER_ID,
       employeeNumber: 'ROOT-001',
@@ -81,10 +82,59 @@ export async function seedRootUser() {
       workspaceRole: 'org_owner',
       hourlyRate: '0.00',
       onboardingStatus: 'completed',
-    });
+    }).returning();
+    employeeId = newEmployee.id;
     console.log('✅ Root employee record created');
   } else {
+    employeeId = existingEmployee[0].id;
     console.log('Root employee record already exists');
+  }
+
+  // Generate external identifiers for Operations workspace and root employee
+  const { externalIdentifiers } = await import('@shared/schema');
+  const { and } = await import('drizzle-orm');
+  
+  // Create Operations workspace external ID (ORG-SUPT)
+  const existingOrgId = await db.select().from(externalIdentifiers)
+    .where(and(
+      eq(externalIdentifiers.entityType, 'org'),
+      eq(externalIdentifiers.entityId, OPS_WORKSPACE_ID)
+    ))
+    .limit(1);
+  
+  if (!existingOrgId.length) {
+    await db.insert(externalIdentifiers).values({
+      entityType: 'org',
+      entityId: OPS_WORKSPACE_ID,
+      externalId: 'ORG-SUPT',
+      isPrimary: true,
+    });
+    console.log('✅ Operations workspace external ID created: ORG-SUPT');
+  }
+  
+  // Create root employee external ID (EMP-SUPT-00001)
+  const existingEmpId = await db.select().from(externalIdentifiers)
+    .where(and(
+      eq(externalIdentifiers.entityType, 'employee'),
+      eq(externalIdentifiers.entityId, employeeId)
+    ))
+    .limit(1);
+  
+  if (!existingEmpId.length) {
+    await db.insert(externalIdentifiers).values({
+      entityType: 'employee',
+      entityId: employeeId,
+      externalId: 'EMP-SUPT-00001',
+      orgId: OPS_WORKSPACE_ID,
+      isPrimary: true,
+    });
+    
+    // Update employee number to match external ID
+    await db.update(employees)
+      .set({ employeeNumber: 'EMP-SUPT-00001' })
+      .where(eq(employees.id, employeeId));
+    
+    console.log('✅ Root employee external ID created: EMP-SUPT-00001');
   }
 
   console.log('\n🎉 Root user setup complete!');

@@ -190,13 +190,10 @@ export function UniversalNavHeader() {
                 ))}
               </div>
 
-              {/* Footer: User Profile */}
-              <div className="p-4 border-t border-border mt-auto">
-                <div 
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors cursor-pointer group"
-                  data-testid="button-logout-hamburger"
-                >
+              {/* Footer: User Profile + Settings + Sign Out */}
+              <div className="p-4 border-t border-border mt-auto space-y-2">
+                {/* User Info Display */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent">
                   <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500">
                     <AvatarImage src={user?.profileImageUrl || undefined} className="object-cover rounded-lg" />
                     <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold">
@@ -213,8 +210,31 @@ export function UniversalNavHeader() {
                       {user?.email || ""}
                     </p>
                   </div>
-                  <ChevronRight size={16} className="text-sidebar-foreground group-hover:text-sidebar-foreground transition-colors" />
                 </div>
+
+                {/* Settings Button */}
+                <Link
+                  href="/settings"
+                  onClick={() => setSidebarOpen(false)}
+                  data-testid="link-settings-hamburger"
+                >
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    Settings
+                  </Button>
+                </Link>
+
+                {/* Sign Out Button */}
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                  data-testid="button-logout-hamburger"
+                >
+                  Sign Out
+                </Button>
               </div>
             </SheetContent>
           </Sheet>
@@ -242,9 +262,20 @@ export function UniversalNavHeader() {
           </div>
         </div>
 
-        {/* Right: Notifications */}
-        <div className="[&_button]:text-white [&_button]:hover:bg-white/20">
-          <NotificationsCenter />
+        {/* Right: User Initials + Notifications */}
+        <div className="flex items-center gap-2">
+          {/* User Initials Display (no dropdown - settings/sign-out in hamburger menu) */}
+          <div 
+            className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+            data-testid="display-user-initials"
+          >
+            <span className="text-sm font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
+          </div>
+          
+          {/* Notifications */}
+          <div className="[&_button]:text-white [&_button]:hover:bg-white/20">
+            <NotificationsCenter />
+          </div>
         </div>
       </div>
 
