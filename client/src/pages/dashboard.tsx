@@ -455,6 +455,26 @@ export default function Dashboard() {
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 break-words" data-testid="text-welcome">
                   Welcome back, {firstName}
                 </h2>
+                
+                {/* User Identity Badges */}
+                <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+                  {displayExternalId && (
+                    <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-blue-50 border-blue-200 text-blue-700 font-medium" data-testid="badge-external-id">
+                      {displayExternalId}
+                    </Badge>
+                  )}
+                  {displayRole && (
+                    <Badge variant="secondary" className="text-xs px-2.5 py-0.5 font-medium" data-testid="badge-role">
+                      {displayRole.replace(/_/g, ' ')}
+                    </Badge>
+                  )}
+                  {orgId && (
+                    <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-blue-50 border-blue-200 text-blue-700 font-medium" data-testid="badge-org-id">
+                      {orgId}
+                    </Badge>
+                  )}
+                </div>
+                
                 <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
                   {workspaceRole === 'org_owner' ? 'Manage your entire workforce with AutoForce™' : 
                    workspaceRole === 'org_admin' ? 'Administer your organization' :
