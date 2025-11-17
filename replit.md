@@ -45,6 +45,7 @@ The platform features a professional aesthetic with Deep Charcoal, Platinum neut
 -   **Fill Request Marketplace**: External contractor matching system for shifts.
 -   **Universal Responsive Schedule with Drag-and-Drop**: Full-featured scheduling with desktop drag-and-drop and touch-optimized mobile interface.
 -   **Universal Time Tracking System**: Consolidated time tracking with GPS verification, photo capture, and three-view navigation (Clock, Timesheet, Approvals) with manager approval workflows.
+-   **Comprehensive Data Integrity System**: Event sourcing architecture with immutable audit trails, SHA-256 verification for AI actions, ID registry to prevent reuse, and Write-Ahead Logging (WAL) for transaction safety. Actor type tracking (END_USER, SUPPORT_STAFF, AI_AGENT, SYSTEM) ensures complete accountability. Features deterministic hash generation, row-count verification for all writes, and composite indexes for high-volume queries.
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)

@@ -11182,6 +11182,9 @@ export const auditEvents = pgTable("audit_events", {
   index("idx_audit_events_type").on(table.eventType, table.timestamp),
   index("idx_audit_events_status").on(table.status, table.timestamp),
   index("idx_audit_events_hash").on(table.actionHash),
+  // Composite indexes for high-volume queries
+  index("idx_audit_events_workspace_created").on(table.workspaceId, table.timestamp),
+  index("idx_audit_events_aggregate_created").on(table.aggregateId, table.timestamp),
 ]);
 
 export const insertAuditEventSchema = createInsertSchema(auditEvents).omit({

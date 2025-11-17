@@ -71,6 +71,9 @@ import {
   organizationRoomMembers,
   organizationRoomOnboarding,
   notifications,
+  auditEvents,
+  idRegistry,
+  writeAheadLog,
   type User,
   type UpsertUser,
   type AbuseViolation,
@@ -180,11 +183,30 @@ import {
   type InsertPolicyAcknowledgment,
   type Notification,
   type InsertNotification,
+  type AuditEvent,
+  type InsertAuditEvent,
+  type IdRegistry,
+  type InsertIdRegistry,
+  type WriteAheadLog,
+  type InsertWriteAheadLog,
 } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, count } from "drizzle-orm";
+
+// Custom error for WAL transition failures
+export class InvalidWalTransitionError extends Error {
+  constructor(
+    public transactionId: string,
+    public expectedStatus: string,
+    public actualStatus?: string,
+    message?: string
+  ) {
+    super(message || `Invalid WAL transition for transaction ${transactionId}: expected status '${expectedStatus}'${actualStatus ? `, found '${actualStatus}'` : ''}`);
+    this.name = 'InvalidWalTransitionError';
+  }
+}
 
 // Generate unique organization ID: wfosupport-#########
 function generateOrganizationId(): string {
@@ -356,6 +378,16 @@ export interface IStorage {
   // Audit Log operations (Security & Compliance)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(workspaceId: string, filters?: { userId?: string; entityType?: string; action?: string; startDate?: Date; endDate?: Date; limit?: number; offset?: number }): Promise<AuditLog[]>;
+  
+  // Event Sourcing & Data Integrity operations
+  createAuditEvent(event: InsertAuditEvent): Promise<string>;
+  getAuditEvent(id: string): Promise<AuditEvent | undefined>;
+  verifyAuditEvent(eventId: string, actionHash: string): Promise<void>;
+  registerID(entry: InsertIdRegistry): Promise<void>;
+  createWriteAheadLog(entry: InsertWriteAheadLog): Promise<string>;
+  markWALPrepared(transactionId: string): Promise<void>;
+  markWALCommitted(transactionId: string): Promise<void>;
+  markWALRolledBack(transactionId: string, errorMessage?: string): Promise<void>;
   
   // Feature Flag operations (Monetization)
   getFeatureFlags(workspaceId: string): Promise<FeatureFlag | undefined>;
@@ -1947,6 +1979,154 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+  
+  // ============================================================================
+  // EVENT SOURCING & DATA INTEGRITY OPERATIONS
+  // ============================================================================
+  
+  async createAuditEvent(event: InsertAuditEvent): Promise<string> {
+    const [newEvent] = await db
+      .insert(auditEvents)
+      .values(event)
+      .returning();
+    
+    return newEvent.id;
+  }
+  
+  async getAuditEvent(id: string): Promise<AuditEvent | undefined> {
+    const [event] = await db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.id, id));
+    
+    return event;
+  }
+  
+  async verifyAuditEvent(eventId: string, actionHash: string): Promise<void> {
+    const result = await db
+      .update(auditEvents)
+      .set({ 
+        verifiedAt: new Date(),
+        status: 'committed' as any,
+      })
+      .where(and(
+        eq(auditEvents.id, eventId),
+        eq(auditEvents.actionHash, actionHash)
+      ))
+      .returning();
+    
+    if (!result || result.length === 0) {
+      throw new Error(`Failed to verify audit event ${eventId} - hash mismatch or event not found`);
+    }
+  }
+  
+  async registerID(entry: InsertIdRegistry): Promise<void> {
+    try {
+      await db
+        .insert(idRegistry)
+        .values(entry)
+        .onConflictDoNothing(); // ID might already be registered
+    } catch (error) {
+      // Silently fail if ID is already registered (that's the goal!)
+      console.warn('[Storage] ID already registered:', entry.id);
+    }
+  }
+  
+  async createWriteAheadLog(entry: InsertWriteAheadLog): Promise<string> {
+    const [newEntry] = await db
+      .insert(writeAheadLog)
+      .values(entry)
+      .returning();
+    
+    return newEntry.id;
+  }
+  
+  async markWALPrepared(transactionId: string): Promise<void> {
+    // Transition: pending → prepared
+    const result = await db
+      .update(writeAheadLog)
+      .set({ 
+        preparedAt: new Date(),
+        status: 'pending' as any, // TODO: Should be 'prepared' but eventStatusEnum needs update
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(writeAheadLog.transactionId, transactionId),
+        eq(writeAheadLog.status, 'pending' as any)
+      ))
+      .returning();
+    
+    if (!result || result.length === 0) {
+      const [existing] = await db
+        .select()
+        .from(writeAheadLog)
+        .where(eq(writeAheadLog.transactionId, transactionId));
+      
+      if (!existing) {
+        throw new InvalidWalTransitionError(transactionId, 'pending', undefined, `Transaction not found`);
+      }
+      throw new InvalidWalTransitionError(transactionId, 'pending', existing.status, `Cannot prepare - must be in pending state`);
+    }
+  }
+  
+  async markWALCommitted(transactionId: string): Promise<void> {
+    // Transition: pending (with preparedAt set) → committed
+    const result = await db
+      .update(writeAheadLog)
+      .set({ 
+        committedAt: new Date(),
+        status: 'committed' as any,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(writeAheadLog.transactionId, transactionId),
+        eq(writeAheadLog.status, 'pending' as any), // Must be in pending state (prepared has preparedAt)
+        isNotNull(writeAheadLog.preparedAt) // Must have been prepared
+      ))
+      .returning();
+    
+    if (!result || result.length === 0) {
+      const [existing] = await db
+        .select()
+        .from(writeAheadLog)
+        .where(eq(writeAheadLog.transactionId, transactionId));
+      
+      if (!existing) {
+        throw new InvalidWalTransitionError(transactionId, 'prepared', undefined, `Transaction not found`);
+      }
+      throw new InvalidWalTransitionError(transactionId, 'prepared', existing.status, `Cannot commit - must be prepared first (preparedAt must be set)`);
+    }
+  }
+  
+  async markWALRolledBack(transactionId: string, errorMessage?: string): Promise<void> {
+    // Transition: pending or pending+prepared → rolled_back
+    const result = await db
+      .update(writeAheadLog)
+      .set({ 
+        rolledBackAt: new Date(),
+        status: 'rolled_back' as any,
+        errorMessage,
+        retryCount: sql`${writeAheadLog.retryCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(writeAheadLog.transactionId, transactionId),
+        eq(writeAheadLog.status, 'pending' as any) // Can rollback from pending (before or after prepare)
+      ))
+      .returning();
+    
+    if (!result || result.length === 0) {
+      const [existing] = await db
+        .select()
+        .from(writeAheadLog)
+        .where(eq(writeAheadLog.transactionId, transactionId));
+      
+      if (!existing) {
+        throw new InvalidWalTransitionError(transactionId, 'pending', undefined, `Transaction not found`);
+      }
+      throw new InvalidWalTransitionError(transactionId, 'pending', existing.status, `Cannot rollback - already ${existing.status}`);
+    }
   }
   
   // ============================================================================
