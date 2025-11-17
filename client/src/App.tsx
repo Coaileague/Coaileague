@@ -7,7 +7,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { GraduationCap, Settings2, Search, Menu } from "lucide-react";
-import { PeekRailNav } from "@/components/peek-rail-nav";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
@@ -25,7 +26,6 @@ import { ServiceHealthProvider } from "@/contexts/ServiceHealthContext";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
@@ -323,18 +323,22 @@ function AppContent() {
   // Check if user is Root Admin (platform-level access)
   const isRootAdmin = (user as any)?.platformRole === 'root_admin' || (user as any)?.platformRole === 'sysop';
 
+  // Sidebar width configuration
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",       // 256px default
+    "--sidebar-width-icon": "3.5rem", // 56px collapsed (matches old peek rail)
+  };
+
   return (
     <ProtectedRoute>
       <CommandPalette />
-      <div className="flex h-screen w-full overflow-x-hidden max-w-full">
-        {/* Gmail-style Peek Rail Navigation - HIDDEN on mobile */}
-        {!isMobileChat && !isMobile && <PeekRailNav defaultPinned={false} />}
-        
-        {/* Main content container with proper spacing for peek rail (no margin on mobile) */}
-        <div className={cn(
-          "flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden",
-          !isMobileChat && !isMobile && "ml-14 md:ml-14" // 56px (3.5rem = 14*4px) margin for collapsed rail
-        )}>
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          {/* Universal Sidebar - HIDDEN on mobile */}
+          {!isMobileChat && !isMobile && <AppSidebar />}
+          
+          {/* Main content container */}
+          <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
             {/* Demo Banner - positioned to account for fixed header (hidden on mobile) */}
             {!isMobile && <DemoBanner />}
 
@@ -495,9 +499,7 @@ function AppContent() {
             </main>
           </div>
         </div>
-        
-      {/* Mobile Bottom Navigation - Only shown on mobile, hidden on tablet/desktop */}
-      {!isMobileChat && !isHelpDesk && <MobileBottomNav />}
+      </SidebarProvider>
       
       <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ProtectedRoute>
@@ -510,7 +512,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ServiceHealthProvider>
           <OverlayControllerProvider>
-            <ThemeProvider defaultTheme="dark">
+            <ThemeProvider defaultTheme="light">
               <WorkspaceThemeProvider>
                 <TransitionProvider>
                 <TooltipProvider>
