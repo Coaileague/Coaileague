@@ -130,51 +130,31 @@ import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
-// Separate header component for app navigation
-function AppHeader({ isRootAdmin, setLocation, setShowOnboarding }: any) {
-  const { user } = useAuth();
-
+// Compact top-right utility cluster - Fortune 500 aesthetic
+function AppUtilityCluster({ setLocation }: any) {
   return (
-    <header className="fixed top-0 left-14 right-0 z-[40] flex items-center justify-between px-3 sm:px-4 py-2 border-b bg-card/95 backdrop-blur-sm h-14">
-      <div className="flex items-center gap-2">
-        {/* Workspace Switcher - shows current workspace name */}
-        <WorkspaceSwitcher />
-      </div>
-
-      <div className="flex items-center gap-2">
-        {/* Settings Gear - Keep in header for quick access */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (isRootAdmin) {
-                  setLocation('/platform-admin');
-                } else if (
-                  (user as any)?.platformRole === 'deputy_admin' ||
-                  (user as any)?.platformRole === 'support_manager' ||
-                  (user as any)?.platformRole === 'support_agent' ||
-                  (user as any)?.platformRole === 'compliance_officer'
-                ) {
-                  setLocation('/admin-command-center');
-                } else {
-                  setLocation('/settings');
-                }
-              }}
-              data-testid="button-settings-gear"
-              className="shrink-0 gap-2"
-            >
-              <Settings2 className="h-4 w-4 text-primary" />
-              <span className="hidden sm:inline text-sm">{isRootAdmin ? 'Admin' : 'Settings'}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isRootAdmin ? 'Platform Management' : 'Organization Settings'}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </header>
+    <div className="fixed top-3 right-4 z-50 flex items-center gap-2 bg-background/95 backdrop-blur-xl border rounded-lg shadow-sm px-3 py-2 max-w-[320px]">
+      {/* Workspace Info */}
+      <WorkspaceSwitcher />
+      
+      {/* Settings Gear - Always goes to /settings, no admin redirect */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation('/settings')}
+            data-testid="button-settings-gear"
+            className="h-8 w-8 shrink-0"
+          >
+            <Settings2 className="h-4 w-4 text-primary" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Settings</p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -270,17 +250,13 @@ function AppContent() {
             {/* Demo Banner - positioned to account for fixed header (hidden on mobile) */}
             {!isMobile && <DemoBanner />}
 
-            {/* Global Header - FIXED floats over all content - HIDDEN on mobile */}
+            {/* Compact top-right utility cluster - HIDDEN on mobile */}
             {!isMobileChat && !isHelpDesk && !isMobile && (
-              <AppHeader 
-                isRootAdmin={isRootAdmin} 
-                setLocation={setLocation} 
-                setShowOnboarding={setShowOnboarding}
-              />
+              <AppUtilityCluster setLocation={setLocation} />
             )}
 
-            {/* Main content area - add padding-top for fixed header (desktop only) */}
-            <main className={`flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full ${!isMobileChat && !isHelpDesk && !isMobile ? 'pt-14' : ''}`}>
+            {/* Main content area - no padding needed for floating utility cluster */}
+            <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
               {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
               {!isMobileChat && !isHelpDesk && !isMobile && <PageBreadcrumb />}
               
