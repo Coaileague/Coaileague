@@ -30,6 +30,7 @@ import { aiBrainRouter } from "./ai-brain-routes"; // Unified AI Brain System
 import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
+import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -1115,6 +1116,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Unified AI Brain System (cross-org learning, job execution, global patterns)
   app.use('/api/ai-brain', aiBrainRouter);
+
+  // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
+  app.use('/api/automation', requireAuth, automationRouter);
 
   // Register DispatchOS™ routes (GPS tracking, incident management, CAD operations)
   const dispatchRouter = (await import('./routes/dispatch')).default;
