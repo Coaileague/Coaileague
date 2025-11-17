@@ -377,20 +377,22 @@ export default function Invoices() {
     const now = new Date();
     switch (activeTab) {
       case 'open':
-        // Open = sent but not paid (excludes drafts - they're internal)
-        return invoices.filter(i => i.status === 'sent');
+        // Open = sent OR overdue (all unpaid receivables, excludes drafts)
+        return invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
       case 'paid':
         return invoices.filter(i => i.status === 'paid');
       case 'past_due':
-        // Past due = sent and overdue
+        // Past due = explicitly overdue OR sent but past due date
         return invoices.filter(i => {
-          if (i.status !== 'sent' || !i.dueDate) return false;
-          return new Date(i.dueDate) < now;
+          if (i.status === 'overdue') return true;
+          if (i.status === 'sent' && i.dueDate && new Date(i.dueDate) < now) return true;
+          return false;
         });
       case 'due_soon':
-        // Due soon = sent and due within 7 days
+        // Due soon = (sent OR overdue) and due within 7 days
         return invoices.filter(i => {
-          if (i.status !== 'sent' || !i.dueDate) return false;
+          if (i.status !== 'sent' && i.status !== 'overdue') return false;
+          if (!i.dueDate) return false;
           const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           return daysUntilDue <= 7 && daysUntilDue > 0;
         });
@@ -409,12 +411,13 @@ export default function Invoices() {
     const now = new Date();
     const total = invoices.reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
     const paid = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
-    // Outstanding = sent but not paid (excludes drafts)
-    const outstanding = invoices.filter(i => i.status === 'sent').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
-    // Overdue = sent but past due date
+    // Outstanding = sent OR overdue (not paid, excludes drafts)
+    const outstanding = invoices.filter(i => i.status === 'sent' || i.status === 'overdue').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    // Overdue = explicitly overdue status OR sent but past due date
     const overdue = invoices.filter(i => {
-      if (i.status !== 'sent' || !i.dueDate) return false;
-      return new Date(i.dueDate) < now;
+      if (i.status === 'overdue') return true;
+      if (i.status === 'sent' && i.dueDate && new Date(i.dueDate) < now) return true;
+      return false;
     }).reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
     
     return { total, paid, outstanding, overdue };
@@ -948,7 +951,7 @@ export default function Invoices() {
             </TabsTrigger>
             <TabsTrigger value="open" data-testid="tab-open">
               <Mail className="h-4 w-4 mr-1" />
-              Open ({invoices.filter(i => i.status === 'sent').length})
+              Open ({invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length})
             </TabsTrigger>
             <TabsTrigger value="paid" data-testid="tab-paid">
               <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -957,15 +960,19 @@ export default function Invoices() {
             <TabsTrigger value="past_due" data-testid="tab-past-due">
               <AlertCircle className="h-4 w-4 mr-1" />
               Past Due ({invoices.filter(i => {
-                if (i.status !== 'sent' || !i.dueDate) return false;
-                return new Date(i.dueDate) < new Date();
+                const now = new Date();
+                if (i.status === 'overdue') return true;
+                if (i.status === 'sent' && i.dueDate && new Date(i.dueDate) < now) return true;
+                return false;
               }).length})
             </TabsTrigger>
             <TabsTrigger value="due_soon" data-testid="tab-due-soon">
               <Clock className="h-4 w-4 mr-1" />
               Due Soon ({invoices.filter(i => {
-                if (i.status !== 'sent' || !i.dueDate) return false;
-                const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                if (i.status !== 'sent' && i.status !== 'overdue') return false;
+                if (!i.dueDate) return false;
+                const now = new Date();
+                const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                 return daysUntilDue <= 7 && daysUntilDue > 0;
               }).length})
             </TabsTrigger>
