@@ -13186,6 +13186,64 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // AI Compliance Audit Logs - Comprehensive activity tracking
+  app.get('/api/audit-logs', requireAuth, requireProfessional, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID required" });
+      }
+
+      // Filters
+      const actorFilter = req.query.actorType as string | undefined;
+      const statusFilter = req.query.status as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+
+      // Build query
+      const conditions = [eq(auditEvents.workspaceId, workspaceId)];
+      
+      if (actorFilter && actorFilter !== 'all') {
+        conditions.push(eq(auditEvents.actorType, actorFilter as any));
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        conditions.push(eq(auditEvents.status, statusFilter as any));
+      }
+
+      // Fetch audit events
+      const events = await db
+        .select()
+        .from(auditEvents)
+        .where(and(...conditions))
+        .orderBy(desc(auditEvents.timestamp))
+        .limit(limit);
+
+      // Transform to frontend format
+      const logs = events.map(event => ({
+        id: event.id,
+        timestamp: event.timestamp,
+        actorType: event.actorType,
+        actorId: event.actorId,
+        actorName: event.actorName || 'Unknown',
+        action: event.eventType,
+        resourceType: event.aggregateType,
+        resourceId: event.aggregateId,
+        status: event.status === 'committed' ? 'success' : event.status === 'failed' ? 'failure' : 'warning',
+        details: typeof event.payload === 'object' && event.payload && 'description' in event.payload
+          ? String(event.payload.description)
+          : `${event.eventType} on ${event.aggregateType}`,
+        ipAddress: event.ipAddress || undefined,
+        userAgent: event.userAgent || undefined,
+        verificationHash: event.actionHash || undefined,
+      }));
+
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
   // Personal staff data (assigned tickets, etc.)
   app.get('/api/platform/personal-data', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {

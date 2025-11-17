@@ -37,6 +37,15 @@ export default function AuditLogs() {
 
   const { data: auditLogs, isLoading } = useQuery<AuditLog[]>({
     queryKey: ['/api/audit-logs', actorFilter, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (actorFilter !== 'all') params.append('actorType', actorFilter);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      const url = `/api/audit-logs${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch audit logs');
+      return response.json();
+    },
     enabled: true,
   });
 
@@ -98,14 +107,14 @@ export default function AuditLogs() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-medium">Total Actions</CardDescription>
-            <CardTitle className="text-2xl">{auditLogs?.length || 0}</CardTitle>
+            <CardTitle className="text-2xl" data-testid="stat-total-actions">{auditLogs?.length || 0}</CardTitle>
           </CardHeader>
         </Card>
         
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-medium">AI Actions</CardDescription>
-            <CardTitle className="text-2xl text-primary">
+            <CardTitle className="text-2xl text-primary" data-testid="stat-ai-actions">
               {auditLogs?.filter(log => log.actorType === 'AI_AGENT').length || 0}
             </CardTitle>
           </CardHeader>
@@ -114,7 +123,7 @@ export default function AuditLogs() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-medium">Success Rate</CardDescription>
-            <CardTitle className="text-2xl text-green-600">
+            <CardTitle className="text-2xl text-green-600" data-testid="stat-success-rate">
               {auditLogs && auditLogs.length > 0
                 ? Math.round((auditLogs.filter(log => log.status === 'success').length / auditLogs.length) * 100)
                 : 0}%
@@ -125,7 +134,7 @@ export default function AuditLogs() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-medium">Warnings</CardDescription>
-            <CardTitle className="text-2xl text-yellow-600">
+            <CardTitle className="text-2xl text-yellow-600" data-testid="stat-warnings">
               {auditLogs?.filter(log => log.status === 'warning').length || 0}
             </CardTitle>
           </CardHeader>
@@ -199,24 +208,24 @@ export default function AuditLogs() {
               </>
             ) : filteredLogs && filteredLogs.length > 0 ? (
               filteredLogs.map((log) => (
-                <Card key={log.id} className="hover-elevate">
+                <Card key={log.id} className="hover-elevate" data-testid={`audit-log-${log.id}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                       <div className="flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={getActorBadgeVariant(log.actorType)} className="text-xs">
+                          <Badge variant={getActorBadgeVariant(log.actorType)} className="text-xs" data-testid={`badge-actor-${log.id}`}>
                             {log.actorType === 'AI_AGENT' && '🤖 '}
                             {log.actorType === 'END_USER' && '👤 '}
                             {log.actorType === 'SUPPORT_STAFF' && '🛟 '}
                             {log.actorType === 'SYSTEM' && '⚙️ '}
                             {log.actorType.replace('_', ' ')}
                           </Badge>
-                          <Badge variant={getStatusBadgeVariant(log.status)} className="text-xs">
+                          <Badge variant={getStatusBadgeVariant(log.status)} className="text-xs" data-testid={`badge-status-${log.id}`}>
                             {getStatusIcon(log.status)}
                             <span className="ml-1">{log.status.toUpperCase()}</span>
                           </Badge>
                           {log.verificationHash && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs" data-testid={`badge-verified-${log.id}`}>
                               <Shield className="h-3 w-3 mr-1" />
                               Verified
                             </Badge>
@@ -224,18 +233,18 @@ export default function AuditLogs() {
                         </div>
                         
                         <div>
-                          <p className="font-semibold text-sm text-foreground">{log.action}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{log.details}</p>
+                          <p className="font-semibold text-sm text-foreground" data-testid={`text-action-${log.id}`}>{log.action}</p>
+                          <p className="text-xs text-muted-foreground mt-1" data-testid={`text-details-${log.id}`}>{log.details}</p>
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            <span>{log.actorName}</span>
+                            <span data-testid={`text-actor-name-${log.id}`}>{log.actorName}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <FileText className="h-3 w-3" />
-                            <span>{log.resourceType}: {log.resourceId}</span>
+                            <span data-testid={`text-resource-${log.id}`}>{log.resourceType}: {log.resourceId}</span>
                           </div>
                         </div>
                       </div>
@@ -243,10 +252,10 @@ export default function AuditLogs() {
                       <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          <span>{new Date(log.timestamp).toLocaleString()}</span>
+                          <span data-testid={`text-timestamp-${log.id}`}>{new Date(log.timestamp).toLocaleString()}</span>
                         </div>
                         {log.ipAddress && (
-                          <span className="text-xs">IP: {log.ipAddress}</span>
+                          <span className="text-xs" data-testid={`text-ip-${log.id}`}>IP: {log.ipAddress}</span>
                         )}
                       </div>
                     </div>
