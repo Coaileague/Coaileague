@@ -1,18 +1,11 @@
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { UniversalHeader } from "@/components/universal-header";
 
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <Link href="/">
-          <Button variant="ghost" className="mb-8" data-testid="button-back-home">
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Button>
-        </Link>
-
+      <UniversalHeader variant="public" />
+      
+      <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
         <div className="prose prose-slate dark:prose-invert max-w-none">
           <h1 className="text-4xl font-bold mb-2">Terms of Service</h1>
           <p className="text-muted-foreground mb-8">Last Updated: November 13, 2025</p>
@@ -94,9 +87,7 @@ export default function TermsOfService() {
             <p className="text-foreground/90 mb-4">
               You retain ownership of all data you input into the Service. By using AutoForce™, you grant us a 
               limited license to process your data solely to provide the Service. See our{" "}
-              <Link href="/privacy">
-                <a className="text-primary hover:underline" data-testid="link-privacy-policy">Privacy Policy</a>
-              </Link>{" "}
+              <a href="/privacy" className="text-primary hover:underline" data-testid="link-privacy-policy">Privacy Policy</a>{" "}
               for details on how we collect, use, and protect your data.
             </p>
           </section>
