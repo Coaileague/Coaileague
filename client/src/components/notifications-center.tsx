@@ -12,12 +12,18 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Check, X, Clock, Users, Calendar, AlertCircle } from "lucide-react";
+import { 
+  Bell, Check, X, Clock, Users, Calendar, AlertCircle, 
+  Sparkles, DollarSign, FileText, AlertTriangle, PartyPopper, 
+  UserPlus, BrainCircuit, CheckCircle 
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Notification {
   id: string;
-  type: 'shift_assigned' | 'pto_approved' | 'pto_denied' | 'schedule_change' | 'mention' | 'system';
+  type: 'shift_assigned' | 'pto_approved' | 'pto_denied' | 'schedule_change' | 'mention' | 'system' |
+        'welcome_org' | 'welcome_employee' | 'invoice_generated' | 'invoice_paid' | 'payment_received' |
+        'ai_schedule_ready' | 'ai_approval_needed' | 'ai_action_completed' | 'deadline_approaching';
   title: string;
   message: string;
   isRead: boolean;
@@ -82,17 +88,35 @@ export function NotificationsCenter() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'shift_assigned':
-        return <Calendar className="h-4 w-4 text-blue-500" />;
+        return <Calendar className="h-4 w-4 text-primary" />;
       case 'pto_approved':
-        return <Check className="h-4 w-4 text-blue-500" />;
+        return <Check className="h-4 w-4 text-primary" />;
       case 'pto_denied':
-        return <X className="h-4 w-4 text-red-500" />;
+        return <X className="h-4 w-4 text-destructive" />;
       case 'schedule_change':
-        return <Clock className="h-4 w-4 text-orange-500" />;
+        return <Clock className="h-4 w-4 text-primary" />;
       case 'mention':
-        return <Users className="h-4 w-4 text-purple-500" />;
+        return <Users className="h-4 w-4 text-primary" />;
+      case 'welcome_org':
+        return <PartyPopper className="h-4 w-4 text-primary" />;
+      case 'welcome_employee':
+        return <UserPlus className="h-4 w-4 text-primary" />;
+      case 'invoice_generated':
+        return <FileText className="h-4 w-4 text-primary" />;
+      case 'invoice_paid':
+        return <CheckCircle className="h-4 w-4 text-primary" />;
+      case 'payment_received':
+        return <DollarSign className="h-4 w-4 text-primary" />;
+      case 'ai_schedule_ready':
+        return <BrainCircuit className="h-4 w-4 text-primary" />;
+      case 'ai_approval_needed':
+        return <AlertTriangle className="h-4 w-4 text-destructive" />;
+      case 'ai_action_completed':
+        return <Sparkles className="h-4 w-4 text-primary" />;
+      case 'deadline_approaching':
+        return <AlertTriangle className="h-4 w-4 text-destructive" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 

@@ -8904,6 +8904,15 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'mention',             // User mentioned in chat/comment
   'support_escalation',  // HelpOS bot escalated ticket to human support
   'system',              // System notification
+  'welcome_org',         // Welcome message for new organization
+  'welcome_employee',    // Welcome message for new employee
+  'invoice_generated',   // Invoice generated for client
+  'invoice_paid',        // Invoice paid
+  'payment_received',    // Payment received
+  'ai_schedule_ready',   // AI-generated schedule ready for approval
+  'ai_approval_needed',  // AI Brain needs approval for workflow
+  'ai_action_completed', // AI Brain completed automated action
+  'deadline_approaching', // Deadline approaching for approval/action
 ]);
 
 // Notifications table - user-specific, organization-scoped
