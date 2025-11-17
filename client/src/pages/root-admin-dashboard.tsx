@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { TimeGreeting } from "@/components/time-greeting";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -361,9 +360,6 @@ export default function RootAdminDashboard() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                
-                {/* Theme Toggle */}
-                <ThemeToggle />
               </div>
             </div>
           </div>

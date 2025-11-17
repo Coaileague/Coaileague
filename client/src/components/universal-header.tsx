@@ -7,7 +7,6 @@ import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState } from "react";
@@ -90,8 +89,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 >
                   Contact
                 </button>
-                <div className="h-6 w-px bg-border" />
-                <ThemeToggle />
                 <Button
                   variant="ghost"
                   className="min-h-[44px] px-4"
@@ -111,7 +108,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
 
               {/* Mobile Menu - Collapsible Sheet */}
               <div className="flex md:hidden items-center gap-2 shrink-0">
-                <ThemeToggle />
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
@@ -185,7 +181,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
           ) : (
             // WORKSPACE NAVIGATION - Minimal header, PeekRailNav handles main nav
             <div className="flex items-center gap-3">
-              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="sm"

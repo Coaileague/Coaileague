@@ -51,7 +51,6 @@ import { AccountSupportPanel } from "@/components/account-support-panel";
 import { MotdDialog } from "@/components/motd-dialog";
 import { AnimatedStatusBar } from "@/components/animated-status-bar";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
 import { HelpOsAiTester } from "@/components/helpos-ai-tester";
 import { formatDistanceToNow } from "date-fns";
