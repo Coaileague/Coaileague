@@ -312,102 +312,121 @@ export async function attachEmployeeExternalId(
 }
 
 /**
- * Generate and attach external ID to a client
+ * Internal function to attach client external ID within a transaction
  */
-export async function attachClientExternalId(
+async function attachClientExternalIdInTx(
+  tx: any,
   clientId: string,
   orgId: string
 ): Promise<{ externalId: string; localNumber: number }> {
   try {
-    return await db.transaction(async (tx: any) => {
-      try {
-        // Check if client already has an external ID
-        const existing = await tx
-          .select()
-          .from(externalIdentifiers)
-          .where(
-            and(
-              eq(externalIdentifiers.entityType, 'client'),
-              eq(externalIdentifiers.entityId, clientId)
-            )
-          )
-          .limit(1);
+    // Check if client already has an external ID
+    const existing = await tx
+      .select()
+      .from(externalIdentifiers)
+      .where(
+        and(
+          eq(externalIdentifiers.entityType, 'client'),
+          eq(externalIdentifiers.entityId, clientId)
+        )
+      )
+      .limit(1);
 
-        if (existing.length > 0) {
-          const parts = existing[0].externalId.split('-');
-          const localNumber = parseInt(parts[2], 10);
-          console.log(`[Identity] Client ${clientId} already has external ID: ${existing[0].externalId}`);
-          
-          // CRITICAL: Sync external ID to clients.client_code if not already synced
-          await tx
-            .update(clients)
-            .set({ clientCode: existing[0].externalId })
-            .where(eq(clients.id, clientId));
-          
-          return { externalId: existing[0].externalId, localNumber };
-        }
+    if (existing.length > 0) {
+      const parts = existing[0].externalId.split('-');
+      const localNumber = parseInt(parts[2], 10);
+      console.log(`[Identity] Client ${clientId} already has external ID: ${existing[0].externalId}`);
+      
+      // CRITICAL: Sync external ID to clients.client_code if not already synced
+      await tx
+        .update(clients)
+        .set({ clientCode: existing[0].externalId })
+        .where(eq(clients.id, clientId));
+      
+      return { externalId: existing[0].externalId, localNumber };
+    }
 
-        // Ensure org has identifiers set up
-        const org = await tx
-          .select({ name: workspaces.name })
-          .from(workspaces)
-          .where(eq(workspaces.id, orgId))
-          .limit(1);
+    // Ensure org has identifiers set up
+    const org = await tx
+      .select({ name: workspaces.name })
+      .from(workspaces)
+      .where(eq(workspaces.id, orgId))
+      .limit(1);
 
-        if (org.length === 0) {
-          console.error(`[Identity] Organization not found: ${orgId}`);
-          throw new Error('Organization not found');
-        }
+    if (org.length === 0) {
+      console.error(`[Identity] Organization not found: ${orgId}`);
+      throw new Error('Organization not found');
+    }
 
-        const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
+    const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
 
-        // ensureOrgIdentifiersInTx already initialized the sequence, so just increment it
-        const updated = await tx
-          .update(idSequences)
-          .set({ 
-            nextVal: sql`${idSequences.nextVal} + 1`,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(idSequences.orgId, orgId),
-              eq(idSequences.kind, 'client')
-            )
-          )
-          .returning({ issued: sql`${idSequences.nextVal} - 1` });
-        
-        let nextVal = 1;
-        
-        if (updated.length > 0) {
-          nextVal = updated[0].issued as number;
-        }
+    // ensureOrgIdentifiersInTx already initialized the sequence, so just increment it
+    const updated = await tx
+      .update(idSequences)
+      .set({ 
+        nextVal: sql`${idSequences.nextVal} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(idSequences.orgId, orgId),
+          eq(idSequences.kind, 'client')
+        )
+      )
+      .returning({ issued: sql`${idSequences.nextVal} - 1` });
+    
+    let nextVal = 1;
+    
+    if (updated.length > 0) {
+      nextVal = updated[0].issued as number;
+    }
 
-        const externalId = genClientExternalId(orgCode, nextVal);
+    const externalId = genClientExternalId(orgCode, nextVal);
 
-        await tx.insert(externalIdentifiers).values({
-          entityType: 'client',
-          entityId: clientId,
-          externalId: externalId,
-          orgId: orgId,
-          isPrimary: true,
-        });
-
-        // CRITICAL: Sync external ID back to clients.client_code column
-        await tx
-          .update(clients)
-          .set({ clientCode: externalId })
-          .where(eq(clients.id, clientId));
-
-        console.log(`[Identity] Created client external ID: ${externalId} for client ${clientId}`);
-        return { externalId, localNumber: nextVal };
-      } catch (innerError: any) {
-        console.error('[Identity] Transaction error in attachClientExternalId:', innerError.message, innerError.code);
-        throw innerError;
-      }
+    await tx.insert(externalIdentifiers).values({
+      entityType: 'client',
+      entityId: clientId,
+      externalId: externalId,
+      orgId: orgId,
+      isPrimary: true,
     });
-  } catch (outerError: any) {
-    console.error('[Identity] Failed to attach client external ID:', outerError.message, outerError.code);
-    throw outerError;
+
+    // CRITICAL: Sync external ID back to clients.client_code column
+    await tx
+      .update(clients)
+      .set({ clientCode: externalId })
+      .where(eq(clients.id, clientId));
+
+    console.log(`[Identity] Created client external ID: ${externalId} for client ${clientId}`);
+    return { externalId, localNumber: nextVal };
+  } catch (error: any) {
+    console.error('[Identity] Error in attachClientExternalIdInTx:', error.message, error.code);
+    throw error;
+  }
+}
+
+/**
+ * Generate and attach external ID to a client
+ * Public wrapper that starts its own transaction (or uses provided one)
+ */
+export async function attachClientExternalId(
+  clientId: string,
+  orgId: string,
+  txParam?: any
+): Promise<{ externalId: string; localNumber: number }> {
+  // If transaction provided, use it directly
+  if (txParam) {
+    return attachClientExternalIdInTx(txParam, clientId, orgId);
+  }
+  
+  // Otherwise start own transaction (backward compatible)
+  try {
+    return await db.transaction(async (tx: any) => {
+      return attachClientExternalIdInTx(tx, clientId, orgId);
+    });
+  } catch (error: any) {
+    console.error('[Identity] Failed to attach client external ID:', error.message, error.code);
+    throw error;
   }
 }
 
