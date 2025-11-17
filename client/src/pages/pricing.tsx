@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { UniversalHeader } from "@/components/universal-header";
 import { Check, X, TrendingUp, Sparkles } from "lucide-react";
 
 interface PricingTier {
@@ -106,40 +106,9 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Modern Header */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md border-b border-gray-200">
-        <div className="container mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
-          <div className="shrink-0">
-            {/* Desktop: Show full logo */}
-            <div className="hidden sm:block">
-              <AnimatedAutoForceLogo size="sm" variant="full" />
-            </div>
-            {/* Mobile: Show icon only */}
-            <div className="block sm:hidden">
-              <AnimatedAutoForceLogo size="sm" variant="icon" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              className="min-h-[44px] px-3 text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
-              onClick={() => window.location.href = "/"}
-              data-testid="button-back"
-            >
-              Back
-            </Button>
-            <Button
-              className="min-h-[44px] px-3 sm:px-4 text-sm bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white whitespace-nowrap shadow-md"
-              onClick={() => window.location.href = "/api/login"}
-              data-testid="button-launch-platform"
-            >
-              <span className="hidden sm:inline">Launch Platform</span>
-              <span className="sm:hidden">Login</span>
-            </Button>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-background">
+      {/* Universal Header */}
+      <UniversalHeader variant="public" />
 
       {/* Pricing Hero */}
       <section className="pt-24 pb-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
@@ -435,8 +404,7 @@ export default function Pricing() {
       <footer className="border-t border-gray-200 bg-white">
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <AnimatedAutoForceLogo size="sm" variant="icon" />
+            <div className="flex items-center gap-2 text-sm text-foreground/70">
               <span className="text-xs sm:text-sm">© 2025 AutoForce™ by Drill Consulting 360. Enterprise-grade workforce automation.</span>
             </div>
             <div className="flex gap-4 sm:gap-6 text-xs text-gray-600">

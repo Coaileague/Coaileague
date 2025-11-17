@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { UniversalHeader } from "@/components/universal-header";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { DashboardPreview } from "@/components/dashboard-preview";
 import { TimeTrackingPreview } from "@/components/time-tracking-preview";
@@ -35,90 +35,9 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
-      {/* Navigation Header */}
-      <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-3 sm:px-6">
-          <div className="flex h-16 sm:h-20 items-center justify-between gap-2">
-            {/* Professional Navigation Logo */}
-            <button 
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
-              aria-label="Scroll to top"
-              data-testid="button-logo-home"
-            >
-              {/* Desktop: Show full logo */}
-              <div className="hidden sm:block">
-                <AnimatedAutoForceLogo variant="full" size="md" />
-              </div>
-              {/* Mobile: Show smaller logo */}
-              <div className="block sm:hidden">
-                <AnimatedAutoForceLogo variant="icon" size="sm" />
-              </div>
-            </button>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-4 lg:gap-6">
-              <button
-                onClick={() => setLocation("/pricing")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
-                data-testid="link-pricing"
-              >
-                Pricing
-              </button>
-              <button
-                onClick={() => window.scrollTo({ top: document.getElementById('features')?.offsetTop || 0, behavior: 'smooth' })}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
-                data-testid="link-features"
-              >
-                Features
-              </button>
-              <button
-                onClick={() => setLocation("/contact")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
-                data-testid="link-contact"
-              >
-                Contact
-              </button>
-              <div className="h-6 w-px bg-border" />
-              <Button
-                variant="ghost"
-                className="min-h-[44px] px-4"
-                onClick={() => setLocation("/login")}
-                data-testid="button-login"
-              >
-                Login
-              </Button>
-              <Button
-                className="min-h-[44px] px-6"
-                onClick={() => setLocation("/register")}
-                data-testid="button-get-started"
-              >
-                Start Free Trial
-              </Button>
-            </div>
-
-            {/* Mobile Menu - Compact buttons that fit on screen */}
-            <div className="flex md:hidden items-center gap-2 shrink-0">
-              <Button
-                variant="outline"
-                className="min-h-[48px] px-4 text-sm whitespace-nowrap"
-                onClick={() => setLocation("/login")}
-                data-testid="button-login-mobile"
-              >
-                Login
-              </Button>
-              <Button
-                className="min-h-[48px] px-4 text-sm whitespace-nowrap"
-                onClick={() => setLocation("/register")}
-                data-testid="button-signup-mobile"
-              >
-                Sign Up
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+      {/* Universal Header */}
+      <UniversalHeader variant="public" />
+      
       {/* Hero Section - SALES FOCUSED */}
       <section className="relative overflow-x-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
         <div className="responsive-container responsive-spacing-y">

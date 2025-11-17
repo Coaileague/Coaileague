@@ -1,12 +1,11 @@
-import { useState } from 'react';
 import { 
   Calendar, DollarSign, FileText, Zap, CheckCircle, ArrowRight, 
-  Play, Shield, Lock, Activity, Menu, X, Cpu, RefreshCw, MessageSquare, BarChart3
+  Play, Shield, Lock, Activity, Cpu, RefreshCw, MessageSquare, BarChart3
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { UniversalHeader } from '@/components/universal-header';
 
 export default function Homepage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const autonomousFeatures = [
     {
@@ -39,56 +38,9 @@ export default function Homepage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Compact Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 cursor-pointer" data-testid="nav-logo">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-                <Cpu className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <div className="font-bold text-lg">
-                  <span className="text-gray-900">AUTO</span>
-                  <span className="text-blue-600">FORCE</span>
-                  <span className="text-xs align-super text-gray-600">™</span>
-                </div>
-                <div className="text-xs text-gray-500">Autonomous Workforce Management</div>
-              </div>
-            </Link>
-
-            <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium" data-testid="nav-link-features">Features</a>
-              <Link href="/pricing" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium" data-testid="nav-link-pricing">Pricing</Link>
-              <Link href="/contact" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium" data-testid="nav-link-contact">Contact</Link>
-              <Link href="/login" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium" data-testid="nav-link-login">Login</Link>
-              <Link href="/register" className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm" data-testid="nav-button-start-trial">
-                Start Free Trial
-              </Link>
-            </div>
-
-            <button className="md:hidden text-gray-900 hover:text-blue-600 transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} data-testid="button-mobile-menu">
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden mt-4 pb-4 border-t border-gray-200 pt-4" data-testid="mobile-menu">
-              <div className="flex flex-col gap-3">
-                <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium py-2" data-testid="mobile-link-features">Features</a>
-                <Link href="/pricing" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium py-2" data-testid="mobile-link-pricing">Pricing</Link>
-                <Link href="/contact" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium py-2" data-testid="mobile-link-contact">Contact</Link>
-                <Link href="/login" className="text-gray-700 hover:text-blue-600 transition-colors text-sm font-medium py-2" data-testid="mobile-link-login">Login</Link>
-                <Link href="/register" className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm text-center" data-testid="mobile-button-start-trial">
-                  Start Free Trial
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </nav>
+    <div className="min-h-screen bg-background">
+      {/* Universal Header */}
+      <UniversalHeader variant="public" />
 
       {/* Hero Section - Enhanced */}
       <section className="pt-24 pb-20 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden">
