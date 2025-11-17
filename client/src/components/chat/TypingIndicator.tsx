@@ -15,7 +15,7 @@ export function TypingIndicator({ userName, isStaff = false }: TypingIndicatorPr
         {isStaff && (
           <Badge 
             variant="secondary" 
-            className="h-4 px-1.5 text-[10px] bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+            className="h-4 px-1.5 text-[10px] bg-emerald-100 dark:bg-emerald-900 text-blue-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
             data-testid="badge-staff"
           >
             SUPPORT

@@ -22,7 +22,7 @@ interface ProgressHeaderProps {
 const priorityConfig: Record<TicketPriority, { label: string; color: string }> = {
   low: { label: 'Low', color: 'bg-slate-500' },
   normal: { label: 'Normal', color: 'bg-emerald-500' },
-  high: { label: 'High', color: 'bg-cyan-500' },
+  high: { label: 'High', color: 'bg-blue-500' },
   urgent: { label: 'Urgent', color: 'bg-red-500' }
 };
 
@@ -89,7 +89,7 @@ export function HelpDeskProgressHeader({
               "w-2 h-2 rounded-full flex-shrink-0",
               isEscalated ? 'bg-red-500 animate-pulse' :
               lifecyclePhase === 'completed' ? 'bg-emerald-500' :
-              'bg-cyan-500 animate-pulse'
+              'bg-blue-500 animate-pulse'
             )} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -124,7 +124,7 @@ export function HelpDeskProgressHeader({
                 </p>
               )}
               {!isStaffUser && !isEscalated && lifecyclePhase === 'completed' && (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 font-medium">
                   Your request has been resolved
                 </p>
               )}

@@ -41,8 +41,8 @@ export function ParticipantDrawer({
 
   const getRoleBadgeColor = (userType: OnlineUser['userType']) => {
     switch (userType) {
-      case 'staff': return 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
-      case 'subscriber': return 'bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800';
+      case 'staff': return 'bg-emerald-100 dark:bg-emerald-900 text-blue-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+      case 'subscriber': return 'bg-cyan-100 dark:bg-cyan-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
       case 'org_user': return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
       default: return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700';
     }
@@ -67,7 +67,7 @@ export function ParticipantDrawer({
       >
         <SheetHeader className="p-6 pb-4 border-b-2 border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" data-testid="icon-users" />
+            <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" data-testid="icon-users" />
             <SheetTitle className="text-slate-800 dark:text-slate-200" data-testid="text-drawer-title">
               Participants
             </SheetTitle>

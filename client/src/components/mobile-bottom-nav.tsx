@@ -84,7 +84,7 @@ export function MobileBottomNav() {
                   className={cn(
                     "transition-all duration-300",
                     isActive ? "h-7 w-7" : "h-6 w-6",
-                    isActive ? "text-blue-600 dark:text-cyan-400 drop-shadow-md" : "text-gray-500 dark:text-gray-400"
+                    isActive ? "text-blue-600 dark:text-blue-400 drop-shadow-md" : "text-gray-500 dark:text-gray-400"
                   )} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
@@ -101,7 +101,7 @@ export function MobileBottomNav() {
               <span className={cn(
                 "text-[11px] font-semibold transition-all duration-300 truncate w-full text-center",
                 isActive ? "opacity-100" : "opacity-70",
-                isActive ? "text-blue-600 dark:text-cyan-400" : "text-gray-600 dark:text-gray-400"
+                isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"
               )}>
                 {item.label}
               </span>

@@ -63,7 +63,7 @@ export default function OperationsFamilyPage() {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30">
-              <Sparkles className="h-12 w-12 text-emerald-700 dark:text-emerald-400" />
+              <Sparkles className="h-12 w-12 text-blue-700 dark:text-blue-400" />
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-400 via-blue-400 to-blue-500 bg-clip-text text-transparent">

@@ -313,7 +313,7 @@ export default function RootAdminDashboard() {
                   <TimeGreeting 
                     userName={personalData?.userName}
                     role=""
-                    className="text-emerald-600 dark:text-emerald-400 text-xs mt-0.5"
+                    className="text-blue-600 dark:text-blue-400 text-xs mt-0.5"
                   />
                 </div>
               </div>
@@ -375,14 +375,14 @@ export default function RootAdminDashboard() {
           <Card className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-2 border-slate-200 dark:border-slate-700 shadow-md">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-center gap-2 mb-3 lg:flex-col lg:gap-1">
-                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400 shrink-0" />
                 <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wide text-slate-900 dark:text-slate-100 lg:text-center">Quick Access</h2>
               </div>
 
               {/* Support & Helpdesk Tools */}
               {supportActions.length > 0 && (
                 <div className="mb-3">
-                  <h3 className="text-[10px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-2 uppercase tracking-wider lg:text-center">Support & Helpdesk</h3>
+                  <h3 className="text-[10px] sm:text-xs font-bold text-blue-700 dark:text-blue-400 mb-2 uppercase tracking-wider lg:text-center">Support & Helpdesk</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {supportActions.map((action) => {
                       const Icon = action.icon;
@@ -414,7 +414,7 @@ export default function RootAdminDashboard() {
               {/* Platform Management Tools */}
               {platformActions.length > 0 && (
                 <div className="mb-3">
-                  <h3 className="text-[10px] sm:text-xs font-bold text-cyan-700 dark:text-cyan-400 mb-2 uppercase tracking-wider lg:text-center">Platform Management</h3>
+                  <h3 className="text-[10px] sm:text-xs font-bold text-blue-700 dark:text-blue-400 mb-2 uppercase tracking-wider lg:text-center">Platform Management</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {platformActions.map((action) => {
                       const Icon = action.icon;
@@ -522,8 +522,8 @@ export default function RootAdminDashboard() {
               {/* User Search & Management */}
               <div className="space-y-3" id="user-section">
                 <div className="flex items-center justify-center gap-2 lg:flex-col lg:gap-1">
-                  <UserCog className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">User Management</h3>
+                  <UserCog className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">User Management</h3>
                 </div>
                 
                 <div className="relative">
@@ -623,8 +623,8 @@ export default function RootAdminDashboard() {
               {/* Workspace Search & Management */}
               <div className="space-y-3" id="workspace-section">
                 <div className="flex items-center justify-center gap-2 lg:flex-col lg:gap-1">
-                  <Building2 className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Workspace Management</h3>
+                  <Building2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Workspace Management</h3>
                 </div>
                 
                 <div className="relative">

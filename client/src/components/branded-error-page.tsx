@@ -116,7 +116,7 @@ export function BrandedErrorPage({
           Need help? Contact{" "}
           <button 
             onClick={() => setLocation("/support")}
-            className="text-emerald-700 dark:text-emerald-400 hover:underline"
+            className="text-blue-700 dark:text-blue-400 hover:underline"
             data-testid="link-contact-support"
           >
             AutoForce™ Support

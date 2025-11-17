@@ -736,9 +736,9 @@ export default function Dashboard() {
         {workspaceRole === 'auditor' && (
           <ResponsiveSection>
             <div className="space-y-6">
-            <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-950/20 dark:to-cyan-950/20 border-2 border-emerald-500/30 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/20 border-2 border-blue-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-emerald-600 dark:bg-emerald-700 rounded-lg">
+                <div className="p-3 bg-blue-600 dark:bg-blue-700 rounded-lg">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -751,8 +751,8 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">Invoices</p>
+                    <FileText className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Invoices</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">View Only</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Access invoice records</p>
@@ -760,8 +760,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Payroll</p>
+                    <DollarSign className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Payroll</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">View Only</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Review payroll data</p>
@@ -809,9 +809,9 @@ export default function Dashboard() {
         {/* Platform Auditor / Compliance Officer Panel - Platform-Wide Compliance Oversight */}
         {platformRole === 'compliance_officer' && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-br from-cyan-50 to-teal-50 dark:from-cyan-950/20 dark:to-teal-950/20 border-2 border-cyan-500/30 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/20 border-2 border-blue-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-cyan-600 dark:bg-cyan-700 rounded-lg">
+                <div className="p-3 bg-blue-600 dark:bg-blue-700 rounded-lg">
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -824,8 +824,8 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Activity className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Compliance Heatmap</p>
+                    <Activity className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Compliance Heatmap</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Monitor</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Platform compliance status</p>
@@ -842,8 +842,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">Policy Attestations</p>
+                    <FileText className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Policy Attestations</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Audit</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Policy compliance tracking</p>
@@ -860,12 +860,12 @@ export default function Dashboard() {
               </div>
 
               {/* Platform Auditor Access Notice */}
-              <div className="bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4">
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-cyan-900 dark:text-cyan-100 lg:text-center">Compliance Officer Access</p>
-                    <p className="text-xs text-cyan-700 dark:text-cyan-300 mt-1 lg:text-center">
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 lg:text-center">Compliance Officer Access</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 lg:text-center">
                       You have platform-wide compliance oversight including audit trail reviews, AI governance monitoring, 
                       policy attestation tracking, and data retention management across all workspaces.
                     </p>
@@ -879,9 +879,9 @@ export default function Dashboard() {
         {/* Support Manager Panel - Manage Support Operations */}
         {platformRole === 'support_manager' && (
           <div className="mb-8 space-y-6">
-            <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-950/20 dark:to-cyan-950/20 border-2 border-emerald-500/30 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/20 border-2 border-blue-500/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-emerald-600 dark:bg-emerald-700 rounded-lg">
+                <div className="p-3 bg-blue-600 dark:bg-blue-700 rounded-lg">
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -894,8 +894,8 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">All Conversations</p>
+                    <MessageCircle className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">All Conversations</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Manage</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">All support tickets</p>
@@ -903,8 +903,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Activity className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Team Performance</p>
+                    <Activity className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Team Performance</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Monitor</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Agent metrics & SLAs</p>
@@ -912,8 +912,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Bell className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Escalations</p>
+                    <Bell className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Escalations</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Handle</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">High priority issues</p>
@@ -973,8 +973,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Response Time</p>
+                    <Clock className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Response Time</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Track</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">SLA compliance</p>
@@ -982,8 +982,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 lg:text-center">Resolved Today</p>
+                    <CheckCircle className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Resolved Today</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Count</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Tickets closed</p>
@@ -1052,8 +1052,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Activity className="w-4 h-4 text-violet-700 dark:text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-cyan-700 dark:text-cyan-400 lg:text-center">System Health</p>
+                    <Activity className="w-4 h-4 text-violet-700 dark:text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-blue-700 dark:text-blue-400 lg:text-center">System Health</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Monitor</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Infrastructure status</p>
@@ -1072,7 +1072,7 @@ export default function Dashboard() {
               {/* Root Admin Access Notice */}
               <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-purple-600 dark:text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-purple-600 dark:text-blue-700 dark:text-blue-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-purple-900 dark:text-purple-100 lg:text-center">Root Administrator Access</p>
                     <p className="text-xs text-purple-700 dark:text-purple-300 mt-1 lg:text-center">
@@ -1113,8 +1113,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Activity className="w-4 h-4 text-violet-700 dark:text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-cyan-700 dark:text-cyan-400 lg:text-center">Workspace Support</p>
+                    <Activity className="w-4 h-4 text-violet-700 dark:text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-blue-700 dark:text-blue-400 lg:text-center">Workspace Support</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Assist</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Customer success</p>
@@ -1122,8 +1122,8 @@ export default function Dashboard() {
 
                 <div className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-400 lg:text-center">Reports</p>
+                    <FileText className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 lg:text-center">Reports</p>
                   </div>
                   <p className="text-2xl font-bold text-foreground lg:text-center">Generate</p>
                   <p className="text-xs text-muted-foreground mt-1 lg:text-center">Platform analytics</p>

@@ -151,7 +151,7 @@ export function AppSidebar() {
                                 route.badge === 'Root' 
                                   ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
                                   : route.badge === 'Enterprise' 
-                                  ? 'bg-purple-500/20 text-emerald-700 dark:text-emerald-400 border border-purple-500/30'
+                                  ? 'bg-purple-500/20 text-blue-700 dark:text-blue-400 border border-purple-500/30'
                                   : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                               }`}>
                                 {route.badge}
@@ -199,9 +199,9 @@ export function AppSidebar() {
           className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer group"
           data-testid="button-logout"
         >
-          <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400">
+          <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500">
             <AvatarImage src={user?.profileImageUrl || undefined} className="object-cover rounded-lg" />
-            <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 text-white font-bold">
+            <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold">
               {getInitials(user?.firstName, user?.lastName)}
             </AvatarFallback>
           </Avatar>

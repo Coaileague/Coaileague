@@ -156,7 +156,7 @@ export function PremiumMetrics({
                 </div>
                 <div>
                   <div className="font-bold text-lg">ScheduleOS™ AI Engine</div>
-                  <div className="text-xs text-emerald-700 dark:text-emerald-400">
+                  <div className="text-xs text-blue-700 dark:text-blue-400">
                     Status: Active • {roleLabel} {(externalId || employeeId) && `• ${externalId || employeeId}`}
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export function PremiumMetrics({
                      data-testid="ai-metric-savings">
                   <TrendingUp className="w-4 h-4 text-blue-400" />
                   <div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-400">Savings</div>
+                    <div className="text-xs text-blue-700 dark:text-blue-400">Savings</div>
                     <div className="font-bold text-blue-400">${aiInsights.totalSavings}</div>
                   </div>
                 </div>
@@ -177,7 +177,7 @@ export function PremiumMetrics({
                      data-testid="ai-metric-optimized">
                   <Clock className="w-4 h-4 text-blue-400" />
                   <div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-400">Optimized</div>
+                    <div className="text-xs text-blue-700 dark:text-blue-400">Optimized</div>
                     <div className="font-bold text-blue-400">{aiInsights.hoursOptimized}hrs</div>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ export function PremiumMetrics({
                      data-testid="ai-metric-resolved">
                   <CheckCircle className="w-4 h-4 text-blue-400" />
                   <div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-400">Resolved</div>
+                    <div className="text-xs text-blue-700 dark:text-blue-400">Resolved</div>
                     <div className="font-bold text-blue-400">{aiInsights.conflictsResolved}</div>
                   </div>
                 </div>
@@ -195,17 +195,17 @@ export function PremiumMetrics({
                      data-testid="ai-metric-coverage">
                   <Target className="w-4 h-4 text-blue-400" />
                   <div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-400">Coverage</div>
+                    <div className="text-xs text-blue-700 dark:text-blue-400">Coverage</div>
                     <div className="font-bold text-blue-400">{aiInsights.coverageScore}%</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg backdrop-blur-sm" 
                      data-testid="ai-metric-productivity">
-                  <Activity className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                  <Activity className="w-4 h-4 text-blue-700 dark:text-blue-400" />
                   <div>
-                    <div className="text-xs text-emerald-700 dark:text-emerald-400">Productivity</div>
-                    <div className="font-bold text-emerald-700 dark:text-emerald-400">{aiInsights.productivityScore}%</div>
+                    <div className="text-xs text-blue-700 dark:text-blue-400">Productivity</div>
+                    <div className="font-bold text-blue-700 dark:text-blue-400">{aiInsights.productivityScore}%</div>
                   </div>
                 </div>
               </div>

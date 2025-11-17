@@ -279,7 +279,7 @@ export function FloatingSupportChat() {
           zIndex: 9999,
           touchAction: 'none'
         }}
-        className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-full px-4 py-3 shadow-2xl cursor-pointer hover-elevate active-elevate-2"
+        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full px-4 py-3 shadow-2xl cursor-pointer hover-elevate active-elevate-2"
         onClick={() => setState(prev => ({ ...prev, isMinimized: false }))}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -297,7 +297,7 @@ export function FloatingSupportChat() {
     return (
       <button
         onClick={handleChatClick}
-        className="fixed bottom-20 sm:bottom-6 right-6 bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-[9999] group"
+        className="fixed bottom-20 sm:bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-[9999] group"
         data-testid="button-open-chat"
       >
         <MessageCircle className="w-6 h-6" />
@@ -328,7 +328,7 @@ export function FloatingSupportChat() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="p-3 border-b cursor-move bg-gradient-to-r from-blue-500/10 to-cyan-400/10 rounded-t-lg"
+        className="p-3 border-b cursor-move bg-gradient-to-r from-blue-500/10 to-blue-500/10 rounded-t-lg"
         data-testid="chat-bubble-header"
       >
         <div className="flex justify-between items-center">
@@ -393,7 +393,7 @@ export function FloatingSupportChat() {
             )}
           >
             {msg.type === 'bot' && (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-white" />
               </div>
             )}
@@ -416,7 +416,7 @@ export function FloatingSupportChat() {
         ))}
         {isTyping && (
           <div className="flex gap-2 justify-start">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="bg-muted rounded-lg px-3 py-2">

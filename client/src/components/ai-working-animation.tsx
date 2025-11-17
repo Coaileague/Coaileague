@@ -11,7 +11,7 @@ export function AIWorkingAnimation({ message = "Working..." }: { message?: strin
       <div className="relative w-24 h-24">
         {/* Central AI Core */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full animate-pulse shadow-lg shadow-blue-500/50">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-full animate-pulse shadow-lg shadow-blue-500/50">
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-6 h-6 bg-white rounded-full"></div>
             </div>
@@ -68,7 +68,7 @@ export function AIWorkingAnimation({ message = "Working..." }: { message?: strin
           <span className="font-mono">∞</span>
         </div>
         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full animate-progress-bar"></div>
+          <div className="h-full bg-gradient-to-r from-blue-600 to-blue-500 rounded-full animate-progress-bar"></div>
         </div>
       </div>
       

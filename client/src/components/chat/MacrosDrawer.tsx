@@ -54,7 +54,7 @@ export function MacrosDrawer({
       >
         <SheetHeader className="p-6 pb-4 border-b-2 border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-emerald-600 dark:text-emerald-400" data-testid="icon-zap" />
+            <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" data-testid="icon-zap" />
             <SheetTitle className="text-slate-800 dark:text-slate-200" data-testid="text-drawer-title">
               Quick Macros
             </SheetTitle>
@@ -78,7 +78,7 @@ export function MacrosDrawer({
         <div className="flex-1 overflow-y-auto p-6 space-y-3" data-testid="div-macros-list">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Loader2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400 animate-spin mb-3" data-testid="icon-loading" />
+              <Loader2 className="h-8 w-8 text-blue-600 dark:text-blue-400 animate-spin mb-3" data-testid="icon-loading" />
               <p className="text-sm text-slate-500 dark:text-slate-400">Loading macros...</p>
             </div>
           ) : filteredMacros.length === 0 ? (

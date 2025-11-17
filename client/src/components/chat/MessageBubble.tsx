@@ -66,7 +66,7 @@ export function MessageBubble({
               {message.senderName}
             </span>
             {isStaff && (
-              <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" data-testid="badge-staff">
+              <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-emerald-100 dark:bg-emerald-900 text-blue-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" data-testid="badge-staff">
                 SUPPORT
               </Badge>
             )}
@@ -94,7 +94,7 @@ export function MessageBubble({
           {isCurrentUser && (
             <div className="flex items-center" data-testid="div-read-status">
               {readReceipt ? (
-                <CheckCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" data-testid="icon-read-receipt" />
+                <CheckCheck className="h-3 w-3 text-blue-600 dark:text-blue-400" data-testid="icon-read-receipt" />
               ) : (
                 <Check className="h-3 w-3" data-testid="icon-sent" />
               )}
@@ -102,7 +102,7 @@ export function MessageBubble({
           )}
           
           {readReceipt && isCurrentUser && (
-            <span className="text-[10px] text-emerald-600 dark:text-emerald-400" data-testid="text-read-by">
+            <span className="text-[10px] text-blue-600 dark:text-blue-400" data-testid="text-read-by">
               Read by {readReceipt.readByName}
             </span>
           )}

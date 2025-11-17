@@ -32,7 +32,7 @@ export function QueueViewerDialog({ open, onClose, queueEntries }: QueueViewerDi
   };
 
   const userTypeColors = {
-    subscriber: 'text-purple-600 dark:text-emerald-700 dark:text-emerald-400',
+    subscriber: 'text-purple-600 dark:text-blue-700 dark:text-blue-400',
     org_user: 'text-blue-600 dark:text-blue-400',
     guest: 'text-slate-600 dark:text-slate-400'
   };
@@ -77,7 +77,7 @@ export function QueueViewerDialog({ open, onClose, queueEntries }: QueueViewerDi
                 <TrendingUp className="w-4 h-4" />
                 Priority
               </div>
-              <div className="text-2xl font-bold text-purple-600 dark:text-emerald-700 dark:text-emerald-400">
+              <div className="text-2xl font-bold text-purple-600 dark:text-blue-700 dark:text-blue-400">
                 {queueEntries.filter(e => e.priority === 'urgent' || e.priority === 'high').length}
               </div>
             </div>

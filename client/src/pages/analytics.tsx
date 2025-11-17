@@ -111,7 +111,7 @@ export default function Analytics() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-500/5 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-500/5 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
@@ -189,12 +189,12 @@ export default function Analytics() {
           </div>
 
           {/* Active Employees */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/5 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20" data-testid="card-active-employees">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-active-employees">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <UserCheck className="w-6 h-6 text-emerald-700 dark:text-emerald-400 animate-pulse" />
+              <div className="p-3 bg-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                <UserCheck className="w-6 h-6 text-blue-700 dark:text-blue-400 animate-pulse" />
               </div>
-              <div className="h-2 w-2 bg-emerald-600 dark:bg-emerald-400 rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div>
             </div>
             <p className="text-gray-600 text-sm mb-2">Active Employees</p>
             <div className="text-3xl font-bold text-gray-900 mb-1" data-testid="text-active-employees">
@@ -204,12 +204,12 @@ export default function Analytics() {
           </div>
 
           {/* Active Clients */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 rounded-2xl p-6 hover:border-cyan-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20" data-testid="card-active-clients">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-active-clients">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-cyan-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6 text-cyan-700 dark:text-cyan-400" />
+              <div className="p-3 bg-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                <Users className="w-6 h-6 text-blue-700 dark:text-blue-400" />
               </div>
-              <div className="h-2 w-2 bg-cyan-600 dark:bg-cyan-400 rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div>
             </div>
             <p className="text-gray-600 text-sm mb-2">Active Clients</p>
             <div className="text-3xl font-bold text-gray-900 mb-1" data-testid="text-active-clients">
@@ -225,7 +225,7 @@ export default function Analytics() {
           <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-2xl overflow-hidden" data-testid="card-usage">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 Workspace Usage
               </h3>
             </div>
@@ -272,9 +272,9 @@ export default function Analytics() {
 
               {/* Current Plan */}
               <div className="pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <span className="text-sm font-medium text-gray-600">Current Plan</span>
-                  <span className="capitalize font-bold text-emerald-700 dark:text-emerald-400">{analytics.workspace.subscriptionTier}</span>
+                  <span className="capitalize font-bold text-blue-700 dark:text-blue-400">{analytics.workspace.subscriptionTier}</span>
                 </div>
               </div>
             </div>
@@ -284,7 +284,7 @@ export default function Analytics() {
           <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-2xl overflow-hidden" data-testid="card-invoice-stats">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <FileText className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 Invoice Statistics
               </h3>
             </div>

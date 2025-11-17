@@ -210,7 +210,7 @@ export default function SupportChatroomDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-center">
                     <Bot className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -218,7 +218,7 @@ export default function SupportChatroomDashboard() {
                     <CardDescription>Platform-owned support room • Always open</CardDescription>
                   </div>
                 </div>
-                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-400">Platform Owned</Badge>
+                <Badge className="bg-gradient-to-r from-blue-600 to-blue-500">Platform Owned</Badge>
               </div>
             </CardHeader>
             <CardContent>

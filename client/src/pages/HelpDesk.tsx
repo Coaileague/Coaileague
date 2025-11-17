@@ -1740,7 +1740,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center flex-shrink-0">
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <div>
