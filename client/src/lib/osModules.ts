@@ -559,8 +559,8 @@ export const osModules: OSModule[] = [
   },
   {
     id: 'audit-os',
-    name: 'AuditOS™',
-    description: 'Compliance & Audit Trail Management',
+    name: 'AI Compliance Auditing',
+    description: 'AI-Powered Compliance & Audit Trail Management',
     icon: Shield,
     color: 'hsl(var(--destructive))',
     capabilities: ['view_audit_logs'],
@@ -568,10 +568,10 @@ export const osModules: OSModule[] = [
     routes: [
       {
         id: 'audit-logs',
-        label: 'AuditOS™',
+        label: 'AI Compliance',
         href: '/audit-logs',
         icon: Shield,
-        description: 'Compliance and activity tracking',
+        description: 'AI-powered compliance and activity tracking',
         capabilities: ['view_audit_logs'],
         minimumTier: 'professional',
         familyId: 'intelligence',

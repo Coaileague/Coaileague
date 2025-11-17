@@ -25,13 +25,13 @@ export default function TermsOfService() {
               industries, including:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
-              <li>Time tracking and scheduling (OperationsOS™)</li>
-              <li>Invoicing and billing automation (BillOS™)</li>
-              <li>Payroll processing</li>
-              <li>AI-powered support (HelpOS™)</li>
-              <li>Communication tools (CommOS™)</li>
-              <li>Analytics and intelligence (IntelligenceOS™)</li>
-              <li>Compliance auditing (AuditOS™)</li>
+              <li>AI-powered scheduling and time tracking</li>
+              <li>Automated invoicing and billing</li>
+              <li>Integrated payroll processing</li>
+              <li>AI-powered support and assistance</li>
+              <li>Team communication tools</li>
+              <li>Analytics and business intelligence</li>
+              <li>AI compliance auditing and monitoring</li>
             </ul>
           </section>
 
@@ -202,8 +202,7 @@ export default function TermsOfService() {
 
           <div className="mt-12 pt-8 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              AutoForce™ and all related service names (CommOS™, OperationsOS™, BillOS™, IntelligenceOS™, 
-              AuditOS™, MarketingOS™, HelpOS™, ScheduleOS™) are trademarks of [Your Company Name].
+              AutoForce™ and its AI Brain technology are trademarks of [Your Company Name].
             </p>
           </div>
         </div>

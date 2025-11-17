@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DashboardShell, ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
+import { WorkspaceLayout, WorkspaceSection } from "@/components/workspace-layout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -341,7 +342,7 @@ export default function Dashboard() {
     );
     
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <WorkspaceLayout heroGradient>
         {isLoadingDashboard && <ResponsiveLoading />}
         
         <AppShellMobile title="Dashboard" showBack={false}>
@@ -425,21 +426,19 @@ export default function Dashboard() {
           </section>
           </div>
         </AppShellMobile>
-      </div>
+      </WorkspaceLayout>
     );
   }
 
   // Desktop UI - full dashboard with detailed stats
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden w-full max-w-full">
+    <WorkspaceLayout heroGradient>
       {/* Show loading spinner for initial auth check */}
       {isLoadingDashboard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       )}
-      
-      {/* Professional subtle background - NO bright glowing orbs */}
 
       <DashboardShell>
         {/* Branded Header with Logo - Centered on Large Screens */}
@@ -1392,6 +1391,6 @@ export default function Dashboard() {
         </div>
         </ResponsiveSection>
       </DashboardShell>
-    </div>
+    </WorkspaceLayout>
   );
 }
