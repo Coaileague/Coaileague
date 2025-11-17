@@ -50,7 +50,7 @@ export function WorkspaceLayout({
     <div
       className={cn(
         "min-h-screen bg-background overflow-x-hidden w-full",
-        heroGradient && "bg-gradient-to-b from-background via-background to-blue-50/30 dark:to-blue-950/30",
+        heroGradient && "bg-gradient-to-b from-background via-background to-blue-50/30",
         className
       )}
     >
