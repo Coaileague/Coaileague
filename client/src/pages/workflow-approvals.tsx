@@ -228,7 +228,7 @@ export default function WorkflowApprovals() {
           <Sparkles className="w-8 h-8 text-blue-500" />
           Workflow Approvals
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-gray-600">
           99% AI, 1% Human Governance - Review and approve AI-generated workflows
         </p>
       </div>
@@ -351,7 +351,7 @@ export default function WorkflowApprovals() {
                       {/* AI Summary */}
                       <div className="bg-muted/50 rounded-lg p-3" data-testid={`text-summary-${proposal.id}`}>
                         <p className="text-sm font-medium mb-1">AI Summary:</p>
-                        <p className="text-sm text-muted-foreground">{proposal.aiResponse.summary}</p>
+                        <p className="text-sm text-gray-700">{proposal.aiResponse.summary}</p>
                       </div>
 
                       {/* Warnings */}
@@ -380,13 +380,13 @@ export default function WorkflowApprovals() {
                           {proposal.aiResponse.assignments.slice(0, 3).map((assignment, i) => (
                             <div key={i} className="flex items-center justify-between text-sm bg-muted/30 rounded p-2">
                               <span className="font-medium">{assignment.employeeName}</span>
-                              <span className="text-muted-foreground">
+                              <span className="text-gray-700">
                                 {assignment.shifts.length} shifts • {assignment.totalHours}h
                               </span>
                             </div>
                           ))}
                           {proposal.aiResponse.assignments.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center">
+                            <p className="text-xs text-gray-600 text-center">
                               +{proposal.aiResponse.assignments.length - 3} more employees
                             </p>
                           )}
@@ -513,7 +513,7 @@ export default function WorkflowApprovals() {
                     <CardContent className="space-y-4">
                       <div className="bg-muted/50 rounded-lg p-3" data-testid={`text-invoice-summary-${proposal.id}`}>
                         <p className="text-sm font-medium mb-1">AI Summary:</p>
-                        <p className="text-sm text-muted-foreground">{proposal.aiResponse?.summary || 'No summary available'}</p>
+                        <p className="text-sm text-gray-700">{proposal.aiResponse?.summary || 'No summary available'}</p>
                       </div>
                       {proposal.aiResponse?.warnings && proposal.aiResponse.warnings.length > 0 && (
                         <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
@@ -616,7 +616,7 @@ export default function WorkflowApprovals() {
                     <CardContent className="space-y-4">
                       <div className="bg-muted/50 rounded-lg p-3" data-testid={`text-payroll-summary-${proposal.id}`}>
                         <p className="text-sm font-medium mb-1">AI Summary:</p>
-                        <p className="text-sm text-muted-foreground">{proposal.aiResponse?.summary || 'No summary available'}</p>
+                        <p className="text-sm text-gray-700">{proposal.aiResponse?.summary || 'No summary available'}</p>
                       </div>
                       {proposal.aiResponse?.warnings && proposal.aiResponse.warnings.length > 0 && (
                         <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
