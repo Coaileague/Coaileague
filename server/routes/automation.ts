@@ -212,13 +212,36 @@ automationRouter.post('/schedule/apply', async (req: any, res: Response) => {
 // AUTOMATED INVOICING
 // ============================================================================
 
+// Single invoice generation schema
+const singleInvoiceGenerateSchema = z.object({
+  clientId: z.string().min(1),
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
+});
+
+// Single payroll generation schema
+const singlePayrollGenerateSchema = z.object({
+  employeeId: z.string().min(1),
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
+});
+
 /**
  * POST /api/automation/invoice/generate
  * Generate invoice for a specific client (single)
  */
 automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
   try {
-    const { clientId, startDate, endDate } = req.body;
+    // Validate request body
+    const validationResult = singleInvoiceGenerateSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: fromZodError(validationResult.error).toString(),
+      });
+    }
+    
+    const { clientId, startDate, endDate } = validationResult.data;
     
     if (!req.user || !req.workspace) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -345,7 +368,16 @@ automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) =
  */
 automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
   try {
-    const { employeeId, startDate, endDate } = req.body;
+    // Validate request body
+    const validationResult = singlePayrollGenerateSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: fromZodError(validationResult.error).toString(),
+      });
+    }
+    
+    const { employeeId, startDate, endDate } = validationResult.data;
     
     if (!req.user || !req.workspace) {
       return res.status(401).json({ error: 'Unauthorized' });
