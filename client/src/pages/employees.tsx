@@ -36,12 +36,21 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import type { Employee } from "@shared/schema";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 
 export default function Employees() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { workspaceRole, isPlatformStaff } = useWorkspaceAccess();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -56,6 +65,8 @@ export default function Employees() {
     phone: "",
     role: "",
     hourlyRate: "",
+    workspaceRole: "staff", // Default to staff role
+    platformRole: "", // Empty means no platform role
   });
 
   const { data: employees, isLoading } = useQuery<Employee[]>({
@@ -81,6 +92,8 @@ export default function Employees() {
         phone: "",
         role: "",
         hourlyRate: "",
+        workspaceRole: "staff",
+        platformRole: "",
       });
     },
     onError: (error: Error) => {
@@ -372,6 +385,69 @@ export default function Employees() {
                     </div>
                   </div>
                 </div>
+
+                {/* Workspace Role Section - Visible to Org Owner/Admin */}
+                {(workspaceRole === 'org_owner' || workspaceRole === 'org_admin') && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Workspace Role</div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="workspaceRole" className="text-xs">Organization Role *</Label>
+                      <Select 
+                        value={formData.workspaceRole} 
+                        onValueChange={(value) => setFormData({ ...formData, workspaceRole: value })}
+                      >
+                        <SelectTrigger className="h-9 text-sm" data-testid="select-workspace-role">
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="staff">Staff (Regular Employee)</SelectItem>
+                          <SelectItem value="supervisor">Supervisor (Team Lead)</SelectItem>
+                          <SelectItem value="department_manager">Department Manager</SelectItem>
+                          <SelectItem value="org_admin">Org Admin (Full Access)</SelectItem>
+                          {workspaceRole === 'org_owner' && (
+                            <SelectItem value="org_owner">Org Owner (Top Authority)</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Controls access to features within your organization. AI Brain handles 99% autonomously.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Platform Role Section - Visible to Platform Staff Only */}
+                {isPlatformStaff && (
+                  <div className="space-y-2 pt-2 border-t border-primary/30 bg-primary/5 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-3.5 w-3.5 text-primary" />
+                      <div className="text-xs font-semibold text-primary uppercase tracking-wide">Platform Access (Support Staff Only)</div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="platformRole" className="text-xs">Platform Role</Label>
+                      <Select 
+                        value={formData.platformRole} 
+                        onValueChange={(value) => setFormData({ ...formData, platformRole: value })}
+                      >
+                        <SelectTrigger className="h-9 text-sm" data-testid="select-platform-role">
+                          <SelectValue placeholder="No platform role (regular user)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None (Regular User)</SelectItem>
+                          <SelectItem value="support_agent">Support Agent</SelectItem>
+                          <SelectItem value="support_manager">Support Manager</SelectItem>
+                          <SelectItem value="compliance_officer">Compliance Officer</SelectItem>
+                          <SelectItem value="sysop">SysOp (System Operations)</SelectItem>
+                          <SelectItem value="deputy_admin">Deputy Admin</SelectItem>
+                          <SelectItem value="root_admin">Root Admin (Full Authority)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Platform-wide authority for multi-scale support implementation and RBAC management.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2 pt-3">
                 <Button 
