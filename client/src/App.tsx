@@ -14,7 +14,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
 import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { TransitionProvider } from "@/contexts/transition-context";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
@@ -244,10 +243,6 @@ function AppHeader({ isRootAdmin, setLocation, setShowOnboarding }: any) {
           </TooltipContent>
         </Tooltip>
 
-        {/* Theme Toggle */}
-        <div className="shrink-0">
-          <ThemeToggle />
-        </div>
       </div>
     </header>
   );
