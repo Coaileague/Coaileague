@@ -2247,6 +2247,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           workspaceName: workspace.name,
           role: employee.role || undefined
         }).catch(err => console.error('Failed to send onboarding email:', err));
+        
+        // Send welcome notification if employee has a user account
+        if (employee.userId) {
+          const { sendWelcomeEmployeeNotification } = await import('./services/notificationService');
+          sendWelcomeEmployeeNotification(
+            workspaceId,
+            employee.userId,
+            `${employee.firstName} ${employee.lastName}`,
+            workspace.name
+          ).catch(err => console.error('Failed to send welcome notification:', err));
+        }
       }
       
       res.json(updatedEmployee || employee);
