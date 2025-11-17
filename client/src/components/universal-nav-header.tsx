@@ -29,11 +29,11 @@ export function UniversalNavHeader() {
     ? [] 
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
 
-  // Track expanded sections
+  // Track expanded sections - ALL expanded by default for easy access
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     families.forEach(family => {
-      initial[family.id] = family.id === 'platform'; // Only platform expanded by default
+      initial[family.id] = true; // ALL sections expanded by default
     });
     return initial;
   });
