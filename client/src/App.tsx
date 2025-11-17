@@ -122,6 +122,7 @@ import IntegrationsPage from "@/pages/integrations-page";
 import OversightHub from "@/pages/oversight-hub";
 import WorkflowApprovals from "@/pages/workflow-approvals";
 import AICommandCenter from "@/pages/ai-command-center";
+import AuditLogs from "@/pages/audit-logs";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -290,6 +291,7 @@ function AppContent() {
                 <Route path="/invoices" component={Invoices} />
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
+                <Route path="/audit-logs" component={AuditLogs} />
                 <Route path="/ai/command-center" component={AICommandCenter} />
                 <Route path="/billing" component={Billing} />
                 <Route path="/integrations" component={IntegrationsPage} />
