@@ -139,13 +139,13 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
     }
 
     // Get client
-    const client = await storage.getClient(clientId);
+    const client = await storage.getClient(clientId, req.workspace.id);
     if (!client || client.workspaceId !== req.workspace.id) {
       return res.status(404).json({ error: 'Client not found' });
     }
 
-    // Get time entries for this client in date range (stubbed for now)
-    const timeEntries: any[] = []; // TODO: Implement actual time entry lookup
+    // Get unbilled time entries for this client
+    const timeEntries = await storage.getUnbilledTimeEntries(req.workspace.id, clientId);
 
     if (timeEntries.length === 0) {
       return res.status(400).json({
@@ -257,13 +257,18 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
     }
 
     // Get employee
-    const employee = await storage.getEmployee(employeeId);
+    const employee = await storage.getEmployee(employeeId, req.workspace.id);
     if (!employee || employee.workspaceId !== req.workspace.id) {
       return res.status(404).json({ error: 'Employee not found' });
     }
 
-    // Get time entries for this employee in date range (stubbed for now)
-    const timeEntries: any[] = []; // TODO: Implement actual time entry lookup
+    // Get time entries for this employee in date range
+    const timeEntries = await storage.getTimeEntriesByEmployeeAndDateRange(
+      req.workspace.id,
+      employeeId,
+      new Date(startDate),
+      new Date(endDate)
+    );
 
     if (timeEntries.length === 0) {
       return res.status(400).json({
