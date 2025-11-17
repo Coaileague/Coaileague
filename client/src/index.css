@@ -89,7 +89,7 @@
 
   --sidebar-border: 215 20% 25%;       /* Subtle dark border */
 
-  --sidebar-primary: 220 67% 32%;      /* AutoForce blue - Active items */
+  --sidebar-primary: 221 83% 53%;      /* AutoForce blue #2563eb - Active items */
 
   --sidebar-primary-foreground: 0 0% 100%;
 
@@ -97,7 +97,7 @@
 
   --sidebar-accent-foreground: 210 20% 96%;
 
-  --sidebar-ring: 217 90% 56%;         /* AutoForce blue focus ring */
+  --sidebar-ring: 221 83% 53%;         /* AutoForce blue #2563eb focus ring */
 
   /* Popovers */
   --popover: 210 12% 96%;              /* Light gray */
@@ -106,13 +106,13 @@
 
   --popover-border: 213 16% 86%;       /* Neutral border */
 
-  /* Primary - AutoForce Blue */
-  --primary: 217 90% 56%;              /* AutoForce blue - Primary CTAs */
+  /* Primary - AutoForce Blue (#2563eb from public pages) */
+  --primary: 221 83% 53%;              /* AutoForce blue #2563eb - Primary CTAs */
 
   --primary-foreground: 0 0% 100%;     /* White text */
 
   /* Secondary - Professional Steel Blue */
-  --secondary: 213 70% 42%;            /* Steel blue - Secondary actions */
+  --secondary: 217 91% 60%;            /* AutoForce blue-500 #3b82f6 - Secondary actions */
 
   --secondary-foreground: 0 0% 100%;   /* White text */
 
@@ -121,10 +121,10 @@
 
   --muted-foreground: 220 76% 55%;     /* Steel blue - Professional secondary text */
 
-  /* Accent - Professional Blue Accent */
-  --accent: 200 86% 62%;               /* Blue accent - Highlights */
+  /* Accent - AutoForce Blue Accent */
+  --accent: 212 96% 78%;               /* Blue-300 #93c5fd - Highlights */
 
-  --accent-foreground: 0 0% 100%;      /* White text */
+  --accent-foreground: 217 33% 17%;    /* Dark text for better contrast */
 
   /* Destructive */
   --destructive: 0 84% 60%;            /* Rose red */
@@ -133,13 +133,13 @@
 
   /* Input & Ring */
   --input: 213 16% 86%;                /* Neutral border */
-  --ring: 217 90% 56%;                 /* AutoForce blue focus ring */
+  --ring: 221 83% 53%;                 /* AutoForce blue #2563eb focus ring */
   
   /* Charts - AutoForce Blue Palette */
-  --chart-1: 217 90% 56%;              /* AutoForce Blue */
-  --chart-2: 213 70% 42%;              /* Steel Blue */
+  --chart-1: 221 83% 53%;              /* AutoForce Blue #2563eb */
+  --chart-2: 217 91% 60%;              /* AutoForce Blue-500 #3b82f6 */
   --chart-3: 38 72% 48%;               /* Subdued Amber */
-  --chart-4: 200 86% 62%;              /* Blue Accent */
+  --chart-4: 212 96% 78%;              /* Blue-300 #93c5fd */
   --chart-5: 0 65% 52%;                /* Subdued Red */
 
   --font-sans: Inter, Open Sans, sans-serif;
@@ -232,11 +232,11 @@
   --sidebar: 217 64% 10%;              /* Deep navy matching background */
   --sidebar-foreground: 210 20% 96%;
   --sidebar-border: 217 60% 20%;       /* Blue-tinted border */
-  --sidebar-primary: 220 67% 38%;      /* AutoForce blue - Slightly brighter for dark mode */
+  --sidebar-primary: 221 83% 58%;      /* AutoForce blue #2563eb - Slightly brighter for dark mode */
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 215 24% 18%;       /* Hover state */
   --sidebar-accent-foreground: 210 20% 96%;
-  --sidebar-ring: 217 90% 56%;         /* AutoForce blue focus ring */
+  --sidebar-ring: 221 83% 58%;         /* AutoForce blue focus ring */
   
   /* Popovers */
   --popover: 215 24% 18%;
@@ -244,19 +244,19 @@
   --popover-border: 215 20% 25%;
   
   /* Primary - AutoForce Blue */
-  --primary: 217 90% 56%;              /* AutoForce blue - Professional */
+  --primary: 221 83% 58%;              /* AutoForce blue #2563eb - Slightly brighter for dark mode */
   --primary-foreground: 0 0% 100%;
   
   /* Secondary - Professional Steel Blue */
-  --secondary: 213 70% 48%;            /* Steel blue - Secondary actions */
+  --secondary: 217 91% 63%;            /* AutoForce blue-500 #3b82f6 - Brighter for dark mode */
   --secondary-foreground: 0 0% 100%;
   
   /* Muted */
   --muted: 215 22% 22%;
   --muted-foreground: 200 70% 65%;     /* Cyan-tinted blue - Dark mode secondary text */
   
-  /* Accent - Professional Blue Accent */
-  --accent: 200 86% 62%;               /* Blue accent - Accent */
+  /* Accent - AutoForce Blue Accent */
+  --accent: 212 96% 78%;               /* Blue-300 #93c5fd - Accent */
   --accent-foreground: 217 28% 14%;    /* Dark text on accent */
   
   /* Destructive */
@@ -265,13 +265,13 @@
   
   /* Input & Ring */
   --input: 215 20% 25%;
-  --ring: 217 90% 56%;                 /* AutoForce blue focus ring */
+  --ring: 221 83% 58%;                 /* AutoForce blue #2563eb focus ring */
   
   /* Charts - AutoForce Blue Dark Mode Palette */
-  --chart-1: 217 90% 56%;              /* AutoForce Blue */
-  --chart-2: 213 70% 48%;              /* Steel Blue */
+  --chart-1: 221 83% 58%;              /* AutoForce Blue #2563eb */
+  --chart-2: 217 91% 63%;              /* AutoForce Blue-500 #3b82f6 */
   --chart-3: 38 72% 52%;               /* Subdued Amber */
-  --chart-4: 200 86% 62%;              /* Blue Accent */
+  --chart-4: 212 96% 78%;              /* Blue-300 #93c5fd */
   --chart-5: 0 65% 52%;                /* Subdued Red */
 
   --shadow-2xs: 0px 1px 2px 0px hsl(218 85% 5% / 0.30);

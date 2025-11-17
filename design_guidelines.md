@@ -24,19 +24,20 @@
 
 ## Color System - AutoForce™ Professional Palette
 
-### Primary Brand Colors - Vibrant Emerald Theme
-- **Emerald Primary**: #10b981 - rgb(16, 185, 129) - Primary actions, CTAs
-- **Emerald Dark**: #059669 - rgb(5, 150, 105) - Hover states, emphasis
-- **Cyan Accent**: #06b6d4 - rgb(6, 182, 212) - Secondary accents, highlights
-- **Logo Gradient**: linear-gradient(135deg, #10b981 0%, #06b6d4 100%) - Brand identity
-- **CTA Gradient**: linear-gradient(135deg, #10b981 0%, #059669 100%) - Primary buttons
+### Primary Brand Colors - Professional Blue Theme
+- **AutoForce Blue Primary**: #2563eb - rgb(37, 99, 235) - Primary actions, CTAs, brand identity
+- **AutoForce Blue Dark**: #1d4ed8 - rgb(29, 78, 216) - Hover states, emphasis
+- **AutoForce Blue Light**: #3b82f6 - rgb(59, 130, 246) - Accents, highlights
+- **AutoForce Blue Pale**: #dbeafe - rgb(219, 234, 254) - Light backgrounds, badges
+- **Logo Gradient**: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) - Brand identity
+- **CTA Gradient**: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) - Primary buttons
 
 ### Page Backgrounds - Light & Professional
-- **Hero/Landing Background**: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) - Light blue gradient
+- **Hero/Landing Background**: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%) - AutoForce blue gradient
 - **App Background**: #ffffff - Clean white for application pages
 - **Card Surface**: #ffffff - White elevated panels
 - **Input Background**: #f8fafc - Subtle gray for form fields
-- **Hover Background**: #f1f5f9 - Interactive elements
+- **Hover Background**: #eff6ff - Light blue interactive elements
 
 ### Text Hierarchy
 - **Primary Text**: #1e293b - rgb(30, 41, 59) - Headlines, important content
@@ -46,20 +47,21 @@
 
 ### Borders & Dividers
 - **Primary Border**: #e2e8f0 - rgb(226, 232, 240) - Card borders, dividers
+- **Accent Border**: #93c5fd - rgb(147, 197, 253) - Highlighted borders
 - **Input Border**: #e2e8f0 - 2px solid borders
-- **Focus Ring**: rgba(16, 185, 129, 0.1) - Input focus state
+- **Focus Ring**: rgba(37, 99, 235, 0.1) - AutoForce blue focus state
 
 ### Shadows - Soft & Professional
 - **Card Shadow**: 0 20px 60px rgba(0, 0, 0, 0.1) - Login/signup cards
-- **Button Shadow**: 0 4px 16px rgba(16, 185, 129, 0.3) - Primary buttons
-- **Button Hover Shadow**: 0 6px 24px rgba(16, 185, 129, 0.4) - Button hover state
-- **Logo Shadow**: 0 8px 24px rgba(16, 185, 129, 0.3) - Brand elements
+- **Button Shadow**: 0 4px 16px rgba(37, 99, 235, 0.3) - Primary buttons
+- **Button Hover Shadow**: 0 6px 24px rgba(37, 99, 235, 0.4) - Button hover state
+- **Logo Shadow**: 0 8px 24px rgba(37, 99, 235, 0.3) - Brand elements
 
 ### Status Colors (Clear & Vibrant)
 - **Success**: #10b981 - Emerald green for success states
 - **Warning**: #f59e0b - Amber for warnings
 - **Error**: #ef4444 - Red for errors
-- **Info**: #06b6d4 - Cyan for information
+- **Info**: #2563eb - AutoForce blue for information
 
 ---
 
