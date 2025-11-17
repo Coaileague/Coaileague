@@ -26,33 +26,22 @@ export function ThemeProvider({
   storageKey = "shiftsync-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  );
+  // FORCE LIGHT MODE - Ignore localStorage and system preferences
+  const [theme] = useState<Theme>("light");
 
   useEffect(() => {
     const root = window.document.documentElement;
-
     root.classList.remove("light", "dark");
-
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-
-      root.classList.add(systemTheme);
-      return;
-    }
-
-    root.classList.add(theme);
-  }, [theme]);
+    root.classList.add("light");
+    
+    // Clear any dark theme from localStorage
+    localStorage.removeItem(storageKey);
+  }, [storageKey]);
 
   const value = {
-    theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
+    theme: "light" as Theme,
+    setTheme: () => {
+      // No-op: prevent any component from switching to dark mode
     },
   };
 
