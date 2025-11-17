@@ -9,7 +9,8 @@ import {
   CheckCircle, XCircle, Clock, Calendar, Edit, Receipt,
   AlertTriangle, FileText, TrendingUp, Users, DollarSign
 } from "lucide-react";
-import { DashboardShell, ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
+import { ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
+import { WorkspaceLayout } from "@/components/workspace-layout";
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
@@ -46,7 +47,7 @@ export default function ManagerDashboard() {
   const isLoading = loadingTimeOff || loadingTimesheetEdits || loadingShifts || loadingExpenses || loadingI9;
 
   return (
-    <DashboardShell>
+    <WorkspaceLayout maxWidth="7xl">
       {/* Header - Centered */}
       <ResponsiveSection spacing="lg">
         <div className="text-center">
@@ -358,6 +359,6 @@ export default function ManagerDashboard() {
         </Card>
       </div>
       </ResponsiveSection>
-    </DashboardShell>
+    </WorkspaceLayout>
   );
 }

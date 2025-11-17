@@ -24,7 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DashboardShell, ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
+import { ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
 import { WorkspaceLayout, WorkspaceSection } from "@/components/workspace-layout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -432,15 +432,13 @@ export default function Dashboard() {
 
   // Desktop UI - full dashboard with detailed stats
   return (
-    <WorkspaceLayout heroGradient>
+    <WorkspaceLayout heroGradient maxWidth="6xl">
       {/* Show loading spinner for initial auth check */}
       {isLoadingDashboard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       )}
-
-      <DashboardShell>
         {/* Branded Header with Logo - Centered on Large Screens */}
         <ResponsiveSection spacing="lg">
           <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
@@ -1410,7 +1408,6 @@ export default function Dashboard() {
           </div>
         </div>
         </ResponsiveSection>
-      </DashboardShell>
     </WorkspaceLayout>
   );
 }
