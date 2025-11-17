@@ -11115,3 +11115,165 @@ export const insertAiNotificationHistorySchema = createInsertSchema(aiNotificati
 
 export type InsertAiNotificationHistory = z.infer<typeof insertAiNotificationHistorySchema>;
 export type AiNotificationHistory = typeof aiNotificationHistory.$inferSelect;
+
+// ============================================================================
+// DATA INTEGRITY - Event Sourcing & ID Management
+// ============================================================================
+
+// Actor Type Enum - Track WHO performed the action
+export const actorTypeEnum = pgEnum('actor_type', [
+  'END_USER',         // Regular workspace user
+  'SUPPORT_STAFF',    // Support team member (root_admin, deputy_admin, support_manager)
+  'AI_AGENT',         // Gemini AI Brain or autonomous system
+  'SYSTEM',           // System-initiated action (cron job, webhook, etc.)
+]);
+
+// Event Sourcing Status
+export const eventStatusEnum = pgEnum('event_status', [
+  'pending',    // Event logged, not yet committed
+  'committed',  // Event successfully committed to database
+  'failed',     // Event failed to commit
+  'rolled_back' // Event was rolled back
+]);
+
+// Audit Events - Immutable Event Sourcing (never deleted, never modified)
+export const auditEvents = pgTable("audit_events", {
+  // Event identity
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventType: varchar("event_type").notNull(), // USER_CREATED, ORG_UPDATED, SUPPORT_ACTION, AI_ACTION, etc.
+  
+  // Actor information
+  actorId: varchar("actor_id").notNull(), // User ID, AI agent ID, or 'system'
+  actorType: actorTypeEnum("actor_type").notNull(),
+  actorName: varchar("actor_name"), // Cached for historical accuracy
+  
+  // Workspace context
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Entity being modified
+  aggregateId: varchar("aggregate_id").notNull(), // ID of entity being modified
+  aggregateType: varchar("aggregate_type").notNull(), // USER, ORG, TASK, EMPLOYEE, etc.
+  
+  // Event payload
+  payload: jsonb("payload").notNull().default("{}"), // Full action details
+  changes: jsonb("changes"), // { before: {...}, after: {...} }
+  
+  // Verification & integrity
+  actionHash: varchar("action_hash"), // SHA-256 hash for AI action verification
+  verifiedAt: timestamp("verified_at"),
+  
+  // Status tracking
+  status: eventStatusEnum("status").notNull().default("pending"),
+  errorMessage: text("error_message"),
+  
+  // Request metadata
+  metadata: jsonb("metadata").default("{}"), // IP, user agent, session ID, etc.
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id"),
+  requestId: varchar("request_id"),
+  
+  // Immutable timestamp
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+}, (table) => [
+  index("idx_audit_events_actor").on(table.actorId, table.timestamp),
+  index("idx_audit_events_workspace").on(table.workspaceId, table.timestamp),
+  index("idx_audit_events_aggregate").on(table.aggregateType, table.aggregateId),
+  index("idx_audit_events_type").on(table.eventType, table.timestamp),
+  index("idx_audit_events_status").on(table.status, table.timestamp),
+  index("idx_audit_events_hash").on(table.actionHash),
+]);
+
+export const insertAuditEventSchema = createInsertSchema(auditEvents).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertAuditEvent = z.infer<typeof insertAuditEventSchema>;
+export type AuditEvent = typeof auditEvents.$inferSelect;
+
+// ID Registry - Prevent ID reuse forever (NEVER delete records)
+export const idRegistry = pgTable("id_registry", {
+  id: varchar("id").primaryKey(), // The ID that was issued (NOT auto-generated)
+  entityType: varchar("entity_type").notNull(), // USER, ORG, EMPLOYEE, CLIENT, etc.
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Issuing context
+  issuedAt: timestamp("issued_at").notNull().defaultNow(),
+  issuedBy: varchar("issued_by"), // Actor who caused this ID to be created
+  issuedByType: actorTypeEnum("issued_by_type"),
+  
+  // Immutability flag
+  neverReuse: boolean("never_reuse").notNull().default(true),
+  
+  // Soft delete tracking (entity may be deleted but ID is NEVER reused)
+  entityDeletedAt: timestamp("entity_deleted_at"),
+  
+  // Metadata
+  metadata: jsonb("metadata").default("{}"),
+}, (table) => [
+  uniqueIndex("idx_id_registry_unique").on(table.id),
+  index("idx_id_registry_entity_type").on(table.entityType, table.issuedAt),
+  index("idx_id_registry_workspace").on(table.workspaceId, table.issuedAt),
+]);
+
+export const insertIdRegistrySchema = createInsertSchema(idRegistry).omit({
+  issuedAt: true,
+});
+
+export type InsertIdRegistry = z.infer<typeof insertIdRegistrySchema>;
+export type IdRegistry = typeof idRegistry.$inferSelect;
+
+// Write-Ahead Log - Transaction safety pattern
+export const writeAheadLog = pgTable("write_ahead_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Transaction context
+  transactionId: varchar("transaction_id").notNull().unique(),
+  operationType: varchar("operation_type").notNull(), // CREATE, UPDATE, DELETE, etc.
+  
+  // Entity being modified
+  entityType: varchar("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  
+  // Actor
+  actorId: varchar("actor_id").notNull(),
+  actorType: actorTypeEnum("actor_type").notNull(),
+  
+  // Workspace context
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Operation payload
+  payload: jsonb("payload").notNull().default("{}"),
+  
+  // Status tracking
+  status: eventStatusEnum("status").notNull().default("pending"),
+  
+  // Phase tracking (Two-Phase Commit)
+  preparedAt: timestamp("prepared_at"),
+  committedAt: timestamp("committed_at"),
+  rolledBackAt: timestamp("rolled_back_at"),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_wal_transaction_unique").on(table.transactionId),
+  index("idx_wal_status").on(table.status, table.createdAt),
+  index("idx_wal_entity").on(table.entityType, table.entityId),
+  index("idx_wal_workspace").on(table.workspaceId, table.createdAt),
+  index("idx_wal_actor").on(table.actorId, table.createdAt),
+]);
+
+export const insertWriteAheadLogSchema = createInsertSchema(writeAheadLog).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWriteAheadLog = z.infer<typeof insertWriteAheadLogSchema>;
+export type WriteAheadLog = typeof writeAheadLog.$inferSelect;
