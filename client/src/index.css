@@ -82,20 +82,20 @@
 
   --card-border: 213 16% 86%;          /* Neutral borders */
 
-  /* Sidebar - Professional Dark */
-  --sidebar: 215 24% 18%;              /* Graphite - Professional sidebar */
+  /* Sidebar - Professional Light */
+  --sidebar: 0 0% 100%;                /* White - Professional light sidebar */
 
-  --sidebar-foreground: 210 20% 96%;   /* Light gray text */
+  --sidebar-foreground: 217 33% 12%;   /* Deep charcoal - Dark text */
 
-  --sidebar-border: 215 20% 25%;       /* Subtle dark border */
+  --sidebar-border: 213 16% 86%;       /* Light border */
 
   --sidebar-primary: 221 83% 53%;      /* AutoForce blue #2563eb - Active items */
 
   --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 215 22% 22%;       /* Slightly lighter graphite - Hover */
+  --sidebar-accent: 210 18% 92%;       /* Light gray - Hover */
 
-  --sidebar-accent-foreground: 210 20% 96%;
+  --sidebar-accent-foreground: 217 33% 12%;  /* Dark text on hover */
 
   --sidebar-ring: 221 83% 53%;         /* AutoForce blue #2563eb focus ring */
 
