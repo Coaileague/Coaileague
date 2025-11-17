@@ -352,7 +352,8 @@ export default function Dashboard() {
           <Card className="mb-4 bg-white/95 backdrop-blur-sm border-2 border-gray-200 shadow-md">
             <CardHeader className="pb-3">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
+                {/* Avatar hidden on mobile to avoid duplicate (top-right menu already has it) */}
+                <div className="hidden sm:flex w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 items-center justify-center text-white font-bold shadow-md">
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0">

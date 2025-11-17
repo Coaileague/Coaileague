@@ -40,9 +40,9 @@ export function WorkspaceSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="max-w-[240px] justify-between gap-2 px-2"
+          className="w-full justify-between gap-2 px-2"
         >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[220px]">
             <Avatar className="h-6 w-6 shrink-0">
               <AvatarFallback className="text-xs">
                 {currentWorkspace?.name ? getInitials(currentWorkspace.name) : <Building2 className="h-3 w-3" />}

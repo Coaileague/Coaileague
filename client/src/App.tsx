@@ -292,6 +292,7 @@ function AppContent() {
                 <Route path="/oversight" component={OversightHub} />
                 <Route path="/expenses" component={Expenses} />
                 <Route path="/expense-approvals" component={ExpenseApprovals} />
+                <Route path="/pending"><Redirect to="/timesheets/pending" /></Route>
                 <Route path="/timesheets/pending" component={PendingTimeEntries} />
                 <Route path="/timesheets/approvals" component={TimesheetApprovals} />
                 <Route path="/i9-compliance" component={I9Compliance} />
