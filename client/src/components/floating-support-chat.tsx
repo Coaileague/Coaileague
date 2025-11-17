@@ -47,10 +47,23 @@ export function FloatingSupportChat() {
   const platformRole = (employee as any)?.platformRole || null;
   const workspaceRole = employee?.workspaceRole || null;
   
-  // Hide on chat pages to avoid conflicts
+  // Hide on chat pages AND workspace pages to avoid conflicts (chat already in mobile nav)
   const shouldHide = location.startsWith('/chat') || 
                      location.startsWith('/org-chat') || 
-                     location.startsWith('/support/chatrooms');
+                     location.startsWith('/support/chatrooms') ||
+                     location === '/dashboard' ||
+                     location === '/schedule' ||
+                     location === '/billing' ||
+                     location === '/invoices' ||
+                     location === '/payroll' ||
+                     location === '/employees' ||
+                     location === '/clients' ||
+                     location === '/time-tracking' ||
+                     location === '/analytics' ||
+                     location === '/reports' ||
+                     location.startsWith('/employee/portal') ||
+                     location.startsWith('/auditor/portal') ||
+                     location.startsWith('/client/portal');
   
   // State management with localStorage persistence (browser-safe)
   const [state, setState] = useState<ChatBubbleState>({
