@@ -68,9 +68,9 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar variant="floating" collapsible="offcanvas" className="bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 shadow-2xl">
+    <Sidebar variant="floating" collapsible="offcanvas" className="bg-white dark:bg-slate-900/95 backdrop-blur-xl border-r border-border shadow-lg">
       {/* Header */}
-      <SidebarHeader className="p-6 border-b border-slate-700/50">
+      <SidebarHeader className="p-6 border-b border-border">
         <Link href="/dashboard" className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
           {state === 'collapsed' ? (
             <div className="w-12 h-12 flex items-center justify-center">
@@ -83,11 +83,11 @@ export function AppSidebar() {
               </div>
               <div>
                 <h1 className="text-xl font-bold leading-tight">
-                  <span className="text-white">AUTO </span>
-                  <span className="text-blue-400">FORCE</span>
-                  <span className="text-xs text-slate-400 ml-1">™</span>
+                  <span className="text-foreground dark:text-white">AUTO </span>
+                  <span className="text-primary dark:text-blue-400">FORCE</span>
+                  <span className="text-xs text-muted-foreground dark:text-slate-400 ml-1">™</span>
                 </h1>
-                <p className="text-xs text-slate-400">Workforce Management</p>
+                <p className="text-xs text-muted-foreground dark:text-slate-400">Workforce Management</p>
               </div>
             </>
           )}
@@ -102,7 +102,7 @@ export function AppSidebar() {
             <SidebarGroupLabel asChild>
               <button
                 onClick={() => toggleSection(family.id)}
-                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 data-testid={`toggle-section-${family.id}`}
               >
                 <span className="tracking-wider">{family.label}</span>
@@ -125,34 +125,34 @@ export function AppSidebar() {
                         <SidebarMenuButton asChild isActive={isActive}>
                           <Link 
                             href={route.href}
-                            className="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all duration-200 hover:translate-x-1"
+                            className="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted dark:hover:bg-slate-800/50 transition-all duration-200 hover:translate-x-1"
                             data-testid={`link-${route.id}`}
                           >
                             <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
                               isActive 
-                                ? 'bg-blue-600/30' 
-                                : 'bg-slate-800/50 group-hover:bg-blue-600/20'
+                                ? 'bg-primary/10 dark:bg-blue-600/30' 
+                                : 'bg-muted dark:bg-slate-800/50 group-hover:bg-primary/5 dark:group-hover:bg-blue-600/20'
                             }`}>
                               <Icon size={18} className={`transition-colors ${
                                 isActive 
-                                  ? 'text-blue-400' 
-                                  : 'text-slate-400 group-hover:text-blue-400'
+                                  ? 'text-primary dark:text-blue-400' 
+                                  : 'text-muted-foreground dark:text-slate-400 group-hover:text-primary dark:group-hover:text-blue-400'
                               }`} />
                             </div>
                             <span className={`flex-1 text-sm font-medium transition-colors ${
                               isActive 
-                                ? 'text-white' 
-                                : 'text-slate-200 group-hover:text-white'
+                                ? 'text-foreground dark:text-white' 
+                                : 'text-foreground/90 dark:text-slate-200 group-hover:text-foreground dark:group-hover:text-white'
                             }`}>
                               {route.label}
                             </span>
                             {route.badge && (
                               <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                                 route.badge === 'Root' 
-                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                  ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' 
                                   : route.badge === 'Enterprise' 
                                   ? 'bg-purple-500/20 text-blue-700 dark:text-blue-400 border border-purple-500/30'
-                                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                  : 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30'
                               }`}>
                                 {route.badge}
                               </span>
@@ -172,13 +172,13 @@ export function AppSidebar() {
                           className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-50 cursor-not-allowed"
                           data-testid={`link-locked-${route.id}`}
                         >
-                          <div className="w-9 h-9 bg-slate-800/50 rounded-lg flex items-center justify-center">
-                            <Icon size={18} className="text-slate-400" />
+                          <div className="w-9 h-9 bg-muted dark:bg-slate-800/50 rounded-lg flex items-center justify-center">
+                            <Icon size={18} className="text-muted-foreground dark:text-slate-400" />
                           </div>
-                          <span className="flex-1 text-sm text-slate-200 font-medium">
+                          <span className="flex-1 text-sm text-foreground/90 dark:text-slate-200 font-medium">
                             {route.label}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                             {route.badge || 'Locked'}
                           </span>
                         </div>
@@ -193,10 +193,10 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Profile */}
-      <SidebarFooter className="p-4 border-t border-slate-700/50">
+      <SidebarFooter className="p-4 border-t border-border">
         <div 
           onClick={handleLogout}
-          className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer group"
+          className="flex items-center gap-3 p-3 rounded-xl bg-muted dark:bg-slate-800/50 hover:bg-muted/80 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
           data-testid="button-logout"
         >
           <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500">
@@ -206,16 +206,16 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate" data-testid="text-user-name">
+            <p className="text-sm font-semibold text-foreground dark:text-white truncate" data-testid="text-user-name">
               {user?.firstName || user?.lastName 
                 ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
                 : "User"}
             </p>
-            <p className="text-xs text-slate-400 truncate" data-testid="text-user-email">
+            <p className="text-xs text-muted-foreground dark:text-slate-400 truncate" data-testid="text-user-email">
               {user?.email || ""}
             </p>
           </div>
-          <ChevronRight size={16} className="text-slate-400 group-hover:text-slate-200 transition-colors" />
+          <ChevronRight size={16} className="text-muted-foreground dark:text-slate-400 group-hover:text-foreground dark:group-hover:text-slate-200 transition-colors" />
         </div>
       </SidebarFooter>
     </Sidebar>
