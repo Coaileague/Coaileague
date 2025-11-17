@@ -13,8 +13,76 @@ import { Router, type Request, type Response } from 'express';
 import { automationEngine } from '../services/automation-engine';
 import { storage } from '../storage';
 import { z } from 'zod';
+import { fromZodError } from 'zod-validation-error';
 
 export const automationRouter = Router();
+
+// ============================================================================
+// REQUEST VALIDATION SCHEMAS
+// ============================================================================
+
+const scheduleGenerateSchema = z.object({
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
+  requirements: z.string().optional(),
+});
+
+const scheduleApplySchema = z.object({
+  transactionId: z.string().min(1),
+  shifts: z.array(z.object({
+    employeeId: z.string(),
+    clientId: z.string().nullable(),
+    startTime: z.string().datetime(),
+    endTime: z.string().datetime(),
+    role: z.string(),
+    confidence: z.number().min(0).max(1),
+    reasoning: z.string(),
+  })),
+});
+
+const invoiceGenerateSchema = z.object({
+  anchorDate: z.string().datetime(),
+  clientId: z.string().optional(),
+});
+
+const invoiceApplySchema = z.object({
+  transactionId: z.string().min(1),
+  invoices: z.array(z.object({
+    clientId: z.string(),
+    lineItems: z.array(z.object({
+      description: z.string(),
+      quantity: z.number(),
+      unitPrice: z.number(),
+      amount: z.number(),
+    })),
+    totalAmount: z.number(),
+    confidence: z.number().min(0).max(1),
+    reasoning: z.string(),
+  })),
+});
+
+const payrollGenerateSchema = z.object({
+  anchorDate: z.string().datetime(),
+});
+
+const payrollApplySchema = z.object({
+  transactionId: z.string().min(1),
+  payrollItems: z.array(z.object({
+    employeeId: z.string(),
+    regularHours: z.number(),
+    overtimeHours: z.number(),
+    regularPay: z.number(),
+    overtimePay: z.number(),
+    totalPay: z.number(),
+    confidence: z.number().min(0).max(1),
+    reasoning: z.string(),
+  })),
+});
+
+const migrationWizardSchema = z.object({
+  imageBase64: z.string().min(1),
+  extractionType: z.enum(['schedule', 'clients', 'payroll']),
+});
 
 // ============================================================================
 // AI SCHEDULING AUTOMATION
@@ -26,7 +94,16 @@ export const automationRouter = Router();
  */
 automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
   try {
-    const { startDate, endDate, requirements } = req.body;
+    // Validate request body
+    const validationResult = scheduleGenerateSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: fromZodError(validationResult.error).toString(),
+      });
+    }
+    
+    const { startDate, endDate, requirements } = validationResult.data;
     
     if (!req.user || !req.workspace) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -86,7 +163,16 @@ automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
  */
 automationRouter.post('/schedule/apply', async (req: any, res: Response) => {
   try {
-    const { transactionId, shifts } = req.body;
+    // Validate request body
+    const validationResult = scheduleApplySchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: fromZodError(validationResult.error).toString(),
+      });
+    }
+    
+    const { transactionId, shifts } = validationResult.data;
     
     if (!req.user || !req.workspace) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -197,7 +283,16 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
  */
 automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) => {
   try {
-    const { anchorDate } = req.body;
+    // Validate request body
+    const validationResult = invoiceGenerateSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: fromZodError(validationResult.error).toString(),
+      });
+    }
+    
+    const { anchorDate } = validationResult.data;
     
     if (!req.user || !req.workspace) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -320,7 +415,16 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
  */
 automationRouter.post('/payroll/anchor-close', async (req: any, res: Response) => {
   try {
-    const { anchorDate } = req.body;
+    // Validate request body
+    const validationResult = payrollGenerateSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: fromZodError(validationResult.error).toString(),
+      });
+    }
+    
+    const { anchorDate } = validationResult.data;
     
     if (!req.user || !req.workspace) {
       return res.status(401).json({ error: 'Unauthorized' });
