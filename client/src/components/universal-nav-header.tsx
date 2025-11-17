@@ -4,7 +4,7 @@
  * Matches Fortune 500 professional aesthetic with AutoForce branding
  */
 
-import { Menu, Bell, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
@@ -16,6 +16,7 @@ import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
+import { NotificationsCenter } from "@/components/notifications-center";
 
 export function UniversalNavHeader() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -242,15 +243,9 @@ export function UniversalNavHeader() {
         </div>
 
         {/* Right: Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 text-white hover:bg-white/20 relative"
-          data-testid="button-notifications"
-          aria-label="View notifications"
-        >
-          <Bell className="h-5 w-5" />
-        </Button>
+        <div className="[&_button]:text-white [&_button]:hover:bg-white/20">
+          <NotificationsCenter />
+        </div>
       </div>
 
       {/* Date indicator */}
