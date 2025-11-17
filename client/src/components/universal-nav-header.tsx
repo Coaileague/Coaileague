@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { selectSidebarFamilies } from "@/lib/osModules";
 import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
@@ -30,13 +30,18 @@ export function UniversalNavHeader() {
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
 
   // Track expanded sections - ALL expanded by default for easy access
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    families.forEach(family => {
-      initial[family.id] = true; // ALL sections expanded by default
-    });
-    return initial;
-  });
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  // Update expanded sections when families data loads
+  useEffect(() => {
+    if (families.length > 0) {
+      const allExpanded: Record<string, boolean> = {};
+      families.forEach(family => {
+        allExpanded[family.id] = true; // ALL sections expanded by default
+      });
+      setExpandedSections(allExpanded);
+    }
+  }, [families.length]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => ({
@@ -76,7 +81,7 @@ export function UniversalNavHeader() {
     showLogoutTransition(transition);
   };
 
-  const handleNavigate = (href: string) => {
+  const handleNavigate = () => {
     setSidebarOpen(false);
   };
 
@@ -100,7 +105,7 @@ export function UniversalNavHeader() {
             <SheetContent side="left" className="p-0 w-[300px] overflow-y-auto">
               {/* Header */}
               <div className="p-6 border-b border-border bg-sidebar">
-                <Link href="/dashboard" onClick={() => handleNavigate('/dashboard')} className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
+                <Link href="/dashboard" onClick={handleNavigate} className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
                   <div className="w-12 h-12 shrink-0">
                     <AutoForceAFLogo variant="icon" size="md" animated={false} />
                   </div>
@@ -142,7 +147,7 @@ export function UniversalNavHeader() {
                             <Link 
                               key={route.id}
                               href={route.href}
-                              onClick={() => handleNavigate(route.href)}
+                              onClick={handleNavigate}
                               className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-all duration-200 ${
                                 isActive ? 'bg-sidebar-accent' : ''
                               }`}
