@@ -4,12 +4,13 @@ import { useClientLookup } from "@/hooks/useClients";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   Plus, 
   Search,
@@ -20,7 +21,18 @@ import {
   AlertCircle,
   Mail,
   Send,
+  DollarSign,
+  MoreVertical,
+  Eye,
+  Download,
+  XCircle,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -52,6 +64,7 @@ import { WorkspaceLayout } from "@/components/workspace-layout";
 export default function Invoices() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -321,15 +334,73 @@ export default function Invoices() {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <CheckCircle2 className="h-3 w-3 mr-1" />;
+      case 'sent':
+        return <Mail className="h-3 w-3 mr-1" />;
+      case 'draft':
+        return <Clock className="h-3 w-3 mr-1" />;
+      default:
+        return <FileText className="h-3 w-3 mr-1" />;
+    }
+  };
+
+  const isPastDue = (invoice: Invoice) => {
+    if (invoice.status === 'paid' || !invoice.dueDate) return false;
+    return new Date(invoice.dueDate) < new Date();
+  };
+
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Unknown";
   };
 
-  const filteredInvoices = invoices.filter(inv =>
+  // Filter by tab
+  const filterByTab = (invoices: Invoice[]) => {
+    const now = new Date();
+    switch (activeTab) {
+      case 'open':
+        return invoices.filter(i => i.status === 'draft' || i.status === 'sent');
+      case 'paid':
+        return invoices.filter(i => i.status === 'paid');
+      case 'past_due':
+        return invoices.filter(i => {
+          if (i.status === 'paid' || !i.dueDate) return false;
+          return new Date(i.dueDate) < now;
+        });
+      case 'due_soon':
+        return invoices.filter(i => {
+          if (i.status === 'paid' || !i.dueDate) return false;
+          const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          return daysUntilDue <= 7 && daysUntilDue > 0;
+        });
+      default:
+        return invoices;
+    }
+  };
+
+  const filteredInvoices = filterByTab(invoices).filter(inv =>
     inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
     getClientName(inv.clientId).toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Calculate totals for stat cards
+  const calculateTotals = (invoices: Invoice[]) => {
+    const now = new Date();
+    const total = invoices.reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    const paid = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    const outstanding = invoices.filter(i => i.status !== 'paid').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    const overdue = invoices.filter(i => {
+      if (i.status === 'paid' || !i.dueDate) return false;
+      return new Date(i.dueDate) < now;
+    }).reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
+    
+    return { total, paid, outstanding, overdue };
+  };
+
+  const totals = calculateTotals(filteredInvoices);
 
   const draftInvoices = invoices.filter(inv => inv.status === "draft");
 
@@ -786,16 +857,99 @@ export default function Invoices() {
           </div>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search invoices..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            data-testid="input-search-invoices"
-          />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-gray-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="stat-total">${totals.total.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600">Paid</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600" data-testid="stat-paid">${totals.paid.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600">Outstanding</CardTitle>
+                <Clock className="h-4 w-4 text-blue-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600" data-testid="stat-outstanding">${totals.outstanding.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600">Overdue</CardTitle>
+                <AlertCircle className="h-4 w-4 text-red-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600" data-testid="stat-overdue">${totals.overdue.toFixed(2)}</div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Search and Tabs */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              data-testid="input-search-invoices"
+            />
+          </div>
+        </div>
+
+        {/* Tabs for filtering */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+            <TabsTrigger value="all" data-testid="tab-all">
+              All ({invoices.length})
+            </TabsTrigger>
+            <TabsTrigger value="open" data-testid="tab-open">
+              <Clock className="h-4 w-4 mr-1" />
+              Open ({invoices.filter(i => i.status === 'draft' || i.status === 'sent').length})
+            </TabsTrigger>
+            <TabsTrigger value="paid" data-testid="tab-paid">
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              Paid ({invoices.filter(i => i.status === 'paid').length})
+            </TabsTrigger>
+            <TabsTrigger value="past_due" data-testid="tab-past-due">
+              <AlertCircle className="h-4 w-4 mr-1" />
+              Past Due ({invoices.filter(i => {
+                if (i.status === 'paid' || !i.dueDate) return false;
+                return new Date(i.dueDate) < new Date();
+              }).length})
+            </TabsTrigger>
+            <TabsTrigger value="due_soon" data-testid="tab-due-soon">
+              Due Soon ({invoices.filter(i => {
+                if (i.status === 'paid' || !i.dueDate) return false;
+                const daysUntilDue = Math.ceil((new Date(i.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                return daysUntilDue <= 7 && daysUntilDue > 0;
+              }).length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab} className="mt-4">
 
         {isLoading ? (
           <Card>
@@ -856,34 +1010,52 @@ export default function Invoices() {
                   <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`}>
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getClientName(invoice.clientId)}</TableCell>
-                    <TableCell>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
-                    <TableCell>${parseFloat(String(invoice.total || 0)).toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusColor(invoice.status || 'draft')}>
+                      <div className="flex flex-col gap-1">
+                        <span>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</span>
+                        {isPastDue(invoice) && (
+                          <Badge variant="destructive" className="w-fit text-xs">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Past Due
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold">${parseFloat(String(invoice.total || 0)).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(invoice.status || 'draft')} className="gap-1">
+                        {getStatusIcon(invoice.status || 'draft')}
                         {invoice.status || 'draft'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        {invoice.status === 'draft' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => sendEmailMutation.mutate(invoice.id)}
-                            disabled={sendEmailMutation.isPending}
-                            data-testid={`button-send-invoice-${invoice.id}`}
-                          >
-                            <Send className="h-4 w-4 mr-1" />
-                            Send
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" data-testid={`button-actions-${invoice.id}`}>
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
-                        )}
-                        {invoice.status === 'sent' && (
-                          <Badge variant="outline" className="gap-1">
-                            <Mail className="h-3 w-3" />
-                            Sent
-                          </Badge>
-                        )}
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem data-testid={`menu-view-${invoice.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          {invoice.status === 'draft' && (
+                            <DropdownMenuItem 
+                              onClick={() => sendEmailMutation.mutate(invoice.id)}
+                              disabled={sendEmailMutation.isPending}
+                              data-testid={`menu-send-${invoice.id}`}
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send Invoice
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem data-testid={`menu-download-${invoice.id}`}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download PDF
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -891,6 +1063,8 @@ export default function Invoices() {
             </Table>
           </Card>
         )}
+          </TabsContent>
+        </Tabs>
         </div>
       </div>
     </WorkspaceLayout>
