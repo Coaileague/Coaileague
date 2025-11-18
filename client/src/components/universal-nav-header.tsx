@@ -154,7 +154,7 @@ export function UniversalNavHeader() {
                               }`}
                               data-testid={`link-${route.id}`}
                             >
-                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                              <div className={`w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center transition-colors ${
                                 isActive 
                                   ? 'bg-primary/10' 
                                   : 'bg-sidebar-accent group-hover:bg-primary/5'
@@ -165,7 +165,7 @@ export function UniversalNavHeader() {
                                     : 'text-sidebar-foreground group-hover:text-primary'
                                 }`} />
                               </div>
-                              <span className={`flex-1 text-sm font-medium transition-colors ${
+                              <span className={`flex-1 min-w-0 text-sm font-medium transition-colors break-words ${
                                 isActive 
                                   ? 'text-sidebar-foreground' 
                                   : 'text-sidebar-foreground/90 group-hover:text-sidebar-foreground'
