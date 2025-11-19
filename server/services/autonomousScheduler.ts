@@ -12,9 +12,11 @@ import cron from 'node-cron';
 import { db } from '../db';
 import { workspaces, employees, idempotencyKeys, chatConversations, roomEvents } from '@shared/schema';
 import { eq, and, sql, lt } from 'drizzle-orm';
-import { generateUsageBasedInvoices } from './billos';
+import { generateUsageBasedInvoices, sendInvoiceViaStripe } from './billos';
 import { PayrollAutomationEngine } from './payrollAutomation';
 import { ScheduleOSAI } from '../ai/scheduleos';
+import { AIBrainService } from './ai-brain/aiBrainService';
+import { gustoService } from './partners/gusto';
 import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
 import { shouldRunBiweekly, seedAnchor, advanceAnchor, detectAnchorDrift } from './utils/scheduling';
 import { storage } from '../storage';
@@ -404,6 +406,20 @@ async function runNightlyInvoiceGeneration() {
                   console.log(`✅ Generated ${invoices.length} invoice(s) for ${workspace.name}`);
                   totalInvoicesGenerated += invoices.length;
                   successCount++;
+                  
+                  // AUTONOMOUS BILLING: Automatically send invoices via Stripe
+                  for (const invoice of invoices) {
+                    try {
+                      const result = await sendInvoiceViaStripe(invoice.id);
+                      if (result.success) {
+                        console.log(`   📧 Sent invoice ${invoice.invoiceNumber} via Stripe (${result.stripeInvoiceId})`);
+                      } else {
+                        console.warn(`   ⚠️  Failed to send invoice ${invoice.invoiceNumber} via Stripe: ${result.error}`);
+                      }
+                    } catch (stripeError: any) {
+                      console.error(`   ❌ Stripe error for invoice ${invoice.invoiceNumber}:`, stripeError.message);
+                    }
+                  }
                 } else {
                   console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
                 }
@@ -604,12 +620,55 @@ async function runWeeklyScheduleGeneration() {
               console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), generating schedules...`);
               
               try {
-                // TODO: Get shift requirements from workspace configuration
-                // For now, skip auto-scheduling until shift requirements are configured
-                console.log(`   ℹ️  Shift templates not yet configured for ${workspace.name}`);
-                console.log(`   (Requires shift requirement templates in workspace settings)`);
+                // AUTONOMOUS SCHEDULING: Use AI Brain to generate optimal schedules
+                let shiftsGenerated = 0;
                 
-                const shiftsGenerated = 0; // Will be non-zero when shift templates are configured
+                try {
+                  // Fetch employees for workspace
+                  const workspaceEmployees = await db
+                    .select()
+                    .from(employees)
+                    .where(eq(employees.workspaceId, workspace.id));
+                  
+                  if (workspaceEmployees.length === 0) {
+                    console.log(`   ℹ️  No employees found for ${workspace.name}, skipping schedule generation`);
+                  } else {
+                    console.log(`   🤖 Calling AI Brain for ${workspaceEmployees.length} employee(s)...`);
+                    
+                    // Call AI Brain to generate schedule
+                    const aiBrain = new AIBrainService();
+                    const job = await aiBrain.enqueueJob({
+                      workspaceId: workspace.id,
+                      jobType: 'schedule_generation',
+                      input: {
+                        shifts: [], // TODO: Load existing shift templates/requirements
+                        employees: workspaceEmployees.map(e => ({
+                          id: e.id,
+                          name: `${e.firstName} ${e.lastName}`,
+                          availability: [], // TODO: Load from employee availability
+                          skills: [], // TODO: Load from employee skills
+                        })),
+                        constraints: {
+                          weekStart: nextWeekStart.toISOString(),
+                          weekEnd: nextWeekEnd.toISOString(),
+                        },
+                      },
+                    });
+                    
+                    // Process job synchronously (AI Brain persists shifts automatically via persistScheduleAssignments)
+                    const result = await aiBrain.processJob(job.id);
+                    
+                    if (result.status === 'completed') {
+                      shiftsGenerated = result.output?.assignments?.length || 0;
+                      console.log(`   ✅ AI Brain generated ${shiftsGenerated} shift assignment(s)`);
+                    } else if (result.status === 'failed') {
+                      console.error(`   ❌ AI Brain job failed: ${result.errorMessage}`);
+                    }
+                  }
+                } catch (aiError: any) {
+                  console.error(`   ❌ AI Brain error:`, aiError.message);
+                  // Continue to mark operation as completed even if AI fails
+                }
                 
                 // Update lastRunAt, advance anchor, and mark idempotency complete (ATOMIC)
                 await db.transaction(async (tx) => {
@@ -840,6 +899,22 @@ async function runAutomaticPayrollProcessing() {
                   console.log(`   Employees: ${result.totalEmployees}`);
                   console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);
                   console.log(`   Net Pay: $${result.totalNetPay.toFixed(2)}`);
+                  
+                  // AUTONOMOUS PAYROLL: Submit to Gusto (SAFETY MODE: manual approval required by default)
+                  const autoSubmitPayroll = workspace.autoSubmitPayroll === true; // Feature flag
+                  
+                  if (autoSubmitPayroll && result.payrollRunId) {
+                    try {
+                      console.log(`   🚀 Auto-submitting payroll to Gusto (payrollRunId: ${result.payrollRunId})...`);
+                      await gustoService.processPayroll(result.payrollRunId, owner.userId);
+                      console.log(`   ✅ Payroll submitted to Gusto successfully`);
+                    } catch (gustoError: any) {
+                      console.error(`   ❌ Gusto submission failed: ${gustoError.message}`);
+                      console.log(`   📋 Payroll queued for manual review in Workflow Approvals`);
+                    }
+                  } else if (result.payrollRunId) {
+                    console.log(`   📋 SAFETY MODE: Payroll queued for manual approval (set autoSubmitPayroll=true to auto-submit)`);
+                  }
                   
                   totalPayrollRuns++;
                   successCount++;

@@ -18,6 +18,8 @@ import {
   aiSkillRegistry,
   externalIdentifiers,
   workspaces,
+  shifts,
+  scheduleProposals,
   type InsertAiBrainJob,
   type AiBrainJob,
   type InsertAiEventStream,
@@ -253,11 +255,106 @@ Return a JSON object with:
       processedAt: new Date().toISOString()
     };
 
+    // AUTONOMOUS PERSISTENCE: Save schedules to database and queue low-confidence for approval
+    if (job.workspaceId && result.assignments) {
+      // Extract schedule window from input constraints
+      const scheduleWindow = constraints ? {
+        weekStart: constraints.weekStart,
+        weekEnd: constraints.weekEnd,
+      } : undefined;
+      await this.persistScheduleAssignments(job.workspaceId, result, job.id, scheduleWindow);
+    }
+
     return {
       output: result,
       tokensUsed: response.tokensUsed,
       confidence: result.confidence || 0.9
     };
+  }
+
+  /**
+   * Persist AI-generated schedule assignments to database
+   * Auto-approve high confidence (>=0.95), queue low confidence for human review
+   */
+  private async persistScheduleAssignments(workspaceId: string, scheduleResult: any, jobId: string, scheduleWindow?: { weekStart: string, weekEnd: string }): Promise<void> {
+    const confidence = scheduleResult.confidence || 0.9;
+    const requiresApproval = confidence < 0.95;
+    
+    // Extract schedule window from assignments or use provided window
+    let weekStart = scheduleWindow?.weekStart ? new Date(scheduleWindow.weekStart) : new Date();
+    let weekEnd = scheduleWindow?.weekEnd ? new Date(scheduleWindow.weekEnd) : new Date();
+    
+    // If no window provided, derive from first assignment
+    if (!scheduleWindow && scheduleResult.assignments?.length > 0) {
+      const firstAssignment = scheduleResult.assignments[0];
+      if (firstAssignment.startTime) {
+        weekStart = new Date(firstAssignment.startTime);
+        // Set weekEnd to 7 days later
+        weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+      }
+    }
+    
+    try {
+      // Log AI decision to event stream for audit trail
+      await db.insert(aiEventStream).values({
+        workspaceId,
+        eventType: 'schedule_generated',
+        feature: 'scheduleos',
+        payload: {
+          jobId,
+          assignments: scheduleResult.assignments,
+          confidence,
+          reasoning: scheduleResult.reasoning,
+          requiresApproval,
+          weekStart: weekStart.toISOString(),
+          weekEnd: weekEnd.toISOString(),
+        },
+        metadata: {
+          model: 'gemini-2.0-flash-exp',
+          autoApproved: !requiresApproval,
+        },
+        fingerprint: crypto.createHash('md5').update(JSON.stringify(scheduleResult.assignments)).digest('hex'),
+      });
+
+      if (requiresApproval) {
+        // Low confidence - create proposal for human approval with actual schedule window
+        await db.insert(scheduleProposals).values({
+          workspaceId,
+          weekStartDate: weekStart,
+          weekEndDate: weekEnd,
+          aiResponse: scheduleResult,
+          confidence,
+          status: 'pending',
+        });
+        
+        console.log(`📋 [AI Brain] Schedule queued for approval (confidence: ${(confidence * 100).toFixed(1)}%, period: ${weekStart.toISOString().split('T')[0]} to ${weekEnd.toISOString().split('T')[0]})`);
+      } else {
+        // High confidence - auto-approve and persist shifts
+        const createdShifts = [];
+        
+        for (const assignment of scheduleResult.assignments) {
+          const [shift] = await db.insert(shifts).values({
+            workspaceId,
+            employeeId: assignment.employeeId,
+            clientId: assignment.clientId || null,
+            startTime: new Date(assignment.startTime),
+            endTime: new Date(assignment.endTime),
+            status: 'confirmed',
+            aiGenerated: true,
+            aiConfidenceScore: String(assignment.confidence || confidence),
+            title: assignment.position || 'AI Scheduled Shift',
+          }).returning();
+          
+          createdShifts.push(shift);
+        }
+        
+        console.log(`✅ [AI Brain] Auto-approved ${createdShifts.length} shift(s) (confidence: ${(confidence * 100).toFixed(1)}%)`);
+      }
+    } catch (error: any) {
+      console.error('[AI Brain] Failed to persist schedule:', error);
+      throw error;
+    }
   }
 
   /**

@@ -257,6 +257,7 @@ export const workspaces = pgTable("workspaces", {
   
   // PayrollOS™ Payroll Automation
   autoPayrollEnabled: boolean("auto_payroll_enabled").default(true), // Enable/disable auto-payroll processing
+  autoSubmitPayroll: boolean("auto_submit_payroll").default(false), // SAFETY MODE: Auto-submit to Gusto (defaults to manual approval)
   payrollSchedule: varchar("payroll_schedule").default('biweekly'), // 'weekly', 'biweekly', 'semi-monthly', 'monthly', 'custom'
   payrollCustomDays: integer("payroll_custom_days"), // For 'custom' schedule
   payrollDayOfWeek: integer("payroll_day_of_week").default(1), // 0-6 for weekly/biweekly (1=Monday)
@@ -1205,6 +1206,7 @@ export const clients = pgTable("clients", {
   // Billing
   billingEmail: varchar("billing_email"),
   taxId: varchar("tax_id"),
+  stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID for automated billing
 
   // Client-Specific Rate Multiplier Overrides (for enterprise contracts)
   // If set, these override workspace defaults for this client's billing
@@ -1949,6 +1951,8 @@ export const invoices = pgTable("invoices", {
   status: invoiceStatusEnum("status").default('draft'),
   paidAt: timestamp("paid_at"),
   paymentIntentId: varchar("payment_intent_id"), // Stripe Payment Intent ID
+  stripeInvoiceId: varchar("stripe_invoice_id"), // Stripe Invoice ID for automated billing
+  sentAt: timestamp("sent_at"), // When invoice was sent to client
 
   // Additional details
   notes: text("notes"),

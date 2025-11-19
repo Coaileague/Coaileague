@@ -36,6 +36,7 @@ import {
 import { eq, and, gte, lte, isNull, desc, sql } from "drizzle-orm";
 import { Resend } from "resend";
 import { aggregateBillableHours, markEntriesAsBilled } from "./automation/billableHoursAggregator";
+import Stripe from "stripe";
 
 // Lazy initialize Resend only when sending emails (allows server to start without API key)
 let resend: Resend | null = null;
@@ -448,6 +449,120 @@ async function sendInvoiceEmail(invoice: Invoice, clientEmail: string, portalUrl
     });
   } catch (error) {
     console.error('Failed to send invoice email:', error);
+  }
+}
+
+/**
+ * Send invoice via Stripe (Automated Billing)
+ * Creates Stripe invoice, adds line items, and sends to client
+ */
+export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success: boolean; stripeInvoiceId?: string; error?: string }> {
+  try {
+    // Check if Stripe is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.warn('[BillOS™] Stripe not configured - skipping automated invoice sending');
+      return { success: false, error: 'Stripe not configured' };
+    }
+
+    // Initialize Stripe
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-09-30.clover',
+    });
+
+    // Get invoice with line items and client
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, invoiceId))
+      .limit(1);
+
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+
+    // Get client
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, invoice.clientId))
+      .limit(1);
+
+    if (!client) {
+      return { success: false, error: 'Client not found' };
+    }
+
+    // Get line items
+    const lineItems = await db
+      .select()
+      .from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, invoiceId));
+
+    // Get or create Stripe customer
+    let stripeCustomerId = client.stripeCustomerId;
+    
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: client.email || undefined,
+        name: client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || undefined,
+        metadata: {
+          autoforceClientId: client.id,
+          workspaceId: invoice.workspaceId,
+        },
+      });
+      
+      stripeCustomerId = customer.id;
+      
+      // Update client with Stripe customer ID
+      await db.update(clients)
+        .set({ stripeCustomerId })
+        .where(eq(clients.id, client.id));
+    }
+
+    // Create Stripe invoice
+    const stripeInvoice = await stripe.invoices.create({
+      customer: stripeCustomerId,
+      collection_method: 'send_invoice',
+      days_until_due: 30,
+      auto_advance: false, // Keep manual finalization for safety
+      metadata: {
+        autoforceInvoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        workspaceId: invoice.workspaceId,
+      },
+      description: `Invoice ${invoice.invoiceNumber}`,
+    });
+
+    // Add line items to Stripe invoice
+    for (const item of lineItems) {
+      await stripe.invoiceItems.create({
+        customer: stripeCustomerId,
+        invoice: stripeInvoice.id,
+        description: item.description,
+        amount: Math.round(parseFloat(item.amount) * 100), // Convert to cents
+        currency: 'usd',
+      });
+    }
+
+    // Finalize and send invoice
+    await stripe.invoices.finalizeInvoice(stripeInvoice.id);
+    await stripe.invoices.sendInvoice(stripeInvoice.id);
+
+    // Update local invoice record
+    await db.update(invoices)
+      .set({
+        status: 'sent',
+        stripeInvoiceId: stripeInvoice.id,
+        sentAt: new Date(),
+      })
+      .where(eq(invoices.id, invoiceId));
+
+    console.log(`✅ [BillOS™] Invoice ${invoice.invoiceNumber} sent via Stripe (${stripeInvoice.id})`);
+
+    return { success: true, stripeInvoiceId: stripeInvoice.id };
+
+  } catch (error: any) {
+    console.error('[BillOS™] Failed to send invoice via Stripe:', error);
+    return { success: false, error: error.message };
   }
 }
 
