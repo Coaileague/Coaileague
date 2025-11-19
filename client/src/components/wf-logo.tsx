@@ -1,4 +1,4 @@
-// WorkforceOS Compact Logo Component
+// AutoForce Compact Logo Component
 // Perfect for inline use in chat, user lists, badges
 // Transparent background, animated glow, professional look
 
@@ -36,40 +36,28 @@ export function WFLogo({ className = "", size = 24 }: WFLogoProps) {
         </linearGradient>
       </defs>
       
-      {/* Main "W" Letter */}
-      <path
-        d="M 15 20 L 25 75 L 35 35 L 45 75 L 55 20"
-        stroke="url(#blue-gradient-full)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
+      {/* Circular Badge Background */}
+      <circle
+        cx="50"
+        cy="50"
+        r="45"
+        fill="url(#blue-gradient-full)"
         filter="url(#neon-glow-full)"
       />
       
-      {/* "OS" Superscript */}
+      {/* "AF" Text */}
       <text
-        x="60"
-        y="35"
-        fill="url(#blue-gradient-full)"
-        fontSize="20"
-        fontWeight="bold"
+        x="50"
+        y="65"
+        fill="white"
+        fontSize="48"
+        fontWeight="900"
         fontFamily="Arial, sans-serif"
+        textAnchor="middle"
         filter="url(#neon-glow-full)"
       >
-        OS
+        AF
       </text>
-      
-      {/* Additional glow for depth */}
-      <path
-        d="M 15 20 L 25 75 L 35 35 L 45 75 L 55 20"
-        stroke="#3b82f6"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.6"
-      />
     </svg>
   );
 }
@@ -102,76 +90,43 @@ export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
           </feMerge>
         </filter>
         
-        {/* Gradient for professional look - Slate tones */}
+        {/* Gradient for professional look - AutoForce Blue */}
         <linearGradient id={`compact-gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#475569" />
-          <stop offset="50%" stopColor="#64748b" />
-          <stop offset="100%" stopColor="#334155" />
+          <stop offset="0%" stopColor="#2563eb" />
+          <stop offset="50%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1e40af" />
         </linearGradient>
         
         {/* White core gradient for brightness */}
         <linearGradient id={`bright-core-${uniqueId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#cbd5e1" />
-          <stop offset="100%" stopColor="#94a3b8" />
+          <stop offset="0%" stopColor="#dbeafe" />
+          <stop offset="100%" stopColor="#93c5fd" />
         </linearGradient>
       </defs>
       
-      {/* Rounded Container Circle - Subtle glassmorphic background */}
+      {/* Rounded Container Circle - AutoForce Blue */}
       <circle
         cx="20"
         cy="16"
         r="15"
-        fill="rgba(71, 85, 105, 0.05)"
-        stroke="rgba(100, 116, 139, 0.2)"
-        strokeWidth="0.5"
-      />
-      
-      {/* Main "W" Letter - BIGGER, BOLD, GLOWING */}
-      <path
-        d="M 8 10 L 12 26 L 16 14 L 20 26 L 24 10"
-        stroke={`url(#compact-gradient-${uniqueId})`}
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        filter={`url(#compact-glow-${uniqueId})`}
-      />
-      
-      {/* "OS" Superscript - Clean and Visible */}
-      <text
-        x="25"
-        y="14"
         fill={`url(#compact-gradient-${uniqueId})`}
-        fontSize="11"
-        fontWeight="900"
-        fontFamily="system-ui, -apple-system, sans-serif"
+        stroke="rgba(37, 99, 235, 0.3)"
+        strokeWidth="0.5"
         filter={`url(#compact-glow-${uniqueId})`}
-      >
-        OS
-      </text>
-      
-      {/* Bright Core for Max Visibility */}
-      <path
-        d="M 8 10 L 12 26 L 16 14 L 20 26 L 24 10"
-        stroke={`url(#bright-core-${uniqueId})`}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.7"
       />
       
-      {/* Bright OS Core */}
+      {/* "AF" Text - Clean and Visible */}
       <text
-        x="25"
-        y="14"
-        fill="#94a3b8"
-        fontSize="11"
+        x="20"
+        y="21"
+        fill="white"
+        fontSize="14"
         fontWeight="900"
         fontFamily="system-ui, -apple-system, sans-serif"
-        opacity="0.6"
+        textAnchor="middle"
+        filter={`url(#compact-glow-${uniqueId})`}
       >
-        OS
+        AF
       </text>
     </svg>
   );
