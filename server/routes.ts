@@ -5926,8 +5926,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const [request] = await db.insert(serviceCoverageRequests).values({ ...req.body, workspaceId: workspace.id, requestNumber, requestedBy: userId, status: 'processing' }).returning();
       
-      const { AI SchedulingAI } = await import("./ai/scheduleos");
-      const result = await (new AI SchedulingAI()).generateSchedule({ workspaceId: workspace.id, weekStartDate: new Date(req.body.startTime), clientIds: req.body.clientId ? [req.body.clientId] : [], shiftRequirements: [{ title: req.body.title, clientId: req.body.clientId, startTime: new Date(req.body.startTime), endTime: new Date(req.body.endTime), requiredEmployees: req.body.numberOfEmployeesNeeded || 1, requiredSkills: req.body.requiredSkills }] });
+      const { SchedulingAI } = await import("./ai/scheduleos");
+      const result = await (new SchedulingAI()).generateSchedule({ workspaceId: workspace.id, weekStartDate: new Date(req.body.startTime), clientIds: req.body.clientId ? [req.body.clientId] : [], shiftRequirements: [{ title: req.body.title, clientId: req.body.clientId, startTime: new Date(req.body.startTime), endTime: new Date(req.body.endTime), requiredEmployees: req.body.numberOfEmployeesNeeded || 1, requiredSkills: req.body.requiredSkills }] });
       
       const tokens = 1500 + (result.shiftsGenerated * 40);
       const cost = (tokens / 1000) * 0.045 * 4;
@@ -9635,7 +9635,7 @@ ${application.email}`,
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      const report = await storage.getAI HiringComplianceReport(workspace.id);
+      const report = await storage.getHiringComplianceReport(workspace.id);
       res.json(report);
     } catch (error) {
       console.error("Error generating compliance report:", error);

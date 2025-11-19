@@ -48,7 +48,7 @@ import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
-import AI HiringWorkflowBuilder from "@/pages/hireos-workflow-builder";
+import HiringWorkflowBuilder from "@/pages/hireos-workflow-builder";
 import EmployeeFileCabinet from "@/pages/employee-file-cabinet";
 import EmployeeProfile from "@/pages/employee-profile";
 import AdminUsage from "@/pages/admin-usage";
@@ -83,15 +83,15 @@ import Disputes from "@/pages/disputes";
 import MyAuditRecord from "@/pages/my-audit-record";
 import FileGrievance from "@/pages/file-grievance";
 import ReviewDisputes from "@/pages/review-disputes";
-import AI Communications from "@/pages/comm-os";
-import AI CommunicationsOnboarding from "@/pages/comm-os-onboarding";
-import AI Diagnostics from "@/pages/query-os";
+import AICommunications from "@/pages/comm-os";
+import AICommunicationsOnboarding from "@/pages/comm-os-onboarding";
+import AIDiagnostics from "@/pages/query-os";
 import PrivateMessages from "@/pages/private-messages";
-import AI Training from "@/pages/training-os";
-import AI Budgeting from "@/pages/budget-os";
-import AI Integrations from "@/pages/integration-os";
-import AI Records from "@/pages/record-os";
-import AI Analytics from "@/pages/insight-os";
+import AITraining from "@/pages/training-os";
+import AIBudgeting from "@/pages/budget-os";
+import AIIntegrations from "@/pages/integration-os";
+import AIRecords from "@/pages/record-os";
+import AIAnalytics from "@/pages/insight-os";
 import CommunicationFamilyPage from "@/pages/os-family-communication";
 import OperationsFamilyPage from "@/pages/os-family-operations";
 import GrowthFamilyPage from "@/pages/os-family-growth";
@@ -334,16 +334,16 @@ function AppContent() {
                 <Route path="/my-audit-record" component={MyAuditRecord} />
                 <Route path="/file-grievance" component={FileGrievance} />
                 <Route path="/review-disputes" component={ReviewDisputes} />
-                <Route path="/comm-os" component={AI Communications} />
-                <Route path="/comm-os/onboarding" component={AI CommunicationsOnboarding} />
-                <Route path="/query-os" component={AI Diagnostics} />
+                <Route path="/comm-os" component={AICommunications} />
+                <Route path="/comm-os/onboarding" component={AICommunicationsOnboarding} />
+                <Route path="/query-os" component={AIDiagnostics} />
                 <Route path="/messages" component={PrivateMessages} />
                 <Route path="/chat-export" component={ChatExport} />
-                <Route path="/training" component={AI Training} />
-                <Route path="/budget" component={AI Budgeting} />
-                <Route path="/integrations" component={AI Integrations} />
-                <Route path="/search" component={AI Records} />
-                <Route path="/insights" component={AI Analytics} />
+                <Route path="/training" component={AITraining} />
+                <Route path="/budget" component={AIBudgeting} />
+                <Route path="/integrations" component={AIIntegrations} />
+                <Route path="/search" component={AIRecords} />
+                <Route path="/insights" component={AIAnalytics} />
 
                 {/* OS Family Showcase Pages */}
                 <Route path="/os-family/communication" component={CommunicationFamilyPage} />
@@ -389,7 +389,7 @@ function AppContent() {
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/support" component={AdminSupport} />
                 <Route path="/admin/custom-forms" component={AdminCustomForms} />
-                <Route path="/owner/hireos/workflow-builder" component={AI HiringWorkflowBuilder} />
+                <Route path="/owner/hireos/workflow-builder" component={HiringWorkflowBuilder} />
                 <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
                 <Route path="/support/dashboard" component={SupportDashboard} />
                 <Route path="/platform/users" component={PlatformUsers} />
