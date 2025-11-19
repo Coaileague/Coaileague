@@ -31,6 +31,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIdentity } from "@/hooks/useIdentity";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { MetricTile } from "@/components/metric-tile";
+import { CreditBalanceCard } from "@/components/credit-balance";
 
 interface Notification {
   id: string;
@@ -552,27 +553,33 @@ export default function Dashboard() {
 
         {/* Metrics Grid - Fortune 500 Compact Layout */}
         <ResponsiveSection>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 max-w-5xl mx-auto">
-          <MetricTile
-            title="Total Employees"
-            value={totalEmployees}
-            icon={Users}
-            data-testid="card-employees"
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 max-w-7xl mx-auto">
+          {/* Workspace Metrics */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+            <MetricTile
+              title="Total Employees"
+              value={totalEmployees}
+              icon={Users}
+              data-testid="card-employees"
+            />
+            
+            <MetricTile
+              title="Total Clients"
+              value={totalClients}
+              icon={Users}
+              data-testid="card-clients"
+            />
+            
+            <MetricTile
+              title="Total Revenue"
+              value={`$${totalRevenue >= 1000 ? `${(totalRevenue / 1000).toFixed(1)}K` : totalRevenue.toFixed(2)}`}
+              icon={DollarSign}
+              data-testid="card-revenue"
+            />
+          </div>
           
-          <MetricTile
-            title="Total Clients"
-            value={totalClients}
-            icon={Users}
-            data-testid="card-clients"
-          />
-          
-          <MetricTile
-            title="Total Revenue"
-            value={`$${totalRevenue >= 1000 ? `${(totalRevenue / 1000).toFixed(1)}K` : totalRevenue.toFixed(2)}`}
-            icon={DollarSign}
-            data-testid="card-revenue"
-          />
+          {/* Automation Credits */}
+          <CreditBalanceCard onBuyCredits={() => setLocation('/usage')} />
         </div>
         </ResponsiveSection>
 

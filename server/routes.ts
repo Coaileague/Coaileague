@@ -2430,6 +2430,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CREDIT SYSTEM API ROUTES ====================
+
+  /**
+   * Get workspace credit balance
+   * Returns current balance, monthly allocation, and totals
+   */
+  app.get('/api/credits/balance', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import('./rbac');
+      const { workspaceId, error } = await resolveWorkspaceForUser(userId);
+
+      if (!workspaceId) {
+        return res.status(400).json({ error: error || 'No workspace found' });
+      }
+
+      // Get workspace details for tier
+      const { workspaces } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      const { creditManager } = await import('./services/billing/creditManager');
+      const credits = await creditManager.getCreditsAccount(workspaceId);
+
+      if (!credits) {
+        // Initialize if not exists
+        const newCredits = await creditManager.initializeCredits(workspaceId, workspace.subscriptionTier || 'free');
+        return res.json({
+          ...newCredits,
+          subscriptionTier: workspace.subscriptionTier || 'free',
+        });
+      }
+
+      res.json({
+        ...credits,
+        subscriptionTier: workspace.subscriptionTier || 'free',
+      });
+    } catch (error) {
+      console.error('[API] Error fetching credit balance:', error);
+      res.status(500).json({ message: 'Failed to fetch credit balance' });
+    }
+  });
+
+  /**
+   * Get credit usage breakdown for current month
+   * Shows credits spent by feature
+   */
+  app.get('/api/credits/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import('./rbac');
+      const { workspaceId, error } = await resolveWorkspaceForUser(userId);
+
+      if (!workspaceId) {
+        return res.status(400).json({ error: error || 'No workspace found' });
+      }
+
+      const { creditManager } = await import('./services/billing/creditManager');
+      const breakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId);
+
+      res.json(breakdown);
+    } catch (error) {
+      console.error('[API] Error fetching credit usage breakdown:', error);
+      res.status(500).json({ message: 'Failed to fetch usage breakdown' });
+    }
+  });
+
+  /**
+   * Get credit transaction history
+   * RBAC: org_owner and org_admin only
+   */
+  app.get('/api/credits/transactions', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import('./rbac');
+      const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
+
+      if (!workspaceId) {
+        return res.status(400).json({ error: error || 'No workspace found' });
+      }
+
+      // RBAC: Only org_owner and org_admin can view transaction history
+      if (role !== 'org_owner' && role !== 'org_admin') {
+        return res.status(403).json({ error: 'Insufficient permissions to view transaction history' });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const { creditManager } = await import('./services/billing/creditManager');
+      const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
+
+      res.json(transactions);
+    } catch (error) {
+      console.error('[API] Error fetching credit transactions:', error);
+      res.status(500).json({ message: 'Failed to fetch transactions' });
+    }
+  });
+
+  /**
+   * Get available credit packs for purchase
+   */
+  app.get('/api/credits/packs', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import('./rbac');
+      const { workspaceId, error } = await resolveWorkspaceForUser(userId);
+
+      if (!workspaceId) {
+        return res.status(400).json({ error: error || 'No workspace found' });
+      }
+
+      // Get workspace tier
+      const { workspaces } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      // Fetch available packs for this tier
+      const { creditPacks } = await import('@shared/schema');
+      const { and, arrayContains } = await import('drizzle-orm');
+      const { sql } = await import('drizzle-orm');
+      
+      const packs = await db
+        .select()
+        .from(creditPacks)
+        .where(
+          and(
+            eq(creditPacks.isActive, true),
+            sql`${workspace.subscriptionTier || 'free'} = ANY(${creditPacks.availableForTiers})`
+          )
+        )
+        .orderBy(creditPacks.displayOrder);
+
+      res.json(packs);
+    } catch (error) {
+      console.error('[API] Error fetching credit packs:', error);
+      res.status(500).json({ message: 'Failed to fetch credit packs' });
+    }
+  });
+
   // ==================== REPORTING API ROUTES ====================
   
   /**
