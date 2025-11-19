@@ -71,18 +71,17 @@ export function FeedbackWidget() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" data-testid="button-feedback">
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Send Feedback</p>
-        </TooltipContent>
-      </Tooltip>
+      <DialogTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="justify-start gap-2 h-9 w-full"
+          data-testid="button-feedback"
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span className="text-xs">Feedback</span>
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Send Feedback</DialogTitle>

@@ -246,18 +246,12 @@ export function AppSidebar() {
               </Button>
             </div>
 
-            {/* Help & Feedback Row */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <HelpDropdown />
-              </div>
-              <div className="flex-1">
-                <FeedbackWidget />
-              </div>
+            {/* Help, Feedback & What's New - Grid Layout */}
+            <div className="grid grid-cols-2 gap-2">
+              <HelpDropdown />
+              <FeedbackWidget />
             </div>
-
-            {/* What's New Badge */}
-            <div className="px-2">
+            <div className="w-full">
               <WhatsNewBadge />
             </div>
           </div>

@@ -66,23 +66,22 @@ export function WhatsNewBadge() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative" data-testid="button-whats-new">
-              <Sparkles className="h-5 w-5" />
-              {updates.length > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center text-xs font-medium">
-                  {updates.length}
-                </span>
-              )}
-            </Button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>What's New - Feature Updates</p>
-        </TooltipContent>
-      </Tooltip>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="justify-start gap-2 h-9 w-full relative"
+          data-testid="button-whats-new"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span className="text-xs">What's New</span>
+          {updates.length > 0 && (
+            <span className="ml-auto h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center text-xs font-medium">
+              {updates.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start" side="right" sideOffset={8}>
         <div className="p-4">
           <div className="flex items-center gap-2">

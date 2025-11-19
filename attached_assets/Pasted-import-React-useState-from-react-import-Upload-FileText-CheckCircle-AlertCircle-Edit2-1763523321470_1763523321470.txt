@@ -1,0 +1,715 @@
+import React, { useState } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle, Edit2, Eye, Download } from 'lucide-react';
+
+// Types
+interface ExtractionResult {
+  documentId: string;
+  detectedType: string;
+  confidence: number;
+  extractedData: any;
+  validationErrors: ValidationError[];
+  suggestedActions: SuggestedAction[];
+  requiresReview: boolean;
+  fileName: string;
+}
+
+interface ValidationError {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+interface SuggestedAction {
+  description: string;
+  action: string;
+}
+
+// Mock Gemini API call
+async function analyzeDocument(file: File): Promise<ExtractionResult> {
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  const fileName = file.name.toLowerCase();
+  let detectedType = 'unknown';
+  let extractedData: any = {};
+  let confidence = 0.85;
+  let validationErrors: ValidationError[] = [];
+  let suggestedActions: SuggestedAction[] = [];
+  
+  // Detect document type based on filename
+  if (fileName.includes('payroll') || fileName.includes('pay stub')) {
+    detectedType = 'payroll';
+    extractedData = {
+      employees: [
+        { 
+          name: 'John Doe', 
+          employeeId: 'EMP001',
+          hourlyRate: 25.50, 
+          hoursWorked: 42,
+          overtimeHours: 2,
+          grossPay: 1122.50,
+          confidence: 0.95
+        },
+        { 
+          name: 'Jane Smith', 
+          employeeId: 'EMP002',
+          hourlyRate: 30.00, 
+          hoursWorked: 40,
+          overtimeHours: 0,
+          grossPay: 1200.00,
+          confidence: 0.92
+        },
+        { 
+          name: 'Bob Johnson', 
+          employeeId: 'EMP003',
+          hourlyRate: 22.00, 
+          hoursWorked: 38,
+          overtimeHours: 0,
+          grossPay: 836.00,
+          confidence: 0.88
+        }
+      ],
+      payPeriod: { start: '2025-01-01', end: '2025-01-15' },
+      taxSettings: {
+        federalRate: 0.12,
+        stateRate: 0.05,
+        socialSecurity: 0.062,
+        medicare: 0.0145
+      }
+    };
+    confidence = 0.91;
+    validationErrors = [
+      { field: 'employees[2].confidence', message: 'Low confidence on hourly rate extraction', severity: 'warning' }
+    ];
+    suggestedActions = [
+      { description: 'Verify Bob Johnson hourly rate manually', action: 'review_field' },
+      { description: 'Enable auto-payroll for biweekly runs', action: 'enable_automation' }
+    ];
+  } else if (fileName.includes('schedule') || fileName.includes('shift')) {
+    detectedType = 'schedule';
+    extractedData = {
+      shifts: [
+        { 
+          employee: 'John Doe',
+          date: '2025-01-20',
+          startTime: '09:00',
+          endTime: '17:00',
+          client: 'Acme Corp',
+          role: 'Technician',
+          confidence: 0.96
+        },
+        { 
+          employee: 'Jane Smith',
+          date: '2025-01-20',
+          startTime: '13:00',
+          endTime: '21:00',
+          client: 'TechStart Inc',
+          role: 'Senior Tech',
+          confidence: 0.94
+        },
+        { 
+          employee: 'Bob Johnson',
+          date: '2025-01-21',
+          startTime: '08:00',
+          endTime: '16:00',
+          client: 'Acme Corp',
+          role: 'Technician',
+          confidence: 0.89
+        }
+      ],
+      patterns: {
+        rotationType: 'weekly',
+        peakHours: '9am-5pm',
+        weekendCoverage: true
+      }
+    };
+    confidence = 0.93;
+    validationErrors = [
+      { field: 'shifts[2].confidence', message: 'Time format ambiguous for Bob Johnson shift', severity: 'warning' }
+    ];
+    suggestedActions = [
+      { description: 'Enable AI auto-scheduling based on these patterns', action: 'enable_automation' },
+      { description: 'Import shift history for better predictions', action: 'import_history' }
+    ];
+  } else if (fileName.includes('employee') || fileName.includes('roster')) {
+    detectedType = 'employee_roster';
+    extractedData = {
+      employees: [
+        { 
+          name: 'John Doe',
+          employeeId: 'EMP001',
+          email: 'john.doe@example.com',
+          phone: '+1-555-0123',
+          role: 'Technician',
+          hourlyRate: 25.50,
+          hireDate: '2023-03-15',
+          department: 'Operations',
+          confidence: 0.97
+        },
+        { 
+          name: 'Jane Smith',
+          employeeId: 'EMP002',
+          email: 'jane.smith@example.com',
+          phone: '+1-555-0124',
+          role: 'Senior Technician',
+          hourlyRate: 30.00,
+          hireDate: '2022-01-10',
+          department: 'Operations',
+          confidence: 0.95
+        },
+        { 
+          name: 'Bob Johnson',
+          employeeId: 'EMP003',
+          email: 'bob.johnson@example.com',
+          phone: '+1-555-0125',
+          role: 'Technician',
+          hourlyRate: 22.00,
+          hireDate: '2024-06-01',
+          department: 'Operations',
+          confidence: 0.90
+        },
+        { 
+          name: 'Alice Williams',
+          employeeId: 'EMP004',
+          email: 'alice.w@example.com',
+          phone: '+1-555-0126',
+          role: 'Manager',
+          hourlyRate: 45.00,
+          hireDate: '2021-09-20',
+          department: 'Management',
+          confidence: 0.88
+        }
+      ]
+    };
+    confidence = 0.92;
+    validationErrors = [
+      { field: 'employees[3].email', message: 'Email format seems truncated', severity: 'warning' },
+      { field: 'employees[3].confidence', message: 'Low confidence on Alice Williams data', severity: 'warning' }
+    ];
+    suggestedActions = [
+      { description: 'Verify Alice Williams email address', action: 'review_field' },
+      { description: 'Import into employee management system', action: 'import_data' }
+    ];
+  } else if (fileName.includes('invoice') || fileName.includes('billing')) {
+    detectedType = 'invoice';
+    extractedData = {
+      client: {
+        name: 'Acme Corporation',
+        email: 'billing@acmecorp.com',
+        address: '123 Business St, Austin, TX 78701',
+        confidence: 0.96
+      },
+      invoiceNumber: 'INV-2025-001',
+      invoiceDate: '2025-01-15',
+      dueDate: '2025-02-14',
+      lineItems: [
+        { description: 'Technical Services - Week 1', quantity: 40, rate: 75.00, amount: 3000.00 },
+        { description: 'Technical Services - Week 2', quantity: 40, rate: 75.00, amount: 3000.00 },
+        { description: 'Emergency Call Out', quantity: 4, rate: 125.00, amount: 500.00 }
+      ],
+      subtotal: 6500.00,
+      tax: 520.00,
+      total: 7020.00,
+      paymentTerms: 'Net 30'
+    };
+    confidence = 0.94;
+    suggestedActions = [
+      { description: 'Set up auto-billing for Acme Corporation', action: 'enable_automation' },
+      { description: 'Apply 20% markup for Professional tier', action: 'apply_markup' }
+    ];
+  }
+  
+  const requiresReview = confidence < 0.95 || validationErrors.length > 0;
+  
+  return {
+    documentId: `doc_${Date.now()}`,
+    detectedType,
+    confidence,
+    extractedData,
+    validationErrors,
+    suggestedActions,
+    requiresReview,
+    fileName: file.name
+  };
+}
+
+// Main Component
+export default function MigrationSystem() {
+  const [step, setStep] = useState<'upload' | 'analyze' | 'review' | 'import'>('upload');
+  const [files, setFiles] = useState<File[]>([]);
+  const [extractions, setExtractions] = useState<ExtractionResult[]>([]);
+  const [currentReview, setCurrentReview] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setStep('analyze');
+    
+    const results: ExtractionResult[] = [];
+    for (const file of files) {
+      const result = await analyzeDocument(file);
+      results.push(result);
+    }
+    
+    setExtractions(results);
+    setAnalyzing(false);
+    
+    // Move to review if any need review, otherwise go straight to import
+    const needsReview = results.some(r => r.requiresReview);
+    setStep(needsReview ? 'review' : 'import');
+  };
+
+  const handleApprove = () => {
+    if (currentReview < extractions.length - 1) {
+      setCurrentReview(currentReview + 1);
+    } else {
+      setStep('import');
+      handleImport();
+    }
+  };
+
+  const handleReject = () => {
+    const newExtractions = extractions.filter((_, i) => i !== currentReview);
+    setExtractions(newExtractions);
+    
+    if (newExtractions.length === 0) {
+      setStep('upload');
+      setFiles([]);
+    } else if (currentReview >= newExtractions.length) {
+      setCurrentReview(newExtractions.length - 1);
+    }
+  };
+
+  const handleImport = async () => {
+    setImporting(true);
+    
+    // Simulate import progress
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setImportProgress(i);
+    }
+    
+    setImporting(false);
+  };
+
+  if (step === 'upload') {
+    return <UploadStep files={files} onUpload={handleFileUpload} onAnalyze={handleAnalyze} />;
+  }
+
+  if (step === 'analyze') {
+    return <AnalyzeStep analyzing={analyzing} extractions={extractions} />;
+  }
+
+  if (step === 'review') {
+    return (
+      <ReviewStep 
+        extraction={extractions[currentReview]}
+        current={currentReview + 1}
+        total={extractions.length}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      />
+    );
+  }
+
+  if (step === 'import') {
+    return <ImportStep progress={importProgress} importing={importing} extractions={extractions} />;
+  }
+
+  return null;
+}
+
+// Upload Step Component
+function UploadStep({ files, onUpload, onAnalyze }: any) {
+  return (
+    <div className="max-w-4xl mx-auto p-8 space-y-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          🧠 AutoForce AI Migration
+        </h1>
+        <p className="text-gray-600 text-lg">
+          Upload your business documents and let AI Brain extract everything automatically
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { icon: '👥', title: 'Employee Roster', desc: 'Excel, CSV, or PDF' },
+          { icon: '💰', title: 'Payroll Records', desc: 'Past payrolls or pay stubs' },
+          { icon: '📅', title: 'Schedules', desc: 'Shift schedules or timesheets' },
+          { icon: '🧾', title: 'Invoices', desc: 'Client billing history' },
+          { icon: '📊', title: 'Timesheets', desc: 'Time tracking records' },
+          { icon: '📄', title: 'Other Docs', desc: 'We\'ll analyze and categorize' }
+        ].map((card, i) => (
+          <div key={i} className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+            <div className="text-4xl mb-2">{card.icon}</div>
+            <div className="font-semibold text-gray-800">{card.title}</div>
+            <div className="text-sm text-gray-500 mt-1">{card.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-500 transition-colors bg-gray-50">
+        <Upload className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+        <label className="cursor-pointer">
+          <span className="text-lg font-semibold text-gray-700 hover:text-blue-600">
+            Click to upload or drag and drop
+          </span>
+          <input
+            type="file"
+            multiple
+            accept=".pdf,.xlsx,.csv,.xls"
+            onChange={onUpload}
+            className="hidden"
+          />
+        </label>
+        <p className="text-sm text-gray-500 mt-2">PDF, Excel, or CSV files</p>
+      </div>
+
+      {files.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">Files Ready to Analyze:</h3>
+          {files.map((file, i) => (
+            <div key={i} className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <span className="flex-1 font-medium">{file.name}</span>
+              <span className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} KB</span>
+            </div>
+          ))}
+          <button
+            onClick={onAnalyze}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition-shadow"
+          >
+            🧠 Analyze with AI Brain →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Analyze Step Component
+function AnalyzeStep({ analyzing, extractions }: any) {
+  return (
+    <div className="max-w-4xl mx-auto p-8 space-y-8">
+      <div className="text-center space-y-4">
+        <h2 className="text-3xl font-bold">🧠 AI Brain is Analyzing...</h2>
+        <p className="text-gray-600">
+          Using Gemini 2.0 Flash to extract structured data from your documents
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {extractions.map((doc: ExtractionResult, i: number) => {
+          const getStatusColor = (confidence: number) => {
+            if (confidence >= 0.95) return 'text-green-600 bg-green-50 border-green-200';
+            if (confidence >= 0.80) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+            return 'text-red-600 bg-red-50 border-red-200';
+          };
+
+          return (
+            <div key={i} className={`border-2 rounded-lg p-6 ${getStatusColor(doc.confidence)}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6" />
+                    <div>
+                      <div className="font-semibold text-lg capitalize">{doc.detectedType.replace('_', ' ')}</div>
+                      <div className="text-sm opacity-80">{doc.fileName}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold">{Math.round(doc.confidence * 100)}%</div>
+                  <div className="text-sm">Confidence</div>
+                </div>
+              </div>
+              
+              {doc.requiresReview && (
+                <div className="mt-4 flex items-center gap-2 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Requires human review</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {!analyzing && extractions.length > 0 && (
+        <div className="text-center pt-4">
+          <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+          <p className="text-lg font-semibold text-gray-800">Analysis Complete!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Review Step Component
+function ReviewStep({ extraction, current, total, onApprove, onReject }: any) {
+  const [editMode, setEditMode] = useState<string | null>(null);
+  const [editedData, setEditedData] = useState(extraction.extractedData);
+
+  const getConfidenceColor = (score: number) => {
+    if (score >= 0.95) return 'text-green-600';
+    if (score >= 0.80) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const renderDataField = (key: string, value: any, path: string = '') => {
+    const fieldPath = path ? `${path}.${key}` : key;
+    const isEditing = editMode === fieldPath;
+    
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return (
+        <div key={fieldPath} className="ml-4 border-l-2 border-gray-200 pl-4 space-y-2">
+          <div className="font-semibold text-sm text-gray-700 capitalize">{key.replace(/_/g, ' ')}</div>
+          {Object.entries(value).map(([k, v]) => renderDataField(k, v, fieldPath))}
+        </div>
+      );
+    }
+    
+    if (Array.isArray(value)) {
+      return (
+        <div key={fieldPath} className="space-y-3">
+          <div className="font-semibold text-gray-800 capitalize flex items-center gap-2">
+            {key.replace(/_/g, ' ')} <span className="text-sm text-gray-500">({value.length} items)</span>
+          </div>
+          {value.map((item, idx) => (
+            <div key={idx} className="border rounded-lg p-4 bg-gray-50 space-y-2">
+              <div className="text-xs text-gray-500 font-mono">#{idx + 1}</div>
+              {typeof item === 'object' 
+                ? Object.entries(item).map(([k, v]) => renderDataField(k, v, `${fieldPath}[${idx}]`))
+                : <div className="text-sm">{String(item)}</div>
+              }
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div key={fieldPath} className="border rounded-lg p-3 bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <label className="font-medium text-sm capitalize text-gray-700">
+            {key.replace(/_/g, ' ')}
+          </label>
+          <div className="flex items-center gap-2">
+            {key.toLowerCase().includes('confidence') && (
+              <span className={`text-xs font-semibold ${getConfidenceColor(Number(value))}`}>
+                {Math.round(Number(value) * 100)}%
+              </span>
+            )}
+            <button
+              onClick={() => setEditMode(isEditing ? null : fieldPath)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              <Edit2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        
+        {isEditing ? (
+          <input
+            type="text"
+            value={String(value)}
+            onChange={(e) => {
+              const newData = { ...editedData };
+              // Simple update - in production, use proper path navigation
+              setEditedData(newData);
+            }}
+            className="w-full border rounded px-3 py-2 text-sm"
+            autoFocus
+          />
+        ) : (
+          <div className="text-sm text-gray-900 font-mono">{String(value)}</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">📋 Review Extracted Data</h2>
+          <p className="text-gray-500">Document {current} of {total}</p>
+        </div>
+        <div className="text-right">
+          <div className={`text-4xl font-bold ${getConfidenceColor(extraction.confidence)}`}>
+            {Math.round(extraction.confidence * 100)}%
+          </div>
+          <div className="text-sm text-gray-600">Overall Confidence</div>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Eye className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div>
+            <div className="font-semibold text-blue-900">Document Type: {extraction.detectedType.replace('_', ' ').toUpperCase()}</div>
+            <div className="text-sm text-blue-700 mt-1">{extraction.fileName}</div>
+          </div>
+        </div>
+      </div>
+
+      {extraction.validationErrors.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            Issues Found
+          </h4>
+          <ul className="space-y-1">
+            {extraction.validationErrors.map((error: ValidationError, i: number) => (
+              <li key={i} className="text-sm text-yellow-800">
+                • <span className="font-mono text-xs">{error.field}</span>: {error.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="space-y-4 max-h-96 overflow-y-auto border rounded-lg p-4">
+        <h3 className="font-semibold text-lg sticky top-0 bg-white pb-2">Extracted Information</h3>
+        {Object.entries(editedData).map(([key, value]) => renderDataField(key, value))}
+      </div>
+
+      {extraction.suggestedActions.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="font-semibold text-green-900 mb-2">💡 Suggested Actions</h4>
+          <ul className="space-y-2">
+            {extraction.suggestedActions.map((action: SuggestedAction, i: number) => (
+              <li key={i} className="text-sm text-green-800 flex items-start gap-2">
+                <span className="mt-1">•</span>
+                <span>{action.description}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        <button
+          onClick={onApprove}
+          className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+        >
+          <CheckCircle className="h-5 w-5" />
+          Approve & Continue
+        </button>
+        <button
+          onClick={onReject}
+          className="px-8 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+        >
+          Reject
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Import Step Component
+function ImportStep({ progress, importing, extractions }: any) {
+  const completed = progress === 100 && !importing;
+
+  return (
+    <div className="max-w-4xl mx-auto p-8 space-y-8">
+      <div className="text-center space-y-4">
+        <h2 className="text-3xl font-bold">
+          {importing ? '⚡ Importing Data...' : '✅ Migration Complete!'}
+        </h2>
+        <p className="text-gray-600">
+          {importing 
+            ? 'Securely importing your data into AutoForce' 
+            : 'Your business data has been successfully migrated'
+          }
+        </p>
+      </div>
+
+      {importing && (
+        <div className="space-y-4">
+          <div className="bg-gray-200 rounded-full h-4 overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 h-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="text-center text-2xl font-bold text-gray-800">{progress}%</div>
+        </div>
+      )}
+
+      {completed && (
+        <div className="space-y-6">
+          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+            <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+            <div className="text-center space-y-2">
+              <div className="text-xl font-semibold text-green-900">Import Successful!</div>
+              <div className="text-green-700">
+                {extractions.length} document{extractions.length > 1 ? 's' : ''} processed
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">📊 Import Summary</h3>
+            {extractions.map((doc: ExtractionResult, i: number) => {
+              let itemCount = 0;
+              if (doc.extractedData.employees) itemCount = doc.extractedData.employees.length;
+              if (doc.extractedData.shifts) itemCount = doc.extractedData.shifts.length;
+              if (doc.extractedData.lineItems) itemCount = doc.extractedData.lineItems.length;
+
+              return (
+                <div key={i} className="border rounded-lg p-4 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold capitalize">{doc.detectedType.replace('_', ' ')}</div>
+                    <div className="text-sm text-gray-500">{itemCount} records imported</div>
+                  </div>
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-900 mb-3">🚀 Ready to Enable Automations</h4>
+            <div className="space-y-2">
+              {extractions.some((d: ExtractionResult) => d.detectedType === 'schedule') && (
+                <div className="flex items-center gap-2 text-sm text-blue-800">
+                  <input type="checkbox" defaultChecked className="rounded" />
+                  <label>Enable AI Auto-Scheduling</label>
+                </div>
+              )}
+              {extractions.some((d: ExtractionResult) => d.detectedType === 'payroll') && (
+                <div className="flex items-center gap-2 text-sm text-blue-800">
+                  <input type="checkbox" defaultChecked className="rounded" />
+                  <label>Enable Auto-Payroll Processing</label>
+                </div>
+              )}
+              {extractions.some((d: ExtractionResult) => d.detectedType === 'invoice') && (
+                <div className="flex items-center gap-2 text-sm text-blue-800">
+                  <input type="checkbox" defaultChecked className="rounded" />
+                  <label>Enable Auto-Billing</label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition-shadow"
+          >
+            Go to Dashboard →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

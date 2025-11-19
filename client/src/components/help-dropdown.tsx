@@ -30,18 +30,17 @@ export function HelpDropdown() {
   return (
     <>
       <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" data-testid="button-help">
-                <HelpCircle className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Help & Support</p>
-          </TooltipContent>
-        </Tooltip>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="justify-start gap-2 h-9 w-full"
+            data-testid="button-help"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="text-xs">Help</span>
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Help & Support</DropdownMenuLabel>
           <DropdownMenuSeparator />
