@@ -57,11 +57,6 @@ router.post("/api/auth/register", async (req, res) => {
     // Hash password
     const passwordHash = await hashPassword(data.password);
 
-    // Pre-generate organization identifiers (before transaction to avoid cross-boundary writes)
-    const { generateOrganizationId, generateOrganizationSerial } = await import('./services/identityService');
-    const orgId = generateOrganizationId();
-    const orgSerial = await generateOrganizationSerial();
-
     // TRANSACTION: Create user + workspace + employee atomically
     const { newUser, workspace, newEmployee } = await db.transaction(async (tx) => {
       // 1. Create user
@@ -77,14 +72,12 @@ router.post("/api/auth/register", async (req, res) => {
         })
         .returning();
 
-      // 2. Create workspace using pre-generated IDs
+      // 2. Create workspace
       const [ws] = await tx.insert(workspaces).values({
         name: `${data.firstName}'s Workspace`,
         ownerId: user.id,
         subscriptionTier: "free",
         subscriptionStatus: "active",
-        organizationId: orgId,
-        organizationSerial: orgSerial,
       }).returning();
 
       console.log(`[Registration] Created workspace ${ws.id} for user ${user.id}`);
