@@ -26,6 +26,7 @@ import { PlanBadge } from "@/components/plan-badge";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { HelpDropdown } from "@/components/help-dropdown";
 import { FeedbackWidget } from "@/components/feedback-widget";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -34,6 +35,12 @@ export function AppSidebar() {
   const transition = useTransition();
   const { state } = useSidebar();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const isMobile = useIsMobile();
+  
+  // CRITICAL: Prevent rendering on mobile - UniversalNavHeader handles mobile navigation
+  if (isMobile) {
+    return null;
+  }
 
   // Get sidebar families with RBAC filtering
   const families = isLoading 

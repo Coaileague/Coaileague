@@ -240,19 +240,177 @@ function AppContent() {
     "--sidebar-width-icon": "3.5rem", // 56px collapsed (matches old peek rail)
   };
 
+  // Render mobile layout (NO Sidebar component - only UniversalNavHeader)
+  if (isMobile) {
+    return (
+      <ProtectedRoute>
+        <CommandPalette />
+        <div className="flex flex-col h-screen w-full">
+          {/* Universal Navigation Header - MOBILE ONLY */}
+          {!isHelpDesk && <UniversalNavHeader />}
+          
+          {/* Main content area */}
+          <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/login">
+                <Redirect to="/dashboard" />
+              </Route>
+              <Route path="/register">
+                <Redirect to="/dashboard" />
+              </Route>
+              <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/schedule" component={UniversalSchedule} />
+              <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
+              <Route path="/daily-schedule" component={DailySchedule} />
+              <Route path="/workflow-approvals" component={WorkflowApprovals} />
+              <Route path="/sales" component={SalesDashboard} />
+              <Route path="/time-tracking" component={TimeTracking} />
+              <Route path="/employees" component={Employees} />
+              <Route path="/role-management" component={RoleManagement} />
+              <Route path="/manager-dashboard" component={ManagerDashboard} />
+              <Route path="/engagement/dashboard" component={EngagementDashboard} />
+              <Route path="/engagement/employee" component={EmployeeEngagement} />
+              <Route path="/analytics/reports" component={AnalyticsReportsPage} />
+              <Route path="/clients" component={Clients} />
+              <Route path="/invoices" component={Invoices} />
+              <Route path="/reports" component={Reports} />
+              <Route path="/analytics" component={Analytics} />
+              <Route path="/audit-logs" component={AuditLogs} />
+              <Route path="/ai/command-center" component={AICommandCenter} />
+              <Route path="/billing" component={Billing} />
+              <Route path="/integrations" component={IntegrationsPage} />
+              <Route path="/oversight" component={OversightHub} />
+              <Route path="/expenses" component={Expenses} />
+              <Route path="/expense-approvals" component={ExpenseApprovals} />
+              <Route path="/pending"><Redirect to="/timesheets/pending" /></Route>
+              <Route path="/timesheets/pending" component={PendingTimeEntries} />
+              <Route path="/timesheets/approvals" component={TimesheetApprovals} />
+              <Route path="/i9-compliance" component={I9Compliance} />
+              <Route path="/policies" component={Policies} />
+              <Route path="/payroll" component={PayrollDashboard} />
+              <Route path="/my-paychecks" component={MyPaychecks} />
+              <Route path="/leaders-hub">
+                <LeaderRoute>
+                  <LeadersHub />
+                </LeaderRoute>
+              </Route>
+              <Route path="/hr/benefits" component={HRBenefits} />
+              <Route path="/hr/reviews" component={HRReviews} />
+              <Route path="/hr/pto" component={HRPTO} />
+              <Route path="/hr/terminations" component={HRTerminations} />
+              <Route path="/disputes" component={Disputes} />
+              <Route path="/my-audit-record" component={MyAuditRecord} />
+              <Route path="/file-grievance" component={FileGrievance} />
+              <Route path="/review-disputes" component={ReviewDisputes} />
+              <Route path="/comm-os" component={AICommunications} />
+              <Route path="/comm-os/onboarding" component={AICommunicationsOnboarding} />
+              <Route path="/query-os" component={AIDiagnostics} />
+              <Route path="/messages" component={PrivateMessages} />
+              <Route path="/chat-export" component={ChatExport} />
+              <Route path="/training" component={AITraining} />
+              <Route path="/budget" component={AIBudgeting} />
+              <Route path="/integrations" component={AIIntegrations} />
+              <Route path="/search" component={AIRecords} />
+              <Route path="/insights" component={AIAnalytics} />
+
+              {/* OS Family Showcase Pages */}
+              <Route path="/os-family/communication" component={CommunicationFamilyPage} />
+              <Route path="/os-family/operations" component={OperationsFamilyPage} />
+              <Route path="/os-family/growth" component={GrowthFamilyPage} />
+              <Route path="/os-family/platform" component={PlatformFamilyPage} />
+
+              {/* User Menu Routes */}
+              <Route path="/profile" component={Profile} />
+              <Route path="/unavailability" component={Unavailability} />
+              <Route path="/create-org" component={CreateOrg} />
+              <Route path="/updates" component={Updates} />
+              <Route path="/help" component={Help} />
+
+              {/* Support & Admin routes */}
+              <Route path="/org-support" component={OrgSupport} />
+              
+              {/* Unified Root Administrator Control Center */}
+              <Route path="/root-admin-dashboard">
+                <PlatformAdminRoute>
+                  <RootAdminDashboard />
+                </PlatformAdminRoute>
+              </Route>
+              
+              {/* Redirect old admin dashboards to unified control center */}
+              <Route path="/platform-admin">
+                <Redirect to="/root-admin-dashboard" />
+              </Route>
+              <Route path="/admin-command-center">
+                <Redirect to="/root-admin-dashboard" />
+              </Route>
+              <Route path="/root-admin-portal">
+                <Redirect to="/root-admin-dashboard" />
+              </Route>
+              <Route path="/platform/admin">
+                <Redirect to="/root-admin-dashboard" />
+              </Route>
+              <Route path="/admin/command">
+                <Redirect to="/root-admin-dashboard" />
+              </Route>
+              
+              {/* Platform admin tools (accessible from control center) */}
+              <Route path="/admin/usage" component={AdminUsage} />
+              <Route path="/admin/support" component={AdminSupport} />
+              <Route path="/admin/custom-forms" component={AdminCustomForms} />
+              <Route path="/owner/hireos/workflow-builder" component={HiringWorkflowBuilder} />
+              <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
+              <Route path="/support/dashboard" component={SupportDashboard} />
+              <Route path="/platform/users" component={PlatformUsers} />
+              <Route path="/company-reports" component={CompanyReports} />
+              <Route path="/platform/sales" component={SalesPortal} />
+              <Route path="/employee/portal" component={EmployeePortal} />
+              <Route path="/auditor/portal" component={AuditorPortal} />
+              <Route path="/client/portal" component={ClientPortal} />
+              <Route path="/settings" component={Settings} />
+              <Route path="/employee/profile" component={EmployeeProfile} />
+              <Route path="/pricing" component={Pricing} />
+              <Route path="/contact" component={Contact} />
+              <Route path="/support/tickets" component={CustomerSupport} />
+              <Route path="/terms" component={TermsOfService} />
+              <Route path="/privacy" component={PrivacyPolicy} />
+              {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT */}
+              <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
+              <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
+              
+              {/* Redirect legacy chat routes to unified /chat */}
+              <Route path="/support/chat"><Redirect to="/chat" /></Route>
+              <Route path="/live-chat"><Redirect to="/chat" /></Route>
+              <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
+              <Route path="/logo-showcase" component={LogoShowcase} />
+              <Route path="/support" component={Support} />
+              
+              {/* Error pages */}
+              <Route path="/error-403" component={Error403} />
+              <Route path="/error-404" component={Error404} />
+              <Route path="/error-500" component={Error500} />
+              
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+        <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      </ProtectedRoute>
+    );
+  }
+
+  // Desktop layout with SidebarProvider
   return (
     <ProtectedRoute>
       <CommandPalette />
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
         <div className="flex h-screen w-full">
-          {/* Desktop Sidebar - ONLY shown on desktop */}
+          {/* Desktop Sidebar */}
           {!isMobileChat && !isMobile && <AppSidebar />}
           
           {/* Main content container */}
           <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
-            {/* Universal Navigation Header - MOBILE ONLY (desktop uses left sidebar instead) */}
-            {!isHelpDesk && isMobile && <UniversalNavHeader />}
-
             {/* Desktop sidebar toggle + workspace info */}
             {!isHelpDesk && !isMobile && (
               <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -276,7 +434,7 @@ function AppContent() {
               <AppUtilityCluster setLocation={setLocation} />
             )}
 
-            {/* Main content area - no padding needed for floating utility cluster */}
+            {/* Main content area */}
             <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
               {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
               {!isMobileChat && !isHelpDesk && !isMobile && false && <PageBreadcrumb />}
