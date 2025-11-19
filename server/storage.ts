@@ -4820,7 +4820,7 @@ export class DatabaseStorage implements IStorage {
     return checklist;
   }
   
-  async getAI HiringComplianceReport(workspaceId: string): Promise<any> {
+  async getHiringComplianceReport(workspaceId: string): Promise<any> {
     // Get all employees
     const allEmployees = await this.getEmployeesByWorkspace(workspaceId);
     
