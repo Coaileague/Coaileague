@@ -676,9 +676,9 @@ async function runWeeklyScheduleGeneration() {
                     
                     // Call AI Brain to generate schedule
                     const aiBrain = new AIBrainService();
-                    const job = await aiBrain.enqueueJob({
+                    const result = await aiBrain.enqueueJob({
                       workspaceId: workspace.id,
-                      jobType: 'schedule_generation',
+                      skill: 'scheduleos_generation', // Correct field name is 'skill'
                       input: {
                         shifts: [], // TODO: Load existing shift templates/requirements
                         employees: workspaceEmployees.map(e => ({
@@ -694,14 +694,12 @@ async function runWeeklyScheduleGeneration() {
                       },
                     });
                     
-                    // Process job synchronously (AI Brain persists shifts automatically via persistScheduleAssignments)
-                    const result = await aiBrain.processJob(job.id);
-                    
+                    // AI Brain processes job immediately and returns result
                     if (result.status === 'completed') {
                       shiftsGenerated = result.output?.assignments?.length || 0;
                       console.log(`   ✅ AI Brain generated ${shiftsGenerated} shift assignment(s)`);
                     } else if (result.status === 'failed') {
-                      console.error(`   ❌ AI Brain job failed: ${result.errorMessage}`);
+                      console.error(`   ❌ AI Brain job failed: ${result.error}`);
                     }
                   }
                 } catch (aiError: any) {
@@ -1364,6 +1362,7 @@ export function startAutonomousScheduler() {
   // 1. Nightly Invoice Generation (2 AM daily)
   if (SCHEDULER_CONFIG.invoicing.enabled) {
     cron.schedule(SCHEDULER_CONFIG.invoicing.schedule, () => {
+      console.log(`🕐 [CRON EXECUTING] Invoice generation triggered at ${new Date().toISOString()}`);
       runNightlyInvoiceGeneration();
     });
     console.log('✅ Smart Billing Automation:');
@@ -1374,6 +1373,7 @@ export function startAutonomousScheduler() {
   // 2. Schedule Generation (11 PM daily)
   if (SCHEDULER_CONFIG.scheduling.enabled) {
     cron.schedule(SCHEDULER_CONFIG.scheduling.schedule, () => {
+      console.log(`🕐 [CRON EXECUTING] Schedule generation triggered at ${new Date().toISOString()}`);
       runWeeklyScheduleGeneration();
     });
     console.log('✅ AI Scheduling Automation:');
@@ -1384,6 +1384,7 @@ export function startAutonomousScheduler() {
   // 3. Automatic Payroll Processing (3 AM daily)
   if (SCHEDULER_CONFIG.payroll.enabled) {
     cron.schedule(SCHEDULER_CONFIG.payroll.schedule, () => {
+      console.log(`🕐 [CRON EXECUTING] Payroll processing triggered at ${new Date().toISOString()}`);
       runAutomaticPayrollProcessing();
     });
     console.log('✅ Auto Payroll Automation:');

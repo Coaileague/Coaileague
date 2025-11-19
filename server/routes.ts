@@ -23402,6 +23402,66 @@ Respond with valid JSON array only.`
   });
 
   // ============================================================================
+  // AUTONOMOUS OPERATIONS TEST ENDPOINTS (Development/Testing Only)
+  // ============================================================================
+  app.post('/api/test/autonomous/invoice', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log('🧪 Manual trigger: Invoice generation requested by', req.user?.email);
+      const { manualTriggers } = await import('./services/autonomousScheduler');
+      const result = await manualTriggers.invoicing();
+      res.json({ 
+        success: true, 
+        message: 'Invoice generation completed',
+        result 
+      });
+    } catch (error: any) {
+      console.error('❌ Manual invoice generation failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
+  app.post('/api/test/autonomous/schedule', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log('🧪 Manual trigger: Schedule generation requested by', req.user?.email);
+      const { manualTriggers } = await import('./services/autonomousScheduler');
+      const result = await manualTriggers.scheduling();
+      res.json({ 
+        success: true, 
+        message: 'Schedule generation completed',
+        result 
+      });
+    } catch (error: any) {
+      console.error('❌ Manual schedule generation failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
+  app.post('/api/test/autonomous/payroll', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log('🧪 Manual trigger: Payroll processing requested by', req.user?.email);
+      const { manualTriggers } = await import('./services/autonomousScheduler');
+      const result = await manualTriggers.payroll();
+      res.json({ 
+        success: true, 
+        message: 'Payroll processing completed',
+        result 
+      });
+    } catch (error: any) {
+      console.error('❌ Manual payroll processing failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
+  // ============================================================================
   // SERVICE HEALTH & INCIDENT REPORTING ROUTES
   // ============================================================================
   const { registerHealthRoutes } = await import("./routes/health");
