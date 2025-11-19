@@ -709,6 +709,122 @@ export type InsertEmployeeMetrics = z.infer<typeof insertEmployeeMetricsSchema>;
 export type EmployeeMetrics = typeof employeeMetrics.$inferSelect;
 
 // ============================================================================
+// UNIVERSAL DATA MIGRATION SYSTEM
+// ============================================================================
+
+// Document type enum for migration system
+export const migrationDocumentTypeEnum = pgEnum('migration_document_type', [
+  'employees', 'payroll', 'schedules', 'invoices', 'timesheets', 'clients', 'other'
+]);
+
+// Migration job status
+export const migrationJobStatusEnum = pgEnum('migration_job_status', [
+  'uploaded', 'analyzing', 'reviewed', 'importing', 'completed', 'failed', 'cancelled'
+]);
+
+// Migration jobs - Track overall migration sessions
+export const migrationJobs = pgTable("migration_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  status: migrationJobStatusEnum("status").default('uploaded').notNull(),
+  totalDocuments: integer("total_documents").default(0),
+  processedDocuments: integer("processed_documents").default(0),
+  
+  // AI Brain integration
+  syncedToAiBrain: boolean("synced_to_ai_brain").default(false),
+  aiBrainJobId: varchar("ai_brain_job_id"), // Reference to AI Brain knowledge graph job
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_migration_jobs_workspace").on(table.workspaceId),
+  index("idx_migration_jobs_status").on(table.status),
+]);
+
+export const insertMigrationJobSchema = createInsertSchema(migrationJobs).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export type InsertMigrationJob = z.infer<typeof insertMigrationJobSchema>;
+export type MigrationJob = typeof migrationJobs.$inferSelect;
+
+// Migration documents - Track individual uploaded files
+export const migrationDocuments = pgTable("migration_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => migrationJobs.id, { onDelete: 'cascade' }),
+  
+  fileName: varchar("file_name").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: varchar("mime_type").notNull(),
+  
+  detectedType: migrationDocumentTypeEnum("detected_type").notNull(),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).default("0.00"), // 0-100%
+  
+  extractedData: jsonb("extracted_data"), // Raw JSON from Gemini
+  validationErrors: jsonb("validation_errors").default(sql`'[]'::jsonb`),
+  warnings: jsonb("warnings").default(sql`'[]'::jsonb`),
+  
+  recordsExtracted: integer("records_extracted").default(0),
+  recordsImported: integer("records_imported").default(0),
+  
+  requiresReview: boolean("requires_review").default(false),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_migration_documents_job").on(table.jobId),
+  index("idx_migration_documents_type").on(table.detectedType),
+]);
+
+export const insertMigrationDocumentSchema = createInsertSchema(migrationDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMigrationDocument = z.infer<typeof insertMigrationDocumentSchema>;
+export type MigrationDocument = typeof migrationDocuments.$inferSelect;
+
+// Migration records - Track individual extracted records for audit and AI sync
+export const migrationRecords = pgTable("migration_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => migrationDocuments.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  recordType: migrationDocumentTypeEnum("record_type").notNull(),
+  extractedData: jsonb("extracted_data").notNull(), // Individual record data
+  
+  importedToTable: varchar("imported_to_table"), // employees, shifts, invoices, etc.
+  importedRecordId: varchar("imported_record_id"), // ID of created record
+  
+  importStatus: varchar("import_status").default('pending'), // pending, imported, failed, skipped
+  importError: text("import_error"),
+  
+  // Role sync - ALL workspace roles can access via audit systems
+  accessibleByRoles: text("accessible_by_roles").array().default(sql`ARRAY['org_owner', 'org_admin', 'org_manager', 'employee', 'support_staff']::text[]`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  importedAt: timestamp("imported_at"),
+}, (table) => [
+  index("idx_migration_records_document").on(table.documentId),
+  index("idx_migration_records_workspace").on(table.workspaceId),
+  index("idx_migration_records_type").on(table.recordType),
+]);
+
+export const insertMigrationRecordSchema = createInsertSchema(migrationRecords).omit({
+  id: true,
+  createdAt: true,
+  importedAt: true,
+});
+
+export type InsertMigrationRecord = z.infer<typeof insertMigrationRecordSchema>;
+export type MigrationRecord = typeof migrationRecords.$inferSelect;
+
+// ============================================================================
 // CONTRACTOR POOL & MARKETPLACE TABLES
 // ============================================================================
 
