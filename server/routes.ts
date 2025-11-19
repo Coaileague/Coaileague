@@ -2394,6 +2394,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * Get workspace usage and cost summary
+   * Returns AI token usage, partner API usage, and cost breakdown with tier markup
+   * RBAC: org_owner and org_admin only (billing visibility)
+   */
+  app.get('/api/workspace/usage-summary', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { resolveWorkspaceForUser } = await import('./rbac');
+      const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
+
+      if (!workspaceId) {
+        return res.status(400).json({ error: error || 'No workspace found' });
+      }
+
+      // RBAC: Only org_owner and org_admin can view billing data
+      if (role !== 'org_owner' && role !== 'org_admin') {
+        return res.status(403).json({ error: 'Insufficient permissions to view usage data' });
+      }
+
+      // Get current month by default, or custom period from query params
+      const now = new Date();
+      const year = parseInt(req.query.year as string) || now.getFullYear();
+      const month = parseInt(req.query.month as string) || (now.getMonth() + 1);
+
+      // Import and call cost aggregation service
+      const { costAggregationService } = await import('./services/billing/costAggregation');
+      const summary = await costAggregationService.calculateMonthlyCosts(workspaceId, year, month);
+
+      res.json(summary);
+    } catch (error) {
+      console.error('[API] Error fetching usage summary:', error);
+      res.status(500).json({ message: 'Failed to fetch usage summary' });
+    }
+  });
+
   // ==================== REPORTING API ROUTES ====================
   
   /**
