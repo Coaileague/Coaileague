@@ -72,6 +72,9 @@ import { seedAnchor } from './services/utils/scheduling';
 import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { clientsQuerySchema } from "../shared/validation/pagination";
+import bcrypt from 'bcryptjs';
+import { creditManager } from './services/billing/creditManager';
+import { subscriptionManager } from './services/billing/subscriptionManager';
 import { 
   insertWorkspaceSchema,
   insertEmployeeSchema,
@@ -1127,6 +1130,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // AUTH ROUTES
   // ============================================================================
+
+  // Organization Registration - Atomic transaction creates User → Workspace → Employee → Credits
+  app.post('/api/auth/register', async (req: any, res) => {
+    try {
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
+        companyName,
+        subscriptionTier = 'free', // free, starter, professional, enterprise
+        billingCycle = 'monthly', // monthly, yearly
+        paymentMethodId, // Optional Stripe payment method for paid tiers
+      } = req.body;
+
+      // Validation
+      if (!email || !password || !firstName || !lastName || !companyName) {
+        return res.status(400).json({
+          message: 'Email, password, first name, last name, and company name are required',
+        });
+      }
+
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+      }
+
+      // Password strength validation
+      if (password.length < 8) {
+        return res.status(400).json({
+          message: 'Password must be at least 8 characters long',
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({
+          message: 'An account with this email already exists',
+        });
+      }
+
+      // Validate subscription tier
+      const validTiers = ['free', 'starter', 'professional', 'enterprise'];
+      if (!validTiers.includes(subscriptionTier)) {
+        return res.status(400).json({
+          message: 'Invalid subscription tier',
+        });
+      }
+
+      console.log(`🚀 Starting organization registration for ${email} (${subscriptionTier} tier)`);
+
+      // ATOMIC TRANSACTION: Create user, workspace, employee, credits
+      const result = await db.transaction(async (tx) => {
+        // 1. Create User
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const [user] = await tx.insert(users).values({
+          id: userId,
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          createdAt: new Date(),
+        }).returning();
+
+        console.log(`✅ User created: ${user.id}`);
+
+        // 2. Create Workspace
+        const workspaceId = `workspace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const [workspace] = await tx.insert(workspaces).values({
+          id: workspaceId,
+          name: companyName.trim(),
+          ownerId: user.id,
+          subscriptionTier,
+          subscriptionStatus: 'active',
+          createdAt: new Date(),
+        }).returning();
+
+        console.log(`✅ Workspace created: ${workspace.id}`);
+
+        // 3. Create Employee record for owner
+        const employeeId = `employee-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const [employee] = await tx.insert(employees).values({
+          id: employeeId,
+          workspaceId: workspace.id,
+          userId: user.id,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.toLowerCase(),
+          status: 'active',
+          role: 'org_owner',
+          createdAt: new Date(),
+        }).returning();
+
+        console.log(`✅ Employee record created: ${employee.id}`);
+
+        return { user, workspace, employee };
+      });
+
+      const { user, workspace, employee } = result;
+
+      // 4. Initialize credits (outside transaction for retry safety)
+      await creditManager.initializeCredits(workspace.id, subscriptionTier as any);
+      console.log(`✅ Credits initialized: ${subscriptionTier} tier allocation`);
+
+      // 5. Create Stripe subscription if paid tier
+      if (subscriptionTier !== 'free') {
+        const subscriptionResult = await subscriptionManager.createSubscription({
+          workspaceId: workspace.id,
+          tier: subscriptionTier as any,
+          billingCycle: billingCycle as any,
+          paymentMethodId,
+        });
+
+        if (!subscriptionResult.success) {
+          console.error('Subscription creation failed:', subscriptionResult.error);
+          return res.status(400).json({
+            message: subscriptionResult.error || 'Failed to create subscription',
+          });
+        }
+
+        console.log(`✅ Subscription created: ${subscriptionTier} (${billingCycle})`);
+      }
+
+      // 6. Send welcome notification
+      await notificationHelpers.sendWelcomeOrgNotification(workspace.id, user.id);
+
+      console.log(`✅ Welcome notification sent`);
+
+      // 7. Create session
+      req.session.userId = user.id;
+      req.session.passport = {
+        user: {
+          claims: {
+            sub: user.id,
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+          },
+          expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+          refresh_token: 'auto-refresh',
+        },
+      };
+
+      await new Promise((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) reject(err);
+          else resolve(undefined);
+        });
+      });
+
+      console.log(`✅ Organization registration complete: ${workspace.id}`);
+
+      res.json({
+        success: true,
+        message: 'Organization registered successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        workspace: {
+          id: workspace.id,
+          name: workspace.name,
+          subscriptionTier: workspace.subscriptionTier,
+        },
+      });
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      res.status(500).json({
+        message: error.message || 'Registration failed. Please try again.',
+      });
+    }
+  });
   
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {

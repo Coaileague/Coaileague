@@ -190,8 +190,18 @@ export class CostAggregationService {
   /**
    * Generate Stripe invoice line items for usage-based billing
    * 
-   * This creates the line items that will be added to the monthly Stripe invoice.
-   * Each line item represents a different usage category with markup applied.
+   * IMPORTANT: This ONLY bills for PARTNER API costs (QuickBooks, Gusto, Stripe).
+   * AI token usage is NOT included here - it's already covered by the credit system.
+   * 
+   * Credit System (Primary Billing):
+   * - Users buy credits via subscription or credit packs
+   * - AI automations deduct credits when they run
+   * - No separate invoicing for AI usage
+   * 
+   * Partner API Costs (Separate Billing):
+   * - QuickBooks/Gusto/Stripe API calls are billed separately
+   * - Pass-through pricing with tier-based markup
+   * - Invoiced monthly via this method
    */
   async generateInvoiceLineItems(
     workspaceId: string,
@@ -211,22 +221,8 @@ export class CostAggregationService {
       metadata: any;
     }> = [];
     
-    // AI Token Usage Line Item
-    if (costSummary.aiTokenCost > 0) {
-      lineItems.push({
-        description: `AI Token Usage (${costSummary.period})`,
-        amount: Math.round((costSummary.aiTokenCost + costSummary.aiTokenCost * costSummary.markupRate) * 100), // Convert to cents
-        quantity: costSummary.aiApiCalls,
-        metadata: {
-          workspaceId,
-          period: costSummary.period,
-          category: 'ai_tokens',
-          baseCost: costSummary.aiTokenCost,
-          markupRate: costSummary.markupRate,
-          tier: costSummary.workspaceTier,
-        },
-      });
-    }
+    // ❌ AI Token Usage NOT included - already covered by credit system
+    // AI costs are tracked for analytics only, not billed separately
     
     // QuickBooks API Usage Line Item
     if (costSummary.quickbooksCost > 0) {

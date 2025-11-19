@@ -17,7 +17,7 @@ import { eq } from 'drizzle-orm';
 import { CreditManager, TIER_CREDIT_ALLOCATIONS } from './creditManager';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-09-30.clover',
 });
 
 // Subscription tier pricing (monthly base prices)
@@ -94,9 +94,15 @@ export class SubscriptionManager {
       return workspace.stripeCustomerId;
     }
 
+    // Get owner's email for Stripe customer
+    const [owner] = await db.select()
+      .from(users)
+      .where(eq(users.id, workspace.ownerId))
+      .limit(1);
+
     // Create new Stripe customer
     const customer = await stripe.customers.create({
-      email: workspace.email || undefined,
+      email: owner?.email || undefined,
       metadata: {
         workspaceId: workspace.id,
         organizationId: workspace.organizationId || workspace.id,
@@ -184,13 +190,19 @@ export class SubscriptionManager {
       // Initialize credits for tier
       await this.creditManager.initializeCredits(workspaceId, tier);
 
-      const invoice = subscription.latest_invoice as Stripe.Invoice;
-      const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent;
+      // Extract client secret for payment confirmation
+      let clientSecret: string | undefined;
+      if (subscription.latest_invoice) {
+        const invoice = subscription.latest_invoice as any;
+        if (invoice.payment_intent && typeof invoice.payment_intent === 'object') {
+          clientSecret = invoice.payment_intent.client_secret;
+        }
+      }
 
       return {
         success: true,
         subscriptionId: subscription.id,
-        clientSecret: paymentIntent?.client_secret || undefined,
+        clientSecret,
       };
     } catch (error: any) {
       console.error('Subscription creation error:', error);
@@ -464,11 +476,11 @@ export class SubscriptionManager {
       monthlyPrice: pricing.monthlyPrice,
       yearlyPrice: pricing.yearlyPrice,
       monthlyCredits: pricing.credits,
-      currentBalance: creditBalance.currentBalance,
+      currentBalance: creditBalance,
       stripeSubscription,
       billingCycle: stripeSubscription?.items.data[0]?.price?.recurring?.interval || 'monthly',
-      currentPeriodEnd: stripeSubscription?.current_period_end 
-        ? new Date(stripeSubscription.current_period_end * 1000) 
+      currentPeriodEnd: stripeSubscription && (stripeSubscription as any).current_period_end
+        ? new Date((stripeSubscription as any).current_period_end * 1000) 
         : null,
     };
   }
