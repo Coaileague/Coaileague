@@ -58,7 +58,7 @@ import { SupportChatroomList } from "@/components/support-chatroom-list";
 import { MessageSearch } from "@/components/message-search";
 import { WebRTCCall } from "@/components/webrtc-call";
 
-export default function AI Communications() {
+export default function AICommunications() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);

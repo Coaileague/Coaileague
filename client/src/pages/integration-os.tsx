@@ -65,7 +65,7 @@ interface WebhookData {
   deliveryCount?: number;
 }
 
-export default function AI Integrations() {
+export default function AIIntegrations() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");

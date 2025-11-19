@@ -42,7 +42,7 @@ interface BudgetLine {
   variancePercent: number;
 }
 
-export default function AI Budgeting() {
+export default function AIBudgeting() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);

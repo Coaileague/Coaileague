@@ -60,7 +60,7 @@ interface Certification {
   status: "valid" | "expired" | "revoked";
 }
 
-export default function AI Training() {
+export default function AITraining() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");

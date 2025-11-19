@@ -24,7 +24,7 @@ interface SearchMetadata {
   searchType: string;
 }
 
-export default function AI Records() {
+export default function AIRecords() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<string>("all");
   const [results, setResults] = useState<SearchResult | null>(null);

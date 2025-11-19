@@ -13,7 +13,7 @@ import { MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 }
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
-export default function AI CommunicationsOnboarding() {
+export default function AICommunicationsOnboarding() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();

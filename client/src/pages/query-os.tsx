@@ -61,7 +61,7 @@ interface SessionInfo {
   lastActivity?: string;
 }
 
-export default function AI Diagnostics() {
+export default function AIDiagnostics() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();

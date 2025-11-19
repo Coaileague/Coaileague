@@ -12,12 +12,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-interface AI SchedulingPanelProps {
+interface AISchedulingPanelProps {
   weekStartDate: Date;
   onScheduleGenerated?: () => void;
 }
 
-export function AI SchedulingPanel({ weekStartDate, onScheduleGenerated }: AI SchedulingPanelProps) {
+export function AISchedulingPanel({ weekStartDate, onScheduleGenerated }: AISchedulingPanelProps) {
   const { toast } = useToast();
   const [showPreview, setShowPreview] = useState(false);
 

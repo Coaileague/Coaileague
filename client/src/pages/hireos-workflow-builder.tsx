@@ -350,7 +350,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
   );
 }
 
-export default function AI HiringWorkflowBuilder() {
+export default function AIHiringWorkflowBuilder() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [editingStep, setEditingStep] = useState<any>(null);

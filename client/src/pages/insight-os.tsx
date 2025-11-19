@@ -46,7 +46,7 @@ interface AiInsight {
   createdAt: string;
 }
 
-export default function AI Analytics() {
+export default function AIAnalytics() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [dismissingInsight, setDismissingInsight] = useState<string | null>(null);
   const [dismissReason, setDismissReason] = useState("");
