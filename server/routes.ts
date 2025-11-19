@@ -31,6 +31,7 @@ import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
+import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -1111,6 +1112,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
   app.use('/api/automation', requireAuth, automationRouter);
+
+  // Data Migration routes (Import from external platforms) - REQUIRES AUTH
+  app.use('/api/migration', requireAuth, migrationRouter);
 
   // Register AI Dispatch™ routes (GPS tracking, incident management, CAD operations)
   const dispatchRouter = (await import('./routes/dispatch')).default;
