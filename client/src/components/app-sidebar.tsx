@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, GraduationCap, Search, HelpCircle, MessageSquare } from "lucide-react";
+import { ChevronDown, ChevronRight, GraduationCap, Search, HelpCircle, MessageSquare, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -260,6 +260,7 @@ export function AppSidebar() {
         {/* Collapsed State - Icon Only Buttons */}
         {state === 'collapsed' && (
           <div className="flex flex-col items-center gap-2">
+            {/* Tutorial Icon */}
             <Button
               variant="ghost"
               size="icon"
@@ -273,6 +274,8 @@ export function AppSidebar() {
             >
               <GraduationCap className="h-4 w-4" />
             </Button>
+            
+            {/* Search Icon */}
             <Button
               variant="ghost"
               size="icon"
@@ -285,6 +288,45 @@ export function AppSidebar() {
               data-testid="button-sidebar-search-collapsed"
             >
               <Search className="h-4 w-4" />
+            </Button>
+
+            {/* Help Icon */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.open('https://docs.autoforce.com', '_blank')}
+              className="w-10 h-10"
+              data-testid="button-sidebar-help-collapsed"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+
+            {/* Feedback Icon */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const feedbackURL = `/feedback`;
+                window.location.href = feedbackURL;
+              }}
+              className="w-10 h-10"
+              data-testid="button-sidebar-feedback-collapsed"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+
+            {/* What's New Icon with Badge */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const whatsNewURL = `/whats-new`;
+                window.location.href = whatsNewURL;
+              }}
+              className="w-10 h-10 relative"
+              data-testid="button-sidebar-whatsnew-collapsed"
+            >
+              <Sparkles className="h-4 w-4" />
             </Button>
           </div>
         )}

@@ -195,60 +195,62 @@ export function UniversalNavHeader() {
                 ))}
               </div>
 
-              {/* Quick Tools Section */}
-              <div className="p-4 border-t border-border space-y-3">
-                {/* Plan Badge */}
-                <PlanBadge />
+              {/* Quick Tools Section - Only show when authenticated */}
+              {user && !isLoading && (
+                <div className="p-4 border-t border-border space-y-3">
+                  {/* Plan Badge */}
+                  <PlanBadge />
 
-                {/* Tutorial & Search - Grid Layout */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if ((window as any).setShowOnboarding) {
-                        (window as any).setShowOnboarding(true);
-                      }
-                      setSidebarOpen(false);
-                    }}
-                    className="justify-start gap-2 h-9"
-                    data-testid="button-mobile-tutorial"
-                  >
-                    <GraduationCap className="h-4 w-4" />
-                    <span className="text-xs">Tutorial</span>
-                  </Button>
+                  {/* Tutorial & Search - Grid Layout */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if ((window as any).setShowOnboarding) {
+                          (window as any).setShowOnboarding(true);
+                        }
+                        setSidebarOpen(false);
+                      }}
+                      className="justify-start gap-2 h-9"
+                      data-testid="button-mobile-tutorial"
+                    >
+                      <GraduationCap className="h-4 w-4" />
+                      <span className="text-xs">Tutorial</span>
+                    </Button>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if ((window as any).openCommandPalette) {
-                        (window as any).openCommandPalette();
-                      } else {
-                        const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
-                        document.dispatchEvent(event);
-                      }
-                      setSidebarOpen(false);
-                    }}
-                    className="justify-start gap-2 h-9"
-                    data-testid="button-mobile-search"
-                  >
-                    <Search className="h-4 w-4" />
-                    <span className="text-xs">Search</span>
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if ((window as any).openCommandPalette) {
+                          (window as any).openCommandPalette();
+                        } else {
+                          const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                          document.dispatchEvent(event);
+                        }
+                        setSidebarOpen(false);
+                      }}
+                      className="justify-start gap-2 h-9"
+                      data-testid="button-mobile-search"
+                    >
+                      <Search className="h-4 w-4" />
+                      <span className="text-xs">Search</span>
+                    </Button>
+                  </div>
+
+                  {/* Help & Feedback - Grid Layout */}
+                  <div className="grid grid-cols-2 gap-2" onClick={() => setSidebarOpen(false)}>
+                    <HelpDropdown />
+                    <FeedbackWidget />
+                  </div>
+
+                  {/* What's New - Full Width */}
+                  <div className="w-full" onClick={() => setSidebarOpen(false)}>
+                    <WhatsNewBadge />
+                  </div>
                 </div>
-
-                {/* Help & Feedback - Grid Layout */}
-                <div className="grid grid-cols-2 gap-2" onClick={() => setSidebarOpen(false)}>
-                  <HelpDropdown />
-                  <FeedbackWidget />
-                </div>
-
-                {/* What's New - Full Width */}
-                <div className="w-full" onClick={() => setSidebarOpen(false)}>
-                  <WhatsNewBadge />
-                </div>
-              </div>
+              )}
 
               <Separator className="bg-border" />
 

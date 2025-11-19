@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "./db";
-import { users, platformRoles, employees } from "@shared/schema";
+import { users, platformRoles, employees, workspaces, expenseCategories } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import {
   hashPassword,
@@ -57,37 +57,89 @@ router.post("/api/auth/register", async (req, res) => {
     // Hash password
     const passwordHash = await hashPassword(data.password);
 
-    // Create user
-    const [newUser] = await db
-      .insert(users)
-      .values({
+    // Pre-generate organization identifiers (before transaction to avoid cross-boundary writes)
+    const { generateOrganizationId, generateOrganizationSerial } = await import('./services/identityService');
+    const orgId = generateOrganizationId();
+    const orgSerial = await generateOrganizationSerial();
+
+    // TRANSACTION: Create user + workspace + employee atomically
+    const { newUser, workspace, newEmployee } = await db.transaction(async (tx) => {
+      // 1. Create user
+      const [user] = await tx
+        .insert(users)
+        .values({
+          email: data.email,
+          passwordHash,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          emailVerified: false,
+          role: "user",
+        })
+        .returning();
+
+      // 2. Create workspace using pre-generated IDs
+      const [ws] = await tx.insert(workspaces).values({
+        name: `${data.firstName}'s Workspace`,
+        ownerId: user.id,
+        subscriptionTier: "free",
+        subscriptionStatus: "active",
+        organizationId: orgId,
+        organizationSerial: orgSerial,
+      }).returning();
+
+      console.log(`[Registration] Created workspace ${ws.id} for user ${user.id}`);
+
+      // Seed default expense categories (inline to use transaction)
+      const defaultCategories = [
+        { name: 'Mileage', description: 'Vehicle mileage reimbursement' },
+        { name: 'Meals', description: 'Business meals and entertainment' },
+        { name: 'Travel', description: 'Flights, hotels, and transportation' },
+        { name: 'Office Supplies', description: 'Office equipment and supplies' },
+      ];
+      for (const category of defaultCategories) {
+        try {
+          await tx.insert(expenseCategories).values({
+            workspaceId: ws.id,
+            name: category.name,
+            description: category.description,
+            isActive: true,
+          });
+        } catch (error: any) {
+          // Only ignore duplicate key violations (code '23505')
+          // Let other errors bubble up to abort the transaction
+          if (error.code === '23505') {
+            console.log(`Category ${category.name} already exists for workspace ${ws.id}`);
+          } else {
+            throw error; // Re-throw non-duplicate errors to rollback transaction
+          }
+        }
+      }
+
+      // 3. Update user with workspace ID
+      await tx
+        .update(users)
+        .set({ currentWorkspaceId: ws.id })
+        .where(eq(users.id, user.id));
+
+      // 4. Create employee record
+      const [emp] = await tx.insert(employees).values({
+        userId: user.id,
+        workspaceId: ws.id,
         email: data.email,
-        passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
-        emailVerified: false,
-        role: "user",
-      })
-      .returning();
+        workspaceRole: 'org_owner',
+        isActive: true,
+      }).returning();
 
-    // Auto-create workspace for new user
-    const { storage } = await import("./storage");
-    const workspace = await storage.createWorkspace({
-      name: `${data.firstName}'s Workspace`,
-      ownerId: newUser.id,
-      subscriptionTier: "free",
-      subscriptionStatus: "active",
+      console.log(`[Registration] Created employee ${emp.id} for workspace ${ws.id}`);
+
+      return { newUser: user, workspace: ws, newEmployee: emp };
     });
 
-    console.log(`[Registration] Created workspace ${workspace.id} for user ${newUser.id}`);
+    console.log(`[Registration] Transaction complete - user, workspace, and employee created`);
 
-    // Update user with workspace ID
-    await db
-      .update(users)
-      .set({ currentWorkspaceId: workspace.id })
-      .where(eq(users.id, newUser.id));
-
-    // Ensure org identifiers exist before creating employee (retry if needed)
+    // Ensure org identifiers exist (OUTSIDE transaction - won't rollback registration if it fails)
     const { ensureOrgIdentifiers } = await import('./services/identityService');
     try {
       await ensureOrgIdentifiers(workspace.id, workspace.name);
@@ -96,19 +148,6 @@ router.post("/api/auth/register", async (req, res) => {
       console.error(`[Registration] Failed to ensure org identifiers:`, orgError.message);
       // Don't fail registration - external IDs can be retried later
     }
-
-    // Create employee record for the workspace owner (separate from external ID attachment)
-    const [newEmployee] = await db.insert(employees).values({
-      userId: newUser.id,
-      workspaceId: workspace.id,
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      workspaceRole: 'org_owner',
-      isActive: true,
-    }).returning();
-
-    console.log(`[Registration] Created employee ${newEmployee.id} for workspace ${workspace.id}`);
 
     // Try to attach employee external ID (in separate transaction - won't rollback employee creation)
     try {
