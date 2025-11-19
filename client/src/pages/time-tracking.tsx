@@ -95,22 +95,50 @@ export default function TimeTracking() {
     return () => clearInterval(interval);
   }, []);
 
-  const { data: employees = [] } = useQuery<Employee[]>({
+  const { data: employees = [], isError: employeesError, error: employeesErrorObj, refetch: refetchEmployees } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
     enabled: isAuthenticated,
   });
 
   const { data: clients = [] } = useClientLookup();
 
-  const { data: shifts = [] } = useQuery<Shift[]>({
+  const { data: shifts = [], isError: shiftsError, error: shiftsErrorObj, refetch: refetchShifts } = useQuery<Shift[]>({
     queryKey: ["/api/shifts"],
     enabled: isAuthenticated,
   });
 
-  const { data: allTimeEntries = [] } = useQuery<TimeEntry[]>({
+  const { data: allTimeEntries = [], isError: entriesError, error: entriesErrorObj, refetch: refetchEntries } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries"],
     enabled: isAuthenticated,
   });
+
+  // Show error toasts when queries fail
+  useEffect(() => {
+    if (employeesError && employeesErrorObj) {
+      toast({
+        title: "Failed to Load Employees",
+        description: "Unable to fetch employee data. Please try again.",
+        variant: "destructive",
+        action: <Button variant="outline" size="sm" onClick={() => refetchEmployees()} data-testid="button-retry-employees">Retry</Button>,
+      });
+    }
+    if (shiftsError && shiftsErrorObj) {
+      toast({
+        title: "Failed to Load Shifts",
+        description: "Unable to fetch shift data. Please try again.",
+        variant: "destructive",
+        action: <Button variant="outline" size="sm" onClick={() => refetchShifts()} data-testid="button-retry-shifts">Retry</Button>,
+      });
+    }
+    if (entriesError && entriesErrorObj) {
+      toast({
+        title: "Failed to Load Time Entries",
+        description: "Unable to fetch time tracking data. Please try again.",
+        variant: "destructive",
+        action: <Button variant="outline" size="sm" onClick={() => refetchEntries()} data-testid="button-retry-entries">Retry</Button>,
+      });
+    }
+  }, [employeesError, employeesErrorObj, shiftsError, shiftsErrorObj, entriesError, entriesErrorObj, toast, refetchEmployees, refetchShifts, refetchEntries]);
 
   // Get current user's employee record to determine role
   const currentEmployee = employees.find(emp => emp.userId === user?.id);

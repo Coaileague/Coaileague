@@ -81,10 +81,26 @@ export default function Employees() {
     platformRole: "", // Empty = no platform role
   });
 
-  const { data: employees, isLoading } = useQuery<Employee[]>({
+  const { data: employees, isLoading, isError, error, refetch } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
     enabled: isAuthenticated,
   });
+
+  // Show error toast when query fails
+  useEffect(() => {
+    if (isError && error) {
+      toast({
+        title: "Failed to Load Employees",
+        description: error instanceof Error ? error.message : "Unable to fetch employee data. Please try again.",
+        variant: "destructive",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry-employees">
+            Retry
+          </Button>
+        ),
+      });
+    }
+  }, [isError, error, toast, refetch]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {

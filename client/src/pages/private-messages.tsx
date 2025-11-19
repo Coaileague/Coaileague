@@ -80,7 +80,7 @@ export default function PrivateMessages() {
   });
 
   // Fetch all conversations (DM threads)
-  const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
+  const { data: conversations = [], isLoading: conversationsLoading, isError: conversationsError, error: conversationsErrorObj, refetch: refetchConversations } = useQuery<Conversation[]>({
     queryKey: ['/api/private-messages/conversations'],
     enabled: !!user,
     refetchInterval: 5000, // Poll for new messages
@@ -100,7 +100,7 @@ export default function PrivateMessages() {
   });
 
   // Fetch messages for selected conversation
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<PrivateMessage[]>({
+  const { data: messages = [], isLoading: messagesLoading, isError: messagesError, error: messagesErrorObj, refetch: refetchMessages } = useQuery<PrivateMessage[]>({
     queryKey: ['/api/private-messages', selectedConversation],
     enabled: !!selectedConversation,
     refetchInterval: 3000, // Poll for new messages
@@ -119,6 +119,26 @@ export default function PrivateMessages() {
       }));
     },
   });
+
+  // Show error toasts when queries fail
+  useEffect(() => {
+    if (conversationsError && conversationsErrorObj) {
+      toast({
+        title: "Failed to Load Conversations",
+        description: "Unable to fetch messages. Please try again.",
+        variant: "destructive",
+        action: <Button variant="outline" size="sm" onClick={() => refetchConversations()} data-testid="button-retry-conversations">Retry</Button>,
+      });
+    }
+    if (messagesError && messagesErrorObj) {
+      toast({
+        title: "Failed to Load Messages",
+        description: "Unable to fetch conversation messages. Please try again.",
+        variant: "destructive",
+        action: <Button variant="outline" size="sm" onClick={() => refetchMessages()} data-testid="button-retry-messages">Retry</Button>,
+      });
+    }
+  }, [conversationsError, conversationsErrorObj, messagesError, messagesErrorObj, toast, refetchConversations, refetchMessages]);
 
   // Search users for new conversation
   const { data: searchResults = [], isLoading: searchLoading } = useQuery({
