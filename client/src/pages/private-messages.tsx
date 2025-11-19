@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
 import { WorkspaceLayout } from "@/components/workspace-layout";
-import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -872,9 +871,7 @@ export default function PrivateMessages() {
   if (isMobile) {
     return (
       <WorkspaceLayout>
-        <AppShellMobile title="Private Messages" showBack={true}>
-          {pageContent}
-        </AppShellMobile>
+        {pageContent}
       </WorkspaceLayout>
     );
   }

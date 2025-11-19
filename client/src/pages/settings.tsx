@@ -30,7 +30,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkspaceLayout } from "@/components/workspace-layout";
-import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 
@@ -911,9 +910,7 @@ export default function Settings() {
   if (isMobile) {
     return (
       <WorkspaceLayout>
-        <AppShellMobile title="Settings" showBack={true}>
-          {pageContent}
-        </AppShellMobile>
+        {pageContent}
       </WorkspaceLayout>
     );
   }

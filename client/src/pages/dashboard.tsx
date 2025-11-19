@@ -29,7 +29,6 @@ import { WorkspaceLayout, WorkspaceSection } from "@/components/workspace-layout
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIdentity } from "@/hooks/useIdentity";
-import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { MetricTile } from "@/components/metric-tile";
 
@@ -346,8 +345,7 @@ export default function Dashboard() {
       <WorkspaceLayout heroGradient>
         {isLoadingDashboard && <ResponsiveLoading />}
         
-        <AppShellMobile title="Dashboard" showBack={false}>
-          <div className="pb-4">
+        <div className="pb-4">
           {/* Welcome Card */}
           <Card className="mb-4 bg-white/95 backdrop-blur-sm border-2 border-gray-200 shadow-md">
             <CardHeader className="pb-3">
@@ -426,8 +424,7 @@ export default function Dashboard() {
               <FeatureCard icon={Calendar} label="Clients" href="/clients" />
             </div>
           </section>
-          </div>
-        </AppShellMobile>
+        </div>
       </WorkspaceLayout>
     );
   }

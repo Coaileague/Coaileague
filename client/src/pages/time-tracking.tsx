@@ -33,7 +33,6 @@ import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkspaceLayout } from "@/components/workspace-layout";
-import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/page-header";
 import { TimelineSkeleton, MetricsCardsSkeleton } from "@/components/loading-indicators/skeletons";
@@ -638,9 +637,7 @@ export default function TimeTracking() {
     if (isMobile) {
       return (
         <WorkspaceLayout>
-          <AppShellMobile title="Time Tracking" showBack={true}>
-            {loadingSkeleton}
-          </AppShellMobile>
+          {loadingSkeleton}
         </WorkspaceLayout>
       );
     }
@@ -1781,9 +1778,7 @@ export default function TimeTracking() {
   if (isMobile) {
     return (
       <WorkspaceLayout>
-        <AppShellMobile title="Time Tracking" showBack={true}>
-          {pageContent}
-        </AppShellMobile>
+        {pageContent}
       </WorkspaceLayout>
     );
   }

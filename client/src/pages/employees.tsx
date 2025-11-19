@@ -26,7 +26,6 @@ import {
 import { SwipeToDelete } from "@/components/swipe-to-delete";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkspaceLayout } from "@/components/workspace-layout";
-import { AppShellMobile } from "@/components/mobile/AppShellMobile";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import {
   Dialog,
@@ -790,9 +789,7 @@ export default function Employees() {
   if (isMobile) {
     return (
       <WorkspaceLayout>
-        <AppShellMobile title="Employees" showBack={true}>
-          {pageContent}
-        </AppShellMobile>
+        {pageContent}
       </WorkspaceLayout>
     );
   }
