@@ -23,6 +23,7 @@ import { storage } from '../storage';
 import { executeIdempotencyCheck, updateIdempotencyResult } from './autonomy/helpers';
 import { runWebSocketConnectionCleanup } from './wsConnectionCleanup';
 import crypto from 'crypto';
+import { createNotification } from './notificationService';
 
 // ============================================================================
 // IDEMPOTENCY FINGERPRINTING
@@ -408,17 +409,55 @@ async function runNightlyInvoiceGeneration() {
                   successCount++;
                   
                   // AUTONOMOUS BILLING: Automatically send invoices via Stripe
+                  let invoicesSent = 0;
                   for (const invoice of invoices) {
                     try {
                       const result = await sendInvoiceViaStripe(invoice.id);
                       if (result.success) {
                         console.log(`   📧 Sent invoice ${invoice.invoiceNumber} via Stripe (${result.stripeInvoiceId})`);
+                        invoicesSent++;
                       } else {
                         console.warn(`   ⚠️  Failed to send invoice ${invoice.invoiceNumber} via Stripe: ${result.error}`);
                       }
                     } catch (stripeError: any) {
                       console.error(`   ❌ Stripe error for invoice ${invoice.invoiceNumber}:`, stripeError.message);
                     }
+                  }
+                  
+                  // NOTIFY ORG OWNERS/ADMINS: Invoice generation complete
+                  try {
+                    const orgLeaders = await db.select()
+                      .from(employees)
+                      .where(
+                        and(
+                          eq(employees.workspaceId, workspace.id),
+                          sql`(${employees.workspaceRole} IN ('org_owner', 'org_admin'))`
+                        )
+                      );
+                    
+                    for (const leader of orgLeaders) {
+                      if (leader.userId) {
+                        await createNotification({
+                          workspaceId: workspace.id,
+                          userId: leader.userId,
+                          type: 'system',
+                          title: 'Invoices Generated Automatically',
+                          message: `AI Brain generated ${invoices.length} invoice(s) and sent ${invoicesSent} via Stripe. View invoices to review billing details.`,
+                          actionUrl: '/invoices',
+                          relatedEntityType: 'workspace',
+                          relatedEntityId: workspace.id,
+                          metadata: { 
+                            invoicesGenerated: invoices.length,
+                            invoicesSent,
+                            automationRun: runId,
+                          },
+                          createdBy: 'system-autoforce',
+                        });
+                      }
+                    }
+                    console.log(`   🔔 Notified ${orgLeaders.length} org leader(s) about invoice generation`);
+                  } catch (notifError) {
+                    console.warn(`   ⚠️  Failed to send notifications:`, notifError);
                   }
                 } else {
                   console.log(`ℹ️  No unbilled time entries for ${workspace.name}`);
@@ -701,6 +740,43 @@ async function runWeeklyScheduleGeneration() {
                 if (shiftsGenerated > 0) {
                   console.log(`✅ Generated ${shiftsGenerated} shift(s) for ${workspace.name}`);
                   successCount++;
+                  
+                  // NOTIFY ORG LEADERS: Schedule generation complete
+                  try {
+                    const orgLeaders = await db.select()
+                      .from(employees)
+                      .where(
+                        and(
+                          eq(employees.workspaceId, workspace.id),
+                          sql`(${employees.workspaceRole} IN ('org_owner', 'org_admin', 'department_manager'))`
+                        )
+                      );
+                    
+                    for (const leader of orgLeaders) {
+                      if (leader.userId) {
+                        await createNotification({
+                          workspaceId: workspace.id,
+                          userId: leader.userId,
+                          type: 'system',
+                          title: 'Schedule Generated Automatically',
+                          message: `AI Brain generated ${shiftsGenerated} shift assignment(s) for ${format(nextWeekStart, 'MMM d')} - ${format(nextWeekEnd, 'MMM d')}. Review the schedule to ensure accuracy.`,
+                          actionUrl: '/schedule',
+                          relatedEntityType: 'workspace',
+                          relatedEntityId: workspace.id,
+                          metadata: { 
+                            shiftsGenerated,
+                            weekStart: nextWeekStart.toISOString(),
+                            weekEnd: nextWeekEnd.toISOString(),
+                            automationRun: runId,
+                          },
+                          createdBy: 'system-autoforce',
+                        });
+                      }
+                    }
+                    console.log(`   🔔 Notified ${orgLeaders.length} leader(s) about schedule generation`);
+                  } catch (notifError) {
+                    console.warn(`   ⚠️  Failed to send notifications:`, notifError);
+                  }
                 } else {
                   console.log(`ℹ️  No shifts generated (templates not configured)`);
                 }
