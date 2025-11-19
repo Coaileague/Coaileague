@@ -11,7 +11,7 @@
  * Each automation (scheduling, invoicing, payroll) costs a specific number of credits.
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { 
   workspaceCredits, 
   creditTransactions, 

@@ -103,7 +103,7 @@ export function BuyCreditsModal({ open, onOpenChange }: BuyCreditsModalProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            {packs?.map((pack) => {
+            {(packs as CreditPack[])?.map((pack: CreditPack) => {
               const totalCredits = pack.creditsAmount + (pack.bonusCredits || 0);
               const pricePerCredit = (parseFloat(pack.priceUsd) / totalCredits).toFixed(3);
 

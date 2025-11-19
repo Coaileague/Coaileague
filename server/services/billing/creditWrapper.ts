@@ -3,9 +3,10 @@
  * Provides a reusable wrapper for any automation function to handle credit checks and deductions
  */
 
-import { creditManager } from './creditManager';
+import { creditManager, CREDIT_COSTS } from './creditManager';
 
-export type FeatureKey = 'ai_scheduling' | 'ai_invoicing' | 'ai_payroll' | 'ai_analytics' | 'ai_chat';
+// Re-export the feature keys from CREDIT_COSTS for type safety
+export type FeatureKey = keyof typeof CREDIT_COSTS;
 
 export interface CreditWrapperOptions {
   workspaceId: string;
@@ -56,17 +57,17 @@ export async function withCredits<T>(
 
     if (!creditCheck.hasEnoughCredits) {
       console.log(`❌ [Credit Wrapper] Insufficient credits for ${featureKey} in workspace ${workspaceId}`);
-      console.log(`   Required: ${creditCheck.required}, Available: ${creditCheck.available}`);
+      console.log(`   Required: ${creditCheck.required}, Available: ${creditCheck.currentBalance}`);
       
       return {
         success: false,
         insufficientCredits: true,
-        error: `Insufficient credits. Need ${creditCheck.required}, have ${creditCheck.available}`,
+        error: `Insufficient credits. Need ${creditCheck.required}, have ${creditCheck.currentBalance}`,
       };
     }
 
     console.log(`✅ [Credit Wrapper] Credit check passed for ${featureKey}`);
-    console.log(`   Cost: ${creditCheck.required} credits, Available: ${creditCheck.available}`);
+    console.log(`   Cost: ${creditCheck.required} credits, Available: ${creditCheck.currentBalance}`);
 
     // Step 2: Execute the automation function
     let result: T;
@@ -87,7 +88,6 @@ export async function withCredits<T>(
         workspaceId,
         userId: userId || 'system-autoforce',
         featureKey,
-        amount: creditCheck.required,
         description,
         metadata: {
           timestamp: new Date().toISOString(),

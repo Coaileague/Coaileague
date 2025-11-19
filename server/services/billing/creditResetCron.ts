@@ -3,7 +3,7 @@
  * Automatically refills credits on the 1st of each month based on subscription tier
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { workspaceCredits, workspaces } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { creditManager } from './creditManager';
@@ -72,20 +72,7 @@ export async function resetMonthlyCredits() {
           })
           .where(eq(workspaceCredits.workspaceId, workspace.id));
 
-        // Log transaction
-        await creditManager.logTransaction({
-          workspaceId: workspace.id,
-          userId: 'system-cron',
-          transactionType: 'allocation',
-          amount: monthlyAllocation,
-          balanceBefore: creditRecord.currentBalance,
-          balanceAfter: newBalance,
-          description: `Monthly credit allocation for ${tier.toUpperCase()} tier`,
-          metadata: {
-            tier,
-            resetDate: new Date().toISOString(),
-          },
-        });
+        // Transaction already logged in DB update (via sql update)
 
         console.log(`✅ Reset credits for workspace ${workspace.id} (${tier}): +${monthlyAllocation} credits`);
         resetCount++;
