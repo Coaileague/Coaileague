@@ -88,11 +88,8 @@ export async function withCredits<T>(
         workspaceId,
         userId: userId || 'system-autoforce',
         featureKey,
+        featureName: description || featureKey,
         description,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          featureKey,
-        },
       });
 
       console.log(`✅ [Credit Wrapper] Deducted ${creditCheck.required} credits for ${featureKey}`);
