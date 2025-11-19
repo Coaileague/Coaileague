@@ -4,9 +4,10 @@
  * Matches Fortune 500 professional aesthetic with AutoForce branding
  */
 
-import { Menu, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, ChevronDown, ChevronRight, GraduationCap, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
@@ -17,6 +18,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { NotificationsCenter } from "@/components/notifications-center";
+import { HelpDropdown } from "@/components/help-dropdown";
+import { FeedbackWidget } from "@/components/feedback-widget";
+import { WhatsNewBadge } from "@/components/whats-new-badge";
+import { PlanBadge } from "@/components/plan-badge";
 
 export function UniversalNavHeader() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -190,8 +195,65 @@ export function UniversalNavHeader() {
                 ))}
               </div>
 
+              {/* Quick Tools Section */}
+              <div className="p-4 border-t border-border space-y-3">
+                {/* Plan Badge */}
+                <PlanBadge />
+
+                {/* Tutorial & Search - Grid Layout */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if ((window as any).setShowOnboarding) {
+                        (window as any).setShowOnboarding(true);
+                      }
+                      setSidebarOpen(false);
+                    }}
+                    className="justify-start gap-2 h-9"
+                    data-testid="button-mobile-tutorial"
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="text-xs">Tutorial</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if ((window as any).openCommandPalette) {
+                        (window as any).openCommandPalette();
+                      } else {
+                        const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                        document.dispatchEvent(event);
+                      }
+                      setSidebarOpen(false);
+                    }}
+                    className="justify-start gap-2 h-9"
+                    data-testid="button-mobile-search"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span className="text-xs">Search</span>
+                  </Button>
+                </div>
+
+                {/* Help & Feedback - Grid Layout */}
+                <div className="grid grid-cols-2 gap-2" onClick={() => setSidebarOpen(false)}>
+                  <HelpDropdown />
+                  <FeedbackWidget />
+                </div>
+
+                {/* What's New - Full Width */}
+                <div className="w-full" onClick={() => setSidebarOpen(false)}>
+                  <WhatsNewBadge />
+                </div>
+              </div>
+
+              <Separator className="bg-border" />
+
               {/* Footer: User Profile + Settings + Sign Out */}
-              <div className="p-4 border-t border-border mt-auto space-y-2">
+              <div className="p-4 space-y-2">
                 {/* User Info Display */}
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent">
                   <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500">
