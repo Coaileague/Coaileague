@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "./db";
-import { users, platformRoles } from "@shared/schema";
+import { users, platformRoles, employees } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import {
   hashPassword,
@@ -79,11 +79,47 @@ router.post("/api/auth/register", async (req, res) => {
       subscriptionStatus: "active",
     });
 
+    console.log(`[Registration] Created workspace ${workspace.id} for user ${newUser.id}`);
+
     // Update user with workspace ID
     await db
       .update(users)
       .set({ currentWorkspaceId: workspace.id })
       .where(eq(users.id, newUser.id));
+
+    // Ensure org identifiers exist before creating employee (retry if needed)
+    const { ensureOrgIdentifiers } = await import('./services/identityService');
+    try {
+      await ensureOrgIdentifiers(workspace.id, workspace.name);
+      console.log(`[Registration] Ensured org identifiers for workspace ${workspace.id}`);
+    } catch (orgError: any) {
+      console.error(`[Registration] Failed to ensure org identifiers:`, orgError.message);
+      // Don't fail registration - external IDs can be retried later
+    }
+
+    // Create employee record for the workspace owner (separate from external ID attachment)
+    const [newEmployee] = await db.insert(employees).values({
+      userId: newUser.id,
+      workspaceId: workspace.id,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      workspaceRole: 'org_owner',
+      isActive: true,
+    }).returning();
+
+    console.log(`[Registration] Created employee ${newEmployee.id} for workspace ${workspace.id}`);
+
+    // Try to attach employee external ID (in separate transaction - won't rollback employee creation)
+    try {
+      const { attachEmployeeExternalId } = await import('./services/identityService');
+      const result = await attachEmployeeExternalId(newEmployee.id, workspace.id);
+      console.log(`[Registration] Attached external ID ${result.externalId} to employee ${newEmployee.id}`);
+    } catch (extIdError: any) {
+      console.error(`[Registration] Failed to attach external ID:`, extIdError.message);
+      console.log(`[Registration] Employee ${newEmployee.id} created successfully - external ID can be attached later`);
+      // Don't fail registration - external IDs can be attached later via retry mechanism
+    }
 
     // Create verification token
     const verificationToken = await createVerificationToken(newUser.id);
