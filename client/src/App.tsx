@@ -131,6 +131,7 @@ import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { UniversalNavHeader } from "@/components/universal-nav-header";
+import { NotificationsCenter } from "@/components/notifications-center";
 
 // Compact top-right utility cluster - Fortune 500 aesthetic
 function AppUtilityCluster({ setLocation }: any) {
@@ -249,8 +250,23 @@ function AppContent() {
           
           {/* Main content container */}
           <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
-            {/* Universal Navigation Header - Shows on ALL pages (mobile + desktop) */}
-            {!isHelpDesk && <UniversalNavHeader />}
+            {/* Universal Navigation Header - MOBILE ONLY (desktop uses left sidebar instead) */}
+            {!isHelpDesk && isMobile && <UniversalNavHeader />}
+
+            {/* Desktop sidebar toggle + workspace info */}
+            {!isHelpDesk && !isMobile && (
+              <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <SidebarTrigger data-testid="button-sidebar-toggle" className="text-muted-foreground" />
+                    <WorkspaceSwitcher />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <NotificationsCenter />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Demo Banner - positioned to account for fixed header (hidden on mobile) */}
             {!isMobile && <DemoBanner />}
