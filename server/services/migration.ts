@@ -80,14 +80,19 @@ export class MigrationService {
   /**
    * Step 2: Analyze document using Gemini Vision
    */
-  async analyzeDocument(documentId: string) {
-    // Get document
+  async analyzeDocument(documentId: string, workspaceId: string) {
+    // Get document with workspace scoping (security: prevent cross-tenant access)
     const [document] = await db.select()
       .from(migrationDocuments)
-      .where(eq(migrationDocuments.id, documentId));
+      .where(
+        and(
+          eq(migrationDocuments.id, documentId),
+          eq(migrationDocuments.workspaceId, workspaceId)
+        )
+      );
 
     if (!document) {
-      throw new Error(`Document ${documentId} not found`);
+      throw new Error(`Document ${documentId} not found or access denied`);
     }
 
     // Update status to analyzing
@@ -173,13 +178,19 @@ export class MigrationService {
   /**
    * Step 3: Import migration records into AutoForce
    */
-  async importRecords(jobId: string, recordIds: string[]) {
+  async importRecords(jobId: string, recordIds: string[], workspaceId: string) {
+    // Get job with workspace scoping (security: prevent cross-tenant access)
     const [job] = await db.select()
       .from(migrationJobs)
-      .where(eq(migrationJobs.id, jobId));
+      .where(
+        and(
+          eq(migrationJobs.id, jobId),
+          eq(migrationJobs.workspaceId, workspaceId)
+        )
+      );
 
     if (!job) {
-      throw new Error(`Migration job ${jobId} not found`);
+      throw new Error(`Migration job ${jobId} not found or access denied`);
     }
 
     // Update job status
@@ -190,12 +201,18 @@ export class MigrationService {
     const importedRecords = [];
 
     for (const recordId of recordIds) {
+      // Get record with workspace scoping (security: prevent cross-tenant access)
       const [record] = await db.select()
         .from(migrationRecords)
-        .where(eq(migrationRecords.id, recordId));
+        .where(
+          and(
+            eq(migrationRecords.id, recordId),
+            eq(migrationRecords.workspaceId, workspaceId)
+          )
+        );
 
       if (!record || record.jobId !== jobId) {
-        console.warn(`⚠️  Skipping invalid record: ${recordId}`);
+        console.warn(`⚠️  Skipping invalid or unauthorized record: ${recordId}`);
         continue;
       }
 
@@ -458,10 +475,16 @@ Extract data from the provided document and return a JSON response with this str
   /**
    * Get migration records for job
    */
-  async getMigrationRecords(jobId: string) {
+  async getMigrationRecords(jobId: string, workspaceId: string) {
+    // Fetch records with workspace scoping (security: prevent cross-tenant access)
     return db.select()
       .from(migrationRecords)
-      .where(eq(migrationRecords.jobId, jobId))
+      .where(
+        and(
+          eq(migrationRecords.jobId, jobId),
+          eq(migrationRecords.workspaceId, workspaceId)
+        )
+      )
       .orderBy(desc(migrationRecords.createdAt));
   }
 }

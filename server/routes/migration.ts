@@ -92,8 +92,8 @@ migrationRouter.post('/analyze/:documentId', async (req: any, res: Response) => 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Analyze document
-    const result = await migrationService.analyzeDocument(documentId);
+    // Analyze document (workspace-scoped for security)
+    const result = await migrationService.analyzeDocument(documentId, req.workspace.id);
 
     return res.json({
       success: true,
@@ -133,8 +133,8 @@ migrationRouter.post('/import/:jobId', async (req: any, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Import records
-    const result = await migrationService.importRecords(jobId, recordIds);
+    // Import records (workspace-scoped for security)
+    const result = await migrationService.importRecords(jobId, recordIds, req.workspace.id);
 
     return res.json({
       success: true,
@@ -191,7 +191,8 @@ migrationRouter.get('/records/:jobId', async (req: any, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const records = await migrationService.getMigrationRecords(jobId);
+    // Get records (workspace-scoped for security)
+    const records = await migrationService.getMigrationRecords(jobId, req.workspace.id);
 
     return res.json({
       success: true,
