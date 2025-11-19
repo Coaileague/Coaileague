@@ -22,6 +22,7 @@ import { shouldRunBiweekly, seedAnchor, advanceAnchor, detectAnchorDrift } from 
 import { storage } from '../storage';
 import { executeIdempotencyCheck, updateIdempotencyResult } from './autonomy/helpers';
 import { runWebSocketConnectionCleanup } from './wsConnectionCleanup';
+import { resetMonthlyCredits } from './billing/creditResetCron';
 import crypto from 'crypto';
 import { createNotification } from './notificationService';
 
@@ -271,6 +272,11 @@ const SCHEDULER_CONFIG = {
     enabled: true,
     schedule: '*/5 * * * *', // Every 5 minutes
     description: 'Auto-close orphaned WebSocket connections (>5min) and purge stale records (>24h)'
+  },
+  creditReset: {
+    enabled: true,
+    schedule: '0 0 1 * *', // Midnight on 1st of every month
+    description: 'Monthly refill of automation credits based on subscription tier'
   }
 };
 
@@ -1422,6 +1428,17 @@ export function startAutonomousScheduler() {
     console.log(`   ${SCHEDULER_CONFIG.wsConnectionCleanup.description}\n`);
   }
 
+  // 7. Monthly Credit Reset (1st of month at midnight)
+  if (SCHEDULER_CONFIG.creditReset.enabled) {
+    cron.schedule(SCHEDULER_CONFIG.creditReset.schedule, () => {
+      console.log(`🕐 [CRON EXECUTING] Credit reset triggered at ${new Date().toISOString()}`);
+      resetMonthlyCredits();
+    });
+    console.log('✅ Monthly Credit Reset:');
+    console.log(`   Schedule: ${SCHEDULER_CONFIG.creditReset.schedule} (monthly at midnight on 1st)`);
+    console.log(`   ${SCHEDULER_CONFIG.creditReset.description}\n`);
+  }
+
   isSchedulerRunning = true;
 
   console.log('╔════════════════════════════════════════════════╗');
@@ -1439,4 +1456,5 @@ export const manualTriggers = {
   cleanup: runIdempotencyKeyCleanup,
   roomAutoClose: runRoomAutoClose,
   wsConnectionCleanup: runWebSocketConnectionCleanup,
+  creditReset: resetMonthlyCredits,
 };
