@@ -980,7 +980,7 @@ async function runAutomaticPayrollProcessing() {
                   if (autoSubmitPayroll && result.payrollRunId) {
                     try {
                       console.log(`   🚀 Auto-submitting payroll to Gusto (payrollRunId: ${result.payrollRunId})...`);
-                      await gustoService.processPayroll(result.payrollRunId, owner.userId);
+                      await gustoService.processPayroll(workspace.id, result.payrollRunId, owner.userId);
                       console.log(`   ✅ Payroll submitted to Gusto successfully`);
                     } catch (gustoError: any) {
                       console.error(`   ❌ Gusto submission failed: ${gustoError.message}`);
