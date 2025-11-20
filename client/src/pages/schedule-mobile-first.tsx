@@ -177,22 +177,20 @@ export default function ScheduleMobileFirst() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Constrained container for desktop polish */}
-      <div className="max-w-4xl mx-auto w-full flex flex-col h-full">
-        {/* Header with Week Navigation and Stats */}
-        <WeekHeader
-          weekStart={weekStart}
-          onPreviousWeek={handlePreviousWeek}
-          onNextWeek={handleNextWeek}
-          stats={stats}
-          isLoadingStats={statsLoading}
-        />
+      {/* Header with Week Navigation and Stats */}
+      <WeekHeader
+        weekStart={weekStart}
+        onPreviousWeek={handlePreviousWeek}
+        onNextWeek={handleNextWeek}
+        stats={stats}
+        isLoadingStats={statsLoading}
+      />
 
-        {/* Day Selector Tabs */}
-        <DayTabs
-          weekStart={weekStart}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+      {/* Day Selector Tabs */}
+      <DayTabs
+        weekStart={weekStart}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
       />
 
       {/* Employee Shift Cards - Scrollable */}
@@ -308,19 +306,18 @@ export default function ScheduleMobileFirst() {
         </div>
       )}
 
-        {/* Shift Creation/Edit Bottom Sheet */}
-        <ShiftBottomSheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          employees={employees}
-          clients={clients}
-          selectedDate={selectedDate}
-          selectedEmployee={selectedEmployee}
-          editingShift={editingShift}
-          onSubmit={handleSubmitShift}
-          isSubmitting={createShiftMutation.isPending}
-        />
-      </div> {/* Close max-w-4xl container */}
+      {/* Shift Creation/Edit Bottom Sheet */}
+      <ShiftBottomSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        employees={employees}
+        clients={clients}
+        selectedDate={selectedDate}
+        selectedEmployee={selectedEmployee}
+        editingShift={editingShift}
+        onSubmit={handleSubmitShift}
+        isSubmitting={createShiftMutation.isPending}
+      />
     </div>
   );
 }

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import type { Shift, Employee, Client, ShiftOrder } from '@shared/schema';
 import ScheduleMobileFirst from '@/pages/schedule-mobile-first';
+import { WorkspaceLayout } from '@/components/workspace-layout';
 
 // Post order template data (will be pre-created in database)
 const POST_ORDER_TEMPLATES = [
@@ -353,7 +354,7 @@ export default function UniversalSchedule() {
       clockOutDate.setHours(parseInt(clockOutHour), parseInt(clockOutMinute), 0);
 
       // Include postOrders in the request payload
-      return await apiRequest('/api/shifts', 'POST', {
+      return await apiRequest('POST', '/api/shifts', {
         employeeId: shiftData.isOpenShift ? null : shiftData.employeeId,
         clientId: shiftData.clientId || null,
         title: shiftData.position,
@@ -385,7 +386,7 @@ export default function UniversalSchedule() {
   // AI Fill mutation
   const aiFillMutation = useMutation({
     mutationFn: async (shiftId: string) => {
-      return await apiRequest(`/api/shifts/${shiftId}/ai-fill`, 'POST', {});
+      return await apiRequest('POST', `/api/shifts/${shiftId}/ai-fill`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
@@ -486,29 +487,36 @@ export default function UniversalSchedule() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Sparkles className="h-12 w-12 mx-auto mb-4 animate-pulse" style={{ color: '#3b82f6' }} />
-          <p className="text-muted-foreground">Loading schedule...</p>
+      <WorkspaceLayout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <Sparkles className="h-12 w-12 mx-auto mb-4 animate-pulse" style={{ color: '#3b82f6' }} />
+            <p className="text-muted-foreground">Loading schedule...</p>
+          </div>
         </div>
-      </div>
+      </WorkspaceLayout>
     );
   }
 
-  // Mobile: Render new mobile-first schedule
+  // Mobile: Render new mobile-first schedule wrapped in WorkspaceLayout
   if (isMobile) {
-    return <ScheduleMobileFirst />;
+    return (
+      <WorkspaceLayout>
+        <ScheduleMobileFirst />
+      </WorkspaceLayout>
+    );
   }
 
-  // Desktop: Render grid-based schedule
+  // Desktop: Render grid-based schedule wrapped in WorkspaceLayout
   return (
-    <DndContext
-      sensors={isTouchDevice ? [] : sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex h-screen bg-background">
+    <WorkspaceLayout maxWidth="full">
+      <DndContext
+        sensors={isTouchDevice ? [] : sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex h-screen bg-background">
         {/* Desktop Employee Sidebar */}
         {!isMobile && (
         <div className="w-64 bg-card border-r flex flex-col">
@@ -1195,6 +1203,7 @@ export default function UniversalSchedule() {
         </div>
       ) : null}
     </DragOverlay>
-    </DndContext>
+      </DndContext>
+    </WorkspaceLayout>
   );
 }
