@@ -124,6 +124,7 @@ import OversightHub from "@/pages/oversight-hub";
 import WorkflowApprovals from "@/pages/workflow-approvals";
 import AICommandCenter from "@/pages/ai-command-center";
 import AuditLogs from "@/pages/audit-logs";
+import AutomationControl from "@/pages/automation-control";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -279,6 +280,7 @@ function AppContent() {
               <Route path="/reports" component={Reports} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/audit-logs" component={AuditLogs} />
+              <Route path="/automation-control" component={AutomationControl} />
               <Route path="/ai/command-center" component={AICommandCenter} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
@@ -468,6 +470,7 @@ function AppContent() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/audit-logs" component={AuditLogs} />
+                <Route path="/automation-control" component={AutomationControl} />
                 <Route path="/ai/command-center" component={AICommandCenter} />
                 <Route path="/billing" component={Billing} />
                 <Route path="/usage" component={UsageDashboard} />

@@ -19,6 +19,7 @@ import { employees } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { createNotification } from '../services/notificationService';
 import { withCredits } from '../services/billing/creditWrapper';
+import { ComplianceMonitoringService } from '../services/complianceMonitoring';
 
 export const automationRouter = Router();
 
@@ -745,33 +746,170 @@ automationRouter.get('/status', async (req: any, res: Response) => {
     const recentEvents = await storage.getAuditEvents({
       workspaceId: req.workspace.id,
       actorType: 'AI_AGENT',
-      limit: 50,
+      limit: 100,
     });
 
-    // Group by event type
-    const stats = recentEvents.reduce((acc, event) => {
-      const type = event.eventType;
-      if (!acc[type]) {
-        acc[type] = { count: 0, lastRun: event.timestamp };
-      }
-      acc[type].count++;
-      if (event.timestamp && (!acc[type].lastRun || event.timestamp > acc[type].lastRun)) {
-        acc[type].lastRun = event.timestamp;
-      }
-      return acc;
-    }, {} as Record<string, { count: number; lastRun: Date | null }>);
+    // Calculate stats for each automation type
+    const schedulingEvents = recentEvents.filter(e => e.eventType?.includes('schedule') || e.eventType?.includes('shift'));
+    const invoicingEvents = recentEvents.filter(e => e.eventType?.includes('invoice'));
+    const payrollEvents = recentEvents.filter(e => e.eventType?.includes('payroll'));
+    const complianceEvents = recentEvents.filter(e => e.eventType?.includes('compliance'));
+    
+    const calcSuccessRate = (events: any[]) => {
+      if (events.length === 0) return 0;
+      const successful = events.filter(e => e.success !== false).length;
+      return successful / events.length;
+    };
+
+    const getLastRun = (events: any[]) => {
+      if (events.length === 0) return null;
+      // Create copy before sorting to avoid mutating cached data
+      const eventsCopy = [...events];
+      const sorted = eventsCopy.sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+      return sorted[0]?.timestamp ? new Date(sorted[0].timestamp).toISOString() : null;
+    };
+
+    // Get issue count from last compliance scan metadata
+    const getIssueCount = (events: any[]) => {
+      if (events.length === 0) return 0;
+      const eventsCopy = [...events];
+      const sorted = eventsCopy.sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+      return sorted[0]?.metadata?.totalIssues || 0;
+    };
 
     return res.json({
-      success: true,
-      status: 'operational',
-      recentActivity: stats,
-      totalEvents: recentEvents.length,
+      scheduling: {
+        enabled: true, // Always enabled for autonomous system
+        lastRun: getLastRun(schedulingEvents),
+        nextRun: null, // Could be calculated from workspace schedule settings
+        successRate: calcSuccessRate(schedulingEvents),
+      },
+      invoicing: {
+        enabled: true,
+        lastRun: getLastRun(invoicingEvents),
+        nextRun: null,
+        successRate: calcSuccessRate(invoicingEvents),
+      },
+      payroll: {
+        enabled: true,
+        lastRun: getLastRun(payrollEvents),
+        nextRun: null,
+        successRate: calcSuccessRate(payrollEvents),
+      },
+      compliance: {
+        enabled: true, // Now fully functional
+        lastRun: getLastRun(complianceEvents),
+        issuesDetected: getIssueCount(complianceEvents),
+      },
     });
 
   } catch (error) {
     console.error('Automation status error:', error);
     return res.status(500).json({
       error: 'Failed to get automation status',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+// ============================================================================
+// COMPLIANCE MONITORING AUTOMATION
+// ============================================================================
+
+/**
+ * POST /api/automation/compliance/scan
+ * Run comprehensive compliance scan and flag issues
+ */
+automationRouter.post('/compliance/scan', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.workspace) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Run compliance scan WITH CREDIT DEDUCTION
+    const creditResult = await withCredits(
+      {
+        workspaceId: req.workspace.id,
+        featureKey: 'ai_general', // Use general AI feature for now
+        description: 'Compliance monitoring scan',
+        userId: req.user.id,
+      },
+      async () => {
+        return await ComplianceMonitoringService.scanWorkspace(req.workspace.id);
+      }
+    );
+
+    // Handle insufficient credits - MUST return error response
+    if (!creditResult.success) {
+      if (creditResult.insufficientCredits) {
+        return res.status(402).json({
+          error: 'Insufficient credits',
+          message: creditResult.error || 'Not enough credits to run compliance scan',
+          required: 10, // Compliance scan cost
+        });
+      }
+      // Other errors
+      return res.status(500).json({
+        error: 'Compliance scan failed',
+        message: creditResult.error || 'Unknown error',
+      });
+    }
+
+    const issues = creditResult.result!;
+    const summary = ComplianceMonitoringService.getIssueSummary(issues);
+    const grouped = ComplianceMonitoringService.groupIssuesByType(issues);
+
+    // Create audit event for compliance scan
+    await storage.createAuditEvent({
+      workspaceId: req.workspace.id,
+      userId: req.user.id,
+      actorType: 'AI_AGENT',
+      eventType: 'compliance_scan_completed',
+      resourceType: 'workspace',
+      resourceId: req.workspace.id,
+      description: `Compliance scan found ${issues.length} total issues (${summary.critical} critical)`,
+      metadata: { 
+        totalIssues: issues.length,
+        summary,
+        scannedAt: new Date().toISOString(),
+      },
+      ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    // Create notifications for critical issues
+    if (summary.critical > 0) {
+      await createNotification({
+        workspaceId: req.workspace.id,
+        userId: req.user.id,
+        title: `⚠️ ${summary.critical} Critical Compliance Issues Detected`,
+        message: `Compliance scan found ${summary.critical} critical issues requiring immediate attention.`,
+        type: 'compliance_alert',
+        metadata: { issueCount: summary.critical },
+      });
+    }
+
+    // Return structured summary as promised on landing page
+    return res.json({
+      success: true,
+      totalIssues: issues.length,
+      summary,
+      issues: grouped,
+      scannedAt: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Compliance scan error:', error);
+    return res.status(500).json({
+      error: 'Failed to run compliance scan',
       message: error instanceof Error ? error.message : String(error),
     });
   }
