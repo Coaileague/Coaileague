@@ -111,16 +111,16 @@ automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
     
     const { startDate, endDate, requirements } = validationResult.data;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get employees for workspace
-    const employees = await storage.getEmployeesByWorkspace(req.workspace.id);
+    const employees = await storage.getEmployeesByWorkspace(req.user!.currentWorkspaceId);
     
     // Get existing shifts in date range to avoid conflicts
     const existingShifts = await storage.getShiftsByWorkspace(
-      req.workspace.id,
+      req.user!.currentWorkspaceId,
       new Date(startDate),
       new Date(endDate)
     );
@@ -128,7 +128,7 @@ automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
     // Call automation engine WITH CREDIT DEDUCTION
     const creditResult = await withCredits(
       {
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         featureKey: 'ai_scheduling',
         description: `Generated AI schedule from ${startDate} to ${endDate}`,
         userId: req.user.id,
@@ -139,7 +139,7 @@ automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
             actorId: req.user.id,
             actorType: 'END_USER',
             actorName: req.user.name || undefined,
-            workspaceId: req.workspace.id,
+            workspaceId: req.user!.currentWorkspaceId,
             ipAddress: req.ip,
             userAgent: req.get('user-agent'),
           },
@@ -208,7 +208,7 @@ automationRouter.post('/schedule/apply', async (req: any, res: Response) => {
     
     const { transactionId, shifts } = validationResult.data;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -218,7 +218,7 @@ automationRouter.post('/schedule/apply', async (req: any, res: Response) => {
         actorId: req.user.id,
         actorType: 'END_USER',
         actorName: req.user.name || undefined,
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       },
@@ -277,18 +277,18 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
     
     const { clientId, startDate, endDate } = validationResult.data;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get client
-    const client = await storage.getClient(clientId, req.workspace.id);
-    if (!client || client.workspaceId !== req.workspace.id) {
+    const client = await storage.getClient(clientId, req.user!.currentWorkspaceId);
+    if (!client || client.workspaceId !== req.user!.currentWorkspaceId) {
       return res.status(404).json({ error: 'Client not found' });
     }
 
     // Get unbilled time entries for this client
-    const timeEntries = await storage.getUnbilledTimeEntries(req.workspace.id, clientId);
+    const timeEntries = await storage.getUnbilledTimeEntries(req.user!.currentWorkspaceId, clientId);
 
     if (timeEntries.length === 0) {
       return res.status(400).json({
@@ -299,7 +299,7 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
     // Generate invoice WITH CREDIT DEDUCTION
     const creditResult = await withCredits(
       {
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         featureKey: 'ai_invoice_generation',
         description: `Generated AI invoice for client ${clientId} (${startDate} to ${endDate})`,
         userId: req.user.id,
@@ -310,7 +310,7 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
             actorId: req.user.id,
             actorType: 'END_USER',
             actorName: req.user.name || undefined,
-            workspaceId: req.workspace.id,
+            workspaceId: req.user!.currentWorkspaceId,
             ipAddress: req.ip,
             userAgent: req.get('user-agent'),
           },
@@ -379,7 +379,7 @@ automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) =
     
     const { anchorDate } = validationResult.data;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -389,12 +389,12 @@ automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) =
         actorId: req.user.id,
         actorType: 'END_USER',
         actorName: req.user.name || undefined,
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       },
       {
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         anchorDate: new Date(anchorDate),
       }
     );
@@ -406,7 +406,7 @@ automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) =
           .from(employees)
           .where(
             and(
-              eq(employees.workspaceId, req.workspace.id),
+              eq(employees.workspaceId, req.user!.currentWorkspaceId),
               sql`(${employees.workspaceRole} IN ('org_owner', 'org_admin', 'department_manager'))`
             )
           );
@@ -417,14 +417,14 @@ automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) =
         for (const leader of orgLeaders) {
           if (leader.userId) {
             await createNotification({
-              workspaceId: req.workspace.id,
+              workspaceId: req.user!.currentWorkspaceId,
               userId: leader.userId,
               type: 'system',
               title: 'Invoices Generated by AI Brain',
               message: `AI Brain generated ${result.invoices.length} invoice(s) totaling $${totalAmount.toFixed(2)}${needsReview > 0 ? `. ${needsReview} require review.` : '. All auto-approved.'}`,
               actionUrl: '/invoices',
               relatedEntityType: 'workspace',
-              relatedEntityId: req.workspace.id,
+              relatedEntityId: req.user!.currentWorkspaceId,
               metadata: { 
                 invoicesGenerated: result.invoices.length,
                 totalAmount,
@@ -483,19 +483,19 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
     
     const { employeeId, startDate, endDate } = validationResult.data;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get employee
-    const employee = await storage.getEmployee(employeeId, req.workspace.id);
-    if (!employee || employee.workspaceId !== req.workspace.id) {
+    const employee = await storage.getEmployee(employeeId, req.user!.currentWorkspaceId);
+    if (!employee || employee.workspaceId !== req.user!.currentWorkspaceId) {
       return res.status(404).json({ error: 'Employee not found' });
     }
 
     // Get time entries for this employee in date range
     const timeEntries = await storage.getTimeEntriesByEmployeeAndDateRange(
-      req.workspace.id,
+      req.user!.currentWorkspaceId,
       employeeId,
       new Date(startDate),
       new Date(endDate)
@@ -510,7 +510,7 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
     // Generate payroll WITH CREDIT DEDUCTION
     const creditResult = await withCredits(
       {
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         featureKey: 'ai_payroll_processing',
         description: `Generated AI payroll for employee ${employeeId} (${startDate} to ${endDate})`,
         userId: req.user.id,
@@ -521,7 +521,7 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
             actorId: req.user.id,
             actorType: 'END_USER',
             actorName: req.user.name || undefined,
-            workspaceId: req.workspace.id,
+            workspaceId: req.user!.currentWorkspaceId,
             ipAddress: req.ip,
             userAgent: req.get('user-agent'),
           },
@@ -590,7 +590,7 @@ automationRouter.post('/payroll/anchor-close', async (req: any, res: Response) =
     
     const { anchorDate } = validationResult.data;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -600,12 +600,12 @@ automationRouter.post('/payroll/anchor-close', async (req: any, res: Response) =
         actorId: req.user.id,
         actorType: 'END_USER',
         actorName: req.user.name || undefined,
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       },
       {
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         anchorDate: new Date(anchorDate),
       }
     );
@@ -617,7 +617,7 @@ automationRouter.post('/payroll/anchor-close', async (req: any, res: Response) =
           .from(employees)
           .where(
             and(
-              eq(employees.workspaceId, req.workspace.id),
+              eq(employees.workspaceId, req.user!.currentWorkspaceId),
               sql`(${employees.workspaceRole} IN ('org_owner', 'org_admin', 'department_manager'))`
             )
           );
@@ -628,14 +628,14 @@ automationRouter.post('/payroll/anchor-close', async (req: any, res: Response) =
         for (const leader of orgLeaders) {
           if (leader.userId) {
             await createNotification({
-              workspaceId: req.workspace.id,
+              workspaceId: req.user!.currentWorkspaceId,
               userId: leader.userId,
               type: 'system',
               title: 'Payroll Processed by AI Brain',
               message: `AI Brain processed payroll for ${result.payrolls.length} employee(s) totaling $${totalPayroll.toFixed(2)}${needsReview > 0 ? `. ${needsReview} require review.` : '. All auto-approved.'}`,
               actionUrl: '/payroll',
               relatedEntityType: 'workspace',
-              relatedEntityId: req.workspace.id,
+              relatedEntityId: req.user!.currentWorkspaceId,
               metadata: { 
                 payrollsProcessed: result.payrolls.length,
                 totalPayroll,
@@ -685,7 +685,7 @@ automationRouter.post('/migrate/schedule', async (req: any, res: Response) => {
   try {
     const { imageBase64, mimeType } = req.body;
     
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -701,14 +701,14 @@ automationRouter.post('/migrate/schedule', async (req: any, res: Response) => {
         actorId: req.user.id,
         actorType: 'END_USER',
         actorName: req.user.name || undefined,
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       },
       {
         imageBase64,
         mimeType,
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
       }
     );
 
@@ -738,13 +738,13 @@ automationRouter.post('/migrate/schedule', async (req: any, res: Response) => {
  */
 automationRouter.get('/status', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get recent automation events from audit log
     const recentEvents = await storage.getAuditEvents({
-      workspaceId: req.workspace.id,
+      workspaceId: req.user!.currentWorkspaceId,
       actorType: 'AI_AGENT',
       limit: 100,
     });
@@ -830,20 +830,20 @@ automationRouter.get('/status', async (req: any, res: Response) => {
  */
 automationRouter.post('/compliance/scan', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Run compliance scan WITH CREDIT DEDUCTION
     const creditResult = await withCredits(
       {
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         featureKey: 'ai_general', // Use general AI feature for now
         description: 'Compliance monitoring scan',
         userId: req.user.id,
       },
       async () => {
-        return await ComplianceMonitoringService.scanWorkspace(req.workspace.id);
+        return await ComplianceMonitoringService.scanWorkspace(req.user!.currentWorkspaceId);
       }
     );
 
@@ -869,18 +869,19 @@ automationRouter.post('/compliance/scan', async (req: any, res: Response) => {
 
     // Create audit event for compliance scan
     await storage.createAuditEvent({
-      workspaceId: req.workspace.id,
-      userId: req.user.id,
+      workspaceId: req.user!.currentWorkspaceId,
+      actorId: req.user.id,
       actorType: 'AI_AGENT',
+      actorName: req.user.name || 'AI Brain',
+      aggregateId: req.user!.currentWorkspaceId,
+      aggregateType: 'workspace',
       eventType: 'compliance_scan_completed',
-      resourceType: 'workspace',
-      resourceId: req.workspace.id,
-      description: `Compliance scan found ${issues.length} total issues (${summary.critical} critical)`,
-      metadata: { 
+      payload: { 
         totalIssues: issues.length,
         summary,
         scannedAt: new Date().toISOString(),
       },
+      metadata: {},
       ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown',
     });
@@ -888,7 +889,7 @@ automationRouter.post('/compliance/scan', async (req: any, res: Response) => {
     // Create notifications for critical issues
     if (summary.critical > 0) {
       await createNotification({
-        workspaceId: req.workspace.id,
+        workspaceId: req.user!.currentWorkspaceId,
         userId: req.user.id,
         title: `⚠️ ${summary.critical} Critical Compliance Issues Detected`,
         message: `Compliance scan found ${summary.critical} critical issues requiring immediate attention.`,
@@ -921,13 +922,13 @@ automationRouter.post('/compliance/scan', async (req: any, res: Response) => {
  */
 automationRouter.get('/compliance/recent', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.workspace) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get latest compliance scan from audit log
     const recentScans = await storage.getAuditEvents({
-      workspaceId: req.workspace.id,
+      workspaceId: req.user!.currentWorkspaceId,
       actorType: 'AI_AGENT',
       eventType: 'compliance_scan_completed',
       limit: 1,
