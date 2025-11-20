@@ -40,7 +40,7 @@ import {
   PauseCircle, Send, AlertTriangle
 } from 'lucide-react';
 import type { Shift, Employee, Client, ShiftOrder } from '@shared/schema';
-import MobileSchedule from '@/pages/mobile-schedule';
+import ScheduleMobileFirst from '@/pages/schedule-mobile-first';
 
 // Post order template data (will be pre-created in database)
 const POST_ORDER_TEMPLATES = [
@@ -495,9 +495,9 @@ export default function UniversalSchedule() {
     );
   }
 
-  // Mobile: Render mobile schedule
+  // Mobile: Render new mobile-first schedule
   if (isMobile) {
-    return <MobileSchedule />;
+    return <ScheduleMobileFirst />;
   }
 
   // Desktop: Render grid-based schedule

@@ -264,7 +264,7 @@ function AppContent() {
               </Route>
               <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
               <Route path="/dashboard" component={Dashboard} />
-              <Route path="/schedule" component={ScheduleMobileFirst} />
+              <Route path="/schedule" component={UniversalSchedule} />
               <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
               <Route path="/daily-schedule" component={DailySchedule} />
               <Route path="/workflow-approvals" component={WorkflowApprovals} />
@@ -454,7 +454,7 @@ function AppContent() {
                 </Route>
                 <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
                 <Route path="/dashboard" component={Dashboard} />
-                <Route path="/schedule" component={ScheduleMobileFirst} />
+                <Route path="/schedule" component={UniversalSchedule} />
                 <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/daily-schedule" component={DailySchedule} />
                 <Route path="/workflow-approvals" component={WorkflowApprovals} />
