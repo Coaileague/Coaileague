@@ -15,6 +15,14 @@ interface Update {
 
 const updates: Update[] = [
   {
+    id: "mobile-schedule-2025-11-20",
+    title: "Mobile-First AI Scheduling™",
+    description: "Completely redesigned mobile scheduling experience with week navigation, real-time stats cards (hours, cost, overtime, open shifts), swipe-friendly day tabs, and streamlined shift creation with bottom sheet interface. Supports open (unassigned) shifts with dedicated display cards.",
+    date: "2025-11-20",
+    category: "feature",
+    badge: "NEW",
+  },
+  {
     id: "1",
     title: "AI Analytics™ - AI Analytics Platform",
     description: "Launch of autonomous AI analytics with real-time insights, cost-saving recommendations, and anomaly detection. Get actionable recommendations with confidence scores and estimated ROI impact.",
