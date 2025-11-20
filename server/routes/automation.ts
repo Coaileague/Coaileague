@@ -18,6 +18,7 @@ import { db } from '../db';
 import { employees } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { createNotification } from '../services/notificationService';
+import { withCredits } from '../services/billing/creditWrapper';
 
 export const automationRouter = Router();
 
@@ -123,24 +124,51 @@ automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
       new Date(endDate)
     );
 
-    // Call automation engine
-    const result = await automationEngine.generateSchedule(
+    // Call automation engine WITH CREDIT DEDUCTION
+    const creditResult = await withCredits(
       {
-        actorId: req.user.id,
-        actorType: 'END_USER',
-        actorName: req.user.name || undefined,
         workspaceId: req.workspace.id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+        featureKey: 'ai_scheduling',
+        description: `Generated AI schedule from ${startDate} to ${endDate}`,
+        userId: req.user.id,
       },
-      {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        employees,
-        existingShifts,
-        requirements,
+      async () => {
+        return await automationEngine.generateSchedule(
+          {
+            actorId: req.user.id,
+            actorType: 'END_USER',
+            actorName: req.user.name || undefined,
+            workspaceId: req.workspace.id,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+          },
+          {
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+            employees,
+            existingShifts,
+            requirements,
+          }
+        );
       }
     );
+
+    // Handle insufficient credits
+    if (!creditResult.success) {
+      if (creditResult.insufficientCredits) {
+        return res.status(402).json({
+          error: 'Insufficient credits',
+          message: creditResult.error,
+          required: 25, // AI scheduling cost
+        });
+      }
+      return res.status(500).json({
+        error: 'Schedule generation failed',
+        message: creditResult.error,
+      });
+    }
+
+    const result = creditResult.result!;
 
     return res.json({
       success: true,
@@ -150,6 +178,7 @@ automationRouter.post('/schedule/generate', async (req: any, res: Response) => {
       confidence: result.decision.overallConfidence,
       shifts: result.decision.shifts,
       conflicts: result.decision.conflicts,
+      creditsDeducted: creditResult.creditsDeducted,
     });
 
   } catch (error) {
@@ -266,24 +295,51 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
       });
     }
 
-    // Generate invoice
-    const result = await automationEngine.generateInvoice(
+    // Generate invoice WITH CREDIT DEDUCTION
+    const creditResult = await withCredits(
       {
-        actorId: req.user.id,
-        actorType: 'END_USER',
-        actorName: req.user.name || undefined,
         workspaceId: req.workspace.id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+        featureKey: 'ai_invoicing',
+        description: `Generated AI invoice for client ${clientId} (${startDate} to ${endDate})`,
+        userId: req.user.id,
       },
-      {
-        clientId,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        timeEntries,
-        client,
+      async () => {
+        return await automationEngine.generateInvoice(
+          {
+            actorId: req.user.id,
+            actorType: 'END_USER',
+            actorName: req.user.name || undefined,
+            workspaceId: req.workspace.id,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+          },
+          {
+            clientId,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+            timeEntries,
+            client,
+          }
+        );
       }
     );
+
+    // Handle insufficient credits
+    if (!creditResult.success) {
+      if (creditResult.insufficientCredits) {
+        return res.status(402).json({
+          error: 'Insufficient credits',
+          message: creditResult.error,
+          required: 15, // AI invoicing cost
+        });
+      }
+      return res.status(500).json({
+        error: 'Invoice generation failed',
+        message: creditResult.error,
+      });
+    }
+
+    const result = creditResult.result!;
 
     return res.json({
       success: true,
@@ -293,6 +349,7 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
       confidence: result.decision.confidence,
       total: result.decision.total,
       anomalies: result.decision.anomalies,
+      creditsDeducted: creditResult.creditsDeducted,
     });
 
   } catch (error) {
@@ -449,24 +506,51 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
       });
     }
 
-    // Generate payroll
-    const result = await automationEngine.generatePayroll(
+    // Generate payroll WITH CREDIT DEDUCTION
+    const creditResult = await withCredits(
       {
-        actorId: req.user.id,
-        actorType: 'END_USER',
-        actorName: req.user.name || undefined,
         workspaceId: req.workspace.id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+        featureKey: 'ai_payroll',
+        description: `Generated AI payroll for employee ${employeeId} (${startDate} to ${endDate})`,
+        userId: req.user.id,
       },
-      {
-        employeeId,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        timeEntries,
-        employee,
+      async () => {
+        return await automationEngine.generatePayroll(
+          {
+            actorId: req.user.id,
+            actorType: 'END_USER',
+            actorName: req.user.name || undefined,
+            workspaceId: req.workspace.id,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+          },
+          {
+            employeeId,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+            timeEntries,
+            employee,
+          }
+        );
       }
     );
+
+    // Handle insufficient credits
+    if (!creditResult.success) {
+      if (creditResult.insufficientCredits) {
+        return res.status(402).json({
+          error: 'Insufficient credits',
+          message: creditResult.error,
+          required: 15, // AI payroll cost
+        });
+      }
+      return res.status(500).json({
+        error: 'Payroll generation failed',
+        message: creditResult.error,
+      });
+    }
+
+    const result = creditResult.result!;
 
     return res.json({
       success: true,
@@ -476,6 +560,7 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
       confidence: result.decision.confidence,
       netPay: result.decision.netPay,
       warnings: result.decision.warnings,
+      creditsDeducted: creditResult.creditsDeducted,
     });
 
   } catch (error) {
