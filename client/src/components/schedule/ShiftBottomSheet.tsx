@@ -127,6 +127,7 @@ export function ShiftBottomSheet({
 
     await onSubmit({
       ...data,
+      employeeId: data.employeeId === 'unassigned' ? null : data.employeeId,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       status: 'scheduled',
@@ -161,8 +162,8 @@ export function ShiftBottomSheet({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Open Shift (Unassigned)</SelectItem>
-                        {(employees || []).map((emp) => (
+                        <SelectItem value="unassigned">Open Shift (Unassigned)</SelectItem>
+                        {Array.isArray(employees) && employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
                             {emp.firstName} {emp.lastName} - {emp.role}
                           </SelectItem>
@@ -201,7 +202,7 @@ export function ShiftBottomSheet({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(clients || []).map((client) => (
+                        {Array.isArray(clients) && clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.companyName || `${client.firstName} ${client.lastName}`}
                           </SelectItem>
