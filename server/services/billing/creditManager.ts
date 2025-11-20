@@ -29,7 +29,7 @@ export const CREDIT_COSTS = {
   'ai_shift_matching': 5,         // Match employee to single shift
   
   // AI Invoicing
-  'ai_invoice_generation': 10,    // Generate invoice from timesheet
+  'ai_invoice_generation': 15,    // Generate invoice from timesheet
   'ai_invoice_review': 3,         // Review invoice for errors
   
   // AI Payroll
@@ -43,6 +43,9 @@ export const CREDIT_COSTS = {
   // AI Analytics
   'ai_analytics_report': 12,      // Generate analytics report
   'ai_predictions': 10,           // Predictive analytics
+  
+  // AI Migration
+  'ai_migration': 10,             // Gemini Vision data extraction
   
   // General AI
   'ai_general': 3,                // Generic AI operation

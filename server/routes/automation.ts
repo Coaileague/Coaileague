@@ -299,7 +299,7 @@ automationRouter.post('/invoice/generate', async (req: any, res: Response) => {
     const creditResult = await withCredits(
       {
         workspaceId: req.workspace.id,
-        featureKey: 'ai_invoicing',
+        featureKey: 'ai_invoice_generation',
         description: `Generated AI invoice for client ${clientId} (${startDate} to ${endDate})`,
         userId: req.user.id,
       },
@@ -510,7 +510,7 @@ automationRouter.post('/payroll/generate', async (req: any, res: Response) => {
     const creditResult = await withCredits(
       {
         workspaceId: req.workspace.id,
-        featureKey: 'ai_payroll',
+        featureKey: 'ai_payroll_processing',
         description: `Generated AI payroll for employee ${employeeId} (${startDate} to ${endDate})`,
         userId: req.user.id,
       },

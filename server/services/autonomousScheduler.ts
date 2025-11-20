@@ -25,6 +25,7 @@ import { runWebSocketConnectionCleanup } from './wsConnectionCleanup';
 import { resetMonthlyCredits } from './billing/creditResetCron';
 import crypto from 'crypto';
 import { createNotification } from './notificationService';
+import { withCredits } from './billing/creditWrapper';
 
 // ============================================================================
 // IDEMPOTENCY FINGERPRINTING
@@ -680,32 +681,58 @@ async function runWeeklyScheduleGeneration() {
                   } else {
                     console.log(`   🤖 Calling AI Brain for ${workspaceEmployees.length} employee(s)...`);
                     
-                    // Call AI Brain to generate schedule
-                    const aiBrain = new AIBrainService();
-                    const result = await aiBrain.enqueueJob({
-                      workspaceId: workspace.id,
-                      skill: 'scheduleos_generation', // Correct field name is 'skill'
-                      input: {
-                        shifts: [], // TODO: Load existing shift templates/requirements
-                        employees: workspaceEmployees.map(e => ({
-                          id: e.id,
-                          name: `${e.firstName} ${e.lastName}`,
-                          availability: [], // TODO: Load from employee availability
-                          skills: [], // TODO: Load from employee skills
-                        })),
-                        constraints: {
-                          weekStart: nextWeekStart.toISOString(),
-                          weekEnd: nextWeekEnd.toISOString(),
-                        },
-                      },
-                    });
+                    // Get workspace owner for credit tracking
+                    const owner = workspaceEmployees.find(e => e.workspaceRole === 'org_owner');
+                    const ownerUserId = owner?.userId || undefined;
                     
-                    // AI Brain processes job immediately and returns result
-                    if (result.status === 'completed') {
-                      shiftsGenerated = result.output?.assignments?.length || 0;
-                      console.log(`   ✅ AI Brain generated ${shiftsGenerated} shift assignment(s)`);
-                    } else if (result.status === 'failed') {
-                      console.error(`   ❌ AI Brain job failed: ${result.error}`);
+                    // Call AI Brain WITH CREDIT DEDUCTION
+                    const creditResult = await withCredits(
+                      {
+                        workspaceId: workspace.id,
+                        featureKey: 'ai_scheduling',
+                        description: `Autonomous AI schedule generation (${format(nextWeekStart, 'MMM dd')} - ${format(nextWeekEnd, 'MMM dd')})`,
+                        userId: ownerUserId,
+                      },
+                      async () => {
+                        const aiBrain = new AIBrainService();
+                        return await aiBrain.enqueueJob({
+                          workspaceId: workspace.id,
+                          skill: 'scheduleos_generation',
+                          input: {
+                            shifts: [],
+                            employees: workspaceEmployees.map(e => ({
+                              id: e.id,
+                              name: `${e.firstName} ${e.lastName}`,
+                              availability: [],
+                              skills: [],
+                            })),
+                            constraints: {
+                              weekStart: nextWeekStart.toISOString(),
+                              weekEnd: nextWeekEnd.toISOString(),
+                            },
+                          },
+                        });
+                      }
+                    );
+                    
+                    // Handle insufficient credits
+                    if (!creditResult.success) {
+                      if (creditResult.insufficientCredits) {
+                        console.warn(`   ⚠️  Insufficient credits (25 required) - skipping autonomous schedule generation`);
+                        console.log(`   💳 Purchase more credits to resume AI automations`);
+                      } else {
+                        console.error(`   ❌ Credit deduction failed: ${creditResult.error}`);
+                      }
+                    } else {
+                      const result = creditResult.result!;
+                      
+                      // AI Brain processes job immediately and returns result
+                      if (result.status === 'completed') {
+                        shiftsGenerated = result.output?.assignments?.length || 0;
+                        console.log(`   ✅ AI Brain generated ${shiftsGenerated} shift assignment(s) [${creditResult.creditsDeducted} credits]`);
+                      } else if (result.status === 'failed') {
+                        console.error(`   ❌ AI Brain job failed: ${result.error}`);
+                      }
                     }
                   }
                 } catch (aiError: any) {

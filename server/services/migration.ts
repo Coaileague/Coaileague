@@ -16,6 +16,7 @@ import { db } from '../db';
 import { migrationJobs, migrationDocuments, migrationRecords, employees, clients, shifts } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { withCredits } from './billing/creditWrapper';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -104,13 +105,40 @@ export class MigrationService {
       .set({ status: 'analyzing' })
       .where(eq(migrationJobs.id, document.jobId));
 
+    // Get userId from migration job for credit tracking
+    const [job] = await db.select()
+      .from(migrationJobs)
+      .where(eq(migrationJobs.id, document.jobId));
+    
+    const userId = job?.createdBy;
+
     try {
-      // Extract data using Gemini Vision
-      const extractedData = await this.extractDataWithGemini(
-        document.fileData,
-        document.mimeType,
-        document.documentType
+      // Extract data using Gemini Vision WITH CREDIT DEDUCTION
+      const creditResult = await withCredits(
+        {
+          workspaceId: document.workspaceId,
+          featureKey: 'ai_migration',
+          description: `Gemini Vision data extraction from ${document.fileName} (${document.documentType})`,
+          userId,
+        },
+        async () => {
+          return await this.extractDataWithGemini(
+            document.fileData,
+            document.mimeType,
+            document.documentType
+          );
+        }
       );
+
+      // Handle insufficient credits
+      if (!creditResult.success) {
+        if (creditResult.insufficientCredits) {
+          throw new Error(`Insufficient credits: Migration requires 10 credits. ${creditResult.error}`);
+        }
+        throw new Error(`Credit deduction failed: ${creditResult.error}`);
+      }
+
+      const extractedData = creditResult.result!;
 
       // Create migration records
       const records = await Promise.all(
