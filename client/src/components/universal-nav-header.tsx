@@ -4,7 +4,7 @@
  * Matches Fortune 500 professional aesthetic with AutoForce branding
  */
 
-import { Menu, ChevronDown, ChevronRight, GraduationCap, Search } from "lucide-react";
+import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -12,7 +12,7 @@ import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { selectSidebarFamilies } from "@/lib/osModules";
+import { selectCondensedMobileFamilies, getDesktopOnlyRoutes } from "@/lib/osModules";
 import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTransition } from "@/contexts/transition-context";
@@ -22,6 +22,7 @@ import { HelpDropdown } from "@/components/help-dropdown";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { PlanBadge } from "@/components/plan-badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function UniversalNavHeader() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -30,10 +31,15 @@ export function UniversalNavHeader() {
   const transition = useTransition();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Get navigation items with RBAC filtering
+  // Get CONDENSED navigation items for mobile (essential features only)
   const families = isLoading 
     ? [] 
-    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+    : selectCondensedMobileFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+
+  // Get desktop-only routes for "Use Desktop" prompt
+  const desktopOnlyRoutes = isLoading
+    ? []
+    : getDesktopOnlyRoutes(workspaceRole, subscriptionTier, isPlatformStaff);
 
   // Track expanded sections - ALL expanded by default for easy access
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -125,6 +131,30 @@ export function UniversalNavHeader() {
                   </div>
                 </Link>
               </div>
+
+              {/* Use Desktop Notice */}
+              {desktopOnlyRoutes.length > 0 && (
+                <div className="px-4 pt-4">
+                  <Alert className="border-amber-500/30 bg-amber-500/5">
+                    <Monitor className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                    <AlertDescription className="text-xs text-foreground/80 mt-1">
+                      <strong className="font-semibold block mb-1">Mobile Limitations</strong>
+                      Major operations require desktop for best experience:
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                        {desktopOnlyRoutes.slice(0, 5).map(route => (
+                          <li key={route.id}>{route.label}</li>
+                        ))}
+                        {desktopOnlyRoutes.length > 5 && (
+                          <li className="font-semibold">+{desktopOnlyRoutes.length - 5} more features</li>
+                        )}
+                      </ul>
+                      <p className="mt-2 text-[10px] text-amber-700 dark:text-amber-600 font-medium">
+                        📍 Use desktop for AI Scheduling, Invoicing, Payroll & Analytics
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
 
               {/* Navigation Menu */}
               <div className="p-4 space-y-2">

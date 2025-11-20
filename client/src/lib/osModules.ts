@@ -828,3 +828,66 @@ export function selectSidebarFamilies(
     .filter(family => family.routes.length > 0 || family.locked.length > 0)
     .sort((a, b) => a.order - b.order);
 }
+
+/**
+ * CONDENSED MOBILE MENU
+ * Returns only mobile-friendly routes for limited mobile capabilities
+ * Forces users to desktop for major operations (AI Brain automations, bulk data, analytics)
+ */
+export function selectCondensedMobileFamilies(
+  role: WorkspaceRole,
+  tier: SubscriptionTier,
+  isPlatformStaff: boolean = false
+): SidebarFamily[] {
+  // Mobile-friendly route IDs - Essential features only
+  const mobileFriendlyRouteIds = [
+    'dashboard-home',          // Dashboard overview
+    'time-os',                 // Time tracking (clock in/out)
+    'private-messages',        // Private messaging
+    'support-chat',            // Support (if applicable)
+  ];
+
+  // Get full navigation families
+  const fullFamilies = selectSidebarFamilies(role, tier, isPlatformStaff);
+
+  // Filter to only mobile-friendly routes
+  const condensedFamilies = fullFamilies
+    .map(family => ({
+      ...family,
+      routes: family.routes.filter(route => mobileFriendlyRouteIds.includes(route.id)),
+      locked: [], // Don't show locked routes on mobile
+    }))
+    .filter(family => family.routes.length > 0);
+
+  return condensedFamilies;
+}
+
+/**
+ * Get desktop-only routes (hidden from mobile condensed menu)
+ * Used to display "Use Desktop" prompts to users
+ */
+export function getDesktopOnlyRoutes(
+  role: WorkspaceRole,
+  tier: SubscriptionTier,
+  isPlatformStaff: boolean = false
+): OSModuleRoute[] {
+  const mobileFriendlyIds = [
+    'dashboard-home',
+    'time-os',
+    'private-messages',
+    'support-chat',
+  ];
+
+  const fullFamilies = selectSidebarFamilies(role, tier, isPlatformStaff);
+  const desktopOnlyRoutes: OSModuleRoute[] = [];
+
+  fullFamilies.forEach(family => {
+    family.routes.forEach(route => {
+      if (!mobileFriendlyIds.includes(route.id)) {
+        desktopOnlyRoutes.push(route);
+      }
+    });
+  });
+
+  return desktopOnlyRoutes;
+}

@@ -11562,3 +11562,66 @@ export const insertCreditPackSchema = createInsertSchema(creditPacks).omit({
 
 export type InsertCreditPack = z.infer<typeof insertCreditPackSchema>;
 export type CreditPack = typeof creditPacks.$inferSelect;
+
+// Checkpoint status enum
+export const checkpointStatusEnum = pgEnum('checkpoint_status', [
+  'paused',     // Automation paused due to insufficient credits
+  'resumed',    // Automation resumed after credit purchase
+  'expired',    // Checkpoint expired (24h limit)
+  'cancelled'   // User cancelled the checkpoint
+]);
+
+// AI Brain Checkpoints - Save automation state when credits exhausted
+export const aiCheckpoints = pgTable("ai_checkpoints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id), // User who triggered automation
+  
+  // Automation context
+  featureKey: varchar("feature_key").notNull(), // 'ai_scheduling', 'ai_invoicing', 'ai_payroll'
+  featureName: varchar("feature_name").notNull(), // Human-readable name
+  
+  // Checkpoint state
+  status: checkpointStatusEnum("status").notNull().default("paused"),
+  creditsRequired: integer("credits_required").notNull(), // Credits needed to resume
+  creditsAtPause: integer("credits_at_pause").notNull(), // Balance when paused
+  
+  // Progress tracking
+  progressPercentage: integer("progress_percentage").default(0), // 0-100% completion
+  completedSteps: text("completed_steps").array().default(sql`ARRAY[]::text[]`), // Completed operations
+  
+  // Automation state (serialized for resume)
+  stateSnapshot: jsonb("state_snapshot").notNull(), // Full state for resumption
+  partialResults: jsonb("partial_results").default("{}"), // What was completed
+  resumeParameters: jsonb("resume_parameters").notNull(), // Parameters to resume
+  
+  // User notification
+  userNotified: boolean("user_notified").default(false),
+  notifiedAt: timestamp("notified_at"),
+  
+  // Lifecycle
+  pausedAt: timestamp("paused_at").defaultNow(),
+  resumedAt: timestamp("resumed_at"),
+  expiresAt: timestamp("expires_at").notNull(), // Auto-expire after 24h
+  
+  // Audit
+  errorMessage: text("error_message"), // Error that triggered pause
+  metadata: jsonb("metadata").default("{}"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ai_checkpoints_workspace_idx").on(table.workspaceId, table.status),
+  index("ai_checkpoints_user_idx").on(table.userId),
+  index("ai_checkpoints_feature_idx").on(table.featureKey),
+  index("ai_checkpoints_expires_idx").on(table.expiresAt),
+]);
+
+export const insertAiCheckpointSchema = createInsertSchema(aiCheckpoints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiCheckpoint = z.infer<typeof insertAiCheckpointSchema>;
+export type AiCheckpoint = typeof aiCheckpoints.$inferSelect;
