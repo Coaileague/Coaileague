@@ -83,9 +83,9 @@ export class ComplianceMonitoringService {
 
       const hours = (new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) / (1000 * 60 * 60);
       
-      const existing = employeeHours.get(shift.employeeId) || { employee: shift.employee, totalHours: 0 };
+      const existing = employeeHours.get(shift.employeeId || '') || { employee: shift.employee, totalHours: 0 };
       existing.totalHours += hours;
-      employeeHours.set(shift.employeeId, existing);
+      employeeHours.set(shift.employeeId || '', existing);
     }
 
     // Flag employees over 40 hours/week
@@ -141,65 +141,6 @@ export class ComplianceMonitoringService {
 
     // FUTURE: Add certification tracking to employee schema or separate table
     // For now, skip to avoid false positives
-
-    return issues;
-
-    /* TEMPLATE for when certifications are available:
-    const thirtyDaysFromNow = addDays(new Date(), 30);
-    const employeesWithCerts = await db.query.employees.findMany({
-      where: and(
-        eq(employees.workspaceId, workspaceId),
-        sql`certifications IS NOT NULL`
-      ),
-    });
-
-    for (const employee of employeesWithCerts) {
-      const certs = employee.certifications as any[];
-      if (!Array.isArray(certs)) continue;
-
-      for (const cert of certs) {
-        if (cert.expiryDate) {
-          const expiryDate = new Date(cert.expiryDate);
-          const daysUntilExpiry = differenceInDays(expiryDate, new Date());
-
-          if (daysUntilExpiry <= 30 && daysUntilExpiry >= 0) {
-            issues.push({
-              id: `cert-expiring-${employee.id}-${cert.name}-${Date.now()}`,
-              type: 'CERTIFICATION',
-              severity: daysUntilExpiry <= 7 ? 'CRITICAL' : daysUntilExpiry <= 14 ? 'HIGH' : 'MEDIUM',
-              title: `Certification Expiring Soon: ${cert.name}`,
-              description: `${cert.name} expires in ${daysUntilExpiry} days. Employee may not be eligible for certain shifts after expiration.`,
-              affectedEntity: {
-                type: 'employee',
-                id: employee.id,
-                name: `${employee.firstName} ${employee.lastName}` || 'Unknown',
-              },
-              regulation: cert.isRequired ? 'Required certification per job requirements' : 'Optional certification',
-              dueDate: expiryDate,
-              detected_at: new Date(),
-              resolution: `Contact ${employee.name} to renew ${cert.name} before ${format(expiryDate, 'MMM d, yyyy')}.`,
-            });
-          } else if (daysUntilExpiry < 0) {
-            issues.push({
-              id: `cert-expired-${employee.id}-${cert.name}-${Date.now()}`,
-              type: 'CERTIFICATION',
-              severity: 'CRITICAL',
-              title: `Expired Certification: ${cert.name}`,
-              description: `${cert.name} expired ${Math.abs(daysUntilExpiry)} days ago. Employee may not be eligible for shifts requiring this certification.`,
-              affectedEntity: {
-                type: 'employee',
-                id: employee.id,
-                name: `${employee.firstName} ${employee.lastName}` || 'Unknown',
-              },
-              regulation: cert.isRequired ? 'Required certification per job requirements' : 'Optional certification',
-              dueDate: expiryDate,
-              detected_at: new Date(),
-              resolution: `Remove ${employee.name} from shifts requiring ${cert.name}. Do not schedule until renewed.`,
-            });
-          }
-        }
-      }
-    }
 
     return issues;
   }

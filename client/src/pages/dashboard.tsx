@@ -52,6 +52,134 @@ interface WorkspaceHealth {
   safeToRun: boolean;
 }
 
+interface ComplianceData {
+  hasData: boolean;
+  lastScan: string | null;
+  issues: any[];
+  summary: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+}
+
+// Compliance Alerts Component
+function ComplianceAlerts() {
+  const [, setLocation] = useLocation();
+  const { data: compliance, isLoading } = useQuery<ComplianceData>({
+    queryKey: ['/api/automation/compliance/recent'],
+  });
+
+  if (isLoading || !compliance?.hasData || compliance.summary.total === 0) {
+    return null;
+  }
+
+  const hasCritical = compliance.summary.critical > 0;
+  const hasHigh = compliance.summary.high > 0;
+
+  return (
+    <ResponsiveSection>
+      <div 
+        className={`rounded-xl p-6 border-2 shadow-lg ${
+          hasCritical 
+            ? 'bg-red-50 dark:bg-red-950/30 border-red-500 dark:border-red-700' 
+            : hasHigh 
+            ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-500 dark:border-orange-700' 
+            : 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-500 dark:border-yellow-700'
+        }`}
+        data-testid="card-compliance-alerts"
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-lg ${
+              hasCritical 
+                ? 'bg-red-100 dark:bg-red-900/50' 
+                : hasHigh 
+                ? 'bg-orange-100 dark:bg-orange-900/50' 
+                : 'bg-yellow-100 dark:bg-yellow-900/50'
+            }`}>
+              <Shield className={`w-6 h-6 ${
+                hasCritical 
+                  ? 'text-red-600 dark:text-red-400' 
+                  : hasHigh 
+                  ? 'text-orange-600 dark:text-orange-400' 
+                  : 'text-yellow-600 dark:text-yellow-400'
+              }`} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Compliance Alerts
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                AI Brain detected {compliance.summary.total} issue{compliance.summary.total === 1 ? '' : 's'} requiring attention
+              </p>
+            </div>
+          </div>
+          <Button 
+            onClick={() => setLocation('/automation-control')}
+            variant="outline"
+            size="sm"
+            data-testid="button-view-compliance"
+          >
+            View Details
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {compliance.summary.critical > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-red-200 dark:border-red-800" data-testid="card-critical-issues">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span className="text-xs font-semibold text-red-900 dark:text-red-300">CRITICAL</span>
+              </div>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{compliance.summary.critical}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Immediate action required</p>
+            </div>
+          )}
+          {compliance.summary.high > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-orange-200 dark:border-orange-800" data-testid="card-high-issues">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <span className="text-xs font-semibold text-orange-900 dark:text-orange-300">HIGH</span>
+              </div>
+              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{compliance.summary.high}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Requires prompt attention</p>
+            </div>
+          )}
+          {compliance.summary.medium > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-yellow-200 dark:border-yellow-800" data-testid="card-medium-issues">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-xs font-semibold text-yellow-900 dark:text-yellow-300">MEDIUM</span>
+              </div>
+              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{compliance.summary.medium}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Review when possible</p>
+            </div>
+          )}
+          {compliance.summary.low > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700" data-testid="card-low-issues">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <span className="text-xs font-semibold text-gray-900 dark:text-gray-300">LOW</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{compliance.summary.low}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Monitor</p>
+            </div>
+          )}
+        </div>
+
+        {compliance.lastScan && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+            Last scan: {formatDistanceToNow(new Date(compliance.lastScan), { addSuffix: true })}
+          </p>
+        )}
+      </div>
+    </ResponsiveSection>
+  );
+}
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -673,6 +801,9 @@ export default function Dashboard() {
             </div>
           </ResponsiveSection>
         )}
+
+        {/* Compliance Alerts Section */}
+        <ComplianceAlerts />
 
         {/* Quick Actions Grid - Role-Based Dynamic Cards */}
         <ResponsiveSection>

@@ -914,3 +914,49 @@ automationRouter.post('/compliance/scan', async (req: any, res: Response) => {
     });
   }
 });
+
+/**
+ * GET /api/automation/compliance/recent
+ * Get recent compliance issues for dashboard display
+ */
+automationRouter.get('/compliance/recent', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.workspace) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get latest compliance scan from audit log
+    const recentScans = await storage.getAuditEvents({
+      workspaceId: req.workspace.id,
+      actorType: 'AI_AGENT',
+      eventType: 'compliance_scan_completed',
+      limit: 1,
+    });
+
+    if (recentScans.length === 0) {
+      return res.json({
+        hasData: false,
+        lastScan: null,
+        issues: [],
+        summary: { total: 0, critical: 0, high: 0, medium: 0, low: 0 },
+      });
+    }
+
+    const lastScan = recentScans[0];
+    const metadata = lastScan.metadata as any;
+
+    return res.json({
+      hasData: true,
+      lastScan: lastScan.timestamp,
+      issues: [], // Full issues not stored in audit log, only summary
+      summary: metadata?.summary || { total: 0, critical: 0, high: 0, medium: 0, low: 0 },
+    });
+
+  } catch (error) {
+    console.error('Recent compliance fetch error:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch compliance data',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
