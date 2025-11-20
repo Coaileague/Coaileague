@@ -71,7 +71,6 @@ async function createCheckpoint(
     stateSnapshot,
     resumeParameters,
     expiresAt,
-    errorMessage: `Automation paused: Insufficient credits (need ${creditsRequired}, have ${currentBalance})`,
   }).returning();
 
   console.log(`💾 [AI Brain Checkpoint] Created checkpoint ${checkpoint.id} for ${featureKey}`);
