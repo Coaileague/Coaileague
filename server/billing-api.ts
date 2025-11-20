@@ -179,7 +179,36 @@ billingRouter.post('/usage/estimate', async (req, res) => {
 // ============================================================================
 
 /**
- * Get wallet balance
+ * Get full credit account details (for AutoForce credit system)
+ */
+billingRouter.get('/credits', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Import CreditManager from billing system
+    const { CreditManager } = await import('./services/billing/creditManager');
+    const creditManager = new CreditManager();
+    
+    const credits = await creditManager.getCreditsAccount(workspaceId);
+    
+    if (!credits) {
+      // Initialize if not exists
+      const newCredits = await creditManager.initializeCredits(workspaceId, 'free');
+      return res.json(newCredits);
+    }
+
+    res.json(credits);
+  } catch (error: any) {
+    console.error('Failed to get credits:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get wallet balance (legacy endpoint)
  */
 billingRouter.get('/credits/balance', async (req, res) => {
   try {
@@ -193,6 +222,35 @@ billingRouter.get('/credits/balance', async (req, res) => {
     res.json(balance);
   } catch (error: any) {
     console.error('Failed to get balance:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get credit transaction history
+ */
+billingRouter.get('/transactions', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Import CreditManager
+    const { CreditManager } = await import('./services/billing/creditManager');
+    const creditManager = new CreditManager();
+    
+    // Parse query params
+    const { limit, offset } = z.object({
+      limit: z.string().transform(s => parseInt(s) || 50).optional(),
+      offset: z.string().transform(s => parseInt(s) || 0).optional(),
+    }).parse(req.query);
+    
+    const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
+
+    res.json(transactions);
+  } catch (error: any) {
+    console.error('Failed to get transactions:', error);
     res.status(500).json({ error: error.message });
   }
 });

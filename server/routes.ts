@@ -6645,13 +6645,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate AI schedule
-      const result = await scheduleOSAI.generateSchedule({
-        workspaceId: workspace.id,
-        weekStartDate: new Date(weekStartDate),
-        clientIds: clientIds || [],
-        shiftRequirements,
-      });
+      // Import credit system
+      const { withCredits } = await import('./services/billing/creditWrapper');
+
+      // Generate AI schedule WITH CREDIT DEDUCTION
+      const creditResult = await withCredits(
+        {
+          workspaceId: workspace.id,
+          featureKey: 'ai_scheduling',
+          description: `AI schedule generation for week ${weekStartDate}`,
+          userId,
+        },
+        async () => {
+          return await scheduleOSAI.generateSchedule({
+            workspaceId: workspace.id,
+            weekStartDate: new Date(weekStartDate),
+            clientIds: clientIds || [],
+            shiftRequirements,
+          });
+        }
+      );
+
+      if (!creditResult.success) {
+        // Check if it's insufficient credits specifically
+        if (creditResult.insufficientCredits) {
+          return res.status(402).json({
+            message: creditResult.error || 'Insufficient credits for AI scheduling',
+            feature: 'ai_scheduling',
+            creditsRequired: 25,
+          });
+        }
+        
+        // Other errors (automation execution failure, etc.)
+        return res.status(500).json({
+          message: creditResult.error || 'Failed to generate AI schedule',
+        });
+      }
+
+      const result = creditResult.result;
 
       // Track usage for billing
       await db.insert(smartScheduleUsage).values({
