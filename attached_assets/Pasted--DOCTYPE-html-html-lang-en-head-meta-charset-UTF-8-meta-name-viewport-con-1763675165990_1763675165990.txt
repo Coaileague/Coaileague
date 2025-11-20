@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AutoForce™ Mobile - Schedule</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 16px;
+            border-bottom: 1px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:active {
+            background: #e2e8f0;
+            transform: scale(0.95);
+        }
+
+        .week-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .week-nav button {
+            flex: 0 0 auto;
+            padding: 8px 12px;
+            border: 1px solid #e1e8ed;
+            background: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .week-nav button:active {
+            background: #f8fafc;
+        }
+
+        .week-display {
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .stats-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .stat-card {
+            flex: 0 0 auto;
+            width: 140px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .stat-value.success {
+            color: #10b981;
+        }
+
+        .stat-value.warning {
+            color: #f59e0b;
+        }
+
+        .stat-value.danger {
+            color: #ef4444;
+        }
+
+        .stat-subtext {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* Day Selector */
+        .day-selector {
+            padding: 0 16px 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .day-selector::-webkit-scrollbar {
+            display: none;
+        }
+
+        .day-tabs {
+            display: flex;
+            gap: 8px;
+            min-width: max-content;
+        }
+
+        .day-tab {
+            flex: 0 0 auto;
+            padding: 12px 20px;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .day-tab.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+        }
+
+        .day-name {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .day-date {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* Employee Shifts */
+        .shifts-container {
+            padding: 0 16px 16px;
+        }
+
+        .employee-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .employee-header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .employee-info {
+            flex: 1;
+        }
+
+        .employee-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .employee-role {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .employee-hours {
+            font-size: 12px;
+            color: #94a3b8;
+            background: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .shift-content {
+            padding: 16px;
+        }
+
+        .shift-block {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .shift-block.paramedic {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+        }
+
+        .shift-block.emt {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .shift-block.dispatcher {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+        }
+
+        .shift-block.supervisor {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .shift-time {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .shift-details {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        .shift-detail {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shift-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(10px);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .no-shift {
+            text-align: center;
+            padding: 32px 16px;
+            color: #94a3b8;
+        }
+
+        .no-shift-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .no-shift-text {
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .quick-add-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            color: #64748b;
+        }
+
+        .nav-item.active {
+            color: #2563eb;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            font-size: 28px;
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+            cursor: pointer;
+            z-index: 99;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Bottom Sheet */
+        .bottom-sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .bottom-sheet-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+            z-index: 201;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .bottom-sheet.open {
+            transform: translateY(0);
+        }
+
+        .sheet-handle {
+            width: 40px;
+            height: 5px;
+            background: #cbd5e1;
+            border-radius: 3px;
+            margin: 12px auto 8px;
+        }
+
+        .sheet-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .sheet-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .sheet-content {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8fafc;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .form-actions button {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-save {
+            background: #2563eb;
+            color: white;
+        }
+
+        /* Auto Schedule Sheet */
+        .auto-schedule-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-card {
+            background: #f8fafc;
+            border: 2px solid #e1e8ed;
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-card:active {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .option-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .option-desc {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            z-index: 300;
+            opacity: 0;
+            transition: all 0.3s;
+            border-left: 4px solid #2563eb;
+            max-width: calc(100% - 32px);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Loading State */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            z-index: 250;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e1e8ed;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-top">
+            <div class="logo">AutoForce™</div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="showAutoSchedule()">⚡</button>
+                <button class="icon-btn">⚙️</button>
+            </div>
+        </div>
+        <div class="week-nav">
+            <button onclick="previousWeek()">←</button>
+            <div class="week-display">Nov 18 - 24, 2024</div>
+            <button onclick="nextWeek()">→</button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-label">Hours</div>
+            <div class="stat-value">384.5</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Cost</div>
+            <div class="stat-value success">$12.4K</div>
+            <div class="stat-subtext">83% of budget</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Overtime</div>
+            <div class="stat-value warning">12.5</div>
+            <div class="stat-subtext">hrs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Open</div>
+            <div class="stat-value danger">3</div>
+            <div class="stat-subtext">shifts</div>
+        </div>
+    </div>
+
+    <!-- Day Selector -->
+    <div class="day-selector">
+        <div class="day-tabs">
+            <div class="day-tab active">
+                <div class="day-name">MON</div>
+                <div class="day-date">18</div>
+            </div>
+            <div class="day-tab">
+                <div class="day-name">TUE</div>
+                <div class="day-date">19</div>
+            </div>
+            <div class="day-tab">
+                <div class="day-name">WED</div>
+                <div class="day-date">20</div>
+            </div>
+            <div class="day-tab">
+                <div class="day-name">THU</div>
+                <div class="day-date">21</div>
+            </div>
+            <div class="day-tab">
+                <div class="day-name">FRI</div>
+                <div class="day-date">22</div>
+            </div>
+            <div class="day-tab">
+                <div class="day-name">SAT</div>
+                <div class="day-date">23</div>
+            </div>
+            <div class="day-tab">
+                <div class="day-name">SUN</div>
+                <div class="day-date">24</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Shifts -->
+    <div class="shifts-container">
+        <!-- Employee 1 -->
+        <div class="employee-card">
+            <div class="employee-header">
+                <div class="employee-info">
+                    <div class="employee-name">Sarah Martinez</div>
+                    <div class="employee-role">Paramedic</div>
+                </div>
+                <div class="employee-hours">42.0 hrs</div>
+            </div>
+            <div class="shift-content">
+                <div class="shift-block paramedic">
+                    <div class="shift-time">7:00 AM - 3:00 PM</div>
+                    <div class="shift-details">
+                        <div class="shift-detail">📍 Station 3</div>
+                        <div class="shift-detail">⏱️ 8.0 hrs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee 2 -->
+        <div class="employee-card">
+            <div class="employee-header">
+                <div class="employee-info">
+                    <div class="employee-name">James Wilson</div>
+                    <div class="employee-role">EMT</div>
+                </div>
+                <div class="employee-hours">38.5 hrs</div>
+            </div>
+            <div class="shift-content">
+                <div class="shift-block emt">
+                    <div class="shift-time">3:00 PM - 11:00 PM</div>
+                    <div class="shift-details">
+                        <div class="shift-detail">📍 Station 1</div>
+                        <div class="shift-detail">⏱️ 8.0 hrs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee 3 -->
+        <div class="employee-card">
+            <div class="employee-header">
+                <div class="employee-info">
+                    <div class="employee-name">Michael Chen</div>
+                    <div class="employee-role">Driver</div>
+                </div>
+                <div class="employee-hours">40.0 hrs</div>
+            </div>
+            <div class="shift-content">
+                <div class="no-shift">
+                    <div class="no-shift-icon">📅</div>
+                    <div class="no-shift-text">No shift scheduled</div>
+                    <button class="quick-add-btn" onclick="openQuickAdd('Michael Chen')">+ Add Shift</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee 4 -->
+        <div class="employee-card">
+            <div class="employee-header">
+                <div class="employee-info">
+                    <div class="employee-name">Lisa Rodriguez</div>
+                    <div class="employee-role">Dispatcher</div>
+                </div>
+                <div class="employee-hours">40.0 hrs</div>
+            </div>
+            <div class="shift-content">
+                <div class="shift-block dispatcher">
+                    <div class="shift-time">9:00 AM - 5:00 PM</div>
+                    <div class="shift-details">
+                        <div class="shift-detail">📍 HQ</div>
+                        <div class="shift-detail">⏱️ 8.0 hrs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee 5 -->
+        <div class="employee-card">
+            <div class="employee-header">
+                <div class="employee-info">
+                    <div class="employee-name">David Thompson</div>
+                    <div class="employee-role">Supervisor</div>
+                </div>
+                <div class="employee-hours">45.0 hrs</div>
+            </div>
+            <div class="shift-content">
+                <div class="shift-block supervisor">
+                    <div class="shift-time">8:00 AM - 6:00 PM</div>
+                    <div class="shift-details">
+                        <div class="shift-detail">📍 All Stations</div>
+                        <div class="shift-detail">⏱️ 10.0 hrs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee 6 -->
+        <div class="employee-card">
+            <div class="employee-header">
+                <div class="employee-info">
+                    <div class="employee-name">Amanda Foster</div>
+                    <div class="employee-role">Paramedic</div>
+                </div>
+                <div class="employee-hours">36.0 hrs</div>
+            </div>
+            <div class="shift-content">
+                <div class="no-shift">
+                    <div class="no-shift-icon">📅</div>
+                    <div class="no-shift-text">No shift scheduled</div>
+                    <button class="quick-add-btn" onclick="openQuickAdd('Amanda Foster')">+ Add Shift</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="openAddShift()">+</button>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <button class="nav-item active">
+            <div class="nav-icon">📅</div>
+            <div class="nav-label">Schedule</div>
+        </button>
+        <button class="nav-item" onclick="showToast('Team view coming soon')">
+            <div class="nav-icon">👥</div>
+            <div class="nav-label">Team</div>
+        </button>
+        <button class="nav-item" onclick="showToast('Time tracking coming soon')">
+            <div class="nav-icon">⏰</div>
+            <div class="nav-label">Time</div>
+        </button>
+        <button class="nav-item" onclick="showToast('More options coming soon')">
+            <div class="nav-icon">⋯</div>
+            <div class="nav-label">More</div>
+        </button>
+    </div>
+
+    <!-- Add Shift Bottom Sheet -->
+    <div class="bottom-sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+    <div class="bottom-sheet" id="addSheetSheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">Add Shift</div>
+        </div>
+        <div class="sheet-content">
+            <div class="form-group">
+                <label class="form-label">Employee</label>
+                <select class="form-select" id="employeeSelect">
+                    <option>Sarah Martinez - Paramedic</option>
+                    <option>James Wilson - EMT</option>
+                    <option>Michael Chen - Driver</option>
+                    <option>Lisa Rodriguez - Dispatcher</option>
+                    <option>David Thompson - Supervisor</option>
+                    <option>Amanda Foster - Paramedic</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-input" value="2024-11-18">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Start Time</label>
+                <input type="time" class="form-input" value="09:00">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">End Time</label>
+                <input type="time" class="form-input" value="17:00">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Location</label>
+                <select class="form-select">
+                    <option>Station 1</option>
+                    <option>Station 2</option>
+                    <option>Station 3</option>
+                    <option>Station 4</option>
+                    <option>HQ</option>
+                    <option>All Stations</option>
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+                <button class="btn-save" onclick="saveShift()">Save Shift</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto Schedule Bottom Sheet -->
+    <div class="bottom-sheet" id="autoScheduleSheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">⚡ Auto-Schedule</div>
+        </div>
+        <div class="sheet-content">
+            <div class="auto-schedule-options">
+                <div class="option-card" onclick="autoSchedule('week')">
+                    <div class="option-title">📅 Fill This Week</div>
+                    <div class="option-desc">AI will fill all open shifts for this week based on availability and skills</div>
+                </div>
+                <div class="option-card" onclick="autoSchedule('optimize')">
+                    <div class="option-title">✨ Optimize Schedule</div>
+                    <div class="option-desc">Rebalance existing shifts to minimize overtime and reduce costs</div>
+                </div>
+                <div class="option-card" onclick="autoSchedule('month')">
+                    <div class="option-title">📆 Fill Next Month</div>
+                    <div class="option-desc">Generate complete schedule for next month using templates</div>
+                </div>
+                <div class="option-card" onclick="autoSchedule('gaps')">
+                    <div class="option-title">🔍 Fill Coverage Gaps</div>
+                    <div class="option-desc">Find and fill only the shifts that need coverage</div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">AI is scheduling...</div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toastMessage">✓ Action completed</span>
+    </div>
+
+    <script>
+        // Sheet Management
+        function openAddShift() {
+            document.getElementById('sheetOverlay').classList.add('open');
+            document.getElementById('addSheetSheet').classList.add('open');
+        }
+
+        function showAutoSchedule() {
+            document.getElementById('sheetOverlay').classList.add('open');
+            document.getElementById('autoScheduleSheet').classList.add('open');
+        }
+
+        function closeSheet() {
+            document.getElementById('sheetOverlay').classList.remove('open');
+            document.getElementById('addSheetSheet').classList.remove('open');
+            document.getElementById('autoScheduleSheet').classList.remove('open');
+        }
+
+        function openQuickAdd(employeeName) {
+            document.getElementById('employeeSelect').value = employeeName;
+            openAddShift();
+        }
+
+        // Actions
+        function saveShift() {
+            closeSheet();
+            showToast('✓ Shift created successfully');
+        }
+
+        function autoSchedule(type) {
+            closeSheet();
+            document.getElementById('loadingOverlay').classList.add('show');
+            
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.remove('show');
+                let message = '';
+                switch(type) {
+                    case 'week':
+                        message = '✓ 12 shifts scheduled for this week';
+                        break;
+                    case 'optimize':
+                        message = '✓ Schedule optimized - saved $890 in overtime';
+                        break;
+                    case 'month':
+                        message = '✓ 156 shifts scheduled for next month';
+                        break;
+                    case 'gaps':
+                        message = '✓ 3 coverage gaps filled';
+                        break;
+                }
+                showToast(message);
+            }, 2500);
+        }
+
+        function previousWeek() {
+            showToast('← Loaded previous week');
+        }
+
+        function nextWeek() {
+            showToast('→ Loaded next week');
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Day Tab Selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const dayTabs = document.querySelectorAll('.day-tab');
+            dayTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    dayTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    showToast('Loaded ' + this.querySelector('.day-name').textContent);
+                });
+            });
+        });
+
+        // Prevent body scroll when sheet is open
+        const sheetOverlay = document.getElementById('sheetOverlay');
+        sheetOverlay.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>

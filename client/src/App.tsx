@@ -39,6 +39,7 @@ import Dashboard from "@/pages/dashboard";
 import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
 import DailySchedule from "@/pages/daily-schedule";
+import ScheduleMobileFirst from "@/pages/schedule-mobile-first";
 import SalesDashboard from "@/pages/sales/dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
@@ -263,7 +264,7 @@ function AppContent() {
               </Route>
               <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
               <Route path="/dashboard" component={Dashboard} />
-              <Route path="/schedule" component={UniversalSchedule} />
+              <Route path="/schedule" component={ScheduleMobileFirst} />
               <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
               <Route path="/daily-schedule" component={DailySchedule} />
               <Route path="/workflow-approvals" component={WorkflowApprovals} />
@@ -453,7 +454,7 @@ function AppContent() {
                 </Route>
                 <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
                 <Route path="/dashboard" component={Dashboard} />
-                <Route path="/schedule" component={UniversalSchedule} />
+                <Route path="/schedule" component={ScheduleMobileFirst} />
                 <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/daily-schedule" component={DailySchedule} />
                 <Route path="/workflow-approvals" component={WorkflowApprovals} />

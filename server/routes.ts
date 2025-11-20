@@ -4736,6 +4736,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // SCHEDULE WEEK STATS - Calculate weekly statistics for schedule view
+  // ============================================================================
+  
+  app.get('/api/schedules/week/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const weekStart = req.query.weekStart as string;
+      
+      if (!weekStart) {
+        return res.status(400).json({ message: "weekStart query parameter required (ISO date string)" });
+      }
+      
+      // Calculate week range
+      const startDate = new Date(weekStart);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 7);
+      
+      // Fetch all shifts for the week
+      const shifts = await storage.getShiftsByWorkspace(
+        workspaceId,
+        startDate,
+        endDate
+      );
+      
+      // Fetch all employees to get hourly rates
+      const employees = await storage.getEmployeesByWorkspace(workspaceId);
+      const employeeMap = new Map(employees.map(e => [e.id, e]));
+      
+      // Calculate stats
+      let totalHours = 0;
+      let totalCost = 0;
+      let overtimeHours = 0;
+      let openShifts = 0;
+      
+      // Track hours per employee for overtime calculation
+      const employeeHours = new Map<string, number>();
+      
+      for (const shift of shifts) {
+        const start = new Date(shift.startTime);
+        const end = new Date(shift.endTime);
+        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        
+        if (shift.status === 'open' || !shift.employeeId) {
+          openShifts++;
+        } else {
+          totalHours += hours;
+          
+          // Track employee hours
+          const empHours = employeeHours.get(shift.employeeId) || 0;
+          employeeHours.set(shift.employeeId, empHours + hours);
+          
+          // Calculate cost
+          const employee = employeeMap.get(shift.employeeId);
+          if (employee?.hourlyRate) {
+            totalCost += hours * parseFloat(employee.hourlyRate.toString());
+          }
+        }
+      }
+      
+      // Calculate overtime (hours > 40 per week per employee)
+      for (const [employeeId, hours] of employeeHours.entries()) {
+        if (hours > 40) {
+          overtimeHours += hours - 40;
+        }
+      }
+      
+      res.json({
+        weekStart: startDate.toISOString(),
+        weekEnd: endDate.toISOString(),
+        totalHours: Math.round(totalHours * 10) / 10,
+        totalCost: Math.round(totalCost * 100) / 100,
+        overtimeHours: Math.round(overtimeHours * 10) / 10,
+        openShifts,
+        shiftsCount: shifts.length,
+      });
+      
+    } catch (error) {
+      console.error("Error calculating week stats:", error);
+      res.status(500).json({ message: "Failed to calculate week stats" });
+    }
+  });
+
+  // ============================================================================
   // SCHEDULEOS™ AI FILL - Auto-assign best employee to open shift
   // ============================================================================
   
