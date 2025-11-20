@@ -139,3 +139,97 @@ aiBrainRouter.post('/feedback', requireAuth, async (req: AuthenticatedRequest, r
     res.status(500).json({ error: 'Failed to submit feedback' });
   }
 });
+
+/**
+ * GET /api/ai-brain/checkpoints - Get all paused automation checkpoints
+ */
+aiBrainRouter.get('/checkpoints', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.user?.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const checkpoints = await db.query.aiCheckpoints.findMany({
+      where: (checkpoints, { eq }) => eq(checkpoints.workspaceId, workspaceId),
+      orderBy: (checkpoints, { desc }) => [desc(checkpoints.createdAt)],
+    });
+    
+    res.json(checkpoints);
+  } catch (error: any) {
+    console.error('Error fetching checkpoints:', error);
+    res.status(500).json({ error: 'Failed to fetch checkpoints' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/checkpoints/:id/resume - Resume automation from checkpoint
+ */
+aiBrainRouter.post('/checkpoints/:id/resume', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+    const workspaceId = req.user?.currentWorkspaceId;
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    // Import aiCheckpoints table
+    const { aiCheckpoints, workspaceCredits } = await import('@shared/schema');
+    const { eq, and } = await import('drizzle-orm');
+
+    // Fetch the checkpoint
+    const checkpoint = await db.query.aiCheckpoints.findFirst({
+      where: and(
+        eq(aiCheckpoints.id, id),
+        eq(aiCheckpoints.workspaceId, workspaceId),
+        eq(aiCheckpoints.status, 'paused')
+      ),
+    });
+
+    if (!checkpoint) {
+      return res.status(404).json({ error: 'Checkpoint not found or already resumed' });
+    }
+
+    // Check if workspace has enough credits
+    const credits = await db.query.workspaceCredits.findFirst({
+      where: eq(workspaceCredits.workspaceId, workspaceId),
+    });
+
+    if (!credits || credits.balance < checkpoint.creditsNeeded) {
+      return res.status(400).json({ 
+        error: 'Insufficient credits',
+        needed: checkpoint.creditsNeeded,
+        available: credits?.balance || 0
+      });
+    }
+
+    // Mark checkpoint as resumed
+    await db
+      .update(aiCheckpoints)
+      .set({ 
+        status: 'resumed',
+        resumedAt: new Date()
+      })
+      .where(eq(aiCheckpoints.id, id));
+
+    // Re-enqueue the automation job with resume parameters
+    const result = await aiBrainService.enqueueJob({
+      workspaceId,
+      userId,
+      skill: checkpoint.automationType,
+      input: checkpoint.resumeParams,
+      priority: 'high', // Resume jobs get high priority
+    });
+
+    res.json({ 
+      success: true,
+      checkpoint,
+      job: result
+    });
+  } catch (error: any) {
+    console.error('Error resuming checkpoint:', error);
+    res.status(500).json({ error: 'Failed to resume automation' });
+  }
+});

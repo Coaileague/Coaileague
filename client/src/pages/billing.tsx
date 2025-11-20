@@ -26,6 +26,7 @@ import {
 import { format } from "date-fns";
 import type { Workspace } from "@shared/schema";
 import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CheckpointAlert } from "@/components/checkpoint-alert";
 
 export default function Billing() {
   const { user } = useAuth();
@@ -142,6 +143,9 @@ export default function Billing() {
           )}
         </Card>
       )}
+
+      {/* AI Brain Checkpoint Alert */}
+      <CheckpointAlert workspaceId={workspace?.id || null} variant="detailed" />
 
       {/* Main Content Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
