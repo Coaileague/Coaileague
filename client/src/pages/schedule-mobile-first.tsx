@@ -60,10 +60,11 @@ export default function ScheduleMobileFirst() {
     queryKey: ['/api/employees'],
   });
 
-  // Fetch clients
-  const { data: clients = [] } = useQuery<Client[]>({
+  // Fetch clients (paginated response)
+  const { data: clientsResponse } = useQuery<{ data: Client[] }>({
     queryKey: ['/api/clients'],
   });
+  const clients = Array.isArray(clientsResponse?.data) ? clientsResponse.data : [];
 
   // Filter shifts for selected day
   const dayShifts = useMemo(() => {
