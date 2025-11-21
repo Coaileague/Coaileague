@@ -449,31 +449,39 @@ Extract data from the provided document and return a JSON response with this str
   ): Promise<any> {
     switch (recordType) {
       case 'employees':
-        // Import employee (simplified - would need full validation)
-        const nameParts = data.name ? data.name.split(' ') : ['Unknown', 'Employee'];
-        const firstName = nameParts[0] || 'Unknown';
-        const lastName = nameParts.slice(1).join(' ') || 'Employee';
+        // Import employee with safe name parsing (handles single-word names)
+        const nameParts = data.name ? data.name.trim().split(/\s+/) : [];
+        const firstName = nameParts.length > 0 ? nameParts[0] : 'Unknown';
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Employee';
         
         const [employee] = await db.insert(employees).values({
           workspaceId,
           firstName,
-          lastName,
-          email: data.email,
-          phone: data.phone,
-          workspaceRole: 'employee',
-          hourlyRate: data.hourlyRate?.toString(),
-          isActive: data.status === 'active',
+          lastName, // Guaranteed non-empty: either from split or 'Employee' fallback
+          email: data.email?.trim() || null,
+          phone: data.phone?.trim() || null,
+          role: data.role?.trim() || null,
+          workspaceRole: 'staff', // Default role for migrated employees
+          hourlyRate: data.hourlyRate ? data.hourlyRate.toString() : null,
+          isActive: data.status ? data.status === 'active' : true,
         }).returning();
         return { employeeId: employee.id };
 
       case 'clients':
-        // Import client
+        // Import client with safe name parsing (handles single-word names)
+        const rawName = data.contactName || data.name || '';
+        const clientNameParts = rawName.trim().split(/\s+/).filter(p => p.length > 0);
+        const clientFirstName = clientNameParts.length > 0 ? clientNameParts[0] : 'Unknown';
+        const clientLastName = clientNameParts.length > 1 ? clientNameParts.slice(1).join(' ') : 'Client';
+        
         const [client] = await db.insert(clients).values({
           workspaceId,
-          firstName: data.contactName || data.name || 'Unknown',
-          lastName: 'Contact',
-          email: data.email,
-          phone: data.phone,
+          firstName: clientFirstName,
+          lastName: clientLastName, // Guaranteed non-empty: either from split or 'Client' fallback
+          companyName: data.companyName?.trim() || data.name?.trim() || null,
+          email: data.email?.trim() || null,
+          phone: data.phone?.trim() || null,
+          isActive: true,
         }).returning();
         return { clientId: client.id };
 
