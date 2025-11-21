@@ -685,9 +685,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       return 'bg-blue-600 border border-blue-700 shadow-md text-white dark:bg-blue-700 dark:border-blue-800';
     }
     
-    // Bot messages - lighter blue for distinction
+    // Bot messages - lighter blue for distinction with BLACK text for maximum contrast
     if (role === 'bot' || senderType === 'bot') {
-      return 'bg-blue-100 border border-blue-300 shadow-sm text-blue-900 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-100';
+      return 'bg-blue-100 border border-blue-300 shadow-sm text-black dark:bg-blue-950/50 dark:border-blue-800 dark:text-white';
     }
     
     // Staff messages - blue theme with white text
