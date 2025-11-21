@@ -669,34 +669,34 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'root_admin': return 'text-blue-600 font-bold';  // Root admin
-      case 'bot': return 'text-blue-500 font-bold';  // Bot
-      case 'deputy_admin': return 'text-blue-600 font-bold';
-      case 'support_manager': return 'text-blue-600 font-bold';
-      case 'sysop': return 'text-blue-600 font-bold';
-      default: return 'text-white font-semibold';  // Regular users - white for visibility
+      case 'root_admin': return 'text-blue-900 font-bold';  // Root admin - dark for contrast
+      case 'bot': return 'text-blue-900 font-bold';  // Bot - dark for contrast
+      case 'deputy_admin': return 'text-blue-900 font-bold';
+      case 'support_manager': return 'text-blue-900 font-bold';
+      case 'sysop': return 'text-blue-900 font-bold';
+      default: return 'text-blue-900 font-semibold';  // Regular users - dark for visibility
     }
   };
 
-  // Get message bubble color - Blue visibility scheme with proper contrast
+  // Get message bubble color - LIGHT backgrounds with DARK text for readability
   const getMessageBubbleColor = (senderType: string, role: string, isSelf: boolean) => {
     if (isSelf) {
-      // Support staff own messages - blue theme with white text
-      return 'bg-blue-600 border border-blue-700 shadow-md text-white dark:bg-blue-700 dark:border-blue-800';
+      // Support staff own messages - medium blue with WHITE text for contrast
+      return 'bg-blue-600 border border-blue-700 shadow-md text-white';
     }
     
-    // Bot messages - lighter blue for distinction with BLACK text for maximum contrast
+    // Bot messages - very light blue with BLACK text for maximum contrast
     if (role === 'bot' || senderType === 'bot') {
-      return 'bg-blue-100 border border-blue-300 shadow-sm text-black dark:bg-blue-950/50 dark:border-blue-800 dark:text-white';
+      return 'bg-blue-50 border border-blue-200 shadow-sm text-black';
     }
     
-    // Staff messages - blue theme with white text
+    // Staff messages - light blue with DARK text
     if (role === 'root_admin' || role === 'deputy_admin' || role === 'support_manager' || role === 'sysop') {
-      return 'bg-blue-500 border border-blue-600 shadow-sm text-white dark:bg-blue-600 dark:border-blue-700';
+      return 'bg-blue-500 border border-blue-600 shadow-sm text-white';
     }
     
-    // Customer/regular messages - darker blue background with white text
-    return 'bg-blue-700 border border-blue-800 shadow-md text-white dark:bg-blue-800 dark:border-blue-900';
+    // Customer/regular messages - light background with DARK text
+    return 'bg-gray-100 border border-gray-300 shadow-md text-black';
   };
 
   const isStaff = user && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((user as any).platformRole);
@@ -1042,8 +1042,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
       {/* Main Layout - Responsive: Stacked (mobile) vs 3-column (desktop) */}
       <main className="flex flex-col md:flex-row flex-grow overflow-y-auto md:overflow-hidden w-full relative z-10">
-        {/* CENTER COLUMN: Chat Area - Mobile-first with proper scroll */}
-        <section className="flex-grow flex flex-col bg-slate-900/80 backdrop-blur-md relative md:border-r-2 border-blue-700 shadow-inner min-h-0">
+        {/* CENTER COLUMN: Chat Area - WHITE BACKGROUND for readability */}
+        <section className="flex-grow flex flex-col bg-white relative md:border-r-2 border-blue-300 shadow-inner min-h-0">
           {/* Progress Header - Only show for escalated tickets with real ticket IDs */}
           {isStaff && urlConversationId && urlConversationId !== 'helpdesk' && (
             <div className="px-4 py-3 border-b border-blue-700 bg-slate-800/70">
@@ -1102,9 +1102,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                           </span>
                         </div>
                         
-                        {/* Message Content - Mobile-safe wrapping with overflow protection */}
+                        {/* Message Content - Dark text for readability on light backgrounds */}
                         <div 
-                          className="text-white dark:text-blue-100 text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
+                          className="text-inherit text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
                           dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
                         />
                       </div>
