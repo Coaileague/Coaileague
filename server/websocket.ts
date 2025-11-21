@@ -863,18 +863,6 @@ export function setupWebSocket(server: Server) {
 
                 // 2. HELPOS™ announcement (AI Bot): Only for customers (not staff)
                 if (!isStaff) {
-                  // Customer: Add to queue and send welcome with position
-                  // Generate ticket number if needed
-                  const ticketNumber = `TKT-${Date.now().toString().slice(-6)}`;
-                  
-                  const queueEntry = await queueManager.enqueue({
-                    conversationId: conversationId,
-                    userId: payload.userId?.startsWith('guest-') ? undefined : payload.userId, // Guests don't have user records
-                    ticketNumber,
-                    userName: displayName,
-                    workspaceId: ws.workspaceId,
-                  });
-
                   // AUTO-VOICE for public HelpDesk room: Give guests immediate ability to send messages
                   if (isMainRoom) {
                     if (ws.readyState === WebSocket.OPEN) {
@@ -883,50 +871,74 @@ export function setupWebSocket(server: Server) {
                     }
                   }
 
-                  await queueManager.updateQueuePositions();
-                  const updatedEntry = await queueManager.getQueueEntry(conversationId);
+                  // Check if user has an active support ticket
+                  const existingTicket = await storage.getActiveSupportTicket(payload.userId, ws.workspaceId);
                   
-                  if (updatedEntry) {
-                    const queueStatus = await queueManager.getQueueStatus();
-                    const welcomeMessage = await generateQueueWelcome(
-                      displayName,
-                      queueEntry.ticketNumber,
-                      updatedEntry.queuePosition || 1,
-                      updatedEntry.estimatedWaitMinutes || 5,
-                      queueStatus.waitingCount
-                    );
+                  let welcomeMessage: string;
+                  let ticketNumber: string;
+                  
+                  if (!existingTicket && ws.workspaceId) {
+                    // NO TICKET: Start intake flow to create one
+                    const { startIntakeFlow } = await import('./helpos-bot');
+                    welcomeMessage = startIntakeFlow(conversationId, payload.userId, ws.workspaceId);
+                    ticketNumber = `INTAKE-${Date.now().toString().slice(-6)}`; // Temp ID until real ticket created
+                  } else {
+                    // HAS TICKET: Use existing ticket or create temp one
+                    ticketNumber = existingTicket?.ticketNumber || `TKT-${Date.now().toString().slice(-6)}`;
                     
-                    // EPHEMERAL welcome message - NOT saved to database to prevent doubles
-                    // Create message object for WebSocket only
-                    const botMessage = {
-                      id: `temp-${Date.now()}`,
+                    const queueEntry = await queueManager.enqueue({
                       conversationId: conversationId,
-                      senderId: 'ai-bot',
-                      senderName: 'HelpOS™',
-                      senderType: 'bot',
-                      message: welcomeMessage,
-                      messageType: 'text',
-                      createdAt: new Date(),
-                      isPrivateMessage: true,
-                      recipientId: payload.userId,
-                      isSystemMessage: false,
-                      attachmentUrl: null,
-                      attachmentName: null,
-                      isRead: false,
-                      readAt: null,
-                    };
-
-                    await queueManager.markWelcomeSent(queueEntry.id);
-
-                    // Send PRIVATE HelpOS welcome DM (only to this user, ephemeral)
-                    const privateWelcome = JSON.stringify({
-                      type: 'private_message',
-                      message: botMessage,
-                      from: 'HelpOS™',
+                      userId: payload.userId?.startsWith('guest-') ? undefined : payload.userId,
+                      ticketNumber,
+                      userName: displayName,
+                      workspaceId: ws.workspaceId,
                     });
-                    if (ws.readyState === WebSocket.OPEN) {
-                      ws.send(privateWelcome);
+
+                    await queueManager.updateQueuePositions();
+                    const updatedEntry = await queueManager.getQueueEntry(conversationId);
+                    
+                    if (updatedEntry) {
+                      const queueStatus = await queueManager.getQueueStatus();
+                      welcomeMessage = await generateQueueWelcome(
+                        displayName,
+                        ticketNumber,
+                        updatedEntry.queuePosition || 1,
+                        updatedEntry.estimatedWaitMinutes || 5,
+                        queueStatus.waitingCount
+                      );
+                      await queueManager.markWelcomeSent(queueEntry.id);
+                    } else {
+                      welcomeMessage = `Welcome ${displayName}! Your ticket is ${ticketNumber}.`;
                     }
+                  }
+                  
+                  // EPHEMERAL welcome message - NOT saved to database to prevent doubles
+                  const botMessage = {
+                    id: `temp-${Date.now()}`,
+                    conversationId: conversationId,
+                    senderId: 'ai-bot',
+                    senderName: 'HelpOS™',
+                    senderType: 'bot',
+                    message: welcomeMessage,
+                    messageType: 'text',
+                    createdAt: new Date(),
+                    isPrivateMessage: true,
+                    recipientId: payload.userId,
+                    isSystemMessage: false,
+                    attachmentUrl: null,
+                    attachmentName: null,
+                    isRead: false,
+                    readAt: null,
+                  };
+
+                  // Send PRIVATE HelpOS welcome DM (only to this user, ephemeral)
+                  const privateWelcome = JSON.stringify({
+                    type: 'private_message',
+                    message: botMessage,
+                    from: 'HelpOS™',
+                  });
+                  if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(privateWelcome);
                   }
                 }
               } catch (announceError) {

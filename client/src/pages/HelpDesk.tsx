@@ -1125,12 +1125,34 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               <div className="mb-2 sm:mb-3 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 rounded-md border border-border bg-muted/40 p-2 sm:p-3 backdrop-blur">
                 <AgentToolbelt
                   ticketId={sessionId}
-                  onMacroInsert={(macro) => setInputMessage(prev => prev ? `${prev}\n\n${macro}` : macro)}
-                  onRequestFile={(type) => {
-                    sendMessage(`📎 Please provide: ${type}`, userName, 'support');
-                    toast({ title: "File Request Sent", description: `Requested ${type} from customer` });
+                  selectedUserId={selectedUserId}
+                  selectedUserName={onlineUsers.find(u => u.id === selectedUserId)?.name || null}
+                  onMacroInsert={(macro, targetUserId) => {
+                    if (targetUserId) {
+                      const targetName = onlineUsers.find(u => u.id === targetUserId)?.name || 'User';
+                      sendMessage(`@${targetName}: ${macro}`, userName, 'support');
+                    } else {
+                      setInputMessage(prev => prev ? `${prev}\n\n${macro}` : macro);
+                    }
                   }}
-                  onSendKBLink={(link) => setInputMessage(prev => prev ? `${prev}\n\n${link}` : link)}
+                  onRequestFile={(type, targetUserId) => {
+                    if (targetUserId) {
+                      const targetName = onlineUsers.find(u => u.id === targetUserId)?.name || 'User';
+                      sendMessage(`@${targetName} 📎 Please provide: ${type}`, userName, 'support');
+                      toast({ title: "File Request Sent", description: `Requested ${type} from ${targetName}` });
+                    } else {
+                      sendMessage(`📎 Please provide: ${type}`, userName, 'support');
+                      toast({ title: "File Request Sent", description: `Requested ${type} from customer` });
+                    }
+                  }}
+                  onSendKBLink={(link, targetUserId) => {
+                    if (targetUserId) {
+                      const targetName = onlineUsers.find(u => u.id === targetUserId)?.name || 'User';
+                      sendMessage(`@${targetName}: ${link}`, userName, 'support');
+                    } else {
+                      setInputMessage(prev => prev ? `${prev}\n\n${link}` : link);
+                    }
+                  }}
                   onEscalate={(reason, queue) => {
                     setTicketStatus('escalated');
                     sendMessage(`⚠️ Escalating to ${queue}: ${reason}`, userName, 'system');

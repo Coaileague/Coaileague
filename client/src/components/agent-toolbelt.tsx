@@ -36,9 +36,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface AgentToolbeltProps {
   ticketId?: string;
-  onMacroInsert?: (macro: string) => void;
-  onRequestFile?: (fileType: string) => void;
-  onSendKBLink?: (article: string) => void;
+  selectedUserId?: string | null; // Target user for tools
+  selectedUserName?: string | null; // Target user name for display
+  onMacroInsert?: (macro: string, targetUserId?: string) => void;
+  onRequestFile?: (fileType: string, targetUserId?: string) => void;
+  onSendKBLink?: (article: string, targetUserId?: string) => void;
   onEscalate?: (reason: string, queue: string) => void;
   onTransfer?: (agentId: string) => void;
   onCreateBug?: (description: string) => void;
@@ -63,6 +65,8 @@ const kbArticles = [
 
 export function AgentToolbelt({
   ticketId,
+  selectedUserId,
+  selectedUserName,
   onMacroInsert,
   onRequestFile,
   onSendKBLink,
@@ -80,31 +84,34 @@ export function AgentToolbelt({
 
   const handleMacro = (macroText: string) => {
     if (onMacroInsert) {
-      onMacroInsert(macroText);
+      onMacroInsert(macroText, selectedUserId || undefined);
     }
+    const targetInfo = selectedUserName ? ` for ${selectedUserName}` : "";
     toast({
       title: "Macro Inserted",
-      description: "Template text has been added to your message.",
+      description: `Template text added${targetInfo}`,
     });
   };
 
   const handleRequestFile = (fileType: string) => {
     if (onRequestFile) {
-      onRequestFile(fileType);
+      onRequestFile(fileType, selectedUserId || undefined);
     }
+    const targetInfo = selectedUserName ? ` from ${selectedUserName}` : " from user";
     toast({
       title: "File Requested",
-      description: `Requesting ${fileType} from user...`,
+      description: `Requesting ${fileType}${targetInfo}`,
     });
   };
 
   const handleKBLink = (article: typeof kbArticles[0]) => {
     if (onSendKBLink) {
-      onSendKBLink(`[KB] **${article.title}**: ${window.location.origin}${article.url}`);
+      onSendKBLink(`[KB] **${article.title}**: ${window.location.origin}${article.url}`, selectedUserId || undefined);
     }
+    const targetInfo = selectedUserName ? ` to ${selectedUserName}` : "";
     toast({
       title: "KB Link Sent",
-      description: `Sent link to ${article.title}`,
+      description: `Sent ${article.title}${targetInfo}`,
     });
   };
 

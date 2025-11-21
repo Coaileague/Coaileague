@@ -4,7 +4,31 @@
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive platform powered by a unified AI Brain that autonomously manages end-to-end workforce operations. Its core purpose is to achieve complete automation—from intelligent scheduling and payroll to compliance monitoring and billing—with a 99% AI completion rate, minimizing human intervention. Key capabilities include AI-powered scheduling, automated invoice and payroll generation, smart hiring, compliance auditing, and real-time analytics. AutoForce™ targets emergency services and service-related industries with a hybrid subscription and usage-based revenue model, aiming for significant market potential through its autonomous capabilities.
 
 ## Recent Updates (Nov 21, 2025)
-**CRITICAL RBAC + CHAT SYSTEM FIXES:**
+**HELPDESK INTAKE SYSTEM + TOOL TARGETING (Latest):**
+
+**HelpOS Bot Auto-Ticket Creation:**
+- **Feature**: Bot automatically creates support tickets for users who join HelpDesk without active tickets
+- **Intake Flow**: Multi-step conversational gathering of subject → description → priority → ticket creation
+- **Bot States Added**: `INTAKE_SUBJECT`, `INTAKE_DESCRIPTION`, `INTAKE_PRIORITY`, `CREATING_TICKET`
+- **Ticket Generation**: Auto-generates `TKT-YYYY-NNNN` format ticket numbers (e.g., TKT-2025-0001)
+- **Files Modified**: `server/helpos-bot.ts` (added intake state machine), `server/websocket.ts` (trigger on join), `server/storage.ts` (added `getActiveSupportTicket()`)
+- **User Experience**: Users without tickets get guided through intake, users with tickets get normal queue welcome
+- **Database**: Tickets stored in `supportTickets` table with full context for staff escalation
+
+**Support Tool Context Targeting Fixed:**
+- **Issue**: When staff right-clicked users, only "kick" targeted the selected user; macros, file requests, and KB links broadcasted to everyone
+- **Fix**: Added `selectedUserId` and `selectedUserName` props to `AgentToolbelt`, updated all callbacks to accept `targetUserId` parameter
+- **Implementation**: Tools now prefix targeted messages with `@UserName:` to clearly indicate recipient
+- **Files Modified**: `client/src/components/agent-toolbelt.tsx`, `client/src/pages/HelpDesk.tsx`
+- **Result**: All support tools (macros, file requests, KB links) now properly target the right-clicked user
+
+**Chat History Disabled for Main HelpDesk:**
+- **Change**: Main HelpDesk room (`/helpdesk`) now starts fresh each session - no old messages loaded
+- **Rationale**: Users get individual help, don't need to see previous sessions from other people
+- **Exception**: Escalated ticket rooms preserve full history for staff context
+- **Files Modified**: `server/websocket.ts` (conditional history based on `isMainRoom`)
+
+**Previous RBAC + CHAT SYSTEM FIXES:**
 
 **System-Wide RBAC Bug Fixed (14 instances):**
 - **Root Cause**: Permission checks throughout codebase were looking for role `'root'` (which doesn't exist in schema) instead of `'root_admin'`

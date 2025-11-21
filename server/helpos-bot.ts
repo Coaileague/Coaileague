@@ -7,6 +7,10 @@ import { usageMeteringService } from './services/billing/usageMetering';
 // Bot conversation states
 export enum BotState {
   GREETING = 'greeting',
+  INTAKE_SUBJECT = 'intake_subject', // Asking for ticket subject/summary
+  INTAKE_DESCRIPTION = 'intake_description', // Asking for detailed description
+  INTAKE_PRIORITY = 'intake_priority', // Asking for urgency level
+  CREATING_TICKET = 'creating_ticket', // Creating the support ticket
   SEARCHING = 'searching',
   ANSWERING = 'answering',
   CLARIFYING = 'clarifying',
@@ -28,6 +32,12 @@ export interface BotConversation {
   lastInteraction: Date;
   workspaceId?: string; // For billing tracking
   userId?: string; // For billing tracking
+  // Intake data (for ticket creation)
+  intakeData?: {
+    subject?: string;
+    description?: string;
+    priority?: 'low' | 'normal' | 'high' | 'urgent';
+  };
 }
 
 // In-memory bot conversation store (could be moved to database for persistence)
@@ -85,17 +95,52 @@ function detectSentiment(message: string): { satisfaction: number; escalation: n
 }
 
 /**
+ * Generate a unique ticket number for support tickets
+ * Format: TKT-YYYY-NNNN (e.g., TKT-2025-0001)
+ */
+async function generateTicketNumber(workspaceId: string): Promise<string> {
+  const year = new Date().getFullYear();
+  
+  // Get the count of tickets for this workspace in the current year
+  const yearStart = new Date(year, 0, 1);
+  const tickets = await db.select({ ticketNumber: supportTickets.ticketNumber })
+    .from(supportTickets)
+    .where(
+      and(
+        eq(supportTickets.workspaceId, workspaceId),
+        sql`${supportTickets.createdAt} >= ${yearStart}`
+      )
+    )
+    .orderBy(desc(supportTickets.createdAt))
+    .limit(1);
+  
+  let nextNumber = 1;
+  if (tickets.length > 0 && tickets[0].ticketNumber) {
+    // Extract number from last ticket (e.g., "TKT-2025-0042" -> 42)
+    const match = tickets[0].ticketNumber.match(/TKT-\d{4}-(\d+)/);
+    if (match && match[1]) {
+      nextNumber = parseInt(match[1], 10) + 1;
+    }
+  }
+  
+  // Format: TKT-YYYY-NNNN (padded to 4 digits)
+  const paddedNumber = String(nextNumber).padStart(4, '0');
+  return `TKT-${year}-${paddedNumber}`;
+}
+
+/**
  * Initialize a new bot conversation
  */
 export async function initializeBotConversation(
   ticketId: string, 
   userQuery: string,
   workspaceId?: string,
-  userId?: string
+  userId?: string,
+  startIntake: boolean = false
 ): Promise<BotConversation> {
   const conversation: BotConversation = {
     ticketId,
-    state: BotState.GREETING,
+    state: startIntake ? BotState.INTAKE_SUBJECT : BotState.GREETING,
     userQuery,
     suggestedFaqs: [],
     conversationHistory: [],
@@ -104,10 +149,40 @@ export async function initializeBotConversation(
     lastInteraction: new Date(),
     workspaceId,
     userId,
+    intakeData: startIntake ? {} : undefined,
   };
   
   activeBotConversations.set(ticketId, conversation);
   return conversation;
+}
+
+/**
+ * Start ticket intake flow for users without tickets
+ * Returns the initial bot greeting that prompts for ticket info
+ */
+export function startIntakeFlow(
+  conversationId: string,
+  userId: string,
+  workspaceId: string
+): string {
+  // Initialize conversation in INTAKE_SUBJECT state
+  const conversation: BotConversation = {
+    ticketId: conversationId,
+    state: BotState.INTAKE_SUBJECT,
+    userQuery: '', // Will be filled as we collect info
+    suggestedFaqs: [],
+    conversationHistory: [],
+    satisfactionSignals: 0,
+    escalationSignals: 0,
+    lastInteraction: new Date(),
+    workspaceId,
+    userId,
+    intakeData: {},
+  };
+  
+  activeBotConversations.set(conversationId, conversation);
+  
+  return "👋 Welcome to AutoForce™ Support! I'm HelpOS, your AI assistant.\n\nI'll help create a support ticket for you. First, can you briefly describe what you need help with? (Just a short summary)";
 }
 
 /**
@@ -275,13 +350,16 @@ export async function processBotMessage(
   if (!conversation) {
     conversation = await initializeBotConversation(ticketId, userMessage, workspaceId, userId);
   } else {
-    // Update workspace/user context if provided
+    // CRITICAL: Don't reinitialize - preserve existing state and intakeData
+    // Just update workspace/user context if provided
     if (workspaceId && !conversation.workspaceId) {
       conversation.workspaceId = workspaceId;
     }
     if (userId && !conversation.userId) {
       conversation.userId = userId;
     }
+    // Preserve existing intakeData if in intake flow
+    // (Don't overwrite with new initialization)
   }
   
   // Update conversation history
@@ -303,6 +381,67 @@ export async function processBotMessage(
   
   // State machine logic
   switch (conversation.state) {
+    case BotState.INTAKE_SUBJECT:
+      // Collect subject from user
+      if (!conversation.intakeData) {
+        conversation.intakeData = {};
+      }
+      conversation.intakeData.subject = userMessage.trim();
+      conversation.state = BotState.INTAKE_DESCRIPTION;
+      response = "Got it! Now, please describe your issue in detail. What's happening, and when did it start?";
+      break;
+      
+    case BotState.INTAKE_DESCRIPTION:
+      // Collect description from user
+      if (!conversation.intakeData) {
+        conversation.intakeData = {};
+      }
+      conversation.intakeData.description = userMessage.trim();
+      conversation.state = BotState.INTAKE_PRIORITY;
+      response = "Thanks for the details. How urgent is this issue?\n\nPlease respond with:\n• **urgent** - Needs immediate attention\n• **high** - Important but not critical\n• **normal** - Standard priority\n• **low** - Can wait";
+      break;
+      
+    case BotState.INTAKE_PRIORITY:
+      // Collect priority and create ticket with validation
+      const priorityMap: Record<string, 'urgent' | 'high' | 'normal' | 'low'> = {
+        'urgent': 'urgent',
+        'high': 'high',
+        'normal': 'normal',
+        'low': 'low',
+        '1': 'urgent',
+        '2': 'high',
+        '3': 'normal',
+        '4': 'low',
+        'critical': 'urgent',
+        'important': 'high',
+        'medium': 'normal',
+        'minor': 'low',
+      };
+      
+      const userPriority = (userMessage || '').trim().toLowerCase();
+      // Safe priority parsing with explicit default
+      const priority: 'urgent' | 'high' | 'normal' | 'low' = 
+        priorityMap[userPriority] !== undefined 
+          ? priorityMap[userPriority] 
+          : 'normal';
+      
+      if (!conversation.intakeData) {
+        conversation.intakeData = {};
+      }
+      conversation.intakeData.priority = priority;
+      
+      // Move to ticket creation
+      conversation.state = BotState.CREATING_TICKET;
+      response = `Perfect! Creating your support ticket with **${priority}** priority. I'll search our knowledge base while your ticket is being processed...`;
+      
+      // Create the ticket (will be handled after this switch)
+      break;
+      
+    case BotState.CREATING_TICKET:
+      // Ticket should have been created, move to search mode
+      conversation.state = BotState.SEARCHING;
+      // Fall through to search logic
+      
     case BotState.GREETING:
     case BotState.SEARCHING:
       // Search FAQs
@@ -349,6 +488,47 @@ export async function processBotMessage(
       
     default:
       response = "I'm here to help! What can I assist you with?";
+  }
+  
+  // Handle ticket creation if in CREATING_TICKET state
+  if (conversation.state === BotState.CREATING_TICKET && conversation.intakeData) {
+    const { subject, description, priority } = conversation.intakeData;
+    
+    if (subject && description && priority && workspaceId && userId) {
+      try {
+        // Generate unique ticket number
+        const ticketNumber = await generateTicketNumber(workspaceId);
+        
+        // Create the support ticket
+        await db.insert(supportTickets).values({
+          workspaceId,
+          ticketNumber,
+          type: 'support',
+          priority,
+          subject,
+          description,
+          requestedBy: userId, // Store the user who created it
+          status: 'open',
+        });
+        
+        // Clear intake data and move to searching state
+        conversation.intakeData = undefined;
+        conversation.state = BotState.SEARCHING;
+        
+        // Update response to include ticket number
+        response += `\n\n✅ **Ticket ${ticketNumber}** created successfully! Let me search for answers to your issue...`;
+      } catch (error) {
+        console.error('Error creating support ticket:', error);
+        response = "I encountered an error creating your ticket. Let me connect you with a support agent who can assist you directly.";
+        shouldEscalate = true;
+        conversation.state = BotState.ESCALATING;
+      }
+    } else {
+      // Missing required data - fall back to escalation
+      response = "I'm missing some information to create your ticket. Let me connect you with a support agent who can help.";
+      shouldEscalate = true;
+      conversation.state = BotState.ESCALATING;
+    }
   }
   
   // Record bot response

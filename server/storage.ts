@@ -365,6 +365,7 @@ export interface IStorage {
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
   getSupportTicket(id: string, workspaceId: string): Promise<SupportTicket | undefined>;
   getSupportTickets(workspaceId: string): Promise<SupportTicket[]>;
+  getActiveSupportTicket(userId: string, workspaceId: string): Promise<SupportTicket | undefined>;
   updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
   
   // HelpOS™ AI Support System
@@ -1853,6 +1854,24 @@ export class DatabaseStorage implements IStorage {
       .from(supportTickets)
       .where(eq(supportTickets.workspaceId, workspaceId))
       .orderBy(desc(supportTickets.createdAt));
+  }
+
+  async getActiveSupportTicket(userId: string, workspaceId: string): Promise<SupportTicket | undefined> {
+    const tickets = await db.select()
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.workspaceId, workspaceId),
+          eq(supportTickets.requestedBy, userId),
+          or(
+            eq(supportTickets.status, 'open'),
+            eq(supportTickets.status, 'in_progress')
+          )
+        )
+      )
+      .orderBy(desc(supportTickets.createdAt))
+      .limit(1);
+    return tickets[0];
   }
   
   async updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket> {
