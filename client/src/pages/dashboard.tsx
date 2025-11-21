@@ -82,7 +82,7 @@ function ComplianceAlerts() {
   return (
     <ResponsiveSection>
       <div 
-        className={`rounded-xl p-6 border-2 shadow-lg ${
+        className={`rounded-xl p-6 md:p-6 mobile-compact-p border-2 shadow-lg ${
           hasCritical 
             ? 'bg-red-50 dark:bg-red-950/30 border-red-500 dark:border-red-700' 
             : hasHigh 
@@ -127,9 +127,9 @@ function ComplianceAlerts() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mobile-grid-4 mobile-compact-gap-sm">
           {compliance.summary.critical > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-red-200 dark:border-red-800" data-testid="card-critical-issues">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 md:p-4 mobile-card-tight border-2 border-red-200 dark:border-red-800" data-testid="card-critical-issues">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
                 <span className="text-xs font-semibold text-red-900 dark:text-red-300">CRITICAL</span>
@@ -139,7 +139,7 @@ function ComplianceAlerts() {
             </div>
           )}
           {compliance.summary.high > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-orange-200 dark:border-orange-800" data-testid="card-high-issues">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 md:p-4 mobile-card-tight border-2 border-orange-200 dark:border-orange-800" data-testid="card-high-issues">
               <div className="flex items-center gap-2 mb-1">
                 <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 <span className="text-xs font-semibold text-orange-900 dark:text-orange-300">HIGH</span>
@@ -149,7 +149,7 @@ function ComplianceAlerts() {
             </div>
           )}
           {compliance.summary.medium > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-yellow-200 dark:border-yellow-800" data-testid="card-medium-issues">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 md:p-4 mobile-card-tight border-2 border-yellow-200 dark:border-yellow-800" data-testid="card-medium-issues">
               <div className="flex items-center gap-2 mb-1">
                 <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
                 <span className="text-xs font-semibold text-yellow-900 dark:text-yellow-300">MEDIUM</span>
@@ -159,7 +159,7 @@ function ComplianceAlerts() {
             </div>
           )}
           {compliance.summary.low > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700" data-testid="card-low-issues">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 md:p-4 mobile-card-tight border-2 border-gray-200 dark:border-gray-700" data-testid="card-low-issues">
               <div className="flex items-center gap-2 mb-1">
                 <AlertCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span className="text-xs font-semibold text-gray-900 dark:text-gray-300">LOW</span>
@@ -681,9 +681,9 @@ export default function Dashboard() {
 
         {/* Metrics Grid - Fortune 500 Compact Layout */}
         <ResponsiveSection>
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mobile-compact-gap max-w-7xl mx-auto">
           {/* Workspace Metrics */}
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 mobile-compact-gap-sm">
             <MetricTile
               title="Total Employees"
               value={totalEmployees}
@@ -714,7 +714,7 @@ export default function Dashboard() {
         {/* Automation Value Metrics - Only show for workspace scope */}
         {stats?.automation && (
           <ResponsiveSection>
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 from-blue-600 to-indigo-600 rounded-xl p-6 sm:p-8 text-white shadow-lg border-2 border-blue-500 border-blue-500">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 from-blue-600 to-indigo-600 rounded-xl p-6 sm:p-8 mobile-compact-p text-white shadow-lg border-2 border-blue-500 border-blue-500">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h3 className="text-2xl font-bold mb-2" data-testid="text-automation-title">AI Brain Automation Value</h3>
@@ -734,26 +734,26 @@ export default function Dashboard() {
               </div>
 
               {/* Key Metrics Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-hours-saved">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mobile-grid-2 mobile-compact-gap-sm mb-6">
+                <div className="bg-white/10 rounded-lg p-4 md:p-4 mobile-card-compact backdrop-blur-sm" data-testid="card-hours-saved">
                   <p className="text-blue-100 text-xs mb-1">Hours Saved This Month</p>
                   <p className="text-3xl font-bold">{stats.automation.hoursSavedThisMonth.toFixed(1)}</p>
                   <p className="text-blue-200 text-xs mt-1">{stats.automation.hoursSavedAllTime.toFixed(0)} hrs all-time</p>
                 </div>
 
-                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-cost-avoidance">
+                <div className="bg-white/10 rounded-lg p-4 md:p-4 mobile-card-compact backdrop-blur-sm" data-testid="card-cost-avoidance">
                   <p className="text-blue-100 text-xs mb-1">Cost Avoidance (Monthly)</p>
                   <p className="text-3xl font-bold">${stats.automation.costAvoidanceMonthly.toLocaleString()}</p>
                   <p className="text-blue-200 text-xs mt-1">${stats.automation.costAvoidanceTotal.toLocaleString()} total</p>
                 </div>
 
-                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-ai-success">
+                <div className="bg-white/10 rounded-lg p-4 md:p-4 mobile-card-compact backdrop-blur-sm" data-testid="card-ai-success">
                   <p className="text-blue-100 text-xs mb-1">AI Success Rate</p>
                   <p className="text-3xl font-bold">{(stats.automation.aiSuccessRate * 100).toFixed(1)}%</p>
                   <p className="text-blue-200 text-xs mt-1">Avg confidence: {(stats.automation.avgConfidenceScore * 100).toFixed(0)}%</p>
                 </div>
 
-                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm" data-testid="card-auto-approval">
+                <div className="bg-white/10 rounded-lg p-4 md:p-4 mobile-card-compact backdrop-blur-sm" data-testid="card-auto-approval">
                   <p className="text-blue-100 text-xs mb-1">Auto-Approval Rate</p>
                   <p className="text-3xl font-bold">{(stats.automation.autoApprovalRate * 100).toFixed(1)}%</p>
                   <p className="text-blue-200 text-xs mt-1">High-confidence automation</p>
@@ -761,7 +761,7 @@ export default function Dashboard() {
               </div>
 
               {/* System Breakdown */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mobile-compact-gap-sm">
                 <div className="bg-white/5 rounded-lg p-4 border border-white/10" data-testid="card-schedule-ai">
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="w-4 h-4 text-blue-200" />
@@ -807,11 +807,11 @@ export default function Dashboard() {
 
         {/* Quick Actions Grid - Role-Based Dynamic Cards */}
         <ResponsiveSection>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mobile-grid-2 mobile-compact-gap">
           {/* Accessible quick actions */}
           {quickActions.map((route) => (
             <Link key={route.id} href={route.href}>
-              <button className="w-full bg-card border border-border rounded-lg p-6 text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid={`button-quick-${route.id}`}>
+              <button className="w-full bg-card border border-border rounded-lg p-6 md:p-6 mobile-card-compact text-left hover-elevate active-elevate-2 transition-all duration-200 group" data-testid={`button-quick-${route.id}`}>
                 <div className="p-3 bg-muted rounded-lg w-fit mb-4">
                   <route.icon className="w-8 h-8 text-primary" />
                 </div>
@@ -837,7 +837,7 @@ export default function Dashboard() {
                   <div className="relative">
                     <button 
                       disabled
-                      className="w-full bg-card/30 border border-border/50 rounded-lg p-6 text-left opacity-60 cursor-not-allowed group" 
+                      className="w-full bg-card/30 border border-border/50 rounded-lg p-6 md:p-6 mobile-card-compact text-left opacity-60 cursor-not-allowed group" 
                       data-testid={`button-locked-${route.id}`}
                     >
                       <div className="p-3 bg-muted/50 rounded-lg w-fit mb-4 relative">
