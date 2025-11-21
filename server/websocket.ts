@@ -727,6 +727,7 @@ export function setupWebSocket(server: Server) {
 
                 const userListPayload = JSON.stringify({
                   type: 'user_list_update',
+                  conversationId: conversationId,
                   users: filteredUsers,
                   count: filteredUsers.length
                 });
@@ -2418,6 +2419,7 @@ export function setupWebSocket(server: Server) {
               if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
                   type: 'user_list_update',
+                  conversationId: ws.conversationId,
                   users: allUsers,
                   count: allUsers.length,
                 }));
