@@ -33,14 +33,14 @@ export default function ScheduleMobileFirst() {
   const { workspaceRole } = useWorkspaceAccess();
   const { employee: currentEmployee } = useEmployee();
   
-  // RBAC check - managers and admins can edit
-  const canEdit = ['org_owner', 'org_admin', 'org_manager', 'admin', 'owner', 'manager'].includes(workspaceRole);
-  
   // Check if user is manager/supervisor for advanced features
   const isManagerOrSupervisor = useMemo(() => {
     if (!currentEmployee || !currentEmployee.workspaceRole) return false;
     return ['owner', 'admin', 'department_manager', 'supervisor', 'org_owner', 'org_admin', 'org_manager'].includes(currentEmployee.workspaceRole);
   }, [currentEmployee]);
+  
+  // RBAC check - managers and admins can edit (use same logic as isManagerOrSupervisor)
+  const canEdit = isManagerOrSupervisor;
 
   // State
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
