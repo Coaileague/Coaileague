@@ -1,10 +1,14 @@
+/* ========================================================================
+   MOBILE-FIRST COMPACT DESIGN SYSTEM
+   ======================================================================== */
+
 /* Fluid Typography - scales smoothly from phone to tablet */
 :root {
-  --t-1: clamp(11px, 2.4vw, 12px);
-  --t0: clamp(12px, 2.8vw, 14px);
-  --t1: clamp(14px, 3.4vw, 16px);
-  --t2: clamp(16px, 4.2vw, 18px);
-  --t3: clamp(18px, 5vw, 20px);
+  --t-1: clamp(10px, 2.2vw, 12px);   /* Extra compact on phones */
+  --t0: clamp(12px, 2.6vw, 14px);    /* Compact body text */
+  --t1: clamp(13px, 3.2vw, 16px);    /* Slightly smaller base */
+  --t2: clamp(15px, 4vw, 18px);      /* Compact headings */
+  --t3: clamp(17px, 4.8vw, 20px);    /* Larger headings */
 }
 
 .text-xs { font-size: var(--t-1); }
@@ -12,6 +16,22 @@
 .text-base { font-size: var(--t1); }
 .text-lg { font-size: var(--t2); }
 .text-xl { font-size: var(--t3); }
+
+/* COMPACT MOBILE SPACING - Much smaller for phone users */
+@media (max-width: 767px) {
+  /* Override large padding/gaps with compact versions */
+  .mobile-compact-p { padding: 0.75rem !important; }      /* 12px instead of 24px */
+  .mobile-compact-px { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .mobile-compact-py { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+  
+  .mobile-compact-gap { gap: 0.75rem !important; }        /* 12px gap */
+  .mobile-compact-gap-sm { gap: 0.5rem !important; }      /* 8px gap */
+  .mobile-compact-gap-xs { gap: 0.375rem !important; }    /* 6px gap */
+  
+  /* Compact section spacing */
+  .mobile-section { padding: 1rem !important; }           /* 16px sections */
+  .mobile-section-tight { padding: 0.75rem !important; }  /* 12px tight sections */
+}
 
 /* Safe-area + bottom nav spacing for notched devices */
 :root {
@@ -36,6 +56,36 @@
 .card {
   min-height: 92px;
   line-height: 1.2;
+}
+
+/* Compact Grid System for Mobile */
+@media (max-width: 767px) {
+  /* Override default grid columns to show more items */
+  .mobile-grid-2 { 
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important; 
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-grid-3 { 
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0.375rem !important;
+  }
+  
+  /* Compact cards on mobile */
+  .mobile-card-compact {
+    padding: 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-card-tight {
+    padding: 0.5rem !important;
+    gap: 0.375rem !important;
+  }
 }
 
 /* Tablet grids - responsive columns */
