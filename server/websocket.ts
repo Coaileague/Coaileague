@@ -728,16 +728,26 @@ export function setupWebSocket(server: Server) {
                   }
                 }
 
-                // Add real users
+                // Add real users - fetch fresh display info for sync consistency
                 const clientArray = Array.from(clients);
                 for (const client of clientArray) {
                   if (client.userId && client.readyState === WebSocket.OPEN) {
                     const userRole = await storage.getUserPlatformRole(client.userId);
                     const isStaff = userRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(userRole);
                     
+                    // SYNC FIX: Use formatUserDisplayNameForChat for consistency with messages
+                    const userInfo = await storage.getUserDisplayInfo(client.userId);
+                    const displayName = userInfo ? formatUserDisplayNameForChat({
+                      firstName: userInfo.firstName,
+                      lastName: userInfo.lastName,
+                      email: userInfo.email || undefined,
+                      platformRole: userInfo.platformRole || undefined,
+                      workspaceRole: userInfo.workspaceRole || undefined,
+                    }) : (client.userName || 'User');
+                    
                     onlineUsers.push({
                       id: client.userId,
-                      name: client.userName || 'User',
+                      name: displayName,
                       role: userRole || 'guest',
                       status: client.userStatus || 'online',
                       userType: client.userType || 'guest'
@@ -774,9 +784,20 @@ export function setupWebSocket(server: Server) {
               for (const client of Array.from(clients2)) {
                 if (client.userId && client.readyState === WebSocket.OPEN) {
                   const userRole = await storage.getUserPlatformRole(client.userId).catch(() => null);
+                  
+                  // SYNC FIX: Use formatUserDisplayNameForChat for consistency
+                  const userInfo = await storage.getUserDisplayInfo(client.userId);
+                  const displayName = userInfo ? formatUserDisplayNameForChat({
+                    firstName: userInfo.firstName,
+                    lastName: userInfo.lastName,
+                    email: userInfo.email || undefined,
+                    platformRole: userInfo.platformRole || undefined,
+                    workspaceRole: userInfo.workspaceRole || undefined,
+                  }) : (client.userName || 'User');
+                  
                   participants.push({
                     id: client.userId,
-                    name: client.userName || 'User',
+                    name: displayName,
                     role: userRole || 'guest',
                     status: client.userStatus || 'online',
                     userType: client.userType || 'guest'

@@ -4,13 +4,37 @@
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive platform powered by a unified AI Brain that autonomously manages end-to-end workforce operations. Its core purpose is to achieve complete automation—from intelligent scheduling and payroll to compliance monitoring and billing—with a 99% AI completion rate, minimizing human intervention. Key capabilities include AI-powered scheduling, automated invoice and payroll generation, smart hiring, compliance auditing, and real-time analytics. AutoForce™ targets emergency services and service-related industries with a hybrid subscription and usage-based revenue model, aiming for significant market potential through its autonomous capabilities.
 
 ## Recent Updates (Nov 21, 2025)
-**Critical Chat System Fixes:**
-- **Database Schema Fixed**: Added missing `updated_by` and `updated_at` columns to `motd_messages` table - resolved 500 errors blocking MOTD API
-- **WorkforceOS Banner Removed**: Deleted promotional banner containing "WorkforceOS" branding - fully replaced with AutoForce™ branding
-- **Mobile Chat Guard Removed**: Removed blocking guard that prevented message sending before `conversation_joined` event
-- **WebSocket Status**: WebSocket server running at `/ws/chat`, connections successful, welcome messages implemented (lines 930-965 in server/websocket.ts)
-- **HTTP Fallback Active**: Chat system has HTTP API fallback (`POST /api/support/helpos-chat`) for cases where WebSocket doesn't connect
-- **Compact Mobile Design**: Responsive spacing utilities (`.mobile-compact-p`, `.mobile-compact-gap`) for phone-friendly layouts
+**CRITICAL RBAC + CHAT SYSTEM FIXES:**
+
+**System-Wide RBAC Bug Fixed (14 instances):**
+- **Root Cause**: Permission checks throughout codebase were looking for role `'root'` (which doesn't exist in schema) instead of `'root_admin'`
+- **Impact**: Platform owner couldn't kick users, access admin features, or use platform-level permissions
+- **Files Fixed**: `server/websocket.ts`, `server/routes.ts`, `server/helpos-bot.ts`, `client/src/data/quickActions.ts`, `client/src/pages/comm-os.tsx`, `client/src/components/clean-context-menu.tsx`, `client/src/hooks/useFeatureFlags.ts`
+- **Scope**: Kick user, ban user, escalation tickets, AI scheduling, role grants, HelpDesk access, MOTD creation, quick actions, feature flags, support staff queries
+
+**WebSocket User List Sync Fixed:**
+- **Root Cause**: `user_list_update` event used cached `client.userName` (platformRole title like "Admin Root") instead of real name from database
+- **Fix**: Both `user_list_update` and `participants_update` now use `formatUserDisplayNameForChat()` for consistency
+- **Result**: Chat messages and user sidebar now show identical names (e.g., "Brigido Guiton" everywhere, not "Admin Root")
+
+**Message Display Race Condition Fixed:**
+- **Root Cause**: Message filter used async state `resolvedConversationId` instead of synchronous ref, causing 0/36 messages accepted
+- **Fix**: Changed to `resolvedConversationIdRef.current` for synchronous security checks
+- **Result**: All 36/36 historical messages now load correctly on join
+
+**UI/UX Chat Improvements:**
+- Chat background changed from dark to white for readability
+- Bot messages: `bg-blue-50` + `text-black` for maximum contrast
+- User's own messages: light background + dark text (same as bot)
+- All names now use `text-blue-900` (dark) for visibility on light backgrounds
+
+**WebSocket Event Order Fixed:**
+- Server now sends `conversation_joined` BEFORE `conversation_history` ensuring client has UUID before filtering
+- Added `conversationId` to `conversation_history` payload for proper message filtering
+
+**Progress Header Fixed:**
+- Only shows for escalated tickets with real ticket IDs (not general /helpdesk chat)
+- Eliminates "Loading ticket information..." blocking message for non-ticket conversations
 
 ## User Preferences
 I prefer detailed explanations.
