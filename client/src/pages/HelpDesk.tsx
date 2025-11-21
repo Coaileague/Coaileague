@@ -681,8 +681,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   // Get message bubble color - LIGHT backgrounds with DARK text for readability
   const getMessageBubbleColor = (senderType: string, role: string, isSelf: boolean) => {
     if (isSelf) {
-      // Support staff own messages - medium blue with WHITE text for contrast
-      return 'bg-blue-600 border border-blue-700 shadow-md text-white';
+      // YOUR OWN messages - light background with DARK text (same as bot for readability)
+      return 'bg-blue-50 border border-blue-200 shadow-md text-black';
     }
     
     // Bot messages - very light blue with BLACK text for maximum contrast
@@ -690,7 +690,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       return 'bg-blue-50 border border-blue-200 shadow-sm text-black';
     }
     
-    // Staff messages - light blue with DARK text
+    // Staff messages from OTHER staff - medium blue with white text
     if (role === 'root_admin' || role === 'deputy_admin' || role === 'support_manager' || role === 'sysop') {
       return 'bg-blue-500 border border-blue-600 shadow-sm text-white';
     }
@@ -1076,8 +1076,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 }
 
                 // Regular messages - ALL left-aligned with modern bubbles
-                // SHOW ACTUAL NAME, not role - use firstName if available
-                const actualName = msg.senderName || (user as any)?.firstName || userName || 'User';
+                // SHOW ACTUAL NAME - use logged-in user's real name for own messages
+                const actualName = isSelf 
+                  ? userName // Use the real userName from state (firstName + lastName)
+                  : (msg.senderName || 'User'); // Use message's senderName for others
                 const bubbleColor = getMessageBubbleColor(msg.senderType || 'customer', role, isSelf);
                 const nameColor = getRoleColor(role);
 
