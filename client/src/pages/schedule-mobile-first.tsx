@@ -1,32 +1,46 @@
 /**
- * Mobile-First Schedule - New modern schedule interface
- * Features: Week stats, day tabs, employee shift cards, AI generation FAB
+ * Mobile-First Schedule - Merged best features from both mobile schedules
+ * Features: Week stats, day tabs, employee shift cards, AI generation FAB, manager tools, approvals, reports, view toggle
  */
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { startOfWeek, addDays, addWeeks, format } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useClientLookup } from '@/hooks/useClients';
+import { useEmployee } from '@/hooks/useEmployee';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Plus } from 'lucide-react';
 import { WeekHeader } from '@/components/schedule/WeekHeader';
 import { DayTabs } from '@/components/schedule/DayTabs';
 import { EmployeeShiftCard } from '@/components/schedule/EmployeeShiftCard';
 import { ShiftBottomSheet } from '@/components/schedule/ShiftBottomSheet';
+import { ApprovalsDrawer } from '@/components/mobile/schedule/ApprovalsDrawer';
+import { ReportsSheet } from '@/components/mobile/schedule/ReportsSheet';
+import { ManagerToolbar } from '@/components/mobile/schedule/ManagerToolbar';
+import { ViewToggle } from '@/components/mobile/schedule/ViewToggle';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Shift, Employee } from '@shared/schema';
 
 export default function ScheduleMobileFirst() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const { workspaceRole } = useWorkspaceAccess();
+  const { employee: currentEmployee } = useEmployee();
   
   // RBAC check - managers and admins can edit
   const canEdit = ['org_owner', 'org_admin', 'org_manager', 'admin', 'owner', 'manager'].includes(workspaceRole);
+  
+  // Check if user is manager/supervisor for advanced features
+  const isManagerOrSupervisor = useMemo(() => {
+    if (!currentEmployee || !currentEmployee.workspaceRole) return false;
+    return ['owner', 'admin', 'department_manager', 'supervisor', 'org_owner', 'org_admin', 'org_manager'].includes(currentEmployee.workspaceRole);
+  }, [currentEmployee]);
 
   // State
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -34,6 +48,9 @@ export default function ScheduleMobileFirst() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [editingShift, setEditingShift] = useState<Shift | undefined>();
+  const [viewMode, setViewMode] = useState<'my' | 'full'>('full');
+  const [showApprovals, setShowApprovals] = useState(false);
+  const [showReports, setShowReports] = useState(false);
 
   // Fetch weekly stats
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -64,14 +81,26 @@ export default function ScheduleMobileFirst() {
   // Fetch clients using authenticated lookup hook
   const { data: clients = [] } = useClientLookup();
 
+  // Calculate pending shifts for approvals
+  const pendingShifts = useMemo(() => {
+    return shifts.filter(s => s.status === 'draft');
+  }, [shifts]);
+
   // Filter shifts for selected day
   const dayShifts = useMemo(() => {
     const selectedDayStr = format(selectedDate, 'yyyy-MM-dd');
-    return shifts.filter(shift => {
+    let filteredShifts = shifts.filter(shift => {
       const shiftDay = format(new Date(shift.startTime), 'yyyy-MM-dd');
       return shiftDay === selectedDayStr;
     });
-  }, [shifts, selectedDate]);
+
+    // Filter by view mode for managers/supervisors
+    if (isManagerOrSupervisor && viewMode === 'my') {
+      filteredShifts = filteredShifts.filter(s => s.employeeId === currentEmployee?.id);
+    }
+
+    return filteredShifts;
+  }, [shifts, selectedDate, viewMode, isManagerOrSupervisor, currentEmployee]);
 
   // Group shifts by employee (including open shifts)
   const { employeeShiftsMap, openShifts } = useMemo(() => {
@@ -190,6 +219,24 @@ export default function ScheduleMobileFirst() {
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
       />
+
+      {/* View Toggle - Manager/Supervisor only */}
+      {isManagerOrSupervisor && (
+        <ViewToggle
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+      )}
+
+      {/* Manager Toolbar - Quick actions for managers */}
+      {isManagerOrSupervisor && (
+        <ManagerToolbar
+          pendingCount={pendingShifts.length}
+          onShowApprovals={() => setShowApprovals(true)}
+          onShowReports={() => setShowReports(true)}
+          onShowEmployees={() => setLocation('/employees')}
+        />
+      )}
 
       {/* Employee Shift Cards - Scrollable */}
       <ScrollArea className="flex-1">
@@ -317,6 +364,26 @@ export default function ScheduleMobileFirst() {
         onSubmit={handleSubmitShift}
         isSubmitting={createShiftMutation.isPending}
       />
+
+      {/* Approvals Drawer - Manager/Supervisor only */}
+      {isManagerOrSupervisor && (
+        <ApprovalsDrawer
+          open={showApprovals}
+          onOpenChange={setShowApprovals}
+          pendingShifts={pendingShifts}
+          employees={employees}
+        />
+      )}
+
+      {/* Reports Sheet - Manager/Supervisor only */}
+      {isManagerOrSupervisor && (
+        <ReportsSheet
+          open={showReports}
+          onOpenChange={setShowReports}
+          shifts={shifts}
+          employees={employees}
+        />
+      )}
     </div>
   );
 }
