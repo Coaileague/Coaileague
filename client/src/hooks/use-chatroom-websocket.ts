@@ -258,7 +258,7 @@ export function useChatroomWebSocket(
                   .filter(msg => isForActiveConversation(resolvedConversationId, data, msg))
                   .map(msg => ({
                     ...msg,
-                    createdAt: msg.createdAt instanceof Date ? msg.createdAt : new Date(msg.createdAt),
+                    createdAt: msg.createdAt instanceof Date ? msg.createdAt : (msg.createdAt ? new Date(msg.createdAt) : new Date()),
                   }));
                 setMessages(filtered);
               } else {
@@ -614,16 +614,19 @@ export function useChatroomWebSocket(
       return;
     }
 
-    // Wait for conversation_joined event to populate resolvedConversationIdRef
-    if (!resolvedConversationIdRef.current) {
-      console.warn('[Chat] Cannot send message before conversation join completes');
-      setError('Waiting for chat connection...');
+    // Use resolved conversation ID (UUID) if available, otherwise fall back to conversationId
+    // The backend will handle slug-to-UUID resolution if needed
+    const targetConversationId = resolvedConversationIdRef.current || conversationId;
+    
+    if (!targetConversationId) {
+      console.warn('[Chat] No conversation ID available');
+      setError('Chat not initialized');
       return;
     }
 
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
-      conversationId: resolvedConversationIdRef.current, // Use resolved UUID, not slug
+      conversationId: targetConversationId,
       message: messageText,
       senderName: senderName,
       senderType: senderType,
@@ -640,14 +643,15 @@ export function useChatroomWebSocket(
     const currentUser = onlineUsers.find(u => u.id === userId);
     const isStaff = currentUser?.userType === 'staff' || false;
 
-    // Wait for conversation_joined event to populate resolvedConversationIdRef
-    if (!resolvedConversationIdRef.current) {
-      return; // Silently skip typing indicator if not joined yet
+    // Use resolved conversation ID (UUID) if available, otherwise fall back to conversationId
+    const targetConversationId = resolvedConversationIdRef.current || conversationId;
+    if (!targetConversationId) {
+      return; // Silently skip typing indicator if no conversation ID
     }
 
     wsRef.current.send(JSON.stringify({
       type: 'typing',
-      conversationId: resolvedConversationIdRef.current, // Use resolved UUID
+      conversationId: targetConversationId,
       userId: userId,
       userName: userName,
       isStaff: isStaff,

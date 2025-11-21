@@ -931,7 +931,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     const mobileUsers = uniqueUsers.map(u => ({
       id: u.id,
       name: u.name,
-      role: ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role) ? 'staff' : 'customer',
+      role: (['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role) ? 'staff' : 'customer') as 'staff' | 'customer' | 'guest',
       platformRole: u.role,
     }));
 
@@ -942,7 +942,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         currentUser={{
           id: user?.id || '',
           name: userName,
-          isStaff: isStaff,
+          isStaff: isStaff || false,
         }}
         onSendMessage={(message) => sendMessage(message, userName, isStaff ? 'support' : 'customer')}
         onCommandExecute={(command) => {
