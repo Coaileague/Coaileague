@@ -740,6 +740,14 @@ export function setupWebSocket(server: Server) {
               }
             };
 
+            // Send join acknowledgment to client FIRST with resolved conversation UUID
+            // This ensures the frontend updates its security checks before receiving user_list_update
+            ws.send(JSON.stringify({
+              type: 'conversation_joined',
+              conversationId: conversationId, // Send back the resolved UUID, not the slug
+              success: true,
+            }));
+
             await broadcastUserList();
 
             // Broadcast participants update with detailed user info
@@ -950,13 +958,6 @@ export function setupWebSocket(server: Server) {
                 console.log(`${displayName} joined conversation ${payload.conversationId}`);
               }
             }
-
-            // Send join acknowledgment to client with resolved conversation UUID
-            ws.send(JSON.stringify({
-              type: 'conversation_joined',
-              conversationId: conversationId, // Send back the resolved UUID, not the slug
-              success: true,
-            }));
             break;
           }
 
