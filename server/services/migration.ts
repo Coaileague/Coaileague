@@ -51,26 +51,22 @@ export class MigrationService {
     const [job] = await db.insert(migrationJobs).values({
       id: jobId,
       workspaceId: params.workspaceId,
-      createdBy: params.userId,
+      userId: params.userId,
       status: 'uploaded',
-      documentType: params.documentType,
       totalDocuments: 1,
       processedDocuments: 0,
-      totalRecords: 0,
-      importedRecords: 0,
     }).returning();
 
     // Create migration document
     const [document] = await db.insert(migrationDocuments).values({
       id: docId,
       jobId: job.id,
-      workspaceId: params.workspaceId,
       fileName: params.fileName,
-      fileData: params.fileData,
+      fileSize: Buffer.from(params.fileData, 'base64').length,
       mimeType: params.mimeType,
-      documentType: params.documentType,
-      processingStatus: 'pending',
-      confidenceScore: 0,
+      detectedType: params.documentType,
+      confidence: "0.00",
+      extractedData: { fileData: params.fileData }, // Store file data in extractedData
     }).returning();
 
     console.log(`✅ Migration job created: ${jobId}, Document: ${docId}`);
@@ -82,50 +78,51 @@ export class MigrationService {
    * Step 2: Analyze document using Gemini Vision
    */
   async analyzeDocument(documentId: string, workspaceId: string) {
-    // Get document with workspace scoping (security: prevent cross-tenant access)
+    // Get document and join with job for workspace scoping (security: prevent cross-tenant access)
     const [document] = await db.select()
       .from(migrationDocuments)
-      .where(
-        and(
-          eq(migrationDocuments.id, documentId),
-          eq(migrationDocuments.workspaceId, workspaceId)
-        )
-      );
-
-    if (!document) {
-      throw new Error(`Document ${documentId} not found or access denied`);
-    }
-
-    // Update status to analyzing
-    await db.update(migrationDocuments)
-      .set({ processingStatus: 'analyzing' })
       .where(eq(migrationDocuments.id, documentId));
 
-    await db.update(migrationJobs)
-      .set({ status: 'analyzing' })
-      .where(eq(migrationJobs.id, document.jobId));
+    if (!document) {
+      throw new Error(`Document ${documentId} not found`);
+    }
 
-    // Get userId from migration job for credit tracking
+    // Get job for workspace scoping and userId
     const [job] = await db.select()
       .from(migrationJobs)
       .where(eq(migrationJobs.id, document.jobId));
     
-    const userId = job?.createdBy;
+    if (!job || job.workspaceId !== workspaceId) {
+      throw new Error(`Document ${documentId} access denied`);
+    }
+
+    const userId = job.userId;
+
+    // Update job status to analyzing
+    await db.update(migrationJobs)
+      .set({ status: 'analyzing' })
+      .where(eq(migrationJobs.id, document.jobId));
 
     try {
+      // Extract file data from document's extractedData field
+      const fileData = (document.extractedData as any)?.fileData;
+      if (!fileData) {
+        throw new Error('File data not found in document');
+      }
+
       // Extract data using Gemini Vision WITH CREDIT DEDUCTION
       const creditResult = await withCredits(
         {
-          workspaceId: document.workspaceId,
+          workspaceId: job.workspaceId,
           featureKey: 'ai_migration',
-          description: `Gemini Vision data extraction from ${document.fileName} (${document.documentType})`,
+          description: `Gemini Vision data extraction from ${document.fileName} (${document.detectedType})`,
           userId,
         },
         async () => {
           return await this.extractDataWithGemini(
-            document.fileData,
+            fileData,
             document.mimeType,
-            document.documentType
+            document.detectedType
           );
         }
       );
@@ -148,13 +145,9 @@ export class MigrationService {
           return db.insert(migrationRecords).values({
             id: recordId,
             documentId: document.id,
-            jobId: document.jobId,
-            workspaceId: document.workspaceId,
+            workspaceId: job.workspaceId,
             recordType: record.recordType,
             extractedData: record.data,
-            importedData: null,
-            confidenceScore: record.confidence,
-            validationErrors: record.warnings,
             importStatus: 'pending',
             accessibleByRoles: ['org_owner', 'org_admin', 'org_manager', 'employee', 'support_staff'],
           }).returning();
@@ -164,10 +157,10 @@ export class MigrationService {
       // Update document with results
       await db.update(migrationDocuments)
         .set({
-          processingStatus: 'completed',
-          confidenceScore: extractedData.overallConfidence,
-          extractedRecordCount: records.length,
+          confidence: extractedData.overallConfidence.toFixed(2),
+          recordsExtracted: records.length,
           validationErrors: extractedData.errors,
+          requiresReview: extractedData.overallConfidence < 0.95,
         })
         .where(eq(migrationDocuments.id, documentId));
 
@@ -176,7 +169,6 @@ export class MigrationService {
         .set({
           status: 'reviewed',
           processedDocuments: 1,
-          totalRecords: records.length,
         })
         .where(eq(migrationJobs.id, document.jobId));
 
@@ -192,7 +184,10 @@ export class MigrationService {
       console.error(`❌ Document analysis failed:`, error);
 
       await db.update(migrationDocuments)
-        .set({ processingStatus: 'failed', validationErrors: [error instanceof Error ? error.message : String(error)] })
+        .set({ 
+          validationErrors: [error instanceof Error ? error.message : String(error)],
+          requiresReview: true,
+        })
         .where(eq(migrationDocuments.id, documentId));
 
       await db.update(migrationJobs)
@@ -239,7 +234,7 @@ export class MigrationService {
           )
         );
 
-      if (!record || record.jobId !== jobId) {
+      if (!record) {
         console.warn(`⚠️  Skipping invalid or unauthorized record: ${recordId}`);
         continue;
       }
@@ -256,7 +251,8 @@ export class MigrationService {
         await db.update(migrationRecords)
           .set({
             importStatus: 'imported',
-            importedData,
+            importedRecordId: importedData.employeeId || importedData.clientId || 'imported',
+            importedToTable: record.recordType === 'employees' ? 'employees' : record.recordType === 'clients' ? 'clients' : 'unknown',
             importedAt: new Date(),
           })
           .where(eq(migrationRecords.id, recordId));
@@ -269,7 +265,7 @@ export class MigrationService {
         await db.update(migrationRecords)
           .set({
             importStatus: 'failed',
-            validationErrors: [...(record.validationErrors || []), error instanceof Error ? error.message : String(error)],
+            importError: error instanceof Error ? error.message : String(error),
           })
           .where(eq(migrationRecords.id, recordId));
 
@@ -282,7 +278,7 @@ export class MigrationService {
     await db.update(migrationJobs)
       .set({
         status: 'completed',
-        importedRecords: importedCount,
+        completedAt: new Date(),
       })
       .where(eq(migrationJobs.id, jobId));
 
@@ -454,14 +450,19 @@ Extract data from the provided document and return a JSON response with this str
     switch (recordType) {
       case 'employees':
         // Import employee (simplified - would need full validation)
+        const nameParts = data.name ? data.name.split(' ') : ['Unknown', 'Employee'];
+        const firstName = nameParts[0] || 'Unknown';
+        const lastName = nameParts.slice(1).join(' ') || 'Employee';
+        
         const [employee] = await db.insert(employees).values({
           workspaceId,
-          name: data.name,
+          firstName,
+          lastName,
           email: data.email,
           phone: data.phone,
           workspaceRole: 'employee',
-          hourlyRate: data.hourlyRate,
-          status: data.status || 'active',
+          hourlyRate: data.hourlyRate?.toString(),
+          isActive: data.status === 'active',
         }).returning();
         return { employeeId: employee.id };
 
@@ -469,8 +470,8 @@ Extract data from the provided document and return a JSON response with this str
         // Import client
         const [client] = await db.insert(clients).values({
           workspaceId,
-          name: data.name,
-          contactName: data.contactName,
+          firstName: data.contactName || data.name || 'Unknown',
+          lastName: 'Contact',
           email: data.email,
           phone: data.phone,
         }).returning();
@@ -507,12 +508,7 @@ Extract data from the provided document and return a JSON response with this str
     // Fetch records with workspace scoping (security: prevent cross-tenant access)
     return db.select()
       .from(migrationRecords)
-      .where(
-        and(
-          eq(migrationRecords.jobId, jobId),
-          eq(migrationRecords.workspaceId, workspaceId)
-        )
-      )
+      .where(eq(migrationRecords.workspaceId, workspaceId))
       .orderBy(desc(migrationRecords.createdAt));
   }
 }
