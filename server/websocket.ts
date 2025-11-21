@@ -433,51 +433,65 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // Get user display info for formatted name
-            const userInfo = await storage.getUserDisplayInfo(payload.userId);
-            const displayName = userInfo ? formatUserDisplayNameForChat({
-              firstName: userInfo.firstName,
-              lastName: userInfo.lastName,
-              email: userInfo.email || undefined,
-              platformRole: userInfo.platformRole || undefined,
-              workspaceRole: userInfo.workspaceRole || undefined,
-            }) : 'User';
+            // CHECK FOR GUEST/ANONYMOUS USERS FIRST - Short-circuit all database lookups
+            const isGuestUser = payload.userId?.startsWith('guest-');
+            let displayName = 'Guest';
+            let userType: 'staff' | 'subscriber' | 'org_user' | 'guest' = 'guest';
+            let platformRole: string | null = null;
+            let isStaff = false;
 
             // HELPDESK ACCESS CONTROL: For the main HelpDesk room (public IRC-style chatroom)
             let userRoleInfo = '';
-            if (isMainRoom || payload.conversationId === MAIN_ROOM_ID) {
-              // This is the main HelpDesk public chatroom - all authenticated users allowed
-              try {
-                const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
-                
+            
+            if (isGuestUser) {
+              // Anonymous guest user - completely skip database lookups and workspace checks
+              displayName = 'Guest';
+              userType = 'guest';
+              userRoleInfo = 'anonymous guest';
+              
+              // Guests can only join the main helpdesk room (not private workspaces)
+              if (!isMainRoom && payload.conversationId !== MAIN_ROOM_ID) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  message: 'Guests can only join the public HelpDesk',
+                }));
+                return;
+              }
+            } else {
+              // Authenticated user - fetch display info from database
+              const userInfo = await storage.getUserDisplayInfo(payload.userId);
+              displayName = userInfo ? formatUserDisplayNameForChat({
+                firstName: userInfo.firstName,
+                lastName: userInfo.lastName,
+                email: userInfo.email || undefined,
+                platformRole: userInfo.platformRole || undefined,
+                workspaceRole: userInfo.workspaceRole || undefined,
+              }) : 'User';
+
+              // Determine user type and set initial status
+              platformRole = await storage.getUserPlatformRole(payload.userId).catch(() => null);
+              isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
+              
+              if (isStaff) {
+                userType = 'staff';
+              } else if (conversation.workspaceId) {
+                // Users in a workspace are organization users
+                userType = 'org_user';
+              }
+              
+              // Set role info for authenticated users
+              if (isMainRoom || payload.conversationId === MAIN_ROOM_ID) {
+                // This is the main HelpDesk public chatroom
                 if (isStaff) {
                   userRoleInfo = `platform staff - ${platformRole}`;
                 } else {
                   userRoleInfo = 'guest/customer';
                 }
-              } catch (staffCheckError) {
-                // Error checking staff status - allow access anyway (degraded mode)
-                console.error('Failed to verify staff status:', staffCheckError);
-                userRoleInfo = 'degraded mode';
               }
-            }
-
-            // Determine user type and set initial status
-            const platformRole = await storage.getUserPlatformRole(payload.userId).catch(() => null);
-            const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
-            
-            let userType: 'staff' | 'subscriber' | 'org_user' | 'guest' = 'guest';
-            if (isStaff) {
-              userType = 'staff';
-            } else if (conversation.workspaceId) {
-              // Users in a workspace are organization users
-              userType = 'org_user';
             }
 
             // RATE LIMITING: Track connection (enforce 3 concurrent connections max)
             // Skip tracking for guest users since they don't have user records
-            const isGuestUser = payload.userId?.startsWith('guest-');
             if (!isGuestUser) {
               const connectionTracking = await trackConnection(
                 payload.userId,

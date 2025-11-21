@@ -614,14 +614,21 @@ export function useChatroomWebSocket(
       return;
     }
 
+    // Wait for conversation_joined event to populate resolvedConversationIdRef
+    if (!resolvedConversationIdRef.current) {
+      console.warn('[Chat] Cannot send message before conversation join completes');
+      setError('Waiting for chat connection...');
+      return;
+    }
+
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
-      conversationId: conversationId,
+      conversationId: resolvedConversationIdRef.current, // Use resolved UUID, not slug
       message: messageText,
       senderName: senderName,
       senderType: senderType,
     }));
-  }, [conversationId]);
+  }, [conversationId]); // Include dependency to avoid stale closures
 
   // Send typing indicator
   const sendTyping = useCallback((isTyping: boolean) => {
@@ -633,15 +640,20 @@ export function useChatroomWebSocket(
     const currentUser = onlineUsers.find(u => u.id === userId);
     const isStaff = currentUser?.userType === 'staff' || false;
 
+    // Wait for conversation_joined event to populate resolvedConversationIdRef
+    if (!resolvedConversationIdRef.current) {
+      return; // Silently skip typing indicator if not joined yet
+    }
+
     wsRef.current.send(JSON.stringify({
       type: 'typing',
-      conversationId: conversationId, // Include conversationId for proper scoping
+      conversationId: resolvedConversationIdRef.current, // Use resolved UUID
       userId: userId,
       userName: userName,
       isStaff: isStaff,
       isTyping: isTyping,
     }));
-  }, [userId, userName, onlineUsers, conversationId]);
+  }, [userId, userName, onlineUsers, conversationId]); // Keep dependencies to avoid stale closures
 
   // Send status change
   const sendStatusChange = useCallback((status: 'online' | 'away' | 'busy') => {
