@@ -133,6 +133,14 @@ export default function ScheduleMobileFirst() {
     return map;
   }, [shifts]);
 
+  // Filter employees based on view mode
+  const displayEmployees = useMemo(() => {
+    if (isManagerOrSupervisor && viewMode === 'my' && currentEmployee) {
+      return employees.filter(emp => emp.id === currentEmployee.id);
+    }
+    return employees;
+  }, [employees, viewMode, isManagerOrSupervisor, currentEmployee]);
+
   // Create shift mutation
   const createShiftMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -243,15 +251,15 @@ export default function ScheduleMobileFirst() {
         <div className="px-4 py-4 space-y-3 pb-24">
           {shiftsLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading shifts...</div>
-          ) : employees.length === 0 ? (
+          ) : displayEmployees.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <div className="text-4xl mb-3">👥</div>
               <div>No employees found. Add employees to start scheduling.</div>
             </div>
           ) : (
             <>
-              {/* Open Shifts Section */}
-              {openShifts.length > 0 && (
+              {/* Open Shifts Section - Only show in full view */}
+              {viewMode === 'full' && openShifts.length > 0 && (
                 <EmployeeShiftCard
                   key="open-shifts"
                   employee={{
@@ -297,8 +305,8 @@ export default function ScheduleMobileFirst() {
                 />
               )}
               
-              {/* Regular Employee Cards */}
-              {employees.map(employee => (
+              {/* Regular Employee Cards - Filtered by view mode */}
+              {displayEmployees.map(employee => (
                 <EmployeeShiftCard
                   key={employee.id}
                   employee={employee}
