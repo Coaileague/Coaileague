@@ -539,10 +539,19 @@ export function setupWebSocket(server: Server) {
               globalConnections.subscriberUsers.add(payload.userId);
             }
 
-            // Send conversation history
+            // CRITICAL: Send join acknowledgment FIRST so client updates resolvedConversationId
+            // before receiving conversation_history. Otherwise filter rejects all messages!
+            ws.send(JSON.stringify({
+              type: 'conversation_joined',
+              conversationId: conversationId, // Send back the resolved UUID, not the slug
+              success: true,
+            }));
+
+            // Now send conversation history (after client knows the correct UUID)
             const messages = await storage.getChatMessagesByConversation(conversationId);
             ws.send(JSON.stringify({
               type: 'conversation_history',
+              conversationId, // CRITICAL: Include conversationId so frontend filter accepts messages
               messages,
             }));
 
@@ -754,14 +763,8 @@ export function setupWebSocket(server: Server) {
               }
             };
 
-            // Send join acknowledgment to client FIRST with resolved conversation UUID
-            // This ensures the frontend updates its security checks before receiving user_list_update
-            ws.send(JSON.stringify({
-              type: 'conversation_joined',
-              conversationId: conversationId, // Send back the resolved UUID, not the slug
-              success: true,
-            }));
-
+            // Join acknowledgment already sent above (before conversation_history)
+            // This ensures the frontend updates its security checks before filtering messages
             await broadcastUserList();
 
             // Broadcast participants update with detailed user info

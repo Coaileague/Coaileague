@@ -252,25 +252,39 @@ export function useChatroomWebSocket(
 
             case 'conversation_history':
               // Load conversation history for the active room
+              // CRITICAL: Use ref (synchronous) not state (async) to avoid race condition
+              const activeConvId = resolvedConversationIdRef.current;
+              console.log('📜 Received conversation_history:', {
+                totalMessages: data.messages?.length || 0,
+                conversationId: data.conversationId,
+                activeConversationId: activeConvId,
+                firstMessage: data.messages?.[0],
+              });
               if (data.messages && Array.isArray(data.messages)) {
                 // Filter messages for active conversation and normalize timestamps
                 const filtered = data.messages
-                  .filter(msg => isForActiveConversation(resolvedConversationId, data, msg))
+                  .filter(msg => isForActiveConversation(activeConvId, data, msg))
                   .map(msg => ({
                     ...msg,
                     createdAt: msg.createdAt instanceof Date ? msg.createdAt : (msg.createdAt ? new Date(msg.createdAt) : new Date()),
                   }));
+                console.log('📜 Filtered messages:', {
+                  before: data.messages.length,
+                  after: filtered.length,
+                  sample: filtered[0],
+                });
                 setMessages(filtered);
               } else {
                 // No history available - start with empty state
+                console.log('📜 No history available, starting with empty state');
                 setMessages([]);
               }
               break;
 
             case 'new_message':
               if (data.message && typeof data.message !== 'string') {
-                // Filter by conversationId to prevent message bleed
-                if (!isForActiveConversation(resolvedConversationId, data, data.message as ChatMessage)) {
+                // Filter by conversationId to prevent message bleed (use ref for sync access)
+                if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
                   break;
                 }
                 setMessages((prev) => [...prev, data.message as ChatMessage]);
@@ -280,8 +294,8 @@ export function useChatroomWebSocket(
             case 'private_message':
               // Handle private DMs (e.g., HelpOS welcome messages)
               if (data.message && typeof data.message !== 'string') {
-                // Filter by conversationId to prevent message bleed
-                if (!isForActiveConversation(resolvedConversationId, data, data.message as ChatMessage)) {
+                // Filter by conversationId to prevent message bleed (use ref for sync access)
+                if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
                   break;
                 }
                 setMessages((prev) => [...prev, data.message as ChatMessage]);
