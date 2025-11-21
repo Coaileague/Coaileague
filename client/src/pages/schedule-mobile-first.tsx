@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useClientLookup } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Plus } from 'lucide-react';
 import { WeekHeader } from '@/components/schedule/WeekHeader';
@@ -17,7 +18,7 @@ import { DayTabs } from '@/components/schedule/DayTabs';
 import { EmployeeShiftCard } from '@/components/schedule/EmployeeShiftCard';
 import { ShiftBottomSheet } from '@/components/schedule/ShiftBottomSheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Shift, Employee, Client } from '@shared/schema';
+import type { Shift, Employee } from '@shared/schema';
 
 export default function ScheduleMobileFirst() {
   const { toast } = useToast();
@@ -60,11 +61,8 @@ export default function ScheduleMobileFirst() {
     queryKey: ['/api/employees'],
   });
 
-  // Fetch clients (paginated response)
-  const { data: clientsResponse } = useQuery<{ data: Client[] }>({
-    queryKey: ['/api/clients'],
-  });
-  const clients = Array.isArray(clientsResponse?.data) ? clientsResponse.data : [];
+  // Fetch clients using authenticated lookup hook
+  const { data: clients = [] } = useClientLookup();
 
   // Filter shifts for selected day
   const dayShifts = useMemo(() => {
