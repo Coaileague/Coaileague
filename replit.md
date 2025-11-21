@@ -35,6 +35,7 @@ AutoForce™ is powered by a **Unified AI Brain** that orchestrates autonomous o
 -   **Data Integrity System**: Event sourcing architecture with immutable audit trails, SHA-256 verification for AI actions, ID registry to prevent reuse, and Write-Ahead Logging (WAL) for transaction safety. Actor type tracking ensures accountability.
 -   **Atomic Organization Registration Flow**: Transaction-safe registration process ensuring atomicity for User → Workspace → Expense Categories → Employee creation.
 -   **Universal Migration System**: Provides comprehensive migration tracking for onboarding from external platforms, including `migrationJobs`, `migrationDocuments`, and `migrationRecords` tables, supporting various document types and AI Brain synchronization.
+-   **HelpDesk Chat System**: Universal support chat system with mobile and desktop support. WebSocket backend automatically resolves support room slugs (e.g., 'helpdesk') to conversation UUIDs, auto-creates backing conversations on first join, and persists linkage via `updateSupportRoomConversation()`. Includes platform-wide fallback workspace for anonymous users, HelpOS AI assistant, role-based welcome messages, and auto-voice grants for guests.
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)
