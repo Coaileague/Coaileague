@@ -950,6 +950,13 @@ export function setupWebSocket(server: Server) {
                 console.log(`${displayName} joined conversation ${payload.conversationId}`);
               }
             }
+
+            // Send join acknowledgment to client with resolved conversation UUID
+            ws.send(JSON.stringify({
+              type: 'conversation_joined',
+              conversationId: conversationId, // Send back the resolved UUID, not the slug
+              success: true,
+            }));
             break;
           }
 
