@@ -4,11 +4,13 @@
 AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive platform powered by a unified AI Brain that autonomously manages end-to-end workforce operations. Its core purpose is to achieve complete automation—from intelligent scheduling and payroll to compliance monitoring and billing—with a 99% AI completion rate, minimizing human intervention. Key capabilities include AI-powered scheduling, automated invoice and payroll generation, smart hiring, compliance auditing, and real-time analytics. AutoForce™ targets emergency services and service-related industries with a hybrid subscription and usage-based revenue model, aiming for significant market potential through its autonomous capabilities.
 
 ## Recent Updates (Nov 21, 2025)
-**Mobile UI Optimization & Chat Fixes:**
-- **Compact Mobile Design System**: Created responsive spacing utilities that reduce padding/gaps on phones (12px instead of 24px), enabling 2-4 column grids for better information density
-- **Mobile Chat Fix**: Removed blocking guard that prevented message sending before `conversation_joined` event - users can now type immediately
-- **Smart Fallback**: Messages use resolved UUID when available, or fall back to conversation ID with backend resolution
-- **HelpOS Bot Welcome**: Welcome messages sent when users join for the first time (already implemented, confirmed working)
+**Critical Chat System Fixes:**
+- **Database Schema Fixed**: Added missing `updated_by` and `updated_at` columns to `motd_messages` table - resolved 500 errors blocking MOTD API
+- **WorkforceOS Banner Removed**: Deleted promotional banner containing "WorkforceOS" branding - fully replaced with AutoForce™ branding
+- **Mobile Chat Guard Removed**: Removed blocking guard that prevented message sending before `conversation_joined` event
+- **WebSocket Status**: WebSocket server running at `/ws/chat`, connections successful, welcome messages implemented (lines 930-965 in server/websocket.ts)
+- **HTTP Fallback Active**: Chat system has HTTP API fallback (`POST /api/support/helpos-chat`) for cases where WebSocket doesn't connect
+- **Compact Mobile Design**: Responsive spacing utilities (`.mobile-compact-p`, `.mobile-compact-gap`) for phone-friendly layouts
 
 ## User Preferences
 I prefer detailed explanations.

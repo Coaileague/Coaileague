@@ -1044,15 +1044,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       <main className="flex flex-col md:flex-row flex-grow overflow-y-auto md:overflow-hidden w-full relative z-10">
         {/* CENTER COLUMN: Chat Area - Mobile-first with proper scroll */}
         <section className="flex-grow flex flex-col bg-slate-900/80 backdrop-blur-md relative md:border-r-2 border-blue-700 shadow-inner min-h-0">
-          {/* Progress Header - Only visible to staff */}
-          {isStaff && (
+          {/* Progress Header - Only show for escalated tickets with real ticket IDs */}
+          {isStaff && urlConversationId && urlConversationId !== 'helpdesk' && (
             <div className="px-4 py-3 border-b border-blue-700 bg-slate-800/70">
               <HelpDeskProgressHeader
-                status={ticketStatus}
-                assignedAgent={userName}
-                slaRemaining={3600}
-                priority="normal"
-                ticketId={sessionId}
+                ticketId={urlConversationId}
+                fetchLiveData={true}
               />
             </div>
           )}
