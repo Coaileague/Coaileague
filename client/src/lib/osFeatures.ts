@@ -92,7 +92,7 @@ export const OS_FEATURES: Record<string, OSFeature> = {
     name: 'SalesOS',
     displayName: 'SalesOS™',
     tagline: 'AI Lead Generation & CRM',
-    description: 'GPT-4 powered lead discovery, intelligent pipeline management, automated email campaigns, conversion tracking',
+    description: 'Gemini 2.0 powered lead discovery, intelligent pipeline management, automated email campaigns, conversion tracking',
     icon: 'TrendingUp',
     tier: 'professional',
   },

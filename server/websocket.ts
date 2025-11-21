@@ -1327,9 +1327,49 @@ export function setupWebSocket(server: Server) {
                     break;
                   }
                   
-                  // Find target user role
-                  const targetRole = await storage.getUserPlatformRole(targetUsername);
+                  // CRITICAL FIX: Find target user ID from connected clients (not display name)
+                  let targetUserId: string | null = null;
+                  let targetUserDisplayName: string = targetUsername;
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      // Match by userId OR by display name
+                      if (client.userId === targetUsername || client.userName === targetUsername) {
+                        targetUserId = client.userId;
+                        targetUserDisplayName = client.userName || targetUsername;
+                      }
+                    });
+                  }
+                  
+                  if (!targetUserId) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: `User "${targetUsername}" not found in this conversation.`,
+                    }));
+                    break;
+                  }
+                  
+                  // SELF-KICK PROTECTION: Prevent kicking yourself
+                  if (targetUserId === ws.userId) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: '⛔ You cannot kick yourself from the chat.',
+                    }));
+                    break;
+                  }
+                  
+                  // Find target user role (use userId, not username)
+                  const targetRole = await storage.getUserPlatformRole(targetUserId);
                   const actorRole = await storage.getUserPlatformRole(ws.userId);
+                  
+                  // ROOT ADMIN PROTECTION: Nobody can kick root_admin
+                  if (targetRole === 'root_admin') {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: '⛔ Platform administrators cannot be kicked.',
+                    }));
+                    break;
+                  }
                   
                   // Check hierarchy authorization
                   const authCheck = checkStaffActionAuthorization(actorRole, targetRole, 'kick');
@@ -1341,13 +1381,14 @@ export function setupWebSocket(server: Server) {
                     break;
                   }
                   
-                  // Check if target user is actually connected
+                  // Check if target user is actually connected and kick ONLY them
                   let userFound = false;
                   let wasConnected = false;
                   
                   if (clients) {
                     clients.forEach((client) => {
-                      if (client.userId === targetUsername && client.readyState === WebSocket.OPEN) {
+                      // FIX: Compare userId to userId (not userId to display name)
+                      if (client.userId === targetUserId && client.readyState === WebSocket.OPEN) {
                         userFound = true;
                         wasConnected = true;
                         // Send kick event to target user
@@ -1360,15 +1401,15 @@ export function setupWebSocket(server: Server) {
                     });
                   }
                   
-                  // System announcement with appropriate feedback
+                  // System announcement with appropriate feedback (use display name for clarity)
                   const kickMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: null,
                     senderName: 'Server',
                     senderType: 'system',
                     message: wasConnected 
-                      ? `✅ ${staffDisplayName} (${staffRoleName}) removed ${targetUsername} from chat. Reason: ${reason}`
-                      : `⚠️ Command executed: ${staffDisplayName} (${staffRoleName}) attempted to kick ${targetUsername} (user not currently connected or is simulated/test user). Reason: ${reason}`,
+                      ? `✅ ${staffDisplayName} (${staffRoleName}) removed ${targetUserDisplayName} from chat. Reason: ${reason}`
+                      : `⚠️ Command executed: ${staffDisplayName} (${staffRoleName}) attempted to kick ${targetUserDisplayName} (user not currently connected). Reason: ${reason}`,
                     messageType: 'text',
                     isSystemMessage: true,
                   });
