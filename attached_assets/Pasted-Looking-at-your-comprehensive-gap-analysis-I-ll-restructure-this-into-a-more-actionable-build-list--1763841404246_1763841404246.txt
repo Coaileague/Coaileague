@@ -1,0 +1,223 @@
+Looking at your comprehensive gap analysis, I'll restructure this into a more actionable build list optimized for Replit Agent or similar AI coding tools. Here's a reorganized implementation roadmap:
+🚀 AutoForce™ Implementation Roadmap for Replit Agent
+Phase 1: Foundation & Security (Week 1)
+Critical infrastructure that everything else depends on
+1.1 PWA Infrastructure
+Task: Convert AutoForce to Progressive Web App
+Files to create:
+- /public/manifest.json (app manifest with icons, theme, display mode)
+- /public/service-worker.js (offline caching, background sync)
+- /app/components/pwa-installer.tsx (install prompt component)
+- Update /app/layout.tsx to register service worker
+Features:
+- Offline time tracking queue
+- Background sync for punches when online
+- App install banner
+- Push notification support setup
+1.2 Multi-Factor Authentication
+Task: Implement TOTP-based 2FA
+Files to create:
+- /server/services/auth/mfa.ts (TOTP generation/validation)
+- /app/pages/security/setup-2fa.tsx (QR code setup page)
+- /app/components/mfa-verify-modal.tsx
+- Database migration: Add mfa_secret, mfa_enabled to users table
+Libraries: speakeasy, qrcode
+1.3 Complete Integration OAuth Flows
+Task: Fix QuickBooks and Gusto OAuth
+Files to modify:
+- /server/services/integrations/quickbooks.ts (complete OAuth flow)
+- /server/services/integrations/gusto.ts (complete OAuth flow)
+- /app/pages/settings/integrations.tsx (OAuth connection UI)
+Environment vars needed:
+- QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET
+- GUSTO_CLIENT_ID, GUSTO_CLIENT_SECRET
+Phase 2: AI Brain Skills System (Week 2)
+Modular AI capabilities architecture
+2.1 Skills Framework
+Task: Build pluggable AI Brain skills system
+Files to create:
+- /server/services/ai-brain/skills/base-skill.ts (abstract class)
+- /server/services/ai-brain/skills/skill-loader.ts (dynamic loader)
+- /server/services/ai-brain/skills/skill-registry.ts
+- /server/services/ai-brain/skills/types.ts
+Architecture:
+- Each skill = separate module with manifest.json
+- Skills can subscribe to events
+- Skills can expose API endpoints
+- Hot-reload capability
+2.2 Core AI Skills
+Task: Implement essential AI skills
+Skills to create:
+1. /skills/document-ocr/
+   - index.ts (OCR using Gemini Vision API)
+   - Extract text from receipts, PDFs, images
+   
+2. /skills/predictive-analytics/
+   - revenue-forecasting.ts
+   - demand-prediction.ts
+   - churn-analysis.ts
+   
+3. /skills/conversational-scheduling/
+   - natural-language.ts
+   - Parse: "Schedule John for Monday mornings"
+   
+4. /skills/insights-generator/
+   - cost-optimization.ts
+   - efficiency-analyzer.ts
+   - Proactive recommendations
+Phase 3: Mobile-First Experience (Week 3)
+Native-like mobile functionality
+3.1 Mobile Employee Portal
+Task: Create mobile-optimized employee experience
+Files to create:
+- /app/mobile/clock-in.tsx (GPS-based punch with photo)
+- /app/mobile/shift-view.tsx (today's schedule)
+- /app/mobile/shift-marketplace.tsx (swap/pickup shifts)
+- /app/mobile/quick-actions.tsx (common tasks widget)
+- /app/components/mobile/gps-validator.tsx
+Features:
+- Geofencing for clock in/out
+- Photo verification option
+- Offline punch queue
+- Push notifications for shifts
+3.2 Mobile Client Portal
+Task: Client monitoring and management
+Files to create:
+- /app/mobile/client-dashboard.tsx
+- /app/mobile/live-tracking.tsx (GPS tracking of workers)
+- /app/mobile/instant-feedback.tsx (rate service)
+- /app/mobile/emergency-contact.tsx
+Phase 4: Communication & Notifications (Week 4)
+4.1 Twilio SMS Integration
+Task: Implement SMS notifications
+Files to create:
+- /server/services/communications/sms.ts
+- /server/services/notifications/shift-reminders.ts
+- /app/pages/settings/notification-preferences.tsx
+Automated messages:
+- Shift reminders (2 hours before)
+- Schedule changes
+- Payroll notifications
+- Emergency alerts
+4.2 Real-time Updates
+Task: WebSocket-powered live features
+Files to modify:
+- /server/websocket/handlers.ts (add real-time events)
+- /app/hooks/use-realtime.ts (React hook for subscriptions)
+New real-time features:
+- Live schedule updates
+- GPS tracking updates
+- Instant notifications
+- Real-time analytics
+Phase 5: Self-Service Enhancements (Week 5-6)
+5.1 Shift Marketplace
+Task: Build shift trading system
+Files to create:
+- /app/pages/shifts/marketplace.tsx
+- /server/services/shifts/shift-trading.ts
+- /server/services/shifts/shift-bidding.ts
+- Database: shift_trades, shift_bids tables
+Features:
+- Post shifts for trade
+- Bid on open shifts
+- Manager approval workflow
+- Fair distribution algorithm
+5.2 Advanced Client Features
+Task: Enhanced client self-service
+Files to create:
+- /app/pages/client/spending-analytics.tsx
+- /app/pages/client/service-history.tsx
+- /app/pages/client/team-messaging.tsx
+- /app/components/client/report-builder.tsx
+Phase 6: Analytics & Reporting (Week 7-8)
+6.1 Custom Report Builder
+Task: Drag-and-drop report creator
+Files to create:
+- /app/pages/reports/builder.tsx
+- /app/components/reports/field-selector.tsx
+- /app/components/reports/filter-panel.tsx
+- /server/services/reports/query-builder.ts
+- /server/services/reports/report-scheduler.ts
+Features:
+- Visual query builder
+- Save report templates
+- Schedule delivery (email/SMS)
+- Export to Excel/PDF
+6.2 AI Insights Dashboard
+Task: Predictive analytics dashboard
+Files to create:
+- /app/pages/insights/dashboard.tsx
+- /app/components/insights/cost-savings-card.tsx
+- /app/components/insights/risk-alerts.tsx
+- /app/components/insights/optimization-tips.tsx
+Phase 7: Compliance & Data (Week 9-10)
+7.1 GDPR Tools
+Task: Data privacy compliance
+Files to create:
+- /app/pages/privacy/data-export.tsx
+- /app/pages/privacy/deletion-request.tsx
+- /server/services/gdpr/data-processor.ts
+- /server/services/gdpr/anonymizer.ts
+7.2 Advanced Security
+Task: Enterprise security features
+Files to create:
+- /server/middleware/ip-whitelist.ts
+- /app/pages/security/soc2-dashboard.tsx
+- /server/services/security/audit-logger.ts
+- /server/services/security/vulnerability-scanner.ts
+📋 Replit Agent Instructions
+Setup Commands
+bash# Install new dependencies
+npm install speakeasy qrcode twilio @react-pdf/renderer
+npm install react-beautiful-dnd recharts leaflet
+npm install --save-dev @types/speakeasy
+
+# Create directory structure
+mkdir -p server/services/ai-brain/skills
+mkdir -p app/mobile
+mkdir -p app/pages/insights
+mkdir -p server/services/communications
+Build Order Priority
+
+Start with Phase 1 - Security and integrations are foundational
+Phase 2 in parallel - AI skills can be built independently
+Phase 3-4 together - Mobile and communications are interrelated
+Phase 5-7 iteratively - Can be built in any order based on priorities
+
+Testing Requirements for Each Phase
+
+Phase 1: Auth flow testing, OAuth verification
+Phase 2: AI skill unit tests, integration tests
+Phase 3: Mobile responsiveness, GPS testing
+Phase 4: SMS delivery, WebSocket stability
+Phase 5: Transaction testing for shift trades
+Phase 6: Report accuracy, performance testing
+Phase 7: Compliance verification, security scanning
+
+Environment Variables Needed
+env# Add to .env
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+
+QUICKBOOKS_CLIENT_ID=
+QUICKBOOKS_CLIENT_SECRET=
+QUICKBOOKS_REDIRECT_URI=
+
+GUSTO_CLIENT_ID=
+GUSTO_CLIENT_SECRET=
+
+GOOGLE_MAPS_API_KEY=
+Success Metrics
+
+ PWA installable on mobile devices
+ 2FA enabled for all users
+ QuickBooks invoices syncing automatically
+ AI Brain processing 5+ skill types
+ Mobile clock-in working with GPS
+ SMS reminders reducing no-shows by 30%
+ Shift marketplace active with 10+ trades/week
+ Custom reports being generated
+ GDPR compliance verified
+
+This structure gives Replit Agent clear, specific tasks with file paths, dependencies, and implementation details. Each task is self-contained enough to be built independently while maintaining the overall architecture coherence.
