@@ -327,35 +327,43 @@ export default function Pricing() {
               </div>
             </div>
 
-            {/* AI Features & Token Usage */}
+            {/* AI Features & Credit Usage */}
             <div className="mt-4 p-6 bg-purple-50 border-2 border-purple-200 rounded-xl">
               <div className="flex items-start gap-3">
                 <Sparkles className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-900">AI Features & Token Usage</h3>
+                  <h3 className="font-semibold text-gray-900">AI Automation Credit Costs</h3>
                   <p className="text-sm text-gray-700">
-                    AI-powered features (AI Support Bot, AI Training Tutor, Smart RFP Analysis, Platform Healing) operate on a <strong className="text-purple-700">customer-pays usage model</strong> to ensure fair pricing as we scale.
+                    All AI automations use credits from your monthly allocation. <strong className="text-purple-700">No surprise charges</strong> - you control your spending by purchasing additional credits only when needed.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-3 pt-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Support Bot</div>
-                      <div className="text-xs text-gray-600">$0.002 per message • ~$0.50 avg per session</div>
+                      <div className="text-xs font-semibold text-purple-700">AI Scheduling</div>
+                      <div className="text-xs text-gray-600">25 credits ($2.50) per schedule generation</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Training Tutor</div>
-                      <div className="text-xs text-gray-600">$0.003 per interaction • ~$2 avg per course</div>
+                      <div className="text-xs font-semibold text-purple-700">AI Invoice Generation</div>
+                      <div className="text-xs text-gray-600">15 credits ($1.50) per invoice</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">Smart RFP Analysis</div>
-                      <div className="text-xs text-gray-600">$0.10 per RFP document analyzed</div>
+                      <div className="text-xs font-semibold text-purple-700">AI Payroll Processing</div>
+                      <div className="text-xs text-gray-600">15 credits ($1.50) per payroll run</div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">Platform Healing AI</div>
-                      <div className="text-xs text-gray-600">$0.005 per diagnostic session</div>
+                      <div className="text-xs font-semibold text-purple-700">AI Chat (HelpOS/QueryOS)</div>
+                      <div className="text-xs text-gray-600">5 credits ($0.50) per conversation</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-purple-700">AI Analytics Reports</div>
+                      <div className="text-xs text-gray-600">12 credits ($1.20) per report</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-purple-700">Additional Credits</div>
+                      <div className="text-xs text-gray-600">100 credits = $10 (buy anytime)</div>
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 pt-2 border-t border-purple-200">
-                    <strong>Example:</strong> Professional plan with 50 employees using AI features moderately: Base $9,999/mo + ~$50/mo AI usage = $10,049/mo total (still saving $215K/year vs. $335K in traditional admin salaries).
+                    <strong>Example:</strong> Professional plan (2,000 credits = $200/mo included) running 20 schedules (500 credits), 40 invoices (600 credits), 8 payroll runs (120 credits) = 1,220 credits used. Still have 780 credits remaining. No overages.
                   </p>
                 </div>
               </div>
