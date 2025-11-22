@@ -134,10 +134,10 @@ export default function Support() {
   ];
 
   const statusItems = [
-    { label: "Platform Status", value: "Operational", status: "success" },
-    { label: "API Services", value: "Operational", status: "success" },
-    { label: "Mobile Apps", value: "Operational", status: "success" },
-    { label: "Email Delivery", value: "Operational", status: "success" },
+    { label: "Automation Service Live", value: "Operational", status: "success" },
+    { label: "HelpDesk Live", value: "Operational", status: "success" },
+    { label: "Mobile App Live", value: "Operational", status: "success" },
+    { label: "AI Brain Live", value: "Operational", status: "success" },
   ];
 
   return (
