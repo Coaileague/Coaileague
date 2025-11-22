@@ -30,6 +30,11 @@ export function useAuth() {
         return null;
       }
       
+      // Handle 304 Not Modified - use cached data
+      if (res.status === 304) {
+        return undefined;
+      }
+      
       if (!res.ok) {
         throw new Error(`${res.status}: ${res.statusText}`);
       }
