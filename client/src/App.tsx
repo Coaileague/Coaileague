@@ -168,27 +168,9 @@ function AppContent() {
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
 
-  // Determine if current path is a public page (no loading screen needed)
-  const currentPath = window.location.pathname;
-  const isPublicPath = [
-    '/',
-    '/login',
-    '/register',
-    '/pricing',
-    '/contact',
-    '/support',
-    '/terms',
-    '/privacy',
-    '/chat',
-    '/logo-showcase',
-  ].some(path => currentPath === path) || 
-  currentPath.startsWith('/onboarding/') ||
-  currentPath.startsWith('/pay-invoice/') ||
-  currentPath.startsWith('/error-');
-
-  // Show professional loading state during auth check - but ONLY for authenticated users or private pages
-  // Skip loading screen for public pages to allow instant viewing
-  if (isLoading && (isAuthenticated || !isPublicPath)) {
+  // Show loading screen ONLY if user is authenticated and auth check is still pending
+  // For unauthenticated users, skip loading and show public routes immediately
+  if (isLoading && isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="flex flex-col items-center gap-4">
