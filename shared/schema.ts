@@ -69,6 +69,12 @@ export const users = pgTable("users", {
   loginAttempts: integer("login_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
 
+  // Multi-Factor Authentication (MFA)
+  mfaSecret: varchar("mfa_secret"), // Encrypted TOTP secret
+  mfaEnabled: boolean("mfa_enabled").default(false),
+  mfaBackupCodes: text("mfa_backup_codes").array(), // Encrypted backup codes
+  mfaLastUsedAt: timestamp("mfa_last_used_at"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
