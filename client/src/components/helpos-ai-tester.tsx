@@ -111,7 +111,7 @@ export function HelpOsAiTester() {
   });
 
   const handleTest = () => {
-    setAiResponse("");
+    // Don't clear response - mutation will update it
     testAiMutation.mutate(message);
   };
 
@@ -194,8 +194,8 @@ export function HelpOsAiTester() {
               />
             </div>
 
-            {/* AI Response */}
-            {(testAiMutation.isPending || aiResponse) && (
+            {/* AI Response - Always show after first test */}
+            {(testAiMutation.isPending || testAiMutation.isSuccess || aiResponse) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">AI Response</label>
                 <ScrollArea className="h-48 rounded-md border p-4">
@@ -204,9 +204,13 @@ export function HelpOsAiTester() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span>AI is thinking...</span>
                     </div>
-                  ) : (
+                  ) : aiResponse ? (
                     <div className="whitespace-pre-wrap text-sm">
                       {aiResponse}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      No response yet...
                     </div>
                   )}
                 </ScrollArea>
