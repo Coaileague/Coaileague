@@ -6,6 +6,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CRITICAL: Block all loading overlays on public routes - absolute priority */
+body[data-public-route="true"] [data-testid*="loader"],
+body[data-public-route="true"] [data-testid*="loading"],
+body[data-public-route="true"] .fixed.inset-0.bg-background {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
 /* AUTOFORCE™ v2.0 - MODERN SUCCESS-ORIENTED DESIGN (Vibrant Gradients + Premium Dark) */
 :root {
   --button-outline: rgba(0,0,0, .10);

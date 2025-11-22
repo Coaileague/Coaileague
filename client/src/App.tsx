@@ -229,8 +229,6 @@ function AppContent() {
     );
   }
 
-  if (!isAuthenticated) {
-
   // Check if user is Root Admin (platform-level access)
   const isRootAdmin = (user as any)?.platformRole === 'root_admin' || (user as any)?.platformRole === 'sysop';
   

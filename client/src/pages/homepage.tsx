@@ -7,61 +7,64 @@ import { Link } from 'wouter';
 import { UniversalHeader } from '@/components/universal-header';
 
 export default function Homepage() {
-  // DEBUG: Find what's rendering loaders
+  // CRITICAL: Mark body as public route and aggressively hide all loaders
   useEffect(() => {
-    console.log('🏠 HOMEPAGE MOUNTED - Checking for loaders...');
+    document.body.setAttribute('data-public-route', 'true');
     
-    // Monitor for any loader elements appearing
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) { // Element node
-            const el = node as HTMLElement;
-            if (el.getAttribute?.('data-testid')?.includes('loader') || 
-                el.querySelector?.('[data-testid*="loader"]') ||
-                el.className?.includes('animate-spin')) {
-              console.error('❌ LOADER DETECTED ON HOMEPAGE:', {
-                element: el.tagName,
-                testid: el.getAttribute?.('data-testid'),
-                classes: el.className,
-                stack: new Error().stack
-              });
-              // Remove it
-              el.remove();
-            }
-          }
-        });
+    // AGGRESSIVE: Hide ALL potential loading elements immediately and continuously
+    const hideLoaders = () => {
+      // Hide by data-testid
+      document.querySelectorAll('[data-testid*="loader"], [data-testid*="loading"]').forEach(el => {
+        (el as HTMLElement).style.display = 'none';
+        (el as HTMLElement).style.visibility = 'hidden';
+        (el as HTMLElement).style.opacity = '0';
+        (el as HTMLElement).style.pointerEvents = 'none';
       });
-    });
-    
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true,
-      attributes: false 
-    });
-    
-    // Also scan existing DOM
-    console.log('🔍 Scanning existing DOM for loaders...');
-    document.querySelectorAll('[data-testid*="loader"], [data-testid*="loading"], .animate-spin').forEach((el: Element) => {
-      console.error('❌ EXISTING LOADER FOUND:', {
-        element: el.tagName,
-        testid: (el as HTMLElement).getAttribute('data-testid'),
-        classes: (el as HTMLElement).className,
-        html: (el as HTMLElement).outerHTML.substring(0, 200)
+      
+      // Hide any fixed overlays with background
+      document.querySelectorAll('.fixed.inset-0').forEach(el => {
+        const style = window.getComputedStyle(el);
+        if (style.backgroundColor || el.classList.contains('bg-background') || el.classList.contains('animate-spin')) {
+          (el as HTMLElement).style.display = 'none';
+          (el as HTMLElement).style.visibility = 'hidden';
+        }
       });
-      (el as HTMLElement).remove();
-    });
+      
+      // Hide animated spinners
+      document.querySelectorAll('.animate-spin, [class*="rotate"]').forEach(el => {
+        if ((el as HTMLElement).offsetHeight < 200) { // Likely a spinner, not main content
+          (el as HTMLElement).style.display = 'none';
+          (el as HTMLElement).style.visibility = 'hidden';
+        }
+      });
+      
+      // Hide backdrop blurs that look like overlays
+      document.querySelectorAll('.backdrop-blur').forEach(el => {
+        const parent = el.parentElement;
+        if (parent?.classList.contains('fixed')) {
+          (el as HTMLElement).style.display = 'none';
+          (el as HTMLElement).style.visibility = 'hidden';
+        }
+      });
+    };
     
-    // Check for ProtectedRoute loading spinner
-    const spinnerDiv = document.querySelector('.animate-spin');
-    if (spinnerDiv) {
-      console.error('❌ FOUND ANIMATED SPINNER:', spinnerDiv);
-      (spinnerDiv as HTMLElement).remove();
+    // Initial hide
+    hideLoaders();
+    
+    // Continuously hide for 5 seconds to catch delayed loaders
+    const intervals: NodeJS.Timeout[] = [];
+    for (let i = 0; i < 50; i++) {
+      intervals.push(setTimeout(hideLoaders, i * 100));
     }
     
-    console.log('✅ HOMEPAGE: Loader cleanup complete');
+    // Also monitor for new elements
+    const observer = new MutationObserver(hideLoaders);
+    observer.observe(document.body, { childList: true, subtree: true });
     
-    return () => observer.disconnect();
+    return () => {
+      intervals.forEach(clearTimeout);
+      observer.disconnect();
+    };
   }, []);
 
   const autonomousFeatures = [
