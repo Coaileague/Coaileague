@@ -45,6 +45,15 @@ import {
 import * as notificationHelpers from "./notifications";
 import Stripe from 'stripe';
 import PDFDocument from 'pdfkit';
+
+// ============================================================================
+// STRIPE SINGLETON - Security & Performance Optimization
+// ============================================================================
+// Reuse single Stripe instance across all routes to prevent redundant client creation
+// and reduce secret key exposure risk
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-09-30.clover',
+});
 import { 
   sendShiftAssignmentEmail, 
   sendInvoiceGeneratedEmail, 
@@ -6888,17 +6897,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Activate AI Scheduling™ with payment (Owner/Manager only)
-  app.post('/api/scheduleos/activate', isAuthenticated, requireManager, async (req: any, res) => {
+  // Create Payment Intent for ScheduleOS™ activation (SECURE: Server-side creation)
+  app.post('/api/scheduleos/payment-intent', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
       
+      // Get user's employee record to find their workspace
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Verify they're a manager or owner
+      const roles = ['owner', 'manager'];
+      if (!roles.includes(employee.role)) {
+        return res.status(403).json({ message: "Requires owner or manager role" });
+      }
+
+      const [workspace] = await db.select()
+        .from(workspaces)
+        .where(eq(workspaces.id, employee.workspaceId))
+        .limit(1);
+
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      const { paymentMethod } = req.body; // 'stripe_subscription' | 'stripe_card'
+      // Check if already activated
+      if (workspace.scheduleosActivatedAt) {
+        return res.status(400).json({
+          error: "ScheduleOS already activated",
+          alreadyActivated: true,
+          activatedAt: workspace.scheduleosActivatedAt,
+        });
+      }
+
+      const SCHEDULEOS_ACTIVATION_FEE = 9900; // $99 one-time fee
+
+      // Check if Payment Intent already exists and handle rotation
+      if (workspace.scheduleosPaymentIntentId) {
+        try {
+          // Verify the existing intent
+          const existingIntent = await stripe.paymentIntents.retrieve(
+            workspace.scheduleosPaymentIntentId
+          );
+          
+          if (existingIntent.status === 'succeeded') {
+            // Already paid - return existing intent
+            return res.json({
+              alreadyPaid: true,
+              clientSecret: existingIntent.client_secret,
+              paymentIntentId: existingIntent.id,
+              amount: SCHEDULEOS_ACTIVATION_FEE,
+              status: existingIntent.status,
+            });
+          }
+          
+          // If status is 'requires_payment_method', 'canceled', or 'requires_action':
+          // Allow creating a new intent by clearing the old one
+          console.log('[Stripe] Clearing old Payment Intent with status:', existingIntent.status);
+          await storage.updateWorkspace(workspace.id, {
+            scheduleosPaymentIntentId: null,
+          });
+        } catch (stripeError: any) {
+          // If intent doesn't exist anymore, clear it from workspace
+          console.log('[Stripe] Old Payment Intent not found, clearing reference:', stripeError.message);
+          await storage.updateWorkspace(workspace.id, {
+            scheduleosPaymentIntentId: null,
+          });
+        }
+      }
+
+      // Ensure Stripe customer exists
+      let customerId = workspace.stripeCustomerId;
+      if (!customerId) {
+        const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+        const manager = new subscriptionManager.SubscriptionManager();
+        customerId = await manager.ensureStripeCustomer(workspace.id);
+      }
+
+      // Create new Payment Intent with strict metadata (server-side only)
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: SCHEDULEOS_ACTIVATION_FEE,
+        currency: 'usd',
+        customer: customerId,
+        metadata: {
+          workspaceId: workspace.id,
+          userId: userId,
+          purpose: 'scheduleos_activation',
+          createdAt: new Date().toISOString(),
+        },
+        description: 'ScheduleOS Activation - One-time payment',
+      });
+
+      console.log('[Stripe] Payment Intent created for ScheduleOS activation:', paymentIntent.id);
+
+      // Store Payment Intent ID for tracking
+      await storage.updateWorkspace(workspace.id, {
+        scheduleosPaymentIntentId: paymentIntent.id,
+      });
+
+      // Return client secret for frontend confirmation with status
+      res.json({
+        success: true,
+        requiresPayment: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: SCHEDULEOS_ACTIVATION_FEE,
+        status: paymentIntent.status,
+      });
+    } catch (error: any) {
+      console.error('[Stripe] Error creating Payment Intent:', error);
+      res.status(500).json({ error: "Failed to create payment intent", details: error.message });
+    }
+  });
+
+  // Activate AI Scheduling™ with payment (SECURE: Validates Payment Intent ownership and prevents reuse)
+  app.post('/api/scheduleos/activate', isAuthenticated, requireManager, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get user's employee record to find their workspace
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Verify they're a manager or owner
+      const roles = ['owner', 'manager'];
+      if (!roles.includes(employee.role)) {
+        return res.status(403).json({ message: "Requires owner or manager role" });
+      }
+
+      const [workspace] = await db.select()
+        .from(workspaces)
+        .where(eq(workspaces.id, employee.workspaceId))
+        .limit(1);
+
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      const { paymentMethod, paymentIntentId } = req.body; // 'stripe_subscription' | 'stripe_card'
 
       if (!paymentMethod) {
         return res.status(400).json({ message: "Payment method required" });
@@ -6913,20 +7053,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // TODO: Verify Stripe payment here when test keys are provided
-      // For now, activate immediately (will be payment-gated in production)
+      // STEP 1: Check subscription tier - paid tiers get free activation
+      if (workspace.subscriptionTier !== 'free') {
+        console.log('[Stripe] ScheduleOS activation allowed for paid tier:', workspace.subscriptionTier);
+        
+        await storage.updateWorkspace(workspace.id, {
+          scheduleosActivatedAt: new Date(),
+          scheduleosActivatedBy: userId,
+          scheduleosPaymentMethod: 'subscription_included',
+        });
 
-      await storage.updateWorkspace(workspace.id, {
-        scheduleosActivatedAt: new Date(),
-        scheduleosActivatedBy: userId,
-        scheduleosPaymentMethod: paymentMethod,
-      });
+        return res.json({
+          success: true,
+          message: "AI Scheduling™ activated successfully! (Included in your subscription)",
+          activatedAt: new Date(),
+          activatedBy: userId,
+        });
+      }
 
-      res.json({
-        success: true,
-        message: "AI Scheduling™ activated successfully!",
-        activatedAt: new Date(),
-        activatedBy: userId,
+      // STEP 2: Free tier requires payment
+      const SCHEDULEOS_ACTIVATION_FEE = 9900; // $99 one-time fee
+
+      if (paymentMethod === 'stripe_subscription') {
+        // Check if workspace has valid Stripe subscription
+        if (!workspace.stripeSubscriptionId) {
+          return res.status(400).json({
+            success: false,
+            error: "No active subscription found. Please upgrade your tier first.",
+            requiresUpgrade: true,
+          });
+        }
+
+        console.log('[Stripe] ScheduleOS activation via subscription:', workspace.stripeSubscriptionId);
+
+        await storage.updateWorkspace(workspace.id, {
+          scheduleosActivatedAt: new Date(),
+          scheduleosActivatedBy: userId,
+          scheduleosPaymentMethod: 'stripe_subscription',
+        });
+
+        return res.json({
+          success: true,
+          message: "AI Scheduling™ activated successfully!",
+          activatedAt: new Date(),
+          activatedBy: userId,
+        });
+      }
+
+      if (paymentMethod === 'stripe_card') {
+        // SECURITY: Verify payment intent was provided
+        if (!paymentIntentId) {
+          return res.status(400).json({
+            success: false,
+            error: "Payment Intent ID required. Please create payment intent first.",
+          });
+        }
+
+        try {
+          // SECURITY: Verify payment with Stripe (using shared singleton)
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+          // SECURITY CHECK #1: Payment must be succeeded
+          if (paymentIntent.status !== 'succeeded') {
+            console.error('[Stripe] Payment not succeeded:', paymentIntent.status);
+            return res.status(400).json({
+              success: false,
+              error: `Payment failed: ${paymentIntent.status}`,
+            });
+          }
+
+          // SECURITY CHECK #2: Amount must match exactly
+          if (paymentIntent.amount !== SCHEDULEOS_ACTIVATION_FEE) {
+            console.error('[Stripe] Invalid payment amount:', paymentIntent.amount, 'expected:', SCHEDULEOS_ACTIVATION_FEE);
+            return res.status(400).json({
+              success: false,
+              error: "Invalid payment amount",
+            });
+          }
+
+          // SECURITY CHECK #3: Metadata workspaceId must match current workspace
+          if (paymentIntent.metadata?.workspaceId !== workspace.id) {
+            console.error('[Stripe] Payment Intent workspace mismatch:', paymentIntent.metadata?.workspaceId, 'vs', workspace.id);
+            return res.status(400).json({
+              success: false,
+              error: "Payment Intent does not belong to this workspace",
+            });
+          }
+
+          // SECURITY CHECK #4: Payment Intent must have correct purpose
+          if (paymentIntent.metadata?.purpose !== 'scheduleos_activation') {
+            console.error('[Stripe] Invalid Payment Intent purpose:', paymentIntent.metadata?.purpose);
+            return res.status(400).json({
+              success: false,
+              error: "Invalid Payment Intent purpose",
+            });
+          }
+
+          // SECURITY CHECK #5: Payment Intent hasn't been used before (check if stored in any workspace)
+          const [existingUsage] = await db
+            .select()
+            .from(workspaces)
+            .where(eq(workspaces.scheduleosPaymentIntentId, paymentIntentId))
+            .limit(1);
+
+          if (existingUsage) {
+            console.error('[Stripe] Payment Intent already used:', paymentIntentId, 'by workspace:', existingUsage.id);
+            return res.status(400).json({
+              success: false,
+              error: "Payment Intent has already been used",
+            });
+          }
+
+          console.log('[Stripe] ScheduleOS payment verified:', paymentIntentId);
+
+          // SECURITY: Store Payment Intent ID to prevent reuse
+          await storage.updateWorkspace(workspace.id, {
+            scheduleosActivatedAt: new Date(),
+            scheduleosActivatedBy: userId,
+            scheduleosPaymentMethod: 'stripe_card',
+            scheduleosPaymentIntentId: paymentIntentId,
+          });
+
+          return res.json({
+            success: true,
+            message: "AI Scheduling™ activated successfully!",
+            activatedAt: new Date(),
+            activatedBy: userId,
+          });
+        } catch (stripeError: any) {
+          console.error('[Stripe] Error verifying payment:', stripeError);
+          return res.status(400).json({
+            success: false,
+            error: `Payment verification failed: ${stripeError.message}`,
+          });
+        }
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: "Invalid payment method",
       });
     } catch (error: any) {
       console.error("Error activating AI Scheduling™:", error);
@@ -14628,6 +14893,17 @@ Summary:`;
       const validated = masterKeysUpdateSchema.parse(req.body);
       const rootUserId = req.user!.id;
 
+      // Fetch workspace BEFORE updating for Stripe sync
+      const [existingWorkspace] = await db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, id))
+        .limit(1);
+
+      if (!existingWorkspace) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
       const updateData: any = {
         last_admin_action: validated.actionDescription,
         last_admin_action_by: rootUserId,
@@ -14646,6 +14922,9 @@ Summary:`;
         if (validated.featureToggles.supportos !== undefined) updateData.feature_supportos_enabled = validated.featureToggles.supportos;
         if (validated.featureToggles.communicationos !== undefined) updateData.feature_communicationos_enabled = validated.featureToggles.communicationos;
       }
+
+      // Track if we need to update Stripe subscription
+      let shouldSyncStripe = false;
 
       // Update billing override if provided (with validation)
       if (validated.billingOverride) {
@@ -14669,8 +14948,10 @@ Summary:`;
         updateData.billing_override_applied_at = new Date();
         updateData.billing_override_expires_at = override.expiresAt || null;
         
-        // TODO: Trigger live billing update - update Stripe subscription, recalculate invoices
-        // await updateStripeBilling(id, override);
+        // Mark for Stripe sync if subscription exists
+        if (existingWorkspace.stripeSubscriptionId) {
+          shouldSyncStripe = true;
+        }
       }
 
       // Update admin notes and flags if provided
@@ -14685,6 +14966,105 @@ Summary:`;
 
       if (!updated) {
         return res.status(404).json({ error: "Organization not found" });
+      }
+
+      // STEP 3: Sync billing override with Stripe subscription (SECURE: Guards and rollback)
+      if (validated.billingOverride) {
+        // SECURITY: Guard against missing subscription ID
+        if (!existingWorkspace.stripeSubscriptionId) {
+          console.warn('[Stripe] No subscription ID for workspace:', id, '- DB update only, no Stripe sync');
+          // Continue with DB update only - no Stripe sync needed
+        } else {
+          // SECURITY: Attempt Stripe sync with proper error handling
+          try {
+            const { TIER_PRICING } = await import('./services/billing/subscriptionManager');
+
+            console.log('[Stripe] Syncing billing override for workspace:', id);
+
+            // Get current subscription (using shared Stripe singleton)
+            const subscription = await stripe.subscriptions.retrieve(existingWorkspace.stripeSubscriptionId);
+
+            // SECURITY: Check subscription status before updating
+            if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
+              console.warn('[Stripe] Cannot update canceled/expired subscription:', subscription.status);
+              // Rollback DB update - subscription is not active
+              await db
+                .update(workspaces)
+                .set({
+                  billing_override_type: existingWorkspace.billing_override_type,
+                  billing_override_discount_percent: existingWorkspace.billing_override_discount_percent,
+                  billing_override_custom_price: existingWorkspace.billing_override_custom_price,
+                  billing_override_reason: existingWorkspace.billing_override_reason,
+                  billing_override_applied_by: existingWorkspace.billing_override_applied_by,
+                  billing_override_applied_at: existingWorkspace.billing_override_applied_at,
+                  billing_override_expires_at: existingWorkspace.billing_override_expires_at,
+                })
+                .where(eq(workspaces.id, id));
+
+              return res.status(400).json({ 
+                error: 'Cannot update billing override - subscription is not active',
+                subscriptionStatus: subscription.status,
+                message: 'The Stripe subscription is canceled or incomplete. Please reactivate before applying billing overrides.',
+              });
+            }
+
+            // Calculate new price based on override
+            const baseTier = existingWorkspace.subscriptionTier as keyof typeof TIER_PRICING;
+            let newPrice = TIER_PRICING[baseTier]?.monthlyPrice || 0;
+
+            if (validated.billingOverride.type === 'discount' && validated.billingOverride.discountPercent) {
+              newPrice = Math.round(newPrice * (1 - validated.billingOverride.discountPercent / 100));
+              console.log('[Stripe] Applying discount:', validated.billingOverride.discountPercent + '%', 'New price:', newPrice);
+            } else if (validated.billingOverride.type === 'custom' && validated.billingOverride.customPrice) {
+              newPrice = Math.round(parseFloat(validated.billingOverride.customPrice) * 100); // Convert to cents
+              console.log('[Stripe] Applying custom price:', newPrice);
+            } else if (validated.billingOverride.type === 'free') {
+              newPrice = 0;
+              console.log('[Stripe] Applying free override');
+            }
+
+            // Update subscription price with prorations
+            await stripe.subscriptions.update(existingWorkspace.stripeSubscriptionId, {
+              items: [{
+                id: subscription.items.data[0].id,
+                price_data: {
+                  currency: 'usd',
+                  product: subscription.items.data[0].price.product as string,
+                  recurring: { interval: 'month' },
+                  unit_amount: newPrice,
+                },
+              }],
+              proration_behavior: 'create_prorations', // Pro-rate the change
+            });
+
+            console.log('[Stripe] Subscription updated successfully with new price:', newPrice);
+          } catch (stripeError: any) {
+            console.error('[Stripe] Failed to update subscription:', stripeError);
+            
+            // SECURITY: Rollback DB update to maintain consistency
+            await db
+              .update(workspaces)
+              .set({
+                billing_override_type: existingWorkspace.billing_override_type,
+                billing_override_discount_percent: existingWorkspace.billing_override_discount_percent,
+                billing_override_custom_price: existingWorkspace.billing_override_custom_price,
+                billing_override_reason: existingWorkspace.billing_override_reason,
+                billing_override_applied_by: existingWorkspace.billing_override_applied_by,
+                billing_override_applied_at: existingWorkspace.billing_override_applied_at,
+                billing_override_expires_at: existingWorkspace.billing_override_expires_at,
+              })
+              .where(eq(workspaces.id, id));
+
+            console.log('[Stripe] Rolled back DB changes due to Stripe sync failure');
+
+            // SECURITY: Return error to prevent inconsistent state
+            return res.status(500).json({ 
+              error: 'Failed to update Stripe subscription',
+              message: 'Unable to sync billing override with Stripe. Please retry or contact support.',
+              details: stripeError.message,
+            });
+          }
+        }
       }
 
       res.json({

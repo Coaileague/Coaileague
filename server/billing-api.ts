@@ -256,7 +256,7 @@ billingRouter.get('/transactions', async (req, res) => {
 });
 
 /**
- * Purchase credits
+ * Purchase credits - Create Stripe Checkout session (SECURE: Validates credit pack)
  */
 billingRouter.post('/credits/purchase', async (req, res) => {
   try {
@@ -266,25 +266,76 @@ billingRouter.post('/credits/purchase', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // SECURITY: Require creditPackId - don't hardcode defaults
     const input = z.object({
-      amount: z.number().positive(),
-      paymentMethodId: z.string().optional(), // Stripe payment method ID
+      creditPackId: z.string(),
+      successUrl: z.string().optional(),
+      cancelUrl: z.string().optional(),
     }).parse(req.body);
 
-    // TODO: Process Stripe payment first
-    // For now, just add credits
-    const wallet = await creditLedgerService.addCredits(
-      workspaceId,
-      input.amount,
-      `Credit purchase: $${input.amount}`,
-      true,
-      userId
-    );
+    // SECURITY: Validate creditPackId is provided
+    if (!input.creditPackId) {
+      return res.status(400).json({ 
+        error: 'Credit pack ID required',
+        message: 'Please select a credit pack to purchase',
+      });
+    }
 
-    res.json({ success: true, wallet });
+    // Import creditPurchaseService and emailService
+    const { creditPurchaseService } = await import('./services/billing/creditPurchase');
+    const { emailService } = await import('./services/emailService');
+
+    // SECURITY: Use getAppBaseUrl() to enforce HTTPS in production
+    const baseUrl = emailService.getAppBaseUrl();
+
+    // Create Stripe Checkout session
+    console.log('[Stripe] Creating checkout session for credit purchase:', input.creditPackId);
+    
+    try {
+      const session = await creditPurchaseService.createCheckoutSession({
+        workspaceId,
+        userId,
+        creditPackId: input.creditPackId,
+        successUrl: input.successUrl || `${baseUrl}/billing/credits?success=true`,
+        cancelUrl: input.cancelUrl || `${baseUrl}/billing/credits?canceled=true`,
+      });
+
+      console.log('[Stripe] Checkout session created:', session.sessionId);
+
+      res.json({ 
+        success: true, 
+        checkoutUrl: session.sessionUrl,
+        sessionId: session.sessionId,
+      });
+    } catch (packError: any) {
+      // SECURITY: Handle pack validation failures with clear error messages
+      console.error('[Stripe] Pack validation or checkout failed:', packError);
+      
+      if (packError.message?.includes('not found') || packError.message?.includes('does not exist')) {
+        return res.status(404).json({ 
+          error: 'Credit pack not found',
+          message: 'The selected credit pack does not exist or is inactive',
+        });
+      }
+      
+      return res.status(400).json({ 
+        error: 'Failed to create checkout session',
+        message: packError.message || 'Unable to process credit purchase',
+      });
+    }
   } catch (error: any) {
-    console.error('Failed to purchase credits:', error);
-    res.status(400).json({ error: error.message });
+    console.error('[Stripe] Failed to create checkout session:', error);
+    
+    // Handle Zod validation errors
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ 
+        error: 'Invalid request',
+        message: 'Missing required fields',
+        details: error.errors,
+      });
+    }
+    
+    res.status(400).json({ error: error.message || 'Failed to initiate credit purchase' });
   }
 });
 

@@ -191,6 +191,7 @@ export const workspaces = pgTable("workspaces", {
   scheduleosActivatedAt: timestamp("scheduleos_activated_at"), // Payment confirmed, feature unlocked
   scheduleosActivatedBy: varchar("scheduleos_activated_by"), // User ID who activated (Owner/Manager only)
   scheduleosPaymentMethod: varchar("scheduleos_payment_method"), // 'stripe_subscription' | 'stripe_card'
+  scheduleosPaymentIntentId: varchar("scheduleos_payment_intent_id"), // Stripe Payment Intent ID to prevent reuse
 
   // Future AI Features (following same pattern)
   hireos_trial_started_at: timestamp("hireos_trial_started_at"),
