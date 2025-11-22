@@ -13,63 +13,52 @@ export default function Homepage() {
     document.body.setAttribute('data-public-route', 'true');
     
     const hideAllOverlays = () => {
-      // Look for ANY fixed inset-0 overlay
-      const allFixed = document.querySelectorAll('.fixed.inset-0');
+      // Look for ALL fixed positioned elements
+      const allFixed = document.querySelectorAll('[style*="position: fixed"], [class*="fixed"]');
       
-      allFixed.forEach((el, idx) => {
-        const classes = (el as HTMLElement).className;
-        const bgColor = window.getComputedStyle(el).backgroundColor;
-        const zIndex = window.getComputedStyle(el).zIndex;
-        
-        console.log(`🔍 FIXED OVERLAY #${idx}:`, {
-          classes: classes.substring(0, 150),
-          backgroundColor: bgColor,
-          zIndex: zIndex,
-          html: (el as HTMLElement).outerHTML.substring(0, 200)
-        });
-        
-        // Hide it
-        (el as HTMLElement).style.display = 'none !important';
-        (el as HTMLElement).style.visibility = 'hidden !important';
-        (el as HTMLElement).style.opacity = '0 !important';
-        (el as HTMLElement).style.pointerEvents = 'none !important';
-      });
-      
+      // Log what we find
       if (allFixed.length > 0) {
-        console.log(`🚨 FOUND ${allFixed.length} FIXED OVERLAYS`);
+        console.log(`📍 Found ${allFixed.length} fixed elements:`);
+        
+        allFixed.forEach((el, idx) => {
+          if (idx < 10) { // Only log first 10 to avoid spam
+            const classes = (el as HTMLElement).className;
+            const style = (el as HTMLElement).getAttribute('style');
+            const bgColor = window.getComputedStyle(el).backgroundColor;
+            const zIndex = window.getComputedStyle(el).zIndex;
+            
+            console.log(`  [${idx}] ${el.tagName}`, {
+              classes: classes.substring(0, 80),
+              zIndex: zIndex,
+              bg: bgColor.substring(0, 50)
+            });
+          }
+        });
       }
       
-      // Also hide animate-spin
-      const spinners = document.querySelectorAll('.animate-spin');
-      spinners.forEach((el, idx) => {
-        const height = (el as HTMLElement).offsetHeight;
-        const width = (el as HTMLElement).offsetWidth;
+      // Hide ALL fixed overlays with high z-index that might be blocking content
+      allFixed.forEach((el) => {
+        const style = window.getComputedStyle(el);
+        const zIndex = parseInt(style.zIndex);
         
-        if (height < 300 && width < 300) {
-          console.log(`⚙️ SPINNER #${idx}:`, {
-            height, width,
-            classes: (el as HTMLElement).className.substring(0, 100)
-          });
+        // If it has a background color and high z-index, it's probably an overlay
+        if ((style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)') || zIndex > 40) {
           (el as HTMLElement).style.display = 'none !important';
           (el as HTMLElement).style.visibility = 'hidden !important';
+          (el as HTMLElement).style.opacity = '0 !important';
         }
       });
     };
     
-    // Run immediately
+    // Run immediately and multiple times
     hideAllOverlays();
-    
-    // Continue checking every 100ms for 10 seconds
     const intervals: NodeJS.Timeout[] = [];
-    for (let i = 1; i <= 100; i++) {
+    for (let i = 1; i <= 50; i++) {
       intervals.push(setTimeout(hideAllOverlays, i * 100));
     }
     
     // Monitor DOM changes
-    const observer = new MutationObserver(() => {
-      hideAllOverlays();
-    });
-    
+    const observer = new MutationObserver(hideAllOverlays);
     observer.observe(document.body, { childList: true, subtree: true });
     
     return () => {
