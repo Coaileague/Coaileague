@@ -846,11 +846,12 @@ export function setupWebSocket(server: Server) {
                   isSystemMessage: true,
                 });
 
-                // Broadcast system message
+                // Broadcast system message with conversationId so frontend accepts it
                 const clients = conversationClients.get(conversationId);
                 if (clients) {
                   const systemPayload = JSON.stringify({
                     type: 'new_message',
+                    conversationId: conversationId,
                     message: systemJoinMessage,
                   });
                   clients.forEach((client) => {
