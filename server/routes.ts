@@ -5709,18 +5709,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return { assignment: assignment[0] };
         });
         
-        // 6. ONBOARDING STUB - Post-transaction side effects (idempotent)
+        // 6. ONBOARDING - Create checklist and notify manager
         const contractor = await db.select().from(contractorPool).where(eq(contractorPool.id, currentOffer.contractorId)).limit(1);
         
         if (contractor && contractor[0]) {
           console.log(`[Onboarding] Starting onboarding for contractor ${contractor[0].firstName} ${contractor[0].lastName}`);
           
-          // TODO: Create onboarding checklist (stub for now)
-          // const checklist = await createOnboardingChecklist(result.assignment.id, contractor[0]);
+          // Create onboarding checklist with default items
+          const DEFAULT_ONBOARDING_ITEMS = [
+            { itemId: '1', itemName: 'Welcome packet', itemType: 'document' as const, isRequired: true, isCompleted: false },
+            { itemId: '2', itemName: 'I-9 verification', itemType: 'form' as const, isRequired: true, isCompleted: false },
+            { itemId: '3', itemName: 'W-4 tax form', itemType: 'form' as const, isRequired: true, isCompleted: false },
+            { itemId: '4', itemName: 'Safety training', itemType: 'certification' as const, isRequired: true, isCompleted: false },
+            { itemId: '5', itemName: 'Equipment orientation', itemType: 'task' as const, isRequired: true, isCompleted: false },
+            { itemId: '6', itemName: 'Direct manager meeting', itemType: 'task' as const, isRequired: false, isCompleted: false },
+          ];
           
-          // Notify manager of acceptance
-          // TODO: Send email/notification to manager
-          console.log(`[Onboarding] Notification stub: Manager notified of contractor acceptance`);
+          try {
+            await storage.createOnboardingChecklist({
+              workspaceId,
+              applicationId: currentOffer.applicationId,
+              employeeId: result.assignment.employeeId,
+              templateId: null,
+              checklistItems: DEFAULT_ONBOARDING_ITEMS,
+              overallProgress: 0,
+              i9DeadlineDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 business days
+            });
+            
+            // Notify manager via email
+            const manager = await storage.getEmployee(shift.assignedManagerId || '', workspaceId);
+            if (manager && manager.email) {
+              await emailService.sendManagerOnboardingNotification(
+                workspaceId,
+                manager.id,
+                manager.email,
+                `${contractor[0].firstName} ${contractor[0].lastName}`
+              );
+            }
+            
+            console.log(`[Onboarding] Checklist created and manager notified for ${contractor[0].firstName}`);
+          } catch (error) {
+            console.error(`[Onboarding] Error creating checklist:`, error);
+          }
         }
         
         // 📡 Broadcast shift update (post-transaction, idempotent)
