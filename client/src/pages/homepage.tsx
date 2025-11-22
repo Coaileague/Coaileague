@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { 
   Calendar, DollarSign, FileText, Zap, CheckCircle, ArrowRight, 
   Play, Shield, Lock, Activity, Cpu, RefreshCw, MessageSquare, BarChart3
@@ -6,6 +7,14 @@ import { Link } from 'wouter';
 import { UniversalHeader } from '@/components/universal-header';
 
 export default function Homepage() {
+  // CRITICAL: Ensure NO loading overlays can appear on homepage
+  useEffect(() => {
+    // Hide any loading spinner that tries to appear
+    document.querySelectorAll('[data-testid="autoforce-loader-overlay"], [data-testid="responsive-loading"], .animate-spin').forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+      (el as HTMLElement).style.visibility = 'hidden';
+    });
+  }, []);
 
   const autonomousFeatures = [
     {

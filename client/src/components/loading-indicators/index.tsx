@@ -5,6 +5,7 @@
  */
 
 import { UniversalTransitionOverlay, type AnimationType, type ScenarioType, type TransitionStatus } from "@/components/universal-transition-overlay";
+import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 
 interface LoadingProps {
   isVisible?: boolean;
@@ -29,6 +30,14 @@ export function ResponsiveLoading({
   duration,
   onComplete
 }: LoadingProps) {
+  // CRITICAL: Respect universal loading gate - NEVER show on public routes
+  const { isLoadingBlocked } = useUniversalLoadingGate();
+  
+  // If loading is blocked (public route), don't render anything
+  if (isLoadingBlocked) {
+    return null;
+  }
+
   return (
     <UniversalTransitionOverlay
       isVisible={isVisible}

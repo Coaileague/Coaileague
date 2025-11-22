@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AutoForceAFLogo } from "./autoforce-af-logo";
+import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 import { 
   Loader2, CheckCircle, XCircle, AlertCircle, 
   Activity, Zap, Shield, Database, CloudUpload,
