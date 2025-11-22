@@ -1886,11 +1886,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Get organization external ID (ORG-XXXX)
+      const [orgIdentifier] = await db
+        .select()
+        .from(externalIdentifiers)
+        .where(
+          and(
+            eq(externalIdentifiers.entityType, 'org'),
+            eq(externalIdentifiers.entityId, workspace.id)
+          )
+        )
+        .limit(1);
+      
       // Security: Redact sensitive fields for non-root users
       const platformRole = (req as any).platformRole;
       const safeWorkspace = redactSensitiveWorkspaceFields(workspace, platformRole);
       
-      res.json(safeWorkspace);
+      res.json({
+        ...safeWorkspace,
+        orgCode: orgIdentifier?.externalId || null,
+      });
     } catch (error) {
       console.error("Error fetching workspace:", error);
       res.status(500).json({ message: "Failed to fetch workspace" });
@@ -2527,31 +2542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current workspace info
-  app.get('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      let workspace = await storage.getWorkspaceByOwnerId(userId);
-      
-      // Auto-create workspace on first login
-      if (!workspace) {
-        const user = await storage.getUser(userId);
-        workspace = await storage.createWorkspace({
-          name: `${user?.firstName || user?.email || 'My'}'s Workspace`,
-          ownerId: userId,
-        });
-      }
-      
-      // Security: Redact sensitive fields for non-root users
-      const platformRole = (req as any).platformRole;
-      const safeWorkspace = redactSensitiveWorkspaceFields(workspace, platformRole);
-      
-      res.json(safeWorkspace);
-    } catch (error) {
-      console.error("Error fetching workspace:", error);
-      res.status(500).json({ message: "Failed to fetch workspace" });
-    }
-  });
+  // DUPLICATE REMOVED - This endpoint is defined earlier at line 1878
 
   /**
    * Get workspace access context for role-based navigation and permissions

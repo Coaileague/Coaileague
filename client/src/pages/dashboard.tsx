@@ -196,10 +196,11 @@ export default function Dashboard() {
   });
   const userId = currentUser?.id;
   
-  const { data: workspace } = useQuery<{ id: string; name?: string }>({ 
+  const { data: workspace } = useQuery<{ id: string; name?: string; orgCode?: string }>({ 
     queryKey: ['/api/workspace'] 
   });
   const workspaceId = workspace?.id;
+  const orgCode = workspace?.orgCode || 'N/A';
 
   // Fetch workspace health status
   const { data: workspaceHealth } = useQuery<WorkspaceHealth>({
@@ -684,6 +685,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mobile-compact-gap max-w-7xl mx-auto">
           {/* Workspace Metrics */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 mobile-compact-gap-sm">
+            <MetricTile
+              title="Organization"
+              value={orgCode}
+              icon={LayoutDashboard}
+              data-testid="card-organization"
+            />
+            
             <MetricTile
               title="Total Employees"
               value={totalEmployees}
