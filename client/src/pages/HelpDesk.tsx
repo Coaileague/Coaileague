@@ -364,8 +364,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       queryClient.invalidateQueries({ queryKey: ['/api/helpdesk/motd'] });
       setShowMotd(false);
       toast({
-        title: "Welcome to HelpDesk!",
-        description: "You can now access the support chat",
+        title: "Welcome to AutoForce™ HelpDesk!",
+        description: "You can now access the support chat powered by AutoForce™ AI",
       });
     },
   });
@@ -400,7 +400,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     // Role priority (lower number = higher priority)
     const rolePriority: Record<string, number> = {
       'root_admin': 0,        // Root admin at absolute top (you)
-      'bot': 1,               // HelpOS AI bot
+      'bot': 1,               // AutoForce™ AI bot
       'deputy_admin': 2,      // Deputy administrators
       'support_manager': 3,   // Support managers
       'sysop': 4,             // System operators
@@ -601,7 +601,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     /**
      * HARDCODED SUPERSCRIPT ROLE DISPLAY - DESKTOP CHAT ONLY
      * DO NOT MODIFY WITHOUT EXPLICIT USER PERMISSION
-     * Makes role display like ™ in HelpOS™ - superscript but large enough to read
+     * Makes role display like ™ in AutoForce™ AI - superscript but large enough to read
      * for older users or those with vision difficulties
      */
     // Inline superscript role badge - ONLY for staff and bot roles
@@ -1095,7 +1095,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         {/* Header: Name with inline superscript role badge + Timestamp */}
                         <div className="flex items-center gap-1 sm:gap-1.5 mb-1 flex-wrap min-w-0">
                           <span className={`text-xs font-bold ${nameColor} truncate`}>
-                            {role === 'bot' ? 'HelpOS' : actualName.split('(')[0].trim()}
+                            {role === 'bot' ? 'AutoForce™ AI' : actualName.split('(')[0].trim()}
                             {/* Role badge as inline superscript like mathematical notation */}
                             {getRoleIcon(role)}
                           </span>
@@ -1316,7 +1316,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-0.5 flex-wrap">
                             <span className={`text-[11px] font-semibold break-words ${getRoleColor(u.role)}`}>
-                              {u.role === 'bot' ? 'HelpOS' : u.name}
+                              {u.role === 'bot' ? 'AutoForce™ AI' : u.name}
                               {/* Inline superscript role badge */}
                               {getRoleIcon(u.role)}
                             </span>
@@ -1938,7 +1938,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 });
                 
                 toast({
-                  title: newState ? "HelpOS™ AI Enabled" : "HelpOS™ AI Disabled",
+                  title: newState ? "AutoForce™ AI Enabled" : "AutoForce™ AI Disabled",
                   description: newState 
                     ? "AI costs are billed to customer credits" 
                     : "Standard support mode active",
@@ -2033,7 +2033,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         </div>
                         <div>
                           <h3 className="text-gray-900 font-bold text-lg">
-                            {selectedUserId.startsWith('helpbot') ? 'HelpOS™' : 'System Bot'}
+                            {selectedUserId.startsWith('helpbot') ? 'AutoForce™ AI' : 'System Bot'}
                           </h3>
                           <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
                             System-Generated AI Assistant
