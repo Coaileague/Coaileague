@@ -57,7 +57,7 @@ export default function PrivacyPolicy() {
             <p className="text-foreground/90 mb-4">We use collected information to:</p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li><strong>Provide Services:</strong> Time tracking, scheduling, invoicing, payroll, AI-powered automation</li>
-              <li><strong>AI Processing:</strong> Train and improve HelpOS™ and AI Scheduling™ Smart AI algorithms</li>
+              <li><strong>AI Processing:</strong> Train and improve AI Brain automation and intelligent support algorithms</li>
               <li><strong>Analytics:</strong> Monitor usage patterns, improve features, optimize performance</li>
               <li><strong>Communications:</strong> Send updates, invoices, support responses, security alerts</li>
               <li><strong>Compliance:</strong> Maintain audit trails, generate compliance reports, ensure labor law adherence</li>
@@ -68,13 +68,13 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">4. AI and Machine Learning</h2>
+            <h2 className="text-2xl font-semibold mb-4">4. AI Brain and Intelligent Automation</h2>
             <p className="text-foreground/90 mb-4">
-              Our AI-powered features (HelpOS™, AI Scheduling™ Smart AI) process your data to:
+              Our AI Brain automation system processes your data to:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>Generate automated schedules based on employee availability and preferences</li>
-              <li>Provide intelligent support responses</li>
+              <li>Provide intelligent support responses through our AI Support Assistant</li>
               <li>Analyze patterns to improve scheduling accuracy</li>
               <li>Predict staffing needs and optimize labor costs</li>
             </ul>

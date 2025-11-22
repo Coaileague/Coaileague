@@ -59,7 +59,7 @@ export default function TermsOfService() {
               <li>Pay all fees associated with your selected plan</li>
               <li>Provide valid payment information</li>
               <li>Allow us to charge your payment method on a recurring basis</li>
-              <li>Usage-based charges for AI features (HelpOS™, AI Scheduling™ Smart AI) beyond plan limits</li>
+              <li>Usage-based charges for AI Brain automation features beyond plan limits</li>
             </ul>
             <p className="text-foreground/90 mb-4">
               We reserve the right to modify pricing with 30 days' notice. Continued use after price changes 
@@ -68,10 +68,9 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">5. AI-Powered Features</h2>
+            <h2 className="text-2xl font-semibold mb-4">5. AI Brain Automation Features</h2>
             <p className="text-foreground/90 mb-4">
-              Our AI-powered features (HelpOS™ support, AI Scheduling™ Smart AI) operate under a "99% AI, 1% human governance" 
-              model:
+              Our AI Brain automation system operates under a "99% AI, 1% human governance" model:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>AI-generated schedules with ≥95% confidence are auto-approved</li>

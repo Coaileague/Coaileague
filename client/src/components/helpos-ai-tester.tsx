@@ -50,7 +50,7 @@ export function HelpOsAiTester() {
     onSuccess: () => {
       toast({
         title: "✅ Workspace Selected",
-        description: "HelpOS is ready to use",
+        description: "AI Support Assistant is ready",
       });
     },
     onError: (error: any) => {
@@ -97,13 +97,13 @@ export function HelpOsAiTester() {
     onSuccess: (data: any) => {
       setAiResponse(data.message || "No response from AI");
       toast({
-        title: "✅ HelpOS™ AI Responding",
-        description: "Smart AI is working!",
+        title: "✅ AI Brain Responding",
+        description: "Intelligent automation system active!",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "❌ HelpOS™ AI Error",
+        title: "❌ AI Brain Error",
         description: error.message || "Failed to get AI response",
         variant: "destructive",
       });
@@ -136,10 +136,10 @@ export function HelpOsAiTester() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5" style={{ color: "#3b82f6" }} />
-              Test HelpOS™ Smart AI
+              AI Brain Intelligence Tester
             </DialogTitle>
             <DialogDescription>
-              Send a test message to verify HelpOS™ AI is working correctly
+              Test the AI Brain's intelligent support automation system
             </DialogDescription>
           </DialogHeader>
 
@@ -150,7 +150,7 @@ export function HelpOsAiTester() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    {workspaces.length === 1 ? 'Workspace' : 'Select Workspace for HelpOS'}
+                    {workspaces.length === 1 ? 'Workspace' : 'Select Workspace for AI Assistant'}
                   </label>
                   <Select
                     value={user.currentWorkspaceId || ""}
@@ -175,7 +175,7 @@ export function HelpOsAiTester() {
                   )}
                   {!user.currentWorkspaceId && workspaces.length > 1 && (
                     <p className="text-xs text-destructive">
-                      ⚠️ Please select a workspace to use HelpOS
+                      ⚠️ Please select a workspace to use AI Support
                     </p>
                   )}
                 </div>
@@ -241,7 +241,7 @@ export function HelpOsAiTester() {
               ) : (
                 <>
                   <Bot className="mr-2 h-4 w-4" />
-                  Test HelpOS AI
+                  Test AI Brain
                 </>
               )}
             </Button>

@@ -1,5 +1,5 @@
-// HelpOS FAQ Management Routes
-// AI-powered FAQ system with semantic search using OpenAI embeddings
+// AI-Powered Smart Support Knowledge Base Routes
+// Intelligent FAQ system with semantic search using AI embeddings
 
 import type { Express } from 'express';
 import { db } from './db';

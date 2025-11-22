@@ -109,7 +109,7 @@ export function FloatingSupportChat() {
     {
       id: 1,
       type: 'bot',
-      text: "Hi! I'm HelpOS™, your AutoForce™ Support Assistant. How can I help you today?",
+      text: "Hi! I'm your AutoForce™ AI Support Assistant. How can I help you today?",
       timestamp: new Date()
     }
   ]);
@@ -262,7 +262,7 @@ export function FloatingSupportChat() {
         }
       }
     } catch (error) {
-      console.error('[HelpOS] Error:', error);
+      console.error('[AI Support] Error:', error);
       setIsTyping(false);
       const errorMessage: Message = {
         id: messages.length + 2,
@@ -346,7 +346,7 @@ export function FloatingSupportChat() {
       >
         <div className="flex justify-between items-center">
           <div className="flex-1">
-            <h3 className="font-bold text-sm">Live Chat - HelpOS™</h3>
+            <h3 className="font-bold text-sm">Live Chat - AI Support</h3>
             <p className="text-xs text-muted-foreground">
               {workId} • {orgId}
             </p>

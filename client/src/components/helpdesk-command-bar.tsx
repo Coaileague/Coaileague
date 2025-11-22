@@ -197,9 +197,9 @@ export function HelpDeskCommandBar({
                 </div>
               </div>
 
-              {/* HelpOS™ AI Toggle */}
+              {/* AI Brain Assistant Toggle */}
               <div className="flex items-center gap-2 pr-4 border-r-2 border-slate-300">
-                <span className="text-xs text-slate-900 font-bold">HelpOS™ AI:</span>
+                <span className="text-xs text-slate-900 font-bold">AI Brain:</span>
                 <Button
                   onClick={onToggleAI}
                   variant="outline"
