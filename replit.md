@@ -34,6 +34,7 @@ AutoForce™ is powered by a **Unified AI Brain** that orchestrates autonomous o
 -   **Atomic Organization Registration Flow**: Transaction-safe registration process for User → Workspace → Expense Categories → Employee creation.
 -   **Universal Migration System**: Provides comprehensive migration tracking for onboarding from external platforms.
 -   **HelpDesk Chat System**: Universal support chat system with mobile/desktop support, WebSocket backend, auto-ticket creation, HelpOS AI assistant, and targeted support tools.
+-   **HelpOS Multi-Workspace Architecture**: Intelligent workspace selection system for HelpOS tester - auto-selects sole workspace for single-workspace users, provides manual selector for multi-workspace owners (like root), uses `refetchQueries` to ensure immediate auth context updates, and falls back to `currentWorkspaceId` from database for security without cross-tenant leakage.
 
 ## External Dependencies
 -   **Database**: Neon (PostgreSQL)
