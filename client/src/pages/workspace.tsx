@@ -9,6 +9,7 @@ import {
   CheckCircle, Receipt, ShieldCheck, Book, MessageSquare,
   Truck, HelpCircle, ArrowRight, Activity
 } from "lucide-react";
+import { AutoForceLoader } from "@/components/autoforce-loader";
 import type { WorkspaceFeature } from "@shared/workspaceFeatures";
 
 const iconMap: Record<string, any> = {
@@ -48,11 +49,7 @@ export default function Workspace() {
   const workspaceRole = featuresData?.workspaceRole;
 
   if (isLoading || featuresLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse">Loading workspace...</div>
-      </div>
-    );
+    return <AutoForceLoader isVisible={true} scenario="workspace" />;
   }
 
   if (!user) {
