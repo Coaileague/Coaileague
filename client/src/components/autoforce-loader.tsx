@@ -9,6 +9,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AutoForceAFLogo } from "./autoforce-af-logo";
 import { Loader2 } from "lucide-react";
+import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 
 export type LoadingScenario = 
   | "workspace" 
@@ -72,6 +73,14 @@ export function AutoForceLoader({
   progress,
   variant = "full"
 }: AutoForceLoaderProps) {
+  // CRITICAL: Respect universal loading gate - NEVER show on public routes
+  const { isLoadingBlocked } = useUniversalLoadingGate();
+  
+  // If loading is blocked (public route), don't render anything
+  if (isLoadingBlocked) {
+    return null;
+  }
+
   const scenarioDefaults = scenarioMessages[scenario];
   const displayMessage = message || scenarioDefaults.title;
   const displaySubmessage = submessage || scenarioDefaults.description;

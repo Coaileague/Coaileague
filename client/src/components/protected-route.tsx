@@ -1,45 +1,21 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Redirect } from "wouter";
-
-// Routes that are PUBLIC and should NEVER show loading screens
-const PUBLIC_ROUTES = new Set([
-  "/",
-  "/login",
-  "/register",
-  "/pricing",
-  "/contact",
-  "/support",
-  "/terms",
-  "/privacy",
-  "/chat",
-  "/mobile-chat",
-  "/live-chat",
-  "/helpdesk5",
-  "/support/chat",
-  "/logo-showcase",
-  "/error-403",
-  "/error-404",
-  "/error-500",
-]);
+import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-
-  // Check if on public route - NEVER show loading screen for public routes
-  const isPublicRoute = PUBLIC_ROUTES.has(window.location.pathname) || 
-                        window.location.pathname.startsWith("/onboarding/") ||
-                        window.location.pathname.startsWith("/pay-invoice/");
+  const { isLoadingBlocked } = useUniversalLoadingGate();
 
   useEffect(() => {
     // Only redirect if not on a public route
-    if (!isPublicRoute && !isLoading && !isAuthenticated) {
+    if (!isLoadingBlocked && !isLoading && !isAuthenticated) {
       window.location.href = "/api/login";
     }
-  }, [isAuthenticated, isLoading, isPublicRoute]);
+  }, [isAuthenticated, isLoading, isLoadingBlocked]);
 
-  // CRITICAL: Never show loading spinner for public routes - render children immediately
-  if (isLoading && !isPublicRoute) {
+  // CRITICAL: UniversalLoadingGate blocks loading on public routes
+  // Never show loading spinner if gate says no
+  if (isLoading && !isLoadingBlocked) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Loading" />
@@ -48,7 +24,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // If not authenticated and not public route, show nothing (will redirect via useEffect)
-  if (!isAuthenticated && !isPublicRoute) {
+  if (!isAuthenticated && !isLoadingBlocked) {
     return null;
   }
 

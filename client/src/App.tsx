@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
 import { OverlayControllerProvider } from "@/contexts/overlay-controller";
+import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate";
 import { TransitionProvider } from "@/contexts/transition-context";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -558,22 +559,24 @@ export default function App() {
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ServiceHealthProvider>
-          <OverlayControllerProvider>
-            <ThemeProvider defaultTheme="light">
-              <WorkspaceThemeProvider>
-                <TransitionProvider>
-                <TooltipProvider>
-                  <ResponsiveAppFrame>
-                    <AppContent />
-                    <FloatingSupportChat />
-                    <ReenableChatButton />
-                    <Toaster />
-                  </ResponsiveAppFrame>
-                </TooltipProvider>
-                </TransitionProvider>
-              </WorkspaceThemeProvider>
-            </ThemeProvider>
-          </OverlayControllerProvider>
+          <UniversalLoadingGateProvider>
+            <OverlayControllerProvider>
+              <ThemeProvider defaultTheme="light">
+                <WorkspaceThemeProvider>
+                  <TransitionProvider>
+                  <TooltipProvider>
+                    <ResponsiveAppFrame>
+                      <AppContent />
+                      <FloatingSupportChat />
+                      <ReenableChatButton />
+                      <Toaster />
+                    </ResponsiveAppFrame>
+                  </TooltipProvider>
+                  </TransitionProvider>
+                </WorkspaceThemeProvider>
+              </ThemeProvider>
+            </OverlayControllerProvider>
+          </UniversalLoadingGateProvider>
         </ServiceHealthProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>

@@ -48,6 +48,8 @@ export default function Workspace() {
   const platformRole = featuresData?.platformRole;
   const workspaceRole = featuresData?.workspaceRole;
 
+  // Only show loader if actually loading AND not on a public route
+  // AutoForceLoader internally checks universal gate anyway
   if (isLoading || featuresLoading) {
     return <AutoForceLoader isVisible={true} scenario="workspace" />;
   }

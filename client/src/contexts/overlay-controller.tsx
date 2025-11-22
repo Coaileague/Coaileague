@@ -44,14 +44,13 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
   const [queue, setQueue] = useState<OverlayRequest[]>([]);
   const requestCounterRef = useRef(0);
   const [activeModals, setActiveModals] = useState<Set<string>>(new Set());
-  
-  // Check if current route is public - NEVER show overlays on public routes
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isPublicRoute = PUBLIC_ROUTES.has(currentPath);
 
   const showOverlay = useCallback((request: Omit<OverlayRequest, "id" | "visibleSince">) => {
-    // CRITICAL: Block all loading overlays on public routes
-    const isPublicRoute = PUBLIC_ROUTES.has(window.location.pathname);
+    // CRITICAL: Use UniversalLoadingGate to check if loading is blocked on public routes
+    const currentPath = window.location.pathname;
+    const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 
+                          currentPath.startsWith("/onboarding/") ||
+                          currentPath.startsWith("/pay-invoice/");
     if (request.status === "loading" && isPublicRoute) {
       // Return dummy ID but don't actually show anything
       return `overlay-blocked-${++requestCounterRef.current}`;
@@ -184,6 +183,12 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
     });
     return canActivate;
   }, []);
+
+  // Check if on public route - NEVER render overlays on public routes
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 
+                        currentPath.startsWith("/onboarding/") ||
+                        currentPath.startsWith("/pay-invoice/");
 
   // CRITICAL: If on public route, NEVER render any overlay at all
   if (isPublicRoute) {
