@@ -781,6 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the support ticket
       const ticket = await storage.createSupportTicket({
         workspaceId,
+        type: 'support',
         requestorId: userId || 'guest-user',
         requestorEmail: userEmail,
         category: 'support_request',
