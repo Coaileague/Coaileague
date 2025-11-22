@@ -42,13 +42,15 @@ export function HelpOsAiTester() {
   const switchWorkspaceMutation = useMutation({
     mutationFn: async (workspaceId: string) => {
       await apiRequest(`/api/workspace/switch/${workspaceId}`, "POST");
-      // Refetch user query to reload currentWorkspaceId and WAIT for it
-      await queryClient.refetchQueries({ queryKey: ['/api/auth/me'] });
+      // CRITICAL: invalidateQueries AND WAIT for fresh data
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      // Give React Query time to refetch (it's triggered by invalidation above)
+      await new Promise(resolve => setTimeout(resolve, 100));
     },
     onSuccess: () => {
       toast({
         title: "✅ Workspace Selected",
-        description: "HelpOS will now use this workspace",
+        description: "HelpOS is ready to use",
       });
     },
     onError: (error: any) => {
@@ -215,7 +217,12 @@ export function HelpOsAiTester() {
           <DialogFooter>
             <Button
               onClick={handleTest}
-              disabled={!message.trim() || testAiMutation.isPending}
+              disabled={
+                !message.trim() || 
+                testAiMutation.isPending || 
+                switchWorkspaceMutation.isPending ||
+                (!user?.currentWorkspaceId && workspaces.length > 1)
+              }
               style={{
                 background: "linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)",
               }}
