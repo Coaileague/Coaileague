@@ -242,7 +242,7 @@ export function FloatingSupportChat() {
       const botMessage: Message = {
         id: messages.length + 2,
         type: 'bot',
-        text: data.response,
+        text: data.message || data.response || "No response from AI",
         timestamp: new Date()
       };
       
