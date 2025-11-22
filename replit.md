@@ -17,7 +17,7 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive plat
 - HR Operations Analyst: $82.5K/yr
 - Admin Operations Manager: $97.5K/yr
 
-**Pricing Philosophy**: All features are bundled into tiers (no individual add-ons). Pricing captures ~23-50% of customer savings depending on tier. All ROI claims are mathematically verified and FTC-compliant. AI usage features use customer-pays model at $0.002-$0.10 per interaction with monthly credits included in each tier.
+**Pricing Philosophy**: All features are bundled into tiers (no individual add-ons). Pricing captures ~23-50% of customer savings depending on tier. All ROI claims are mathematically verified and FTC-compliant. AI automations use a credit-based system (1 credit = $0.10) with monthly allocations: Starter 500 credits ($50), Professional 2,000 credits ($200), Enterprise 10,000 credits ($1,000). Additional credits purchasable at 100 credits = $10.
 
 ## User Preferences
 I prefer detailed explanations.
