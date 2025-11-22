@@ -63,8 +63,8 @@ interface PendingEntry {
 
 export default function PendingTimeEntries() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
-  const [employeeFilter, setEmployeeFilter] = useState<string>("");
-  const [clientFilter, setClientFilter] = useState<string>("");
+  const [employeeFilter, setEmployeeFilter] = useState<string | undefined>(undefined);
+  const [clientFilter, setClientFilter] = useState<string | undefined>(undefined);
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const [endDateFilter, setEndDateFilter] = useState<string>("");
   const [hasGpsFilter, setHasGpsFilter] = useState<boolean | null>(null);
@@ -262,12 +262,12 @@ export default function PendingTimeEntries() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="filter-employee">Employee</Label>
-              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+              <Select value={employeeFilter} onValueChange={(val) => setEmployeeFilter(val || undefined)}>
                 <SelectTrigger id="filter-employee" data-testid="select-filter-employee">
                   <SelectValue placeholder="All employees" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All employees</SelectItem>
+                  <SelectItem value="all-employees">All employees</SelectItem>
                   {allEmployees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.firstName} {emp.lastName}
@@ -279,15 +279,15 @@ export default function PendingTimeEntries() {
 
             <div className="space-y-2">
               <Label htmlFor="filter-client">Client</Label>
-              <Select value={clientFilter} onValueChange={setClientFilter}>
+              <Select value={clientFilter} onValueChange={(val) => setClientFilter(val || undefined)}>
                 <SelectTrigger id="filter-client" data-testid="select-filter-client">
                   <SelectValue placeholder="All clients" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All clients</SelectItem>
+                  <SelectItem value="all-clients">All clients</SelectItem>
                   {allClients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                      {client.companyName || `${client.firstName} ${client.lastName}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -319,7 +319,7 @@ export default function PendingTimeEntries() {
             <div className="space-y-2">
               <Label htmlFor="filter-verification">Verification</Label>
               <Select 
-                value={hasGpsFilter === true ? 'gps' : hasPhotoFilter === true ? 'photo' : ''} 
+                value={hasGpsFilter === true ? 'gps' : hasPhotoFilter === true ? 'photo' : 'all-entries'} 
                 onValueChange={(val) => {
                   if (val === 'gps') {
                     setHasGpsFilter(true);
@@ -337,7 +337,7 @@ export default function PendingTimeEntries() {
                   <SelectValue placeholder="All entries" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All entries</SelectItem>
+                  <SelectItem value="all-entries">All entries</SelectItem>
                   <SelectItem value="gps">GPS verified only</SelectItem>
                   <SelectItem value="photo">Photo verified only</SelectItem>
                 </SelectContent>
