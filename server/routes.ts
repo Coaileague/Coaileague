@@ -24377,4 +24377,92 @@ Respond with valid JSON array only.`
 
   // Return the server we created at the top with WebSocket
   return server;
-}
+
+// ============================================================================
+// SALES & ORG INVITATIONS ROUTES
+// ============================================================================
+
+// GET /api/sales/invitations - Get all invitations
+app.get("/api/sales/invitations", requirePlatformStaff, async (req, res) => {
+  try {
+    const invitations = await db.select().from(orgInvitations).orderBy(orgInvitations.createdAt);
+    res.json(invitations);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sales/invitations/send - Send org trial invitation
+app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
+  try {
+    const { email, organizationName, contactName, offeredTier } = req.body;
+    if (!email || !organizationName) return res.status(400).json({ error: "Email and org name required" });
+
+    const invitationToken = Math.random().toString(36).substring(2, 15);
+    const result = await db.insert(orgInvitations).values({
+      email,
+      organizationName,
+      contactName,
+      offeredTier: offeredTier || "starter",
+      invitationToken,
+      invitationTokenExpiry: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      sentBy: req.user?.id,
+      status: "pending",
+    }).returning();
+
+    res.json({ success: true, invitation: result[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/sales/proposals - Get proposals
+app.get("/api/sales/proposals", requireAuth, async (req, res) => {
+  try {
+    const list = await db.select().from(proposals).orderBy(proposals.createdAt);
+    res.json(list);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sales/proposals - Create proposal
+app.post("/api/sales/proposals", requireAuth, async (req, res) => {
+  try {
+    const { title, description, prospectEmail, prospectName, prospectOrganization, suggestedTier, estimatedValue } = req.body;
+    if (!title || !prospectEmail) return res.status(400).json({ error: "Title and email required" });
+
+    const result = await db.insert(proposals).values({
+      title,
+      description,
+      prospectEmail,
+      prospectName,
+      prospectOrganization,
+      suggestedTier: suggestedTier || "starter",
+      estimatedValue: estimatedValue ? parseFloat(estimatedValue) : undefined,
+      status: "draft",
+      createdBy: req.user?.id || "system",
+      content: {},
+    }).returning();
+
+    res.json({ success: true, proposal: result[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sales/proposals/:id/send - Send proposal
+app.post("/api/sales/proposals/:id/send", requireAuth, async (req, res) => {
+  try {
+    const result = await db.update(proposals).set({
+      status: "sent",
+      sentAt: new Date(),
+      sentBy: req.user?.id,
+    }).where(eq(proposals.id, req.params.id)).returning();
+
+    if (!result[0]) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true, proposal: result[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
