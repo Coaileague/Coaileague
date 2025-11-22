@@ -7,66 +7,67 @@ import { Link } from 'wouter';
 import { UniversalHeader } from '@/components/universal-header';
 
 export default function Homepage() {
-  // DEBUG: Find and report what's rendering loaders
+  // DEBUG: Find what's rendering the overlay
   useEffect(() => {
     console.log('🏠 HOMEPAGE MOUNTED');
     document.body.setAttribute('data-public-route', 'true');
     
-    // DETAILED DEBUG: Find what's actually rendering
-    const debugAndHide = () => {
-      const loaders = document.querySelectorAll('[data-testid*="loader"], [data-testid*="loading"], .fixed.inset-0.bg-background, .animate-spin');
+    const hideAllOverlays = () => {
+      // Look for ANY fixed inset-0 overlay
+      const allFixed = document.querySelectorAll('.fixed.inset-0');
       
-      loaders.forEach((el, idx) => {
-        const testid = (el as HTMLElement).getAttribute('data-testid');
+      allFixed.forEach((el, idx) => {
         const classes = (el as HTMLElement).className;
-        const parent = el.parentElement?.tagName;
-        const grandparent = el.parentElement?.parentElement?.tagName;
+        const bgColor = window.getComputedStyle(el).backgroundColor;
+        const zIndex = window.getComputedStyle(el).zIndex;
         
-        console.log(`❌ LOADER #${idx}:`, {
-          testid,
-          tag: el.tagName,
-          classes: classes.substring(0, 100),
-          parent,
-          grandparent,
-          html: (el as HTMLElement).outerHTML.substring(0, 150)
+        console.log(`🔍 FIXED OVERLAY #${idx}:`, {
+          classes: classes.substring(0, 150),
+          backgroundColor: bgColor,
+          zIndex: zIndex,
+          html: (el as HTMLElement).outerHTML.substring(0, 200)
         });
         
         // Hide it
-        (el as HTMLElement).style.display = 'none';
-        (el as HTMLElement).style.visibility = 'hidden';
-        (el as HTMLElement).style.opacity = '0';
+        (el as HTMLElement).style.display = 'none !important';
+        (el as HTMLElement).style.visibility = 'hidden !important';
+        (el as HTMLElement).style.opacity = '0 !important';
+        (el as HTMLElement).style.pointerEvents = 'none !important';
       });
       
-      if (loaders.length > 0) {
-        console.log(`🚨 FOUND ${loaders.length} LOADERS - removing them`);
+      if (allFixed.length > 0) {
+        console.log(`🚨 FOUND ${allFixed.length} FIXED OVERLAYS`);
       }
+      
+      // Also hide animate-spin
+      const spinners = document.querySelectorAll('.animate-spin');
+      spinners.forEach((el, idx) => {
+        const height = (el as HTMLElement).offsetHeight;
+        const width = (el as HTMLElement).offsetWidth;
+        
+        if (height < 300 && width < 300) {
+          console.log(`⚙️ SPINNER #${idx}:`, {
+            height, width,
+            classes: (el as HTMLElement).className.substring(0, 100)
+          });
+          (el as HTMLElement).style.display = 'none !important';
+          (el as HTMLElement).style.visibility = 'hidden !important';
+        }
+      });
     };
     
-    // Run debug immediately and every 200ms for 5 seconds
-    debugAndHide();
+    // Run immediately
+    hideAllOverlays();
+    
+    // Continue checking every 100ms for 10 seconds
     const intervals: NodeJS.Timeout[] = [];
-    for (let i = 1; i <= 25; i++) {
-      intervals.push(setTimeout(debugAndHide, i * 200));
+    for (let i = 1; i <= 100; i++) {
+      intervals.push(setTimeout(hideAllOverlays, i * 100));
     }
     
-    // Monitor for new elements
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) {
-            const el = node as HTMLElement;
-            if (el.getAttribute?.('data-testid')?.includes('loader') || 
-                el.querySelector?.('[data-testid*="loader"]')) {
-              console.error('🎯 NEWLY ADDED LOADER DETECTED:', {
-                tag: el.tagName,
-                testid: el.getAttribute?.('data-testid'),
-                component: el.outerHTML.substring(0, 200)
-              });
-              debugAndHide();
-            }
-          }
-        });
-      });
+    // Monitor DOM changes
+    const observer = new MutationObserver(() => {
+      hideAllOverlays();
     });
     
     observer.observe(document.body, { childList: true, subtree: true });
