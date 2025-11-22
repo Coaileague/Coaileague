@@ -93,7 +93,7 @@ export function HelpOsAiTester() {
       return response;
     },
     onSuccess: (data: any) => {
-      setAiResponse(data.reply || "No response from AI");
+      setAiResponse(data.message || "No response from AI");
       toast({
         title: "✅ HelpOS™ AI Responding",
         description: "Smart AI is working!",
