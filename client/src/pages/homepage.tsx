@@ -7,58 +7,68 @@ import { Link } from 'wouter';
 import { UniversalHeader } from '@/components/universal-header';
 
 export default function Homepage() {
-  // CRITICAL: Mark body as public route and aggressively hide all loaders
+  // DEBUG: Find and report what's rendering loaders
   useEffect(() => {
+    console.log('🏠 HOMEPAGE MOUNTED');
     document.body.setAttribute('data-public-route', 'true');
     
-    // AGGRESSIVE: Hide ALL potential loading elements immediately and continuously
-    const hideLoaders = () => {
-      // Hide by data-testid
-      document.querySelectorAll('[data-testid*="loader"], [data-testid*="loading"]').forEach(el => {
+    // DETAILED DEBUG: Find what's actually rendering
+    const debugAndHide = () => {
+      const loaders = document.querySelectorAll('[data-testid*="loader"], [data-testid*="loading"], .fixed.inset-0.bg-background, .animate-spin');
+      
+      loaders.forEach((el, idx) => {
+        const testid = (el as HTMLElement).getAttribute('data-testid');
+        const classes = (el as HTMLElement).className;
+        const parent = el.parentElement?.tagName;
+        const grandparent = el.parentElement?.parentElement?.tagName;
+        
+        console.log(`❌ LOADER #${idx}:`, {
+          testid,
+          tag: el.tagName,
+          classes: classes.substring(0, 100),
+          parent,
+          grandparent,
+          html: (el as HTMLElement).outerHTML.substring(0, 150)
+        });
+        
+        // Hide it
         (el as HTMLElement).style.display = 'none';
         (el as HTMLElement).style.visibility = 'hidden';
         (el as HTMLElement).style.opacity = '0';
-        (el as HTMLElement).style.pointerEvents = 'none';
       });
       
-      // Hide any fixed overlays with background
-      document.querySelectorAll('.fixed.inset-0').forEach(el => {
-        const style = window.getComputedStyle(el);
-        if (style.backgroundColor || el.classList.contains('bg-background') || el.classList.contains('animate-spin')) {
-          (el as HTMLElement).style.display = 'none';
-          (el as HTMLElement).style.visibility = 'hidden';
-        }
-      });
-      
-      // Hide animated spinners
-      document.querySelectorAll('.animate-spin, [class*="rotate"]').forEach(el => {
-        if ((el as HTMLElement).offsetHeight < 200) { // Likely a spinner, not main content
-          (el as HTMLElement).style.display = 'none';
-          (el as HTMLElement).style.visibility = 'hidden';
-        }
-      });
-      
-      // Hide backdrop blurs that look like overlays
-      document.querySelectorAll('.backdrop-blur').forEach(el => {
-        const parent = el.parentElement;
-        if (parent?.classList.contains('fixed')) {
-          (el as HTMLElement).style.display = 'none';
-          (el as HTMLElement).style.visibility = 'hidden';
-        }
-      });
+      if (loaders.length > 0) {
+        console.log(`🚨 FOUND ${loaders.length} LOADERS - removing them`);
+      }
     };
     
-    // Initial hide
-    hideLoaders();
-    
-    // Continuously hide for 5 seconds to catch delayed loaders
+    // Run debug immediately and every 200ms for 5 seconds
+    debugAndHide();
     const intervals: NodeJS.Timeout[] = [];
-    for (let i = 0; i < 50; i++) {
-      intervals.push(setTimeout(hideLoaders, i * 100));
+    for (let i = 1; i <= 25; i++) {
+      intervals.push(setTimeout(debugAndHide, i * 200));
     }
     
-    // Also monitor for new elements
-    const observer = new MutationObserver(hideLoaders);
+    // Monitor for new elements
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === 1) {
+            const el = node as HTMLElement;
+            if (el.getAttribute?.('data-testid')?.includes('loader') || 
+                el.querySelector?.('[data-testid*="loader"]')) {
+              console.error('🎯 NEWLY ADDED LOADER DETECTED:', {
+                tag: el.tagName,
+                testid: el.getAttribute?.('data-testid'),
+                component: el.outerHTML.substring(0, 200)
+              });
+              debugAndHide();
+            }
+          }
+        });
+      });
+    });
+    
     observer.observe(document.body, { childList: true, subtree: true });
     
     return () => {
