@@ -24439,4 +24439,6 @@ app.post("/api/sales/proposals", requireAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-});
+
+  return server;
+}
