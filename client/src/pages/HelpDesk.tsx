@@ -128,23 +128,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   // REMOVED: Agreement and terms dialogs - chatroom is now publicly accessible without barriers
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // User state tracking for contextual menus
-  const [silencedUsers, setSilencedUsers] = useState<Set<string>>(new Set());
-  const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
-  const [documentRequests, setDocumentRequests] = useState<Map<string, Set<string>>>(new Map());
-  // Map structure: userId => Set of request types ('authenticate', 'document', 'photo', 'signature', 'info')
-  
-  // Enhanced HelpDesk state
-  const [ticketStatus, setTicketStatus] = useState<'new' | 'assigned' | 'investigating' | 'waiting_user' | 'resolved' | 'escalated'>('investigating');
-  const [showContextPanel, setShowContextPanel] = useState(true);
-  
-  // Seasonal animations toggle (staff only)
-  const [seasonalAnimationsEnabled, setSeasonalAnimationsEnabled] = useState(() => {
-    const stored = localStorage.getItem('seasonal-animations-enabled');
-    return stored !== null ? stored === 'true' : true; // Default enabled
-  });
   
   // Generate or get session ID for tracking
   const [sessionId] = useState(() => {
@@ -164,6 +147,34 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const escalationData = sessionStorage.getItem('helpos_escalation');
   const parsedEscalation = escalationData ? JSON.parse(escalationData) : null;
   
+  // Guest intake form state (now parsedEscalation is defined)
+  const [showGuestIntakeForm, setShowGuestIntakeForm] = useState(!user); // Show for guests on load
+  const [guestIntakeData, setGuestIntakeData] = useState({
+    name: parsedEscalation?.guestName || '',
+    email: '',
+    issueType: '',
+    problemDescription: ''
+  });
+  const [hasCompletedIntake, setHasCompletedIntake] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // User state tracking for contextual menus
+  const [silencedUsers, setSilencedUsers] = useState<Set<string>>(new Set());
+  const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
+  const [documentRequests, setDocumentRequests] = useState<Map<string, Set<string>>>(new Map());
+  // Map structure: userId => Set of request types ('authenticate', 'document', 'photo', 'signature', 'info')
+  
+  // Enhanced HelpDesk state
+  const [ticketStatus, setTicketStatus] = useState<'new' | 'assigned' | 'investigating' | 'waiting_user' | 'resolved' | 'escalated'>('investigating');
+  const [showContextPanel, setShowContextPanel] = useState(true);
+  
+  // Seasonal animations toggle (staff only)
+  const [seasonalAnimationsEnabled, setSeasonalAnimationsEnabled] = useState(() => {
+    const stored = localStorage.getItem('seasonal-animations-enabled');
+    return stored !== null ? stored === 'true' : true; // Default enabled
+  });
+  
   // Determine the conversation ID to join (escalation > default)
   const conversationToJoin = urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
   
@@ -176,10 +187,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   });
 
   // No IRC-style messages - users see terms/agreement first, then optional MOTD dialog if set by admins
-
+  const isGuest = !user;
+  
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
-    : parsedEscalation?.guestName || user?.email?.split('@')[0] || 'Guest';
+    : guestIntakeData.name || parsedEscalation?.guestName || user?.email?.split('@')[0] || 'Guest';
 
   const { 
     messages, 
@@ -1183,25 +1195,34 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             )}
             
             <div className="flex items-end gap-1.5 sm:gap-2">
-              <Input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type message..."
-                disabled={!isConnected}
-                className="flex-grow p-2 sm:p-2.5 md:p-3 border-2 border-border rounded-xl sm:rounded-2xl resize-none focus:ring-primary focus:border-primary bg-background text-foreground placeholder:text-muted-foreground text-sm"
-                data-testid="input-message"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!isConnected || !inputMessage.trim()}
-                variant="default"
-                className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-sm transition-all h-auto text-sm flex-shrink-0"
-                data-testid="button-send"
-              >
-                <Send className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Send</span>
-              </Button>
+              {isGuest && isSilenced && !justGotVoice ? (
+                <div className="flex-grow p-3 sm:p-3.5 border-2 border-amber-200 dark:border-amber-900 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-100 text-sm">
+                  <p className="font-semibold mb-1">📞 You're in Queue (Spectator Mode)</p>
+                  <p className="text-xs">Your chat is read-only while waiting. AutoForce™ AI will assist you shortly.</p>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={isGuest ? "Describe your issue..." : "Type message..."}
+                    disabled={!isConnected || (isGuest && isSilenced && !justGotVoice)}
+                    className="flex-grow p-2 sm:p-2.5 md:p-3 border-2 border-border rounded-xl sm:rounded-2xl resize-none focus:ring-primary focus:border-primary bg-background text-foreground placeholder:text-muted-foreground text-sm"
+                    data-testid="input-message"
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!isConnected || !inputMessage.trim() || (isGuest && isSilenced && !justGotVoice)}
+                    variant="default"
+                    className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-sm transition-all h-auto text-sm flex-shrink-0"
+                    data-testid="button-send"
+                  >
+                    <Send className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Send</span>
+                  </Button>
+                </>
+              )}
             </div>
             <div className="mt-2 px-1" data-testid="chat-status-bar">
               <AnimatedStatusBar
@@ -1575,6 +1596,99 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         </section>
         )}
       </main>
+
+      {/* GUEST INTAKE FORM - Collects guest information for support agents */}
+      <Dialog open={showGuestIntakeForm && !hasCompletedIntake} onOpenChange={(open) => !open && setShowGuestIntakeForm(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
+            <DialogDescription>
+              Please provide some information so our support team can better assist you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="guest-name" className="text-sm font-medium">Name</Label>
+              <Input
+                id="guest-name"
+                placeholder="Your name"
+                value={guestIntakeData.name}
+                onChange={(e) => setGuestIntakeData(prev => ({ ...prev, name: e.target.value }))}
+                className="mt-1"
+                data-testid="input-guest-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="guest-email" className="text-sm font-medium">Email</Label>
+              <Input
+                id="guest-email"
+                type="email"
+                placeholder="your@email.com"
+                value={guestIntakeData.email}
+                onChange={(e) => setGuestIntakeData(prev => ({ ...prev, email: e.target.value }))}
+                className="mt-1"
+                data-testid="input-guest-email"
+              />
+            </div>
+            <div>
+              <Label htmlFor="issue-type" className="text-sm font-medium">Issue Type</Label>
+              <Select value={guestIntakeData.issueType} onValueChange={(value) => setGuestIntakeData(prev => ({ ...prev, issueType: value }))}>
+                <SelectTrigger id="issue-type" data-testid="select-issue-type">
+                  <SelectValue placeholder="Select issue type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="billing">Billing & Payments</SelectItem>
+                  <SelectItem value="technical">Technical Issue</SelectItem>
+                  <SelectItem value="account">Account Help</SelectItem>
+                  <SelectItem value="feature">Feature Request</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="problem-description" className="text-sm font-medium">Describe Your Issue</Label>
+              <Textarea
+                id="problem-description"
+                placeholder="Tell us what you're experiencing..."
+                value={guestIntakeData.problemDescription}
+                onChange={(e) => setGuestIntakeData(prev => ({ ...prev, problemDescription: e.target.value }))}
+                className="mt-1 min-h-24 resize-none"
+                data-testid="textarea-problem"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                if (guestIntakeData.name && guestIntakeData.email && guestIntakeData.issueType && guestIntakeData.problemDescription) {
+                  // Send intake data to agents via system message
+                  sendMessage(
+                    `[GUEST INTAKE]\nName: ${guestIntakeData.name}\nEmail: ${guestIntakeData.email}\nIssue Type: ${guestIntakeData.issueType}\n\nDescription:\n${guestIntakeData.problemDescription}`,
+                    userName,
+                    'system'
+                  );
+                  setHasCompletedIntake(true);
+                  setShowGuestIntakeForm(false);
+                  toast({
+                    title: "✓ Information Received",
+                    description: "AutoForce™ AI is analyzing your issue. An agent will be with you shortly.",
+                  });
+                } else {
+                  toast({
+                    title: "⚠️ Missing Information",
+                    description: "Please fill in all fields to continue.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="w-full"
+              data-testid="button-submit-intake"
+            >
+              Start Chat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Secure Request Dialog - Opens when staff requests secure info from user */}
       {secureRequest && (
