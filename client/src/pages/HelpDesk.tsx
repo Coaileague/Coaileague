@@ -238,7 +238,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       sendMessage(
         `✅ An agent is now helping you!\n\nTicket #${ticketNumber} has been assigned. Your chat is no longer read-only.`,
         'AutoForce™ AI',
-        'bot'
+        'system'
       );
     }
     
@@ -1684,13 +1684,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   const savedTicketId = sessionStorage.getItem('support_ticket_id');
                   if (savedTicketId) setTicketNumber(savedTicketId);
                   
-                  // Update userName with guest's actual name for user list
-                  setUserName(guestIntakeData.name);
-                  
-                  // Send intake data to agents via system message
+                  // Send intake data to agents via system message with guest's actual name
                   sendMessage(
                     `[GUEST INTAKE]\nTicket: ${savedTicketId || 'PENDING'}\nName: ${guestIntakeData.name}\nEmail: ${guestIntakeData.email}\nIssue Type: ${guestIntakeData.issueType}\n\nDescription:\n${guestIntakeData.problemDescription}`,
-                    userName,
+                    guestIntakeData.name,
                     'system'
                   );
                   setHasCompletedIntake(true);
@@ -1707,7 +1704,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         sendMessage(
                           `⏳ Queue Update\nTicket: ${savedTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nAutoForce™ AI is reviewing your issue. An agent will be assigned shortly.`,
                           'AutoForce™ AI',
-                          'bot'
+                          'system'
                         );
                       }
                     }, 60000); // Update every 60 seconds
