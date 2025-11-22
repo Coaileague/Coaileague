@@ -14,13 +14,14 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2, ExternalLink } from 'lucide-react';
+import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2, ExternalLink, Headset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmployee } from '@/hooks/useEmployee';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface ChatBubbleState {
@@ -40,6 +41,8 @@ export function FloatingSupportChat() {
   const { user } = useAuth();
   const { employee } = useEmployee();
   const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   
   // Real IDs from auth system
   const workId = employee?.employeeNumber || 'GUEST';
@@ -201,6 +204,47 @@ export function FloatingSupportChat() {
       setLocation('/support/chatrooms');
     } else {
       setLocation('/org-chat');
+    }
+  };
+
+  // Request human support - creates ticket and routes to helpdesk
+  const handleRequestHumanHelp = async () => {
+    setIsCreatingTicket(true);
+    try {
+      const response = await fetch('/api/support/create-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          subject: 'User Requested Human Support',
+          description: messages.map(m => `${m.type === 'user' ? 'User' : 'AI'}: ${m.text}`).join('\n'),
+          conversationHistory: messages
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to create ticket');
+      
+      const data = await response.json();
+      toast({
+        title: "✅ Support Ticket Created",
+        description: "Connecting you to a support agent...",
+      });
+
+      // Route to helpdesk (support staff route if available, otherwise org chat)
+      if (user) {
+        sessionStorage.setItem('support_ticket_id', data.ticketId);
+        setLocation('/support/chatrooms');
+      }
+      setState(prev => ({ ...prev, isOpen: false }));
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      toast({
+        title: "❌ Error",
+        description: "Could not create support ticket. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingTicket(false);
     }
   };
   
@@ -445,7 +489,16 @@ export function FloatingSupportChat() {
       </div>
       
       {/* Input area */}
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-2">
+        <Button
+          onClick={handleRequestHumanHelp}
+          disabled={isCreatingTicket}
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600"
+          data-testid="button-human-help"
+        >
+          <Headset className="w-4 h-4 mr-2" />
+          {isCreatingTicket ? 'Creating Ticket...' : 'Request Human Help'}
+        </Button>
         <div className="flex gap-2">
           <Input
             value={inputValue}
