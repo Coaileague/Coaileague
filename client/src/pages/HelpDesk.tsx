@@ -41,8 +41,6 @@ import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
 import { HelpDeskCommandBar } from "@/components/helpdesk-command-bar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ChatAnnouncementBanner } from "@/components/chat-announcement-banner";
-import { BannerManager } from "@/components/banner-manager";
 import { HelpCommandPanel } from "@/components/help-command-panel";
 import { QueueManagerPanel } from "@/components/queue-manager-panel";
 import { TutorialManagerPanel } from "@/components/tutorial-manager-panel";
@@ -1064,14 +1062,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         </div>
       </header>
 
-      {/* Announcement Banner - Bright emerald/green theme */}
-      <ChatAnnouncementBanner
-        queuePosition={messages.filter(m => m.senderType === 'customer').length + 1}
-        queueWaitTime="2-3 minutes"
-        onlineStaff={uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length}
-        customMessages={promotionalBanners}
-        seasonalAnimationsEnabled={seasonalAnimationsEnabled}
-      />
 
       {/* Main Layout - Responsive: Stacked (mobile) vs 3-column (desktop) */}
       <main className="flex flex-col md:flex-row flex-grow overflow-y-auto md:overflow-hidden w-full relative z-10">
@@ -1820,48 +1810,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       )}
 
 
-      {/* Banner Manager - Staff Only */}
-      {isStaff && (
-        <BannerManager
-          open={showBannerManager}
-          onClose={() => setShowBannerManager(false)}
-          currentBanners={promotionalBanners}
-          onSendCommand={(command) => {
-            // Parse banner commands and call API
-            const parts = command.split(' ');
-            const action = parts[1]; // 'add', 'edit', 'remove', 'toggle'
-            
-            if (action === 'add') {
-              // Extract message from quotes
-              const messageMatch = command.match(/"([^"]+)"/);
-              const message = messageMatch ? messageMatch[1] : '';
-              
-              if (message) {
-                createBannerMutation.mutate({
-                  message,
-                  isActive: true, // Make new banners active by default
-                });
-                setShowBannerManager(false);
-              }
-            } else if (action === 'edit') {
-              // /banner edit <id> "<message>" <type> <icon> [<link>]
-              const bannerId = parts[2];
-              const messageMatch = command.match(/"([^"]+)"/);
-              const message = messageMatch ? messageMatch[1] : '';
-              
-              if (bannerId && message) {
-                updateBannerMutation.mutate({
-                  id: bannerId,
-                  data: { message },
-                });
-                setShowBannerManager(false);
-              }
-            } else if (action === 'remove') {
-              const bannerId = parts[2];
-              if (bannerId) {
-                deleteBannerMutation.mutate(bannerId);
-              }
-            } else if (action === 'toggle') {
               const bannerId = parts[2];
               const isActive = parts[3] === 'on';
               if (bannerId) {
