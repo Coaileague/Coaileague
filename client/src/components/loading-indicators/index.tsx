@@ -7,6 +7,7 @@
 import { UniversalTransitionOverlay, type AnimationType, type ScenarioType, type TransitionStatus } from "@/components/universal-transition-overlay";
 
 interface LoadingProps {
+  isVisible?: boolean;
   message?: string;
   submessage?: string;
   progress?: number;
@@ -18,6 +19,7 @@ interface LoadingProps {
 }
 
 export function ResponsiveLoading({
+  isVisible = true,
   message = "Loading...",
   submessage,
   progress,
@@ -29,7 +31,7 @@ export function ResponsiveLoading({
 }: LoadingProps) {
   return (
     <UniversalTransitionOverlay
-      isVisible={true}
+      isVisible={isVisible}
       status={status}
       animationType={animationType}
       scenario={scenario}
