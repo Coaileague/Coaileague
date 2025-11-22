@@ -290,7 +290,34 @@ export function useChatroomWebSocket(
                 if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
                   break;
                 }
-                setMessages((prev) => [...prev, data.message as ChatMessage]);
+                
+                const msg = data.message as ChatMessage;
+                setMessages((prev) => [...prev, msg]);
+                
+                // Auto-add sender to user list if not already present (refresh list when new user joins)
+                if (msg.senderId && msg.senderName) {
+                  const senderId = msg.senderId;
+                  const senderName = msg.senderName;
+                  const senderType = msg.senderType;
+                  const senderRole = (msg as any).role;
+                  
+                  setOnlineUsers((prev) => {
+                    const userExists = prev.some(u => u.id === senderId);
+                    if (!userExists && senderType !== 'system') {
+                      // Add the new user with info from the message
+                      const newUser: OnlineUser = {
+                        id: senderId,
+                        name: senderName,
+                        role: senderRole || 'guest',
+                        status: 'online',
+                        userType: senderType === 'support' ? 'staff' : 'guest',
+                      };
+                      console.log('👤 Auto-added new user to list:', newUser.name);
+                      return [...prev, newUser];
+                    }
+                    return prev;
+                  });
+                }
               }
               break;
 
@@ -301,7 +328,33 @@ export function useChatroomWebSocket(
                 if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
                   break;
                 }
-                setMessages((prev) => [...prev, data.message as ChatMessage]);
+                
+                const msg = data.message as ChatMessage;
+                setMessages((prev) => [...prev, msg]);
+                
+                // Auto-add sender to user list if not already present
+                if (msg.senderId && msg.senderName) {
+                  const senderId = msg.senderId;
+                  const senderName = msg.senderName;
+                  const senderType = msg.senderType;
+                  const senderRole = (msg as any).role;
+                  
+                  setOnlineUsers((prev) => {
+                    const userExists = prev.some(u => u.id === senderId);
+                    if (!userExists && senderType !== 'system') {
+                      const newUser: OnlineUser = {
+                        id: senderId,
+                        name: senderName,
+                        role: senderRole || 'guest',
+                        status: 'online',
+                        userType: senderType === 'support' ? 'staff' : 'guest',
+                      };
+                      console.log('👤 Auto-added new user to list from DM:', newUser.name);
+                      return [...prev, newUser];
+                    }
+                    return prev;
+                  });
+                }
               }
               break;
 
