@@ -16,23 +16,33 @@ export default function Homepage() {
       // Look for ALL fixed positioned elements
       const allFixed = document.querySelectorAll('[style*="position: fixed"], [class*="fixed"]');
       
-      // Log what we find
+      // Log what we find - DETAILED
       if (allFixed.length > 0) {
         console.log(`📍 Found ${allFixed.length} fixed elements:`);
         
         allFixed.forEach((el, idx) => {
-          if (idx < 10) { // Only log first 10 to avoid spam
-            const classes = (el as HTMLElement).className;
-            const style = (el as HTMLElement).getAttribute('style');
-            const bgColor = window.getComputedStyle(el).backgroundColor;
-            const zIndex = window.getComputedStyle(el).zIndex;
-            
-            console.log(`  [${idx}] ${el.tagName}`, {
-              classes: classes.substring(0, 80),
-              zIndex: zIndex,
-              bg: bgColor.substring(0, 50)
-            });
-          }
+          const classes = (el as HTMLElement).className;
+          const id = (el as HTMLElement).id;
+          const testid = (el as HTMLElement).getAttribute('data-testid');
+          const computed = window.getComputedStyle(el);
+          const bgColor = computed.backgroundColor;
+          const zIndex = computed.zIndex;
+          const width = (el as HTMLElement).offsetWidth;
+          const height = (el as HTMLElement).offsetHeight;
+          const top = computed.top;
+          const left = computed.left;
+          
+          // Extract just the first few classes for readability
+          const classArray = classes.split(' ').slice(0, 5).join(' ');
+          
+          console.log(`  [${idx}] <${el.tagName.toLowerCase()}> ${width}x${height} z:${zIndex}`, {
+            id: id || 'none',
+            testid: testid || 'none',
+            classes: classArray || 'none',
+            bg: bgColor,
+            pos: `${top}, ${left}`,
+            html: (el as HTMLElement).outerHTML.substring(0, 100)
+          });
         });
       }
       
