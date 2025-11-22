@@ -1030,7 +1030,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             </div>
             <div>
               <h1 className="text-blue-400 font-bold text-sm sm:text-base text-center">HelpDesk</h1>
-              <p className="text-blue-300 text-[10px] sm:text-xs text-center">Live support chat</p>
+              <p className="text-blue-300 text-sm sm:text-base text-center">Live support chat</p>
             </div>
           </div>
 
@@ -1049,7 +1049,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
         {/* Queue Status Bar - Blue info strip */}
         <div className="bg-blue-950/40 px-3 py-1.5 border-t border-blue-700">
-          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs text-blue-300">
+          <div className="flex items-center justify-between gap-2 text-sm sm:text-base text-blue-300">
             <span className="flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="truncate">{uniqueUsers.filter(u => ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(u.role)).length} agents online</span>
@@ -1090,7 +1090,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
                     <div key={idx} className="flex justify-center my-1">
-                      <span className="text-[10px] font-mono text-blue-600 dark:text-blue-300 italic bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
+                      <span className="text-xs font-mono text-blue-600 dark:text-blue-300 italic bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
                         <Zap className="w-3 h-3 text-blue-500" />
                         <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
                       </span>
@@ -1117,19 +1117,19 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                       <div className="flex-1 min-w-0 overflow-hidden">
                         {/* Header: Name with inline superscript role badge + Timestamp */}
                         <div className="flex items-center gap-1 sm:gap-1.5 mb-1 flex-wrap min-w-0">
-                          <span className={`text-xs font-bold ${nameColor} truncate`}>
+                          <span className={`text-sm font-bold ${nameColor} truncate`}>
                             {role === 'bot' ? 'AutoForce™ AI' : actualName.split('(')[0].trim()}
                             {/* Role badge as inline superscript like mathematical notation */}
                             {getRoleIcon(role)}
                           </span>
-                          <span className="text-[10px] text-blue-500 dark:text-blue-400 ml-auto flex-shrink-0">
+                          <span className="text-xs text-blue-500 dark:text-blue-400 ml-auto flex-shrink-0">
                             {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                         
                         {/* Message Content - Dark text for readability on light backgrounds */}
                         <div 
-                          className="text-inherit text-xs sm:text-xs leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
+                          className="text-inherit text-base sm:text-base leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
                           dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
                         />
                       </div>
@@ -1207,9 +1207,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             
             <div className="flex items-end gap-1.5 sm:gap-2">
               {isGuest && isSilenced && !justGotVoice ? (
-                <div className="flex-grow p-3 sm:p-3.5 border-2 border-amber-200 dark:border-amber-900 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-100 text-sm">
+                <div className="flex-grow p-3 sm:p-3.5 border-2 border-amber-200 dark:border-amber-900 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-100 text-base">
                   <p className="font-semibold mb-1">📞 You're in Queue (Spectator Mode)</p>
-                  <p className="text-xs">Your chat is read-only while waiting. AutoForce™ AI will assist you shortly.</p>
+                  <p className="text-sm">Your chat is read-only while waiting. AutoForce™ AI will assist you shortly.</p>
                 </div>
               ) : (
                 <>
@@ -1219,14 +1219,14 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                     onKeyPress={handleKeyPress}
                     placeholder={isGuest ? "Describe your issue..." : "Type message..."}
                     disabled={!isConnected || (isGuest && isSilenced && !justGotVoice)}
-                    className="flex-grow p-2 sm:p-2.5 md:p-3 border-2 border-border rounded-xl sm:rounded-2xl resize-none focus:ring-primary focus:border-primary bg-background text-foreground placeholder:text-muted-foreground text-sm"
+                    className="flex-grow p-2 sm:p-2.5 md:p-3 border-2 border-border rounded-xl sm:rounded-2xl resize-none focus:ring-primary focus:border-primary bg-background text-foreground placeholder:text-muted-foreground text-base"
                     data-testid="input-message"
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!isConnected || !inputMessage.trim() || (isGuest && isSilenced && !justGotVoice)}
                     variant="default"
-                    className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-sm transition-all h-auto text-sm flex-shrink-0"
+                    className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-semibold shadow-sm transition-all h-auto text-base flex-shrink-0"
                     data-testid="button-send"
                   >
                     <Send className="w-4 h-4 sm:mr-1" />
@@ -1256,14 +1256,14 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               {showContextPanel && isStaff ? (
                 <>
                   <Info className="w-4 h-4 text-primary flex-shrink-0" />
-                  <h2 className="text-xs font-bold text-foreground">
+                  <h2 className="text-sm font-bold text-foreground">
                     Ticket Context
                   </h2>
                 </>
               ) : (
                 <>
                   <Users className="w-4 h-4 text-primary flex-shrink-0" />
-                  <h2 className="text-xs font-bold text-foreground">
+                  <h2 className="text-sm font-bold text-foreground">
                     Online Users
                   </h2>
                 </>
@@ -1280,7 +1280,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 </Button>
               )}
               {!showContextPanel && (
-                <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0 bg-primary text-white" data-testid="text-user-count">
+                <Badge variant="default" className="ml-auto text-xs px-1.5 py-0 bg-primary text-white" data-testid="text-user-count">
                   {uniqueUsers.length}
                 </Badge>
               )}
@@ -1347,7 +1347,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         {/* User Name with inline superscript role badge - matching mobile chat */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-0.5 flex-wrap">
-                            <span className={`text-[11px] font-semibold break-words ${getRoleColor(u.role)}`}>
+                            <span className={`text-sm font-semibold break-words ${getRoleColor(u.role)}`}>
                               {u.role === 'bot' ? 'AutoForce™ AI' : u.name}
                               {/* Inline superscript role badge */}
                               {getRoleIcon(u.role)}
@@ -1359,7 +1359,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                     <ContextMenuContent className="bg-card shadow-lg border-2 border-border w-72 z-50">
                       {isStaff && u.role !== 'bot' && (userPlatformRole === 'root_admin' || u.role !== 'root_admin') ? (
                         <>
-                          <div className="px-2 py-1.5 text-xs font-bold text-foreground border-b border-border">
+                          <div className="px-2 py-1.5 text-sm font-bold text-foreground border-b border-border">
                             {u.name}
                           </div>
                           
@@ -1619,7 +1619,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="guest-name" className="text-sm font-medium">Name</Label>
+              <Label htmlFor="guest-name" className="text-base font-medium">Name</Label>
               <Input
                 id="guest-name"
                 placeholder="Your name"
@@ -1630,7 +1630,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               />
             </div>
             <div>
-              <Label htmlFor="guest-email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="guest-email" className="text-base font-medium">Email</Label>
               <Input
                 id="guest-email"
                 type="email"
@@ -1642,7 +1642,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               />
             </div>
             <div>
-              <Label htmlFor="issue-type" className="text-sm font-medium">Issue Type</Label>
+              <Label htmlFor="issue-type" className="text-base font-medium">Issue Type</Label>
               <Select value={guestIntakeData.issueType} onValueChange={(value) => setGuestIntakeData(prev => ({ ...prev, issueType: value }))}>
                 <SelectTrigger id="issue-type" data-testid="select-issue-type">
                   <SelectValue placeholder="Select issue type" />
@@ -1657,7 +1657,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="problem-description" className="text-sm font-medium">Describe Your Issue</Label>
+              <Label htmlFor="problem-description" className="text-base font-medium">Describe Your Issue</Label>
               <Textarea
                 id="problem-description"
                 placeholder="Tell us what you're experiencing..."
