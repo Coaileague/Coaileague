@@ -13866,8 +13866,8 @@ Keep it professional, actionable, and under 250 words.`;
       const userId = req.user!.id;
       const [platformRole] = await db
         .select()
-        .from(platformUserRoles)
-        .where(eq(platformUserRoles.userId, userId))
+        .from(platformRoles)
+        .where(eq(platformRoles.userId, userId))
         .limit(1);
       
       const isPlatformStaff = !!platformRole && (
