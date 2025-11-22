@@ -13861,8 +13861,24 @@ Keep it professional, actionable, and under 250 words.`;
       const { getAnalyticsStats } = await import("./services/analyticsStats");
       const bustCache = req.query.bust === 'true';
       
-      // Use workspaceId from middleware - same resolution as /api/clients for consistency
-      const workspaceId = req.workspaceId || null;
+      // Check if user has platform staff role - if yes, show platform-wide stats
+      // Support staff needs to see ALL clients/employees across ALL workspaces
+      const userId = req.user!.id;
+      const [platformRole] = await db
+        .select()
+        .from(platformUserRoles)
+        .where(eq(platformUserRoles.userId, userId))
+        .limit(1);
+      
+      const isPlatformStaff = !!platformRole && (
+        platformRole.role === 'root_admin' || 
+        platformRole.role === 'sysop' || 
+        platformRole.role === 'support_manager'
+      );
+      
+      // Platform staff sees platform-wide stats (null workspace = all workspaces)
+      // Regular users see workspace-scoped stats
+      const workspaceId = isPlatformStaff ? null : (req.workspaceId || null);
       
       const stats = await getAnalyticsStats(workspaceId, bustCache);
       res.json(stats);
