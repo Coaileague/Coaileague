@@ -2368,9 +2368,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* AutoForce™ AI Tester - Floating button to test AI integration */}
-      <AutoforceAiTester />
     </div>
   );
 }
