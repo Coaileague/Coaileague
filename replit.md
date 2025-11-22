@@ -1,7 +1,23 @@
 # AutoForce™
 
 ## Overview
-AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive platform powered by a unified AI Brain that autonomously manages end-to-end workforce operations. Its core purpose is to achieve complete automation—from intelligent scheduling and payroll to compliance monitoring and billing—with a 99% AI completion rate, minimizing human intervention. Key capabilities include AI-powered scheduling, automated invoice and payroll generation, smart hiring, compliance auditing, and real-time analytics. AutoForce™ targets emergency services and service-related industries with a hybrid subscription and usage-based revenue model, aiming for significant market potential through its autonomous capabilities.
+AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive platform powered by a unified AI Brain that autonomously manages end-to-end workforce operations. Its core purpose is to achieve complete automation—from intelligent scheduling and payroll to compliance monitoring and billing—with a 99% AI completion rate, minimizing human intervention. Key capabilities include AI-powered scheduling, automated invoice and payroll generation, smart hiring, compliance auditing, and real-time analytics. AutoForce™ targets emergency services and service-related industries with an aggressive value-based pricing model that captures 40-50% of the $250K-$430K in administrative salary savings customers achieve.
+
+## Pricing Model
+**Value-Based Subscription Pricing** (Updated 2025-11-22):
+- **Free**: $0/mo (30-day trial, 5 employees max, view-only features)
+- **Starter**: $4,999/mo ($59,988/yr) - Replaces 2-3 positions ($252.5K value) → $192K net savings/yr (3.2x return)
+- **Professional**: $9,999/mo ($119,988/yr) - Replaces 3-4 positions ($335K value) → $215K net savings/yr (1.8x return)
+- **Enterprise**: $17,999/mo ($215,988/yr) - Replaces 5 positions ($432.5K value) → $216K net savings/yr (1.0x return)
+
+**Position Replacement Values** (based on senior-level salary benchmarks):
+- Senior Payroll Specialist: $90K/yr
+- Senior Billing Specialist: $85K/yr
+- Workforce Scheduler: $77.5K/yr
+- HR Operations Analyst: $82.5K/yr
+- Admin Operations Manager: $97.5K/yr
+
+**Pricing Philosophy**: All features are bundled into tiers (no individual add-ons). Pricing captures ~23-50% of customer savings depending on tier. All ROI claims are mathematically verified and FTC-compliant. AI usage features use customer-pays model at $0.002-$0.10 per interaction with monthly credits included in each tier.
 
 ## User Preferences
 I prefer detailed explanations.
