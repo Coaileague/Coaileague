@@ -168,8 +168,36 @@ function AppContent() {
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
   const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
+  
+  // CRITICAL: Public routes that should render IMMEDIATELY without waiting for auth loading
+  const PUBLIC_ROUTES = new Set([
+    "/",
+    "/login",
+    "/register",
+    "/pricing",
+    "/contact",
+    "/support",
+    "/terms",
+    "/privacy",
+    "/chat",
+    "/mobile-chat",
+    "/live-chat",
+    "/helpdesk5",
+    "/support/chat",
+    "/logo-showcase",
+    "/error-403",
+    "/error-404",
+    "/error-500",
+  ]);
+  
+  const currentPath = window.location.pathname;
+  const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 
+                        currentPath.startsWith("/onboarding/") ||
+                        currentPath.startsWith("/pay-invoice/");
 
-  if (!isAuthenticated) {
+  // CRITICAL: If on public route, render immediately without waiting for auth to load
+  // This prevents loading screens from appearing on public pages
+  if (isPublicRoute) {
     return (
       <Switch>
         <Route path="/" component={Homepage} />
@@ -200,6 +228,8 @@ function AppContent() {
       </Switch>
     );
   }
+
+  if (!isAuthenticated) {
 
   // Check if user is Root Admin (platform-level access)
   const isRootAdmin = (user as any)?.platformRole === 'root_admin' || (user as any)?.platformRole === 'sysop';
