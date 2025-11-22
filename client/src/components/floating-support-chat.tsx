@@ -230,11 +230,9 @@ export function FloatingSupportChat() {
         description: "Connecting you to a support agent...",
       });
 
-      // Route to universal helpdesk for all users
-      if (user) {
-        sessionStorage.setItem('support_ticket_id', data.ticketId);
-        setLocation('/chat'); // Universal platform helpdesk
-      }
+      // Route to universal helpdesk for all users (both authenticated and guests)
+      sessionStorage.setItem('support_ticket_id', data.ticketId);
+      setLocation('/chat'); // Universal platform helpdesk
       setState(prev => ({ ...prev, isOpen: false }));
     } catch (error) {
       console.error('Error creating support ticket:', error);
