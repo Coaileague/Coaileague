@@ -8,7 +8,7 @@ import {
   FileText, Calendar, Clock, ArrowRight,
   Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail, Lock,
   Shield, UserCog, Server, Database, MessageCircle, Settings,
-  HelpCircle, MessageSquare, LayoutDashboard, AlertTriangle
+  HelpCircle, MessageSquare, LayoutDashboard, AlertTriangle, Building2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
@@ -383,6 +383,7 @@ export default function Dashboard() {
   // summary.totalCustomers = platform-wide count (always accurate after backend fix)
   const totalClients = stats?.workspace?.activeClients ?? stats?.summary.totalCustomers ?? 0;
   const totalRevenue = stats?.summary.monthlyRevenue.amount || 0;
+  const totalOrganizations = stats?.summary.totalWorkspaces || 0;
 
   // Use WebSocket unread count if available
   const unreadCount = isConnected && wsUnreadCount !== undefined 
@@ -690,6 +691,13 @@ export default function Dashboard() {
               value={orgCode}
               icon={LayoutDashboard}
               data-testid="card-organization"
+            />
+            
+            <MetricTile
+              title="Total Organizations"
+              value={totalOrganizations}
+              icon={Building2}
+              data-testid="card-organizations"
             />
             
             <MetricTile
