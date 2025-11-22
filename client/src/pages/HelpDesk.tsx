@@ -1809,20 +1809,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         />
       )}
 
-
-              const bannerId = parts[2];
-              const isActive = parts[3] === 'on';
-              if (bannerId) {
-                updateBannerMutation.mutate({
-                  id: bannerId,
-                  data: { isActive },
-                });
-              }
-            }
-          }}
-        />
-      )}
-
       {/* Help Command Panel */}
       <HelpCommandPanel
         open={showHelpPanel}
