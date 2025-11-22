@@ -775,6 +775,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${description}\n\n--- Conversation History ---\n${conversationHistory.map(m => `${m.type === 'user' ? 'User' : 'AI'}: ${m.text}`).join('\n')}`
         : description;
       
+      // Generate ticket number
+      const ticketNumber = `TKT-${new Date().getFullYear()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      
       // Create the support ticket
       const ticket = await storage.createSupportTicket({
         workspaceId,
@@ -784,7 +787,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject,
         description: fullDescription,
         priority: 'normal',
-        status: 'open'
+        status: 'open',
+        ticketNumber
       });
 
       res.json({ 
