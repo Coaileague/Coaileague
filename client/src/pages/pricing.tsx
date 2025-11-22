@@ -54,6 +54,7 @@ export default function Pricing() {
         { name: "GPS + photo verification", included: true },
         { name: "Client portal access", included: true },
         { name: "Advanced analytics & reporting", included: true },
+        { name: "$50/mo AI credits included", included: true },
         { name: "$50/employee/mo overages", included: true },
         { name: "Priority email support (12hr)", included: true },
         { name: "QuickBooks/Gusto integrations", included: false },
@@ -354,7 +355,7 @@ export default function Pricing() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 pt-2 border-t border-purple-200">
-                    <strong>Example:</strong> Professional plan with 50 employees using AI features moderately: Base $999/mo + ~$25/mo AI usage = $1,024/mo total (still saving $100k+/year vs. traditional staffing).
+                    <strong>Example:</strong> Professional plan with 50 employees using AI features moderately: Base $9,999/mo + ~$50/mo AI usage = $10,049/mo total (still saving $215K/year vs. $335K in traditional admin salaries).
                   </p>
                 </div>
               </div>
@@ -398,7 +399,7 @@ export default function Pricing() {
               },
               {
                 q: "How does AI feature billing work?",
-                a: "AI features (AI Support Bot, Training Tutor, RFP Analysis) use customer-pays usage model at $0.002-$0.10 per interaction. Most customers spend $50-$200/month on AI usage. All plans include AI credits: Starter gets $100/mo, Professional gets $200/mo, Enterprise gets $1,000/mo. This keeps costs predictable while ensuring fair pricing.",
+                a: "AI features (AI Support Bot, Training Tutor, RFP Analysis) use a credit-based system. Each tier includes monthly AI credits: Starter gets $50/mo (500 credits), Professional gets $200/mo (2,000 credits), Enterprise gets $1,000/mo (10,000 credits). Additional credits can be purchased at 100 credits = $10. Most customers stay within their monthly allocation.",
               },
               {
                 q: "Is AutoForce™ worth it for smaller companies?",
