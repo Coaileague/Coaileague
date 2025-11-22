@@ -32,7 +32,26 @@
     <link rel="stylesheet" href="/print-styles.css" media="print">
   </head>
   <body>
+    <style>
+      /* AGGRESSIVE: Block ALL loading screens and overlays */
+      #initial-loader { display: none !important; visibility: hidden !important; opacity: 0 !important; position: fixed !important; z-index: -9999 !important; }
+      [id*="loader"] { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+      [class*="loader"] { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+      [class*="loading"] { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+    </style>
     <div id="root"></div>
+    <script>
+      // Ensure no overlay blocks rendering
+      window.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[id*="loader"], [class*="loader"], [class*="loading"]').forEach(el => {
+          el.style.display = 'none';
+          el.style.visibility = 'hidden';
+          el.style.opacity = '0';
+          el.style.pointerEvents = 'none';
+          el.style.zIndex = '-9999';
+        });
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
