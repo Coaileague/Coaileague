@@ -1090,8 +1090,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
                     <div key={idx} className="flex justify-center my-1">
-                      <span className="text-xs font-mono text-blue-600 dark:text-blue-300 italic bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
-                        <Zap className="w-3 h-3 text-blue-500" />
+                      <span className="text-xs font-mono font-bold text-red-700 dark:text-red-400 italic bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center gap-1.5">
+                        <Zap className="w-3 h-3 text-red-600 dark:text-red-400" />
                         <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
                       </span>
                     </div>
@@ -1619,18 +1619,19 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="guest-name" className="text-base font-medium">Name</Label>
+              <Label htmlFor="guest-name" className="text-base font-medium">Name <span className="text-red-600">*</span></Label>
               <Input
                 id="guest-name"
                 placeholder="Your name"
                 value={guestIntakeData.name}
                 onChange={(e) => setGuestIntakeData(prev => ({ ...prev, name: e.target.value }))}
                 className="mt-1"
+                required
                 data-testid="input-guest-name"
               />
             </div>
             <div>
-              <Label htmlFor="guest-email" className="text-base font-medium">Email</Label>
+              <Label htmlFor="guest-email" className="text-base font-medium">Email <span className="text-red-600">*</span></Label>
               <Input
                 id="guest-email"
                 type="email"
@@ -1638,11 +1639,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 value={guestIntakeData.email}
                 onChange={(e) => setGuestIntakeData(prev => ({ ...prev, email: e.target.value }))}
                 className="mt-1"
+                required
+                pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
                 data-testid="input-guest-email"
               />
             </div>
             <div>
-              <Label htmlFor="issue-type" className="text-base font-medium">Issue Type</Label>
+              <Label htmlFor="issue-type" className="text-base font-medium">Issue Type <span className="text-red-600">*</span></Label>
               <Select value={guestIntakeData.issueType} onValueChange={(value) => setGuestIntakeData(prev => ({ ...prev, issueType: value }))}>
                 <SelectTrigger id="issue-type" data-testid="select-issue-type">
                   <SelectValue placeholder="Select issue type" />
@@ -1657,13 +1660,14 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="problem-description" className="text-base font-medium">Describe Your Issue</Label>
+              <Label htmlFor="problem-description" className="text-base font-medium">Describe Your Issue <span className="text-red-600">*</span></Label>
               <Textarea
                 id="problem-description"
                 placeholder="Tell us what you're experiencing..."
                 value={guestIntakeData.problemDescription}
                 onChange={(e) => setGuestIntakeData(prev => ({ ...prev, problemDescription: e.target.value }))}
                 className="mt-1 min-h-24 resize-none"
+                required
                 data-testid="textarea-problem"
               />
             </div>
@@ -1671,10 +1675,17 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           <DialogFooter>
             <Button
               onClick={() => {
-                if (guestIntakeData.name && guestIntakeData.email && guestIntakeData.issueType && guestIntakeData.problemDescription) {
+                // Email validation: must contain @ and a domain
+                const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+                const isValidEmail = emailRegex.test(guestIntakeData.email);
+                
+                if (guestIntakeData.name && isValidEmail && guestIntakeData.issueType && guestIntakeData.problemDescription) {
                   // Get ticket number from session storage (set when guest created ticket)
                   const savedTicketId = sessionStorage.getItem('support_ticket_id');
                   if (savedTicketId) setTicketNumber(savedTicketId);
+                  
+                  // Update userName with guest's actual name for user list
+                  setUserName(guestIntakeData.name);
                   
                   // Send intake data to agents via system message
                   sendMessage(
@@ -1709,9 +1720,15 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                     description: `Ticket #${savedTicketId || 'PENDING'} - AutoForce™ AI is analyzing your issue. An agent will be with you shortly.`,
                   });
                 } else {
+                  let errorMsg = "Please fill in all fields to continue.";
+                  if (!guestIntakeData.name) errorMsg = "Please enter your name.";
+                  else if (!isValidEmail) errorMsg = "Please enter a valid email (must include @ and domain).";
+                  else if (!guestIntakeData.issueType) errorMsg = "Please select an issue type.";
+                  else if (!guestIntakeData.problemDescription) errorMsg = "Please describe your issue.";
+                  
                   toast({
-                    title: "⚠️ Missing Information",
-                    description: "Please fill in all fields to continue.",
+                    title: "⚠️ Missing or Invalid Information",
+                    description: errorMsg,
                     variant: "destructive",
                   });
                 }
