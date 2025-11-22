@@ -68,6 +68,14 @@ import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePen
 import { queueManager } from './services/helpOsQueue';
 import { HelpOSAI } from './helpos-ai';
 import { helposService } from './services/helposService';
+import {
+  generateMfaSecret,
+  verifyMfaToken,
+  enableMfa,
+  disableMfa,
+  regenerateBackupCodes,
+  checkMfaStatus,
+} from './services/auth/mfa';
 import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
 import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, type AuthenticatedRequest } from "./rbac";
@@ -1550,6 +1558,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // ============================================================================
+  // MULTI-FACTOR AUTHENTICATION (MFA) ROUTES - WITH RBAC
+  // ============================================================================
+
+  // Get MFA status for current user
+  app.get('/api/auth/mfa/status', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const status = await checkMfaStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error checking MFA status:", error);
+      res.status(500).json({ message: "Failed to check MFA status" });
+    }
+  });
+
+  // Setup MFA - Generate secret and QR code
+  app.post('/api/auth/mfa/setup', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const userEmail = req.user!.email || '';
+
+      if (!userEmail) {
+        return res.status(400).json({ message: "Email required for MFA setup" });
+      }
+
+      const mfaSetup = await generateMfaSecret(userId, userEmail);
+      res.json({
+        success: true,
+        qrCodeUrl: mfaSetup.qrCodeUrl,
+        backupCodes: mfaSetup.backupCodes,
+      });
+    } catch (error) {
+      console.error("Error setting up MFA:", error);
+      res.status(500).json({ message: "Failed to setup MFA" });
+    }
+  });
+
+  // Enable MFA - Verify first token and activate
+  app.post('/api/auth/mfa/enable', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({ message: "Token required" });
+      }
+
+      // Verify the token
+      const verification = await verifyMfaToken(userId, token);
+
+      if (!verification.valid) {
+        return res.status(400).json({ message: "Invalid token" });
+      }
+
+      // Enable MFA
+      await enableMfa(userId);
+
+      res.json({
+        success: true,
+        message: "MFA enabled successfully",
+      });
+    } catch (error) {
+      console.error("Error enabling MFA:", error);
+      res.status(500).json({ message: "Failed to enable MFA" });
+    }
+  });
+
+  // Verify MFA token during login (public endpoint for login flow)
+  app.post('/api/auth/mfa/verify', async (req: any, res) => {
+    try {
+      const { userId, token } = req.body;
+
+      if (!userId || !token) {
+        return res.status(400).json({ message: "User ID and token required" });
+      }
+
+      const verification = await verifyMfaToken(userId, token);
+
+      if (!verification.valid) {
+        return res.status(400).json({ message: "Invalid token" });
+      }
+
+      res.json({
+        success: true,
+        isBackupCode: verification.isBackupCode || false,
+      });
+    } catch (error) {
+      console.error("Error verifying MFA token:", error);
+      res.status(500).json({ message: "Failed to verify token" });
+    }
+  });
+
+  // Disable MFA - Requires password OR MFA token confirmation
+  app.post('/api/auth/mfa/disable', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { password, token } = req.body;
+
+      if (!password && !token) {
+        return res.status(400).json({ 
+          message: "Password or MFA token required to disable MFA" 
+        });
+      }
+
+      // Option 1: Verify with password (for password-based accounts)
+      if (password) {
+        const user = await storage.getUser(userId);
+        if (!user?.passwordHash) {
+          return res.status(400).json({ 
+            message: "Password authentication not available. Use MFA token instead." 
+          });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.passwordHash);
+        if (!validPassword) {
+          return res.status(400).json({ message: "Invalid password" });
+        }
+      }
+
+      // Option 2: Verify with MFA token (for OIDC/social accounts)
+      if (token && !password) {
+        const verification = await verifyMfaToken(userId, token);
+        if (!verification.valid) {
+          return res.status(400).json({ message: "Invalid MFA token" });
+        }
+      }
+
+      // Disable MFA after successful verification
+      await disableMfa(userId);
+
+      res.json({
+        success: true,
+        message: "MFA disabled successfully",
+      });
+    } catch (error) {
+      console.error("Error disabling MFA:", error);
+      res.status(500).json({ message: "Failed to disable MFA" });
+    }
+  });
+
+  // Regenerate backup codes
+  app.post('/api/auth/mfa/regenerate-backup-codes', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const newBackupCodes = await regenerateBackupCodes(userId);
+
+      res.json({
+        success: true,
+        backupCodes: newBackupCodes,
+      });
+    } catch (error) {
+      console.error("Error regenerating backup codes:", error);
+      res.status(500).json({ message: "Failed to regenerate backup codes" });
     }
   });
 

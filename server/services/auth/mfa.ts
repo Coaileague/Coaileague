@@ -5,7 +5,12 @@ import { db } from '../../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-const ENCRYPTION_KEY = process.env.SESSION_SECRET || 'default-key-change-in-production';
+// Require SESSION_SECRET for MFA encryption - fail fast if missing
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required for MFA encryption');
+}
+
+const ENCRYPTION_KEY = process.env.SESSION_SECRET;
 const ALGORITHM = 'aes-256-cbc';
 
 /**
