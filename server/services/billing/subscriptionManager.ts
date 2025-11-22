@@ -34,7 +34,7 @@ export const TIER_PRICING = {
   },
   starter: {
     monthlyPrice: 499900, // $4,999/month
-    yearlyPrice: 5999880, // $59,998.80/year ($4,999.90/month - saves $60/year on annual)
+    yearlyPrice: 5998800, // $59,988/year ($4,999/month × 12 months)
     stripePriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
     credits: TIER_CREDIT_ALLOCATIONS.starter,

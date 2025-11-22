@@ -21,28 +21,28 @@ export default function Pricing() {
       name: "Free",
       price: "Free",
       savings: "Try before you buy",
-      roi: "∞ ROI",
-      description: "30-day demo with all features",
+      roi: "Risk-free trial",
+      description: "30-day demo - experience the automation",
       cta: "Start Free Trial",
       features: [
         { name: "Up to 5 employees for 30 days", included: true },
-        { name: "All Professional features unlocked", included: true },
-        { name: "Real data - migrate to paid seamlessly", included: true },
         { name: "GPS clock-in/out + time tracking", included: true },
-        { name: "Smart scheduling preview", included: true },
+        { name: "Smart scheduling (view-only preview)", included: true },
+        { name: "Basic reporting & analytics", included: true },
+        { name: "Real data - migrate to paid seamlessly", included: true },
         { name: "Email support", included: true },
         { name: "No credit card required", included: true },
         { name: "Auto-billing & invoicing", included: false },
         { name: "Auto-payroll processing", included: false },
         { name: "QuickBooks/Gusto integrations", included: false },
-        { name: "Unlimited employees", included: false },
+        { name: "AI-powered features", included: false },
       ],
     },
     {
       name: "Starter",
       price: "$4,999",
-      savings: "Save $192K/year",
-      roi: "3.2x ROI",
+      savings: "Net savings: $192K/year",
+      roi: "3.2x return",
       description: "Replace your scheduling & billing staff",
       cta: "Start Free Trial",
       popular: true,
@@ -63,8 +63,8 @@ export default function Pricing() {
     {
       name: "Professional",
       price: "$9,999",
-      savings: "Save $215K/year",
-      roi: "2.1x ROI",
+      savings: "Net savings: $215K/year",
+      roi: "1.8x return",
       description: "Replace entire HR & admin departments",
       cta: "Start Free Trial",
       features: [
@@ -84,8 +84,8 @@ export default function Pricing() {
     {
       name: "Enterprise",
       price: "$17,999",
-      savings: "Save $216K/year",
-      roi: "1.2x ROI",
+      savings: "Net savings: $216K/year",
+      roi: "1.0x return",
       description: "Fortune 500-grade automation at scale",
       cta: "Contact Sales",
       features: [
@@ -122,7 +122,7 @@ export default function Pricing() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">Replace $250K-$430K</span> in Administrative Salaries
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Pay once per month. Save $192K-$217K annually. AutoForce™ replaces 3-5 high-end administrative positions with AI automation.
+            Pay once per month. Save $192K-$216K annually in net savings. AutoForce™ replaces 3-5 high-end administrative positions with AI automation.
           </p>
         </div>
 
@@ -270,7 +270,7 @@ export default function Pricing() {
                   ],
                   totalSaved: "$432.5k/yr",
                   costOfPlan: "$216k/yr",
-                  netSavings: "$216.5k/yr"
+                  netSavings: "$216k/yr"
                 },
               ].map((breakdown) => (
                 <div key={breakdown.plan} className="bg-gradient-to-br from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4 hover:shadow-xl transition-shadow">
@@ -374,7 +374,7 @@ export default function Pricing() {
             {[
               {
                 q: "Why is AutoForce™ priced so much higher than other workforce management tools?",
-                a: "Because we replace entire positions, not just software. Traditional tools like When I Work or Deputy cost $2-5/employee but still require a payroll specialist ($90K/yr), billing coordinator ($85K/yr), and scheduler ($77K/yr). AutoForce™ eliminates these salaries entirely through AI automation. At $4,999-$17,999/month, you save $192K-$217K annually—a 2-3x ROI even at our premium pricing.",
+                a: "Because we replace entire positions, not just software. Traditional tools like When I Work or Deputy cost $2-5/employee but still require a payroll specialist ($90K/yr), billing coordinator ($85K/yr), and scheduler ($77K/yr). AutoForce™ eliminates these salaries entirely through AI automation. At $4,999-$17,999/month, you save $192K-$216K annually in NET savings—more than paying for itself.",
               },
               {
                 q: "What positions does AutoForce™ actually replace?",
@@ -402,7 +402,7 @@ export default function Pricing() {
               },
               {
                 q: "Is AutoForce™ worth it for smaller companies?",
-                a: "If you have 10+ employees and currently employ a scheduler, billing coordinator, or payroll specialist, AutoForce™ delivers 2-3x ROI immediately. Even at our premium pricing, replacing just 2 positions ($170K/year in salaries) saves you $110K/year on the Starter plan ($4,999/mo = $60K/year).",
+                a: "If you have 10+ employees and currently employ a scheduler, billing coordinator, or payroll specialist, AutoForce™ delivers strong ROI immediately. Even at our premium pricing, replacing just 2-3 positions ($252K/year in salaries) costs $60K/year on the Starter plan—a net savings of $192K/year.",
               },
             ].map((faq) => (
               <div
