@@ -45,9 +45,9 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
   const requestCounterRef = useRef(0);
   const [activeModals, setActiveModals] = useState<Set<string>>(new Set());
   
-  // Check if current route is public - use window.location.pathname for proper detection
-  const isPublicRoute = PUBLIC_ROUTES.has(window.location.pathname);
-  const shouldShowOverlay = activeOverlay && activeOverlay.status === "loading" && !isPublicRoute;
+  // Check if current route is public - NEVER show overlays on public routes
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isPublicRoute = PUBLIC_ROUTES.has(currentPath);
 
   const showOverlay = useCallback((request: Omit<OverlayRequest, "id" | "visibleSince">) => {
     // CRITICAL: Block all loading overlays on public routes
@@ -185,15 +185,24 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
     return canActivate;
   }, []);
 
+  // CRITICAL: If on public route, NEVER render any overlay at all
+  if (isPublicRoute) {
+    return (
+      <OverlayControllerContext.Provider value={{ showOverlay, hideOverlay, updateOverlay, isModalActive, registerModal, unregisterModal, tryActivate }}>
+        {children}
+      </OverlayControllerContext.Provider>
+    );
+  }
+
   return (
     <OverlayControllerContext.Provider value={{ showOverlay, hideOverlay, updateOverlay, isModalActive, registerModal, unregisterModal, tryActivate }}>
       {children}
       {/* Single overlay instance - only one can be visible at a time */}
       {/* Uses UniversalTransitionOverlay with multiple animation variants */}
-      {/* Never show overlays on public routes - CRITICAL: Only render if shouldShowOverlay is true */}
+      {/* Never render overlays on public routes (already handled above) */}
       {activeOverlay && activeOverlay.status === "loading" ? (
         <ResponsiveLoading
-          isVisible={!isPublicRoute}
+          isVisible={true}
           message={activeOverlay.title}
           submessage={activeOverlay.submessage}
           scenario={activeOverlay.scenario}
@@ -207,6 +216,7 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
     </OverlayControllerContext.Provider>
   );
 }
+
 
 export function useOverlayController() {
   const context = useContext(OverlayControllerContext);
