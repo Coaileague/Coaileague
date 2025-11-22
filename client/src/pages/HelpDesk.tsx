@@ -156,6 +156,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     problemDescription: ''
   });
   const [hasCompletedIntake, setHasCompletedIntake] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState<string | null>(() => sessionStorage.getItem('support_ticket_id') || null);
+  const [queueJoinTime] = useState(() => new Date());
+  const [queueUpdateInterval, setQueueUpdateInterval] = useState<NodeJS.Timeout | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -227,6 +230,24 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     currentRoute: '/chat',
     shouldProtect: isConnected || messages.length > 0,
   });
+
+  // Cleanup queue update interval on unmount or when guest gets voice
+  useEffect(() => {
+    if (justGotVoice && queueUpdateInterval) {
+      clearInterval(queueUpdateInterval);
+      setQueueUpdateInterval(null);
+      // Send notification that agent is helping
+      sendMessage(
+        `✅ An agent is now helping you!\n\nTicket #${ticketNumber} has been assigned. Your chat is no longer read-only.`,
+        'AutoForce™ AI',
+        'bot'
+      );
+    }
+    
+    return () => {
+      if (queueUpdateInterval) clearInterval(queueUpdateInterval);
+    };
+  }, [justGotVoice, queueUpdateInterval]);
 
   // Enhanced connection state tracking
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | 'denied'>('disconnected');
@@ -1661,17 +1682,41 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             <Button
               onClick={() => {
                 if (guestIntakeData.name && guestIntakeData.email && guestIntakeData.issueType && guestIntakeData.problemDescription) {
+                  // Get ticket number from session storage (set when guest created ticket)
+                  const savedTicketId = sessionStorage.getItem('support_ticket_id');
+                  if (savedTicketId) setTicketNumber(savedTicketId);
+                  
                   // Send intake data to agents via system message
                   sendMessage(
-                    `[GUEST INTAKE]\nName: ${guestIntakeData.name}\nEmail: ${guestIntakeData.email}\nIssue Type: ${guestIntakeData.issueType}\n\nDescription:\n${guestIntakeData.problemDescription}`,
+                    `[GUEST INTAKE]\nTicket: ${savedTicketId || 'PENDING'}\nName: ${guestIntakeData.name}\nEmail: ${guestIntakeData.email}\nIssue Type: ${guestIntakeData.issueType}\n\nDescription:\n${guestIntakeData.problemDescription}`,
                     userName,
                     'system'
                   );
                   setHasCompletedIntake(true);
                   setShowGuestIntakeForm(false);
+                  
+                  // Start periodic queue update messages
+                  if (isGuest) {
+                    const interval = setInterval(() => {
+                      if (!justGotVoice && isSilenced) { // Only send if still in queue
+                        const waitSeconds = Math.round((Date.now() - queueJoinTime.getTime()) / 1000);
+                        const waitMinutes = Math.floor(waitSeconds / 60);
+                        const positionInQueue = silencedUsers.size; // Count of silenced users
+                        
+                        sendMessage(
+                          `⏳ Queue Update\nTicket: ${savedTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nAutoForce™ AI is reviewing your issue. An agent will be assigned shortly.`,
+                          'AutoForce™ AI',
+                          'bot'
+                        );
+                      }
+                    }, 60000); // Update every 60 seconds
+                    
+                    setQueueUpdateInterval(interval);
+                  }
+                  
                   toast({
                     title: "✓ Information Received",
-                    description: "AutoForce™ AI is analyzing your issue. An agent will be with you shortly.",
+                    description: `Ticket #${savedTicketId || 'PENDING'} - AutoForce™ AI is analyzing your issue. An agent will be with you shortly.`,
                   });
                 } else {
                   toast({
