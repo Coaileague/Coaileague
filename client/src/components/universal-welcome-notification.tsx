@@ -164,27 +164,33 @@ export function UniversalWelcomeNotification({
           </div>
 
           {/* Footer with Loading Progress */}
-          <div className="mt-4 sm:mt-5 space-y-2">
+          <div className="mt-4 sm:mt-5 space-y-3">
             {/* Loading message */}
             <p className="text-white/80 text-xs sm:text-sm font-medium h-5 sm:h-6 flex items-center">
               {loadingMessage}
             </p>
             
-            {/* Progress bar */}
-            <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-              <div
-                className="h-full bg-white/90 rounded-full transition-all duration-100 ease-out"
-                style={{
-                  width: `${progress}%`,
-                  boxShadow: "0 0 10px rgba(255, 255, 255, 0.4)"
-                }}
-              />
+            {/* Progress section with large percentage */}
+            <div className="space-y-2">
+              {/* Progress bar */}
+              <div className="w-full h-2 sm:h-2.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                <div
+                  className="h-full bg-white/95 rounded-full transition-all duration-100 ease-out"
+                  style={{
+                    width: `${progress}%`,
+                    boxShadow: "0 0 15px rgba(255, 255, 255, 0.6)"
+                  }}
+                />
+              </div>
+              
+              {/* Large, bold percentage text */}
+              <div className="flex items-center justify-between">
+                <span className="text-white/70 text-xs">Loading...</span>
+                <span className="text-white font-bold text-base sm:text-lg tabular-nums">
+                  {Math.round(progress)}%
+                </span>
+              </div>
             </div>
-            
-            {/* Percentage text */}
-            <p className="text-white/60 text-xs text-right">
-              {Math.round(progress)}%
-            </p>
           </div>
         </div>
       </div>
