@@ -10,9 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, Lock, Sparkles } from "lucide-react";
+import { CheckCircle2, Lock, Sparkles, Loader2 } from "lucide-react";
 import type { PremiumFeature } from "@/data/premiumFeatures";
 import { ROICalculator } from "./roi-calculator";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { redirectToCheckout } from "@/lib/stripeCheckout";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -97,13 +100,37 @@ const PRICING_TIERS = [
 ];
 
 export function UpgradeModal({ isOpen, onClose, feature }: UpgradeModalProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedTier, setSelectedTier] = useState<string>('professional');
+  const [isLoading, setIsLoading] = useState(false);
+  const [workspaceId] = useState(user?.workspace_id || '');
 
-  const handleUpgrade = () => {
-    // TODO: Integrate with Stripe checkout
-    console.log('Upgrading to:', selectedTier, 'for feature:', feature?.id);
-    // For now, just close the modal
-    onClose();
+  const PRICE_MAP: Record<string, string> = {
+    basic: process.env.VITE_STRIPE_BASIC_PRICE || 'price_basic_test',
+    starter: process.env.VITE_STRIPE_STARTER_PRICE || 'price_starter_test',
+    professional: process.env.VITE_STRIPE_PROFESSIONAL_PRICE || 'price_professional_test',
+    enterprise: process.env.VITE_STRIPE_ENTERPRISE_PRICE || 'price_enterprise_test',
+  };
+
+  const handleUpgrade = async () => {
+    if (!workspaceId) {
+      toast({ title: "Error", description: "No workspace found", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const priceId = PRICE_MAP[selectedTier];
+      await redirectToCheckout(priceId, workspaceId);
+    } catch (error: any) {
+      toast({
+        title: "Payment Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   if (!feature) return null;
