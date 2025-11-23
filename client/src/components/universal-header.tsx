@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { queryClient } from "@/lib/queryClient";
+import { LOGOUT_CONFIG } from "@/config/logout";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -44,18 +45,29 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
 
   const handleLogout = async () => {
     try {
-      // Call logout API
-      await fetch("/api/logout", { method: "POST", credentials: "include" });
+      // Call logout API using centralized config
+      await fetch(LOGOUT_CONFIG.endpoint, { 
+        method: LOGOUT_CONFIG.method, 
+        credentials: "include" 
+      });
       // IMMEDIATELY clear the auth cache so component re-renders as unauthenticated
       // This prevents showing cached auth data while the page navigates
-      queryClient.setQueryData(["/api/auth/me"], null);
-      // Redirect to home
-      setLocation("/");
+      LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
+        queryClient.setQueryData([key], null);
+      });
+      // Redirect using config
+      if (LOGOUT_CONFIG.fullPageReload) {
+        window.location.href = LOGOUT_CONFIG.redirectPath;
+      } else {
+        setLocation(LOGOUT_CONFIG.redirectPath);
+      }
     } catch (error) {
       console.error("Logout failed:", error);
       // Still clear cache and redirect even if logout fails
-      queryClient.setQueryData(["/api/auth/me"], null);
-      setLocation("/");
+      LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
+        queryClient.setQueryData([key], null);
+      });
+      setLocation(LOGOUT_CONFIG.redirectPath);
     }
   };
   
