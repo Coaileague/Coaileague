@@ -31,6 +31,8 @@ interface ChatBubbleState {
   isOpen: boolean;
 }
 
+type AnimationState = 'idle' | 'opening' | 'closing' | 'minimizing' | 'expanding';
+
 interface Message {
   id: number;
   type: 'bot' | 'user';
@@ -44,6 +46,7 @@ export function FloatingSupportChat() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
+  const [animationState, setAnimationState] = useState<AnimationState>('idle');
   
   // Real IDs from auth system
   const workId = employee?.employeeNumber || 'GUEST';

@@ -109,6 +109,29 @@ export const CHAT_BUBBLE_CONFIG = {
     },
   },
 
+  // ===== ANIMATIONS =====
+  animations: {
+    // Drag movement - smooth follow with cubic bezier easing
+    dragTransition: 'none', // No transition during drag (instant follow)
+    dragTransitionDuration: '0ms',
+    
+    // Opening animation - scale and fade in
+    openingDuration: 400, // ms
+    openingEasing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', // spring-like bounce
+    openingStartScale: 0.75,
+    openingStartOpacity: 0,
+    
+    // Closing animation - scale and fade out
+    closingDuration: 250, // ms
+    closingEasing: 'cubic-bezier(0.4, 0, 0.2, 1)', // smooth exit
+    closingEndScale: 0.75,
+    closingEndOpacity: 0,
+    
+    // Minimize animation
+    minimizingDuration: 300, // ms
+    minimizingEasing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+
   // ===== CONTENT =====
   content: {
     initialMessage: "Hi! I'm AutoForce™ AI, your intelligent support system. How can I help you today?",
