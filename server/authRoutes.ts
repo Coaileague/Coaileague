@@ -317,25 +317,37 @@ router.post("/api/auth/logout", (req, res) => {
 // ============================================================================
 
 router.get("/api/auth/me", requireAuth, async (req, res) => {
-  const user = req.user as User; // Type assertion from requireAuth middleware
+  const sessionUser = req.user as User; // Get user ID from session
+  
+  // CRITICAL FIX: Fetch FRESH user data from database instead of using stale session data
+  // This ensures workspace assignments from login are immediately visible
+  const [freshUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, sessionUser.id))
+    .limit(1);
+
+  if (!freshUser) {
+    return res.status(401).json({ message: "User not found" });
+  }
   
   // GATEKEEPER: Check for platform role (root_admin, sysop, compliance_officer)
   const userPlatformRoles = await db
     .select()
     .from(platformRoles)
-    .where(eq(platformRoles.userId, user.id));
+    .where(eq(platformRoles.userId, freshUser.id));
   
   const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
   
   res.json({
     user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName ?? "",
-      lastName: user.lastName ?? "",
-      role: user.role ?? "user",
-      emailVerified: user.emailVerified ?? false,
-      currentWorkspaceId: user.currentWorkspaceId ?? null,
+      id: freshUser.id,
+      email: freshUser.email,
+      firstName: freshUser.firstName ?? "",
+      lastName: freshUser.lastName ?? "",
+      role: freshUser.role ?? "user",
+      emailVerified: freshUser.emailVerified ?? false,
+      currentWorkspaceId: freshUser.currentWorkspaceId ?? null,
       platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role
     },
   });
