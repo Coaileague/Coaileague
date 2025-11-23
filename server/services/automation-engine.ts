@@ -547,8 +547,8 @@ Return ONLY valid JSON (no markdown):
         .where(
           and(
             eq(timeEntries.clientId, client.id),
-            gte(timeEntries.startTime, startDate),
-            lte(timeEntries.endTime, endDate),
+            gte(timeEntries.clockIn, startDate),
+            lte(timeEntries.clockOut, endDate),
             eq(timeEntries.workspaceId, params.workspaceId)
           )
         );

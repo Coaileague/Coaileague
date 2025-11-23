@@ -72,7 +72,7 @@ import {
   sendTimesheetEditDeniedEmail
 } from "./email";
 import { emailService } from "./services/emailService";
-import { taxCalculator } from "./services/taxCalculator";
+import { calculateStateTax, calculateBonusTaxation } from "./services/taxCalculator";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';

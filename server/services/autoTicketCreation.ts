@@ -52,12 +52,12 @@ export async function createHealthCheckTicket(
       .insert(supportTickets)
       .values({
         workspaceId,
+        type: 'support',
+        ticketNumber: `AUTO-${Date.now()}`,
         subject: `⚠️ System Alert: ${healthCheckName} Health Check Failed`,
         description: `Automated health check detected a problem:\n\n${failureReason}\n\nThis ticket was auto-created by the monitoring system.`,
         status: 'open',
         priority: severity,
-        category: 'system_alert',
-        createdBy: 'system', // System-generated ticket
       })
       .returning();
 
@@ -91,12 +91,12 @@ export async function createQuotaWarningTicket(
       .insert(supportTickets)
       .values({
         workspaceId,
+        type: 'support',
+        ticketNumber: `QUOTA-${Date.now()}`,
         subject: `⚠️ Quota Alert: ${quotaType} at ${percentageUsed.toFixed(0)}% Capacity`,
         description: `Your ${quotaType} quota is running low:\n\nCurrent: ${currentUsage}\nLimit: ${limit}\nUsage: ${percentageUsed.toFixed(1)}%\n\nPlease upgrade your plan or contact support.`,
         status: 'open',
         priority: 'high',
-        category: 'billing',
-        createdBy: 'system',
       })
       .returning();
 
@@ -121,12 +121,12 @@ export async function createSecurityAlertTicket(
       .insert(supportTickets)
       .values({
         workspaceId,
+        type: 'support',
+        ticketNumber: `SEC-${Date.now()}`,
         subject: `🔒 Security Alert: ${alertType}`,
         description: `A security alert has been triggered:\n\n${details}\n\nPlease review immediately.`,
         status: 'open',
         priority: 'critical',
-        category: 'security',
-        createdBy: 'system',
       })
       .returning();
 
