@@ -151,9 +151,9 @@ export function FloatingSupportChat() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  // Document-level drag handlers
+  // Document-level drag handlers - always attached
   useEffect(() => {
-    if (typeof window === 'undefined' || !isDraggingRef.current) return;
+    if (typeof window === 'undefined') return;
     
     const handleDocumentMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
@@ -169,8 +169,6 @@ export function FloatingSupportChat() {
     
     const handleDocumentUp = () => {
       isDraggingRef.current = false;
-      document.removeEventListener('mousemove', handleDocumentMove);
-      document.removeEventListener('mouseup', handleDocumentUp);
     };
     
     document.addEventListener('mousemove', handleDocumentMove);
@@ -180,7 +178,7 @@ export function FloatingSupportChat() {
       document.removeEventListener('mousemove', handleDocumentMove);
       document.removeEventListener('mouseup', handleDocumentUp);
     };
-  }, [state.position]);
+  }, []);
   
   // Pointer Events drag handlers - simple start only
   const handlePointerDown = (e: React.MouseEvent) => {
@@ -367,19 +365,32 @@ export function FloatingSupportChat() {
     );
   }
   
-  // Floating button (when closed)
+  // Floating button (when closed) - draggable
   if (!state.isOpen) {
     return (
-      <button
-        onClick={handleChatClick}
-        className="fixed bottom-20 sm:bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 z-[9999] group"
-        data-testid="button-open-chat"
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          touchAction: 'none',
+          cursor: isDraggingRef.current ? 'grabbing' : 'grab'
+        }}
+        onMouseDown={handlePointerDown}
+        onClick={handleClickWithDragCheck}
+        className="group"
       >
-        <MessageCircle className="w-6 h-6" />
-        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-          !
-        </div>
-      </button>
+        <button
+          className="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 w-16 h-16 flex items-center justify-center pointer-events-none"
+          data-testid="button-open-chat"
+        >
+          <MessageCircle className="w-6 h-6" />
+          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+            !
+          </div>
+        </button>
+      </div>
     );
   }
   
