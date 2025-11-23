@@ -44,31 +44,37 @@ export const CHAT_BUBBLE_CONFIG = {
     headerGap: 1,         // gap-1
     
     // Chat messages area
-    chatAreaMinHeight: 400,
-    chatAreaMaxHeight: 450,
-    chatAreaPadding: 4,   // p-4
-    chatAreaSpacing: 3,   // space-y-3
-    messageGap: 2,        // gap-2
+    chatAreaMinHeight: 250,  // Reduced to fit form
+    chatAreaMaxHeight: 300,  // Reduced to fit form
+    chatAreaPadding: 2,      // p-2 (reduced)
+    chatAreaSpacing: 2,      // space-y-2 (reduced)
+    messageGap: 2,           // gap-2
     
     // Message bubbles
-    messagePaddingX: 3,   // px-3
-    messagePaddingY: 2,   // py-2
-    messageMaxWidth: 80,  // max-w-[80%]
-    avatarSize: 8,        // w-8 h-8
-    avatarIconSize: 4,    // w-4 h-4
-    smallAvatarSize: 2,   // w-2 h-2
+    messagePaddingX: 2,      // px-2 (reduced)
+    messagePaddingY: 1,      // py-1 (reduced)
+    messageMaxWidth: 80,     // max-w-[80%]
+    avatarSize: 6,           // w-6 h-6 (reduced)
+    avatarIconSize: 3,       // w-3 h-3 (reduced)
+    smallAvatarSize: 1,      // w-1 h-1 (reduced)
     
     // Typing indicators
     typingDelay1: '0.1s',
     typingDelay2: '0.2s',
     
     // Header & input
-    headerPadding: 3,     // p-3
-    inputAreaPadding: 3,  // p-3
-    inputAreaSpacing: 2,  // space-y-2
-    inputGap: 2,          // gap-2
-    inputIconSize: 4,     // w-4 h-4
-    inputIconMarginRight: 2, // mr-2
+    headerPadding: 2,        // p-2 (reduced)
+    inputAreaPadding: 2,     // p-2 (reduced)
+    inputAreaSpacing: 1,     // space-y-1 (reduced)
+    inputGap: 1,             // gap-1 (reduced)
+    inputIconSize: 3,        // w-3 h-3 (reduced)
+    inputIconMarginRight: 1, // mr-1 (reduced)
+    
+    // Form sizes (new)
+    formPadding: 2,          // p-2
+    formSpacing: 1,          // space-y-1
+    formLabelSize: 'text-xs',
+    formInputSize: 'text-xs',
   },
 
   // ===== COLORS =====
