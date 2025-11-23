@@ -24,6 +24,7 @@ import { FeedbackWidget } from "@/components/feedback-widget";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { PlanBadge } from "@/components/plan-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { performLogout } from "@/lib/logoutHandler";
 
 export function UniversalNavHeader() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -84,25 +85,9 @@ export function UniversalNavHeader() {
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include"
-      });
-      toast({
-        title: "Signed out successfully",
-        description: "You have been logged out of AutoForce™",
-      });
-      setSidebarOpen(false);
-      setLocation("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Sign out failed",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }
+    showLogoutTransition(transition);
+    setSidebarOpen(false);
+    await performLogout();
   };
 
   const handleNavigate = () => {
