@@ -2,36 +2,9 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Suppress Vite HMR WebSocket errors in development (harmless dev-only warnings)
+// Suppress Vite HMR WebSocket errors in development (harmless dev-only warnings in Replit)
 if (import.meta.env.DEV) {
-  // Patch window.location.port if undefined (fixes Vite HMR in Replit)
-  if (!window.location.port) {
-    Object.defineProperty(window.location, 'port', {
-      value: '5000',
-      writable: true,
-      configurable: true
-    });
-  }
-
-  // Wrap WebSocket to catch invalid URLs
-  const OriginalWebSocket = window.WebSocket;
-  (window as any).WebSocket = function(...args: any[]) {
-    const url = args[0];
-    if (typeof url === 'string' && url.includes('localhost:undefined')) {
-      console.debug('[Development] Skipping invalid Vite HMR WebSocket:', url);
-      // Return a no-op WebSocket-like object
-      return {
-        readyState: 3,
-        close: () => {},
-        send: () => {},
-        addEventListener: () => {},
-        removeEventListener: () => {}
-      };
-    }
-    return new OriginalWebSocket(...args);
-  };
-
-  // Handle unhandled promise rejections (WebSocket errors from Vite)
+  // Suppress unhandled promise rejections from Vite HMR connection attempts
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     const reason = event.reason;
     const reasonStr = String(reason);
@@ -46,7 +19,7 @@ if (import.meta.env.DEV) {
     }
   });
   
-  // Also suppress console.error for these
+  // Also suppress console.error for these development-only errors
   const origError = console.error;
   console.error = (...args: any[]) => {
     const fullStr = args.map(a => String(a)).join(" ");
