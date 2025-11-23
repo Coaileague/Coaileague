@@ -12,7 +12,7 @@ interface WelcomeNotificationProps {
   loadingDuration?: number; // How long the actual loading took in ms
 }
 
-const DISPLAY_DURATION = 4000; // How long to show the notification
+const DISPLAY_DURATION = 6000; // How long to show the notification (6 seconds to enjoy messages!)
 
 export function UniversalWelcomeNotification({
   firstName = "User",
@@ -28,10 +28,11 @@ export function UniversalWelcomeNotification({
   const [loadingMessage, setLoadingMessage] = useState(() => getRandomLoadingMessage());
 
   // Progress bar that advances realistically based on loading duration
+  // Extended to 3000ms minimum so you can enjoy the messages!
   useEffect(() => {
     let animationId: NodeJS.Timeout;
     const startTime = Date.now();
-    const targetDuration = Math.max(loadingDuration, 800); // Minimum 800ms for the loading bar
+    const targetDuration = Math.max(loadingDuration, 3000); // Min 3 seconds for the loading bar
     
     const updateProgress = () => {
       const elapsed = Date.now() - startTime;
@@ -48,11 +49,11 @@ export function UniversalWelcomeNotification({
     return () => clearTimeout(animationId);
   }, [loadingDuration]);
 
-  // Change loading message every 800ms for variety
+  // Change loading message every 600ms for variety (more frequent messages!)
   useEffect(() => {
     const messageInterval = setInterval(() => {
       setLoadingMessage(getRandomLoadingMessage());
-    }, 800);
+    }, 600);
     
     return () => clearInterval(messageInterval);
   }, []);
