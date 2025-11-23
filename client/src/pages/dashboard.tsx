@@ -14,7 +14,10 @@ import { Link, useLocation } from "wouter";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { useTransition } from "@/contexts/transition-context";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
+import { useMessage } from "@/hooks/useConfig";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
@@ -69,7 +72,8 @@ interface ComplianceData {
 function ComplianceAlerts() {
   const [, setLocation] = useLocation();
   const { data: compliance, isLoading } = useQuery<ComplianceData>({
-    queryKey: ['/api/automation/compliance/recent'],
+    queryKey: queryKeys.automation.compliance,
+    queryFn: () => apiGet('automation.getComplianceRecent'),
   });
 
   if (isLoading || !compliance?.hasData || compliance.summary.total === 0) {
