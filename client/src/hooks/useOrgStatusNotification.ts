@@ -14,12 +14,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { 
   getOrgStatusMessage, 
   getCustomizedOrgMessage,
   OrgStatusType,
   ORG_STATUS_API,
-  ORG_STATUS_TEST_IDS,
 } from "@/config/orgStatusMessages";
 
 export interface WorkspaceStatus {
@@ -43,6 +43,7 @@ export interface OrgCustomization {
 
 export function useOrgStatusNotification(workspaceId?: string) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [shown, setShown] = useState(false);
 
   // Fetch org status
@@ -65,7 +66,7 @@ export function useOrgStatusNotification(workspaceId?: string) {
       }
     },
     enabled: !!workspaceId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 1,
   });
 
@@ -85,17 +86,16 @@ export function useOrgStatusNotification(workspaceId?: string) {
       }
     },
     enabled: !!workspaceId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
     retry: 0,
   });
 
   // Show toast based on status
-  const showOrgStatusToast = useCallback(() => {
-    if (!status || shown) return;
+  useEffect(() => {
+    if (!status || shown || statusLoading) return;
 
     // Skip if active status
     if (status.status === "active") {
-      // Could show welcome toast here
       setShown(true);
       return;
     }
@@ -108,34 +108,27 @@ export function useOrgStatusNotification(workspaceId?: string) {
     });
 
     // Show toast
-    const actionElement = message.actionLabel && message.actionUrl ? (
-      <button
-        onClick={() => {
-          window.location.href = message.actionUrl || "/";
-        }}
-        className="px-2 py-1 text-sm font-medium hover:underline"
-      >
-        {message.actionLabel}
-      </button>
-    ) : undefined;
-
     toast({
       title: message.title,
       description: message.description,
-      variant: message.severity === "error" ? "destructive" : message.severity === "warning" ? "default" : "default",
+      variant: message.severity === "error" ? "destructive" : "default",
       duration: message.autoClose || undefined,
-      action: actionElement,
     });
 
-    setShown(true);
-  }, [status, shown, customization, toast]);
-
-  // Show toast when status loads
-  useEffect(() => {
-    if (!statusLoading && status) {
-      showOrgStatusToast();
+    // Navigate if action specified
+    if (message.actionUrl) {
+      setTimeout(() => {
+        setLocation(message.actionUrl || "/");
+      }, 500);
     }
-  }, [statusLoading, status, showOrgStatusToast]);
+
+    setShown(true);
+  }, [status, shown, statusLoading, customization, toast, setLocation]);
+
+  // Reset shown flag when workspace changes
+  useEffect(() => {
+    setShown(false);
+  }, [workspaceId]);
 
   // Check if access is blocked
   const isAccessBlocked = status?.status && [
@@ -144,11 +137,6 @@ export function useOrgStatusNotification(workspaceId?: string) {
     "suspended_other",
     "trial_expired",
   ].includes(status.status);
-
-  // Reset shown flag when workspace changes
-  useEffect(() => {
-    setShown(false);
-  }, [workspaceId]);
 
   return {
     status: status?.status || "active",
