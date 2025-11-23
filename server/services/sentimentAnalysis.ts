@@ -5,7 +5,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { db } from '../db';
-import { supportTickets, reviews, disputes } from '@shared/schema';
+import { supportTickets, disputes } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -53,15 +53,8 @@ ${reviewText}`,
     const content = response.response.text();
     const parsed = JSON.parse(content);
 
-    // Update review with sentiment score
-    await db
-      .update(reviews)
-      .set({
-        sentimentScore: parsed.score,
-        sentimentLabel: parsed.label,
-      })
-      .where(eq(reviews.id, reviewId))
-      .catch(() => null);
+    // Note: Review sentiment storage would require schema updates to add sentiment fields
+    // For now, just return the analysis result without persistence
 
     return {
       score: parsed.score,
@@ -116,16 +109,9 @@ ${ticketText}`,
     const parsed = JSON.parse(content);
     const shouldEscalate = parsed.urgency === 'critical' || parsed.score < -0.5;
 
-    // Update ticket with sentiment and urgency
-    await db
-      .update(supportTickets)
-      .set({
-        sentimentScore: parsed.score,
-        urgencyLevel: parsed.urgency,
-        flaggedForEscalation: shouldEscalate,
-      })
-      .where(eq(supportTickets.id, ticketId))
-      .catch(() => null);
+    // Note: Ticket sentiment storage would require schema updates
+    // Sentiment analysis returned but not persisted to database yet
+    // Admin can use shouldEscalate flag to manually review critical tickets
 
     return {
       score: parsed.score,
@@ -181,15 +167,8 @@ ${disputeText}`,
     const content = response.response.text();
     const parsed = JSON.parse(content);
 
-    // Update dispute with sentiment
-    await db
-      .update(disputes)
-      .set({
-        sentimentScore: parsed.score,
-        resolutionConfidence: parsed.resolutionConfidence,
-      })
-      .where(eq(disputes.id, disputeId))
-      .catch(() => null);
+    // Note: Dispute sentiment storage would require schema updates
+    // Analysis returned for admin review without persistence
 
     return {
       score: parsed.score,

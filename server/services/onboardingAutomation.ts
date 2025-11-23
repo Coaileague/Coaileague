@@ -6,7 +6,7 @@
 import { db } from "../db";
 import { users, userOnboarding, workspaces } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
-import { sendOnboardingEmail, sendManagerNotification } from "./emailService";
+import { Resend } from "resend";
 
 /**
  * Initialize onboarding workflow for new employee
