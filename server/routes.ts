@@ -75,6 +75,10 @@ import { emailService } from "./services/emailService";
 import { calculateStateTax, calculateBonusTaxation } from "./services/taxCalculator";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
+import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
+import { createHealthCheckTicket } from "./services/autoTicketCreation";
+import { sendMonitoringAlert } from "./services/externalMonitoring";
+import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI } from "./services/healthCheck";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
@@ -1264,63 +1268,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const checks: Record<string, { status: string; message?: string }> = {};
     
     try {
-      // 1. Database check
-      try {
-        await db.execute(sql`SELECT 1`);
-        checks.database = { status: 'up' };
-      } catch (error) {
-        checks.database = { status: 'down', message: (error as any).message };
-        await autoCreateSupportTicket('Database', 'Database connection failed', 'critical');
-      }
+      // Use real health check functions from healthCheck service
+      const dbHealth = await checkDatabase();
+      checks.database = { status: dbHealth.status === 'operational' ? 'up' : dbHealth.status === 'degraded' ? 'degraded' : 'down', message: dbHealth.message };
+      
+      const chatHealth = await checkChatWebSocket();
+      checks.websocket = { status: chatHealth.status === 'operational' ? 'up' : 'down', message: chatHealth.message };
+      
+      const stripeHealth = await checkStripe();
+      checks.stripe = { status: stripeHealth.status === 'operational' ? 'up' : 'down', message: stripeHealth.message };
+      
+      const geminiHealth = await checkGeminiAI();
+      checks.gemini = { status: geminiHealth.status === 'operational' ? 'up' : 'down', message: geminiHealth.message };
+      
+      // Email service health check
+      checks.resend = { status: emailService ? 'up' : 'unconfigured' };
 
-      // 2. Stripe check
-      try {
-        if (stripe) {
-          await stripe.charges.list({ limit: 1 });
-          checks.stripe = { status: 'up' };
-        } else {
-          checks.stripe = { status: 'unconfigured' };
-        }
-      } catch (error) {
-        checks.stripe = { status: 'down', message: (error as any).message };
-        await autoCreateSupportTicket('Stripe', 'Stripe API unreachable', 'high');
+      // Create auto-tickets for critical failures
+      if (dbHealth.status === 'down') {
+        await createHealthCheckTicket('default', 'database', 'Database connection failed - auto-created by health check');
       }
-
-      // 3. Gemini AI check
-      try {
-        const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': process.env.GEMINI_API_KEY || ''
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'ping' }] }]
-          })
-        });
-        checks.gemini = response.ok ? { status: 'up' } : { status: 'down', message: 'API returned error' };
-        if (!response.ok) {
-          await autoCreateSupportTicket('Gemini AI', 'Gemini API unreachable', 'high');
-        }
-      } catch (error) {
-        checks.gemini = { status: 'down', message: (error as any).message };
-        await autoCreateSupportTicket('Gemini AI', 'Gemini API connection failed', 'high');
+      if (stripeHealth.status === 'down') {
+        await createHealthCheckTicket('default', 'stripe', 'Stripe API unreachable - auto-created by health check');
       }
-
-      // 4. Resend email service check
-      try {
-        if (emailService) {
-          checks.resend = { status: 'up' };
-        } else {
-          checks.resend = { status: 'unconfigured' };
-        }
-      } catch (error) {
-        checks.resend = { status: 'down', message: (error as any).message };
-        await autoCreateSupportTicket('Resend', 'Email service unavailable', 'high');
+      if (geminiHealth.status === 'down') {
+        await createHealthCheckTicket('default', 'gemini_ai', 'Gemini API unreachable - auto-created by health check');
       }
-
-      // 5. WebSocket check
-      checks.websocket = { status: 'up' }; // If server is running, WebSocket is available
 
       const isHealthy = !Object.values(checks).some(c => c.status === 'down');
       
@@ -3002,6 +2975,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             workspace.name
           ).catch(err => console.error('Failed to send welcome notification:', err));
         }
+      }
+      
+      // Trigger automated onboarding workflow (non-blocking)
+      if (employee.id) {
+        initiateEmployeeOnboarding(employee.id, workspaceId, req.user?.id)
+          .catch(err => console.error('[Onboarding] Failed to initiate workflow:', err));
       }
       
       res.json(updatedEmployee || employee);

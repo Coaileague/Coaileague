@@ -26,6 +26,8 @@ import { resetMonthlyCredits } from './billing/creditResetCron';
 import crypto from 'crypto';
 import { createNotification } from './notificationService';
 import { withCredits } from './billing/creditWrapper';
+import { sendMonitoringAlert } from './externalMonitoring';
+import { checkDatabase, checkChatWebSocket, checkStripe } from './healthCheck';
 
 // ============================================================================
 // IDEMPOTENCY FINGERPRINTING
