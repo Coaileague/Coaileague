@@ -1782,34 +1782,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             e.preventDefault();
           }
         }}>
-          <DialogHeader className={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonPlacement === 'header' ? 'flex items-center justify-between' : ''}>
-            <div className="flex items-center gap-3 flex-1">
-              {CHAT_BUBBLE_CONFIG.intakeFormDialog.showHomeButton && CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonPlacement === 'header' && (
-                <Button
-                  type="button"
-                  variant={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonVariant as any}
-                  size="icon"
-                  onClick={() => {
-                    if (CHAT_BUBBLE_CONFIG.intakeFormDialog.useFullPageReload) {
-                      window.location.href = CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath;
-                    } else {
-                      navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath);
-                    }
-                  }}
-                  className="h-8 w-8 flex-shrink-0"
-                  data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
-                  title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              )}
-              <div className="flex-1">
-                <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
-                <DialogDescription>
-                  Please provide some information so our support team can better assist you.
-                </DialogDescription>
-              </div>
-            </div>
+          <DialogHeader>
+            <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
+            <DialogDescription>
+              Please provide some information so our support team can better assist you.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1882,26 +1859,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               />
             </div>
           </div>
-          <DialogFooter className="flex gap-2 flex-col">
-            {CHAT_BUBBLE_CONFIG.intakeFormDialog.showHomeButton && CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonPlacement === 'footer' && (
-              <Button
-                type="button"
-                variant={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonVariant as any}
-                onClick={() => {
-                  if (CHAT_BUBBLE_CONFIG.intakeFormDialog.useFullPageReload) {
-                    window.location.href = CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath;
-                  } else {
-                    navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath);
-                  }
-                }}
-                className="w-full"
-                data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
-                title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
-              >
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                {CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
-              </Button>
-            )}
+          <DialogFooter>
             <Button
               onClick={() => {
                 // Form is already validated by isFormComplete()
