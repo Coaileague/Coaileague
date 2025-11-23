@@ -1,8 +1,11 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
+import { Home } from "lucide-react"
+import { useLocation } from "wouter"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { HOME_BUTTON_CONFIG, getHomeButtonConfig } from "@/config/homeButton"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -25,24 +28,69 @@ const AlertDialogOverlay = React.forwardRef<
 ))
 AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 
+interface AlertDialogContentProps extends React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> {
+  showHomeButton?: boolean;
+  homeButtonPath?: string;
+  isGuest?: boolean;
+}
+
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </AlertDialogPrimitive.Content>
-  </AlertDialogPortal>
-))
+  AlertDialogContentProps
+>(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, ...props }, ref) => {
+  const [, setLocation] = useLocation();
+  const config = getHomeButtonConfig(isGuest);
+  const navPath = homeButtonPath || config.navigationPath;
+
+  const handleHomeClick = () => {
+    if (config.useFullPageReload) {
+      window.location.href = navPath;
+    } else {
+      setLocation(navPath);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!HOME_BUTTON_CONFIG.escapeKeyEnabled) return;
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showHomeButton) {
+        handleHomeClick();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showHomeButton, navPath]);
+
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+          className
+        )}
+        {...props}
+      >
+        {showHomeButton && (
+          <button
+            onClick={handleHomeClick}
+            className="absolute right-3 top-3 rounded-md p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent"
+            data-testid={config.testId}
+            title={config.tooltip}
+            aria-label={config.ariaLabel}
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span className="sr-only">{config.ariaLabel}</span>
+          </button>
+        )}
+        {children}
+      </AlertDialogPrimitive.Content>
+    </AlertDialogPortal>
+  );
+})
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
 const AlertDialogHeader = ({

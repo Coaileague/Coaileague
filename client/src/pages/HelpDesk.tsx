@@ -1776,12 +1776,18 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           setShowGuestIntakeForm(false);
         }
       }}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
-          // Prevent closing by clicking outside dialog if form is incomplete
-          if (!isFormComplete()) {
-            e.preventDefault();
-          }
-        }}>
+        <DialogContent 
+          className="sm:max-w-md" 
+          showHomeButton={true}
+          homeButtonPath="/pricing"
+          isGuest={true}
+          onPointerDownOutside={(e) => {
+            // Prevent closing by clicking outside dialog if form is incomplete
+            if (!isFormComplete()) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
             <DialogDescription>

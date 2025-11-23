@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import { X, Home } from "lucide-react"
+import { useLocation } from "wouter"
 
 import { cn } from "@/lib/utils"
+import { HOME_BUTTON_CONFIG, getHomeButtonConfig } from "@/config/homeButton"
 
 const Dialog = DialogPrimitive.Root
 
@@ -29,28 +31,75 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  showHomeButton?: boolean;
+  homeButtonPath?: string;
+  isGuest?: boolean;
+}
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background/95 backdrop-blur-md p-4 shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:bg-accent">
-        <X className="h-3.5 w-3.5" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-))
+  DialogContentProps
+>(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, ...props }, ref) => {
+  const [, setLocation] = useLocation();
+  const config = getHomeButtonConfig(isGuest);
+  const navPath = homeButtonPath || config.navigationPath;
+
+  const handleHomeClick = () => {
+    if (config.useFullPageReload) {
+      window.location.href = navPath;
+    } else {
+      setLocation(navPath);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!HOME_BUTTON_CONFIG.escapeKeyEnabled) return;
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showHomeButton) {
+        handleHomeClick();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showHomeButton, navPath]);
+
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background/95 backdrop-blur-md p-4 shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <div className="absolute right-3 top-3 flex items-center gap-1">
+          {showHomeButton && (
+            <button
+              onClick={handleHomeClick}
+              className="rounded-md p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent"
+              data-testid={config.testId}
+              title={config.tooltip}
+              aria-label={config.ariaLabel}
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span className="sr-only">{config.ariaLabel}</span>
+            </button>
+          )}
+          <DialogPrimitive.Close className="rounded-md p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:bg-accent">
+            <X className="h-3.5 w-3.5" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        </div>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+})
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({
