@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState } from "react";
+import { queryClient } from "@/lib/queryClient";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -38,6 +39,21 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
     } else {
       setLocation("/");
       setTimeout(scrollToFeatures, 200);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Call logout API
+      await fetch("/api/logout", { method: "POST", credentials: "include" });
+      // Invalidate auth query cache to force refetch (will return null/401)
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      // Redirect to home
+      setLocation("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Still redirect even if logout fails
+      setLocation("/");
     }
   };
   
@@ -184,7 +200,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = "/api/logout"}
+                onClick={handleLogout}
                 data-testid="button-logout"
                 className="text-foreground/80 hover:text-foreground"
               >
