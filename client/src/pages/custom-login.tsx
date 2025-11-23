@@ -145,7 +145,7 @@ export default function CustomLogin() {
         {/* Main Content */}
         <div className="flex-1 flex items-center justify-center p-6">
           <div 
-            className="w-full max-w-[420px] animate-[fadeInUp_0.6s_ease]"
+            className="w-full max-w-sm animate-[fadeInUp_0.6s_ease]"
             style={{ animation: 'fadeInUp 0.6s ease' }}
           >
             {/* White Login Card */}
@@ -158,8 +158,8 @@ export default function CustomLogin() {
           {/* No logo here - it's in header now */}
 
           {/* Login Header - Minimal */}
-          <div className="text-center mb-7">
-            <h1 className="text-xl font-semibold mb-1" style={{ color: '#1e293b' }}>
+          <div className="text-center mb-5">
+            <h1 className="text-lg font-semibold mb-1" style={{ color: '#1e293b' }}>
               Sign In
             </h1>
             <p className="text-xs" style={{ color: '#94a3b8' }}>
@@ -175,7 +175,7 @@ export default function CustomLogin() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#475569' }}>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>
                       Email
                     </FormLabel>
                     <FormControl>
@@ -185,11 +185,12 @@ export default function CustomLogin() {
                         placeholder="you@company.com"
                         disabled={isLoading}
                         data-testid="input-email"
-                        className="w-full px-3 py-2 rounded-lg text-sm border transition-all"
+                        className="w-full px-2.5 py-1.5 rounded text-xs border transition-all"
                         style={{
                           background: '#f8fafc',
                           borderColor: '#e2e8f0',
-                          color: '#1e293b'
+                          color: '#1e293b',
+                          height: '32px'
                         }}
                       />
                     </FormControl>
@@ -203,7 +204,7 @@ export default function CustomLogin() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#475569' }}>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>
                       Password
                     </FormLabel>
                     <FormControl>
@@ -211,14 +212,15 @@ export default function CustomLogin() {
                         <Input
                           {...field}
                           type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
+                          placeholder="Enter password"
                           disabled={isLoading}
                           data-testid="input-password"
-                          className="w-full px-3 py-2 rounded-lg text-sm border transition-all pr-10"
+                          className="w-full px-2.5 py-1.5 rounded text-xs border transition-all pr-8"
                           style={{
                             background: '#f8fafc',
                             borderColor: '#e2e8f0',
-                            color: '#1e293b'
+                            color: '#1e293b',
+                            height: '32px'
                           }}
                         />
                         <button
@@ -238,7 +240,7 @@ export default function CustomLogin() {
               />
 
               {/* Forgot Password Link */}
-              <div className="text-right pt-1">
+              <div className="text-right -mt-2">
                 <button
                   type="button"
                   onClick={() => setLocation("/reset-password")}
@@ -254,11 +256,12 @@ export default function CustomLogin() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2 rounded-lg text-white text-sm font-semibold transition-all duration-300 disabled:opacity-70 mt-4"
+                className="w-full py-1.5 rounded text-white text-xs font-semibold transition-all duration-300 disabled:opacity-70 mt-3"
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  height: '32px'
                 }}
                 data-testid="button-login"
               >
