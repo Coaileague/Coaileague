@@ -1,0 +1,48 @@
+Critical Gaps Identified (58+ files need migration):
+API & Query Issues:
+58 files still using hardcoded /api/ endpoints and old apiRequest() pattern
+20+ files with hardcoded queryKey arrays (not using centralized queryKeys)
+Examples: sales-portal, hr-terminations, hr-pto, hr-benefits, platform-users, hr-reviews, file-grievance, review-disputes, shift-approvals, timesheet-approvals, timeoff-approvals, policies, pay-invoice, custom-register, integrations-page, oversight-hub, company-reports
+Navigation Issues:
+8+ hardcoded setLocation() calls in pages (file-grievance, profile, custom-register, admin-command-center, onboarding)
+Routes like /disputes, /my-audit-record, /dashboard, /error-403, /login, / still hardcoded in components
+Missing Workflows & AI Logic:
+AI scheduling referenced in config but no implementation page
+Sentiment analysis service exists but not integrated into support/reviews
+Performance metrics service exists but no metrics dashboard page
+PTO accrual automation backend exists but no employee-facing accrual display
+Performance review reminders backend exists but no reminder dashboard
+Pulse survey automation backend exists but no survey distribution UI
+HelpOS AI (help-desk-ai service) exists but missing frontend integration
+Feature Gaps:
+Stripe checkout needs real keys (currently test mode hardcoded in buy-credits-modal)
+OAuth integrations (QuickBooks, Gusto, Slack) backend ready but no UI pages
+2FA recovery codes download/print feature exists but UI incomplete
+Credit purchasing flow exists but incomplete error handling
+Incident reporting from support (ServiceFailureDialog) not fully wired to backend
+Missing Routes in navigationConfig.ts:
+No /help, /contact (external docs links)
+Missing integration-specific routes (QuickBooks, Gusto, Slack flows)
+Missing AI workflow pages (scheduling, sentiment, analytics, matching)
+Missing support/incident routes
+Missing queryKeys:
+No support tickets, chat conversations, billing/subscription keys
+No integration status keys
+No automation/workflow execution keys
+Error Handling Gaps:
+20+ API mutation handlers have generic error toasts (no detailed error messages)
+No global error tracking/Sentry integration
+No network retry logic beyond TanStack Query defaults
+TODOs Found:
+"TODO: Integrate with Stripe checkout" - upgrade-modal.tsx
+"TODO: Implement edit dialog" - clients-table.tsx
+"TODO: Real Stripe flow when test keys added" - scheduleos-panel.tsx
+"TODO: END-USER PRIORITY SYSTEM" - HelpDesk.tsx
+📋 Recommended Next Steps:
+Batch migrate 58 files using proven pattern (read in guide: GAPS_AND_MIGRATIONS.md)
+Add 8 missing hardcoded setLocation() calls to navConfig
+Wire up AI features (scheduling, sentiment, metrics dashboards)
+Complete Stripe integration (real keys, error handling, retry logic)
+Add OAuth flow UI pages for integrations
+Implement error tracking with Sentry/DataDog
+The foundation is bulletproof - every tool for systematic migration is ready. The config system is complete and tested.
