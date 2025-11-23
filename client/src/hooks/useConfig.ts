@@ -112,57 +112,9 @@ export function useDefault(path: string): any {
 }
 
 /**
- * Get pricing tier
- * Usage: const tier = usePricingTier('professional')
- */
-export function usePricingTier(tier: string) {
-  return useMemo(() => configManager.getPricingTier(tier as any), [tier]);
-}
-
-/**
- * Get features for a tier
- * Usage: const features = useTierFeatures('professional')
- */
-export function useTierFeatures(tier: string): string[] {
-  return useMemo(() => configManager.getTierFeatures(tier as any), [tier]);
-}
-
-/**
- * Check if feature is available in tier
- * Usage: const available = useFeatureInTier('ai.autoScheduling', 'professional')
- */
-export function useFeatureInTier(featurePath: string, tier: string): boolean {
-  return useMemo(() => configManager.isFeatureInTier(featurePath, tier as any), [featurePath, tier]);
-}
-
-/**
- * Check if feature is available (enabled AND in tier)
- * Usage: const available = useFeatureAvailable('ai.autoScheduling', 'professional')
- */
-export function useFeatureAvailable(featurePath: string, tier: string): boolean {
-  return useMemo(() => configManager.isFeatureAvailable(featurePath, tier), [featurePath, tier]);
-}
-
-/**
- * Get all available features for a tier
- * Usage: const features = useAvailableFeatures('professional')
- */
-export function useAvailableFeatures(tier: string): string[] {
-  return useMemo(() => configManager.getAvailableFeatures(tier), [tier]);
-}
-
-/**
  * Get app config
  * Usage: const config = useAppConfig()
  */
 export function useAppConfig() {
   return useMemo(() => configManager.app(), []);
-}
-
-/**
- * Get all pricing tiers
- * Usage: const tiers = useAllPricingTiers()
- */
-export function useAllPricingTiers() {
-  return useMemo(() => configManager.getAllPricingTiers(), []);
 }

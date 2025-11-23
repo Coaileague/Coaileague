@@ -83,9 +83,13 @@ export default function Employees() {
     workspaceRole: "staff", // Default to staff role
     platformRole: "", // Empty = no platform role
   });
+  
+  // Get messages from config
+  const successMsg = useMessage('create.success', { entity: 'Employee' });
 
-  const { data: employees, isLoading, isError, error, refetch } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+  const { data: employees = [], isLoading, isError, error, refetch } = useQuery<Employee[]>({
+    queryKey: queryKeys.employees.all,
+    queryFn: () => apiGet('employees.list'),
     enabled: isAuthenticated,
   });
 
@@ -106,14 +110,12 @@ export default function Employees() {
   }, [isError, error, toast, refetch]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/employees", data);
-    },
+    mutationFn: (data: any) => apiPost('employees.create', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
       toast({
         title: "Success",
-        description: "Employee added successfully",
+        description: successMsg,
       });
       setIsAddDialogOpen(false);
       setFormData({
@@ -135,7 +137,7 @@ export default function Employees() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/login";
         }, 500);
         return;
       }
@@ -188,11 +190,9 @@ export default function Employees() {
   };
 
   const inviteMutation = useMutation({
-    mutationFn: async (employeeId: string) => {
-      return await apiRequest("/api/onboarding/invite", "POST", { employeeId });
-    },
+    mutationFn: (employeeId: string) => apiPost('support.createTicket', { employeeId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
       toast({
         title: "Invitation Sent",
         description: "Onboarding invitation email has been sent successfully",
@@ -216,11 +216,9 @@ export default function Employees() {
   };
 
   const approveMutation = useMutation({
-    mutationFn: async (data: { employeeId: string; hourlyRate: number }) => {
-      return await apiRequest("POST", "/api/employees/approve", data);
-    },
+    mutationFn: (data: { employeeId: string; hourlyRate: number }) => apiPost('employees.create', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
       toast({
         title: "Employee Approved",
         description: "Employee has been approved and activated with pay rate set",
@@ -304,7 +302,7 @@ export default function Employees() {
   const pendingApprovals = employees?.filter(emp => emp.onboardingStatus === 'pending_review') || [];
 
   const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
   };
 
   const handleDeleteEmployee = (employeeId: number | string) => {

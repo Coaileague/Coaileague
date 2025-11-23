@@ -82,7 +82,6 @@ export function useConfigValue<T = any>(path: string): T {
     features: FEATURE_TOGGLES,
     ai: AI_CONFIG,
     messages: MESSAGES,
-    pricing: PRICING_TIERS,
   };
 
   for (const part of parts) {
