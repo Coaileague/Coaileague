@@ -2317,12 +2317,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create workflow notification for each recipient
       for (const email of recipients) {
         // Log audit trail
+        const reportId = `${reportType}-${new Date().getTime()}`;
         await storage.createAuditLog({
           workspaceId,
           userId,
           action: 'report_shared',
           entityType: 'company_report',
-          entityId: `${reportType}-${new Date().getTime()}`,
+          entityId: reportId,
           metadata: {
             reportType,
             startDate,
@@ -2332,7 +2333,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         });
 
-        // TODO: Send email notification with report link
+        // Send email notification with report link
+        await emailService.sendReportDelivery(
+          workspaceId,
+          email,
+          {
+            reportNumber: reportId,
+            reportTitle: reportType.replace(/_/g, ' ').toUpperCase(),
+            clientName: email.split('@')[0],
+          }
+        ).catch(err => console.error(`[REPORT WORKFLOW] Failed to send report email to ${email}:`, err.message));
+        
         console.log(`[REPORT WORKFLOW] Shared ${reportType} report to ${email}`);
       }
 
@@ -4450,11 +4461,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiresApproval: false,
       });
       
-      // TODO: Send email to employee with temporary password
+      // Send email to employee with temporary password
+      const workspace = await storage.getWorkspace(workspaceId);
+      await emailService.sendEmployeeTemporaryPassword(
+        workspaceId,
+        employeeId,
+        employee.email || '',
+        tempPassword,
+        employee.firstName || 'Employee',
+        workspace?.name || 'AutoForce™'
+      ).catch(err => console.error(`[PASSWORD RESET] Failed to send email to ${employee.email}:`, err.message));
       
       res.json({ 
         success: true, 
-        message: "Password reset successfully",
+        message: "Password reset successfully and sent via email",
         tempPassword // In production, this should be emailed, not returned
       });
     } catch (error) {
@@ -5969,7 +5989,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ));
             
             console.log(`[Contractor Response] All offers declined for shift ${currentOffer.shiftId}`);
-            // TODO: Notify manager to re-run search or expand criteria
+            
+            // Notify manager to re-run search or expand criteria (async, outside transaction)
+            const shiftRequest = await storage.getShiftRequest(currentOffer.shiftRequestId, workspaceId);
+            if (shiftRequest?.createdBy) {
+              setImmediate(async () => {
+                try {
+                  const creator = await storage.getUser(shiftRequest.createdBy);
+                  if (creator?.email) {
+                    await emailService.sendEmail(
+                      creator.email,
+                      'Shift Staffing Alert - No Available Contractors',
+                      `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                          <h2 style="color: #dc2626;">Shift Staffing Alert</h2>
+                          <p>All contractors have declined the shift request.</p>
+                          <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+                            <p style="margin: 5px 0;"><strong>Shift ID:</strong> ${currentOffer.shiftId}</p>
+                            <p style="margin: 5px 0;"><strong>Status:</strong> All offers declined</p>
+                            <p style="margin: 15px 0 0 0;">Please review your search criteria and try again with expanded parameters.</p>
+                          </div>
+                          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                            This is an automated notification from AutoForce™.
+                          </p>
+                        </div>
+                      `,
+                      'shift_staffing_alert',
+                      workspaceId
+                    ).catch(err => console.error('[Shift Alert] Failed to send email:', err.message));
+                  }
+                } catch (err) {
+                  console.error('[Shift Alert] Error notifying manager:', err);
+                }
+              });
+            }
           }
         });
         
