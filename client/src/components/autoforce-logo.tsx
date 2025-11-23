@@ -19,45 +19,27 @@ export function AutoForceLogo({
   
   // Use centralized size config
   const sizeConfig = getLogoSize(size);
-  const badgeSizeClasses = {
-    sm: sizeConfig.container,
-    md: sizeConfig.container,
-    lg: sizeConfig.container,
-    xl: sizeConfig.container,
-    hero: sizeConfig.container
-  };
   
   // Full variant with AF badge and tagline
   if (variant === "full") {
-    const titleSizes = {
-      sm: "text-2xl",
-      md: "text-3xl",
-      lg: "text-4xl",
-      xl: "text-5xl",
-      hero: "text-6xl"
-    };
-    
-    const taglineSizes = {
-      sm: "text-xs",
-      md: "text-sm",
-      lg: "text-base",
-      xl: "text-lg",
-      hero: "text-xl"
-    };
-    
     return (
       <div 
         className={cn("flex flex-col items-center justify-center gap-4 pointer-events-none", className)} 
-        data-testid="logo-full"
+        data-testid={`${logoConfig.accessibility.testIdPrefix}-full`}
       >
         <div 
           className={cn(
-            "flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
-            badgeSizeClasses[size],
-            animated && "animate-pulse-slow"
+            "flex items-center justify-center",
+            logoConfig.badge.shape,
+            logoConfig.badge.gradient,
+            logoConfig.badge.shadow,
+            sizeConfig.container,
+            animated && logoConfig.animations.pulse.class
           )}
         >
-          <span className="text-white font-black">AF</span>
+          <span className={cn("font-black", logoConfig.badge.text.color)}>
+            {logoConfig.badge.text.content}
+          </span>
         </div>
         
         <div className="flex flex-col items-center gap-2">
@@ -65,39 +47,39 @@ export function AutoForceLogo({
             <span 
               className={cn(
                 "font-black text-gray-900 dark:text-foreground",
-                titleSizes[size]
+                logoConfig.sizes.text[size]
               )}
-              data-testid="logo-text-auto"
+              data-testid={`${logoConfig.accessibility.testIdPrefix}-text-auto`}
             >
-              Auto
+              {logoConfig.brand.name.slice(0, 4)}
             </span>
             <span 
               className={cn(
                 "font-black text-primary",
-                titleSizes[size]
+                logoConfig.sizes.text[size]
               )}
-              data-testid="logo-text-force"
+              data-testid={`${logoConfig.accessibility.testIdPrefix}-text-force`}
             >
-              Force
+              {logoConfig.brand.name.slice(4)}
             </span>
             <span 
               className={cn(
                 "font-black text-xs align-super text-gray-900 dark:text-foreground"
               )}
-              data-testid="logo-trademark"
+              data-testid={`${logoConfig.accessibility.testIdPrefix}-trademark`}
             >
-              ™
+              {logoConfig.brand.trademark}
             </span>
           </div>
           
           <p 
             className={cn(
               "tracking-wide uppercase font-medium text-center text-gray-700 dark:text-gray-400",
-              taglineSizes[size]
+              logoConfig.sizes.tagline[size]
             )}
-            data-testid="logo-tagline"
+            data-testid={`${logoConfig.accessibility.testIdPrefix}-tagline`}
           >
-            Autonomous Workforce Management
+            {logoConfig.brand.tagline}
           </p>
         </div>
       </div>
@@ -108,14 +90,19 @@ export function AutoForceLogo({
   return (
     <div 
       className={cn(
-        "flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-lg",
-        badgeSizeClasses[size],
-        animated && "animate-pulse-slow",
+        "flex items-center justify-center",
+        logoConfig.badge.shape,
+        logoConfig.badge.gradient,
+        logoConfig.badge.shadow,
+        sizeConfig.container,
+        animated && logoConfig.animations.pulse.class,
         className
       )} 
-      data-testid={`logo-${variant}`}
+      data-testid={`${logoConfig.accessibility.testIdPrefix}-${variant}`}
     >
-      <span className="text-white font-black">AF</span>
+      <span className={cn("font-black", logoConfig.badge.text.color)}>
+        {logoConfig.badge.text.content}
+      </span>
     </div>
   );
 }
