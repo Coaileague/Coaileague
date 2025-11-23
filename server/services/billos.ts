@@ -274,8 +274,12 @@ async function createInvoiceFromBillableSummary(
     subtotal += proratedAmount;
   }
   
-  // Calculate tax and totals
-  const taxRate = 0; // TODO: Integrate tax calculation API
+  // Calculate tax and totals using real tax calculation
+  const taxRate = await calculateStateTax(
+    workspace?.address || '',
+    workspace?.taxId || '',
+    subtotal
+  ) || 0;
   const taxAmount = subtotal * taxRate;
   const total = subtotal + taxAmount;
   

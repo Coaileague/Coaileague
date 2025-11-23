@@ -9,7 +9,7 @@ export const FEATURE_TOGGLES = {
   ai: {
     autoScheduling: true,
     sentimentAnalysis: true,
-    predictiveAnalytics: false,
+    predictiveAnalytics: true, // ENABLED: Sold in Professional tier
     smartMatching: true,
     aiCopilot: true,
   },
@@ -38,16 +38,16 @@ export const FEATURE_TOGGLES = {
   // Communications
   communications: {
     emailNotifications: true,
-    smsNotifications: false,
+    smsNotifications: true, // ENABLED: Sold in Professional tier
     inAppNotifications: true,
     chatSupport: true,
-    webhooks: false,
+    webhooks: true, // ENABLED: Sold in Enterprise tier
   },
 
   // Analytics
   analytics: {
     basicReports: true,
-    advancedAnalytics: false,
+    advancedAnalytics: true, // ENABLED: Sold in Enterprise tier
     customReports: true,
     dataExport: true,
     dashboards: true,

@@ -537,8 +537,18 @@ Return ONLY valid JSON (no markdown):
 
     // Generate invoice for each client
     for (const client of clients) {
-      // Get time entries for this client in the anchor period (stub for now)
-      const timeEntries: TimeEntry[] = []; // TODO: Implement getTimeEntriesByClient
+      // Get time entries for this client in the anchor period from actual database
+      const timeEntries = await db
+        .select()
+        .from(timeEntriesTable)
+        .where(
+          and(
+            eq(timeEntriesTable.clientId, client.id),
+            gte(timeEntriesTable.startTime, startDate),
+            lte(timeEntriesTable.endTime, endDate),
+            eq(timeEntriesTable.workspaceId, params.workspaceId)
+          )
+        );
 
       if (timeEntries.length === 0) {
         continue; // Skip clients with no billable time
