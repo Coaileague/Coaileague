@@ -1800,7 +1800,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
                   title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
                 >
-                  <Home className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
               )}
               <div className="flex-1">
@@ -1898,7 +1898,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
                 title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
               >
-                <Home className="h-4 w-4 mr-2" />
+                <ChevronLeft className="h-4 w-4 mr-2" />
                 {CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
               </Button>
             )}
