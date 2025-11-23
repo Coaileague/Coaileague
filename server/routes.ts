@@ -1410,6 +1410,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to check workspace health' });
     }
   });
+
+  // Organization status endpoint - returns org-aware status for universal toast notifications
+  app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ error: 'No workspace selected' });
+      }
+
+      const workspace = await storage.getWorkspace(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      // Determine org status based on workspace state
+      type OrgStatusType = 'active' | 'suspended_payment' | 'suspended_violation' | 'suspended_other' | 'maintenance' | 'restricted' | 'trial_ending' | 'trial_expired';
+      let status: OrgStatusType = 'active';
+
+      if (workspace.isFrozen) {
+        status = 'suspended_payment';
+      } else if (workspace.isSuspended) {
+        status = 'suspended_violation';
+      } else if (workspace.isLocked) {
+        status = 'suspended_other';
+      }
+
+      res.json({
+        workspaceId,
+        status,
+        statusReason: workspace.suspendedReason || workspace.frozenReason || workspace.lockedReason || null,
+        lastChecked: new Date().toISOString(),
+        metadata: {},
+      });
+    } catch (error) {
+      console.error('Failed to fetch workspace status:', error);
+      res.status(500).json({ error: 'Failed to fetch workspace status' });
+    }
+  });
+
+  // Get custom organization status messages - per-org customization
+  app.get('/api/workspace/custom-messages', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ error: 'No workspace selected' });
+      }
+
+      // Return empty customization (future: store in DB per org)
+      res.json({
+        workspaceId,
+        statusOverrides: {},
+        customMessages: {},
+      });
+    } catch (error) {
+      console.error('Failed to fetch custom messages:', error);
+      res.status(500).json({ error: 'Failed to fetch custom messages' });
+    }
+  });
   
   // SECURITY: Apply rate limiting BEFORE auth routes to prevent brute-force attacks
   app.use('/api', apiLimiter);
