@@ -1,12 +1,12 @@
 /**
- * AutoForce™ Logo Configuration
+ * AutoForce™ Logo Configuration - Premium High-Tech Design
  * 
- * Centralized logo design system: edit once, updates everywhere instantly
- * Contains colors, sizes, animations, and design elements for all logo variants
+ * Modern, professional logo system with smooth animations
+ * Edit once, updates everywhere instantly
  */
 
 export const logoConfig = {
-  // Brand name and trademark
+  // Brand identity
   brand: {
     name: "AutoForce",
     trademark: "™",
@@ -14,24 +14,27 @@ export const logoConfig = {
     taglineAlt: "Autonomous Management Solutions",
   },
 
-  // Colors - using CSS variable references for dark/light mode support
+  // Professional color palette
   colors: {
     primary: "hsl(var(--primary))",
-    accent: "hsl(217, 91%, 60%)", // Bright blue accent
+    accent: "hsl(217, 91%, 60%)",
+    success: "hsl(142, 71%, 45%)",
     white: "hsl(0, 0%, 100%)",
-    dark: "hsl(0, 0%, 0%)",
+    dark: "hsl(215, 28%, 17%)",
     foreground: "currentColor",
     mutedForeground: "hsl(var(--muted-foreground))",
+    glassDark: "rgba(30, 41, 59, 0.7)",
+    glassLight: "rgba(255, 255, 255, 0.7)",
   },
 
-  // Size mappings for all logo variants
+  // Badge/Icon sizes
   sizes: {
     badge: {
       sm: { container: "w-10 h-10", text: "text-sm" },
       md: { container: "w-14 h-14", text: "text-lg" },
-      lg: { container: "w-16 h-16", text: "text-xl" },
-      xl: { container: "w-20 h-20", text: "text-2xl" },
-      hero: { container: "w-28 h-28", text: "text-4xl" },
+      lg: { container: "w-20 h-20", text: "text-2xl" },
+      xl: { container: "w-28 h-28", text: "text-4xl" },
+      hero: { container: "w-40 h-40", text: "text-6xl" },
     },
     text: {
       sm: "text-2xl",
@@ -55,69 +58,150 @@ export const logoConfig = {
     },
   },
 
-  // Animations
+  // Modern animations
   animations: {
-    pulse: {
+    // Icon pulse with scale effect
+    iconPulse: {
       enabled: true,
-      class: "animate-pulse-slow",
+      keyframes: `
+        @keyframes icon-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.8; }
+        }
+      `,
+      duration: "3s",
+      timingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
     },
-    rotate: {
+
+    // Smooth glow effect
+    glow: {
       enabled: true,
+      keyframes: `
+        @keyframes glow-pulse {
+          0%, 100% { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4)); }
+          50% { filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.8)); }
+        }
+      `,
+      duration: "4s",
+      timingFunction: "ease-in-out",
+    },
+
+    // Rotating accent ring
+    rotateRing: {
+      enabled: true,
+      keyframes: `
+        @keyframes rotate-ring {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `,
       duration: "20s",
+      timingFunction: "linear",
     },
-    lightningBolt: {
+
+    // Shimmer effect for premium feel
+    shimmer: {
       enabled: true,
-      duration: "1.5s",
-      delay: "0.5s",
-      intensity: 0.8, // 0-1, controls opacity
+      keyframes: `
+        @keyframes shimmer {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+      `,
+      duration: "2.5s",
+      timingFunction: "ease-in-out",
     },
   },
 
-  // Lightning bolt effect configuration
-  lightningBolt: {
-    enabled: true,
-    color: "hsl(60, 100%, 50%)", // Bright yellow
-    shadowColor: "hsl(40, 100%, 60%)", // Golden glow
-    strokeWidth: 2,
-    glowFilter: true,
+  // New premium icon design - Modern geometric "A" with tech elements
+  icon: {
+    style: "premium-modern",
+    background: {
+      type: "gradient-radial",
+      colors: ["hsl(var(--primary), 1)", "hsl(217, 91%, 60%, 1)"],
+      animated: true,
+      animationType: "glow", // applies glow animation
+    },
+    shape: {
+      type: "circle", // or "hexagon", "rounded-square"
+      border: {
+        enabled: true,
+        width: "1.5px",
+        color: "rgba(255, 255, 255, 0.3)",
+        animated: true,
+      },
+      shadow: "0 12px 32px rgba(59, 130, 246, 0.3)",
+    },
+    content: {
+      type: "geometric-a", // geometric letter A with accent lines
+      color: "white",
+      weight: 900,
+      renderAs: "svg", // render as SVG for smooth animations
+    },
+  },
+
+  // Geometric "A" SVG design
+  geometricA: {
+    viewBox: "0 0 100 100",
     paths: [
-      // Define lightning bolt path segments
       {
-        d: "M 15 5 L 18 12 L 12 12 L 20 25",
-        opacity: 1,
+        // Left diagonal line
+        d: "M 30 80 L 50 20",
+        stroke: "currentColor",
+        strokeWidth: "6",
+        strokeLinecap: "round",
       },
       {
-        d: "M 18 12 L 15 18 L 19 18 L 14 25",
-        opacity: 0.7,
+        // Right diagonal line
+        d: "M 70 80 L 50 20",
+        stroke: "currentColor",
+        strokeWidth: "6",
+        strokeLinecap: "round",
+      },
+      {
+        // Horizontal crossbar with accent
+        d: "M 38 55 L 62 55",
+        stroke: "currentColor",
+        strokeWidth: "5",
+        strokeLinecap: "round",
+      },
+      {
+        // Tech accent - small circles at intersections
+        type: "circle",
+        cx: "50",
+        cy: "25",
+        r: "3",
+        fill: "hsl(60, 100%, 50%)",
+        animated: true,
+        animation: "pulse",
       },
     ],
   },
 
-  // AF Badge (circular icon) configuration
+  // Badge styling
   badge: {
     shape: "rounded-full",
     gradient: "bg-gradient-to-br from-primary to-accent",
-    shadow: "shadow-lg",
+    shadow: "shadow-xl",
     border: {
-      enabled: false,
-      color: "border-primary/20",
+      enabled: true,
+      color: "border-white/20",
       width: "border",
     },
     text: {
       weight: "font-black",
       color: "text-white",
-      content: "AF",
+      content: "A",
+      renderAs: "svg", // use geometric design
     },
+    hoverEffect: "scale-up-subtle", // smooth 5% scale on hover
   },
 
-  // Gradients for SVG logos
+  // SVG gradients
   gradients: {
     primary: {
       id: "primaryGradient",
-      x1: "0%",
-      y1: "0%",
-      x2: "100%",
-      y2: "100%",
+      type: "radial",
       stops: [
         { offset: "0%", color: "hsl(var(--primary))" },
         { offset: "100%", color: "hsl(217, 91%, 60%)" },
@@ -125,81 +209,50 @@ export const logoConfig = {
     },
     accent: {
       id: "accentGradient",
-      x1: "0%",
-      y1: "0%",
-      x2: "100%",
-      y2: "0%",
+      type: "linear",
+      angle: "135deg",
       stops: [
         { offset: "0%", color: "hsl(217, 91%, 60%)" },
         { offset: "100%", color: "hsl(var(--primary))" },
+      ],
+    },
+    glow: {
+      id: "glowGradient",
+      type: "radial",
+      stops: [
+        { offset: "0%", color: "rgba(59, 130, 246, 0.4)" },
+        { offset: "100%", color: "rgba(59, 130, 246, 0)" },
       ],
     },
   },
 
   // Typography
   typography: {
-    fontFamily: "'Inter', 'Segoe UI', 'Arial', sans-serif",
+    fontFamily: "'Inter', '-apple-system', 'Segoe UI', sans-serif",
     fontSize: {
-      main: "32",
-      trademark: "32",
-      tagline: "11",
+      main: "36",
+      tagline: "12",
     },
     fontWeight: {
       main: "700",
-      trademark: "700",
-      tagline: "400",
+      tagline: "500",
     },
     letterSpacing: {
-      main: "-1",
-      tagline: "1.5",
+      main: "-0.5",
+      tagline: "2",
     },
+    textTransform: "uppercase",
   },
 
-  // Network icon (for full logos)
-  networkIcon: {
-    enabled: true,
-    centralHub: {
-      size: 8,
-      animationDuration: "2s",
-      initialOpacity: 1,
-    },
-    orbitalNodes: {
-      size: 5,
-      count: 4,
-      positions: [
-        { x: 10, y: 15 },
-        { x: 50, y: 15 },
-        { x: 10, y: 45 },
-        { x: 50, y: 45 },
-      ],
-    },
-    connections: {
-      strokeWidth: 2,
-      opacity: 0.4,
-    },
-    outerRing: {
-      radius: 28,
-      strokeWidth: 2,
-      opacity: 0.3,
-      animationDuration: "20s",
-    },
-  },
-
-  // Spacing and layout
+  // Spacing
   spacing: {
-    badge: {
-      gap: 4,
-    },
-    full: {
-      gap: 4,
-    },
-    contentGap: 2,
+    badge: { gap: 3 },
+    text: { gap: 2 },
   },
 
-  // Responsive behavior
+  // Responsive
   responsive: {
-    mobileBreakpoint: "md",
-    scaleOnMobile: 0.9,
+    mobileScale: 0.95,
   },
 
   // Accessibility
@@ -210,44 +263,22 @@ export const logoConfig = {
 };
 
 /**
- * Get logo size configuration for a specific size key
- * Usage: getLogoSize('md')
+ * Get logo size for a variant
  */
 export function getLogoSize(size: keyof typeof logoConfig.sizes.badge) {
   return logoConfig.sizes.badge[size];
 }
 
 /**
- * Get lightning bolt configuration
- * Usage: getLightningBoltConfig()
+ * Get animation config
  */
-export function getLightningBoltConfig() {
-  return logoConfig.lightningBolt;
+export function getAnimationConfig(name: keyof typeof logoConfig.animations) {
+  return logoConfig.animations[name];
 }
 
 /**
- * Get animation configuration
- * Usage: getAnimationConfig('lightningBolt')
+ * Check if animation is enabled
  */
-export function getAnimationConfig(type: keyof typeof logoConfig.animations) {
-  return logoConfig.animations[type];
-}
-
-/**
- * Check if a feature is enabled
- * Usage: isLogoFeatureEnabled('lightningBolt')
- */
-export function isLogoFeatureEnabled(feature: "lightningBolt" | "pulse" | "rotate" | "networkIcon") {
-  switch (feature) {
-    case "lightningBolt":
-      return logoConfig.lightningBolt.enabled;
-    case "pulse":
-      return logoConfig.animations.pulse.enabled;
-    case "rotate":
-      return logoConfig.animations.rotate.enabled;
-    case "networkIcon":
-      return logoConfig.networkIcon.enabled;
-    default:
-      return false;
-  }
+export function isAnimationEnabled(name: keyof typeof logoConfig.animations) {
+  return logoConfig.animations[name].enabled;
 }

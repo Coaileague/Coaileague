@@ -6,6 +6,10 @@ interface AutoForceLogoFullProps {
   className?: string;
 }
 
+/**
+ * AutoForce™ Full Logo - Modern SVG with brand name
+ * Uses centralized logoConfig for all styling and animations
+ */
 export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullProps) {
   const svgSizes = {
     sm: logoConfig.sizes.svg.sm,
@@ -16,150 +20,125 @@ export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullP
 
   return (
     <svg
-      viewBox="0 0 400 120"
+      viewBox="0 0 400 100"
       xmlns="http://www.w3.org/2000/svg"
       className={cn(svgSizes[size], className)}
       aria-label={logoConfig.accessibility.ariaLabel}
       data-testid={`${logoConfig.accessibility.testIdPrefix}-full-svg`}
     >
       <defs>
+        <style>{`
+          @keyframes shimmer {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+          }
+          
+          .geometric-line {
+            animation: shimmer 2.5s ease-in-out infinite;
+            transition: stroke-width 0.3s ease;
+          }
+          
+          .geometric-line:hover {
+            stroke-width: 7;
+          }
+        `}</style>
         <linearGradient
-          id={logoConfig.gradients.primary.id}
-          x1={logoConfig.gradients.primary.x1}
-          y1={logoConfig.gradients.primary.y1}
-          x2={logoConfig.gradients.primary.x2}
-          y2={logoConfig.gradients.primary.y2}
+          id="textGradient"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="0%"
         >
-          {logoConfig.gradients.primary.stops.map((stop, idx) => (
-            <stop key={idx} offset={stop.offset} style={{ stopColor: stop.color, stopOpacity: 1 }} />
-          ))}
-        </linearGradient>
-        <linearGradient
-          id={logoConfig.gradients.accent.id}
-          x1={logoConfig.gradients.accent.x1}
-          y1={logoConfig.gradients.accent.y1}
-          x2={logoConfig.gradients.accent.x2}
-          y2={logoConfig.gradients.accent.y2}
-        >
-          {logoConfig.gradients.accent.stops.map((stop, idx) => (
-            <stop key={idx} offset={stop.offset} style={{ stopColor: stop.color, stopOpacity: 1 }} />
-          ))}
+          <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: "hsl(217, 91%, 60%)", stopOpacity: 1 }} />
         </linearGradient>
       </defs>
 
-      {/* Icon: Autonomous Network Nodes */}
-      {logoConfig.networkIcon.enabled && (
-        <g transform="translate(20, 30)">
-          {/* Central Hub */}
-          <circle
-            cx="30"
-            cy="30"
-            r={logoConfig.networkIcon.centralHub.size}
-            fill={`url(#${logoConfig.gradients.primary.id})`}
-          >
-            <animate
-              attributeName="opacity"
-              values="1;0.6;1"
-              dur={logoConfig.networkIcon.centralHub.animationDuration}
-              repeatCount="indefinite"
-            />
-          </circle>
+      {/* Icon Group */}
+      <g transform="translate(10, 15)">
+        {/* Badge background circle */}
+        <circle cx="30" cy="30" r="28" fill="url(#textGradient)" opacity="0.1" />
 
-          {/* Orbital Nodes */}
-          {logoConfig.networkIcon.orbitalNodes.positions.map((pos, idx) => (
-            <circle
-              key={idx}
-              cx={pos.x}
-              cy={pos.y}
-              r={logoConfig.networkIcon.orbitalNodes.size}
-              fill={`url(#${logoConfig.gradients.accent.id})`}
-            />
-          ))}
+        {/* Geometric A paths */}
+        <path
+          className="geometric-line"
+          d="M 18 48 L 30 12"
+          stroke="hsl(var(--primary))"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
 
-          {/* Connection Lines */}
-          {logoConfig.networkIcon.orbitalNodes.positions.map((pos, idx) => (
-            <line
-              key={idx}
-              x1="30"
-              y1="30"
-              x2={pos.x}
-              y2={pos.y}
-              stroke={`url(#${logoConfig.gradients.primary.id})`}
-              strokeWidth={logoConfig.networkIcon.connections.strokeWidth}
-              opacity={logoConfig.networkIcon.connections.opacity}
-            />
-          ))}
+        <path
+          className="geometric-line"
+          d="M 42 48 L 30 12"
+          stroke="hsl(var(--primary))"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
 
-          {/* Outer Ring */}
-          <circle
-            cx="30"
-            cy="30"
-            r={logoConfig.networkIcon.outerRing.radius}
-            fill="none"
-            stroke={`url(#${logoConfig.gradients.primary.id})`}
-            strokeWidth={logoConfig.networkIcon.outerRing.strokeWidth}
-            opacity={logoConfig.networkIcon.outerRing.opacity}
-            strokeDasharray="3,3"
-          >
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              from="0 30 30"
-              to="360 30 30"
-              dur={logoConfig.networkIcon.outerRing.animationDuration}
-              repeatCount="indefinite"
-            />
-          </circle>
-        </g>
-      )}
+        <path
+          className="geometric-line"
+          d="M 22 32 L 38 32"
+          stroke="hsl(var(--primary))"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Accent dot */}
+        <circle cx="30" cy="10" r="2.5" fill="hsl(60, 100%, 50%)" opacity="0.8" />
+      </g>
 
       {/* Text: Brand Name */}
       <text
-        x="100"
-        y="52"
+        x="85"
+        y="42"
         fontFamily={logoConfig.typography.fontFamily}
-        fontSize={logoConfig.typography.fontSize.main}
-        fontWeight={logoConfig.typography.fontWeight.main}
+        fontSize="32"
+        fontWeight="700"
         fill="currentColor"
+        letterSpacing="-0.5"
         className="fill-foreground dark:fill-white"
-        letterSpacing={logoConfig.typography.letterSpacing.main}
       >
         {logoConfig.brand.name}
       </text>
 
-      {/* Text: Trademark with special styling */}
+      {/* Trademark */}
       <text
-        x="268"
-        y="52"
+        x="275"
+        y="36"
         fontFamily={logoConfig.typography.fontFamily}
-        fontSize={logoConfig.typography.fontSize.trademark}
-        fontWeight={logoConfig.typography.fontWeight.trademark}
-        fill={`url(#${logoConfig.gradients.primary.id})`}
-        letterSpacing={logoConfig.typography.letterSpacing.main}
+        fontSize="14"
+        fontWeight="700"
+        fill="url(#textGradient)"
       >
         {logoConfig.brand.trademark}
       </text>
 
       {/* Tagline */}
       <text
-        x="100"
-        y="72"
+        x="85"
+        y="60"
         fontFamily={logoConfig.typography.fontFamily}
-        fontSize={logoConfig.typography.fontSize.tagline}
-        fontWeight={logoConfig.typography.fontWeight.tagline}
+        fontSize="10"
+        fontWeight="500"
+        fill="hsl(var(--muted-foreground))"
+        letterSpacing="1.5"
         className="fill-muted-foreground"
-        letterSpacing={logoConfig.typography.letterSpacing.tagline}
       >
         {logoConfig.brand.taglineAlt.toUpperCase()}
       </text>
 
-      {/* Accent Line */}
-      <rect
-        x="100"
-        y="78"
-        width="180"
-        height="2"
-        fill={`url(#${logoConfig.gradients.accent.id})`}
+      {/* Accent line */}
+      <line
+        x1="85"
+        y1="65"
+        x2="265"
+        y2="65"
+        stroke="url(#textGradient)"
+        strokeWidth="1"
         opacity="0.6"
       />
     </svg>

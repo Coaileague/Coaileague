@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { logoConfig, getLogoSize } from "@/config/logoConfig";
+import { logoConfig, getLogoSize, isAnimationEnabled, getAnimationConfig } from "@/config/logoConfig";
 
 interface AutoForceLogoProps {
   variant?: "nav" | "icon" | "full";
@@ -12,13 +12,14 @@ interface AutoForceLogoProps {
 export function AutoForceLogo({ 
   variant = "nav",
   size = "md",
-  animated = false,
+  animated = true,
   className,
   lightMode = false
 }: AutoForceLogoProps) {
   
   // Use centralized size config
   const sizeConfig = getLogoSize(size);
+  const glowAnimation = isAnimationEnabled("glow") ? getAnimationConfig("glow") : null;
   
   // Full variant with AF badge and tagline
   if (variant === "full") {
@@ -34,7 +35,7 @@ export function AutoForceLogo({
             logoConfig.badge.gradient,
             logoConfig.badge.shadow,
             sizeConfig.container,
-            animated && logoConfig.animations.pulse.class
+            animated && logoConfig.animations.iconPulse.keyframes && "group"
           )}
         >
           <span className={cn("font-black", logoConfig.badge.text.color)}>
@@ -95,7 +96,7 @@ export function AutoForceLogo({
         logoConfig.badge.gradient,
         logoConfig.badge.shadow,
         sizeConfig.container,
-        animated && logoConfig.animations.pulse.class,
+        "group",
         className
       )} 
       data-testid={`${logoConfig.accessibility.testIdPrefix}-${variant}`}

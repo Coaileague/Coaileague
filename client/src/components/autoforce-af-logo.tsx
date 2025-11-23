@@ -1,107 +1,208 @@
 import { cn } from "@/lib/utils";
-import { Zap } from "lucide-react";
-import { logoConfig, getLogoSize, isLogoFeatureEnabled } from "@/config/logoConfig";
+import { logoConfig, getLogoSize, isAnimationEnabled, getAnimationConfig } from "@/config/logoConfig";
 
 interface AutoForceAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
   variant?: "icon" | "full" | "wordmark";
   animated?: boolean;
-  showF?: boolean;
   className?: string;
 }
 
 /**
- * AutoForce™ Logo Component (Centralized Config)
- * AF lightning bolt in circular gradient badge - all settings from logoConfig
- * Edit logoConfig.ts to update logo everywhere instantly
+ * AutoForce™ Premium Modern Logo
+ * High-tech geometric design with smooth animations
+ * All settings from centralized logoConfig
  */
 export function AutoForceAFLogo({
   size = "md",
   variant = "icon",
-  animated = false,
-  showF = false,
+  animated = true,
   className,
 }: AutoForceAFLogoProps) {
   const sizeConfig = getLogoSize(size);
+  const glowAnimation = isAnimationEnabled("glow") ? getAnimationConfig("glow") : null;
+  const iconPulse = isAnimationEnabled("iconPulse") ? getAnimationConfig("iconPulse") : null;
 
-  // Icon only - AF circular badge with lightning bolt
+  // Geometric A icon component
+  const GeometricA = () => (
+    <svg
+      viewBox={logoConfig.geometricA.viewBox}
+      className="w-full h-full"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <style>{`
+          ${logoConfig.animations.iconPulse.keyframes}
+          ${logoConfig.animations.glow.keyframes}
+          ${logoConfig.animations.rotateRing.keyframes}
+          ${logoConfig.animations.shimmer.keyframes}
+          
+          .geometric-line {
+            animation: ${animated ? `shimmer ${logoConfig.animations.shimmer.duration} ${logoConfig.animations.shimmer.timingFunction} infinite` : "none"};
+            transition: stroke-width 0.3s ease;
+          }
+          
+          .geometric-line:hover {
+            stroke-width: 7;
+          }
+        `}</style>
+      </defs>
+
+      {/* Left diagonal */}
+      <path
+        className="geometric-line"
+        d="M 30 80 L 50 20"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Right diagonal */}
+      <path
+        className="geometric-line"
+        d="M 70 80 L 50 20"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Horizontal crossbar */}
+      <path
+        className="geometric-line"
+        d="M 38 55 L 62 55"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Tech accent circles at apex */}
+      <circle
+        cx="50"
+        cy="18"
+        r="3.5"
+        fill="hsl(60, 100%, 50%)"
+        opacity={animated ? 0.8 : 1}
+        style={{
+          animation: animated ? `shimmer ${logoConfig.animations.shimmer.duration} ${logoConfig.animations.shimmer.timingFunction} infinite` : "none",
+        }}
+      />
+    </svg>
+  );
+
+  // Wordmark only
+  if (variant === "wordmark") {
+    return (
+      <div className={cn("flex items-center gap-1 flex-wrap", className)}>
+        <span className="font-bold tracking-tight text-slate-900 dark:text-white" style={{ fontSize: `${logoConfig.sizes.text[size].match(/\\d+/)?.[0] || 24}px` }}>
+          {logoConfig.brand.name}
+        </span>
+        <span className="text-xs align-super text-slate-900 dark:text-white">
+          {logoConfig.brand.trademark}
+        </span>
+      </div>
+    );
+  }
+
+  // Icon variant - Premium modern badge
   if (variant === "icon") {
     return (
       <div
         className={cn(
-          "relative flex items-center justify-center shrink-0",
+          "relative inline-flex items-center justify-center",
           logoConfig.badge.shape,
           logoConfig.badge.gradient,
           logoConfig.badge.shadow,
           sizeConfig.container,
-          animated && logoConfig.animations.pulse.class,
+          "border",
+          logoConfig.badge.border.color,
+          "group overflow-hidden",
           className
         )}
         data-testid={`${logoConfig.accessibility.testIdPrefix}-icon`}
+        style={{
+          animation: animated && iconPulse ? `${iconPulse.duration} ${iconPulse.timingFunction} infinite` : "none",
+          animationName: animated ? "icon-pulse" : "none",
+        }}
       >
-        {/* Neural ring overlay - subtle concentric circles */}
-        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
-        <div className="absolute inset-2 rounded-full border border-white/5" />
+        {/* Background gradient shimmer */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-white to-transparent transition-opacity duration-300" />
 
-        {/* AF with lightning bolt */}
-        <div className="relative flex items-center gap-0.5">
-          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>A</span>
-          <Zap className="w-3 h-3 fill-current" style={{ color: logoConfig.lightningBolt.color }} />
-          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>F</span>
+        {/* Glow effect background */}
+        {animated && glowAnimation && (
+          <div
+            className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{
+              background: `radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent)`,
+              animation: `glow-pulse ${glowAnimation.duration} ${glowAnimation.timingFunction} infinite`,
+              animationPlayState: animated ? "running" : "paused",
+            }}
+          />
+        )}
+
+        {/* Geometric A icon */}
+        <div className="relative z-10 w-3/4 h-3/4 text-white">
+          <GeometricA />
         </div>
       </div>
     );
   }
 
-  // Wordmark - just text
-  if (variant === "wordmark") {
-    return (
-      <div className={cn("flex items-center gap-1 flex-wrap", className)} data-testid={`${logoConfig.accessibility.testIdPrefix}-wordmark`}>
-        <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {logoConfig.brand.name.slice(0, 4)}
-        </span>
-        <span className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: logoConfig.colors.primary }}>
-          {logoConfig.brand.name.slice(4)}
-        </span>
-        <span className="text-sm align-super text-slate-900 dark:text-white">{logoConfig.brand.trademark}</span>
-      </div>
-    );
-  }
-
-  // Full - AF badge + text
+  // Full variant - Icon + text
   return (
-    <div className={cn("flex items-center gap-3", className)} data-testid={`${logoConfig.accessibility.testIdPrefix}-full`}>
+    <div className={cn("flex items-center gap-3 sm:gap-4", className)}>
+      {/* Premium icon with halo effect */}
       <div
         className={cn(
-          "relative shrink-0 flex items-center justify-center",
+          "relative shrink-0 inline-flex items-center justify-center",
           logoConfig.badge.shape,
           logoConfig.badge.gradient,
           logoConfig.badge.shadow,
           sizeConfig.container,
-          animated && logoConfig.animations.pulse.class
+          "border",
+          logoConfig.badge.border.color,
+          "group"
         )}
+        style={{
+          animation: animated ? `icon-pulse ${getAnimationConfig("iconPulse").duration} ${getAnimationConfig("iconPulse").timingFunction} infinite` : "none",
+        }}
       >
-        {/* Neural ring overlay */}
-        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
-        <div className="absolute inset-2 rounded-full border border-white/5" />
+        {/* Glow effect */}
+        {animated && glowAnimation && (
+          <div
+            className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{
+              background: `radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent)`,
+              animation: `glow-pulse ${glowAnimation.duration} ${glowAnimation.timingFunction} infinite`,
+            }}
+          />
+        )}
 
-        {/* AF with lightning bolt */}
-        <div className="relative flex items-center gap-0.5">
-          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>A</span>
-          <Zap className="w-4 h-4 fill-current" style={{ color: logoConfig.lightningBolt.color }} />
-          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>F</span>
+        {/* Geometric A */}
+        <div className="relative z-10 w-2/3 h-2/3 text-white">
+          <GeometricA />
         </div>
       </div>
-      <div className="flex flex-col">
-        <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
-          <span className="text-slate-900 dark:text-white">{logoConfig.brand.name.slice(0, 4)}</span>
-          <span style={{ color: logoConfig.colors.primary }}>{logoConfig.brand.name.slice(4)}</span>
-          <span className="text-xs align-super text-slate-900 dark:text-white">{logoConfig.brand.trademark}</span>
+
+      {/* Text content */}
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className={cn("font-black tracking-tight text-slate-900 dark:text-white", logoConfig.sizes.text[size])}>
+            {logoConfig.brand.name}
+          </span>
+          <span className="text-xs align-super text-slate-900 dark:text-white">
+            {logoConfig.brand.trademark}
+          </span>
         </div>
-        <div className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-400 font-medium tracking-wide mt-0.5">
+        <p className={cn("font-medium text-slate-600 dark:text-slate-400 tracking-wide", logoConfig.sizes.tagline[size])}>
           {logoConfig.brand.taglineAlt}
-        </div>
+        </p>
       </div>
     </div>
   );
 }
+
+// Backward compatibility
+export { AutoForceAFLogo as AnimatedAutoForceLogo };
