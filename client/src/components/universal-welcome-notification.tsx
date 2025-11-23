@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LogIn, Zap, Shield, Crown } from "lucide-react";
 import { LOADING_MESSAGES, getRandomLoadingMessage } from "@/config/loading-messages";
+import { useOrgStatusNotification } from "@/hooks/useOrgStatusNotification";
 
 interface WelcomeNotificationProps {
   firstName?: string;
@@ -8,6 +9,7 @@ interface WelcomeNotificationProps {
   email?: string;
   role?: string;
   platformRole?: string | null;
+  workspaceId?: string;
   onComplete?: () => void;
   loadingDuration?: number; // How long the actual loading took in ms
 }
@@ -20,12 +22,14 @@ export function UniversalWelcomeNotification({
   email,
   role,
   platformRole,
+  workspaceId,
   onComplete,
   loadingDuration = 1000,
 }: WelcomeNotificationProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState(() => getRandomLoadingMessage());
+  const { status: orgStatus, isLoading: statusLoading } = useOrgStatusNotification(workspaceId);
 
   // Progress bar that advances realistically based on loading duration
   // Extended to 3000ms minimum so you can enjoy the messages!
@@ -155,11 +159,13 @@ export function UniversalWelcomeNotification({
               </span>
             </div>
 
-            {/* Quick Status */}
+            {/* Quick Status - Org Aware */}
             <div className="flex gap-2 pt-1">
               <div className="flex-1 px-3 py-2 bg-white/10 rounded-lg backdrop-blur-sm text-center">
                 <div className="text-xs font-medium opacity-75">Status</div>
-                <div className="text-white font-semibold text-sm">Active</div>
+                <div className="text-white font-semibold text-sm">
+                  {statusLoading ? 'Loading...' : orgStatus === 'active' ? 'Active' : 'Review Required'}
+                </div>
               </div>
             </div>
           </div>
