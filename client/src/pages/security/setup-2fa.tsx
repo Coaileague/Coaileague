@@ -104,18 +104,14 @@ export default function Setup2FA() {
 
   // Regenerate backup codes
   const regenerateMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest('/api/auth/mfa/regenerate-backup-codes', {
-        method: 'POST',
-      });
-    },
-    onSuccess: (data) => {
+    mutationFn: () => apiPost('auth.regenerateBackupCodes', {}),
+    onSuccess: (data: { qrCodeUrl: string; backupCodes: string[] }) => {
       setSetupData(data);
       toast({
         title: 'Backup Codes Regenerated',
         description: 'New backup codes have been generated. Please save them securely.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/mfa/status'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.mfa });
     },
     onError: () => {
       toast({

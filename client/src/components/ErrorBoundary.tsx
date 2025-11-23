@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import { navConfig } from '@/config/navigationConfig';
 
 interface Props {
   children: ReactNode;
@@ -78,7 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
               
               <Button
                 onClick={() => {
-                  window.location.href = '/dashboard';
+                  window.location.href = navConfig.app.dashboard;
                 }}
                 className="bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
                 data-testid="button-go-home"
