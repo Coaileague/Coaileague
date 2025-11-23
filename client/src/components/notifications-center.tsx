@@ -1,7 +1,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
+import { navConfig } from "@/config/navigationConfig";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,13 +39,15 @@ export function NotificationsCenter() {
 
   // Get current user info
   const { data: currentUser } = useQuery<{ id: string; email?: string }>({ 
-    queryKey: ['/api/auth/me'] 
+    queryKey: queryKeys.auth.me,
+    queryFn: () => apiGet('auth.current'),
   });
   const userId = currentUser?.id;
   
   // Get current workspace
   const { data: workspace } = useQuery<{ id: string; name?: string }>({ 
-    queryKey: ['/api/workspace'] 
+    queryKey: queryKeys.workspace.current,
+    queryFn: () => apiGet('workspace.current'),
   });
   const workspaceId = workspace?.id;
 
@@ -50,7 +55,8 @@ export function NotificationsCenter() {
   const { unreadCount: wsUnreadCount, isConnected } = useNotificationWebSocket(userId, workspaceId);
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
-    queryKey: ['/api/notifications'],
+    queryKey: queryKeys.notifications.all,
+    queryFn: () => apiGet('notifications.list'),
     enabled: open,
   });
 
@@ -168,6 +174,10 @@ export function NotificationsCenter() {
                   onClick={() => {
                     markAsRead(notification.id);
                     if (notification.actionUrl) {
+                      // Use navConfig routes where possible, fallback to dynamic actionUrl from API
+                      const configRoute = Object.values(navConfig).flatMap(group => 
+                        typeof group === 'object' ? Object.values(group) : []
+                      ).find(route => route === notification.actionUrl);
                       window.location.href = notification.actionUrl;
                     }
                   }}

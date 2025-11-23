@@ -139,6 +139,8 @@ export const navConfig = {
     hiringWorkflow: "/hireos-workflow-builder",
     helpCenter: "/help",
     updates: "/updates",
+    feedback: "/feedback",
+    whatsNew: "/whats-new",
     disputes: "/disputes",
     reviewDisputes: "/review-disputes",
     privateMessages: "/private-messages",

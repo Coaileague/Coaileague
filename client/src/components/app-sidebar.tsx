@@ -28,6 +28,7 @@ import { HelpDropdown } from "@/components/help-dropdown";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { performLogout } from "@/lib/logoutHandler";
+import { navConfig } from "@/config/navigationConfig";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -307,8 +308,7 @@ export function AppSidebar() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                const feedbackURL = `/feedback`;
-                window.location.href = feedbackURL;
+                window.location.href = navConfig.misc.feedback;
               }}
               className="w-10 h-10"
               data-testid="button-sidebar-feedback-collapsed"
@@ -321,8 +321,7 @@ export function AppSidebar() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                const whatsNewURL = `/whats-new`;
-                window.location.href = whatsNewURL;
+                window.location.href = navConfig.misc.whatsNew;
               }}
               className="w-10 h-10 relative"
               data-testid="button-sidebar-whatsnew-collapsed"
