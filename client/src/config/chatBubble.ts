@@ -169,7 +169,7 @@ export const CHAT_BUBBLE_CONFIG = {
     homeButtonVariant: 'ghost',
     homeButtonTooltip: 'Return to Home',
     homeButtonTestId: 'button-home-from-intake',
-    homeNavigationPath: '/', // Full page reload - avoids auth redirects
+    homeNavigationPath: '/pricing', // Navigate to public pricing page (guaranteed no workspace redirect)
     useFullPageReload: true, // Force hard reload instead of SPA navigation
   },
 
