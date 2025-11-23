@@ -47,10 +47,6 @@ export function FloatingSupportChat() {
   const { toast } = useToast();
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const [animationState, setAnimationState] = useState<AnimationState>('idle');
-  const [isAwaitingIdentification, setIsAwaitingIdentification] = useState(false);
-  const [ticketId, setTicketId] = useState<string | null>(null);
-  const [identificationEmail, setIdentificationEmail] = useState('');
-  const [identificationName, setIdentificationName] = useState('');
   
   // Real IDs from auth system
   const workId = employee?.employeeNumber || 'GUEST';
@@ -254,63 +250,12 @@ export function FloatingSupportChat() {
     }
   };
 
-  // Show identification form instead of sending message
+  // Request human support - route directly to chat page (identification happens there)
   const handleRequestHumanHelp = () => {
-    setIsAwaitingIdentification(true);
-  };
-
-  // Create ticket with user identification - routes to helpdesk
-  const handleCreateSupportTicket = async () => {
-    if (!identificationEmail.trim() || !identificationName.trim()) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please provide both email and name to create a support ticket.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsCreatingTicket(true);
-    try {
-      const response = await fetch('/api/support/create-ticket', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          subject: 'User Requested Human Support',
-          description: messages.map(m => `${m.type === 'user' ? 'User' : 'AI'}: ${m.text}`).join('\n'),
-          conversationHistory: messages,
-          userEmail: identificationEmail,
-          userName: identificationName
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to create ticket');
-      
-      const data = await response.json();
-      setTicketId(data.ticketId);
-      
-      toast({
-        title: CHAT_BUBBLE_CONFIG.content.buttonText.successTitle,
-        description: CHAT_BUBBLE_CONFIG.content.buttonText.successDesc,
-      });
-
-      // Route to universal helpdesk for all users (both authenticated and guests)
-      sessionStorage.setItem('support_ticket_id', data.ticketId);
-      setTimeout(() => {
-        setLocation('/chat'); // Universal platform helpdesk
-        setState(prev => ({ ...prev, isOpen: false }));
-      }, 1000);
-    } catch (error) {
-      console.error('Error creating support ticket:', error);
-      toast({
-        title: CHAT_BUBBLE_CONFIG.content.buttonText.errorTitle,
-        description: CHAT_BUBBLE_CONFIG.content.buttonText.errorDesc,
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingTicket(false);
-    }
+    // Store conversation history for persistence
+    sessionStorage.setItem('chat_conversation_history', JSON.stringify(messages));
+    setLocation('/chat'); // Route to support chatroom with welcome form
+    setState(prev => ({ ...prev, isOpen: false }));
   };
   
   // Send message to HelpOS AI
@@ -507,24 +452,22 @@ export function FloatingSupportChat() {
             >
               <Minimize2 className={`w-${CHAT_BUBBLE_CONFIG.sizes.headerIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.headerIconSize}`} />
             </Button>
-            {!isAwaitingIdentification && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className={`h-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize} w-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAnimationState('closing');
-                  setTimeout(() => {
-                    setState(prev => ({ ...prev, isOpen: false }));
-                    setAnimationState('idle');
-                  }, CHAT_BUBBLE_CONFIG.animations.closingDuration);
-                }}
-                data-testid="button-close-chat"
-              >
-                <X className={`w-${CHAT_BUBBLE_CONFIG.sizes.headerIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.headerIconSize}`} />
-              </Button>
-            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`h-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize} w-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setAnimationState('closing');
+                setTimeout(() => {
+                  setState(prev => ({ ...prev, isOpen: false }));
+                  setAnimationState('idle');
+                }, CHAT_BUBBLE_CONFIG.animations.closingDuration);
+              }}
+              data-testid="button-close-chat"
+            >
+              <X className={`w-${CHAT_BUBBLE_CONFIG.sizes.headerIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.headerIconSize}`} />
+            </Button>
           </div>
         </div>
       </div>
@@ -578,82 +521,35 @@ export function FloatingSupportChat() {
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Input area - shows chat input OR identification form */}
-      {!isAwaitingIdentification ? (
-        <div className={`p-${CHAT_BUBBLE_CONFIG.sizes.inputAreaPadding} border-t space-y-${CHAT_BUBBLE_CONFIG.sizes.inputAreaSpacing}`}>
+      {/* Input area - chat input + request help button */}
+      <div className={`p-${CHAT_BUBBLE_CONFIG.sizes.inputAreaPadding} border-t space-y-${CHAT_BUBBLE_CONFIG.sizes.inputAreaSpacing}`}>
+        <Button
+          onClick={handleRequestHumanHelp}
+          className={`w-full bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} hover:${CHAT_BUBBLE_CONFIG.colors.primaryHover}`}
+          data-testid="button-human-help"
+        >
+          <Headset className={`w-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} mr-${CHAT_BUBBLE_CONFIG.sizes.inputIconMarginRight}`} />
+          {CHAT_BUBBLE_CONFIG.content.buttonText.requestHelp}
+        </Button>
+        <div className={`flex gap-${CHAT_BUBBLE_CONFIG.sizes.inputGap}`}>
+          <Input
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            placeholder={CHAT_BUBBLE_CONFIG.content.messagePlaceholder}
+            className="flex-1"
+            data-testid="input-chat-message"
+          />
           <Button
-            onClick={handleRequestHumanHelp}
-            disabled={isCreatingTicket}
-            className={`w-full bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} hover:${CHAT_BUBBLE_CONFIG.colors.primaryHover}`}
-            data-testid="button-human-help"
+            onClick={handleSend}
+            disabled={!inputValue.trim() || isTyping}
+            size="icon"
+            data-testid="button-send-message"
           >
-            <Headset className={`w-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} mr-${CHAT_BUBBLE_CONFIG.sizes.inputIconMarginRight}`} />
-            {isCreatingTicket ? CHAT_BUBBLE_CONFIG.content.buttonText.sending : CHAT_BUBBLE_CONFIG.content.buttonText.requestHelp}
-          </Button>
-          <div className={`flex gap-${CHAT_BUBBLE_CONFIG.sizes.inputGap}`}>
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              placeholder={CHAT_BUBBLE_CONFIG.content.messagePlaceholder}
-              className="flex-1"
-              data-testid="input-chat-message"
-            />
-            <Button
-              onClick={handleSend}
-              disabled={!inputValue.trim() || isTyping}
-              size="icon"
-              data-testid="button-send-message"
-            >
-              <Send className={`w-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize}`} />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className={`p-${CHAT_BUBBLE_CONFIG.sizes.formPadding} border-t space-y-${CHAT_BUBBLE_CONFIG.sizes.formSpacing}`}>
-          <div>
-            <h4 className="font-semibold text-xs">{CHAT_BUBBLE_CONFIG.content.identificationTitle}</h4>
-            <p className="text-xs text-muted-foreground">{CHAT_BUBBLE_CONFIG.content.identificationSubtitle}</p>
-          </div>
-          
-          <div>
-            <label className="text-xs font-medium block mb-0.5">{CHAT_BUBBLE_CONFIG.content.identificationEmailLabel}</label>
-            <Input
-              type="email"
-              value={identificationEmail}
-              onChange={(e) => setIdentificationEmail(e.target.value)}
-              placeholder={CHAT_BUBBLE_CONFIG.content.identificationEmailPlaceholder}
-              className="h-7 text-xs"
-              data-testid="input-ticket-email"
-            />
-          </div>
-          
-          <div>
-            <label className="text-xs font-medium block mb-0.5">{CHAT_BUBBLE_CONFIG.content.identificationNameLabel}</label>
-            <Input
-              type="text"
-              value={identificationName}
-              onChange={(e) => setIdentificationName(e.target.value)}
-              placeholder={CHAT_BUBBLE_CONFIG.content.identificationNamePlaceholder}
-              className="h-7 text-xs"
-              data-testid="input-ticket-name"
-            />
-          </div>
-          
-          <p className="text-xs text-muted-foreground leading-tight">{CHAT_BUBBLE_CONFIG.content.identificationWarning}</p>
-          
-          <Button
-            onClick={handleCreateSupportTicket}
-            disabled={isCreatingTicket}
-            size="sm"
-            className={`w-full bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text}`}
-            data-testid="button-create-ticket"
-          >
-            <Headset className="w-3 h-3 mr-1" />
-            <span className="text-xs">{isCreatingTicket ? CHAT_BUBBLE_CONFIG.content.buttonText.sending : CHAT_BUBBLE_CONFIG.content.buttonText.createTicket}</span>
+            <Send className={`w-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize}`} />
           </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
