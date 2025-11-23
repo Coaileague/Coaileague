@@ -33,7 +33,7 @@ import {
   ChevronLeft, ChevronRight, Info, Coffee, Star, Building2, Bot, Sparkles, Menu, X,
   UserCheck, FileText, Camera, PenTool, ArrowRight, Ban, AlertTriangle,
   Timer, UserX, TrendingUp, Key, Mail, ListChecks, Tag, ClipboardList,
-  History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch
+  History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch, Home
 } from "lucide-react";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
@@ -100,13 +100,29 @@ const CHAT_CONFIG = {
       'support',
     ],
   },
-  display: { showProgressHeaderEscalated: true },
+  display: {
+    showProgressHeaderEscalated: true,
+    showUserCount: true,
+    showWaitTime: true,
+  },
   system: {
     storagePrefix: 'chat:',
     sessionIdKey: 'chat-session-id',
     ticketIdKey: 'support_ticket_id',
     escalationDataKey: 'helpos_escalation',
     guestIntakeDataKey: 'guest_intake_data', // Persistent guest form data throughout chat session
+  },
+  moderation: {
+    allowBan: true,
+    allowSilence: true,
+    allowKick: true,
+  },
+  queue: {
+    updateInterval: 60000,
+    estimatedWaitTime: {
+      min: 2,
+      max: 3,
+    },
   },
 };
 
