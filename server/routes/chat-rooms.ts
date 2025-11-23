@@ -714,4 +714,127 @@ router.delete(
   }
 );
 
+// ============================================================================
+// BULK JOIN ROOMS - POST /api/chat/rooms/join-bulk
+// ============================================================================
+router.post(
+  "/join-bulk",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const { roomIds } = req.body;
+      const workspaceId = authReq.workspaceId;
+      const userId = authReq.user?.id;
+      const userName = authReq.user?.firstName && authReq.user?.lastName
+        ? `${authReq.user.firstName} ${authReq.user.lastName}`
+        : authReq.user?.email || "Unknown User";
+
+      if (!workspaceId || !userId) {
+        return res.status(403).json({ error: "No workspace context" });
+      }
+
+      if (!roomIds || !Array.isArray(roomIds) || roomIds.length === 0) {
+        return res.status(400).json({ error: "Invalid room IDs" });
+      }
+
+      const results = [];
+      const errors = [];
+
+      for (const roomId of roomIds) {
+        try {
+          // Check if room exists and user is not already a participant
+          const [existingParticipant] = await db
+            .select()
+            .from(chatParticipants)
+            .where(
+              and(
+                eq(chatParticipants.conversationId, roomId),
+                eq(chatParticipants.participantId, userId)
+              )
+            )
+            .limit(1);
+
+          if (existingParticipant) {
+            results.push({
+              roomId,
+              status: 'already_joined',
+              message: 'Already a participant',
+            });
+            continue;
+          }
+
+          // Get room details
+          const [room] = await db
+            .select()
+            .from(chatConversations)
+            .where(
+              and(
+                eq(chatConversations.id, roomId),
+                eq(chatConversations.workspaceId, workspaceId)
+              )
+            )
+            .limit(1);
+
+          if (!room) {
+            errors.push({
+              roomId,
+              error: 'Room not found',
+            });
+            continue;
+          }
+
+          // Add user as participant
+          await db.insert(chatParticipants).values({
+            conversationId: roomId,
+            workspaceId,
+            participantId: userId,
+            participantName: userName,
+            participantEmail: authReq.user?.email,
+            participantRole: 'member',
+            canSendMessages: true,
+            canViewHistory: true,
+            canInviteOthers: false,
+            joinedAt: new Date(),
+            isActive: true,
+          });
+
+          // Create audit event
+          await createRoomEvent(
+            workspaceId,
+            roomId,
+            userId,
+            userName,
+            authReq.workspaceRole || "employee",
+            "user_joined",
+            `${userName} joined the room`,
+            {},
+            authReq.ip,
+            authReq.get("user-agent")
+          );
+
+          results.push({
+            roomId,
+            status: 'joined',
+            message: 'Successfully joined room',
+          });
+        } catch (error: any) {
+          errors.push({
+            roomId,
+            error: error.message || 'Failed to join room',
+          });
+        }
+      }
+
+      res.json({
+        success: errors.length === 0,
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      console.error("Error bulk joining rooms:", error);
+      res.status(500).json({ error: "Failed to join rooms" });
+    }
+  }
+);
+
 export default router;
