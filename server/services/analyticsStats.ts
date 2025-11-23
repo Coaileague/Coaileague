@@ -208,9 +208,9 @@ export async function getAnalyticsStats(
     support: {
       openTickets: supportData[0]?.count || 0,
       unresolvedEscalations: escalationsData[0]?.count || 0,
-      avgFirstResponseHours: 2.5, // TODO: Calculate from actual ticket data
+      avgFirstResponseHours: calculateAvgFirstResponseTime(supportTickets), // Calculate from actual ticket data
       liveChats: {
-        active: 0, // TODO: Get from WebSocket connection count
+        active: global.activeWebSocketConnections || 0, // Get from WebSocket connection count
         staffOnline: 0,
       },
     },
@@ -218,7 +218,7 @@ export async function getAnalyticsStats(
       cpu: monitoringData?.cpu || 0,
       memory: monitoringData?.memory || 0,
       database: {
-        status: 'healthy', // TODO: Implement database health check
+        status: checkDatabaseHealth() ? 'healthy' : 'degraded', // Implement database health check
       },
       uptimeSeconds: process.uptime(),
       updatedAt: new Date().toISOString(),
