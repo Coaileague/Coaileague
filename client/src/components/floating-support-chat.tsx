@@ -610,46 +610,47 @@ export function FloatingSupportChat() {
           </div>
         </div>
       ) : (
-        <div className={`p-${CHAT_BUBBLE_CONFIG.sizes.inputAreaPadding} border-t space-y-${CHAT_BUBBLE_CONFIG.sizes.inputAreaSpacing}`}>
+        <div className={`p-${CHAT_BUBBLE_CONFIG.sizes.formPadding} border-t space-y-${CHAT_BUBBLE_CONFIG.sizes.formSpacing}`}>
           <div>
-            <h4 className="font-semibold text-sm mb-1">{CHAT_BUBBLE_CONFIG.content.identificationTitle}</h4>
-            <p className="text-xs text-muted-foreground mb-3">{CHAT_BUBBLE_CONFIG.content.identificationSubtitle}</p>
+            <h4 className="font-semibold text-xs">{CHAT_BUBBLE_CONFIG.content.identificationTitle}</h4>
+            <p className="text-xs text-muted-foreground">{CHAT_BUBBLE_CONFIG.content.identificationSubtitle}</p>
           </div>
           
           <div>
-            <label className="text-xs font-medium">{CHAT_BUBBLE_CONFIG.content.identificationEmailLabel}</label>
+            <label className="text-xs font-medium block mb-0.5">{CHAT_BUBBLE_CONFIG.content.identificationEmailLabel}</label>
             <Input
               type="email"
               value={identificationEmail}
               onChange={(e) => setIdentificationEmail(e.target.value)}
               placeholder={CHAT_BUBBLE_CONFIG.content.identificationEmailPlaceholder}
-              className="mt-1"
+              className="h-7 text-xs"
               data-testid="input-ticket-email"
             />
           </div>
           
           <div>
-            <label className="text-xs font-medium">{CHAT_BUBBLE_CONFIG.content.identificationNameLabel}</label>
+            <label className="text-xs font-medium block mb-0.5">{CHAT_BUBBLE_CONFIG.content.identificationNameLabel}</label>
             <Input
               type="text"
               value={identificationName}
               onChange={(e) => setIdentificationName(e.target.value)}
               placeholder={CHAT_BUBBLE_CONFIG.content.identificationNamePlaceholder}
-              className="mt-1"
+              className="h-7 text-xs"
               data-testid="input-ticket-name"
             />
           </div>
           
-          <p className="text-xs text-muted-foreground">{CHAT_BUBBLE_CONFIG.content.identificationWarning}</p>
+          <p className="text-xs text-muted-foreground leading-tight">{CHAT_BUBBLE_CONFIG.content.identificationWarning}</p>
           
           <Button
             onClick={handleCreateSupportTicket}
             disabled={isCreatingTicket}
+            size="sm"
             className={`w-full bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text}`}
             data-testid="button-create-ticket"
           >
-            <Headset className={`w-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.inputIconSize} mr-${CHAT_BUBBLE_CONFIG.sizes.inputIconMarginRight}`} />
-            {isCreatingTicket ? CHAT_BUBBLE_CONFIG.content.buttonText.sending : CHAT_BUBBLE_CONFIG.content.buttonText.createTicket}
+            <Headset className="w-3 h-3 mr-1" />
+            <span className="text-xs">{isCreatingTicket ? CHAT_BUBBLE_CONFIG.content.buttonText.sending : CHAT_BUBBLE_CONFIG.content.buttonText.createTicket}</span>
           </Button>
         </div>
       )}
