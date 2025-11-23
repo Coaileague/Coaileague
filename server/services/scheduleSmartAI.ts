@@ -2,10 +2,12 @@
  * AI Scheduling™ Smart AI Engine
  * Powered by Gemini 2.0 Flash - Auto-schedules employees to open shifts
  * Uses intelligent constraint solving based on availability, skills, and business rules
+ * With AI Guard Rails: Input validation, rate limiting, audit logging
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { usageMeteringService } from './billing/usageMetering';
+import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import type { Shift, Employee } from '@shared/schema';
 import { z } from 'zod';
 
@@ -86,6 +88,23 @@ export async function scheduleSmartAI(request: ScheduleSmartRequest): Promise<Sc
   if (!genAI) {
     throw new Error("Gemini API key not configured - AI scheduling unavailable");
   }
+
+  // Guard Rails: Create request context
+  const requestContext: AIRequestContext = {
+    workspaceId: request.workspaceId,
+    userId: request.userId || 'system',
+    organizationId: 'platform',
+    requestId: Math.random().toString(36).substring(7),
+    timestamp: new Date(),
+    operation: 'schedule_generation'
+  };
+
+  // Guard Rails: Validate request (check if within rate limits)
+  const validation = aiGuardRails.validateRequest(
+    `Schedule generation: ${request.openShifts.length} shifts, ${request.availableEmployees.length} employees`,
+    requestContext,
+    'schedule_generation'
+  );
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 

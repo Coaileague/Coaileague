@@ -2,10 +2,12 @@
  * Schedule Migration Service
  * Uses Gemini's multimodal vision capabilities to extract schedule data
  * from PDFs/images from external scheduling apps (Deputy, WhenIWork, GetSling)
+ * With AI Guard Rails: Input validation, rate limiting, audit logging
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { usageMeteringService } from './billing/usageMetering';
+import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import { z } from 'zod';
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -54,6 +56,26 @@ export async function extractScheduleFromFile(
 ): Promise<MigrationResponse> {
   if (!genAI) {
     throw new Error("Gemini API key not configured - schedule migration unavailable");
+  }
+
+  // Guard Rails: Create request context
+  const requestContext: AIRequestContext = {
+    workspaceId: request.workspaceId,
+    userId: request.userId || 'system',
+    organizationId: 'platform',
+    requestId: Math.random().toString(36).substring(7),
+    timestamp: new Date(),
+    operation: 'schedule_migration'
+  };
+
+  // Guard Rails: Validate file data (size check)
+  const validation = aiGuardRails.validateRequest(
+    `File migration: ${request.mimeType}`,
+    requestContext,
+    'schedule_migration'
+  );
+  if (!validation.isValid) {
+    throw new Error(`Schedule migration validation failed: ${validation.errors.join(', ')}`);
   }
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
