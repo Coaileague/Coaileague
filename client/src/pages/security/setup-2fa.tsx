@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiPost, apiGet } from '@/lib/apiClient';
+import { queryKeys } from '@/config/queryKeys';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,19 +29,15 @@ export default function Setup2FA() {
   const queryClient = useQueryClient();
 
   // Fetch MFA status
-  const { data: mfaStatus, isLoading: statusLoading } = useQuery({
-    queryKey: ['/api/auth/mfa/status'],
+  const { data: mfaStatus = { enabled: false, backupCodesRemaining: 0 }, isLoading: statusLoading } = useQuery({
+    queryKey: queryKeys.auth.mfa,
+    queryFn: () => apiGet('auth.mfaStatus'),
   });
 
   // Setup MFA mutation
   const setupMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('/api/auth/mfa/setup', {
-        method: 'POST',
-      });
-      return response;
-    },
-    onSuccess: (data) => {
+    mutationFn: () => apiPost('auth.setupMfa', {}),
+    onSuccess: (data: { qrCodeUrl: string; backupCodes: string[] }) => {
       setSetupData(data);
       setIsSetupMode(true);
     },
@@ -60,18 +57,13 @@ export default function Setup2FA() {
   });
 
   const enableMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof tokenSchema>) => {
-      return await apiRequest('/api/auth/mfa/enable', {
-        method: 'POST',
-        body: JSON.stringify(values),
-      });
-    },
+    mutationFn: (values: z.infer<typeof tokenSchema>) => apiPost('auth.enableMfa', values),
     onSuccess: () => {
       toast({
         title: 'MFA Enabled',
         description: 'Two-factor authentication has been successfully enabled.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/mfa/status'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.mfa });
       setIsSetupMode(false);
       setSetupData(null);
       enableForm.reset();
@@ -92,18 +84,13 @@ export default function Setup2FA() {
   });
 
   const disableMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof passwordSchema>) => {
-      return await apiRequest('/api/auth/mfa/disable', {
-        method: 'POST',
-        body: JSON.stringify(values),
-      });
-    },
+    mutationFn: (values: z.infer<typeof passwordSchema>) => apiPost('auth.disableMfa', values),
     onSuccess: () => {
       toast({
         title: 'MFA Disabled',
         description: 'Two-factor authentication has been disabled.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/mfa/status'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.mfa });
       disableForm.reset();
     },
     onError: () => {
