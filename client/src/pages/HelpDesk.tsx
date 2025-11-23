@@ -53,6 +53,7 @@ import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
 import { AutoforceAiTester } from "@/components/helpos-ai-tester";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { CHAT_BUBBLE_CONFIG } from "@/config/chatBubble";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -90,7 +91,6 @@ const CHAT_CONFIG = {
       sender: 'AutoForce™ AI',
     },
   },
-  queue: { updateInterval: 60000 },
   roles: {
     supportStaff: [
       'root_admin',
@@ -1782,11 +1782,28 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             e.preventDefault();
           }
         }}>
-          <DialogHeader>
-            <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
-            <DialogDescription>
-              Please provide some information so our support team can better assist you.
-            </DialogDescription>
+          <DialogHeader className={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonPlacement === 'header' ? 'flex items-center justify-between' : ''}>
+            <div className="flex items-center gap-3 flex-1">
+              {CHAT_BUBBLE_CONFIG.intakeFormDialog.showHomeButton && CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonPlacement === 'header' && (
+                <Button
+                  type="button"
+                  variant={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonVariant as any}
+                  size="icon"
+                  onClick={() => navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath)}
+                  className="h-8 w-8 flex-shrink-0"
+                  data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
+                  title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+              )}
+              <div className="flex-1">
+                <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
+                <DialogDescription>
+                  Please provide some information so our support team can better assist you.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1859,7 +1876,20 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2 flex-col">
+            {CHAT_BUBBLE_CONFIG.intakeFormDialog.showHomeButton && CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonPlacement === 'footer' && (
+              <Button
+                type="button"
+                variant={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonVariant as any}
+                onClick={() => navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath)}
+                className="w-full"
+                data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
+                title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
+              >
+                <Home className="h-4 w-4 mr-2" />
+                {CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
+              </Button>
+            )}
             <Button
               onClick={() => {
                 // Form is already validated by isFormComplete()
