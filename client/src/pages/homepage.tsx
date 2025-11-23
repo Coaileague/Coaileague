@@ -226,7 +226,7 @@ export default function Homepage() {
                     <DollarSign className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">$168K</div>
+                    <div className="text-2xl font-bold text-blue-600">$190K+</div>
                     <div className="text-xs text-gray-500">Avg. Annual Savings</div>
                   </div>
                 </div>
@@ -349,20 +349,20 @@ export default function Homepage() {
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/30">
                 <div className="grid md:grid-cols-3 gap-6 mb-6">
                   <div>
-                    <div className="text-5xl font-bold mb-2">$135K+</div>
+                    <div className="text-5xl font-bold mb-2">$155K+</div>
                     <div className="text-blue-100">Eliminated Salaries</div>
                   </div>
                   <div>
-                    <div className="text-5xl font-bold mb-2">$33K+</div>
+                    <div className="text-5xl font-bold mb-2">$35K+</div>
                     <div className="text-blue-100">Benefits Saved</div>
                   </div>
                   <div>
-                    <div className="text-5xl font-bold mb-2">$168K+</div>
+                    <div className="text-5xl font-bold mb-2">$190K+</div>
                     <div className="text-blue-100">Total Annual Savings</div>
                   </div>
                 </div>
                 <div className="text-sm text-blue-100 italic">
-                  * Based on replacing scheduling coordinator ($55K), payroll admin ($50K), and billing clerk ($48K) + 25% benefits
+                  * Based on replacing scheduler ($65K), payroll administrator ($58K), and billing specialist ($52K) + 25% benefits
                 </div>
               </div>
             </div>
