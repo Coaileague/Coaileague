@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
-import { showSuccessTransition, showErrorTransition } from "@/lib/transition-utils";
+import { UniversalWelcomeNotification } from "@/components/universal-welcome-notification";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -19,12 +19,36 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+interface LoginResponse {
+  message: string;
+  user: {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    emailVerified?: boolean;
+    platformRole?: string | null;
+    currentWorkspaceId?: string | null;
+  };
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      div: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
+    }
+  }
+}
+
 export default function CustomLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const transition = useTransition();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -44,7 +68,7 @@ export default function CustomLogin() {
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      const result: LoginResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(result.message || "Login failed");
@@ -52,15 +76,14 @@ export default function CustomLogin() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
-      toast({
-        title: "Login Successful!",
-        description: `Welcome back, ${data.email.split('@')[0]}!`,
-      });
+      // Show personalized welcome notification
+      setLoginData(result.user);
+      setShowWelcome(true);
 
-      // Direct redirect to dashboard
+      // Redirect after welcome notification completes (4 seconds)
       setTimeout(() => {
         setLocation("/dashboard");
-      }, 500);
+      }, 4500);
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -73,12 +96,24 @@ export default function CustomLogin() {
   };
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-5"
-      style={{
-        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
-      }}
-    >
+    <>
+      {showWelcome && loginData && (
+        <UniversalWelcomeNotification
+          firstName={loginData.firstName}
+          lastName={loginData.lastName}
+          email={loginData.email}
+          role={loginData.role}
+          platformRole={loginData.platformRole}
+          onComplete={() => setShowWelcome(false)}
+        />
+      )}
+
+      <div 
+        className="min-h-screen flex items-center justify-center p-5"
+        style={{
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
+        }}
+      >
       <div 
         className="w-full max-w-[460px] animate-[fadeInUp_0.6s_ease]"
         style={{
@@ -308,6 +343,7 @@ export default function CustomLogin() {
           }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
