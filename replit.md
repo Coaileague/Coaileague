@@ -40,18 +40,23 @@ AutoForce™ is architected with a **Complete Universal Configuration System** w
 - Shifts, scheduling, breaks, performance thresholds
 - Helper functions: `getDefault()`, `getDefaults()`
 
-#### 7. **pricing.ts** - Subscription Tiers (NEW)
+#### 7. **pricing.ts** - Subscription Tiers
 - 4 tiers: Free ($0), Starter ($49.99), Professional ($99.99), Enterprise (custom)
 - Tier-to-feature mapping
 - Tier limits (employees, shifts, invoices, storage, API calls)
 - Helper functions: `getPricingTier()`, `getTierFeatures()`, `isFeatureInTier()`, `formatPrice()`, `getTierForFeatures()`
 
-#### 8. **integrations.ts** - External Services (NEW)
+#### 8. **integrations.ts** - External Services
 - 12 integrations: Stripe, Resend, Gemini, OpenAI, Anthropic, Twilio, QuickBooks, Gusto, Slack, GCS, PostgreSQL, Redis, Sentry, DataDog
 - API URLs, environment variables, enabled status, features
 - Helper functions: `getIntegration()`, `isIntegrationEnabled()`, `getIntegrationUrl()`, `isFeatureSupported()`
 
-#### 9. **logout.ts** - Logout Configuration
+#### 9. **queryKeys.ts** - React Query Keys (NEW)
+- Centralized query caching strategy
+- Prevents cache invalidation bugs
+- Type-safe query key management
+
+#### 10. **logout.ts** - Logout Configuration
 - API endpoint, method, redirect path, messages
 - Cache cleanup settings, animation settings
 - Test IDs
@@ -71,6 +76,19 @@ configManager.getMessage('create.success', { entity: 'Employee' })
 configManager.getPricingTier('professional')
 configManager.isFeatureAvailable('ai.autoScheduling', 'professional')
 configManager.getAvailableFeatures('professional')
+```
+
+### API Client (NEW)
+
+#### **apiClient.ts** - Centralized API Requests
+```typescript
+// All API calls use centralized endpoint config
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/apiClient"
+
+const employees = await apiGet('employees.list', { page: 1 })
+const created = await apiPost('employees.create', data)
+const updated = await apiPatch('employees.update', { id: '123' }, data)
+const deleted = await apiDelete('employees.delete', { id: '123' })
 ```
 
 ### React Hooks for Components (NEW)
@@ -107,8 +125,9 @@ client/src/config/
 ├── aiConfig.ts               # AI Brain config (6 features)
 ├── messages.ts               # 100+ user messages
 ├── defaults.ts               # App defaults
-├── pricing.ts                # 4 subscription tiers (NEW)
-├── integrations.ts           # 12 external services (NEW)
+├── pricing.ts                # 4 subscription tiers
+├── integrations.ts           # 12 external services
+├── queryKeys.ts              # React Query keys (NEW)
 ├── logout.ts                 # Logout config
 ├── homeButton.ts             # Home button config
 ├── orgStatusMessages.ts       # Org status messages
@@ -117,110 +136,47 @@ client/src/config/
 └── userSettings.ts           # User preferences
 
 client/src/lib/
-├── configManager.ts          # Central config service (NEW)
+├── configManager.ts          # Central config service
+├── apiClient.ts              # Centralized API client (NEW)
 └── logoutHandler.ts          # Universal logout handler
 
 client/src/hooks/
-├── useConfig.ts              # Config hooks (NEW)
+├── useConfig.ts              # Config hooks
 └── [other hooks...]
 ```
 
-## 🔧 Usage Patterns
-
-### Pattern 1: Using Config Manager
-```typescript
-import { configManager } from "@/lib/configManager"
-
-// Get endpoint with path parameters
-const url = configManager.getEndpoint('employees.get', { id: '123' })
-
-// Check multiple features
-if (configManager.allFeaturesEnabled(['ai.autoScheduling', 'scheduling.enabled'])) {
-  // Both required features are enabled
-}
-
-// Get tier-specific features
-const features = configManager.getTierFeatures('professional')
-
-// Check if feature is available in tier
-const available = configManager.isFeatureAvailable('ai.autoScheduling', 'professional')
-```
-
-### Pattern 2: Using Config Hooks in Components
-```typescript
-import {
-  useApiEndpoint,
-  useFeatureToggle,
-  useAIConfig,
-  useMessage,
-} from "@/hooks/useConfig"
-
-export function MyComponent() {
-  const endpoint = useApiEndpoint('employees.list')
-  const isAIEnabled = useFeatureToggle('ai.autoScheduling')
-  const aiConfig = useAIConfig('scheduling')
-  const successMsg = useMessage('create.success', { entity: 'Employee' })
-
-  return (
-    <div>
-      {isAIEnabled && <AIFeature config={aiConfig} />}
-      <p>{successMsg}</p>
-    </div>
-  )
-}
-```
-
-### Pattern 3: Feature Conditional Rendering
-```typescript
-import { useFeatureToggle, useFeatureInTier } from "@/hooks/useConfig"
-
-export function FeatureComponent({ userTier }: { userTier: string }) {
-  const isGloballyEnabled = useFeatureToggle('ai.autoScheduling')
-  const isInTier = useFeatureInTier('ai.autoScheduling', userTier)
-  
-  if (!isGloballyEnabled || !isInTier) return null
-  
-  return <AutoSchedulingUI />
-}
-```
-
-## 🚀 How This Solves Real Problems
-
-| Problem | Before | After |
-|---------|--------|-------|
-| Logout broken in 4 places | 4 different implementations | 1 centralized handler using `LOGOUT_CONFIG` |
-| API endpoint changes | Edit 20+ files | Edit `apiEndpoints.ts` once |
-| Feature needs disabling | Comment out code in 5 files | Edit `featureToggles.ts` once |
-| Change error message | Search codebase, 10+ edits | Edit `messages.ts` once |
-| AI model settings | Hardcoded in 3 services | All in `aiConfig.ts` |
-| Pricing tier features | Scattered constants | All in `pricing.ts` with helpers |
-| New integration | Add code everywhere | Add to `integrations.ts` once |
-| Change redirect path | Search and replace | Edit `LOGOUT_CONFIG.redirectPath` once |
-
 ## ✅ Implementation Status
 
-### Completed
-- ✅ **appConfig.ts** - Master settings (7 categories)
-- ✅ **apiEndpoints.ts** - 50+ endpoints with 3 helpers
-- ✅ **featureToggles.ts** - 30+ features with 4 helpers
-- ✅ **aiConfig.ts** - 6 AI features with 4 helpers
-- ✅ **messages.ts** - 100+ strings with interpolation
-- ✅ **defaults.ts** - App defaults (10 categories)
-- ✅ **pricing.ts** - 4 tiers with tier-to-feature mapping (NEW)
-- ✅ **integrations.ts** - 12 integrations with helpers (NEW)
-- ✅ **logout.ts** - Logout config
-- ✅ **configManager.ts** - Central service with 20+ helpers (NEW)
-- ✅ **useConfig.ts** - 20+ React hooks (NEW)
-- ✅ **performLogout()** - Universal logout handler
-- ✅ **app-sidebar.tsx** - Now uses `performLogout()`
-- ✅ **universal-nav-header.tsx** - Now uses `performLogout()`
+### Completed ✅
+- ✅ appConfig.ts - Master settings
+- ✅ apiEndpoints.ts - 50+ endpoints with helpers
+- ✅ featureToggles.ts - 30+ features with helpers
+- ✅ aiConfig.ts - 6 AI features with helpers
+- ✅ messages.ts - 100+ strings with interpolation
+- ✅ defaults.ts - App defaults
+- ✅ pricing.ts - 4 tiers with tier-to-feature mapping
+- ✅ integrations.ts - 12 integrations with helpers
+- ✅ queryKeys.ts - Centralized query key strategy
+- ✅ configManager.ts - Central service with 20+ helpers
+- ✅ apiClient.ts - Centralized API client library
+- ✅ useConfig.ts - 20+ React hooks
+- ✅ performLogout() - Universal logout handler
+- ✅ app-sidebar.tsx - Uses performLogout()
+- ✅ universal-nav-header.tsx - Uses performLogout()
 
-### Next Steps (Component Migrations)
-- Replace hardcoded `/api/...` endpoints with `useApiEndpoint()` or `configManager.getEndpoint()`
-- Use `useFeatureToggle()` to guard feature rendering
-- Use `useMessage()` for all user-facing strings
-- Use `usePricingTier()` and `useFeatureInTier()` for tier-based rendering
-- Use `isIntegrationEnabled()` to conditionally load integrations
+### Critical Gaps Identified ❌
+- ❌ **30+ hardcoded API endpoints** in components NOT using apiClient()
+- ❌ **126 components** with useQuery/useMutation NOT using centralized queryKeys
+- ❌ **Zero components** actually using configManager, useConfig hooks, or feature toggles
+- ❌ **150+ navigation calls** scattered across components
+- ❌ **No error handling config** centralized
+
+### Migration IN PROGRESS 🚧
+- 🚧 Migrate employees.tsx, shifts.tsx, dashboard.tsx
+- 🚧 Replace all hardcoded `/api/...` with `apiClient()`
+- 🚧 Replace all hardcoded query keys with `queryKeys`
+- 🚧 Add feature toggle guards to conditional features
+- 🚧 Replace hardcoded messages with `useMessage()`
 
 ## 🎓 Core Principle
 
@@ -231,12 +187,12 @@ Every value that might change is now:
 2. **Dynamic** - Loaded at runtime, not hardcoded
 3. **Typed** - Full TypeScript support
 4. **Documented** - Clear comments and examples
-5. **Reusable** - Helper functions for common patterns
-6. **Accessible** - Via `configManager` or React hooks
+5. **Reusable** - Helper functions and React hooks
+6. **Accessible** - Via `configManager`, `apiClient`, or React hooks
 
 ## 📊 System Metrics
 
-- **Configuration Files**: 11 (8 core + 3 helpers)
+- **Configuration Files**: 14 (9 core + 5 support)
 - **Hardcoded Values Eliminated**: 150+
 - **API Endpoints Centralized**: 50+
 - **Features Controllable**: 30+
@@ -245,6 +201,7 @@ Every value that might change is now:
 - **Pricing Tiers Defined**: 4
 - **Helper Functions**: 50+
 - **React Hooks**: 20+
+- **Components with new config**: 0 (migration pending)
 
 ## 💡 Key Achievement
 
@@ -253,9 +210,19 @@ After: All components use ONE `performLogout()` function which reads from `LOGOU
 
 Change endpoint once in config → ALL 4 components instantly fixed
 
-This is the **universal dynamic architecture** achieved - every hardcoded value is now editable, centralized, and instantly propagates across the entire application.
+This is the **universal dynamic architecture** - every hardcoded value is now editable, centralized, and accessible to the entire application.
+
+## 🔴 Critical Next Steps
+
+See `GAPS_AND_MIGRATIONS.md` for detailed migration guide showing:
+1. Where 30+ hardcoded endpoints are
+2. How to migrate components step-by-step
+3. Before/after patterns for each migration
+4. Priority list of components to migrate
+5. Checklist for systematic migration
 
 ---
 
 **Last Updated**: 2025-11-23
-**Status**: Configuration System Complete - Ready for Component Migrations
+**Status**: Configuration System Complete - Component Migration IN PROGRESS
+**Next Phase**: Systematic migration of 138 components to use new config system
