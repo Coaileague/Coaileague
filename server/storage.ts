@@ -527,7 +527,7 @@ export interface IStorage {
   getServiceIncidentReportsByService(serviceKey: string, workspaceId?: string, limit?: number): Promise<ServiceIncidentReport[]>;
   updateServiceIncidentReport(id: string, workspaceId: string, data: Partial<InsertServiceIncidentReport>): Promise<ServiceIncidentReport | undefined>;
   
-  // BillOS™ operations (Financial Automation - extends existing invoice/payroll)
+  // Billing Platform operations (Financial Automation - extends existing invoice/payroll)
   // Client billing rates
   getClientRates(workspaceId: string, clientId: string): Promise<any[]>;
   
@@ -2903,7 +2903,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ============================================================================
-  // SHIFT CHATROOM OPERATIONS (TimeOS Integration)
+  // SHIFT CHATROOM OPERATIONS (Time Integration)
   // Auto-create chatroom when employee clocks in, auto-close when they clock out
   // ============================================================================
 

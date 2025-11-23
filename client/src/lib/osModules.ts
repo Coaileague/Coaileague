@@ -308,7 +308,7 @@ export const osModules: OSModule[] = [
       },
       {
         id: 'time-os',
-        label: 'TimeOS™',
+        label: 'Time Platform',
         href: '/time-tracking',
         icon: Clock,
         description: 'GPS-verified time tracking',
@@ -345,7 +345,7 @@ export const osModules: OSModule[] = [
   },
   {
     id: 'bill-os',
-    name: 'BillOS™',
+    name: 'Billing Platform',
     description: 'Administrative Billing & Financial Management',
     icon: Wallet,
     color: 'hsl(var(--chart-2))',
@@ -366,7 +366,7 @@ export const osModules: OSModule[] = [
       },
       {
         id: 'bill-os-invoices',
-        label: 'BillOS™',
+        label: 'Billing Platform',
         href: '/invoices',
         icon: FileCheck2,
         description: 'Automated invoice generation',
@@ -659,8 +659,8 @@ export const platformSupportModule: OSModule = {
 const curatedWorkspaceRoutesForPlatformStaff: string[] = [
   'schedule-os',         // AI Scheduling™ - verify schedule automation
   'payroll-os',          // AI Payroll™ - verify payroll processing
-  'bill-os-invoices',    // BillOS™ Invoices - verify invoice generation
-  'time-os',             // TimeOS™ - verify time tracking
+  'bill-os-invoices',    // Billing Platform Invoices - verify invoice generation
+  'time-os',             // Time Platform - verify time tracking
   'employees',           // Employee management
   'clients',             // Client management
   'analytics-os',        // AnalyticsOS™ - insights and reporting

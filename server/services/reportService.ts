@@ -2,7 +2,7 @@
  * ReportService - Centralized reporting and analytics for AutoForce™
  * 
  * Provides role-scoped, tier-aware reporting across all OS modules:
- * - BillOS™: Billable hours, invoices, client summaries
+ * - Billing Platform: Billable hours, invoices, client summaries
  * - AI Payroll™: Payroll hours, employee earnings
  * - AuditOS™: Audit logs, compliance trails
  * - OperationsOS™: Employee activity, shift attendance

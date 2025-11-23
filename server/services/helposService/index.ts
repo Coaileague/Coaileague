@@ -157,7 +157,7 @@ Which report are you looking for?`,
   billing: {
     keywords: ['invoice', 'billing', 'payment', 'charge', 'subscription', 'upgrade', 'downgrade'],
     solution: `**Billing & Invoicing:**
-1. Go to BillOS™ → Invoices
+1. Go to Billing Platform → Invoices
 2. View automated invoice generation
 3. Track payment status
 4. Export invoices for clients
@@ -386,7 +386,7 @@ class HelpOSService {
 - Use the knowledge base to answer common questions
 - Be concise but thorough (2-4 sentences typically)
 - Use AutoForce™ branding (with ™ symbol)
-- Reference specific OS modules: AI Communications, OperationsOS™, BillOS™, IntelligenceOS™, AuditOS™, MarketingOS™
+- Reference specific OS modules: AI Communications, OperationsOS™, Billing Platform, IntelligenceOS™, AuditOS™, MarketingOS™
 - If you can't solve the issue after 3 attempts, suggest escalation to human support
 
 **Available Knowledge:**

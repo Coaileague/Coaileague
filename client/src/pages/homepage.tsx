@@ -89,14 +89,14 @@ export default function Homepage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-3xl font-bold text-blue-600 mb-1">$120K+</div>
+                    <div className="text-3xl font-bold text-blue-600 mb-1">$140K+</div>
                     <div className="text-sm text-gray-600">Eliminated salary costs</div>
-                    <div className="text-xs text-gray-500 mt-1">2-3 admin positions replaced</div>
+                    <div className="text-xs text-gray-500 mt-1">2-3 admin roles at $60K avg</div>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-blue-600 mb-1">$48K+</div>
+                    <div className="text-3xl font-bold text-blue-600 mb-1">$50K+</div>
                     <div className="text-sm text-gray-600">Reduced overtime waste</div>
-                    <div className="text-xs text-gray-500 mt-1">Optimized scheduling</div>
+                    <div className="text-xs text-gray-500 mt-1">Smarter scheduling & allocation</div>
                   </div>
                 </div>
               </div>

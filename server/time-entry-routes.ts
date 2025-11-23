@@ -1,4 +1,4 @@
-// TimeOS™ - Universal Time Tracking & Clock System
+// Time Platform - Universal Time Tracking & Clock System
 // Comprehensive time tracking with clock in/out, break management, and approval workflow
 
 import { Router } from 'express';

@@ -35,8 +35,8 @@ export const OS_FEATURES: Record<string, OSFeature> = {
   },
   
   billOS: {
-    name: 'BillOS',
-    displayName: 'BillOS™',
+    name: 'Billing',
+    displayName: 'Billing Platform',
     tagline: 'Automated Invoice Generation',
     description: 'Generate professional invoices from time entries automatically. Multi-client billing, tax calculations, Stripe integration',
     icon: 'FileText',

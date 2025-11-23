@@ -219,7 +219,7 @@ export async function completeAssetSchedule(
 }
 
 /**
- * Create asset usage log for BillOS™ integration
+ * Create asset usage log for Billing Platform integration
  */
 async function createAssetUsageLog(
   schedule: any,

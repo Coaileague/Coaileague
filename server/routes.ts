@@ -150,7 +150,7 @@ import {
   timeEntryDiscrepancies,
   insertCustomRuleSchema,
   timeEntries as timeEntriesTable,
-  // BillOS™ Tables
+  // Billing Platform Tables
   clientRates,
   insertClientRateSchema,
   paymentRecords,
@@ -6088,7 +6088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (deniedShiftLineItem && targetInvoice) {
                   // Remove denied shift line item
                   await storage.deleteInvoiceLineItem(deniedShiftLineItem.id);
-                  console.log(`[BillOS™] Removed invoice line item for denied shift ${shift.id}`);
+                  console.log(`[Billing Platform] Removed invoice line item for denied shift ${shift.id}`);
 
                   // Add replacement shift line item
                   const hours = replacement.billableHours;
@@ -6131,17 +6131,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     message: `Updated invoice ${targetInvoice.invoiceNumber} - replaced denied shift with ${replacement.employeeName}`,
                   };
 
-                  console.log(`[BillOS™] Updated invoice ${targetInvoice.invoiceNumber} for auto-replacement`);
+                  console.log(`[Billing Platform] Updated invoice ${targetInvoice.invoiceNumber} for auto-replacement`);
                 } else {
                   // Invoice line not found - shift may not be invoiced yet, will be picked up in next invoice generation
-                  console.log(`[BillOS™] No invoice line item found for shift ${shift.id} - replacement will be billed in next invoice generation`);
+                  console.log(`[Billing Platform] No invoice line item found for shift ${shift.id} - replacement will be billed in next invoice generation`);
                   billingUpdate = {
                     message: 'Shift not yet invoiced - replacement will be included in next invoice generation',
                     deferred: true,
                   };
                 }
               } catch (billingError: any) {
-                console.error('[BillOS™] Failed to update invoice for replacement:', billingError);
+                console.error('[Billing Platform] Failed to update invoice for replacement:', billingError);
                 // Non-fatal: replacement shift created successfully, billing can be corrected manually if needed
                 billingUpdate = {
                   error: billingError.message,
@@ -6708,7 +6708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date(),
       }).where(eq(invoiceProposals.id, id));
       
-      console.log(`✅ BillOS™ Invoice APPROVED by ${userId}: Proposal ${id}`);
+      console.log(`✅ Billing Platform Invoice APPROVED by ${userId}: Proposal ${id}`);
       
       res.json({
         success: true,
@@ -6716,7 +6716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Invoice proposal approved. Invoice will be generated.',
       });
     } catch (error: any) {
-      console.error("BillOS™ Invoice Approval Error:", error);
+      console.error("Billing Platform Invoice Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve invoice" });
     }
   });
@@ -6751,7 +6751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date(),
       }).where(eq(invoiceProposals.id, id));
       
-      console.log(`❌ BillOS™ Invoice REJECTED by ${userId}: Proposal ${id}`);
+      console.log(`❌ Billing Platform Invoice REJECTED by ${userId}: Proposal ${id}`);
       
       res.json({
         success: true,
@@ -7098,7 +7098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Payment Intent for ScheduleOS™ activation (SECURE: Server-side creation)
+  // Create Payment Intent for Scheduling Platform activation (SECURE: Server-side creation)
   app.post('/api/scheduleos/payment-intent', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -7127,7 +7127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if already activated
       if (workspace.scheduleosActivatedAt) {
         return res.status(400).json({
-          error: "ScheduleOS already activated",
+          error: "Scheduling already activated",
           alreadyActivated: true,
           activatedAt: workspace.scheduleosActivatedAt,
         });
@@ -7188,10 +7188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           purpose: 'scheduleos_activation',
           createdAt: new Date().toISOString(),
         },
-        description: 'ScheduleOS Activation - One-time payment',
+        description: 'Scheduling Activation - One-time payment',
       });
 
-      console.log('[Stripe] Payment Intent created for ScheduleOS activation:', paymentIntent.id);
+      console.log('[Stripe] Payment Intent created for Scheduling activation:', paymentIntent.id);
 
       // Store Payment Intent ID for tracking
       await storage.updateWorkspace(workspace.id, {
@@ -7256,7 +7256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // STEP 1: Check subscription tier - paid tiers get free activation
       if (workspace.subscriptionTier !== 'free') {
-        console.log('[Stripe] ScheduleOS activation allowed for paid tier:', workspace.subscriptionTier);
+        console.log('[Stripe] Scheduling activation allowed for paid tier:', workspace.subscriptionTier);
         
         await storage.updateWorkspace(workspace.id, {
           scheduleosActivatedAt: new Date(),
@@ -7285,7 +7285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        console.log('[Stripe] ScheduleOS activation via subscription:', workspace.stripeSubscriptionId);
+        console.log('[Stripe] Scheduling activation via subscription:', workspace.stripeSubscriptionId);
 
         await storage.updateWorkspace(workspace.id, {
           scheduleosActivatedAt: new Date(),
@@ -7365,7 +7365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          console.log('[Stripe] ScheduleOS payment verified:', paymentIntentId);
+          console.log('[Stripe] Scheduling payment verified:', paymentIntentId);
 
           // SECURITY: Store Payment Intent ID to prevent reuse
           await storage.updateWorkspace(workspace.id, {
@@ -7671,9 +7671,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             total: newTotal.toFixed(2),
           });
 
-          console.log(`[BillOS™] Added ${hours}h ($${amount.toFixed(2)}) to invoice ${invoice.invoiceNumber} for client ${client.name}`);
+          console.log(`[Billing Platform] Added ${hours}h ($${amount.toFixed(2)}) to invoice ${invoice.invoiceNumber} for client ${client.name}`);
         } catch (billingError: any) {
-          console.error(`[BillOS™] Failed to create invoice line item for shift:`, billingError);
+          console.error(`[Billing Platform] Failed to create invoice line item for shift:`, billingError);
         }
       }
 
@@ -8162,7 +8162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INVOICE ROUTES (Multi-tenant isolated)
   // ============================================================================
 
-  // Auto-generate invoices for all clients due for billing (BillOS™ Automation) - PROTECTED: Owner only
+  // Auto-generate invoices for all clients due for billing (Billing Platform Automation) - PROTECTED: Owner only
   app.post('/api/invoices/auto-generate', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -20036,7 +20036,7 @@ Return ONLY valid JSON array with this exact structure:
         .values(validatedData)
         .returning();
       
-      // TODO: If has_monetary_reward = true, trigger BillOS™ integration for instant taxable bonus
+      // TODO: If has_monetary_reward = true, trigger Billing Platform integration for instant taxable bonus
       
       res.json(recognition);
     } catch (error: any) {

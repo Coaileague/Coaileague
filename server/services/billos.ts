@@ -1,5 +1,5 @@
 /**
- * BillOS™ - Full Financial Automation System
+ * Billing Platform - Full Financial Automation System
  * Combines InvoiceOS (AR) and AI Payroll (HR) into unified billing solution
  * 
  * Features:
@@ -74,7 +74,7 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
   
   // Log warnings for human review (surfaced in invoice review dashboard)
   if (aggregationResult.warnings.length > 0) {
-    console.warn('[BillOS™] Billable hours aggregation warnings:', aggregationResult.warnings);
+    console.warn('[Billing Platform] Billable hours aggregation warnings:', aggregationResult.warnings);
   }
   
   // Check for critical warnings that should block invoice generation
@@ -85,7 +85,7 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
   );
   
   if (criticalWarnings.length > 0) {
-    console.error('[BillOS™] Critical warnings detected - invoices require manual review:', criticalWarnings);
+    console.error('[Billing Platform] Critical warnings detected - invoices require manual review:', criticalWarnings);
     // Continue generation but flag for review (warnings stored with invoice)
   }
   
@@ -111,7 +111,7 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
       });
       
     } catch (error) {
-      console.error(`[BillOS™] Failed to generate invoice for client ${clientSummary.clientName}:`, error);
+      console.error(`[Billing Platform] Failed to generate invoice for client ${clientSummary.clientName}:`, error);
     }
   }
   
@@ -460,7 +460,7 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
   try {
     // Check if Stripe is configured
     if (!process.env.STRIPE_SECRET_KEY) {
-      console.warn('[BillOS™] Stripe not configured - skipping automated invoice sending');
+      console.warn('[Billing Platform] Stripe not configured - skipping automated invoice sending');
       return { success: false, error: 'Stripe not configured' };
     }
 
@@ -556,12 +556,12 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
       })
       .where(eq(invoices.id, invoiceId));
 
-    console.log(`✅ [BillOS™] Invoice ${invoice.invoiceNumber} sent via Stripe (${stripeInvoice.id})`);
+    console.log(`✅ [Billing Platform] Invoice ${invoice.invoiceNumber} sent via Stripe (${stripeInvoice.id})`);
 
     return { success: true, stripeInvoiceId: stripeInvoice.id };
 
   } catch (error: any) {
-    console.error('[BillOS™] Failed to send invoice via Stripe:', error);
+    console.error('[Billing Platform] Failed to send invoice via Stripe:', error);
     return { success: false, error: error.message };
   }
 }

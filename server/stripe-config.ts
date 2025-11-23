@@ -11,8 +11,8 @@ export const STRIPE_PRODUCTS = {
     employeeLimit: 25,
     features: [
       'AI Scheduling™ - Smart Scheduling',
-      'TimeOS™ - Time Tracking',  
-      'BillOS™ - Automated Invoicing',
+      'Time Platform - Time Tracking',  
+      'Billing Platform - Automated Invoicing',
       'Basic Payroll',
       'Client Portal',
       'Mobile App Access',

@@ -157,7 +157,7 @@ export const emailTemplates = {
           If you have already submitted payment, please disregard this notice. If you have questions about this invoice, please contact us immediately.
         </p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated reminder from AutoForce™ BillOS.
+          This is an automated reminder from AutoForce™ Billing.
         </p>
       </div>
     `

@@ -99,9 +99,9 @@ const onboardingSteps: OnboardingStep[] = [
     url: "/os-family/operations",
     features: [
       "AI Scheduling™ - AI-powered smart scheduling",
-      "TimeOS™ - Geofencing and mobile clock-in",
+      "Time Platform - Geofencing and mobile clock-in",
       "AI Payroll™ - Automated payroll processing",
-      "BillOS™ - Invoice generation and tracking"
+      "Billing Platform - Invoice generation and tracking"
     ]
   },
   {
@@ -121,7 +121,7 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "time-os",
     family: "operations",
-    title: "TimeOS™ - Time Tracking",
+    title: "Time Platform - Time Tracking",
     description: "Comprehensive time tracking with geofencing and overtime management",
     icon: Calendar,
     url: "/time-tracking",

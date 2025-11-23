@@ -216,7 +216,7 @@ export default function Landing() {
           </div>
 
           <div className="space-y-12 sm:space-y-16 lg:space-y-20 max-w-6xl mx-auto w-full">
-            {/* TimeOS Visual */}
+            {/* Time Visual */}
             <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
               <div className="space-y-3 sm:space-y-4 max-w-full">
                 <Badge variant="outline" className="inline-flex">

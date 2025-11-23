@@ -15,7 +15,7 @@ export default function OperationsFamilyPage() {
       color: "from-indigo-500 to-blue-500"
     },
     {
-      name: "TimeOS™",
+      name: "Time Platform",
       icon: Clock,
       description: "Comprehensive time tracking with geofencing, mobile clock-in, and overtime management",
       features: ["Geofencing", "Mobile Clock-in", "Overtime Tracking", "Break Management"],
@@ -31,7 +31,7 @@ export default function OperationsFamilyPage() {
       color: "from-primary to-blue-500"
     },
     {
-      name: "BillOS™",
+      name: "Billing Platform",
       icon: FileText,
       description: "Automated invoice generation, client billing, payment tracking, and expense management",
       features: ["Auto Invoicing", "Payment Tracking", "Expense Reports", "Client Portal"],

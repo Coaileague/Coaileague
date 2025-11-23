@@ -9,7 +9,7 @@ import { isHolidayDate } from "./holidayDetector";
  * 
  * Automatically collects approved, unbilled time entries for a billing period
  * and prepares them for invoice generation. This is the "data collection" 
- * automation that feeds into BillOS™.
+ * automation that feeds into Billing Platform.
  * 
  * CRITICAL: Overtime must be calculated at the employee level (tracking weekly
  * hours across all clients), but the output is grouped by client (for invoicing).

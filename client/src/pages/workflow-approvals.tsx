@@ -6,7 +6,7 @@
  * 
  * Approves:
  * - AI Scheduling™ AI-generated schedules (schedule_proposals)
- * - BillOS™ Auto-generated invoices
+ * - Billing Platform Auto-generated invoices
  * - OperationsOS™ Auto-generated payroll
  * 
  * Features:
@@ -293,7 +293,7 @@ export default function WorkflowApprovals() {
           </TabsTrigger>
           <TabsTrigger value="invoices" className="flex-1" data-testid="tab-invoices">
             <DollarSign className="w-4 h-4 mr-2" />
-            BillOS™
+            Billing Platform
           </TabsTrigger>
           <TabsTrigger value="payroll" className="flex-1" data-testid="tab-payroll">
             <Users className="w-4 h-4 mr-2" />
@@ -456,7 +456,7 @@ export default function WorkflowApprovals() {
           </ScrollArea>
         </TabsContent>
 
-        {/* BillOS™ Invoice Proposals */}
+        {/* Billing Platform Invoice Proposals */}
         <TabsContent value="invoices" className="flex-1 flex flex-col">
           {permissions.lockedFeatures.invoiceAutomation ? (
             <div className="flex-1 flex items-center justify-center p-6">

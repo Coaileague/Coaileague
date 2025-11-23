@@ -4,7 +4,7 @@
  * Integrates with ALL WorkforceOS™ systems for comprehensive scheduling:
  * - TalentOS™: Performance scores, attendance rates, composite scores
  * - ClockOS™: Tardiness, no-call-no-show, time entry violations
- * - BillOS™: Automatic client billing from scheduled hours
+ * - Billing Platform: Automatic client billing from scheduled hours
  * - Geo-Compliance: Location-based assignment (employee address to job site distance)
  * - Availability: Day/time preferences, max hours
  * - Years of Service: Seniority-based prioritization
@@ -902,7 +902,7 @@ YOUR CRITICAL RESPONSIBILITIES
 5. 📅 RESPECT AVAILABILITY: Never schedule on unavailable days
 6. ⏰ RESPECT MAX HOURS: Don't exceed maxHoursPerWeek
 7. 🚨 WARN about scheduling unreliable employees (high tardiness, no-call-no-show, violations)
-8. 💰 CALCULATE BILLABLE HOURS accurately for BillOS™ integration
+8. 💰 CALCULATE BILLABLE HOURS accurately for Billing Platform integration
 9. 🔄 AVOID CONFLICTS with existing shifts
 10. 📊 PROVIDE CLEAR RISK WARNINGS for each risky assignment
 

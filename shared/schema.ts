@@ -186,7 +186,7 @@ export const workspaces = pgTable("workspaces", {
   lockedBy: varchar("locked_by"),
 
   // AI Feature Trials & Activation (Subscriber Pays All Model)
-  // ScheduleOS™ AI Auto-Scheduling
+  // Scheduling Platform AI Auto-Scheduling
   scheduleosTrialStartedAt: timestamp("scheduleos_trial_started_at"), // 7-day free trial
   scheduleosActivatedAt: timestamp("scheduleos_activated_at"), // Payment confirmed, feature unlocked
   scheduleosActivatedBy: varchar("scheduleos_activated_by"), // User ID who activated (Owner/Manager only)
@@ -255,14 +255,14 @@ export const workspaces = pgTable("workspaces", {
   // AUTOMATION SETTINGS - Organization-Level Schedule Configuration
   // ============================================================================
   
-  // BillOS™ Invoicing Automation
+  // Billing Platform Invoicing Automation
   autoInvoicingEnabled: boolean("auto_invoicing_enabled").default(true), // Enable/disable auto-invoice generation
   invoiceSchedule: varchar("invoice_schedule").default('monthly'), // 'weekly', 'biweekly', 'semi-monthly', 'monthly', 'net30', 'custom'
   invoiceCustomDays: integer("invoice_custom_days"), // For 'custom' schedule (e.g., every 10 days)
   invoiceDayOfWeek: integer("invoice_day_of_week"), // 0-6 for weekly/biweekly (0=Sunday)
   invoiceDayOfMonth: integer("invoice_day_of_month").default(1), // 1-31 for monthly/semi-monthly
   
-  // PayrollOS™ Payroll Automation
+  // Payroll Platform Payroll Automation
   autoPayrollEnabled: boolean("auto_payroll_enabled").default(true), // Enable/disable auto-payroll processing
   autoSubmitPayroll: boolean("auto_submit_payroll").default(false), // SAFETY MODE: Auto-submit to Gusto (defaults to manual approval)
   payrollSchedule: varchar("payroll_schedule").default('biweekly'), // 'weekly', 'biweekly', 'semi-monthly', 'monthly', 'custom'
@@ -271,7 +271,7 @@ export const workspaces = pgTable("workspaces", {
   payrollDayOfMonth: integer("payroll_day_of_month").default(1), // 1-31 for monthly (process day)
   payrollCutoffDay: integer("payroll_cutoff_day").default(15), // 1-31 for semi-monthly (second pay date)
   
-  // ScheduleOS™ Schedule Generation Automation
+  // Scheduling Platform Schedule Generation Automation
   autoSchedulingEnabled: boolean("auto_scheduling_enabled").default(true), // Enable/disable auto-schedule generation
   scheduleGenerationInterval: varchar("schedule_generation_interval").default('weekly'), // 'weekly', 'biweekly', 'monthly', 'custom'
   scheduleCustomDays: integer("schedule_custom_days"), // For 'custom' interval
@@ -1617,7 +1617,7 @@ export const insertScheduleProposalSchema = createInsertSchema(scheduleProposals
 export type InsertScheduleProposal = z.infer<typeof insertScheduleProposalSchema>;
 export type ScheduleProposal = typeof scheduleProposals.$inferSelect;
 
-// Invoice Proposals - AI-generated invoices awaiting approval (BillOS™ Automation)
+// Invoice Proposals - AI-generated invoices awaiting approval (Billing Platform Automation)
 export const invoiceProposals = pgTable("invoice_proposals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -1807,7 +1807,7 @@ export const timeEntries = pgTable("time_entries", {
   rejectedAt: timestamp("rejected_at"), // When rejected
   rejectionReason: text("rejection_reason"), // Why rejected
 
-  // BillOS™ & PayrollOS™ Integration (separate orthogonal tracking)
+  // Billing Platform & Payroll Platform Integration (separate orthogonal tracking)
   invoiceId: varchar("invoice_id").references(() => invoices.id, { onDelete: 'set null' }),
   billedAt: timestamp("billed_at"), // When included in invoice
   payrollRunId: varchar("payroll_run_id"), // Future: link to payroll run table
@@ -3353,7 +3353,7 @@ export const auditActionEnum = pgEnum('audit_action', [
   'request_secure_info',
   'release_spectator',
 
-  // Autonomous Automation actions (BillOS™, ScheduleOS™, PayrollOS™)
+  // Autonomous Automation actions (Billing Platform, Scheduling Platform, Payroll Platform)
   'automation_job_start',
   'automation_job_complete',
   'automation_job_error',
@@ -4535,13 +4535,13 @@ export const chatConversations = pgTable("chat_conversations", {
   
   // Conversation type for privacy/monitoring
   conversationType: varchar("conversation_type").notNull().default("open_chat"), 
-  // Types: 'dm_user' (user-to-user), 'dm_support' (support-to-user), 'dm_bot' (bot-to-user), 'open_chat' (CommOS/monitored), 'shift_chat' (temporary shift chatroom)
+  // Types: 'dm_user' (user-to-user), 'dm_support' (support-to-user), 'dm_bot' (bot-to-user), 'open_chat' (Communications/monitored), 'shift_chat' (temporary shift chatroom)
   
   // Shift-specific chatroom (auto-created on clock-in, auto-closed on clock-out)
   shiftId: varchar("shift_id").references(() => shifts.id, { onDelete: 'set null' }),
   timeEntryId: varchar("time_entry_id").references(() => timeEntries.id, { onDelete: 'set null' }),
   
-  // Workroom lifecycle management (CommOS™ Workroom Upgrade)
+  // Workroom lifecycle management (Communications Platform Workroom Upgrade)
   autoCloseAt: timestamp("auto_close_at"), // Automatic room closure timestamp (shift end, etc.)
   visibility: varchar("visibility").default("workspace"), // 'workspace', 'public', 'private'
   helpdeskTicketId: varchar("helpdesk_ticket_id").references(() => supportTickets.id, { onDelete: 'set null' }), // Link to support ticket for helpdesk DMs
@@ -6120,7 +6120,7 @@ export type RuleExecutionLog = typeof ruleExecutionLogs.$inferSelect;
 // GEO-COMPLIANCE & AUDIT TRAIL (Monopolistic Feature #3)
 // ============================================================================
 
-// Comprehensive audit trail for all critical changes (PayrollOS™ & TimeOS™)
+// Comprehensive audit trail for all critical changes (Payroll Platform & Time Platform)
 export const auditTrail = pgTable("audit_trail", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -6556,7 +6556,7 @@ export const assetSchedules = pgTable("asset_schedules", {
   odometerEnd: decimal("odometer_end", { precision: 10, scale: 2 }),
   fuelUsed: decimal("fuel_used", { precision: 10, scale: 2 }),
 
-  // Billing (auto-calculated for BillOS™)
+  // Billing (auto-calculated for Billing Platform)
   billableHours: decimal("billable_hours", { precision: 10, scale: 2 }),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }), // Snapshot from asset
   totalCharge: decimal("total_charge", { precision: 10, scale: 2 }),
@@ -6627,7 +6627,7 @@ export const assetUsageLogs = pgTable("asset_usage_logs", {
   fuelConsumed: decimal("fuel_consumed", { precision: 10, scale: 2 }),
   idleTime: decimal("idle_time", { precision: 10, scale: 2 }), // Hours
 
-  // BillOS™ integration
+  // Billing Platform integration
   invoiceLineItemId: varchar("invoice_line_item_id"),
   billingStatus: varchar("billing_status").default("pending"), // 'pending', 'invoiced', 'paid'
 
@@ -6862,7 +6862,7 @@ export const employeeRecognition = pgTable("employee_recognition", {
   // Visibility
   isPublic: boolean("is_public").default(true), // Visible on company feed
 
-  // Monetary reward (BillOS™ integration)
+  // Monetary reward (Billing Platform integration)
   hasMonetaryReward: boolean("has_monetary_reward").default(false),
   rewardAmount: decimal("reward_amount", { precision: 10, scale: 2 }),
   rewardType: varchar("reward_type"), // 'bonus', 'gift_card', 'pto_hours', 'points'
@@ -8569,7 +8569,7 @@ export const timeOffRequests = pgTable("time_off_requests", {
   
   // AI scheduling impact
   affectsScheduling: boolean("affects_scheduling").default(true),
-  aiNotified: boolean("ai_notified").default(false), // Has ScheduleOS been notified?
+  aiNotified: boolean("ai_notified").default(false), // Has Scheduling been notified?
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -9370,7 +9370,7 @@ export const billingAddons = pgTable("billing_addons", {
   
   // Add-on identity
   addonKey: varchar("addon_key").notNull().unique(), // e.g., 'scheduleos_ai', 'recordos', 'insightos'
-  name: varchar("name").notNull(), // e.g., 'ScheduleOS™ AI Auto-Scheduling'
+  name: varchar("name").notNull(), // e.g., 'Scheduling Platform AI Auto-Scheduling'
   description: text("description"),
   category: varchar("category").notNull(), // 'ai_feature', 'os_module', 'integration', 'support'
   

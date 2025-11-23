@@ -97,11 +97,11 @@ export async function getAutomationMetrics(workspaceId: string | null): Promise<
     prevMonthPayrolls,
   ] = await Promise.all([
     getSchedulingMetrics(workspaceId, monthStart, monthEnd),
-    getBillOSMetrics(workspaceId, monthStart, monthEnd),
+    getBillingMetrics(workspaceId, monthStart, monthEnd),
     getPayrollMetrics(workspaceId, monthStart, monthEnd),
     getAIJobMetrics(workspaceId, monthStart, monthEnd),
     getSchedulingMetrics(workspaceId, prevMonthStart, prevMonthEnd),
-    getBillOSMetrics(workspaceId, prevMonthStart, prevMonthEnd),
+    getBillingMetrics(workspaceId, prevMonthStart, prevMonthEnd),
     getPayrollMetrics(workspaceId, prevMonthStart, prevMonthEnd),
   ]);
   
@@ -139,7 +139,7 @@ export async function getAutomationMetrics(workspaceId: string | null): Promise<
   // Calculate true all-time hours saved from historical data
   const allTimeMetrics = await Promise.all([
     getSchedulingMetrics(workspaceId, new Date(0), now), // All time
-    getBillOSMetrics(workspaceId, new Date(0), now),
+    getBillingMetrics(workspaceId, new Date(0), now),
     getPayrollMetrics(workspaceId, new Date(0), now),
   ]);
   
@@ -248,9 +248,9 @@ async function getSchedulingMetrics(
 }
 
 /**
- * Get BillOS™ automation metrics
+ * Get Billing Platform automation metrics
  */
-async function getBillOSMetrics(
+async function getBillingMetrics(
   workspaceId: string,
   startDate: Date,
   endDate: Date
