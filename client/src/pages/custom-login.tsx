@@ -11,6 +11,7 @@ import { UniversalWelcomeNotification } from "@/components/universal-welcome-not
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
+import { THEME } from "@/config/theme";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -108,9 +109,9 @@ export default function CustomLogin() {
         />
       )}
 
-      <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #fafbff 0%, #f5f9ff 100%)' }}>
+      <div className="min-h-screen flex flex-col" style={{ background: THEME.pages.login.background }}>
         {/* Header */}
-        <div className="border-b" style={{ background: 'rgba(255, 255, 255, 0.7)', borderColor: '#e2e8f0' }}>
+        <div className="border-b" style={{ background: THEME.pages.login.header.bg, borderColor: THEME.pages.login.header.borderColor }}>
           <div className="container mx-auto px-6 py-5 flex items-center justify-between">
             <button 
               onClick={() => setLocation("/")}
@@ -118,23 +119,26 @@ export default function CustomLogin() {
               data-testid="button-logo-login"
             >
               <div 
-                className="w-10 h-10 rounded-lg inline-flex items-center justify-center text-xl font-bold text-white"
+                className="rounded-lg inline-flex items-center justify-center text-white font-bold"
                 style={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+                  width: THEME.pages.login.header.logoSize,
+                  height: THEME.pages.login.header.logoSize,
+                  fontSize: THEME.pages.login.header.logoFontSize,
+                  background: THEME.pages.login.header.logoGradient,
+                  boxShadow: THEME.pages.login.header.logoShadow
                 }}
               >
                 AF
               </div>
               <div>
-                <div className="font-semibold" style={{ color: '#1e293b' }}>AUTOFORCE</div>
-                <div className="text-xs" style={{ color: '#94a3b8' }}>Workforce Intelligence</div>
+                <div className="font-semibold" style={{ color: THEME.colors.text.primary }}>AUTOFORCE</div>
+                <div className="text-xs" style={{ color: THEME.colors.text.placeholder }}>Workforce Intelligence</div>
               </div>
             </button>
             <button
               onClick={() => setLocation("/")}
               className="text-sm font-medium transition-colors"
-              style={{ color: '#3b82f6' }}
+              style={{ color: THEME.colors.primary.light }}
               data-testid="link-back-landing"
             >
               Back to Home
@@ -145,37 +149,56 @@ export default function CustomLogin() {
         {/* Main Content */}
         <div className="flex-1 flex items-center justify-center p-6">
           <div 
-            className="w-full max-w-sm animate-[fadeInUp_0.6s_ease]"
-            style={{ animation: 'fadeInUp 0.6s ease' }}
+            className="w-full animate-[fadeInUp_0.6s_ease]"
+            style={{
+              maxWidth: THEME.pages.login.card.maxWidth,
+              animation: 'fadeInUp 0.6s ease'
+            }}
           >
             {/* White Login Card */}
             <div 
-              className="bg-white rounded-2xl p-8 max-sm:p-6"
+              className="rounded-2xl max-sm:p-6"
               style={{
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                background: THEME.pages.login.card.bg,
+                padding: THEME.pages.login.card.padding,
+                borderRadius: THEME.pages.login.card.borderRadius,
+                boxShadow: THEME.pages.login.card.shadow
               }}
             >
-          {/* No logo here - it's in header now */}
-
           {/* Login Header - Minimal */}
           <div className="text-center mb-5">
-            <h1 className="text-lg font-semibold mb-1" style={{ color: '#1e293b' }}>
+            <h1 className="font-semibold mb-1" style={{ 
+              fontSize: THEME.pages.login.heading.fontSize,
+              fontWeight: THEME.pages.login.heading.fontWeight,
+              color: THEME.pages.login.heading.color
+            }}>
               Sign In
             </h1>
-            <p className="text-xs" style={{ color: '#94a3b8' }}>
+            <p style={{ 
+              fontSize: THEME.pages.login.subheading.fontSize,
+              color: THEME.pages.login.subheading.color
+            }}>
               Access your workspace
             </p>
           </div>
 
           {/* Login Form */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <form onSubmit={form.handleSubmit(onSubmit)} style={{ gap: THEME.pages.login.spacing.formGap }} className="flex flex-col">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>
+                    <FormLabel style={{
+                      fontSize: THEME.pages.login.label.fontSize,
+                      fontWeight: THEME.pages.login.label.fontWeight,
+                      textTransform: THEME.pages.login.label.textTransform as any,
+                      color: THEME.pages.login.label.color,
+                      letterSpacing: THEME.pages.login.label.letterSpacing,
+                      marginBottom: '4px',
+                      display: 'block'
+                    }}>
                       Email
                     </FormLabel>
                     <FormControl>
@@ -185,11 +208,16 @@ export default function CustomLogin() {
                         placeholder="you@company.com"
                         disabled={isLoading}
                         data-testid="input-email"
-                        className="!h-8 !px-2 !py-1 !text-xs w-full border transition-all rounded"
+                        className="!w-full border transition-all"
                         style={{
-                          background: '#f8fafc',
-                          borderColor: '#e2e8f0',
-                          color: '#1e293b'
+                          height: THEME.pages.login.input.height,
+                          fontSize: THEME.pages.login.input.fontSize,
+                          padding: THEME.pages.login.input.padding,
+                          background: THEME.pages.login.input.bg,
+                          borderColor: THEME.pages.login.input.borderColor,
+                          color: THEME.pages.login.input.color,
+                          borderRadius: THEME.pages.login.input.borderRadius,
+                          boxSizing: 'border-box'
                         }}
                       />
                     </FormControl>
@@ -203,7 +231,15 @@ export default function CustomLogin() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>
+                    <FormLabel style={{
+                      fontSize: THEME.pages.login.label.fontSize,
+                      fontWeight: THEME.pages.login.label.fontWeight,
+                      textTransform: THEME.pages.login.label.textTransform as any,
+                      color: THEME.pages.login.label.color,
+                      letterSpacing: THEME.pages.login.label.letterSpacing,
+                      marginBottom: '4px',
+                      display: 'block'
+                    }}>
                       Password
                     </FormLabel>
                     <FormControl>
@@ -214,11 +250,17 @@ export default function CustomLogin() {
                           placeholder="Enter password"
                           disabled={isLoading}
                           data-testid="input-password"
-                          className="!h-8 !px-2 !py-1 !text-xs !pr-8 w-full border transition-all rounded"
+                          className="!w-full border transition-all"
                           style={{
-                            background: '#f8fafc',
-                            borderColor: '#e2e8f0',
-                            color: '#1e293b'
+                            height: THEME.pages.login.input.height,
+                            fontSize: THEME.pages.login.input.fontSize,
+                            padding: THEME.pages.login.input.padding,
+                            paddingRight: '32px',
+                            background: THEME.pages.login.input.bg,
+                            borderColor: THEME.pages.login.input.borderColor,
+                            color: THEME.pages.login.input.color,
+                            borderRadius: THEME.pages.login.input.borderRadius,
+                            boxSizing: 'border-box'
                           }}
                         />
                         <button
@@ -238,12 +280,15 @@ export default function CustomLogin() {
               />
 
               {/* Forgot Password Link */}
-              <div className="text-right -mt-2">
+              <div className="text-right" style={{ marginTop: '-8px' }}>
                 <button
                   type="button"
                   onClick={() => setLocation("/reset-password")}
-                  className="text-xs transition-colors font-medium"
-                  style={{ color: '#3b82f6' }}
+                  className="font-medium transition-colors"
+                  style={{ 
+                    fontSize: THEME.pages.login.link.fontSize,
+                    color: THEME.pages.login.link.color
+                  }}
                   data-testid="link-reset-password"
                 >
                   Forgot password?
@@ -254,11 +299,17 @@ export default function CustomLogin() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-8 py-1 rounded text-white text-xs font-semibold transition-all duration-300 disabled:opacity-70 mt-3"
+                className="w-full text-white font-semibold transition-all duration-300 disabled:opacity-70"
                 style={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                  height: THEME.pages.login.button.height,
+                  fontSize: THEME.pages.login.button.fontSize,
+                  padding: THEME.pages.login.button.padding,
+                  marginTop: THEME.pages.login.spacing.buttonTop,
+                  background: THEME.pages.login.button.gradient,
+                  boxShadow: THEME.pages.login.button.shadow,
+                  borderRadius: THEME.pages.login.button.borderRadius,
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  border: 'none'
                 }}
                 data-testid="button-login"
               >
@@ -275,20 +326,26 @@ export default function CustomLogin() {
           </Form>
 
           {/* Divider */}
-          <div className="my-3 flex items-center gap-3">
-            <div className="flex-1" style={{ borderTop: '1px solid #e2e8f0' }}></div>
-            <span className="text-xs" style={{ color: '#cbd5e1' }}>or</span>
-            <div className="flex-1" style={{ borderTop: '1px solid #e2e8f0' }}></div>
+          <div className="flex items-center gap-3" style={{ margin: THEME.pages.login.spacing.dividerMargin }}>
+            <div className="flex-1" style={{ borderTop: `1px solid ${THEME.colors.border.primary}` }}></div>
+            <span style={{ 
+              fontSize: THEME.pages.login.label.fontSize,
+              color: THEME.colors.text.muted
+            }}>or</span>
+            <div className="flex-1" style={{ borderTop: `1px solid ${THEME.colors.border.primary}` }}></div>
           </div>
 
           {/* Footer Links */}
           <div className="text-center mb-4">
-            <p className="text-xs" style={{ color: '#94a3b8' }}>
+            <p style={{ 
+              fontSize: THEME.pages.login.subheading.fontSize,
+              color: THEME.colors.text.placeholder
+            }}>
               Don't have an account?{" "}
               <button
                 onClick={() => setLocation("/register")}
                 className="font-semibold transition-colors"
-                style={{ color: '#3b82f6' }}
+                style={{ color: THEME.colors.primary.light }}
                 data-testid="link-register"
               >
                 Create one
@@ -296,14 +353,15 @@ export default function CustomLogin() {
             </p>
           </div>
 
-          {/* Demo Section - Minimal */}
+          {/* Demo Section */}
           <button
             onClick={() => window.location.href = "/api/demo-login"}
-            className="w-full py-2 rounded-lg text-xs font-medium transition-all border"
+            className="w-full rounded text-xs font-medium transition-all border"
             style={{
-              color: '#3b82f6',
-              borderColor: '#e2e8f0',
-              background: '#f8fafc'
+              height: THEME.pages.login.input.height,
+              color: THEME.colors.primary.light,
+              borderColor: THEME.colors.border.primary,
+              background: THEME.pages.login.input.bg
             }}
             data-testid="button-demo"
           >
