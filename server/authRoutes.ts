@@ -4,6 +4,9 @@ import { z } from "zod";
 import { db } from "./db";
 import { users, platformRoles, employees, workspaces, expenseCategories } from "@shared/schema";
 import { eq } from "drizzle-orm";
+
+// Type for User from database queries
+type User = typeof users.$inferSelect;
 import {
   hashPassword,
   verifyPassword,
@@ -294,7 +297,7 @@ router.post("/api/auth/logout", (req, res) => {
 // ============================================================================
 
 router.get("/api/auth/me", requireAuth, async (req, res) => {
-  const user = req.user!; // requireAuth ensures user exists
+  const user = req.user as User; // Type assertion from requireAuth middleware
   
   // GATEKEEPER: Check for platform role (root_admin, sysop, compliance_officer)
   const userPlatformRoles = await db
@@ -391,7 +394,7 @@ const changePasswordSchema = z.object({
 router.post("/api/auth/change-password", requireAuth, async (req, res) => {
   try {
     const data = changePasswordSchema.parse(req.body);
-    const user = req.user!;
+    const user = req.user as User;
 
     // Verify current password
     if (!user.passwordHash || user.passwordHash === null) {

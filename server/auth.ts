@@ -309,7 +309,7 @@ export async function verifyEmailToken(
 
 export async function createPasswordResetToken(
   email: string
-): Promise<{ success: boolean; token?: string; message?: string }> {
+): Promise<{ success: boolean; token?: string; user?: typeof users.$inferSelect; message?: string }> {
   const [user] = await db
     .select()
     .from(users)
@@ -334,7 +334,7 @@ export async function createPasswordResetToken(
     })
     .where(eq(users.id, user.id));
 
-  return { success: true, token };
+  return { success: true, token, user };
 }
 
 export async function resetPassword(
