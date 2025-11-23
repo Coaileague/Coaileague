@@ -82,6 +82,7 @@ import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI } from ".
 import { getTimeEntriesByEmployee, getTimeEntriesByWorkspace, getPendingTimeEntries, approveTimeEntry, rejectTimeEntry, calculatePayrollHours, createTimeEntry } from "./services/timeEntryService";
 import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData } from "./services/exportService";
 import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "./services/invoiceAdjustmentService";
+import { approveShift, rejectShift, getPendingShifts, getShiftWithDetails, bulkApproveShifts, getApprovalStats } from "./services/shiftApprovalService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
@@ -25824,6 +25825,80 @@ app.post("/api/export/anonymize-employee/:employeeId", requireAuth, mutationLimi
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error anonymizing employee:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// SHIFT APPROVAL ROUTES - Phase 2 Critical Blocker
+// ============================================================================
+
+app.get("/api/shifts/pending", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const shifts = await getPendingShifts(workspaceId);
+    res.json({ success: true, data: shifts });
+  } catch (error: any) {
+    console.error('Error fetching pending shifts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch("/api/shifts/:shiftId/approve", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { shiftId } = req.params;
+    const { notes } = req.body;
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const shift = await approveShift(shiftId, userId, notes);
+    res.json({ success: true, data: shift });
+  } catch (error: any) {
+    console.error('Error approving shift:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.patch("/api/shifts/:shiftId/reject", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { shiftId } = req.params;
+    const { reason, autoReplace } = req.body;
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const shift = await rejectShift(shiftId, userId, reason || 'No reason provided', autoReplace);
+    res.json({ success: true, data: shift });
+  } catch (error: any) {
+    console.error('Error rejecting shift:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/shifts/bulk-approve", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { shiftIds } = req.body;
+    const userId = (req as any).user?.id;
+    if (!userId || !shiftIds) return res.status(400).json({ error: 'User and shiftIds required' });
+
+    const result = await bulkApproveShifts(shiftIds, userId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error bulk approving shifts:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get("/api/shifts/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const stats = await getApprovalStats(workspaceId);
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error('Error fetching shift stats:', error);
     res.status(500).json({ error: error.message });
   }
 });

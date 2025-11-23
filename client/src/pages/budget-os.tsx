@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useModules } from "@/config/moduleConfig";
 import {
   DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
   Plus, Calendar, Users, Target, BarChart3, PieChart, LineChart,
@@ -42,11 +43,26 @@ interface BudgetLine {
   variancePercent: number;
 }
 
-export default function AIBudgeting() {
+export default function FinancialManagement() {
+  const modules = useModules();
+  const module = modules.getModule('financial_management');
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
+
+  if (!module?.enabled) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Module Not Available</CardTitle>
+            <CardDescription>Financial Management is not enabled for your subscription tier</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Fetch budgets from real API
   const { data: budgets = [], isLoading: budgetsLoading } = useQuery<Budget[]>({

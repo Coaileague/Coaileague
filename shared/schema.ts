@@ -1419,6 +1419,44 @@ export const shifts = pgTable("shifts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ============================================================================
+// CUSTOM SCHEDULER INTERVALS TABLE - Phase 2 Critical Blocker
+// ============================================================================
+
+export const customSchedulerIntervals = pgTable("custom_scheduler_intervals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }).unique(),
+  
+  // Automation scheduling intervals (cron-like)
+  scheduleInterval: varchar("schedule_interval"), // 'weekly', 'biweekly', 'monthly', 'custom'
+  scheduleTime: varchar("schedule_time"), // '09:00', '14:30', etc.
+  scheduleDay: varchar("schedule_day"), // 'monday', 'friday', etc.
+  
+  // Custom interval tracking
+  customCronExpression: varchar("custom_cron_expression"), // '0 9 * * MON' for Monday 9 AM
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
+  
+  // Invoice & Payroll generation settings
+  autoGenerateInvoices: boolean("auto_generate_invoices").default(true),
+  autoGeneratePayroll: boolean("auto_generate_payroll").default(true),
+  autoApproveThreshold: integer("auto_approve_threshold").default(85), // Auto-approve if AI confidence > 85%
+  
+  // Settings
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCustomSchedulerIntervalSchema = createInsertSchema(customSchedulerIntervals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCustomSchedulerInterval = z.infer<typeof insertCustomSchedulerIntervalSchema>;
+export type CustomSchedulerInterval = typeof customSchedulerIntervals.$inferSelect;
+
 export const insertShiftSchema = createInsertSchema(shifts).omit({
   id: true,
   createdAt: true,
