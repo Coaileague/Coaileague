@@ -9,10 +9,8 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * AutoForce™ Energy-Based Logo
- * 
- * A and F form from pulsing energy, glow while visible, then dissolve back into the energy.
- * Clean cycle: Energy releases → Letters appear & glow → Letters fade → Energy resets
+ * AutoForce™ Energy-Based AF Logo
+ * Letters form from energy, glow, and dissolve back
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -22,244 +20,58 @@ export function AutoForceAFLogo({
 }: AutoForceAFLogoProps) {
   const sizeConfig = getLogoSize(size);
 
-  /**
-   * Energy-Driven AF Logo - Letters emerge from and dissolve into glowing energy
-   */
   const EnergyAFLogo = () => (
-    <svg
-      viewBox="0 0 100 100"
-      className="w-full h-full"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ filter: animated ? "drop-shadow(0 6px 20px rgba(255, 193, 7, 0.5))" : "none" }}
-    >
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       <defs>
-        <style>{`
-          @keyframes energy-pulse {
-            0% {
-              r: 2;
-              opacity: 1;
-              filter: drop-shadow(0 0 3px rgba(255, 193, 7, 0.8));
-            }
-            50% {
-              r: 8;
-              opacity: 0.3;
-              filter: drop-shadow(0 0 12px rgba(255, 193, 7, 0.4));
-            }
-            100% {
-              r: 2;
-              opacity: 1;
-              filter: drop-shadow(0 0 3px rgba(255, 193, 7, 0.8));
-            }
+        <style>
+          {`
+          @keyframes pulse-energy {
+            0%, 100% { r: 2.5; opacity: 1; filter: drop-shadow(0 0 4px rgba(255, 193, 7, 1)); }
+            50% { r: 8; opacity: 0.3; filter: drop-shadow(0 0 15px rgba(255, 193, 7, 0.5)); }
           }
 
-          @keyframes letter-appear {
-            0% {
-              opacity: 0;
-              filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0));
-            }
-            25% {
-              opacity: 1;
-              filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.9));
-            }
-            75% {
-              opacity: 1;
-              filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.9));
-            }
-            100% {
-              opacity: 0;
-              filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0));
-            }
+          @keyframes fade-letters {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
           }
 
-          @keyframes energy-flow-a {
-            0% { 
-              stroke-dashoffset: 60; 
-              opacity: 0; 
-            }
-            15% { 
-              opacity: 0.6; 
-            }
-            50% { 
-              stroke-dashoffset: 0; 
-              opacity: 0.6; 
-            }
-            85% {
-              opacity: 0.6;
-            }
-            100% { 
-              stroke-dashoffset: -60; 
-              opacity: 0; 
-            }
+          @keyframes glow-letters {
+            0%, 100% { filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0)); }
+            20%, 80% { filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.8)); }
           }
 
-          @keyframes energy-flow-f {
-            0% { 
-              stroke-dashoffset: 60; 
-              opacity: 0; 
-            }
-            20% { 
-              opacity: 0.6; 
-            }
-            55% { 
-              stroke-dashoffset: 0; 
-              opacity: 0.6; 
-            }
-            80% {
-              opacity: 0.6;
-            }
-            100% { 
-              stroke-dashoffset: -60; 
-              opacity: 0; 
-            }
-          }
-
-          .energy-core {
-            animation: energy-pulse 4s ease-in-out infinite;
-          }
-
-          .letter-a {
-            animation: letter-appear 4s ease-in-out infinite;
-          }
-
-          .letter-f {
-            animation: letter-appear 4s ease-in-out infinite 0.15s;
-          }
-
-          .energy-to-a {
-            stroke-dasharray: 60;
-            animation: energy-flow-a 4s ease-in-out infinite;
-          }
-
-          .energy-to-f {
-            stroke-dasharray: 60;
-            animation: energy-flow-f 4s ease-in-out infinite 0.15s;
-          }
-        `}</style>
-
-        {/* Gradients */}
-        <radialGradient id="energyGradient" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFD700" stopOpacity="1" />
-          <stop offset="100%" stopColor="#FFC107" stopOpacity="0.3" />
-        </radialGradient>
-
-        <linearGradient id="whiteStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#F0F0F0" />
-        </linearGradient>
+          .energy { animation: pulse-energy 4s ease-in-out infinite; }
+          .letter-a { animation: fade-letters 4s ease-in-out infinite, glow-letters 4s ease-in-out infinite; }
+          .letter-f { animation: fade-letters 4s ease-in-out infinite 0.15s, glow-letters 4s ease-in-out infinite 0.15s; }
+          `}
+        </style>
       </defs>
 
-      {/* ========== CENTRAL ENERGY CORE ========== */}
-      <circle cx="50" cy="50" r="2.5" fill="url(#energyGradient)" className="energy-core" />
+      {/* Energy core */}
+      <circle cx="50" cy="50" r="2.5" fill="#FFD700" className="energy" />
 
-      {/* ========== ENERGY FLOWS TO LETTERS ========== */}
-      {/* Flow to A (left) */}
-      <path
-        className="energy-to-a"
-        d="M 50 50 L 32 28"
-        stroke="#FFC107"
-        strokeWidth="1.2"
-        fill="none"
-        strokeLinecap="round"
-      />
-
-      {/* Flow to F (right) */}
-      <path
-        className="energy-to-f"
-        d="M 50 50 L 68 28"
-        stroke="#FFB300"
-        strokeWidth="1.2"
-        fill="none"
-        strokeLinecap="round"
-      />
-
-      {/* ========== LETTER "A" - PROPER TRIANGLE SHAPE ========== */}
+      {/* Letter A - Left side */}
       <g className="letter-a">
-        {/* Left diagonal stroke of A */}
-        <line
-          x1="32"
-          y1="20"
-          x2="18"
-          y2="58"
-          stroke="url(#whiteStroke)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Right diagonal stroke of A */}
-        <line
-          x1="32"
-          y1="20"
-          x2="46"
-          y2="58"
-          stroke="url(#whiteStroke)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Horizontal crossbar of A */}
-        <line
-          x1="22"
-          y1="38"
-          x2="42"
-          y2="38"
-          stroke="url(#whiteStroke)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <line x1="32" y1="25" x2="18" y2="70" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
+        <line x1="32" y1="25" x2="46" y2="70" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
+        <line x1="23" y1="48" x2="41" y2="48" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
       </g>
 
-      {/* ========== LETTER "F" - PROPER F SHAPE ========== */}
+      {/* Letter F - Right side */}
       <g className="letter-f">
-        {/* Vertical spine of F */}
-        <line
-          x1="68"
-          y1="20"
-          x2="68"
-          y2="58"
-          stroke="url(#whiteStroke)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Top horizontal bar of F */}
-        <line
-          x1="68"
-          y1="20"
-          x2="84"
-          y2="20"
-          stroke="url(#whiteStroke)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Middle horizontal bar of F */}
-        <line
-          x1="68"
-          y1="39"
-          x2="82"
-          y2="39"
-          stroke="url(#whiteStroke)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <line x1="68" y1="25" x2="68" y2="70" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
+        <line x1="68" y1="25" x2="82" y2="25" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
+        <line x1="68" y1="47" x2="80" y2="47" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
       </g>
-
-      {/* ========== ACCENT RING ========== */}
-      <circle cx="50" cy="50" r="48" fill="none" stroke="#FFB300" strokeWidth="0.6" opacity="0.15" />
     </svg>
   );
 
-  // Wordmark variant
   if (variant === "wordmark") {
     return (
-      <div className={cn("flex items-center gap-1 flex-wrap", className)}>
-        <span className="font-bold tracking-tight text-slate-900 dark:text-white" style={{ fontSize: "24px" }}>
+      <div className={cn("flex items-center gap-1", className)}>
+        <span className="font-bold text-slate-900 dark:text-white" style={{ fontSize: "24px" }}>
           {logoConfig.brand.name}
         </span>
         <span className="text-xs align-super text-slate-900 dark:text-white">
@@ -269,7 +81,6 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Icon only
   if (variant === "icon") {
     return (
       <div
@@ -279,56 +90,46 @@ export function AutoForceAFLogo({
           logoConfig.badge.gradient,
           logoConfig.badge.shadow,
           sizeConfig.container,
-          "border",
-          logoConfig.badge.border.color,
-          "group overflow-hidden",
+          "border border-white/20",
+          "group",
           className
         )}
-        data-testid={`${logoConfig.accessibility.testIdPrefix}-icon`}
       >
-        {/* Shimmer on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-yellow-100 to-transparent transition-opacity duration-500" />
-
-        {/* Icon */}
-        <div className="relative z-10 w-3/4 h-3/4 text-white">
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white to-transparent transition-opacity duration-500 rounded-full" />
+        <div className="relative z-10 w-3/4 h-3/4">
           <EnergyAFLogo />
         </div>
       </div>
     );
   }
 
-  // Full variant - Icon + brand name
   return (
-    <div className={cn("flex items-center gap-3 sm:gap-4", className)}>
+    <div className={cn("flex items-center gap-4", className)}>
       <div
         className={cn(
-          "relative shrink-0 inline-flex items-center justify-center",
+          "relative inline-flex items-center justify-center shrink-0",
           logoConfig.badge.shape,
           logoConfig.badge.gradient,
           logoConfig.badge.shadow,
           sizeConfig.container,
-          "border",
-          logoConfig.badge.border.color,
+          "border border-white/20",
           "group"
         )}
       >
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-yellow-100 to-transparent transition-opacity duration-500" />
-        <div className="relative z-10 w-3/4 h-3/4 text-white">
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white to-transparent transition-opacity duration-500 rounded-full" />
+        <div className="relative z-10 w-3/4 h-3/4">
           <EnergyAFLogo />
         </div>
       </div>
 
-      {/* Brand text */}
       <div className="flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-1.5 flex-wrap">
-          <span className={cn("font-black tracking-tight text-slate-900 dark:text-white", logoConfig.sizes.text[size])}>
+        <div className="flex items-baseline gap-2">
+          <span className="font-black text-slate-900 dark:text-white text-3xl">
             {logoConfig.brand.name}
           </span>
-          <span className="text-xs align-super text-slate-900 dark:text-white">
-            {logoConfig.brand.trademark}
-          </span>
+          <span className="text-xs text-slate-900 dark:text-white">™</span>
         </div>
-        <p className={cn("font-medium text-slate-600 dark:text-slate-400 tracking-wide", logoConfig.sizes.tagline[size])}>
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
           {logoConfig.brand.taglineAlt}
         </p>
       </div>
