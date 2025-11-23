@@ -46,13 +46,15 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
     try {
       // Call logout API
       await fetch("/api/logout", { method: "POST", credentials: "include" });
-      // Invalidate auth query cache to force refetch (will return null/401)
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      // IMMEDIATELY clear the auth cache so component re-renders as unauthenticated
+      // This prevents showing cached auth data while the page navigates
+      queryClient.setQueryData(["/api/auth/me"], null);
       // Redirect to home
       setLocation("/");
     } catch (error) {
       console.error("Logout failed:", error);
-      // Still redirect even if logout fails
+      // Still clear cache and redirect even if logout fails
+      queryClient.setQueryData(["/api/auth/me"], null);
       setLocation("/");
     }
   };
