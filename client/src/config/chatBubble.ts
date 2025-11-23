@@ -162,6 +162,16 @@ export const CHAT_BUBBLE_CONFIG = {
     },
   },
 
+  // ===== INTAKE FORM DIALOG =====
+  intakeFormDialog: {
+    showHomeButton: true,
+    homeButtonPlacement: 'header', // 'header' or 'footer'
+    homeButtonVariant: 'ghost',
+    homeButtonTooltip: 'Return to Home',
+    homeButtonTestId: 'button-home-from-intake',
+    homeNavigationPath: '/',
+  },
+
   // ===== VISIBILITY =====
   zIndex: 9999,
   touchAction: 'none',
