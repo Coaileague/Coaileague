@@ -109,77 +109,67 @@ export default function CustomLogin() {
       )}
 
       <div 
-        className="min-h-screen flex items-center justify-center p-5"
+        className="min-h-screen flex items-center justify-center p-4"
         style={{
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
+          background: 'linear-gradient(135deg, #fafbff 0%, #f5f9ff 100%)'
         }}
       >
       <div 
-        className="w-full max-w-[460px] animate-[fadeInUp_0.6s_ease]"
+        className="w-full max-w-[360px] animate-[fadeInUp_0.6s_ease]"
         style={{
           animation: 'fadeInUp 0.6s ease'
         }}
       >
-        {/* White Login Card */}
+        {/* White Login Card - Minimal Modern Design */}
         <div 
-          className="bg-white rounded-3xl p-12 max-sm:p-8 max-sm:px-6"
+          className="bg-white rounded-2xl p-10 max-sm:p-8"
           style={{
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0 4px 32px rgba(0, 0, 0, 0.08)'
           }}
         >
-          {/* Logo Section */}
-          <div className="text-center mb-10">
-            {/* AF Logo with Gradient */}
+          {/* Logo & Brand Section */}
+          <div className="text-center mb-8">
+            {/* AF Logo with Subtle Gradient */}
             <div 
-              className="w-20 h-20 max-sm:w-16 max-sm:h-16 rounded-[20px] inline-flex items-center justify-center text-[32px] max-sm:text-2xl font-bold text-white mb-4"
+              className="w-16 h-16 max-sm:w-14 max-sm:h-14 rounded-xl inline-flex items-center justify-center text-2xl max-sm:text-xl font-bold text-white mb-3"
               style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)',
-                boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)'
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
               }}
             >
               AF
             </div>
 
-            {/* Brand Name */}
-            <div className="text-[28px] max-sm:text-2xl font-bold mb-2" style={{ color: '#1e293b' }}>
-              AUTO
-              <span 
-                className="bg-clip-text text-transparent"
-                style={{
-                  backgroundImage: 'linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}
-              >
-                FORCE
-              </span>
+            {/* Brand Name - Subtle */}
+            <div className="text-xl max-sm:text-lg font-semibold mb-1" style={{ color: '#1e293b' }}>
+              AUTO<span style={{ color: '#3b82f6' }}>FORCE</span>
             </div>
 
-            {/* Tagline */}
-            <div className="text-sm" style={{ color: '#64748b' }}>
-              Autonomous Workforce Management Solutions
+            {/* Tagline - Smaller */}
+            <div className="text-xs" style={{ color: '#94a3b8' }}>
+              Workforce Intelligence Platform
             </div>
           </div>
 
-          {/* Login Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1e293b' }}>
+          {/* Login Header - Minimal */}
+          <div className="text-center mb-7">
+            <h1 className="text-xl font-semibold mb-1" style={{ color: '#1e293b' }}>
               Sign In
             </h1>
-            <p className="text-sm" style={{ color: '#64748b' }}>
-              Enter your credentials to access your account
+            <p className="text-xs" style={{ color: '#94a3b8' }}>
+              Access your workspace
             </p>
           </div>
 
           {/* Login Form */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium" style={{ color: '#334155' }}>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#475569' }}>
                       Email
                     </FormLabel>
                     <FormControl>
@@ -189,7 +179,7 @@ export default function CustomLogin() {
                         placeholder="you@company.com"
                         disabled={isLoading}
                         data-testid="input-email"
-                        className="w-full px-4 py-3.5 rounded-xl text-[15px] border-2 transition-all"
+                        className="w-full px-3 py-2.5 rounded-lg text-sm border transition-all"
                         style={{
                           background: '#f8fafc',
                           borderColor: '#e2e8f0',
@@ -207,7 +197,7 @@ export default function CustomLogin() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium" style={{ color: '#334155' }}>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#475569' }}>
                       Password
                     </FormLabel>
                     <FormControl>
@@ -218,7 +208,7 @@ export default function CustomLogin() {
                           placeholder="Enter your password"
                           disabled={isLoading}
                           data-testid="input-password"
-                          className="w-full px-4 py-3.5 rounded-xl text-[15px] border-2 transition-all pr-12"
+                          className="w-full px-3 py-2.5 rounded-lg text-sm border transition-all pr-10"
                           style={{
                             background: '#f8fafc',
                             borderColor: '#e2e8f0',
@@ -227,12 +217,12 @@ export default function CustomLogin() {
                         />
                         <button
                           type="button"
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-lg transition-colors"
-                          style={{ color: '#64748b' }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                          style={{ color: '#94a3b8' }}
                           onClick={() => setShowPassword(!showPassword)}
                           data-testid="button-toggle-password"
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </FormControl>
@@ -242,15 +232,15 @@ export default function CustomLogin() {
               />
 
               {/* Forgot Password Link */}
-              <div className="text-right">
+              <div className="text-right pt-1">
                 <button
                   type="button"
                   onClick={() => setLocation("/reset-password")}
-                  className="text-sm transition-colors"
+                  className="text-xs transition-colors font-medium"
                   style={{ color: '#3b82f6' }}
                   data-testid="link-reset-password"
                 >
-                  Forgot your password?
+                  Forgot password?
                 </button>
               </div>
 
@@ -258,10 +248,10 @@ export default function CustomLogin() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl text-white text-base font-semibold transition-all duration-300 disabled:opacity-70"
+                className="w-full py-2.5 rounded-lg text-white text-sm font-semibold transition-all duration-300 disabled:opacity-70 mt-5"
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  boxShadow: '0 4px 16px rgba(59, 130, 246, 0.3)',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
                   cursor: isLoading ? 'not-allowed' : 'pointer'
                 }}
                 data-testid="button-login"
@@ -278,51 +268,48 @@ export default function CustomLogin() {
             </form>
           </Form>
 
+          {/* Divider */}
+          <div className="my-5 flex items-center gap-3">
+            <div className="flex-1" style={{ borderTop: '1px solid #e2e8f0' }}></div>
+            <span className="text-xs" style={{ color: '#cbd5e1' }}>or</span>
+            <div className="flex-1" style={{ borderTop: '1px solid #e2e8f0' }}></div>
+          </div>
+
           {/* Footer Links */}
-          <div className="text-center mt-6">
-            <p className="text-sm mb-2" style={{ color: '#64748b' }}>
+          <div className="text-center mb-4">
+            <p className="text-xs" style={{ color: '#94a3b8' }}>
               Don't have an account?{" "}
               <button
                 onClick={() => setLocation("/register")}
-                className="font-medium transition-colors"
+                className="font-semibold transition-colors"
                 style={{ color: '#3b82f6' }}
                 data-testid="link-register"
               >
-                Sign up
+                Create one
               </button>
             </p>
           </div>
 
-          {/* Demo Section */}
-          <div 
-            className="mt-8 p-5 rounded-xl text-center border-2"
+          {/* Demo Section - Minimal */}
+          <button
+            onClick={() => window.location.href = "/api/demo-login"}
+            className="w-full py-2 rounded-lg text-xs font-medium transition-all border"
             style={{
-              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-              borderColor: '#3b82f6'
+              color: '#3b82f6',
+              borderColor: '#e2e8f0',
+              background: '#f8fafc'
             }}
+            data-testid="button-demo"
           >
-            <p className="text-sm font-medium mb-3" style={{ color: '#1e40af' }}>
-              Want to see it in action?
-            </p>
-            <button
-              onClick={() => window.location.href = "/api/demo-login"}
-              className="px-6 py-2.5 bg-white rounded-lg text-sm font-semibold transition-all duration-300 border-2"
-              style={{
-                color: '#3b82f6',
-                borderColor: '#3b82f6'
-              }}
-              data-testid="button-demo"
-            >
-              Try Demo Account
-            </button>
-          </div>
+            Try Demo Account
+          </button>
 
-          {/* Back to Home */}
-          <div className="mt-8 pt-6 text-center border-t" style={{ borderColor: '#e2e8f0' }}>
+          {/* Back to Home - Minimal */}
+          <div className="mt-5 pt-4 text-center border-t" style={{ borderColor: '#e2e8f0' }}>
             <button
               onClick={() => setLocation("/")}
-              className="text-sm transition-colors"
-              style={{ color: '#64748b' }}
+              className="text-xs transition-colors font-medium"
+              style={{ color: '#94a3b8' }}
               data-testid="button-back-home"
             >
               ← Back to Home
