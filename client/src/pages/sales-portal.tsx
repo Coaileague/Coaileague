@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,12 +35,14 @@ export default function SalesPortal() {
 
   // Fetch email templates
   const { data: templates = [], isLoading: templatesLoading } = useQuery<EmailTemplate[]>({
-    queryKey: ["/api/sales/templates"],
+    queryKey: queryKeys.sales?.templates ?? ["sales", "templates"],
+    queryFn: () => apiGet('sales.templates'),
   });
 
   // Fetch leads
   const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
-    queryKey: ["/api/sales/leads"],
+    queryKey: queryKeys.sales?.leads ?? ["sales", "leads"],
+    queryFn: () => apiGet('sales.leads'),
   });
 
   // Send email mutation
@@ -50,7 +54,7 @@ export default function SalesPortal() {
       companyName: string;
       industry?: string;
     }) => {
-      return await apiRequest("/api/sales/send-email", "POST", data);
+      return await apiPost('sales.sendEmail', data);
     },
     onSuccess: () => {
       toast({
@@ -79,10 +83,10 @@ export default function SalesPortal() {
       contactName?: string;
       industry?: string;
     }) => {
-      return await apiRequest("/api/sales/leads", "POST", data);
+      return await apiPost('sales.addLead', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sales/leads"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales?.leads ?? ["sales", "leads"] });
       toast({
         title: "Lead Added",
         description: "New lead added to database successfully",

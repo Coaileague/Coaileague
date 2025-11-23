@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, DollarSign, Calendar, Shield, Plus, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -50,23 +52,25 @@ export default function HRBenefits() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: benefits, isLoading } = useQuery<Benefit[]>({
-    queryKey: ['/api/hr/benefits'],
+    queryKey: queryKeys.benefits.all,
+    queryFn: () => apiGet('benefits.list'),
   });
 
   const { data: employees } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
+    queryKey: queryKeys.employees.all,
+    queryFn: () => apiGet('employees.list'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: BenefitFormData) => {
-      return apiRequest('POST', '/api/hr/benefits', {
+      return apiPost('benefits.create', {
         ...data,
         employeeContribution: parseFloat(data.employeeContribution),
         employerContribution: parseFloat(data.employerContribution),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/benefits'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.benefits.all });
       setDialogOpen(false);
       toast({
         title: "Success",

@@ -57,14 +57,17 @@ export const navConfig = {
   // HR & Payroll
   hr: {
     benefits: "/hr-benefits",
+    benefitsEnrollment: "/hr-benefits-enrollment",
     reviews: "/hr-reviews",
     pto: "/hr-pto",
+    ptoApprovals: "/pto-approvals",
     terminations: "/hr-terminations",
     payroll: "/payroll-dashboard",
     paychecks: "/my-paychecks",
     expenses: "/expenses",
     expenseApprovals: "/expense-approvals",
     fileGrievance: "/file-grievance",
+    grievanceApprovals: "/grievance-approvals",
   },
 
   // Compliance & Admin
@@ -82,6 +85,9 @@ export const navConfig = {
     policies: "/policies",
     roleManagement: "/role-management",
     auditLogs: "/audit-logs",
+    shiftApprovals: "/shift-approvals",
+    timesheetApprovals: "/admin-timesheet-approvals",
+    timeoffApprovals: "/timeoff-approvals",
   },
 
   // Employee/Portal Routes
@@ -93,6 +99,8 @@ export const navConfig = {
     myAuditRecord: "/my-audit-record",
     pendingTimeEntries: "/pending-time-entries",
     timesheetApprovals: "/timesheet-approvals",
+    myBenefits: "/my-benefits",
+    myPtoBalance: "/my-pto-balance",
   },
 
   // Special Portals
@@ -153,6 +161,8 @@ export const navConfig = {
     automationAuditLog: "/automation-audit-log",
     integrations: "/integrations-page",
     salesDashboard: "/sales/dashboard",
+    supportTickets: "/support-tickets",
+    supportRequests: "/support-requests",
   },
 
   // Error Routes

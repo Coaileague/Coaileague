@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CheckCircle2, XCircle, Plus, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -53,19 +55,21 @@ export default function HRPTO() {
   const [selectedRequest, setSelectedRequest] = useState<PTORequest | null>(null);
 
   const { data: ptoRequests, isLoading } = useQuery<PTORequest[]>({
-    queryKey: ['/api/hr/pto'],
+    queryKey: queryKeys.pto.all,
+    queryFn: () => apiGet('pto.list'),
   });
 
   const { data: employees } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
+    queryKey: queryKeys.employees.all,
+    queryFn: () => apiGet('employees.list'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: PTOFormData) => {
-      return apiRequest('POST', '/api/hr/pto', data);
+      return apiPost('pto.create', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/pto'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pto.all });
       setDialogOpen(false);
       form.reset();
       toast({
@@ -84,10 +88,10 @@ export default function HRPTO() {
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, approved }: { id: number; approved: boolean }) => {
-      return apiRequest('POST', `/api/hr/pto/${id}/approve`, { approved });
+      return apiPost('pto.approve', { id, approved });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/pto'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pto.all });
       setApproveDialogOpen(false);
       setSelectedRequest(null);
       toast({

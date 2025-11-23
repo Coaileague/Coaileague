@@ -85,6 +85,66 @@ export const queryKeys = {
     stats: ["dashboard", "stats"],
     overview: ["dashboard", "overview"],
   },
+
+  // Payroll
+  payroll: {
+    all: ["payroll"],
+    get: (id: string) => ["payroll", id],
+    list: (page: number, limit: number) => ["payroll", "list", page, limit],
+    paychecks: ["payroll", "paychecks"],
+  },
+
+  // Benefits
+  benefits: {
+    all: ["benefits"],
+    list: (page: number, limit: number) => ["benefits", "list", page, limit],
+    enrollment: ["benefits", "enrollment"],
+  },
+
+  // PTO
+  pto: {
+    all: ["pto"],
+    balances: ["pto", "balances"],
+    requests: ["pto", "requests"],
+    approvals: ["pto", "approvals"],
+  },
+
+  // Reviews
+  reviews: {
+    all: ["reviews"],
+    get: (id: string) => ["reviews", id],
+    list: (page: number, limit: number) => ["reviews", "list", page, limit],
+    pending: ["reviews", "pending"],
+  },
+
+  // Grievances
+  grievances: {
+    all: ["grievances"],
+    get: (id: string) => ["grievances", id],
+    list: (page: number, limit: number) => ["grievances", "list", page, limit],
+  },
+
+  // Billing
+  billing: {
+    subscriptions: ["billing", "subscriptions"],
+    credits: ["billing", "credits"],
+    invoices: ["billing", "invoices"],
+    usage: ["billing", "usage"],
+  },
+
+  // Integrations
+  integrations: {
+    all: ["integrations"],
+    status: (integration: string) => ["integrations", "status", integration],
+    oauth: (provider: string) => ["integrations", "oauth", provider],
+  },
+
+  // Clients
+  clients: {
+    all: ["clients"],
+    get: (id: string) => ["clients", id],
+    list: (page: number, limit: number) => ["clients", "list", page, limit],
+  },
 };
 
 /**
