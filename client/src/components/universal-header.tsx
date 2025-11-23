@@ -3,7 +3,7 @@
  * Shows appropriate nav based on authentication state and RBAC
  */
 
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -84,11 +84,11 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
           >
             {/* Desktop: Show full logo */}
             <div className="hidden sm:block">
-              <AnimatedAutoForceLogo variant="full" size="md" />
+              <AutoForceAFLogo variant="full" size="md" />
             </div>
             {/* Mobile: Show smaller logo */}
             <div className="block sm:hidden">
-              <AnimatedAutoForceLogo variant="icon" size="sm" />
+              <AutoForceAFLogo variant="icon" size="sm" />
             </div>
           </button>
 

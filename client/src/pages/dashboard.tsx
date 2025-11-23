@@ -11,7 +11,7 @@ import {
   HelpCircle, MessageSquare, LayoutDashboard, AlertTriangle, Building2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { useTransition } from "@/contexts/transition-context";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { queryClient } from "@/lib/queryClient";
@@ -569,7 +569,7 @@ export default function Dashboard() {
             <div className="flex flex-col items-center text-center gap-4">
               {/* Logo */}
               <div className="transform hover:scale-105 transition-transform duration-300">
-                <AnimatedAutoForceLogo variant="full" size="md" />
+                <AutoForceAFLogo variant="full" size="md" />
               </div>
               
               {/* Welcome Text - Centered */}

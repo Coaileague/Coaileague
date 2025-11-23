@@ -7,7 +7,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import {
   Bell, AlertCircle, Info, Sparkles, Zap, Heart, Star, CheckCircle, X
 } from "lucide-react";
@@ -102,7 +102,7 @@ export function MotdDialog({
             {/* Logo and Icon */}
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center">
-                <AnimatedAutoForceLogo size="sm" variant="icon" />
+                <AutoForceAFLogo size="sm" variant="icon" />
               </div>
               <div 
                 className="p-3 rounded-lg backdrop-blur-sm animate-pulse"

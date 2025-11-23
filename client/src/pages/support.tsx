@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { Input } from "@/components/ui/input";
 import {
   Book,
@@ -144,7 +144,7 @@ export default function Support() {
     <div className="min-h-screen bg-white">
       {/* Top Bar */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white shadow-md border-b border-gray-200 flex items-center justify-between px-6">
-        <AnimatedAutoForceLogo size="sm" variant="full" />
+        <AutoForceAFLogo size="sm" variant="full" />
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -448,7 +448,7 @@ export default function Support() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-              <AnimatedAutoForceLogo size="sm" variant="icon" />
+              <AutoForceAFLogo size="sm" variant="icon" />
               <span className="whitespace-nowrap">© 2025 AutoForce™</span>
             </div>
             <div className="flex gap-3 sm:gap-6 text-xs text-gray-500 flex-wrap">

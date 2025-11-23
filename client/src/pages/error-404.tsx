@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft, Search, FileQuestion } from "lucide-react";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 
 export default function Error404() {
   const [, setLocation] = useLocation();
@@ -38,7 +38,7 @@ export default function Error404() {
         <CardHeader className="text-center pb-4 pt-8">
           <div className="flex justify-center mb-6">
             <div className="p-3 bg-muted rounded-lg border">
-              <AnimatedAutoForceLogo variant="icon" size="md" />
+              <AutoForceAFLogo variant="icon" size="md" />
             </div>
           </div>
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { Loader2, UserPlus, Mail, Lock, User, CheckCircle2, XCircle, Github } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { SiGoogle, SiFacebook } from "react-icons/si";
@@ -89,7 +89,7 @@ export default function Register() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <AnimatedAutoForceLogo variant="full" size="sm" />
+            <AutoForceAFLogo variant="full" size="sm" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Create Account</CardTitle>

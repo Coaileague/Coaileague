@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { AlertTriangle, UserX, Clock, MessageSquareOff } from "lucide-react";
 
 interface KickDialogProps {
@@ -66,7 +66,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <AnimatedAutoForceLogo size="sm" variant="icon" />
+              <AutoForceAFLogo size="sm" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -247,7 +247,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <AnimatedAutoForceLogo size="sm" variant="icon" />
+              <AutoForceAFLogo size="sm" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">

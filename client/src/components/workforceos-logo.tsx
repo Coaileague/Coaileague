@@ -2,7 +2,7 @@
 // Please use @/components/animated-autoforce-logo instead
 // This file will be removed in a future version
 
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 
 // Re-export for backward compatibility
 export { AnimatedAutoForceLogo as AutoForceLogo };

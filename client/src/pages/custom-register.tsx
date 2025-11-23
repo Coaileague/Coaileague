@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
+import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiPost } from "@/lib/apiClient";
@@ -82,7 +82,7 @@ export default function CustomRegister() {
       <div className="w-full max-w-2xl space-y-8">
         {/* Logo and Branding */}
         <div className="flex flex-col items-center gap-4">
-          <AnimatedAutoForceLogo variant="full" size="lg" />
+          <AutoForceAFLogo variant="full" size="lg" />
         </div>
 
         {/* Register Card */}
