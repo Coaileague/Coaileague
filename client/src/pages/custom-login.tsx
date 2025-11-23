@@ -185,12 +185,11 @@ export default function CustomLogin() {
                         placeholder="you@company.com"
                         disabled={isLoading}
                         data-testid="input-email"
-                        className="w-full px-2.5 py-1.5 rounded text-xs border transition-all"
+                        className="!h-8 !px-2 !py-1 !text-xs w-full border transition-all rounded"
                         style={{
                           background: '#f8fafc',
                           borderColor: '#e2e8f0',
-                          color: '#1e293b',
-                          height: '32px'
+                          color: '#1e293b'
                         }}
                       />
                     </FormControl>
@@ -215,12 +214,11 @@ export default function CustomLogin() {
                           placeholder="Enter password"
                           disabled={isLoading}
                           data-testid="input-password"
-                          className="w-full px-2.5 py-1.5 rounded text-xs border transition-all pr-8"
+                          className="!h-8 !px-2 !py-1 !text-xs !pr-8 w-full border transition-all rounded"
                           style={{
                             background: '#f8fafc',
                             borderColor: '#e2e8f0',
-                            color: '#1e293b',
-                            height: '32px'
+                            color: '#1e293b'
                           }}
                         />
                         <button
@@ -256,12 +254,11 @@ export default function CustomLogin() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-1.5 rounded text-white text-xs font-semibold transition-all duration-300 disabled:opacity-70 mt-3"
+                className="w-full h-8 py-1 rounded text-white text-xs font-semibold transition-all duration-300 disabled:opacity-70 mt-3"
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  height: '32px'
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
                 }}
                 data-testid="button-login"
               >
