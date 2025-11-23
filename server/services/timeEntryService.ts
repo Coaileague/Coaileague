@@ -4,7 +4,7 @@
  */
 
 import { db } from "../db";
-import { timeEntries, timeEntryBreaks, employees } from "@shared/schema";
+import { timeEntries, employees } from "@shared/schema";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import type { InsertTimeEntry, TimeEntry } from "@shared/schema";
 
@@ -28,11 +28,11 @@ export async function getTimeEntriesByEmployee(
   return db.query.timeEntries.findMany({
     where: and(
       eq(timeEntries.employeeId, employeeId),
-      gte(timeEntries.clockInTime, startDate),
-      lte(timeEntries.clockOutTime || timeEntries.clockInTime, endDate),
+      gte(timeEntries.clockIn, startDate),
+      lte(timeEntries.clockOut || timeEntries.clockIn, endDate),
       eq(timeEntries.status, "approved")
     ),
-    orderBy: [desc(timeEntries.clockInTime)],
+    orderBy: [desc(timeEntries.clockIn)],
   });
 }
 
@@ -47,8 +47,8 @@ export async function getTimeEntriesByWorkspace(
 ): Promise<TimeEntry[]> {
   const filters = [
     eq(timeEntries.workspaceId, workspaceId),
-    gte(timeEntries.clockInTime, startDate),
-    lte(timeEntries.clockInTime, endDate),
+    gte(timeEntries.clockIn, startDate),
+    lte(timeEntries.clockIn, endDate),
   ];
 
   if (status) {
@@ -57,7 +57,7 @@ export async function getTimeEntriesByWorkspace(
 
   return db.query.timeEntries.findMany({
     where: and(...filters),
-    orderBy: [desc(timeEntries.clockInTime)],
+    orderBy: [desc(timeEntries.clockIn)],
   });
 }
 
@@ -65,15 +65,12 @@ export async function getTimeEntriesByWorkspace(
  * Calculate total billable hours for a time entry
  */
 export function calculateBillableHours(entry: TimeEntry): number {
-  if (!entry.clockOutTime) return 0;
-  const clockOut = new Date(entry.clockOutTime);
-  const clockIn = new Date(entry.clockInTime);
+  if (!entry.clockOut) return 0;
+  const clockOut = new Date(entry.clockOut);
+  const clockIn = new Date(entry.clockIn);
   const totalMinutes = (clockOut.getTime() - clockIn.getTime()) / 60000;
   
-  // Subtract break time if recorded
-  const breakMinutes = entry.breakMinutes || 0;
-  const billableMinutes = Math.max(0, totalMinutes - breakMinutes);
-  
+  const billableMinutes = Math.max(0, totalMinutes);
   return billableMinutes / 60;
 }
 
@@ -83,13 +80,13 @@ export function calculateBillableHours(entry: TimeEntry): number {
 export async function validateTimeEntry(
   workspaceId: string,
   employeeId: string,
-  clockInTime: Date,
-  clockOutTime: Date | null
+  clockIn: Date,
+  clockOut: Date | null
 ): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];
 
   // Check for overlapping entries
-  if (clockOutTime) {
+  if (clockOut) {
     const overlapping = await db.query.timeEntries.findMany({
       where: and(
         eq(timeEntries.workspaceId, workspaceId),
@@ -99,10 +96,10 @@ export async function validateTimeEntry(
     });
 
     for (const entry of overlapping) {
-      const entryClockOut = entry.clockOutTime || new Date();
+      const entryClockOut = entry.clockOut || new Date();
       if (
-        clockInTime < entryClockOut &&
-        clockOutTime > entry.clockInTime
+        clockIn < entryClockOut &&
+        clockOut > entry.clockIn
       ) {
         errors.push("Time entry overlaps with existing entry");
         break;
@@ -111,13 +108,9 @@ export async function validateTimeEntry(
   }
 
   // Check for max hours per day (12 hours)
-  if (clockOutTime) {
-    const hours = calculateBillableHours({
-      ...({} as TimeEntry),
-      clockInTime,
-      clockOutTime,
-      breakMinutes: 0,
-    });
+  if (clockOut) {
+    const totalMinutes = (clockOut.getTime() - clockIn.getTime()) / 60000;
+    const hours = totalMinutes / 60;
 
     if (hours > 12) {
       errors.push("Daily hours cannot exceed 12");
@@ -125,7 +118,7 @@ export async function validateTimeEntry(
   }
 
   // Check for future clock-in
-  if (clockInTime > new Date()) {
+  if (clockIn > new Date()) {
     errors.push("Cannot clock in for future times");
   }
 
@@ -140,13 +133,13 @@ export async function validateTimeEntry(
  */
 export async function createTimeEntry(
   workspaceId: string,
-  data: Omit<InsertTimeEntry, "id" | "createdAt" | "updatedAt">
+  data: { employeeId: string; clockIn: Date; clockOut?: Date | null; status?: string }
 ): Promise<TimeEntry> {
   const validation = await validateTimeEntry(
     workspaceId,
     data.employeeId,
-    data.clockInTime,
-    data.clockOutTime || null
+    data.clockIn,
+    data.clockOut || null
   );
 
   if (!validation.valid) {
@@ -155,7 +148,13 @@ export async function createTimeEntry(
 
   const result = await db
     .insert(timeEntries)
-    .values({ ...data, workspaceId })
+    .values({ 
+      workspaceId,
+      employeeId: data.employeeId,
+      clockIn: data.clockIn,
+      clockOut: data.clockOut || null,
+      status: data.status || "pending"
+    })
     .returning();
 
   return result[0];
@@ -182,14 +181,12 @@ export async function updateTimeEntry(
  */
 export async function approveTimeEntry(
   id: string,
-  approvedBy: string,
-  notes?: string
+  approvedBy: string
 ): Promise<TimeEntry> {
   return updateTimeEntry(id, {
     status: "approved",
     approvedBy,
     approvedAt: new Date(),
-    approvalNotes: notes,
   });
 }
 
@@ -235,17 +232,14 @@ export async function calculatePayrollHours(
   regularHours: number;
   overtimeHours: number;
   totalHours: number;
-  breakMinutes: number;
 }> {
   const entries = await getTimeEntriesByEmployee(employeeId, startDate, endDate);
 
   let totalMinutes = 0;
-  let totalBreakMinutes = 0;
 
   for (const entry of entries) {
     const billable = calculateBillableHours(entry);
     totalMinutes += billable * 60;
-    totalBreakMinutes += entry.breakMinutes || 0;
   }
 
   const totalHours = totalMinutes / 60;
@@ -256,6 +250,5 @@ export async function calculatePayrollHours(
     regularHours,
     overtimeHours,
     totalHours,
-    breakMinutes: totalBreakMinutes,
   };
 }
