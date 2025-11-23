@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { LOGOUT_CONFIG } from "@/config/logout";
 
 export interface LogoutStep {
   id: string;
@@ -105,9 +106,9 @@ export function useLogoutValidation() {
       
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      // Final logout API call
-      await fetch("/api/logout", {
-        method: "POST",
+      // Final logout API call - using centralized config
+      await fetch(LOGOUT_CONFIG.endpoint, {
+        method: LOGOUT_CONFIG.method,
         credentials: "include"
       });
       
