@@ -8,8 +8,7 @@ import {
   employees, 
   timeEntries, 
   invoices, 
-  auditLogs,
-  payrollRecords 
+  auditLogs
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import type { Employee, TimeEntry, Invoice, AuditLog } from "@shared/schema";
@@ -68,9 +67,6 @@ export async function exportEmployees(
     email: emp.email,
     phone: emp.phone,
     role: emp.role,
-    status: emp.status,
-    joinDate: emp.joinDate,
-    payRate: emp.payRate,
   }));
 
   let data: string;
@@ -87,34 +83,25 @@ export async function exportEmployees(
 }
 
 /**
- * Export payroll records
+ * Export payroll records from time entries
  */
 export async function exportPayroll(
   workspaceId: string,
   options: ExportOptions
 ): Promise<{ data: string; filename: string }> {
-  const filters = [eq(payrollRecords.workspaceId, workspaceId)];
-
-  if (options.startDate && options.endDate) {
-    // Add date filtering if needed
-  }
-
-  const payrollData = await db.query.payrollRecords.findMany({
-    where: filters.length > 1 ? undefined : filters[0],
+  const entries = await db.query.timeEntries.findMany({
+    where: eq(timeEntries.workspaceId, workspaceId),
   });
 
-  const sanitized = payrollData.map(record => ({
-    id: record.id,
-    employeeId: record.employeeId,
-    payPeriod: record.payPeriod,
-    regularHours: record.regularHours,
-    overtimeHours: record.overtimeHours,
-    regularPay: record.regularPay,
-    overtimePay: record.overtimePay,
-    deductions: JSON.stringify(record.deductions),
-    netPay: record.netPay,
-    status: record.status,
-    processedAt: record.processedAt,
+  const sanitized = entries.map(entry => ({
+    id: entry.id,
+    employeeId: entry.employeeId,
+    clockIn: entry.clockIn,
+    clockOut: entry.clockOut,
+    totalHours: entry.totalHours,
+    hourlyRate: entry.hourlyRate,
+    totalAmount: entry.totalAmount,
+    status: entry.status,
   }));
 
   let data: string;
@@ -149,14 +136,12 @@ export async function exportAuditLogs(
 
   const sanitized = logs.map(log => ({
     id: log.id,
-    timestamp: log.timestamp,
+    createdAt: log.createdAt,
     userId: log.userId,
     action: log.action,
     actionDescription: log.actionDescription,
     entityType: log.entityType,
     entityId: log.entityId,
-    changes: typeof log.changes === "string" ? log.changes : JSON.stringify(log.changes),
-    ipAddress: log.ipAddress,
   }));
 
   let data: string;
@@ -192,11 +177,10 @@ export async function exportTimeEntries(
   const sanitized = entries.map(entry => ({
     id: entry.id,
     employeeId: entry.employeeId,
-    clockInTime: entry.clockInTime,
-    clockOutTime: entry.clockOutTime,
-    breakMinutes: entry.breakMinutes,
+    clockIn: entry.clockIn,
+    clockOut: entry.clockOut,
+    totalHours: entry.totalHours,
     status: entry.status,
-    notes: entry.notes,
     approvedAt: entry.approvedAt,
   }));
 

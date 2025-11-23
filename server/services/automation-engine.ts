@@ -726,8 +726,9 @@ Return ONLY valid JSON (no markdown):
 
     // Generate payroll for each employee
     for (const employee of employees) {
-      // Get time entries for this employee in the anchor period (stub for now)
-      const timeEntries: TimeEntry[] = []; // TODO: Implement getTimeEntriesByEmployee
+      // Get time entries for this employee in the anchor period
+      const { getTimeEntriesByEmployee } = await import('./timeEntryService');
+      const timeEntries = await getTimeEntriesByEmployee(employee.id, startDate, endDate);
 
       if (timeEntries.length === 0) {
         continue; // Skip employees with no hours

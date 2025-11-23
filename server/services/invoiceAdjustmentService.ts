@@ -4,7 +4,7 @@
  */
 
 import { db } from "../db";
-import { invoices, invoiceLineItems, creditLedger } from "@shared/schema";
+import { invoices, invoiceLineItems } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import type { Invoice } from "@shared/schema";
 
@@ -48,44 +48,36 @@ export async function creditInvoice(
     errors.push("Cannot adjust paid invoices - process as refund instead");
   }
 
-  if (amount > invoice.total) {
-    errors.push(`Credit amount (${amount}) exceeds invoice total (${invoice.total})`);
+  const invoiceTotal = parseFloat(String(invoice.total || 0));
+  if (amount > invoiceTotal) {
+    errors.push(`Credit amount (${amount}) exceeds invoice total (${invoiceTotal})`);
   }
 
   if (errors.length > 0) {
     return {
       success: false,
-      previousTotal: invoice.total,
-      newTotal: invoice.total,
+      previousTotal: invoiceTotal,
+      newTotal: invoiceTotal,
       adjustmentAmount: 0,
       invoice,
       errors,
     };
   }
 
-  const newTotal = invoice.total - amount;
+  const newTotal = invoiceTotal - amount;
 
   // Update invoice
   const updated = await db
     .update(invoices)
     .set({
-      total: newTotal,
-      amountDue: Math.max(0, (invoice.amountDue || 0) - amount),
+      total: String(newTotal),
       notes: `${invoice.notes || ""}\n[CREDIT] ${description} (-$${amount.toFixed(2)}) by ${adjustedBy} at ${new Date().toISOString()}`,
     })
     .where(eq(invoices.id, invoiceId))
     .returning();
 
-  // Log in credit ledger
-  await db.insert(creditLedger).values({
-    workspaceId: invoice.workspaceId,
-    transactionId: invoiceId,
-    transactionType: "invoice_credit",
-    amount: amount,
-    description,
-    createdBy: adjustedBy,
-    createdAt: new Date(),
-  });
+  // Log credit action
+  console.log(`[INVOICE ADJUSTMENT] Credit applied: ${invoiceId} -$${amount.toFixed(2)} by ${adjustedBy}`);
 
   return {
     success: true,
@@ -121,14 +113,14 @@ export async function discountInvoice(
     throw new Error("Cannot discount paid invoices");
   }
 
-  const discountAmount = (invoice.total * discountPercent) / 100;
-  const newTotal = invoice.total - discountAmount;
+  const invoiceTotal = parseFloat(String(invoice.total || 0));
+  const discountAmount = (invoiceTotal * discountPercent) / 100;
+  const newTotal = invoiceTotal - discountAmount;
 
   const updated = await db
     .update(invoices)
     .set({
-      total: newTotal,
-      amountDue: Math.max(0, newTotal),
+      total: String(newTotal),
       notes: `${invoice.notes || ""}\n[DISCOUNT] ${discountPercent}% discount (${reason}) approved by ${approvedBy}`,
     })
     .where(eq(invoices.id, invoiceId))
@@ -164,13 +156,14 @@ export async function refundInvoice(
     throw new Error("Can only refund paid invoices");
   }
 
-  if (refundAmount > invoice.total) {
+  const invoiceTotal = parseFloat(String(invoice.total || 0));
+  if (refundAmount > invoiceTotal) {
     throw new Error(
-      `Refund amount (${refundAmount}) cannot exceed invoice total (${invoice.total})`
+      `Refund amount (${refundAmount}) cannot exceed invoice total (${invoiceTotal})`
     );
   }
 
-  const newTotal = invoice.total - refundAmount;
+  const newTotal = invoiceTotal - refundAmount;
 
   // Update invoice status to partial/refunded
   const newStatus = newTotal === 0 ? "refunded" : "partial";
@@ -179,22 +172,14 @@ export async function refundInvoice(
     .update(invoices)
     .set({
       status: newStatus as any,
-      total: newTotal,
+      total: String(newTotal),
       notes: `${invoice.notes || ""}\n[REFUND] $${refundAmount.toFixed(2)} refunded (${reason}) by ${processedBy}`,
     })
     .where(eq(invoices.id, invoiceId))
     .returning();
 
-  // Log refund in credit ledger
-  await db.insert(creditLedger).values({
-    workspaceId: invoice.workspaceId,
-    transactionId: invoiceId,
-    transactionType: "refund",
-    amount: -refundAmount,
-    description: `Refund: ${reason}`,
-    createdBy: processedBy,
-    createdAt: new Date(),
-  });
+  // Log refund action
+  console.log(`[INVOICE ADJUSTMENT] Refund processed: ${invoiceId} -$${refundAmount.toFixed(2)} by ${processedBy}`);
 
   return {
     success: true,
@@ -212,7 +197,7 @@ export async function correctInvoiceLineItem(
   invoiceId: string,
   lineItemIndex: number,
   newQuantity?: number,
-  newRate?: number,
+  newUnitPrice?: number,
   reason?: string,
   approvedBy?: string
 ): Promise<AdjustmentResult> {
@@ -238,29 +223,33 @@ export async function correctInvoiceLineItem(
   }
 
   const item = lineItems[lineItemIndex];
-  const oldAmount = (item.quantity || 0) * (item.rate || 0);
-  const newItemQuantity = newQuantity ?? item.quantity;
-  const newItemRate = newRate ?? item.rate;
-  const newAmount = newItemQuantity * newItemRate;
+  const oldQuantity = parseFloat(String(item.quantity || 0));
+  const oldUnitPrice = parseFloat(String(item.unitPrice || 0));
+  const oldAmount = oldQuantity * oldUnitPrice;
+  
+  const newItemQuantity = newQuantity ?? oldQuantity;
+  const newItemUnitPrice = newUnitPrice ?? oldUnitPrice;
+  const newAmount = newItemQuantity * newItemUnitPrice;
   const difference = newAmount - oldAmount;
 
   // Update line item
   await db
     .update(invoiceLineItems)
     .set({
-      quantity: newItemQuantity,
-      rate: newItemRate,
+      quantity: String(newItemQuantity),
+      unitPrice: String(newItemUnitPrice),
+      amount: String(newAmount),
     })
     .where(eq(invoiceLineItems.id, item.id));
 
   // Update invoice total
-  const newTotal = invoice.total + difference;
+  const invoiceTotal = parseFloat(String(invoice.total || 0));
+  const newTotal = invoiceTotal + difference;
 
   const updated = await db
     .update(invoices)
     .set({
-      total: newTotal,
-      amountDue: newTotal,
+      total: String(newTotal),
       notes: `${invoice.notes || ""}\n[CORRECTION] Line item adjusted: ${reason || "Manual correction"} by ${approvedBy}`,
     })
     .where(eq(invoices.id, invoiceId))
@@ -268,7 +257,7 @@ export async function correctInvoiceLineItem(
 
   return {
     success: true,
-    previousTotal: invoice.total,
+    previousTotal: invoiceTotal,
     newTotal,
     adjustmentAmount: difference,
     invoice: updated[0],
@@ -295,7 +284,7 @@ export async function getInvoiceAdjustmentHistory(
 
   return {
     adjustments,
-    currentTotal: invoice.total,
+    currentTotal: parseFloat(String(invoice.total || 0)),
   };
 }
 
@@ -317,11 +306,13 @@ export async function bulkCreditInvoices(
       await creditInvoice(invoiceId, creditPerInvoice, reason, approvedBy);
       processedCount++;
     } catch (error) {
-      console.error(`Failed to credit invoice ${invoiceId}:`, error);
+      console.error(`[INVOICE ADJUSTMENT] Failed to credit invoice ${invoiceId}:`, error);
       failedCount++;
     }
   }
 
+  console.log(`[INVOICE ADJUSTMENT] Bulk credit completed: ${processedCount} success, ${failedCount} failed`);
+  
   return {
     success: failedCount === 0,
     processedCount,
