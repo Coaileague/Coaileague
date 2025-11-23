@@ -16,7 +16,6 @@ import { MESSAGES, getMessage, getMessages } from "@/config/messages";
 import { DEFAULTS, getDefault, getDefaults } from "@/config/defaults";
 import { APP_CONFIG, getAppConfig } from "@/config/appConfig";
 import { LOGOUT_CONFIG } from "@/config/logout";
-import { PRICING_TIERS, getPricingTier, getTierFeatures, isFeatureInTier } from "@/config/pricing";
 
 /**
  * Central config manager with all helper functions
@@ -67,22 +66,8 @@ export const configManager = {
   // Logout
   getLogoutConfig: () => LOGOUT_CONFIG,
   
-  // Pricing & Tiers
-  getPricingTier,
-  getTierFeatures,
-  isFeatureInTier,
-  getAllPricingTiers: () => PRICING_TIERS,
-  
-  // Helper: Check if feature is enabled AND available in tier
-  isFeatureAvailable: (featurePath: string, tier: string) => {
-    return isFeatureEnabled(featurePath) && isFeatureInTier(featurePath, tier as any);
-  },
-  
-  // Helper: Get tier-specific features
-  getAvailableFeatures: (tier: string) => {
-    const features = configManager.getTierFeatures(tier as any);
-    return features.filter((f: string) => isFeatureEnabled(f));
-  },
+  // Pricing & Tiers (available via hooks)
+  // Note: Import pricing.ts separately to avoid circular dependencies
 };
 
 /**

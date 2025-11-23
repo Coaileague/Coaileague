@@ -11,10 +11,9 @@
 
 import { useMemo } from "react";
 import { configManager } from "@/lib/configManager";
-import { API_ENDPOINTS } from "@/config/apiEndpoints";
-import { FEATURE_TOGGLES } from "@/config/featureToggles";
-import { AI_CONFIG } from "@/config/aiConfig";
-import type { PRICING_TIERS } from "@/config/pricing";
+// Pricing imports commented out - will be added when pricing module import is resolved
+// import type { PRICING_TIERS, SubscriptionTier } from "@/config/pricing";
+// import { getPricingTier, getTierFeatures, isFeatureInTier } from "@/config/pricing";
 
 /**
  * Get API endpoint
