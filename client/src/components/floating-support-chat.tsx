@@ -151,7 +151,7 @@ export function FloatingSupportChat() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  // Pointer Events drag handlers
+  // Pointer Events drag handlers - with proper capture
   const handlePointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('button, input, textarea')) {
       return; // Don't drag when interacting with controls
@@ -164,12 +164,13 @@ export function FloatingSupportChat() {
       y: e.clientY - state.position.y
     };
     
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDraggingRef.current || typeof window === 'undefined') return;
     
+    e.preventDefault();
     const newX = Math.max(0, Math.min(e.clientX - dragStartRef.current.x, window.innerWidth - 400));
     const newY = Math.max(0, Math.min(e.clientY - dragStartRef.current.y, window.innerHeight - 100));
     
@@ -182,8 +183,21 @@ export function FloatingSupportChat() {
   const handlePointerUp = (e: React.PointerEvent) => {
     if (isDraggingRef.current) {
       isDraggingRef.current = false;
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // Element may have unmounted
+      }
     }
+  };
+  
+  // Prevent click from firing when dragging
+  const handleClickWithDragCheck = (e: React.MouseEvent) => {
+    if (isDraggingRef.current) {
+      e.preventDefault();
+      return;
+    }
+    setState(prev => ({ ...prev, isMinimized: false }));
   };
   
   // Smart routing handler (role-based)
@@ -323,7 +337,7 @@ export function FloatingSupportChat() {
   
   if (shouldHide) return null;
   
-  // Minimized pill UI
+  // Minimized pill UI - draggable on desktop
   if (state.isMinimized) {
     return (
       <div
@@ -332,10 +346,11 @@ export function FloatingSupportChat() {
           left: state.position.x,
           top: state.position.y,
           zIndex: 9999,
-          touchAction: 'none'
+          touchAction: 'none',
+          cursor: isDraggingRef.current ? 'grabbing' : 'grab'
         }}
-        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full px-4 py-3 shadow-2xl cursor-pointer hover-elevate active-elevate-2"
-        onClick={() => setState(prev => ({ ...prev, isMinimized: false }))}
+        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full px-4 py-3 shadow-2xl hover-elevate active-elevate-2"
+        onClick={handleClickWithDragCheck}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
