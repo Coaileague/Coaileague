@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { AnimatedAutoForceLogo } from "@/components/animated-autoforce-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
+import { apiPost } from "@/lib/apiClient";
+import { navConfig } from "@/config/navigationConfig";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -50,22 +52,12 @@ export default function CustomRegister() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          password: data.password,
-        }),
+      await apiPost('auth.register', {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Registration failed");
-      }
 
       toast({
         title: "Registration successful",
@@ -73,7 +65,7 @@ export default function CustomRegister() {
       });
 
       // Redirect to dashboard
-      setLocation("/dashboard");
+      setLocation(navConfig.app.dashboard);
     } catch (error: any) {
       toast({
         title: "Registration failed",

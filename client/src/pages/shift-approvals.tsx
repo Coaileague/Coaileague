@@ -21,7 +21,9 @@ import {
   UserMinus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPatch } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { format } from "date-fns";
 
 interface ShiftAction {
@@ -48,16 +50,17 @@ export default function ShiftApprovalsPage() {
 
   // Fetch pending shift actions
   const { data: actions, isLoading } = useQuery<ShiftAction[]>({
-    queryKey: ['/api/shift-actions/pending'],
+    queryKey: queryKeys.shifts.proposals,
+    queryFn: () => apiGet('shifts.pendingActions'),
   });
 
   // Approve/Deny mutation (uses single endpoint with approved boolean)
   const actionMutation = useMutation({
     mutationFn: async ({ actionId, approved, managerNotes }: { actionId: string; approved: boolean; managerNotes?: string }) => {
-      return await apiRequest(`/api/shift-actions/${actionId}/approve`, 'PUT', { approved, managerNotes });
+      return await apiPatch('shifts.approveAction', { actionId, approved, managerNotes });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shift-actions/pending'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.shifts.proposals });
       toast({
         title: variables.approved ? "Request Approved" : "Request Denied",
         description: variables.approved 

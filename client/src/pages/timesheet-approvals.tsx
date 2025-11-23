@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPatch } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,15 +34,16 @@ export default function TimesheetApprovals() {
   const { toast } = useToast();
 
   const { data: requests, isLoading } = useQuery<TimesheetEditRequest[]>({
-    queryKey: ['/api/timesheet-edit-requests/pending'],
+    queryKey: queryKeys.timeEntries.list(1, 100),
+    queryFn: () => apiGet('timeEntries.pendingApprovals'),
   });
 
   const reviewMutation = useMutation({
     mutationFn: async ({ requestId, approved, reviewNotes }: { requestId: string; approved: boolean; reviewNotes?: string }) => {
-      return await apiRequest(`/api/timesheet-edit-requests/${requestId}/review`, 'PUT', { approved, reviewNotes });
+      return await apiPatch('timeEntries.approveEdit', { requestId, approved, reviewNotes });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/timesheet-edit-requests/pending'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.list(1, 100) });
       toast({
         title: variables.approved ? "Request Approved" : "Request Denied",
         description: variables.approved 

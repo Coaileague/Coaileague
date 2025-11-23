@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, TrendingUp, Users, Plus, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -72,16 +74,18 @@ export default function HRReviews() {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
   const { data: reviews, isLoading } = useQuery<Review[]>({
-    queryKey: ['/api/hr/reviews'],
+    queryKey: queryKeys.reviews.all,
+    queryFn: () => apiGet('reviews.list'),
   });
 
   const { data: employees } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
+    queryKey: queryKeys.employees.all,
+    queryFn: () => apiGet('employees.list'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: ReviewFormData) => {
-      return apiRequest('POST', '/api/hr/reviews', {
+      return apiPost('reviews.create', {
         ...data,
         communicationRating: parseInt(data.communicationRating),
         teamworkRating: parseInt(data.teamworkRating),
@@ -92,7 +96,7 @@ export default function HRReviews() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/reviews'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviews.all });
       setDialogOpen(false);
       form.reset();
       toast({
@@ -137,7 +141,7 @@ export default function HRReviews() {
   const fileDisputeMutation = useMutation({
     mutationFn: async (data: DisputeFormData) => {
       if (!selectedReview) throw new Error("No review selected");
-      return apiRequest('POST', '/api/disputes', {
+      return apiPost('grievances.file', {
         ...data,
         disputeType: 'performance_review',
         targetType: 'performance_reviews',
@@ -145,7 +149,7 @@ export default function HRReviews() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/disputes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grievances.all });
       setDisputeDialogOpen(false);
       disputeForm.reset();
       setSelectedReview(null);

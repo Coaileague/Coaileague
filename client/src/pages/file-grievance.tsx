@@ -14,7 +14,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
+import { navConfig } from "@/config/navigationConfig";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -43,7 +46,8 @@ export default function FileGrievance() {
 
   // Fetch potential items to dispute (reviews, write-ups)
   const { data: disputeableItems } = useQuery({
-    queryKey: ['/api/employee/disputeable-items'],
+    queryKey: queryKeys.grievances.all,
+    queryFn: () => apiGet('grievances.disputeable'),
   });
 
   const form = useForm<FileGrievanceForm>({
@@ -60,20 +64,14 @@ export default function FileGrievance() {
 
   const fileGrievanceMutation = useMutation({
     mutationFn: async (data: FileGrievanceForm) => {
-      const response = await fetch('/api/disputes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to file grievance');
-      return await response.json();
+      return apiPost('grievances.file', data);
     },
     onSuccess: (data: any) => {
       toast({
         title: "Grievance Filed Successfully",
         description: "Your grievance has been submitted for review. You will be notified of the decision.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/disputes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grievances.all });
       setSubmittedId(data.id);
       form.reset();
     },
@@ -103,7 +101,7 @@ export default function FileGrievance() {
           <CardContent className="space-y-4">
             <p>Your grievance has been submitted for review. You can track its status in the disputes page.</p>
             <div className="flex gap-2">
-              <Button onClick={() => setLocation('/disputes')} data-testid="button-view-disputes">
+              <Button onClick={() => setLocation(navConfig.misc.disputes)} data-testid="button-view-disputes">
                 View My Disputes
               </Button>
               <Button variant="outline" onClick={() => setSubmittedId(null)} data-testid="button-file-another">
