@@ -3,9 +3,11 @@
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { X, Home } from "lucide-react"
+import { useLocation } from "wouter"
 
 import { cn } from "@/lib/utils"
+import { HOME_BUTTON_CONFIG, getHomeButtonConfig } from "@/config/homeButton"
 
 const Sheet = SheetPrimitive.Root
 
@@ -51,27 +53,72 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  showHomeButton?: boolean;
+  homeButtonPath?: string;
+  isGuest?: boolean;
+}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      {children}
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary hover:bg-accent">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+>(({ side = "right", className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, ...props }, ref) => {
+  const [, setLocation] = useLocation();
+  const config = getHomeButtonConfig(isGuest);
+  const navPath = homeButtonPath || config.navigationPath;
+
+  const handleHomeClick = () => {
+    if (config.useFullPageReload) {
+      window.location.href = navPath;
+    } else {
+      setLocation(navPath);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!HOME_BUTTON_CONFIG.escapeKeyEnabled) return;
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showHomeButton) {
+        handleHomeClick();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showHomeButton, navPath]);
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), className)}
+        {...props}
+      >
+        {children}
+        <div className="absolute right-4 top-4 flex items-center gap-1">
+          {showHomeButton && (
+            <button
+              onClick={handleHomeClick}
+              className="rounded-md p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent"
+              data-testid={config.testId}
+              title={config.tooltip}
+              aria-label={config.ariaLabel}
+            >
+              <Home className="h-4 w-4" />
+              <span className="sr-only">{config.ariaLabel}</span>
+            </button>
+          )}
+          <SheetPrimitive.Close className="rounded-sm p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary hover:bg-accent">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        </div>
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+})
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = ({
