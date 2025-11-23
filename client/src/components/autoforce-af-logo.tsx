@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { logoConfig, getLogoSize, getAnimationConfig } from "@/config/logoConfig";
+import { logoConfig, getLogoSize } from "@/config/logoConfig";
 
 interface AutoForceAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -9,10 +9,10 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * AutoForce™ Premium Logo - Sophisticated AF Monogram
+ * AutoForce™ Energy-Based Logo
  * 
- * Bold, high-contrast AF monogram with eye-catching energy flows.
- * White letters with gold/amber animation for premium aesthetic.
+ * A and F form from pulsing energy, glow while visible, then dissolve back into the energy.
+ * Clean cycle: Energy releases → Letters appear & glow → Letters fade → Energy resets
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -23,155 +23,230 @@ export function AutoForceAFLogo({
   const sizeConfig = getLogoSize(size);
 
   /**
-   * Premium AF Monogram Icon - High Contrast Design
+   * Energy-Driven AF Logo - Letters emerge from and dissolve into glowing energy
    */
-  const PremiumAFMonogram = () => (
+  const EnergyAFLogo = () => (
     <svg
       viewBox="0 0 100 100"
       className="w-full h-full"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ filter: animated ? "drop-shadow(0 6px 20px rgba(255, 193, 7, 0.4))" : "none" }}
+      style={{ filter: animated ? "drop-shadow(0 6px 20px rgba(255, 193, 7, 0.5))" : "none" }}
     >
       <defs>
         <style>{`
-          ${getAnimationConfig("glowPulse").keyframes}
-          ${getAnimationConfig("flowEnergy").keyframes}
+          @keyframes energy-pulse {
+            0% {
+              r: 2;
+              opacity: 1;
+              filter: drop-shadow(0 0 3px rgba(255, 193, 7, 0.8));
+            }
+            50% {
+              r: 8;
+              opacity: 0.3;
+              filter: drop-shadow(0 0 12px rgba(255, 193, 7, 0.4));
+            }
+            100% {
+              r: 2;
+              opacity: 1;
+              filter: drop-shadow(0 0 3px rgba(255, 193, 7, 0.8));
+            }
+          }
 
-          .energy-line {
+          @keyframes letter-draw {
+            0% {
+              stroke-dashoffset: 300;
+              opacity: 0;
+              filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0));
+            }
+            30% {
+              stroke-dashoffset: 0;
+              opacity: 1;
+              filter: drop-shadow(0 0 8px rgba(255, 193, 7, 0.6));
+            }
+            70% {
+              stroke-dashoffset: 0;
+              opacity: 1;
+              filter: drop-shadow(0 0 8px rgba(255, 193, 7, 0.6));
+            }
+            100% {
+              stroke-dashoffset: -300;
+              opacity: 0;
+              filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0));
+            }
+          }
+
+          @keyframes letter-glow {
+            0% { filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0)); }
+            30% { filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.8)); }
+            70% { filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.8)); }
+            100% { filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0)); }
+          }
+
+          @keyframes energy-flow-a {
+            0% { stroke-dashoffset: 50; opacity: 0; }
+            20% { opacity: 0.4; }
+            50% { stroke-dashoffset: 0; opacity: 0.5; }
+            100% { stroke-dashoffset: -50; opacity: 0; }
+          }
+
+          @keyframes energy-flow-f {
+            0% { stroke-dashoffset: 50; opacity: 0; }
+            20% { opacity: 0.4; }
+            50% { stroke-dashoffset: 0; opacity: 0.5; }
+            100% { stroke-dashoffset: -50; opacity: 0; }
+          }
+
+          .energy-core {
+            animation: energy-pulse 4s ease-in-out infinite;
+          }
+
+          .letter-a {
+            stroke-dasharray: 300;
+            animation: letter-draw 4s ease-in-out infinite;
+          }
+
+          .letter-f {
+            stroke-dasharray: 300;
+            animation: letter-draw 4s ease-in-out infinite 0.2s;
+          }
+
+          .energy-to-a {
             stroke-dasharray: 50;
-            animation: ${animated ? `flow-energy ${getAnimationConfig("flowEnergy").duration} ease-in-out infinite` : "none"};
+            animation: energy-flow-a 4s ease-in-out infinite;
           }
 
-          .connection-glow {
-            animation: ${animated ? `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite` : "none"};
-          }
-
-          .letter-glow {
-            animation: ${animated ? `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite 0.3s` : "none"};
+          .energy-to-f {
+            stroke-dasharray: 50;
+            animation: energy-flow-f 4s ease-in-out infinite 0.2s;
           }
         `}</style>
 
-        {/* White gradient for letters - stands out against blue */}
-        <linearGradient id="whiteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#F5F5F5" stopOpacity="1" />
+        {/* Gradients */}
+        <radialGradient id="energyGradient" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFD700" stopOpacity="1" />
+          <stop offset="100%" stopColor="#FFC107" stopOpacity="0.3" />
+        </radialGradient>
+
+        <linearGradient id="whiteStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F0F0F0" />
         </linearGradient>
-
-        {/* Gold/Amber for energy flows - eye-catching contrast */}
-        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFC107" stopOpacity="1" />
-          <stop offset="100%" stopColor="#FFB300" stopOpacity="1" />
-        </linearGradient>
-
-        {/* Premium glow effect */}
-        <filter id="premiumGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
-        </filter>
-
-        <filter id="energyGlow">
-          <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-
-        {/* Accent glow - subtle ring */}
-        <filter id="accentGlow">
-          <feGaussianBlur stdDeviation="0.8" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
-      {/* Background circle for balance - light accent */}
-      <circle cx="50" cy="50" r="48" fill="none" stroke="#FFB300" strokeWidth="0.8" opacity="0.15" />
+      {/* ========== CENTRAL ENERGY CORE ========== */}
+      {/* This pulsing core is the energy source */}
+      <circle cx="50" cy="50" r="3" fill="url(#energyGradient)" className="energy-core" />
 
-      {/* ========== LETTER "A" (Left) - WHITE, BOLD ========== */}
-      {/* A - Top point */}
-      <circle cx="32" cy="24" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
-
-      {/* A - Bottom left corner */}
-      <circle cx="20" cy="62" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
-
-      {/* A - Bottom right corner */}
-      <circle cx="44" cy="62" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
-
-      {/* A - Left edge line - BRIGHT WHITE */}
-      <line x1="32" y1="24" x2="20" y2="62" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
-
-      {/* A - Right edge line - BRIGHT WHITE */}
-      <line x1="32" y1="24" x2="44" y2="62" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
-
-      {/* A - Horizontal crossbar - BRIGHT WHITE */}
-      <line x1="24" y1="42" x2="40" y2="42" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
-
-      {/* A - Connection node - GOLD/AMBER (eye-catching) */}
-      <circle cx="32" cy="42" r="2.2" fill="url(#goldGradient)" filter="url(#energyGlow)" className="connection-glow" />
-
-      {/* ========== LETTER "F" (Right) - WHITE, BOLD ========== */}
-      {/* F - Top point */}
-      <circle cx="68" cy="24" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
-
-      {/* F - Bottom left corner */}
-      <circle cx="56" cy="62" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
-
-      {/* F - Vertical spine - BRIGHT WHITE */}
-      <line x1="68" y1="24" x2="56" y2="62" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
-
-      {/* F - Top horizontal bar - BRIGHT WHITE */}
-      <line x1="68" y1="24" x2="80" y2="24" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
-
-      {/* F - Middle horizontal bar - BRIGHT WHITE */}
-      <line x1="65" y1="42" x2="77" y2="42" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
-
-      {/* F - Connection node - GOLD/AMBER (eye-catching) */}
-      <circle cx="71" cy="42" r="2.2" fill="url(#goldGradient)" filter="url(#energyGlow)" className="connection-glow" />
-
-      {/* ========== CONNECTING ENERGY FLOWS - GOLD/AMBER ========== */}
-      {/* Energy flowing from A through center to F - VIBRANT GOLD */}
-      <line
-        className="energy-line"
-        x1="32"
-        y1="42"
-        x2="71"
-        y2="42"
-        stroke="url(#goldGradient)"
-        strokeWidth="1.8"
-        opacity="0.8"
-        filter="url(#energyGlow)"
-      />
-
-      {/* Accent energy pulse - top arc - GOLD */}
+      {/* ========== ENERGY FLOWS TO LETTERS ========== */}
+      {/* Flow to A (top-left) */}
       <path
-        className="energy-line"
-        d="M 32 24 Q 50 15 68 24"
+        className="energy-to-a"
+        d="M 50 50 L 32 30"
         stroke="#FFC107"
-        strokeWidth="1.2"
+        strokeWidth="1"
         fill="none"
-        opacity="0.7"
-        filter="url(#accentGlow)"
+        strokeLinecap="round"
       />
 
-      {/* Accent energy pulse - bottom arc - GOLD */}
+      {/* Flow to F (top-right) */}
       <path
-        className="energy-line"
-        d="M 20 62 Q 50 75 80 62"
+        className="energy-to-f"
+        d="M 50 50 L 68 30"
         stroke="#FFB300"
-        strokeWidth="1.2"
+        strokeWidth="1"
         fill="none"
-        opacity="0.7"
-        filter="url(#accentGlow)"
+        strokeLinecap="round"
       />
 
-      {/* Central coordination hub - GOLD accent */}
-      <circle cx="50" cy="50" r="3.5" fill="url(#goldGradient)" opacity="0.8" filter="url(#energyGlow)" className="connection-glow" />
+      {/* ========== LETTER "A" - DRAWN FROM ENERGY ========== */}
+      {/* A forms as energy flows in */}
+      <g>
+        {/* A - left diagonal */}
+        <line
+          className="letter-a"
+          x1="32"
+          y1="22"
+          x2="20"
+          y2="58"
+          stroke="url(#whiteStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
 
-      {/* Premium quality accent rings - GOLD accents */}
-      <circle cx="50" cy="50" r="6" fill="none" stroke="url(#goldGradient)" strokeWidth="0.8" opacity="0.4" filter="url(#accentGlow)" />
-      <circle cx="50" cy="50" r="10" fill="none" stroke="#FFB300" strokeWidth="0.6" opacity="0.2" />
+        {/* A - right diagonal */}
+        <line
+          className="letter-a"
+          x1="32"
+          y1="22"
+          x2="44"
+          y2="58"
+          stroke="url(#whiteStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        {/* A - crossbar */}
+        <line
+          className="letter-a"
+          x1="24"
+          y1="40"
+          x2="40"
+          y2="40"
+          stroke="url(#whiteStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+      </g>
+
+      {/* ========== LETTER "F" - DRAWN FROM ENERGY ========== */}
+      {/* F forms as energy flows in (slightly delayed) */}
+      <g>
+        {/* F - vertical spine */}
+        <line
+          className="letter-f"
+          x1="68"
+          y1="22"
+          x2="56"
+          y2="58"
+          stroke="url(#whiteStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        {/* F - top horizontal */}
+        <line
+          className="letter-f"
+          x1="68"
+          y1="22"
+          x2="80"
+          y2="22"
+          stroke="url(#whiteStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        {/* F - middle horizontal */}
+        <line
+          className="letter-f"
+          x1="65"
+          y1="40"
+          x2="77"
+          y2="40"
+          stroke="url(#whiteStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+      </g>
+
+      {/* ========== ACCENT RING ========== */}
+      {/* Subtle outer ring shows the energy boundary */}
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#FFB300" strokeWidth="0.6" opacity="0.2" />
     </svg>
   );
 
@@ -206,12 +281,12 @@ export function AutoForceAFLogo({
         )}
         data-testid={`${logoConfig.accessibility.testIdPrefix}-icon`}
       >
-        {/* Premium shimmer on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-amber-200 to-transparent transition-opacity duration-500" />
+        {/* Shimmer on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-yellow-100 to-transparent transition-opacity duration-500" />
 
         {/* Icon */}
         <div className="relative z-10 w-3/4 h-3/4 text-white">
-          <PremiumAFMonogram />
+          {animated ? <EnergyAFLogo /> : <EnergyAFLogo />}
         </div>
       </div>
     );
@@ -232,9 +307,9 @@ export function AutoForceAFLogo({
           "group"
         )}
       >
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-amber-200 to-transparent transition-opacity duration-500" />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-yellow-100 to-transparent transition-opacity duration-500" />
         <div className="relative z-10 w-3/4 h-3/4 text-white">
-          <PremiumAFMonogram />
+          {animated ? <EnergyAFLogo /> : <EnergyAFLogo />}
         </div>
       </div>
 
