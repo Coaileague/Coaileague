@@ -36,13 +36,6 @@ export default function CustomLogin() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    
-    transition.showTransition({
-      status: "loading",
-      scenario: "login",
-      message: "Signing In...",
-      submessage: "Authenticating your credentials..."
-    });
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -59,22 +52,16 @@ export default function CustomLogin() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
-      // Redirect to workspace if available, otherwise fallback to dashboard
-      const redirectPath = result.user?.currentWorkspaceId ? "/dashboard" : "/dashboard";
+      toast({
+        title: "Login Successful!",
+        description: `Welcome back, ${data.email.split('@')[0]}!`,
+      });
 
-      showSuccessTransition(
-        transition,
-        "Login Successful!",
-        redirectPath,
-        `Welcome back, ${data.email.split('@')[0]}!`
-      );
+      // Direct redirect to dashboard
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 500);
     } catch (error: any) {
-      showErrorTransition(
-        transition,
-        "Login Failed",
-        error.message || "Invalid email or password"
-      );
-      
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
