@@ -1,6 +1,7 @@
 import { AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { navConfig } from "@/config/navigationConfig";
 
 export function DemoBanner() {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export function DemoBanner() {
         </div>
         <Button 
           size="sm" 
-          onClick={() => window.location.href = "/api/login"}
+          onClick={() => window.location.href = navConfig.auth.login}
           data-testid="button-demo-signup"
         >
           Sign Up for Free

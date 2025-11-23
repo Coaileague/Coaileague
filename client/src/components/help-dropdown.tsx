@@ -23,6 +23,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ServiceFailureDialog } from "@/components/errors/ServiceFailureDialog";
+import { navConfig } from "@/config/navigationConfig";
 
 export function HelpDropdown() {
   const [showIncidentDialog, setShowIncidentDialog] = useState(false);
@@ -48,7 +49,7 @@ export function HelpDropdown() {
             <Book className="mr-2 h-4 w-4" />
             <span>Documentation</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => window.location.href = '/chat'}>
+          <DropdownMenuItem onClick={() => window.location.href = navConfig.app.chat}>
             <MessageSquare className="mr-2 h-4 w-4" />
             <span>Live Chat Support</span>
           </DropdownMenuItem>

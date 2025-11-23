@@ -11,6 +11,7 @@ export const queryKeys = {
     workspaceRole: ["auth", "workspaceRole"],
     platformRole: ["auth", "platformRole"],
     features: ["auth", "features"],
+    mfa: ["auth", "mfa"],
   },
 
   // Workspace

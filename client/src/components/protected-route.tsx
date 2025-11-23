@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
+import { navConfig } from "@/config/navigationConfig";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -9,7 +10,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Only redirect if not on a public route
     if (!isLoadingBlocked && !isLoading && !isAuthenticated) {
-      window.location.href = "/api/login";
+      window.location.href = navConfig.auth.login;
     }
   }, [isAuthenticated, isLoading, isLoadingBlocked]);
 
