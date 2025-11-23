@@ -1789,7 +1789,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   type="button"
                   variant={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonVariant as any}
                   size="icon"
-                  onClick={() => navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath)}
+                  onClick={() => {
+                    if (CHAT_BUBBLE_CONFIG.intakeFormDialog.useFullPageReload) {
+                      window.location.href = CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath;
+                    } else {
+                      navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath);
+                    }
+                  }}
                   className="h-8 w-8 flex-shrink-0"
                   data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
                   title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}
@@ -1881,7 +1887,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               <Button
                 type="button"
                 variant={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonVariant as any}
-                onClick={() => navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath)}
+                onClick={() => {
+                  if (CHAT_BUBBLE_CONFIG.intakeFormDialog.useFullPageReload) {
+                    window.location.href = CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath;
+                  } else {
+                    navigate(CHAT_BUBBLE_CONFIG.intakeFormDialog.homeNavigationPath);
+                  }
+                }}
                 className="w-full"
                 data-testid={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTestId}
                 title={CHAT_BUBBLE_CONFIG.intakeFormDialog.homeButtonTooltip}

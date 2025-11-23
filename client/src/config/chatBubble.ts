@@ -169,7 +169,8 @@ export const CHAT_BUBBLE_CONFIG = {
     homeButtonVariant: 'ghost',
     homeButtonTooltip: 'Return to Home',
     homeButtonTestId: 'button-home-from-intake',
-    homeNavigationPath: '/',
+    homeNavigationPath: '/', // Full page reload - avoids auth redirects
+    useFullPageReload: true, // Force hard reload instead of SPA navigation
   },
 
   // ===== VISIBILITY =====
