@@ -12,9 +12,15 @@ export const CHAT_BUBBLE_CONFIG = {
     initialOffsetY: 620,  // Initial Y offset from bottom
     
     // Drag boundary constraints
-    maxWidth: 400,  // Maximum X position (chat bubble width)
     maxHeight: 600, // Maximum Y position (chat bubble height)
     bottomBoundary: 100, // Minimum Y position to prevent going off bottom
+  },
+
+  // Element widths in pixels for drag boundary calculations
+  elementWidths: {
+    floatingButton: 64,      // w-16 = 4rem = 64px
+    minimizedPill: 140,      // approximate: px-4 py-3 + icon + text
+    chatWindow: 400,         // Full chat window width
   },
 
   sizes: {

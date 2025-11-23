@@ -137,7 +137,15 @@ export function FloatingSupportChat() {
     if (typeof window === 'undefined') return;
     
     const handleResize = () => {
-      const maxX = window.innerWidth - CHAT_BUBBLE_CONFIG.positioning.maxWidth;
+      // Calculate max X based on current element width
+      let elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.floatingButton;
+      if (state.isOpen) {
+        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.chatWindow;
+      } else if (state.isMinimized) {
+        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill;
+      }
+      
+      const maxX = window.innerWidth - elementWidth;
       const maxY = window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.maxHeight;
       setState(prev => ({
         ...prev,
@@ -150,7 +158,7 @@ export function FloatingSupportChat() {
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [state]);
   
   // Document-level drag handlers - always attached
   useEffect(() => {
@@ -159,7 +167,16 @@ export function FloatingSupportChat() {
     const handleDocumentMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       
-      const newX = Math.max(0, Math.min(e.clientX - dragStartRef.current.x, window.innerWidth - CHAT_BUBBLE_CONFIG.positioning.maxWidth));
+      // Calculate max X based on current element width
+      let elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.floatingButton;
+      if (state.isOpen) {
+        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.chatWindow;
+      } else if (state.isMinimized) {
+        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill;
+      }
+      
+      const maxX = window.innerWidth - elementWidth;
+      const newX = Math.max(0, Math.min(e.clientX - dragStartRef.current.x, maxX));
       const newY = Math.max(0, Math.min(e.clientY - dragStartRef.current.y, window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.bottomBoundary));
       
       setState(prev => ({
