@@ -73,6 +73,7 @@ import HRTerminations from "@/pages/hr-terminations";
 import HelpDesk from "@/pages/HelpDesk";
 import SalesPortal from "@/pages/sales-portal";
 import LogoShowcase from "@/pages/logo-showcase";
+import Chatrooms from "@/pages/chatrooms";
 import PayrollDashboard from "@/pages/payroll-dashboard";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
@@ -374,6 +375,7 @@ function AppContent() {
               {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT */}
               <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
               <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
+              <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery and bulk join */}
               
               {/* Redirect legacy chat routes to unified /chat */}
               <Route path="/support/chat"><Redirect to="/chat" /></Route>
