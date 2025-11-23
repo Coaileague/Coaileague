@@ -15,6 +15,7 @@ import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext
 import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate";
 import { TransitionProvider } from "@/contexts/transition-context";
+import { LoadingProvider } from "@/contexts/loading-context";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
