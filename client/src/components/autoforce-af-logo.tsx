@@ -11,9 +11,8 @@ interface AutoForceAFLogoProps {
 /**
  * AutoForce™ Premium Logo - Sophisticated AF Monogram
  * 
- * The "AF" is not just text - it IS the design.
- * Modern geometric letterforms with interconnected network flows.
- * Shows premium tech aesthetic (think Stripe, Apple, Airbnb quality).
+ * Bold, high-contrast AF monogram with eye-catching energy flows.
+ * White letters with gold/amber animation for premium aesthetic.
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -24,15 +23,14 @@ export function AutoForceAFLogo({
   const sizeConfig = getLogoSize(size);
 
   /**
-   * Premium AF Monogram Icon
-   * Sophisticated geometric letterforms with flowing network energy
+   * Premium AF Monogram Icon - High Contrast Design
    */
   const PremiumAFMonogram = () => (
     <svg
       viewBox="0 0 100 100"
       className="w-full h-full"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ filter: animated ? "drop-shadow(0 4px 16px rgba(59, 130, 246, 0.3))" : "none" }}
+      style={{ filter: animated ? "drop-shadow(0 6px 20px rgba(255, 193, 7, 0.4))" : "none" }}
     >
       <defs>
         <style>{`
@@ -48,29 +46,39 @@ export function AutoForceAFLogo({
             animation: ${animated ? `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite` : "none"};
           }
 
-          .letter-a { fill: url(#afGradient); }
-          .letter-f { fill: url(#afGradientReverse); }
+          .letter-glow {
+            animation: ${animated ? `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite 0.3s` : "none"};
+          }
         `}</style>
 
-        {/* Primary gradient for A */}
-        <linearGradient id="afGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1" />
-          <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity="1" />
+        {/* White gradient for letters - stands out against blue */}
+        <linearGradient id="whiteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#F5F5F5" stopOpacity="1" />
         </linearGradient>
 
-        {/* Reverse gradient for F */}
-        <linearGradient id="afGradientReverse" x1="100%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity="1" />
-          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="1" />
+        {/* Gold/Amber for energy flows - eye-catching contrast */}
+        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFC107" stopOpacity="1" />
+          <stop offset="100%" stopColor="#FFB300" stopOpacity="1" />
         </linearGradient>
 
-        {/* Glow filter for premium effect */}
+        {/* Premium glow effect */}
         <filter id="premiumGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
         </filter>
 
         <filter id="energyGlow">
-          <feGaussianBlur stdDeviation="1" result="coloredBlur" />
+          <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* Accent glow - subtle ring */}
+        <filter id="accentGlow">
+          <feGaussianBlur stdDeviation="0.8" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
             <feMergeNode in="SourceGraphic" />
@@ -78,90 +86,92 @@ export function AutoForceAFLogo({
         </filter>
       </defs>
 
-      {/* Background circle for optical balance */}
-      <circle cx="50" cy="50" r="48" fill="none" stroke="hsl(217, 91%, 60%)" strokeWidth="0.5" opacity="0.1" />
+      {/* Background circle for balance - light accent */}
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#FFB300" strokeWidth="0.8" opacity="0.15" />
 
-      {/* ========== LETTER "A" (Left) ========== */}
-      {/* A - Top point (geometric peak) */}
-      <circle cx="32" cy="24" r="2.5" fill="url(#afGradient)" filter="url(#premiumGlow)" />
+      {/* ========== LETTER "A" (Left) - WHITE, BOLD ========== */}
+      {/* A - Top point */}
+      <circle cx="32" cy="24" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
 
       {/* A - Bottom left corner */}
-      <circle cx="20" cy="62" r="2.5" fill="url(#afGradient)" filter="url(#premiumGlow)" />
+      <circle cx="20" cy="62" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
 
       {/* A - Bottom right corner */}
-      <circle cx="44" cy="62" r="2.5" fill="url(#afGradient)" filter="url(#premiumGlow)" />
+      <circle cx="44" cy="62" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
 
-      {/* A - Left edge line */}
-      <line x1="32" y1="24" x2="20" y2="62" stroke="url(#afGradient)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {/* A - Left edge line - BRIGHT WHITE */}
+      <line x1="32" y1="24" x2="20" y2="62" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
 
-      {/* A - Right edge line */}
-      <line x1="32" y1="24" x2="44" y2="62" stroke="url(#afGradient)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {/* A - Right edge line - BRIGHT WHITE */}
+      <line x1="32" y1="24" x2="44" y2="62" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
 
-      {/* A - Horizontal crossbar with connection point */}
-      <line x1="24" y1="42" x2="40" y2="42" stroke="url(#afGradient)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {/* A - Horizontal crossbar - BRIGHT WHITE */}
+      <line x1="24" y1="42" x2="40" y2="42" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
 
-      {/* A - Connection node (for energy flow) */}
-      <circle cx="32" cy="42" r="1.8" fill="hsl(60, 100%, 50%)" filter="url(#energyGlow)" className="connection-glow" />
+      {/* A - Connection node - GOLD/AMBER (eye-catching) */}
+      <circle cx="32" cy="42" r="2.2" fill="url(#goldGradient)" filter="url(#energyGlow)" className="connection-glow" />
 
-      {/* ========== LETTER "F" (Right) ========== */}
+      {/* ========== LETTER "F" (Right) - WHITE, BOLD ========== */}
       {/* F - Top point */}
-      <circle cx="68" cy="24" r="2.5" fill="url(#afGradientReverse)" filter="url(#premiumGlow)" />
+      <circle cx="68" cy="24" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
 
       {/* F - Bottom left corner */}
-      <circle cx="56" cy="62" r="2.5" fill="url(#afGradientReverse)" filter="url(#premiumGlow)" />
+      <circle cx="56" cy="62" r="3" fill="url(#whiteGradient)" filter="url(#premiumGlow)" className="letter-glow" />
 
-      {/* F - Vertical spine */}
-      <line x1="68" y1="24" x2="56" y2="62" stroke="url(#afGradientReverse)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {/* F - Vertical spine - BRIGHT WHITE */}
+      <line x1="68" y1="24" x2="56" y2="62" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
 
-      {/* F - Top horizontal bar */}
-      <line x1="68" y1="24" x2="80" y2="24" stroke="url(#afGradientReverse)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {/* F - Top horizontal bar - BRIGHT WHITE */}
+      <line x1="68" y1="24" x2="80" y2="24" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
 
-      {/* F - Middle horizontal bar */}
-      <line x1="65" y1="42" x2="77" y2="42" stroke="url(#afGradientReverse)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+      {/* F - Middle horizontal bar - BRIGHT WHITE */}
+      <line x1="65" y1="42" x2="77" y2="42" stroke="#FFFFFF" strokeWidth="3" opacity="1" strokeLinecap="round" filter="url(#premiumGlow)" />
 
-      {/* F - Connection node (for energy flow) */}
-      <circle cx="71" cy="42" r="1.8" fill="hsl(60, 100%, 50%)" filter="url(#energyGlow)" className="connection-glow" />
+      {/* F - Connection node - GOLD/AMBER (eye-catching) */}
+      <circle cx="71" cy="42" r="2.2" fill="url(#goldGradient)" filter="url(#energyGlow)" className="connection-glow" />
 
-      {/* ========== CONNECTING ENERGY FLOWS ========== */}
-      {/* Energy flowing from A through center to F */}
+      {/* ========== CONNECTING ENERGY FLOWS - GOLD/AMBER ========== */}
+      {/* Energy flowing from A through center to F - VIBRANT GOLD */}
       <line
         className="energy-line"
         x1="32"
         y1="42"
         x2="71"
         y2="42"
-        stroke="hsl(60, 100%, 50%)"
-        strokeWidth="1.2"
-        opacity="0.6"
+        stroke="url(#goldGradient)"
+        strokeWidth="1.8"
+        opacity="0.8"
         filter="url(#energyGlow)"
       />
 
-      {/* Accent energy pulse - top arc */}
+      {/* Accent energy pulse - top arc - GOLD */}
       <path
         className="energy-line"
         d="M 32 24 Q 50 15 68 24"
-        stroke="hsl(217, 91%, 60%)"
-        strokeWidth="1"
+        stroke="#FFC107"
+        strokeWidth="1.2"
         fill="none"
-        opacity="0.4"
+        opacity="0.7"
+        filter="url(#accentGlow)"
       />
 
-      {/* Accent energy pulse - bottom arc */}
+      {/* Accent energy pulse - bottom arc - GOLD */}
       <path
         className="energy-line"
         d="M 20 62 Q 50 75 80 62"
-        stroke="hsl(var(--primary))"
-        strokeWidth="1"
+        stroke="#FFB300"
+        strokeWidth="1.2"
         fill="none"
-        opacity="0.4"
+        opacity="0.7"
+        filter="url(#accentGlow)"
       />
 
-      {/* Central coordination hub - shows A and F work together */}
-      <circle cx="50" cy="50" r="3" fill="url(#afGradient)" opacity="0.6" filter="url(#premiumGlow)" />
+      {/* Central coordination hub - GOLD accent */}
+      <circle cx="50" cy="50" r="3.5" fill="url(#goldGradient)" opacity="0.8" filter="url(#energyGlow)" className="connection-glow" />
 
-      {/* Premium quality accent lines */}
-      <circle cx="50" cy="50" r="5" fill="none" stroke="url(#afGradient)" strokeWidth="0.6" opacity="0.25" />
-      <circle cx="50" cy="50" r="8" fill="none" stroke="url(#afGradientReverse)" strokeWidth="0.6" opacity="0.15" />
+      {/* Premium quality accent rings - GOLD accents */}
+      <circle cx="50" cy="50" r="6" fill="none" stroke="url(#goldGradient)" strokeWidth="0.8" opacity="0.4" filter="url(#accentGlow)" />
+      <circle cx="50" cy="50" r="10" fill="none" stroke="#FFB300" strokeWidth="0.6" opacity="0.2" />
     </svg>
   );
 
@@ -197,7 +207,7 @@ export function AutoForceAFLogo({
         data-testid={`${logoConfig.accessibility.testIdPrefix}-icon`}
       >
         {/* Premium shimmer on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-25 bg-gradient-to-br from-white via-transparent to-transparent transition-opacity duration-500" />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-amber-200 to-transparent transition-opacity duration-500" />
 
         {/* Icon */}
         <div className="relative z-10 w-3/4 h-3/4 text-white">
@@ -222,7 +232,7 @@ export function AutoForceAFLogo({
           "group"
         )}
       >
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-25 bg-gradient-to-br from-white via-transparent to-transparent transition-opacity duration-500" />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-amber-200 to-transparent transition-opacity duration-500" />
         <div className="relative z-10 w-3/4 h-3/4 text-white">
           <PremiumAFMonogram />
         </div>
