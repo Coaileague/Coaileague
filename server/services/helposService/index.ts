@@ -2,12 +2,14 @@
  * HelpOS™ - Unified AI Support System
  * Dual-persona architecture: bubbleAgent (customer-facing) and staffCopilot (agent assistance)
  * Powered by Gemini 2.0 Flash for cost-effective, intelligent support
+ * With AI Guard Rails: Rate limiting, audit logging, fallback mechanisms
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { HelposAiSession, InsertHelposAiSession, InsertHelposAiTranscriptEntry } from '@shared/schema';
 import type { IStorage } from '../../storage';
 import { usageMeteringService } from '../billing/usageMetering';
+import { aiGuardRails, type AIRequestContext } from '../aiGuardRails';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -31,6 +33,26 @@ class GeminiProvider implements AIProvider {
   async chat(messages: Array<{ role: string; content: string }>, options: { maxTokens?: number; workspaceId?: string; userId?: string } = {}): Promise<{ content: string; tokensUsed: number }> {
     if (!this.genAI) {
       throw new Error("Gemini API key not configured");
+    }
+
+    // Guard Rails: Create request context
+    const requestContext: AIRequestContext = {
+      workspaceId: options.workspaceId || 'unknown',
+      userId: options.userId || 'unknown',
+      organizationId: 'platform',
+      requestId: crypto.randomUUID(),
+      timestamp: new Date(),
+      operation: 'helpos_chat'
+    };
+
+    // Guard Rails: Validate last message
+    const lastMessage = messages[messages.length - 1];
+    const validation = aiGuardRails.validateRequest(lastMessage.content, requestContext, 'helpos_chat');
+    if (!validation.isValid) {
+      return {
+        content: 'I encountered an issue processing your message. Please try again with a shorter message.',
+        tokensUsed: 0
+      };
     }
 
     const model = this.genAI.getGenerativeModel({ model: this.model });
@@ -68,10 +90,20 @@ class GeminiProvider implements AIProvider {
       })
     });
 
-    const lastMessage = conversationMessages[conversationMessages.length - 1];
-    const result = await chat.sendMessage(lastMessage.content);
+    const userMessage = conversationMessages[conversationMessages.length - 1];
+    const result = await chat.sendMessage(userMessage.content);
     const response = result.response;
+    const responseText = response.text();
     
+    // Guard Rails: Validate response
+    const responseValidation = aiGuardRails.validateResponse(responseText, 0, 'helpos_chat');
+    if (!responseValidation.isValid) {
+      return {
+        content: 'I encountered an issue generating a response. Please try again.',
+        tokensUsed: 0
+      };
+    }
+
     // Record token usage for billing (skip for anonymous users)
     const usage = response.usageMetadata;
     const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
@@ -98,8 +130,16 @@ class GeminiProvider implements AIProvider {
       console.log(`💎 HelpOS™ Gemini - ${totalTokens} tokens - Anonymous User (not billed)`);
     }
 
+    // Guard Rails: Audit log
+    aiGuardRails.logAIOperation(requestContext, userMessage.content, responseText, {
+      success: true,
+      creditsUsed: 5,
+      tokensUsed: totalTokens,
+      duration: Date.now() - requestContext.timestamp.getTime()
+    });
+
     return {
-      content: response.text(),
+      content: responseText,
       tokensUsed: totalTokens
     };
   }

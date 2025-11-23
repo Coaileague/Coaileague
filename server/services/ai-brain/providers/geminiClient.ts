@@ -3,10 +3,12 @@
  * 
  * This is the ONE Gemini interface used by the entire platform.
  * All AI operations flow through here for consistency and observability.
+ * With AI Guard Rails: Input validation, rate limiting, audit logging
  */
 
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { usageMeteringService } from '../../billing/usageMetering';
+import { aiGuardRails, type AIRequestContext } from '../aiGuardRails';
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -51,6 +53,25 @@ export class UnifiedGeminiClient {
       throw new Error("Gemini API not configured - AI Brain disabled");
     }
 
+    // Guard Rails: Create request context
+    const requestContext: AIRequestContext = {
+      workspaceId: request.workspaceId || 'unknown',
+      userId: request.userId || 'unknown',
+      organizationId: 'platform',
+      requestId: Math.random().toString(36).substring(7),
+      timestamp: new Date(),
+      operation: request.featureKey
+    };
+
+    // Guard Rails: Validate request
+    const validation = aiGuardRails.validateRequest(request.userMessage, requestContext, request.featureKey);
+    if (!validation.isValid) {
+      return {
+        text: 'Input validation failed. Please check your message and try again.',
+        tokensUsed: 0
+      };
+    }
+
     try {
       console.log(`🧠 [AI Brain] Processing ${request.featureKey} request`);
       
@@ -70,9 +91,18 @@ export class UnifiedGeminiClient {
       });
 
       // Send user message
-      const result = await chat.sendMessage(request.userMessage);
+      const result = await chat.sendMessage(validation.sanitizedInput);
       const response = result.response;
       const responseText = response.text();
+
+      // Guard Rails: Validate response
+      const responseValidation = aiGuardRails.validateResponse(responseText, 0, request.featureKey);
+      if (!responseValidation.isValid) {
+        return {
+          text: 'Response validation failed. Please try again.',
+          tokensUsed: 0
+        };
+      }
 
       // Extract token usage
       const usage = response.usageMetadata;
@@ -98,6 +128,14 @@ export class UnifiedGeminiClient {
         
         console.log(`💰 [AI Brain] ${request.featureKey} - ${tokensUsed} tokens billed to workspace ${request.workspaceId}`);
       }
+
+      // Guard Rails: Audit log
+      aiGuardRails.logAIOperation(requestContext, validation.sanitizedInput, responseText, {
+        success: true,
+        creditsUsed: validation.estimatedCredits,
+        tokensUsed,
+        duration: Date.now() - requestContext.timestamp.getTime()
+      });
 
       return {
         text: responseText,
