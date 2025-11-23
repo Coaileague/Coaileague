@@ -9,8 +9,8 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * AutoForce™ Premium Logo - Autonomous Network Design
- * Connected nodes representing autonomous workforce coordination
+ * AutoForce™ Premium Logo - Autonomous Network with "AF" Integration
+ * The "AF" is elegantly integrated into the network nodes and flows
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -20,7 +20,7 @@ export function AutoForceAFLogo({
 }: AutoForceAFLogoProps) {
   const sizeConfig = getLogoSize(size);
 
-  // Autonomous Network Icon - Connected nodes with flowing energy
+  // Professional Autonomous Network Icon with "AF" Integration
   const AutonomousNetworkIcon = () => (
     <svg
       viewBox="0 0 100 100"
@@ -52,6 +52,18 @@ export function AutoForceAFLogo({
           .outer-ring {
             animation: ${animated ? `rotate-ring ${getAnimationConfig("rotateRing").duration} linear infinite` : "none"};
           }
+
+          .af-letter {
+            font-family: 'Inter', '-apple-system', 'Segoe UI', sans-serif;
+            font-weight: 800;
+            font-size: 14;
+            fill: white;
+            pointer-events: none;
+          }
+
+          .af-accent {
+            animation: ${animated ? `flow-node ${getAnimationConfig("flowNode").duration} ease-in-out infinite` : "none"};
+          }
         `}</style>
 
         <radialGradient id="coreGradient">
@@ -68,7 +80,7 @@ export function AutoForceAFLogo({
         </filter>
       </defs>
 
-      {/* Outer rotating ring - represents continuous autonomous operation */}
+      {/* Outer rotating ring */}
       <circle
         className="outer-ring"
         cx="50"
@@ -81,8 +93,7 @@ export function AutoForceAFLogo({
         strokeDasharray="8,4"
       />
 
-      {/* Connection lines - flowing energy between nodes */}
-      {/* Top connection */}
+      {/* Connection lines with flowing energy */}
       <line
         className="connection-line"
         x1="50"
@@ -93,76 +104,82 @@ export function AutoForceAFLogo({
         strokeWidth="1.5"
         opacity="0.6"
       />
-      {/* Bottom-right connection */}
       <line
         className="connection-line"
         x1="50"
         y1="50"
-        x2="75"
-        y2="72"
+        x2="73"
+        y2="68"
         stroke="hsl(var(--primary))"
         strokeWidth="1.5"
         opacity="0.6"
       />
-      {/* Bottom-left connection */}
       <line
         className="connection-line"
         x1="50"
         y1="50"
-        x2="25"
-        y2="72"
+        x2="27"
+        y2="68"
         stroke="hsl(var(--primary))"
         strokeWidth="1.5"
         opacity="0.6"
       />
 
-      {/* Central core node - the platform coordinating everything */}
+      {/* Central core - Platform nucleus */}
       <circle
         className="core-node"
         cx="50"
         cy="50"
-        r="5"
+        r="5.5"
         fill="url(#coreGradient)"
         filter="url(#glow)"
       />
 
-      {/* Orbital nodes - autonomous workers/agents */}
-      {/* Top node */}
-      <circle
-        className="orbital-node"
-        cx="50"
-        cy="18"
-        r="3.5"
-        fill="hsl(217, 91%, 60%)"
-        opacity="0.8"
-        filter="url(#glow)"
-      />
+      {/* "A" letter in top-left node (Autonomous) */}
+      <g className="af-accent">
+        <circle
+          cx="50"
+          cy="18"
+          r="4.5"
+          fill="hsl(217, 91%, 60%)"
+          opacity="0.85"
+          filter="url(#glow)"
+        />
+        <text x="50" y="21" textAnchor="middle" className="af-letter" fontSize="13">
+          A
+        </text>
+      </g>
 
-      {/* Bottom-right node */}
-      <circle
-        className="orbital-node"
-        cx="75"
-        cy="72"
-        r="3.5"
-        fill="hsl(217, 91%, 60%)"
-        opacity="0.8"
-        filter="url(#glow)"
-        style={{ animationDelay: "0.6s" }}
-      />
+      {/* "F" letter in bottom-right node (Force) */}
+      <g className="af-accent" style={{ animationDelay: "0.6s" }}>
+        <circle
+          cx="73"
+          cy="68"
+          r="4.5"
+          fill="hsl(217, 91%, 60%)"
+          opacity="0.85"
+          filter="url(#glow)"
+        />
+        <text x="73" y="71" textAnchor="middle" className="af-letter" fontSize="13">
+          F
+        </text>
+      </g>
 
-      {/* Bottom-left node */}
-      <circle
-        className="orbital-node"
-        cx="25"
-        cy="72"
-        r="3.5"
-        fill="hsl(217, 91%, 60%)"
-        opacity="0.8"
-        filter="url(#glow)"
-        style={{ animationDelay: "1.2s" }}
-      />
+      {/* Supporting node */}
+      <g className="af-accent" style={{ animationDelay: "1.2s" }}>
+        <circle
+          cx="27"
+          cy="68"
+          r="4.5"
+          fill="hsl(217, 91%, 60%)"
+          opacity="0.7"
+          filter="url(#glow)"
+        />
+        {/* Small accent dot instead of letter for balance */}
+        <circle cx="27" cy="68" r="1" fill="hsl(60, 100%, 50%)" />
+      </g>
 
-      {/* Accent energy pulses */}
+      {/* Energy pulse around core */}
       <circle
         cx="50"
         cy="50"
@@ -192,7 +209,7 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Icon only variant
+  // Icon only
   if (variant === "icon") {
     return (
       <div
@@ -212,7 +229,7 @@ export function AutoForceAFLogo({
         {/* Subtle shimmer on hover */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-white to-transparent transition-opacity duration-300" />
 
-        {/* Icon */}
+        {/* Icon with embedded AF */}
         <div className="relative z-10 w-2/3 h-2/3 text-white">
           <AutonomousNetworkIcon />
         </div>
@@ -220,7 +237,7 @@ export function AutoForceAFLogo({
     );
   }
 
-  // Full variant - Icon + text
+  // Full variant - Icon + brand text
   return (
     <div className={cn("flex items-center gap-3 sm:gap-4", className)}>
       <div
@@ -241,7 +258,7 @@ export function AutoForceAFLogo({
         </div>
       </div>
 
-      {/* Text content */}
+      {/* Brand text */}
       <div className="flex flex-col gap-0.5">
         <div className="flex items-baseline gap-1.5 flex-wrap">
           <span className={cn("font-black tracking-tight text-slate-900 dark:text-white", logoConfig.sizes.text[size])}>
