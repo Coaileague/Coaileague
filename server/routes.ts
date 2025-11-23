@@ -79,6 +79,9 @@ import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
 import { createHealthCheckTicket } from "./services/autoTicketCreation";
 import { sendMonitoringAlert } from "./services/externalMonitoring";
 import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI } from "./services/healthCheck";
+import { getTimeEntriesByEmployee, getTimeEntriesByWorkspace, getPendingTimeEntries, approveTimeEntry, rejectTimeEntry, calculatePayrollHours, createTimeEntry } from "./services/timeEntryService";
+import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData } from "./services/exportService";
+import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "./services/invoiceAdjustmentService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
@@ -25532,6 +25535,296 @@ app.post("/api/disputes/analyze-sentiment", requireAuth, async (req: Authenticat
   } catch (error: any) {
     console.error('Sentiment analysis error:', error);
     res.status(500).json({ error: error.message || 'Sentiment analysis failed' });
+  }
+});
+
+// ============================================================================
+// TIME ENTRY ROUTES - Phase 1 Gap #1
+// ============================================================================
+
+app.get("/api/time-entries", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { startDate, endDate, employeeId, status } = req.query;
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const end = endDate ? new Date(endDate as string) : new Date();
+
+    const entries = employeeId 
+      ? await getTimeEntriesByEmployee(employeeId as string, start, end)
+      : await getTimeEntriesByWorkspace(workspaceId, start, end, status as string);
+
+    res.json({ success: true, data: entries });
+  } catch (error: any) {
+    console.error('Error fetching time entries:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/time-entries", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { employeeId, clockIn, clockOut } = req.body;
+    if (!employeeId || !clockIn) return res.status(400).json({ error: 'employeeId and clockIn required' });
+
+    const entry = await createTimeEntry(workspaceId, {
+      employeeId,
+      clockIn: new Date(clockIn),
+      clockOut: clockOut ? new Date(clockOut) : null,
+      status: 'pending'
+    });
+
+    res.json({ success: true, data: entry });
+  } catch (error: any) {
+    console.error('Error creating time entry:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.patch("/api/time-entries/:id/approve", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const entry = await approveTimeEntry(id, userId);
+    res.json({ success: true, data: entry });
+  } catch (error: any) {
+    console.error('Error approving time entry:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.patch("/api/time-entries/:id/reject", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const entry = await rejectTimeEntry(id, userId, reason || 'No reason provided');
+    res.json({ success: true, data: entry });
+  } catch (error: any) {
+    console.error('Error rejecting time entry:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get("/api/time-entries/pending", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const entries = await getPendingTimeEntries(workspaceId);
+    res.json({ success: true, data: entries });
+  } catch (error: any) {
+    console.error('Error fetching pending time entries:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/time-entries/calculate-hours", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { employeeId, startDate, endDate } = req.body;
+    if (!employeeId || !startDate || !endDate) return res.status(400).json({ error: 'employeeId, startDate, endDate required' });
+
+    const hours = await calculatePayrollHours(employeeId, new Date(startDate), new Date(endDate));
+    res.json({ success: true, data: hours });
+  } catch (error: any) {
+    console.error('Error calculating payroll hours:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// INVOICE ADJUSTMENT ROUTES - Phase 1 Gap #2
+// ============================================================================
+
+app.post("/api/billing/adjust-invoice/credit", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { invoiceId, amount, description } = req.body;
+    const userId = (req as any).user?.id;
+    if (!invoiceId || !amount || !userId) return res.status(400).json({ error: 'invoiceId, amount, and user required' });
+
+    const result = await creditInvoice(invoiceId, amount, description || 'Manual credit', userId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error applying credit:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/billing/adjust-invoice/discount", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { invoiceId, discountPercent, reason } = req.body;
+    const userId = (req as any).user?.id;
+    if (!invoiceId || discountPercent === undefined || !userId) return res.status(400).json({ error: 'invoiceId, discountPercent, and user required' });
+
+    const result = await discountInvoice(invoiceId, discountPercent, reason || 'No reason provided', userId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error applying discount:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/billing/adjust-invoice/refund", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { invoiceId, refundAmount, reason } = req.body;
+    const userId = (req as any).user?.id;
+    if (!invoiceId || !refundAmount || !userId) return res.status(400).json({ error: 'invoiceId, refundAmount, and user required' });
+
+    const result = await refundInvoice(invoiceId, refundAmount, reason || 'No reason provided', userId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error processing refund:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/billing/adjust-invoice/correct-line-item", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { invoiceId, lineItemIndex, newQuantity, newUnitPrice, reason } = req.body;
+    const userId = (req as any).user?.id;
+    if (!invoiceId || lineItemIndex === undefined || !userId) return res.status(400).json({ error: 'invoiceId, lineItemIndex, and user required' });
+
+    const result = await correctInvoiceLineItem(invoiceId, lineItemIndex, newQuantity, newUnitPrice, reason, userId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error correcting line item:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get("/api/billing/adjust-invoice/:invoiceId/history", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const history = await getInvoiceAdjustmentHistory(invoiceId);
+    res.json({ success: true, data: history });
+  } catch (error: any) {
+    console.error('Error fetching adjustment history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/billing/adjust-invoice/bulk-credit", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { invoiceIds, creditPerInvoice, reason } = req.body;
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).workspace?.id;
+    if (!invoiceIds || !creditPerInvoice || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceIds, creditPerInvoice, and workspace required' });
+
+    const result = await bulkCreditInvoices(workspaceId, invoiceIds, creditPerInvoice, reason || 'Bulk credit', userId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error processing bulk credit:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// DATA EXPORT ROUTES - Phase 1 Gap #3
+// ============================================================================
+
+app.post("/api/export/employees", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { format = 'csv' } = req.body;
+    const result = await exportEmployees(workspaceId, { format: format as any });
+    
+    res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error: any) {
+    console.error('Error exporting employees:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/export/payroll", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { format = 'csv', startDate, endDate } = req.body;
+    const result = await exportPayroll(workspaceId, { format: format as any, startDate, endDate });
+    
+    res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error: any) {
+    console.error('Error exporting payroll:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/export/audit-logs", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { format = 'json', startDate, endDate } = req.body;
+    const result = await exportAuditLogs(workspaceId, { format: format as any, startDate, endDate });
+    
+    res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error: any) {
+    console.error('Error exporting audit logs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/export/time-entries", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { format = 'csv', startDate, endDate } = req.body;
+    const result = await exportTimeEntries(workspaceId, { format: format as any, startDate, endDate });
+    
+    res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error: any) {
+    console.error('Error exporting time entries:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/export/all", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { format = 'json', startDate, endDate } = req.body;
+    const result = await exportAllData(workspaceId, { format: format as any, startDate, endDate });
+    
+    res.setHeader('Content-Type', format === 'json' ? 'application/json' : 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error: any) {
+    console.error('Error exporting all data:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/export/anonymize-employee/:employeeId", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    const { employeeId } = req.params;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const result = await anonymizeEmployeeData(workspaceId, employeeId);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error anonymizing employee:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
