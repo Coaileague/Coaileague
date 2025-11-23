@@ -171,7 +171,28 @@ AutoForce™ (Autonomous Workforce Management Solutions) is a comprehensive plat
 
 ---
 
-## 📝 User Preferences (Updated 2025-11-23)
+## 📝 User Preferences & Core Philosophy (Updated 2025-11-23)
+
+### 🎯 CRITICAL PRINCIPLE: Universal Dynamic Architecture
+**NO HARDCODED VALUES ANYWHERE** - Everything must be configurable, editable, and centralized.
+
+**Pattern:**
+- Create centralized config files in `client/src/config/` or `server/config/`
+- ALL components reference config, never hardcode values
+- Single config change = immediate fix everywhere
+- Example: `homeButton.ts` contains ALL home button settings
+  - Icon, tooltip, navigation path, behavior
+  - Guest vs authenticated variants
+  - All props passed to components dynamically
+- Result: Fixes are immediate and never scattered across the codebase
+
+**Benefits:**
+- Instant global updates (no hunting for hardcoded values)
+- Easy A/B testing (change one config)
+- Prevents bugs (configuration centralized)
+- Future-proof (easy to add features)
+
+### User Design Preferences
 - Professional Fortune 500 aesthetic
 - Muted professional tones (no bright glowing colors)
 - Mobile-first responsive design
