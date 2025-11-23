@@ -1766,11 +1766,26 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             e.preventDefault();
           }
         }}>
-          <DialogHeader>
-            <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
-            <DialogDescription>
-              Please provide some information so our support team can better assist you.
-            </DialogDescription>
+          <DialogHeader className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/')}
+                className="h-8 w-8"
+                data-testid="button-home-from-intake"
+                title="Return to Home"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
+              <div className="flex-1">
+                <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
+                <DialogDescription>
+                  Please provide some information so our support team can better assist you.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div>
