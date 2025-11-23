@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { logoConfig } from "@/config/logoConfig";
+import { logoConfig, isAnimationEnabled, getAnimationConfig } from "@/config/logoConfig";
 
 interface AutoForceLogoFullProps {
   size?: "sm" | "md" | "lg" | "xl";
@@ -7,8 +7,7 @@ interface AutoForceLogoFullProps {
 }
 
 /**
- * AutoForce™ Full Logo - Modern SVG with brand name
- * Uses centralized logoConfig for all styling and animations
+ * AutoForce™ Full Logo with Autonomous Network Icon
  */
 export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullProps) {
   const svgSizes = {
@@ -20,7 +19,7 @@ export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullP
 
   return (
     <svg
-      viewBox="0 0 400 100"
+      viewBox="0 0 420 120"
       xmlns="http://www.w3.org/2000/svg"
       className={cn(svgSizes[size], className)}
       aria-label={logoConfig.accessibility.ariaLabel}
@@ -28,101 +27,170 @@ export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullP
     >
       <defs>
         <style>{`
-          @keyframes shimmer {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-          }
-          
-          .geometric-line {
-            animation: shimmer 2.5s ease-in-out infinite;
-            transition: stroke-width 0.3s ease;
-          }
-          
-          .geometric-line:hover {
-            stroke-width: 7;
-          }
+          ${getAnimationConfig("pulseCore").keyframes}
+          ${getAnimationConfig("flowNode").keyframes}
+          ${getAnimationConfig("rotateRing").keyframes}
+          ${getAnimationConfig("flowEnergy").keyframes}
+          ${getAnimationConfig("glowPulse").keyframes}
+
+          .core-node { animation: pulse-core 2s ease-in-out infinite; }
+          .orbital-node { animation: flow-node 3s ease-in-out infinite; }
+          .connection-line { stroke-dasharray: 100; animation: flow-energy 2.5s ease-in-out infinite; }
+          .outer-ring { animation: rotate-ring 20s linear infinite; }
         `}</style>
-        <linearGradient
-          id="textGradient"
-          x1="0%"
-          y1="0%"
-          x2="100%"
-          y2="0%"
-        >
-          <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: "hsl(217, 91%, 60%)", stopOpacity: 1 }} />
+
+        <radialGradient id="coreGradientFull">
+          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1" />
+          <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity="0.8" />
+        </radialGradient>
+
+        <linearGradient id="textGradientFull" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1" />
+          <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity="1" />
         </linearGradient>
+
+        <filter id="glowFull">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
-      {/* Icon Group */}
-      <g transform="translate(10, 15)">
-        {/* Badge background circle */}
-        <circle cx="30" cy="30" r="28" fill="url(#textGradient)" opacity="0.1" />
-
-        {/* Geometric A paths */}
-        <path
-          className="geometric-line"
-          d="M 18 48 L 30 12"
-          stroke="hsl(var(--primary))"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      {/* Icon section */}
+      <g transform="translate(20, 30)">
+        {/* Outer rotating ring */}
+        <circle
+          className="outer-ring"
+          cx="30"
+          cy="30"
+          r="28"
+          fill="none"
+          stroke="hsl(217, 91%, 60%)"
+          strokeWidth="0.8"
+          opacity="0.2"
+          strokeDasharray="6,3"
         />
 
-        <path
-          className="geometric-line"
-          d="M 42 48 L 30 12"
+        {/* Connection lines */}
+        <line
+          className="connection-line"
+          x1="30"
+          y1="30"
+          x2="30"
+          y2="6"
           stroke="hsl(var(--primary))"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeWidth="1.2"
+          opacity="0.6"
+        />
+        <line
+          className="connection-line"
+          x1="30"
+          y1="30"
+          x2="48"
+          y2="48"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.2"
+          opacity="0.6"
+        />
+        <line
+          className="connection-line"
+          x1="30"
+          y1="30"
+          x2="12"
+          y2="48"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.2"
+          opacity="0.6"
         />
 
-        <path
-          className="geometric-line"
-          d="M 22 32 L 38 32"
-          stroke="hsl(var(--primary))"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        {/* Core */}
+        <circle
+          className="core-node"
+          cx="30"
+          cy="30"
+          r="3.5"
+          fill="url(#coreGradientFull)"
+          filter="url(#glowFull)"
         />
 
-        {/* Accent dot */}
-        <circle cx="30" cy="10" r="2.5" fill="hsl(60, 100%, 50%)" opacity="0.8" />
+        {/* Nodes */}
+        <circle
+          className="orbital-node"
+          cx="30"
+          cy="6"
+          r="2.5"
+          fill="hsl(217, 91%, 60%)"
+          opacity="0.8"
+          filter="url(#glowFull)"
+        />
+        <circle
+          className="orbital-node"
+          cx="48"
+          cy="48"
+          r="2.5"
+          fill="hsl(217, 91%, 60%)"
+          opacity="0.8"
+          filter="url(#glowFull)"
+          style={{ animationDelay: "0.6s" }}
+        />
+        <circle
+          className="orbital-node"
+          cx="12"
+          cy="48"
+          r="2.5"
+          fill="hsl(217, 91%, 60%)"
+          opacity="0.8"
+          filter="url(#glowFull)"
+          style={{ animationDelay: "1.2s" }}
+        />
+
+        {/* Energy pulse */}
+        <circle
+          cx="30"
+          cy="30"
+          r="6"
+          fill="none"
+          stroke="hsl(var(--primary))"
+          strokeWidth="0.4"
+          opacity="0.4"
+          style={{ animation: `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite` }}
+        />
       </g>
 
-      {/* Text: Brand Name */}
+      {/* Brand name */}
       <text
-        x="85"
-        y="42"
+        x="110"
+        y="56"
         fontFamily={logoConfig.typography.fontFamily}
-        fontSize="32"
+        fontSize="38"
         fontWeight="700"
         fill="currentColor"
-        letterSpacing="-0.5"
         className="fill-foreground dark:fill-white"
+        letterSpacing="-0.5"
       >
         {logoConfig.brand.name}
       </text>
 
       {/* Trademark */}
       <text
-        x="275"
-        y="36"
+        x="310"
+        y="48"
         fontFamily={logoConfig.typography.fontFamily}
-        fontSize="14"
+        fontSize="16"
         fontWeight="700"
-        fill="url(#textGradient)"
+        fill="url(#textGradientFull)"
       >
         {logoConfig.brand.trademark}
       </text>
 
       {/* Tagline */}
       <text
-        x="85"
-        y="60"
+        x="110"
+        y="75"
         fontFamily={logoConfig.typography.fontFamily}
-        fontSize="10"
+        fontSize="11"
         fontWeight="500"
         fill="hsl(var(--muted-foreground))"
         letterSpacing="1.5"
@@ -133,13 +201,13 @@ export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullP
 
       {/* Accent line */}
       <line
-        x1="85"
-        y1="65"
-        x2="265"
-        y2="65"
-        stroke="url(#textGradient)"
+        x1="110"
+        y1="80"
+        x2="310"
+        y2="80"
+        stroke="url(#textGradientFull)"
         strokeWidth="1"
-        opacity="0.6"
+        opacity="0.5"
       />
     </svg>
   );

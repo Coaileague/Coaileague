@@ -1,12 +1,14 @@
 /**
- * AutoForce™ Logo Configuration - Premium High-Tech Design
+ * AutoForce™ Logo Configuration - Premium Autonomous Platform Design
  * 
- * Modern, professional logo system with smooth animations
- * Edit once, updates everywhere instantly
+ * Sophisticated icon representing autonomous workforce management:
+ * - Central core (the platform)
+ * - Connected nodes (autonomous agents/workers)
+ * - Flowing energy/connections (coordination)
+ * - Smooth animations showing autonomous operation
  */
 
 export const logoConfig = {
-  // Brand identity
   brand: {
     name: "AutoForce",
     trademark: "™",
@@ -14,20 +16,14 @@ export const logoConfig = {
     taglineAlt: "Autonomous Management Solutions",
   },
 
-  // Professional color palette
   colors: {
     primary: "hsl(var(--primary))",
     accent: "hsl(217, 91%, 60%)",
-    success: "hsl(142, 71%, 45%)",
     white: "hsl(0, 0%, 100%)",
-    dark: "hsl(215, 28%, 17%)",
     foreground: "currentColor",
     mutedForeground: "hsl(var(--muted-foreground))",
-    glassDark: "rgba(30, 41, 59, 0.7)",
-    glassLight: "rgba(255, 255, 255, 0.7)",
   },
 
-  // Badge/Icon sizes
   sizes: {
     badge: {
       sm: { container: "w-10 h-10", text: "text-sm" },
@@ -58,127 +54,67 @@ export const logoConfig = {
     },
   },
 
-  // Modern animations
   animations: {
-    // Icon pulse with scale effect
-    iconPulse: {
+    pulseCore: {
       enabled: true,
+      duration: "2s",
       keyframes: `
-        @keyframes icon-pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.8; }
+        @keyframes pulse-core {
+          0%, 100% { r: 5; opacity: 1; }
+          50% { r: 7; opacity: 0.8; }
         }
       `,
+    },
+    flowNode: {
+      enabled: true,
       duration: "3s",
-      timingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
-    },
-
-    // Smooth glow effect
-    glow: {
-      enabled: true,
       keyframes: `
-        @keyframes glow-pulse {
-          0%, 100% { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4)); }
-          50% { filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.8)); }
+        @keyframes flow-node {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.15); }
         }
       `,
-      duration: "4s",
-      timingFunction: "ease-in-out",
     },
-
-    // Rotating accent ring
     rotateRing: {
       enabled: true,
+      duration: "20s",
       keyframes: `
         @keyframes rotate-ring {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
       `,
-      duration: "20s",
-      timingFunction: "linear",
     },
-
-    // Shimmer effect for premium feel
-    shimmer: {
+    flowEnergy: {
       enabled: true,
+      duration: "2.5s",
       keyframes: `
-        @keyframes shimmer {
-          0%, 100% { opacity: 0.6; }
+        @keyframes flow-energy {
+          0% { strokeDashoffset: 100; opacity: 0; }
           50% { opacity: 1; }
+          100% { strokeDashoffset: 0; opacity: 0; }
         }
       `,
-      duration: "2.5s",
-      timingFunction: "ease-in-out",
+    },
+    glowPulse: {
+      enabled: true,
+      duration: "3s",
+      keyframes: `
+        @keyframes glow-pulse {
+          0%, 100% { filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.3)); }
+          50% { filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.6)); }
+        }
+      `,
     },
   },
 
-  // New premium icon design - Modern geometric "A" with tech elements
   icon: {
-    style: "premium-modern",
-    background: {
-      type: "gradient-radial",
-      colors: ["hsl(var(--primary), 1)", "hsl(217, 91%, 60%, 1)"],
-      animated: true,
-      animationType: "glow", // applies glow animation
-    },
-    shape: {
-      type: "circle", // or "hexagon", "rounded-square"
-      border: {
-        enabled: true,
-        width: "1.5px",
-        color: "rgba(255, 255, 255, 0.3)",
-        animated: true,
-      },
-      shadow: "0 12px 32px rgba(59, 130, 246, 0.3)",
-    },
-    content: {
-      type: "geometric-a", // geometric letter A with accent lines
-      color: "white",
-      weight: 900,
-      renderAs: "svg", // render as SVG for smooth animations
-    },
-  },
-
-  // Geometric "A" SVG design
-  geometricA: {
+    type: "autonomous-network",
+    description: "Connected nodes representing autonomous workforce coordination",
     viewBox: "0 0 100 100",
-    paths: [
-      {
-        // Left diagonal line
-        d: "M 30 80 L 50 20",
-        stroke: "currentColor",
-        strokeWidth: "6",
-        strokeLinecap: "round",
-      },
-      {
-        // Right diagonal line
-        d: "M 70 80 L 50 20",
-        stroke: "currentColor",
-        strokeWidth: "6",
-        strokeLinecap: "round",
-      },
-      {
-        // Horizontal crossbar with accent
-        d: "M 38 55 L 62 55",
-        stroke: "currentColor",
-        strokeWidth: "5",
-        strokeLinecap: "round",
-      },
-      {
-        // Tech accent - small circles at intersections
-        type: "circle",
-        cx: "50",
-        cy: "25",
-        r: "3",
-        fill: "hsl(60, 100%, 50%)",
-        animated: true,
-        animation: "pulse",
-      },
-    ],
+    animated: true,
   },
 
-  // Badge styling
   badge: {
     shape: "rounded-full",
     gradient: "bg-gradient-to-br from-primary to-accent",
@@ -188,16 +124,8 @@ export const logoConfig = {
       color: "border-white/20",
       width: "border",
     },
-    text: {
-      weight: "font-black",
-      color: "text-white",
-      content: "A",
-      renderAs: "svg", // use geometric design
-    },
-    hoverEffect: "scale-up-subtle", // smooth 5% scale on hover
   },
 
-  // SVG gradients
   gradients: {
     primary: {
       id: "primaryGradient",
@@ -205,15 +133,6 @@ export const logoConfig = {
       stops: [
         { offset: "0%", color: "hsl(var(--primary))" },
         { offset: "100%", color: "hsl(217, 91%, 60%)" },
-      ],
-    },
-    accent: {
-      id: "accentGradient",
-      type: "linear",
-      angle: "135deg",
-      stops: [
-        { offset: "0%", color: "hsl(217, 91%, 60%)" },
-        { offset: "100%", color: "hsl(var(--primary))" },
       ],
     },
     glow: {
@@ -226,59 +145,27 @@ export const logoConfig = {
     },
   },
 
-  // Typography
   typography: {
     fontFamily: "'Inter', '-apple-system', 'Segoe UI', sans-serif",
-    fontSize: {
-      main: "36",
-      tagline: "12",
-    },
-    fontWeight: {
-      main: "700",
-      tagline: "500",
-    },
-    letterSpacing: {
-      main: "-0.5",
-      tagline: "2",
-    },
-    textTransform: "uppercase",
+    fontSize: { main: "36", tagline: "12" },
+    fontWeight: { main: "700", tagline: "500" },
+    letterSpacing: { main: "-0.5", tagline: "2" },
   },
 
-  // Spacing
-  spacing: {
-    badge: { gap: 3 },
-    text: { gap: 2 },
-  },
-
-  // Responsive
-  responsive: {
-    mobileScale: 0.95,
-  },
-
-  // Accessibility
   accessibility: {
     ariaLabel: "AutoForce™ - Autonomous Workforce Management Platform",
     testIdPrefix: "logo",
   },
 };
 
-/**
- * Get logo size for a variant
- */
 export function getLogoSize(size: keyof typeof logoConfig.sizes.badge) {
   return logoConfig.sizes.badge[size];
 }
 
-/**
- * Get animation config
- */
-export function getAnimationConfig(name: keyof typeof logoConfig.animations) {
-  return logoConfig.animations[name];
-}
-
-/**
- * Check if animation is enabled
- */
 export function isAnimationEnabled(name: keyof typeof logoConfig.animations) {
   return logoConfig.animations[name].enabled;
+}
+
+export function getAnimationConfig(name: keyof typeof logoConfig.animations) {
+  return logoConfig.animations[name];
 }

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { logoConfig, getLogoSize, isAnimationEnabled, getAnimationConfig } from "@/config/logoConfig";
+import { logoConfig, getLogoSize } from "@/config/logoConfig";
+import { AutoForceAFLogo } from "./autoforce-af-logo";
 
 interface AutoForceLogoProps {
   variant?: "nav" | "icon" | "full";
@@ -16,32 +17,8 @@ export function AutoForceLogo({
   className,
   lightMode = false
 }: AutoForceLogoProps) {
-  
-  // Use centralized size config
-  const sizeConfig = getLogoSize(size);
-  const glowAnimation = isAnimationEnabled("glow") ? getAnimationConfig("glow") : null;
-  
-  // Full variant with AF badge and tagline
-  if (variant === "full") {
-    return (
-      <div 
-        className={cn("flex flex-col items-center justify-center gap-4 pointer-events-none", className)} 
-        data-testid={`${logoConfig.accessibility.testIdPrefix}-full`}
-      >
-        <div 
-          className={cn(
-            "flex items-center justify-center",
-            logoConfig.badge.shape,
-            logoConfig.badge.gradient,
-            logoConfig.badge.shadow,
-            sizeConfig.container,
-            animated && logoConfig.animations.iconPulse.keyframes && "group"
-          )}
-        >
-          <span className={cn("font-black", logoConfig.badge.text.color)}>
-            {logoConfig.badge.text.content}
-          </span>
-        </div>
+  // Delegate to the modern AutoForceAFLogo
+  return <AutoForceAFLogo size={size} variant={variant as any} animated={animated} className={className} />;
         
         <div className="flex flex-col items-center gap-2">
           <div className="flex items-baseline gap-1 justify-center flex-wrap">
