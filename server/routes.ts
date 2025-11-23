@@ -19814,20 +19814,10 @@ Return ONLY valid JSON array with this exact structure:
       
       // Trigger AI sentiment analysis for engagement insights
       try {
-        const sentimentInsights = await sentimentAnalysis.analyzeText({
-          text: req.body.responseText || '',
-          context: 'pulse_survey',
-          metadata: {
-            employeeId: employee[0].id,
-            surveyTemplateId: req.body.surveyTemplateId,
-            engagementScore: parseFloat(validatedData.engagementScore),
-          }
-        });
-        // Score enrichment complete - sentiment already captured in response
-        console.log(`[SentimentAnalysis] Pulse survey analyzed - sentiment: ${sentimentInsights.sentiment}`);
+        const sentiment = await sentimentAnalyzer.analyzeSentiment(req.body.responseText || '', 'pulse_survey');
+        console.log(`[SentimentAnalysis] Pulse survey analyzed - sentiment: ${sentiment}`);
       } catch (err) {
         console.error('[SentimentAnalysis] Pulse survey analysis failed (non-blocking):', err);
-        // Continue - sentiment analysis is non-blocking
       }
       
       res.json(response);
@@ -19967,19 +19957,9 @@ Return ONLY valid JSON array with this exact structure:
       
       // Trigger AI sentiment analysis and risk flagging for employer ratings
       try {
-        const sentimentInsights = await sentimentAnalysis.analyzeText({
-          text: req.body.comment || '',
-          context: 'employer_rating',
-          metadata: {
-            employeeId: employee[0]?.id || 'anonymous',
-            ratingType: req.body.ratingType,
-            ratingValue: req.body.ratingValue,
-          }
-        });
-        
-        // Flag high-risk sentiments for manager attention
-        if (sentimentInsights.sentiment === 'negative' || sentimentInsights.riskScore > 0.7) {
-          console.warn(`[SentimentAnalysis] High-risk employer rating detected - workspace: ${workspaceId}, risk: ${sentimentInsights.riskScore}`);
+        const sentiment = await sentimentAnalyzer.analyzeSentiment(req.body.comment || '', 'employer_rating');
+        if (sentiment === 'negative') {
+          console.warn(`[SentimentAnalysis] High-risk employer rating detected - workspace: ${workspaceId}`);
         }
       } catch (err) {
         console.error('[SentimentAnalysis] Employer rating analysis failed (non-blocking):', err);
@@ -20061,25 +20041,12 @@ Return ONLY valid JSON array with this exact structure:
       
       // Trigger AI sentiment analysis and urgency detection for suggestions
       try {
-        const sentimentInsights = await sentimentAnalysis.analyzeText({
-          text: req.body.suggestionText || '',
-          context: 'suggestion',
-          metadata: {
-            employeeId: employee[0]?.id || 'anonymous',
-            category: req.body.category,
-            isAnonymous: req.body.isAnonymous,
-          }
-        });
-        
-        // Auto-detect urgency level based on sentiment analysis
-        const urgencyLevel = sentimentInsights.sentiment === 'negative' ? 'high' : 'normal';
-        
-        // Update suggestion with AI-detected urgency
+        const sentiment = await sentimentAnalyzer.analyzeSentiment(req.body.suggestionText || '', 'suggestion');
+        const urgencyLevel = sentiment === 'negative' ? 'high' : 'normal';
         await db.update(anonymousSuggestions)
           .set({ urgencyLevel })
           .where(eq(anonymousSuggestions.id, suggestion.id));
-          
-        console.log(`[SentimentAnalysis] Suggestion analyzed - urgency: ${urgencyLevel}, sentiment: ${sentimentInsights.sentiment}`);
+        console.log(`[SentimentAnalysis] Suggestion analyzed - urgency: ${urgencyLevel}, sentiment: ${sentiment}`);
       } catch (err) {
         console.error('[SentimentAnalysis] Suggestion analysis failed (non-blocking):', err);
       }
