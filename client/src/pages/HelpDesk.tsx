@@ -106,6 +106,7 @@ const CHAT_CONFIG = {
     sessionIdKey: 'chat-session-id',
     ticketIdKey: 'support_ticket_id',
     escalationDataKey: 'helpos_escalation',
+    guestIntakeDataKey: 'guest_intake_data', // Persistent guest form data throughout chat session
   },
 };
 
@@ -188,13 +189,41 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   
   // Guest intake form state (now parsedEscalation is defined)
   const [showGuestIntakeForm, setShowGuestIntakeForm] = useState(!user); // Show for guests on load
-  const [guestIntakeData, setGuestIntakeData] = useState({
-    name: parsedEscalation?.guestName || '',
-    email: '',
-    issueType: '',
-    problemDescription: ''
+  const [guestIntakeData, setGuestIntakeData] = useState(() => {
+    // Load persisted data from session storage if available
+    const stored = sessionStorage.getItem(CHAT_CONFIG.system.guestIntakeDataKey);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        // If parse fails, use default
+      }
+    }
+    // Default values
+    return {
+      name: parsedEscalation?.guestName || '',
+      email: '',
+      issueType: '',
+      problemDescription: ''
+    };
   });
   const [hasCompletedIntake, setHasCompletedIntake] = useState(false);
+
+  // Check if form is complete and valid
+  const isFormComplete = () => {
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+    return (
+      guestIntakeData.name.trim() &&
+      emailRegex.test(guestIntakeData.email) &&
+      guestIntakeData.issueType &&
+      guestIntakeData.problemDescription.trim()
+    );
+  };
+
+  // Auto-save guest intake data to session storage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem(CHAT_CONFIG.system.guestIntakeDataKey, JSON.stringify(guestIntakeData));
+  }, [guestIntakeData]);
   const [ticketNumber, setTicketNumber] = useState<string | null>(() => sessionStorage.getItem(CHAT_CONFIG.system.ticketIdKey) || null);
   const [queueJoinTime] = useState(() => new Date());
   const [queueUpdateInterval, setQueueUpdateInterval] = useState<NodeJS.Timeout | null>(null);
@@ -1714,8 +1743,29 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       </main>
 
       {/* GUEST INTAKE FORM - Collects guest information for support agents */}
-      <Dialog open={showGuestIntakeForm && !hasCompletedIntake} onOpenChange={(open) => !open && setShowGuestIntakeForm(false)}>
-        <DialogContent className="sm:max-w-md">
+      {/* Non-closeable until all required fields are filled - prevents users from entering chat without ticket info */}
+      <Dialog open={showGuestIntakeForm && !hasCompletedIntake} onOpenChange={(open) => {
+        // Only allow closing if form is complete (prevents accidental disconnect)
+        if (!open && !isFormComplete()) {
+          // Form incomplete - prevent closing
+          toast({
+            title: "⚠️ Information Required",
+            description: "Please complete all fields before continuing. We need this info to help you.",
+            variant: "destructive",
+          });
+          return; // Don't close dialog
+        }
+        if (!open && isFormComplete()) {
+          // Form complete - allow closing (user submitted)
+          setShowGuestIntakeForm(false);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
+          // Prevent closing by clicking outside dialog if form is incomplete
+          if (!isFormComplete()) {
+            e.preventDefault();
+          }
+        }}>
           <DialogHeader>
             <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
             <DialogDescription>
@@ -1729,7 +1779,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 id="guest-name"
                 placeholder="Your name"
                 value={guestIntakeData.name}
-                onChange={(e) => setGuestIntakeData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => {
+                  const newData = { ...guestIntakeData, name: e.target.value };
+                  setGuestIntakeData(newData);
+                  // Real-time sync to session storage (auto-saved by useEffect)
+                }}
                 className="mt-1"
                 required
                 data-testid="input-guest-name"
@@ -1742,7 +1796,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 type="email"
                 placeholder="your@email.com"
                 value={guestIntakeData.email}
-                onChange={(e) => setGuestIntakeData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => {
+                  const newData = { ...guestIntakeData, email: e.target.value };
+                  setGuestIntakeData(newData);
+                  // Real-time sync to session storage (auto-saved by useEffect)
+                }}
                 className="mt-1"
                 required
                 pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
@@ -1751,7 +1809,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             </div>
             <div>
               <Label htmlFor="issue-type" className="text-base font-medium">Issue Type <span className="text-red-600">*</span></Label>
-              <Select value={guestIntakeData.issueType} onValueChange={(value) => setGuestIntakeData(prev => ({ ...prev, issueType: value }))}>
+              <Select value={guestIntakeData.issueType} onValueChange={(value) => {
+                const newData = { ...guestIntakeData, issueType: value };
+                setGuestIntakeData(newData);
+                // Real-time sync to session storage (auto-saved by useEffect)
+              }}>
                 <SelectTrigger id="issue-type" data-testid="select-issue-type">
                   <SelectValue placeholder="Select issue type" />
                 </SelectTrigger>
@@ -1770,7 +1832,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 id="problem-description"
                 placeholder="Tell us what you're experiencing..."
                 value={guestIntakeData.problemDescription}
-                onChange={(e) => setGuestIntakeData(prev => ({ ...prev, problemDescription: e.target.value }))}
+                onChange={(e) => {
+                  const newData = { ...guestIntakeData, problemDescription: e.target.value };
+                  setGuestIntakeData(newData);
+                  // Real-time sync to session storage (auto-saved by useEffect)
+                }}
                 className="mt-1 min-h-24 resize-none"
                 required
                 data-testid="textarea-problem"
@@ -1780,19 +1846,17 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           <DialogFooter>
             <Button
               onClick={() => {
-                // Email validation: must contain @ and a domain
-                const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-                const isValidEmail = emailRegex.test(guestIntakeData.email);
-                
-                if (guestIntakeData.name && isValidEmail && guestIntakeData.issueType && guestIntakeData.problemDescription) {
-                  // Create ticket via mutation - will handle all success/error logic
+                // Form is already validated by isFormComplete()
+                if (isFormComplete()) {
+                  // Data is already persisted to session storage - create ticket
                   createSupportTicketMutation.mutate();
                 } else {
                   let errorMsg = "Please fill in all fields to continue.";
-                  if (!guestIntakeData.name) errorMsg = "Please enter your name.";
-                  else if (!isValidEmail) errorMsg = "Please enter a valid email (must include @ and domain).";
+                  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+                  if (!guestIntakeData.name.trim()) errorMsg = "Please enter your name.";
+                  else if (!emailRegex.test(guestIntakeData.email)) errorMsg = "Please enter a valid email (must include @ and domain).";
                   else if (!guestIntakeData.issueType) errorMsg = "Please select an issue type.";
-                  else if (!guestIntakeData.problemDescription) errorMsg = "Please describe your issue.";
+                  else if (!guestIntakeData.problemDescription.trim()) errorMsg = "Please describe your issue.";
                   
                   toast({
                     title: "⚠️ Missing or Invalid Information",
@@ -1801,7 +1865,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   });
                 }
               }}
-              disabled={createSupportTicketMutation.isPending}
+              disabled={createSupportTicketMutation.isPending || !isFormComplete()}
               className="w-full"
               data-testid="button-submit-intake"
             >
