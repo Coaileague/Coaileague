@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Zap } from "lucide-react";
+import { logoConfig, getLogoSize, isLogoFeatureEnabled } from "@/config/logoConfig";
 
 interface AutoForceAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -10,119 +11,95 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * AutoForce™ Logo Component
- * AF lightning bolt in circular Emergency Green gradient badge
+ * AutoForce™ Logo Component (Centralized Config)
+ * AF lightning bolt in circular gradient badge - all settings from logoConfig
+ * Edit logoConfig.ts to update logo everywhere instantly
  */
 export function AutoForceAFLogo({
   size = "md",
   variant = "icon",
   animated = false,
   showF = false,
-  className
+  className,
 }: AutoForceAFLogoProps) {
-  
-  // Size mappings for the circular badge
-  const badgeSizes = {
-    sm: "w-10 h-10 text-sm",
-    md: "w-14 h-14 text-lg",
-    lg: "w-20 h-20 text-2xl",
-    xl: "w-28 h-28 text-4xl",
-    hero: "w-40 h-40 text-6xl"
-  };
+  const sizeConfig = getLogoSize(size);
 
-  const textSizes = {
-    sm: "text-xs",
-    md: "text-sm",
-    lg: "text-base",
-    xl: "text-xl",
-    hero: "text-2xl"
-  };
-
-  // Icon only - AF circular badge with AutoForce emerald/cyan branding
+  // Icon only - AF circular badge with lightning bolt
   if (variant === "icon") {
     return (
-      <div 
+      <div
         className={cn(
-          "relative flex items-center justify-center shrink-0 rounded-full shadow-lg",
-          badgeSizes[size],
-          animated && "animate-pulse-slow",
+          "relative flex items-center justify-center shrink-0",
+          logoConfig.badge.shape,
+          logoConfig.badge.gradient,
+          logoConfig.badge.shadow,
+          sizeConfig.container,
+          animated && logoConfig.animations.pulse.class,
           className
         )}
-        style={{
-          background: 'linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)',
-        }}
-        data-testid="autoforce-af-logo-icon"
+        data-testid={`${logoConfig.accessibility.testIdPrefix}-icon`}
       >
         {/* Neural ring overlay - subtle concentric circles */}
         <div className="absolute inset-0 rounded-full border-2 border-white/10" />
         <div className="absolute inset-2 rounded-full border border-white/5" />
-        
-        {/* AF with lightning bolt styling */}
+
+        {/* AF with lightning bolt */}
         <div className="relative flex items-center gap-0.5">
-          <span className="text-white font-black tracking-tighter">A</span>
-          <Zap className="w-3 h-3 text-[#E2E8F0] fill-current" />
-          <span className="text-white font-black tracking-tighter">F</span>
+          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>A</span>
+          <Zap className="w-3 h-3 fill-current" style={{ color: logoConfig.lightningBolt.color }} />
+          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>F</span>
         </div>
       </div>
     );
   }
 
-  // Wordmark - just text with AutoForce emerald
+  // Wordmark - just text
   if (variant === "wordmark") {
     return (
-      <div 
-        className={cn("flex items-center gap-1 flex-wrap", className)}
-        data-testid="autoforce-af-logo-wordmark"
-      >
+      <div className={cn("flex items-center gap-1 flex-wrap", className)} data-testid={`${logoConfig.accessibility.testIdPrefix}-wordmark`}>
         <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          AUTO
+          {logoConfig.brand.name.slice(0, 4)}
         </span>
-        <span 
-          className="text-2xl sm:text-3xl font-bold tracking-tight"
-          style={{ color: '#3b82f6' }}
-        >
-          FORCE
+        <span className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: logoConfig.colors.primary }}>
+          {logoConfig.brand.name.slice(4)}
         </span>
-        <span className="text-sm align-super text-slate-900 dark:text-white">™</span>
+        <span className="text-sm align-super text-slate-900 dark:text-white">{logoConfig.brand.trademark}</span>
       </div>
     );
   }
 
-  // Full - AF badge + text with AutoForce emerald/cyan branding
+  // Full - AF badge + text
   return (
-    <div 
-      className={cn("flex items-center gap-3", className)}
-      data-testid="autoforce-af-logo-full"
-    >
-      <div 
+    <div className={cn("flex items-center gap-3", className)} data-testid={`${logoConfig.accessibility.testIdPrefix}-full`}>
+      <div
         className={cn(
-          "relative shrink-0 flex items-center justify-center rounded-full shadow-lg",
-          badgeSizes[size],
-          animated && "animate-pulse-slow"
+          "relative shrink-0 flex items-center justify-center",
+          logoConfig.badge.shape,
+          logoConfig.badge.gradient,
+          logoConfig.badge.shadow,
+          sizeConfig.container,
+          animated && logoConfig.animations.pulse.class
         )}
-        style={{
-          background: 'linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)',
-        }}
       >
         {/* Neural ring overlay */}
         <div className="absolute inset-0 rounded-full border-2 border-white/10" />
         <div className="absolute inset-2 rounded-full border border-white/5" />
-        
+
         {/* AF with lightning bolt */}
         <div className="relative flex items-center gap-0.5">
-          <span className="text-white font-black tracking-tighter">A</span>
-          <Zap className="w-4 h-4 text-[#E2E8F0] fill-current" />
-          <span className="text-white font-black tracking-tighter">F</span>
+          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>A</span>
+          <Zap className="w-4 h-4 fill-current" style={{ color: logoConfig.lightningBolt.color }} />
+          <span className={cn("font-black tracking-tighter", logoConfig.badge.text.color)}>F</span>
         </div>
       </div>
       <div className="flex flex-col">
         <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-none flex items-baseline gap-1 flex-wrap">
-          <span className="text-slate-900 dark:text-white">AUTO</span>
-          <span style={{ color: '#3b82f6' }}>FORCE</span>
-          <span className="text-xs align-super text-slate-900 dark:text-white">™</span>
+          <span className="text-slate-900 dark:text-white">{logoConfig.brand.name.slice(0, 4)}</span>
+          <span style={{ color: logoConfig.colors.primary }}>{logoConfig.brand.name.slice(4)}</span>
+          <span className="text-xs align-super text-slate-900 dark:text-white">{logoConfig.brand.trademark}</span>
         </div>
         <div className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-400 font-medium tracking-wide mt-0.5">
-          Autonomous Workforce Management Solutions
+          {logoConfig.brand.taglineAlt}
         </div>
       </div>
     </div>

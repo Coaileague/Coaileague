@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { logoConfig, getLogoSize } from "@/config/logoConfig";
 
 interface AutoForceLogoProps {
   variant?: "nav" | "icon" | "full";
@@ -16,13 +17,14 @@ export function AutoForceLogo({
   lightMode = false
 }: AutoForceLogoProps) {
   
-  // Size mappings for AF circular badge
+  // Use centralized size config
+  const sizeConfig = getLogoSize(size);
   const badgeSizeClasses = {
-    sm: "w-10 h-10 text-sm",
-    md: "w-14 h-14 text-lg",
-    lg: "w-16 h-16 text-xl",
-    xl: "w-20 h-20 text-2xl",
-    hero: "w-28 h-28 text-4xl"
+    sm: sizeConfig.container,
+    md: sizeConfig.container,
+    lg: sizeConfig.container,
+    xl: sizeConfig.container,
+    hero: sizeConfig.container
   };
   
   // Full variant with AF badge and tagline
