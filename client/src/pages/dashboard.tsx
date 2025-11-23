@@ -72,8 +72,7 @@ interface ComplianceData {
 function ComplianceAlerts() {
   const [, setLocation] = useLocation();
   const { data: compliance, isLoading } = useQuery<ComplianceData>({
-    queryKey: queryKeys.automation.compliance,
-    queryFn: () => apiGet('automation.getComplianceRecent'),
+    queryKey: ['/api/automation/compliance/recent'],
   });
 
   if (isLoading || !compliance?.hasData || compliance.summary.total === 0) {
@@ -196,19 +195,22 @@ export default function Dashboard() {
 
   // Get current user and workspace
   const { data: currentUser } = useQuery<{ id: string; email?: string }>({ 
-    queryKey: ['/api/auth/me'] 
+    queryKey: queryKeys.auth.current,
+    queryFn: () => apiGet('auth.current'),
   });
   const userId = currentUser?.id;
   
   const { data: workspace } = useQuery<{ id: string; name?: string; orgCode?: string }>({ 
-    queryKey: ['/api/workspace'] 
+    queryKey: queryKeys.workspace.current,
+    queryFn: () => apiGet('workspace.current'),
   });
   const workspaceId = workspace?.id;
   const orgCode = workspace?.orgCode || 'N/A';
 
   // Fetch workspace health status
   const { data: workspaceHealth } = useQuery<WorkspaceHealth>({
-    queryKey: ['/api/workspace/health'],
+    queryKey: queryKeys.workspace.health,
+    queryFn: () => apiGet('workspace.getHealth'),
     enabled: isAuthenticated,
   });
 
@@ -217,7 +219,8 @@ export default function Dashboard() {
 
   // Fetch notifications
   const { data: notifications = [], isLoading: notificationsLoading } = useQuery<Notification[]>({
-    queryKey: ['/api/notifications'],
+    queryKey: queryKeys.notifications.all,
+    queryFn: () => apiGet('notifications.list'),
     enabled: isAuthenticated,
   });
 
@@ -267,7 +270,8 @@ export default function Dashboard() {
       trend: { percentChange: number; isImproving: boolean };
     };
   }>({
-    queryKey: ['/api/analytics/stats'],
+    queryKey: queryKeys.analytics.stats,
+    queryFn: () => apiGet('analytics.getStats'),
     enabled: isAuthenticated,
   });
 
@@ -317,40 +321,25 @@ export default function Dashboard() {
 
   // Mark notification as read
   const markAsReadMutation = useMutation({
-    mutationFn: async (id: string) => {
-      try {
-        return await apiRequest(`/api/notifications/${id}/read`, 'PATCH');
-      } finally {
-      }
-    },
+    mutationFn: (id: string) => apiPost('notifications.markRead', { id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 
   // Delete notification
   const deleteNotificationMutation = useMutation({
-    mutationFn: async (id: string) => {
-      try {
-        return await apiRequest(`/api/notifications/${id}`, 'DELETE');
-      } finally {
-      }
-    },
+    mutationFn: (id: string) => apiPost('notifications.delete', { id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 
   // Mark all as read
   const markAllAsReadMutation = useMutation({
-    mutationFn: async () => {
-      try {
-        return await apiRequest('/api/notifications/mark-all-read', 'POST');
-      } finally {
-      }
-    },
+    mutationFn: () => apiPost('notifications.markAllRead', {}),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 
@@ -368,7 +357,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      window.location.href = '/api/login';
+      window.location.href = '/login';
     }
   }, [isAuthenticated, isLoading]);
 
