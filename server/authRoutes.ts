@@ -242,6 +242,26 @@ router.post("/api/auth/login", async (req, res) => {
     // Record successful login
     await recordSuccessfulLogin(user.id);
 
+    // AUTO-ASSIGN WORKSPACE: If user has no workspace context, assign their first workspace
+    let workspaceId = user.currentWorkspaceId;
+    if (!workspaceId) {
+      // Find first workspace where user is an employee
+      const [employeeRecord] = await db
+        .select()
+        .from(employees)
+        .where(eq(employees.userId, user.id))
+        .limit(1);
+
+      if (employeeRecord) {
+        workspaceId = employeeRecord.workspaceId;
+        // Update user's currentWorkspaceId in database
+        await db
+          .update(users)
+          .set({ currentWorkspaceId: workspaceId, updatedAt: new Date() })
+          .where(eq(users.id, user.id));
+      }
+    }
+
     // Check for platform role (root_admin, sysop, compliance_officer)
     const userPlatformRoles = await db
       .select()
@@ -263,7 +283,7 @@ router.post("/api/auth/login", async (req, res) => {
         role: user.role,
         emailVerified: user.emailVerified,
         platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role for routing
-        currentWorkspaceId: user.currentWorkspaceId, // Include workspace for proper redirect
+        currentWorkspaceId: workspaceId, // Include assigned workspace for proper redirect
       },
     });
   } catch (error) {
