@@ -17,6 +17,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { storage } from '../storage';
 import { auditLogger, type AuditContext } from './audit-logger';
+import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import type { Shift, Employee, Client, TimeEntry } from '@shared/schema';
 import {
   scheduleDecisionSchema,

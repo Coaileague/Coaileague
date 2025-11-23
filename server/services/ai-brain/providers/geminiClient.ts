@@ -8,7 +8,7 @@
 
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { usageMeteringService } from '../../billing/usageMetering';
-import { aiGuardRails, type AIRequestContext } from '../aiGuardRails';
+import { aiGuardRails, type AIRequestContext } from '../../aiGuardRails';
 
 const apiKey = process.env.GEMINI_API_KEY;
 
