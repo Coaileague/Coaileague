@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LogIn, Zap, Shield, Crown } from "lucide-react";
+import { LOADING_MESSAGES, getRandomLoadingMessage } from "@/config/loading-messages";
 
 interface WelcomeNotificationProps {
   firstName?: string;
@@ -8,7 +9,10 @@ interface WelcomeNotificationProps {
   role?: string;
   platformRole?: string | null;
   onComplete?: () => void;
+  loadingDuration?: number; // How long the actual loading took in ms
 }
+
+const DISPLAY_DURATION = 4000; // How long to show the notification
 
 export function UniversalWelcomeNotification({
   firstName = "User",
@@ -17,15 +21,48 @@ export function UniversalWelcomeNotification({
   role,
   platformRole,
   onComplete,
+  loadingDuration = 1000,
 }: WelcomeNotificationProps) {
   const [isVisible, setIsVisible] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState(() => getRandomLoadingMessage());
 
-  // Auto-dismiss after 4 seconds
+  // Progress bar that advances realistically based on loading duration
+  useEffect(() => {
+    let animationId: NodeJS.Timeout;
+    const startTime = Date.now();
+    const targetDuration = Math.max(loadingDuration, 800); // Minimum 800ms for the loading bar
+    
+    const updateProgress = () => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min((elapsed / targetDuration) * 100, 100);
+      setProgress(newProgress);
+      
+      if (newProgress < 100) {
+        animationId = setTimeout(updateProgress, 30);
+      }
+    };
+    
+    animationId = setTimeout(updateProgress, 30);
+    
+    return () => clearTimeout(animationId);
+  }, [loadingDuration]);
+
+  // Change loading message every 800ms for variety
+  useEffect(() => {
+    const messageInterval = setInterval(() => {
+      setLoadingMessage(getRandomLoadingMessage());
+    }, 800);
+    
+    return () => clearInterval(messageInterval);
+  }, []);
+
+  // Auto-dismiss after display duration
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
       onComplete?.();
-    }, 4000);
+    }, DISPLAY_DURATION);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -126,16 +163,28 @@ export function UniversalWelcomeNotification({
             </div>
           </div>
 
-          {/* Footer CTA */}
-          <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-white/20 flex items-center justify-between">
-            <p className="text-white/80 text-xs sm:text-sm font-medium">
-              Getting started...
+          {/* Footer with Loading Progress */}
+          <div className="mt-4 sm:mt-5 space-y-2">
+            {/* Loading message */}
+            <p className="text-white/80 text-xs sm:text-sm font-medium h-5 sm:h-6 flex items-center">
+              {loadingMessage}
             </p>
-            <div className="flex gap-1">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: "0.2s" }} />
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: "0.4s" }} />
+            
+            {/* Progress bar */}
+            <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+              <div
+                className="h-full bg-white/90 rounded-full transition-all duration-100 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  boxShadow: "0 0 10px rgba(255, 255, 255, 0.4)"
+                }}
+              />
             </div>
+            
+            {/* Percentage text */}
+            <p className="text-white/60 text-xs text-right">
+              {Math.round(progress)}%
+            </p>
           </div>
         </div>
       </div>

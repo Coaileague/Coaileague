@@ -50,6 +50,7 @@ export default function CustomLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
+  const [loadingDuration, setLoadingDuration] = useState(0);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -61,6 +62,7 @@ export default function CustomLogin() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
+    const startTime = Date.now();
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -68,6 +70,10 @@ export default function CustomLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      setLoadingDuration(duration);
 
       const result: LoginResponse = await response.json();
 
@@ -77,7 +83,7 @@ export default function CustomLogin() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
-      // Show personalized welcome notification
+      // Show personalized welcome notification with actual loading duration
       setLoginData(result.user);
       setShowWelcome(true);
 
@@ -105,6 +111,7 @@ export default function CustomLogin() {
           email={loginData.email}
           role={loginData.role}
           platformRole={loginData.platformRole}
+          loadingDuration={loadingDuration}
           onComplete={() => setShowWelcome(false)}
         />
       )}
