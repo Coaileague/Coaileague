@@ -150,7 +150,7 @@ export default function CustomLogin() {
           >
             {/* White Login Card */}
             <div 
-              className="bg-white rounded-2xl p-12 max-sm:p-8"
+              className="bg-white rounded-2xl p-8 max-sm:p-6"
               style={{
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
               }}
@@ -169,7 +169,7 @@ export default function CustomLogin() {
 
           {/* Login Form */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
                 name="email"
@@ -185,7 +185,7 @@ export default function CustomLogin() {
                         placeholder="you@company.com"
                         disabled={isLoading}
                         data-testid="input-email"
-                        className="w-full px-3 py-2.5 rounded-lg text-sm border transition-all"
+                        className="w-full px-3 py-2 rounded-lg text-sm border transition-all"
                         style={{
                           background: '#f8fafc',
                           borderColor: '#e2e8f0',
@@ -214,7 +214,7 @@ export default function CustomLogin() {
                           placeholder="Enter your password"
                           disabled={isLoading}
                           data-testid="input-password"
-                          className="w-full px-3 py-2.5 rounded-lg text-sm border transition-all pr-10"
+                          className="w-full px-3 py-2 rounded-lg text-sm border transition-all pr-10"
                           style={{
                             background: '#f8fafc',
                             borderColor: '#e2e8f0',
@@ -254,7 +254,7 @@ export default function CustomLogin() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 rounded-lg text-white text-sm font-semibold transition-all duration-300 disabled:opacity-70 mt-5"
+                className="w-full py-2 rounded-lg text-white text-sm font-semibold transition-all duration-300 disabled:opacity-70 mt-4"
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
@@ -275,7 +275,7 @@ export default function CustomLogin() {
           </Form>
 
           {/* Divider */}
-          <div className="my-5 flex items-center gap-3">
+          <div className="my-3 flex items-center gap-3">
             <div className="flex-1" style={{ borderTop: '1px solid #e2e8f0' }}></div>
             <span className="text-xs" style={{ color: '#cbd5e1' }}>or</span>
             <div className="flex-1" style={{ borderTop: '1px solid #e2e8f0' }}></div>
