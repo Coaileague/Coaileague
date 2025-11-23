@@ -195,7 +195,7 @@ export default function Dashboard() {
 
   // Get current user and workspace
   const { data: currentUser } = useQuery<{ id: string; email?: string }>({ 
-    queryKey: queryKeys.auth.current,
+    queryKey: queryKeys.auth.me,
     queryFn: () => apiGet('auth.current'),
   });
   const userId = currentUser?.id;
@@ -277,7 +277,8 @@ export default function Dashboard() {
 
   // Fetch employees to determine user's workspace role
   const { data: allEmployees } = useQuery<any[]>({
-    queryKey: ['/api/employees'],
+    queryKey: queryKeys.employees.all,
+    queryFn: () => apiGet('employees.list'),
     enabled: isAuthenticated,
   });
 
