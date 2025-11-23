@@ -52,48 +52,65 @@ export function AutoForceAFLogo({
             }
           }
 
-          @keyframes letter-draw {
+          @keyframes letter-appear {
             0% {
-              stroke-dashoffset: 300;
               opacity: 0;
-              filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0));
+              filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0));
             }
-            30% {
-              stroke-dashoffset: 0;
+            25% {
               opacity: 1;
-              filter: drop-shadow(0 0 8px rgba(255, 193, 7, 0.6));
+              filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.9));
             }
-            70% {
-              stroke-dashoffset: 0;
+            75% {
               opacity: 1;
-              filter: drop-shadow(0 0 8px rgba(255, 193, 7, 0.6));
+              filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.9));
             }
             100% {
-              stroke-dashoffset: -300;
               opacity: 0;
-              filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0));
+              filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0));
             }
-          }
-
-          @keyframes letter-glow {
-            0% { filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0)); }
-            30% { filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.8)); }
-            70% { filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.8)); }
-            100% { filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0)); }
           }
 
           @keyframes energy-flow-a {
-            0% { stroke-dashoffset: 50; opacity: 0; }
-            20% { opacity: 0.4; }
-            50% { stroke-dashoffset: 0; opacity: 0.5; }
-            100% { stroke-dashoffset: -50; opacity: 0; }
+            0% { 
+              stroke-dashoffset: 60; 
+              opacity: 0; 
+            }
+            15% { 
+              opacity: 0.6; 
+            }
+            50% { 
+              stroke-dashoffset: 0; 
+              opacity: 0.6; 
+            }
+            85% {
+              opacity: 0.6;
+            }
+            100% { 
+              stroke-dashoffset: -60; 
+              opacity: 0; 
+            }
           }
 
           @keyframes energy-flow-f {
-            0% { stroke-dashoffset: 50; opacity: 0; }
-            20% { opacity: 0.4; }
-            50% { stroke-dashoffset: 0; opacity: 0.5; }
-            100% { stroke-dashoffset: -50; opacity: 0; }
+            0% { 
+              stroke-dashoffset: 60; 
+              opacity: 0; 
+            }
+            20% { 
+              opacity: 0.6; 
+            }
+            55% { 
+              stroke-dashoffset: 0; 
+              opacity: 0.6; 
+            }
+            80% {
+              opacity: 0.6;
+            }
+            100% { 
+              stroke-dashoffset: -60; 
+              opacity: 0; 
+            }
           }
 
           .energy-core {
@@ -101,23 +118,21 @@ export function AutoForceAFLogo({
           }
 
           .letter-a {
-            stroke-dasharray: 300;
-            animation: letter-draw 4s ease-in-out infinite;
+            animation: letter-appear 4s ease-in-out infinite;
           }
 
           .letter-f {
-            stroke-dasharray: 300;
-            animation: letter-draw 4s ease-in-out infinite 0.2s;
+            animation: letter-appear 4s ease-in-out infinite 0.15s;
           }
 
           .energy-to-a {
-            stroke-dasharray: 50;
+            stroke-dasharray: 60;
             animation: energy-flow-a 4s ease-in-out infinite;
           }
 
           .energy-to-f {
-            stroke-dasharray: 50;
-            animation: energy-flow-f 4s ease-in-out infinite 0.2s;
+            stroke-dasharray: 60;
+            animation: energy-flow-f 4s ease-in-out infinite 0.15s;
           }
         `}</style>
 
@@ -134,119 +149,109 @@ export function AutoForceAFLogo({
       </defs>
 
       {/* ========== CENTRAL ENERGY CORE ========== */}
-      {/* This pulsing core is the energy source */}
-      <circle cx="50" cy="50" r="3" fill="url(#energyGradient)" className="energy-core" />
+      <circle cx="50" cy="50" r="2.5" fill="url(#energyGradient)" className="energy-core" />
 
       {/* ========== ENERGY FLOWS TO LETTERS ========== */}
-      {/* Flow to A (top-left) */}
+      {/* Flow to A (left) */}
       <path
         className="energy-to-a"
-        d="M 50 50 L 32 30"
+        d="M 50 50 L 32 28"
         stroke="#FFC107"
-        strokeWidth="1"
+        strokeWidth="1.2"
         fill="none"
         strokeLinecap="round"
       />
 
-      {/* Flow to F (top-right) */}
+      {/* Flow to F (right) */}
       <path
         className="energy-to-f"
-        d="M 50 50 L 68 30"
+        d="M 50 50 L 68 28"
         stroke="#FFB300"
-        strokeWidth="1"
+        strokeWidth="1.2"
         fill="none"
         strokeLinecap="round"
       />
 
-      {/* ========== LETTER "A" - DRAWN FROM ENERGY ========== */}
-      {/* A forms as energy flows in */}
-      <g>
-        {/* A - left diagonal */}
+      {/* ========== LETTER "A" - PROPER TRIANGLE SHAPE ========== */}
+      <g className="letter-a">
+        {/* Left diagonal stroke of A */}
         <line
-          className="letter-a"
           x1="32"
-          y1="22"
-          x2="20"
+          y1="20"
+          x2="18"
           y2="58"
           stroke="url(#whiteStroke)"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
-          fill="none"
+          strokeLinejoin="round"
         />
 
-        {/* A - right diagonal */}
+        {/* Right diagonal stroke of A */}
         <line
-          className="letter-a"
           x1="32"
-          y1="22"
-          x2="44"
+          y1="20"
+          x2="46"
           y2="58"
           stroke="url(#whiteStroke)"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
-          fill="none"
+          strokeLinejoin="round"
         />
 
-        {/* A - crossbar */}
+        {/* Horizontal crossbar of A */}
         <line
-          className="letter-a"
-          x1="24"
-          y1="40"
-          x2="40"
-          y2="40"
+          x1="22"
+          y1="38"
+          x2="42"
+          y2="38"
           stroke="url(#whiteStroke)"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
-          fill="none"
+          strokeLinejoin="round"
         />
       </g>
 
-      {/* ========== LETTER "F" - DRAWN FROM ENERGY ========== */}
-      {/* F forms as energy flows in (slightly delayed) */}
-      <g>
-        {/* F - vertical spine */}
+      {/* ========== LETTER "F" - PROPER F SHAPE ========== */}
+      <g className="letter-f">
+        {/* Vertical spine of F */}
         <line
-          className="letter-f"
           x1="68"
-          y1="22"
-          x2="56"
+          y1="20"
+          x2="68"
           y2="58"
           stroke="url(#whiteStroke)"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
-          fill="none"
+          strokeLinejoin="round"
         />
 
-        {/* F - top horizontal */}
+        {/* Top horizontal bar of F */}
         <line
-          className="letter-f"
           x1="68"
-          y1="22"
-          x2="80"
-          y2="22"
+          y1="20"
+          x2="84"
+          y2="20"
           stroke="url(#whiteStroke)"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
-          fill="none"
+          strokeLinejoin="round"
         />
 
-        {/* F - middle horizontal */}
+        {/* Middle horizontal bar of F */}
         <line
-          className="letter-f"
-          x1="65"
-          y1="40"
-          x2="77"
-          y2="40"
+          x1="68"
+          y1="39"
+          x2="82"
+          y2="39"
           stroke="url(#whiteStroke)"
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
-          fill="none"
+          strokeLinejoin="round"
         />
       </g>
 
       {/* ========== ACCENT RING ========== */}
-      {/* Subtle outer ring shows the energy boundary */}
-      <circle cx="50" cy="50" r="48" fill="none" stroke="#FFB300" strokeWidth="0.6" opacity="0.2" />
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#FFB300" strokeWidth="0.6" opacity="0.15" />
     </svg>
   );
 
@@ -286,7 +291,7 @@ export function AutoForceAFLogo({
 
         {/* Icon */}
         <div className="relative z-10 w-3/4 h-3/4 text-white">
-          {animated ? <EnergyAFLogo /> : <EnergyAFLogo />}
+          <EnergyAFLogo />
         </div>
       </div>
     );
@@ -309,7 +314,7 @@ export function AutoForceAFLogo({
       >
         <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white via-yellow-100 to-transparent transition-opacity duration-500" />
         <div className="relative z-10 w-3/4 h-3/4 text-white">
-          {animated ? <EnergyAFLogo /> : <EnergyAFLogo />}
+          <EnergyAFLogo />
         </div>
       </div>
 
