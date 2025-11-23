@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { logoConfig, getLogoSize, isAnimationEnabled, getAnimationConfig } from "@/config/logoConfig";
+import { logoConfig, getLogoSize, getAnimationConfig } from "@/config/logoConfig";
 
 interface AutoForceAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -9,8 +9,11 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * AutoForce™ Premium Logo - Autonomous Network with "AF" Integration
- * The "AF" is elegantly integrated into the network nodes and flows
+ * AutoForce™ Premium Logo - Sophisticated AF Monogram
+ * 
+ * The "AF" is not just text - it IS the design.
+ * Modern geometric letterforms with interconnected network flows.
+ * Shows premium tech aesthetic (think Stripe, Apple, Airbnb quality).
  */
 export function AutoForceAFLogo({
   size = "md",
@@ -20,59 +23,54 @@ export function AutoForceAFLogo({
 }: AutoForceAFLogoProps) {
   const sizeConfig = getLogoSize(size);
 
-  // Professional Autonomous Network Icon with "AF" Integration
-  const AutonomousNetworkIcon = () => (
+  /**
+   * Premium AF Monogram Icon
+   * Sophisticated geometric letterforms with flowing network energy
+   */
+  const PremiumAFMonogram = () => (
     <svg
       viewBox="0 0 100 100"
       className="w-full h-full"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ filter: animated ? "drop-shadow(0 4px 12px rgba(59, 130, 246, 0.25))" : "none" }}
+      style={{ filter: animated ? "drop-shadow(0 4px 16px rgba(59, 130, 246, 0.3))" : "none" }}
     >
       <defs>
         <style>{`
-          ${getAnimationConfig("pulseCore").keyframes}
-          ${getAnimationConfig("flowNode").keyframes}
-          ${getAnimationConfig("rotateRing").keyframes}
-          ${getAnimationConfig("flowEnergy").keyframes}
           ${getAnimationConfig("glowPulse").keyframes}
+          ${getAnimationConfig("flowEnergy").keyframes}
 
-          .core-node {
-            animation: ${animated ? `pulse-core ${getAnimationConfig("pulseCore").duration} ease-in-out infinite` : "none"};
-          }
-
-          .orbital-node {
-            animation: ${animated ? `flow-node ${getAnimationConfig("flowNode").duration} ease-in-out infinite` : "none"};
-          }
-
-          .connection-line {
-            stroke-dasharray: 100;
+          .energy-line {
+            stroke-dasharray: 50;
             animation: ${animated ? `flow-energy ${getAnimationConfig("flowEnergy").duration} ease-in-out infinite` : "none"};
           }
 
-          .outer-ring {
-            animation: ${animated ? `rotate-ring ${getAnimationConfig("rotateRing").duration} linear infinite` : "none"};
+          .connection-glow {
+            animation: ${animated ? `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite` : "none"};
           }
 
-          .af-letter {
-            font-family: 'Inter', '-apple-system', 'Segoe UI', sans-serif;
-            font-weight: 800;
-            font-size: 14;
-            fill: white;
-            pointer-events: none;
-          }
-
-          .af-accent {
-            animation: ${animated ? `flow-node ${getAnimationConfig("flowNode").duration} ease-in-out infinite` : "none"};
-          }
+          .letter-a { fill: url(#afGradient); }
+          .letter-f { fill: url(#afGradientReverse); }
         `}</style>
 
-        <radialGradient id="coreGradient">
+        {/* Primary gradient for A */}
+        <linearGradient id="afGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1" />
-          <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity="0.8" />
-        </radialGradient>
+          <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity="1" />
+        </linearGradient>
 
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+        {/* Reverse gradient for F */}
+        <linearGradient id="afGradientReverse" x1="100%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity="1" />
+          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="1" />
+        </linearGradient>
+
+        {/* Glow filter for premium effect */}
+        <filter id="premiumGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+        </filter>
+
+        <filter id="energyGlow">
+          <feGaussianBlur stdDeviation="1" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
             <feMergeNode in="SourceGraphic" />
@@ -80,118 +78,90 @@ export function AutoForceAFLogo({
         </filter>
       </defs>
 
-      {/* Outer rotating ring */}
-      <circle
-        className="outer-ring"
-        cx="50"
-        cy="50"
-        r="44"
-        fill="none"
+      {/* Background circle for optical balance */}
+      <circle cx="50" cy="50" r="48" fill="none" stroke="hsl(217, 91%, 60%)" strokeWidth="0.5" opacity="0.1" />
+
+      {/* ========== LETTER "A" (Left) ========== */}
+      {/* A - Top point (geometric peak) */}
+      <circle cx="32" cy="24" r="2.5" fill="url(#afGradient)" filter="url(#premiumGlow)" />
+
+      {/* A - Bottom left corner */}
+      <circle cx="20" cy="62" r="2.5" fill="url(#afGradient)" filter="url(#premiumGlow)" />
+
+      {/* A - Bottom right corner */}
+      <circle cx="44" cy="62" r="2.5" fill="url(#afGradient)" filter="url(#premiumGlow)" />
+
+      {/* A - Left edge line */}
+      <line x1="32" y1="24" x2="20" y2="62" stroke="url(#afGradient)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+
+      {/* A - Right edge line */}
+      <line x1="32" y1="24" x2="44" y2="62" stroke="url(#afGradient)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+
+      {/* A - Horizontal crossbar with connection point */}
+      <line x1="24" y1="42" x2="40" y2="42" stroke="url(#afGradient)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+
+      {/* A - Connection node (for energy flow) */}
+      <circle cx="32" cy="42" r="1.8" fill="hsl(60, 100%, 50%)" filter="url(#energyGlow)" className="connection-glow" />
+
+      {/* ========== LETTER "F" (Right) ========== */}
+      {/* F - Top point */}
+      <circle cx="68" cy="24" r="2.5" fill="url(#afGradientReverse)" filter="url(#premiumGlow)" />
+
+      {/* F - Bottom left corner */}
+      <circle cx="56" cy="62" r="2.5" fill="url(#afGradientReverse)" filter="url(#premiumGlow)" />
+
+      {/* F - Vertical spine */}
+      <line x1="68" y1="24" x2="56" y2="62" stroke="url(#afGradientReverse)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+
+      {/* F - Top horizontal bar */}
+      <line x1="68" y1="24" x2="80" y2="24" stroke="url(#afGradientReverse)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+
+      {/* F - Middle horizontal bar */}
+      <line x1="65" y1="42" x2="77" y2="42" stroke="url(#afGradientReverse)" strokeWidth="2.5" opacity="0.9" strokeLinecap="round" />
+
+      {/* F - Connection node (for energy flow) */}
+      <circle cx="71" cy="42" r="1.8" fill="hsl(60, 100%, 50%)" filter="url(#energyGlow)" className="connection-glow" />
+
+      {/* ========== CONNECTING ENERGY FLOWS ========== */}
+      {/* Energy flowing from A through center to F */}
+      <line
+        className="energy-line"
+        x1="32"
+        y1="42"
+        x2="71"
+        y2="42"
+        stroke="hsl(60, 100%, 50%)"
+        strokeWidth="1.2"
+        opacity="0.6"
+        filter="url(#energyGlow)"
+      />
+
+      {/* Accent energy pulse - top arc */}
+      <path
+        className="energy-line"
+        d="M 32 24 Q 50 15 68 24"
         stroke="hsl(217, 91%, 60%)"
         strokeWidth="1"
-        opacity="0.2"
-        strokeDasharray="8,4"
-      />
-
-      {/* Connection lines with flowing energy */}
-      <line
-        className="connection-line"
-        x1="50"
-        y1="50"
-        x2="50"
-        y2="18"
-        stroke="hsl(var(--primary))"
-        strokeWidth="1.5"
-        opacity="0.6"
-      />
-      <line
-        className="connection-line"
-        x1="50"
-        y1="50"
-        x2="73"
-        y2="68"
-        stroke="hsl(var(--primary))"
-        strokeWidth="1.5"
-        opacity="0.6"
-      />
-      <line
-        className="connection-line"
-        x1="50"
-        y1="50"
-        x2="27"
-        y2="68"
-        stroke="hsl(var(--primary))"
-        strokeWidth="1.5"
-        opacity="0.6"
-      />
-
-      {/* Central core - Platform nucleus */}
-      <circle
-        className="core-node"
-        cx="50"
-        cy="50"
-        r="5.5"
-        fill="url(#coreGradient)"
-        filter="url(#glow)"
-      />
-
-      {/* "A" letter in top-left node (Autonomous) */}
-      <g className="af-accent">
-        <circle
-          cx="50"
-          cy="18"
-          r="4.5"
-          fill="hsl(217, 91%, 60%)"
-          opacity="0.85"
-          filter="url(#glow)"
-        />
-        <text x="50" y="21" textAnchor="middle" className="af-letter" fontSize="13">
-          A
-        </text>
-      </g>
-
-      {/* "F" letter in bottom-right node (Force) */}
-      <g className="af-accent" style={{ animationDelay: "0.6s" }}>
-        <circle
-          cx="73"
-          cy="68"
-          r="4.5"
-          fill="hsl(217, 91%, 60%)"
-          opacity="0.85"
-          filter="url(#glow)"
-        />
-        <text x="73" y="71" textAnchor="middle" className="af-letter" fontSize="13">
-          F
-        </text>
-      </g>
-
-      {/* Supporting node */}
-      <g className="af-accent" style={{ animationDelay: "1.2s" }}>
-        <circle
-          cx="27"
-          cy="68"
-          r="4.5"
-          fill="hsl(217, 91%, 60%)"
-          opacity="0.7"
-          filter="url(#glow)"
-        />
-        {/* Small accent dot instead of letter for balance */}
-        <circle cx="27" cy="68" r="1" fill="hsl(60, 100%, 50%)" />
-      </g>
-
-      {/* Energy pulse around core */}
-      <circle
-        cx="50"
-        cy="50"
-        r="8"
         fill="none"
-        stroke="hsl(var(--primary))"
-        strokeWidth="0.5"
-        opacity={animated ? 0.4 : 0.2}
-        style={{
-          animation: animated ? `glow-pulse ${getAnimationConfig("glowPulse").duration} ease-in-out infinite` : "none",
-        }}
+        opacity="0.4"
       />
+
+      {/* Accent energy pulse - bottom arc */}
+      <path
+        className="energy-line"
+        d="M 20 62 Q 50 75 80 62"
+        stroke="hsl(var(--primary))"
+        strokeWidth="1"
+        fill="none"
+        opacity="0.4"
+      />
+
+      {/* Central coordination hub - shows A and F work together */}
+      <circle cx="50" cy="50" r="3" fill="url(#afGradient)" opacity="0.6" filter="url(#premiumGlow)" />
+
+      {/* Premium quality accent lines */}
+      <circle cx="50" cy="50" r="5" fill="none" stroke="url(#afGradient)" strokeWidth="0.6" opacity="0.25" />
+      <circle cx="50" cy="50" r="8" fill="none" stroke="url(#afGradientReverse)" strokeWidth="0.6" opacity="0.15" />
     </svg>
   );
 
@@ -226,18 +196,18 @@ export function AutoForceAFLogo({
         )}
         data-testid={`${logoConfig.accessibility.testIdPrefix}-icon`}
       >
-        {/* Subtle shimmer on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-white to-transparent transition-opacity duration-300" />
+        {/* Premium shimmer on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-25 bg-gradient-to-br from-white via-transparent to-transparent transition-opacity duration-500" />
 
-        {/* Icon with embedded AF */}
-        <div className="relative z-10 w-2/3 h-2/3 text-white">
-          <AutonomousNetworkIcon />
+        {/* Icon */}
+        <div className="relative z-10 w-3/4 h-3/4 text-white">
+          <PremiumAFMonogram />
         </div>
       </div>
     );
   }
 
-  // Full variant - Icon + brand text
+  // Full variant - Icon + brand name
   return (
     <div className={cn("flex items-center gap-3 sm:gap-4", className)}>
       <div
@@ -252,9 +222,9 @@ export function AutoForceAFLogo({
           "group"
         )}
       >
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-white to-transparent transition-opacity duration-300" />
-        <div className="relative z-10 w-2/3 h-2/3 text-white">
-          <AutonomousNetworkIcon />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-25 bg-gradient-to-br from-white via-transparent to-transparent transition-opacity duration-500" />
+        <div className="relative z-10 w-3/4 h-3/4 text-white">
+          <PremiumAFMonogram />
         </div>
       </div>
 
