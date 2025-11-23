@@ -371,11 +371,12 @@ export function FloatingSupportChat() {
       <div
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          left: `${state.position.x}px`,
+          top: `${state.position.y}px`,
           zIndex: 9999,
           touchAction: 'none',
-          cursor: isDraggingRef.current ? 'grabbing' : 'grab'
+          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          userSelect: 'none'
         }}
         onMouseDown={handlePointerDown}
         onClick={handleClickWithDragCheck}
