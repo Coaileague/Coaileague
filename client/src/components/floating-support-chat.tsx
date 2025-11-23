@@ -222,11 +222,14 @@ export function FloatingSupportChat() {
       isDraggingRef.current = false;
       return;
     }
-    setState(prev => ({ ...prev, isMinimized: false }));
+    setAnimationState('opening');
+    setState(prev => ({ ...prev, isMinimized: false, isOpen: true }));
+    setTimeout(() => setAnimationState('idle'), CHAT_BUBBLE_CONFIG.animations.openingDuration);
   };
   
   // Smart routing handler (role-based)
   const handleChatClick = () => {
+    setAnimationState('opening');
     if (!user) {
       // Guest: Open FloatingSupportChat AI flow
       setState(prev => ({ ...prev, isOpen: true, isMinimized: false }));
@@ -234,6 +237,7 @@ export function FloatingSupportChat() {
       // Authenticated users: Open chat bubble (support staff and regular users can access their respective dashboards via header navigation)
       setState(prev => ({ ...prev, isOpen: true, isMinimized: false }));
     }
+    setTimeout(() => setAnimationState('idle'), CHAT_BUBBLE_CONFIG.animations.openingDuration);
   };
   
   // Navigation to dashboards (separate from chat bubble open)
@@ -428,7 +432,12 @@ export function FloatingSupportChat() {
         maxHeight: `${CHAT_BUBBLE_CONFIG.sizes.windowHeight}px`,
         touchAction: CHAT_BUBBLE_CONFIG.touchAction
       }}
-      className={`${CHAT_BUBBLE_CONFIG.colors.background} border-2 ${CHAT_BUBBLE_CONFIG.colors.border} ${CHAT_BUBBLE_CONFIG.effects.roundedLg} ${CHAT_BUBBLE_CONFIG.effects.shadow} flex flex-col`}
+      className={cn(
+        `${CHAT_BUBBLE_CONFIG.colors.background} border-2 ${CHAT_BUBBLE_CONFIG.colors.border} ${CHAT_BUBBLE_CONFIG.effects.roundedLg} ${CHAT_BUBBLE_CONFIG.effects.shadow} flex flex-col`,
+        animationState === 'opening' && 'chat-bubble-opening',
+        animationState === 'closing' && 'chat-bubble-closing',
+        animationState === 'minimizing' && 'chat-bubble-minimizing'
+      )}
       data-testid="chat-bubble-window"
     >
       {/* Draggable header */}
@@ -466,7 +475,9 @@ export function FloatingSupportChat() {
               className={`h-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize} w-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize}`}
               onClick={(e) => {
                 e.stopPropagation();
+                setAnimationState('minimizing');
                 setState(prev => ({ ...prev, isMinimized: true }));
+                setTimeout(() => setAnimationState('idle'), CHAT_BUBBLE_CONFIG.animations.minimizingDuration);
               }}
               data-testid="button-minimize-chat"
             >
@@ -478,7 +489,11 @@ export function FloatingSupportChat() {
               className={`h-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize} w-${CHAT_BUBBLE_CONFIG.sizes.headerButtonSize}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setState(prev => ({ ...prev, isOpen: false }));
+                setAnimationState('closing');
+                setTimeout(() => {
+                  setState(prev => ({ ...prev, isOpen: false }));
+                  setAnimationState('idle');
+                }, CHAT_BUBBLE_CONFIG.animations.closingDuration);
               }}
               data-testid="button-close-chat"
             >
