@@ -123,6 +123,51 @@ function extractStateFromAddress(address: string): string {
 }
 
 /**
+ * Calculate federal income tax (simplified W-4 calculation)
+ */
+export function calculateTaxes(params: {
+  grossWages: number;
+  filingStatus: string;
+  ytdWages: number;
+}): { federalIncomeTax: number; socialSecurity: number; medicare: number; total: number } {
+  // Federal income tax (simplified 2024 rates)
+  const federalRates = {
+    single: [
+      { limit: 11600, rate: 0.10 },
+      { limit: 47150, rate: 0.12 },
+      { limit: 100525, rate: 0.22 },
+      { limit: Infinity, rate: 0.24 }
+    ]
+  };
+
+  const brackets = federalRates[params.filingStatus as keyof typeof federalRates] || federalRates.single;
+  
+  let federalTax = 0;
+  let previousLimit = 0;
+  
+  for (const bracket of brackets) {
+    if (params.ytdWages >= bracket.limit) {
+      federalTax += (bracket.limit - previousLimit) * bracket.rate;
+      previousLimit = bracket.limit;
+    } else {
+      federalTax += Math.max(0, params.ytdWages + params.grossWages - previousLimit) * bracket.rate;
+      break;
+    }
+  }
+
+  // Social Security (6.2%) and Medicare (1.45%) - self-explanatory payroll taxes
+  const socialSecurity = params.grossWages * 0.062;
+  const medicare = params.grossWages * 0.0145;
+
+  return {
+    federalIncomeTax: Math.round(federalTax * 100) / 100,
+    socialSecurity: Math.round(socialSecurity * 100) / 100,
+    medicare: Math.round(medicare * 100) / 100,
+    total: Math.round((federalTax + socialSecurity + medicare) * 100) / 100
+  };
+}
+
+/**
  * Clear tax rate cache (useful for testing)
  */
 export function clearTaxCache() {
