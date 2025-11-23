@@ -16,7 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 import {
   Activity, Users, Building2, DollarSign, TrendingUp, TrendingDown, Server, Database,
@@ -1009,7 +1008,7 @@ export default function RootAdminPortal() {
                       <CardTitle>Chat Messages</CardTitle>
                       <CardDescription>
                         {selectedConversation 
-                          ? conversations.find(c => c.id === selectedConversation)?.userName
+                          ? conversations.find(c => c.id === selectedConversation)?.customerName
                           : 'Select a conversation'}
                       </CardDescription>
                     </div>

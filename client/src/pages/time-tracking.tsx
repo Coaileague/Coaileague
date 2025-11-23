@@ -30,7 +30,9 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiPost, apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/config/queryKeys";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkspaceLayout } from "@/components/workspace-layout";
 import { Link } from "wouter";
@@ -80,7 +82,7 @@ export default function TimeTracking() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/login";
       }, 500);
       return;
     }
@@ -96,19 +98,22 @@ export default function TimeTracking() {
   }, []);
 
   const { data: employees = [], isError: employeesError, error: employeesErrorObj, refetch: refetchEmployees } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+    queryKey: queryKeys.employees.all,
+    queryFn: () => apiGet('employees.list'),
     enabled: isAuthenticated,
   });
 
   const { data: clients = [] } = useClientLookup();
 
   const { data: shifts = [], isError: shiftsError, error: shiftsErrorObj, refetch: refetchShifts } = useQuery<Shift[]>({
-    queryKey: ["/api/shifts"],
+    queryKey: queryKeys.shifts.all,
+    queryFn: () => apiGet('shifts.list'),
     enabled: isAuthenticated,
   });
 
   const { data: allTimeEntries = [], isError: entriesError, error: entriesErrorObj, refetch: refetchEntries } = useQuery<TimeEntry[]>({
-    queryKey: ["/api/time-entries"],
+    queryKey: queryKeys.timeEntries.all,
+    queryFn: () => apiGet('timeEntries.list'),
     enabled: isAuthenticated,
   });
 
@@ -161,7 +166,7 @@ export default function TimeTracking() {
   }, [allTimeEntries, workspaceRole, currentEmployee]);
 
   const clockInMutation = useMutation({
-    mutationFn: async (data: { 
+    mutationFn: (data: { 
       employeeId: string; 
       clientId?: string; 
       shiftId?: string; 
@@ -171,13 +176,9 @@ export default function TimeTracking() {
       gpsLongitude?: number;
       gpsAccuracy?: number;
       photoUrl?: string;
-    }) => {
-      return apiRequest("POST", "/api/time-entries/clock-in", data);
-    },
+    }) => apiPost('timeEntries.clockIn', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
       toast({
         title: "Clocked In",
         description: "Time tracking started successfully with GPS verification",
@@ -207,24 +208,15 @@ export default function TimeTracking() {
   });
 
   const clockOutMutation = useMutation({
-    mutationFn: async (data: { 
+    mutationFn: (data: { 
       timeEntryId: string; 
       gpsLatitude?: number; 
       gpsLongitude?: number; 
       gpsAccuracy?: number;
       photoUrl?: string;
-    }) => {
-      return apiRequest("PATCH", `/api/time-entries/${data.timeEntryId}/clock-out`, {
-        gpsLatitude: data.gpsLatitude,
-        gpsLongitude: data.gpsLongitude,
-        gpsAccuracy: data.gpsAccuracy,
-        photoUrl: data.photoUrl,
-      });
-    },
+    }) => apiPost('timeEntries.clockOut', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
       toast({
         title: "Clocked Out",
         description: "Time entry completed successfully",
