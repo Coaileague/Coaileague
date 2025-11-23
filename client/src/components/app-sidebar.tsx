@@ -27,6 +27,7 @@ import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { HelpDropdown } from "@/components/help-dropdown";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { performLogout } from "@/lib/logoutHandler";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -69,15 +70,8 @@ export function AppSidebar() {
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include"
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
     showLogoutTransition(transition);
+    await performLogout();
   };
 
   return (
