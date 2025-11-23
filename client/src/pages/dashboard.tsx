@@ -687,13 +687,6 @@ export default function Dashboard() {
           {/* Workspace Metrics */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 mobile-compact-gap-sm">
             <MetricTile
-              title="Organization"
-              value={orgCode}
-              icon={LayoutDashboard}
-              data-testid="card-organization"
-            />
-            
-            <MetricTile
               title="Total Organizations"
               value={totalOrganizations}
               icon={Building2}
