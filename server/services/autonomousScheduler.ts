@@ -1067,7 +1067,7 @@ async function runAutomaticPayrollProcessing() {
                   try {
                     const { createNotification } = await import('./notificationService');
                     const workspaceEmployees = await db.query.users.findMany({
-                      where: eq(users.workspaceId, workspace.id),
+                      where: eq(users.currentWorkspaceId, workspace.id),
                     });
 
                     for (const emp of workspaceEmployees) {
