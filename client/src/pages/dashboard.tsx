@@ -35,6 +35,7 @@ import { useIdentity } from "@/hooks/useIdentity";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { MetricTile } from "@/components/metric-tile";
 import { CreditBalanceCard } from "@/components/credit-balance";
+import { PendingApprovalsBanner } from "@/components/pending-approvals-banner";
 
 interface Notification {
   id: string;

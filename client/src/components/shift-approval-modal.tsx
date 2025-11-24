@@ -14,16 +14,22 @@ import { Label } from "@/components/ui/label";
 import { AlertCircle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
+// Matches ShiftAction from shift-approvals.tsx
 export interface ShiftApprovalAction {
   id: string;
   actionType: 'accept' | 'deny' | 'switch_request' | 'cover_request';
-  status: 'pending' | 'approved' | 'denied';
+  status: 'pending' | 'approved' | 'denied' | 'completed' | 'canceled';
   requestedByName: string;
   targetEmployeeName?: string;
   shiftDate: string;
   shiftStart: string;
   shiftEnd: string;
   reason?: string;
+  requestedBy?: string;
+  targetEmployeeId?: string;
+  shiftId?: string;
+  denialReason?: string;
+  createdAt?: string;
 }
 
 interface ShiftApprovalModalProps {

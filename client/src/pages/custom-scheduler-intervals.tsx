@@ -42,6 +42,21 @@ interface CustomSchedulerInterval {
   createdAt: string;
 }
 
+function getScheduleLabel(type: string) {
+  switch (type) {
+    case 'weekly':
+      return 'Weekly';
+    case 'biweekly':
+      return 'Bi-weekly';
+    case 'monthly':
+      return 'Monthly';
+    case 'custom_cron':
+      return 'Custom (Cron)';
+    default:
+      return type;
+  }
+}
+
 export default function CustomSchedulerIntervals() {
   const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
@@ -140,21 +155,7 @@ export default function CustomSchedulerIntervals() {
     });
   };
 
-  const getScheduleLabel = (type: string) => {
-    switch (type) {
-      case 'weekly':
-        return 'Weekly';
-      case 'biweekly':
-        return 'Bi-weekly';
-      case 'monthly':
-        return 'Monthly';
-      case 'custom_cron':
-        return 'Custom (Cron)';
-      default:
-        return type;
-    }
-  };
-
+  
   const activeCount = intervals.filter(i => i.enabled).length;
   const enabledIntervals = intervals.filter(i => i.enabled);
   const disabledIntervals = intervals.filter(i => !i.enabled);
