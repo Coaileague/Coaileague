@@ -463,6 +463,15 @@ function validateWorkspaceAccess(
   return { allowed: true };
 }
 
+// =============================================================================
+// SECURITY: EXTRACT CLIENT IP ADDRESS (For rate limiting & audit logging)
+// =============================================================================
+function getClientIP(request: IncomingMessage): string {
+  return (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() 
+    || request.socket.remoteAddress 
+    || 'unknown';
+}
+
 // Export function to get live room data for API
 export function getLiveRoomConnections() {
   const roomData = new Map<string, {
@@ -521,9 +530,7 @@ export function setupWebSocket(server: Server) {
 
   wss.on('connection', async (ws: WebSocketClient, request: IncomingMessage) => {
     // Extract IP address and user agent from request
-    const ipAddress = (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() 
-      || request.socket.remoteAddress 
-      || 'unknown';
+    const ipAddress = getClientIP(request);
     const userAgent = request.headers['user-agent'] || 'unknown';
     
     // Generate unique session ID for connection tracking
