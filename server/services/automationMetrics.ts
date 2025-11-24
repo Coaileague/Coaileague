@@ -23,14 +23,53 @@ import {
 } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, avg, sum } from "drizzle-orm";
 import { subDays, startOfMonth, endOfMonth, differenceInHours } from "date-fns";
-import { automationMetricsConfig } from "@shared/config/automationMetricsConfig";
-
 // Load dynamic constants from config (replaces hardcoded values)
 // DOCUMENTED SOURCE: Industry standard estimates from SHRM and ADP time studies
-const DEFAULT_ADMIN_HOURLY_RATE = automationMetricsConfig.performanceThresholds.scheduleGenerationMaxMs ? 35 : 35; // Fallback to 35 if config unavailable
+const DEFAULT_ADMIN_HOURLY_RATE = 35; // Default admin hourly rate for cost avoidance calculations
 const DEFAULT_MINUTES_SAVED_PER_SHIFT = 14.5; // 15min manual - 30sec AI (from config defaults)
 const DEFAULT_MINUTES_SAVED_PER_INVOICE = 28; // 30min manual - 2min AI (from config defaults)
 const DEFAULT_MINUTES_SAVED_PER_PAYROLL = 40; // 45min manual - 5min AI (from config defaults)
+
+/**
+ * Get workspace-specific admin hourly rate for cost avoidance calculations
+ */
+async function getWorkspaceAdminHourlyRate(workspaceId: string): Promise<number | null> {
+  try {
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+    });
+    
+    if (workspace?.config && typeof workspace.config === 'object') {
+      const config = workspace.config as any;
+      if (config.adminHourlyRate && typeof config.adminHourlyRate === 'number') {
+        return config.adminHourlyRate;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Set workspace admin hourly rate for cost avoidance calculations
+ */
+export async function setWorkspaceAdminHourlyRate(
+  workspaceId: string,
+  hourlyRate: number
+): Promise<void> {
+  if (hourlyRate <= 0 || hourlyRate > 500) {
+    throw new Error('Hourly rate must be between $1 and $500');
+  }
+  
+  await db.update(workspaces)
+    .set({
+      config: {
+        adminHourlyRate: hourlyRate,
+      },
+    })
+    .where(eq(workspaces.id, workspaceId));
+}
 
 interface AutomationMetrics {
   // Time savings
