@@ -16,6 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Trash2, Plus, AlertTriangle, CheckCircle, AlertCircle, Scale } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { garnishmentTypesConfig, priorityConfig, payrollMessages } from "@/config/payrollConfig";
 
 const garnishmentSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -29,21 +30,11 @@ const garnishmentSchema = z.object({
 
 type GarnishmentFormData = z.infer<typeof garnishmentSchema>;
 
-const priorityLabels: Record<number, string> = {
-  1: "Critical (Federal Taxes, Child Support)",
-  2: "High (Alimony, Court Orders)",
-  3: "Normal (Student Loans)",
-  4: "Low (Other)",
-};
-
-const garnishmentTypes: Record<string, string> = {
-  child_support: 'Child Support',
-  alimony: 'Alimony',
-  taxes: 'Tax Garnishment',
-  student_loans: 'Student Loans',
-  court_order: 'Court Order',
-  other: 'Other Garnishment',
-};
+// Extract labels from config
+const garnishmentTypes = Object.entries(garnishmentTypesConfig).reduce((acc, [key, config]) => {
+  acc[key] = config.label;
+  return acc;
+}, {} as Record<string, string>);
 
 export default function PayrollGarnishmentsPage() {
   const { user } = useAuth();
@@ -93,7 +84,7 @@ export default function PayrollGarnishmentsPage() {
       return response;
     },
     onSuccess: () => {
-      toast({ title: "✓ Garnishment Added", description: "Payroll garnishment created successfully" });
+      toast({ title: "✓ Garnishment Added", description: payrollMessages.garnishments.addSuccess });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll/garnishments'] });
       setDialogOpen(false);
       form.reset();
@@ -109,7 +100,7 @@ export default function PayrollGarnishmentsPage() {
       return await apiRequest('DELETE', `/api/payroll/garnishments/${garnishmentId}`, {});
     },
     onSuccess: () => {
-      toast({ title: "✓ Garnishment Removed", description: "Payroll garnishment deleted successfully" });
+      toast({ title: "✓ Garnishment Removed", description: payrollMessages.garnishments.deleteConfirm });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll/garnishments'] });
       refetch();
     },
@@ -128,20 +119,20 @@ export default function PayrollGarnishmentsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Payroll Garnishments</h1>
-          <p className="text-muted-foreground mt-2">Manage court-ordered wage garnishments (child support, alimony, taxes)</p>
+          <h1 className="text-3xl font-bold tracking-tight">{payrollMessages.garnishments.title}</h1>
+          <p className="text-muted-foreground mt-2">{payrollMessages.garnishments.description}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2" data-testid="button-add-garnishment">
               <Plus className="w-4 h-4" />
-              Add Garnishment
+              {payrollMessages.garnishments.addButton}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Add Payroll Garnishment</DialogTitle>
-              <DialogDescription>Create a court-ordered wage garnishment. Higher priority garnishments are deducted first.</DialogDescription>
+              <DialogTitle>{payrollMessages.garnishments.addDialogTitle}</DialogTitle>
+              <DialogDescription>{payrollMessages.garnishments.addDialogDescription}</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit((data) => addGarnishmentMutation.mutate(data))} className="space-y-4">
