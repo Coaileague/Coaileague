@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { getHealthSummary, getServiceHealth } from '../services/healthCheck';
 import { storage } from '../storage';
 import type { ServiceIncidentReportPayload } from '../../shared/healthTypes';
+import { objectStorageClient } from '../objectStorage';
 
 // Authenticated request type
 interface AuthenticatedRequest extends Request {
@@ -164,9 +165,57 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
         let screenshotKey: string | undefined;
 
         if (req.file) {
-          // TODO: Implement object storage upload
-          // For now, we'll skip screenshot storage until object storage integration is ready
-          console.log('Screenshot upload received but storage not yet implemented:', req.file.originalname);
+          try {
+            // Upload screenshot to object storage
+            const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+            
+            if (!bucketId) {
+              console.warn('Object storage not configured - screenshot will not be saved');
+            } else {
+              // Use shared objectStorageClient with sidecar credentials
+              const bucket = objectStorageClient.bucket(bucketId);
+              
+              // Generate unique filename (guard against empty post-sanitization)
+              const timestamp = Date.now();
+              const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_') || 'screenshot';
+              
+              // Entity ID is the path relative to PRIVATE_OBJECT_DIR
+              const entityId = `service-incidents/${workspaceId}/${timestamp}_${sanitizedFilename}`;
+              
+              // Object name for bucket.file() is just the object segment (.private/...)
+              const objectName = `.private/${entityId}`;
+              
+              // Upload to object storage
+              const blob = bucket.file(objectName);
+              const blobStream = blob.createWriteStream({
+                resumable: false,
+                metadata: {
+                  contentType: req.file.mimetype,
+                  metadata: {
+                    uploadedBy: userId,
+                    workspace: workspaceId,
+                    serviceKey: reportData.serviceKey,
+                    timestamp: new Date().toISOString(),
+                  },
+                },
+              });
+              
+              await new Promise<void>((resolve, reject) => {
+                blobStream.on('error', reject);
+                blobStream.on('finish', resolve);
+                blobStream.end(req.file!.buffer);
+              });
+              
+              // Store canonical object path for access-controlled retrieval via ObjectStorageService
+              screenshotUrl = `/objects/${entityId}`;
+              screenshotKey = entityId;
+              
+              console.log(`Screenshot uploaded successfully: ${screenshotUrl}`);
+            }
+          } catch (uploadError: any) {
+            console.error('Failed to upload screenshot:', uploadError);
+            // Continue without screenshot - don't fail the entire incident report
+          }
         }
 
         // Create incident report in database

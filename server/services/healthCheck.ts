@@ -5,6 +5,7 @@ import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { wsCounter } from './websocketCounter';
+import { objectStorageClient } from '../objectStorage';
 
 // Cache health check results to prevent thrashing
 // Don't cache failures so recovery is detected quickly
@@ -159,7 +160,7 @@ export async function checkGeminiAI(): Promise<ServiceHealth> {
   }
 }
 
-// Object Storage health check with lightweight connectivity probe
+// Object Storage health check with real connectivity probe
 export async function checkObjectStorage(): Promise<ServiceHealth> {
   const cached = getCached('object_storage');
   if (cached) return cached;
@@ -179,16 +180,25 @@ export async function checkObjectStorage(): Promise<ServiceHealth> {
       return result;
     }
 
-    // TODO: Add actual connectivity probe (e.g., list objects with limit 1)
-    // For now, configuration check
+    // Real connectivity probe - list objects with limit 1 (lightweight)
+    const bucket = objectStorageClient.bucket(bucketId);
+    const [files] = await bucket.getFiles({ maxResults: 1 });
     const latencyMs = Date.now() - startTime;
+
+    const status: ServiceStatus = latencyMs < 2000 ? 'operational' : 'degraded';
     const result: ServiceHealth = {
       service: 'object_storage',
-      status: 'operational',
+      status,
       isCritical: false,
-      message: 'Object storage configured',
+      message: status === 'operational' 
+        ? `Object storage responding normally (${files.length ? 'files present' : 'empty bucket'})`
+        : 'Object storage slow response',
       lastChecked: new Date().toISOString(),
       latencyMs,
+      metadata: {
+        bucketId,
+        hasFiles: files.length > 0,
+      },
     };
 
     setCache('object_storage', result, CACHE_TTL_MS);
@@ -198,7 +208,7 @@ export async function checkObjectStorage(): Promise<ServiceHealth> {
       service: 'object_storage',
       status: 'degraded',
       isCritical: false,
-      message: `Object storage issue: ${error.message}`,
+      message: `Object storage connectivity failed: ${error.message}`,
       lastChecked: new Date().toISOString(),
       latencyMs: Date.now() - startTime,
     };
