@@ -12068,6 +12068,8 @@ export const passwordResetAuditLog = pgTable(
     success: boolean("success").notNull(), // Whether reset was successful
     outcomeCode: varchar("outcome_code").notNull(), // 'sent', 'not_found', 'rate_limited', 'email_failed', 'error'
     reason: text("reason"), // Success/failure reason
+    ipAddress: varchar("ip_address"), // IP address of requester
+    userAgent: varchar("user_agent"), // User agent of requester
     createdAt: timestamp("created_at").defaultNow(),
   },
   (table) => [

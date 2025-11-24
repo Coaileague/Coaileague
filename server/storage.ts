@@ -258,6 +258,9 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   createPasswordResetToken(userId: string): Promise<string>;
   
+  // Session operations (for WebSocket auth)
+  getSession(sessionId: string): Promise<{passport?: {user?: string}} | null>;
+  
   // Password reset audit trail and rate limiting
   logPasswordResetAttempt(data: {
     requestedBy: string;
@@ -268,6 +271,8 @@ export interface IStorage {
     success: boolean;
     outcomeCode: 'sent' | 'not_found' | 'rate_limited' | 'email_failed' | 'error';
     reason?: string;
+    ipAddress?: string;
+    userAgent?: string;
   }): Promise<void>;
   getPasswordResetAttempts(requestedBy: string, targetUserId: string | null, targetEmail: string, minutes: number): Promise<number>;
   
@@ -817,6 +822,26 @@ export class DatabaseStorage implements IStorage {
     return token;
   }
 
+  async getSession(sessionId: string): Promise<{passport?: {user?: string}} | null> {
+    try {
+      // Query the sessions table directly
+      const result = await db.execute(sql`
+        SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return null;
+      }
+      
+      // The sess column contains the session data as JSON
+      const sessionData = result.rows[0].sess as {passport?: {user?: string}};
+      return sessionData;
+    } catch (error) {
+      console.error('[SECURITY] Failed to fetch session:', error);
+      return null;
+    }
+  }
+
   async logPasswordResetAttempt(data: {
     requestedBy: string;
     requestedByWorkspaceId?: string;
@@ -826,6 +851,8 @@ export class DatabaseStorage implements IStorage {
     success: boolean;
     outcomeCode: 'sent' | 'not_found' | 'rate_limited' | 'email_failed' | 'error';
     reason?: string;
+    ipAddress?: string;
+    userAgent?: string;
   }): Promise<void> {
     await db.insert(passwordResetAuditLog).values({
       requestedBy: data.requestedBy,
@@ -836,6 +863,8 @@ export class DatabaseStorage implements IStorage {
       success: data.success,
       outcomeCode: data.outcomeCode,
       reason: data.reason || null,
+      ipAddress: data.ipAddress || null,
+      userAgent: data.userAgent || null,
     });
   }
 
