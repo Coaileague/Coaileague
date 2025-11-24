@@ -7,6 +7,7 @@ import { db } from "../db";
 import { users, userOnboarding, workspaces } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { Resend } from "resend";
+import onboardingConfig from "@shared/config/onboardingConfig";
 
 /**
  * Initialize onboarding workflow for new employee
@@ -41,35 +42,27 @@ export async function initiateEmployeeOnboarding(
         completedSteps: [],
         currentStep: 'welcome',
         progressPercentage: 0,
+        totalSteps: onboardingConfig.getTotalSteps(),
       })
       .returning();
 
-    // Send welcome email to employee
+    // Send welcome email to employee (if enabled)
     const resend = getResend();
-    if (resend && employee.email) {
+    if (resend && employee.email && onboardingConfig.notifications.sendWelcomeEmail) {
       await resend.emails.send({
-        from: 'onboarding@autoforce.ai',
+        from: onboardingConfig.email.fromAddress,
         to: employee.email,
-        subject: `Welcome to ${workspace.name}! 🚀`,
-        html: `
-          <h1>Welcome to ${workspace.name}</h1>
-          <p>Hi ${employee.firstName || 'there'},</p>
-          <p>We're excited to have you on board! Here's what you need to do to get started:</p>
-          <ol>
-            <li>Complete your profile</li>
-            <li>Review company policies</li>
-            <li>Set up two-factor authentication</li>
-            <li>Join team channels</li>
-            <li>Schedule 1-on-1 with your manager</li>
-          </ol>
-          <p>You'll receive a notification as each step is completed.</p>
-          <p>Questions? Contact your manager or support@autoforce.ai</p>
-        `,
+        subject: onboardingConfig.emailTemplates.welcome.subject(workspace.name),
+        html: onboardingConfig.emailTemplates.welcome.body(
+          employee.firstName || 'there',
+          workspace.name,
+          onboardingConfig.onboardingSteps
+        ),
       });
     }
 
-    // Notify manager if assigned
-    if (managerId) {
+    // Notify manager if assigned (if enabled)
+    if (managerId && onboardingConfig.notifications.notifyManagerOnboarding) {
       const manager = await db
         .select()
         .from(users)
@@ -78,14 +71,16 @@ export async function initiateEmployeeOnboarding(
 
       if (manager && manager.email && resend) {
         await resend.emails.send({
-          from: 'onboarding@autoforce.ai',
+          from: onboardingConfig.email.fromAddress,
           to: manager.email,
-          subject: `New Team Member: ${employee.firstName} ${employee.lastName}`,
-          html: `
-            <h1>New Team Member Onboarding</h1>
-            <p>${employee.firstName} ${employee.lastName} has joined your team.</p>
-            <p>Onboarding checklist has been initiated. You can track progress in the admin dashboard.</p>
-          `,
+          subject: onboardingConfig.emailTemplates.managerNotification.subject(
+            employee.firstName || 'Unknown',
+            employee.lastName || 'Employee'
+          ),
+          html: onboardingConfig.emailTemplates.managerNotification.body(
+            employee.firstName || 'Unknown',
+            employee.lastName || 'Employee'
+          ),
         });
       }
     }
@@ -115,7 +110,7 @@ export async function completeOnboardingStep(
     if (!onboarding) return;
 
     const completedSteps = [...(onboarding.completedSteps || []), stepId];
-    const totalSteps = onboarding.totalSteps || 20;
+    const totalSteps = onboarding.totalSteps || onboardingConfig.getTotalSteps();
     const progressPercentage = Math.round((completedSteps.length / totalSteps) * 100);
     const isComplete = progressPercentage === 100;
 
@@ -128,8 +123,8 @@ export async function completeOnboardingStep(
       })
       .where(eq(userOnboarding.userId, employeeId));
 
-    // Send completion milestone email
-    if (isComplete) {
+    // Send completion milestone email (if enabled)
+    if (isComplete && onboardingConfig.notifications.sendCompletionEmail) {
       const employee = await db
         .select()
         .from(users)
@@ -140,14 +135,10 @@ export async function completeOnboardingStep(
         const resend = getResend();
         if (resend) {
           await resend.emails.send({
-            from: 'onboarding@autoforce.ai',
+            from: onboardingConfig.email.fromAddress,
             to: employee.email,
-            subject: '🎉 Onboarding Complete!',
-            html: `
-              <h1>Welcome to the Team!</h1>
-              <p>You've completed all onboarding steps. You're all set to get started!</p>
-              <p>If you have any questions, don't hesitate to reach out to your manager.</p>
-            `,
+            subject: onboardingConfig.emailTemplates.completionMilestone.subject(),
+            html: onboardingConfig.emailTemplates.completionMilestone.body(),
           });
         }
       }

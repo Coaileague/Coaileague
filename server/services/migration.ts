@@ -17,8 +17,9 @@ import { migrationJobs, migrationDocuments, migrationRecords, employees, clients
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { withCredits } from './billing/creditWrapper';
+import migrationConfig from '@shared/config/migrationConfig';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(migrationConfig.aiModel.apiKey || '');
 
 export type MigrationType = 'employees' | 'payroll' | 'schedules' | 'invoices' | 'timesheets' | 'clients' | 'other';
 export type MigrationJobStatus = 'uploaded' | 'analyzing' | 'reviewed' | 'importing' | 'completed' | 'failed' | 'cancelled';
@@ -329,7 +330,7 @@ export class MigrationService {
     overallConfidence: number;
     errors: string[];
   }> {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: migrationConfig.aiModel.modelName });
 
     // Build extraction prompt based on document type
     const prompt = this.buildExtractionPrompt(documentType);
@@ -362,7 +363,7 @@ export class MigrationService {
   }
 
   /**
-   * Build extraction prompt for specific document type
+   * Build extraction prompt for specific document type (from config)
    */
   private buildExtractionPrompt(documentType: MigrationType): string {
     const basePrompt = `You are a data extraction AI for AutoForce™ workforce management.
@@ -376,92 +377,9 @@ Extract data from the provided document and return a JSON response with this str
 
 `;
 
-    const prompts: Record<MigrationType, string> = {
-      employees: basePrompt + `Extract employee data. Each record should have:
-{
-  "recordType": "employees",
-  "data": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+1234567890",
-    "role": "Manager",
-    "hourlyRate": 25.00,
-    "status": "active"
-  },
-  "confidence": 0.95,
-  "warnings": []
-}`,
-      schedules: basePrompt + `Extract schedule/shift data. Each record should have:
-{
-  "recordType": "schedules",
-  "data": {
-    "employeeName": "John Doe",
-    "date": "2024-01-15",
-    "startTime": "09:00",
-    "endTime": "17:00",
-    "role": "Manager",
-    "location": "Downtown Office"
-  },
-  "confidence": 0.95,
-  "warnings": []
-}`,
-      payroll: basePrompt + `Extract payroll data. Each record should have:
-{
-  "recordType": "payroll",
-  "data": {
-    "employeeName": "John Doe",
-    "periodStart": "2024-01-01",
-    "periodEnd": "2024-01-15",
-    "regularHours": 80,
-    "overtimeHours": 5,
-    "grossPay": 2125.00
-  },
-  "confidence": 0.95,
-  "warnings": []
-}`,
-      invoices: basePrompt + `Extract invoice data. Each record should have:
-{
-  "recordType": "invoices",
-  "data": {
-    "clientName": "ABC Corp",
-    "invoiceNumber": "INV-001",
-    "date": "2024-01-15",
-    "amount": 1500.00,
-    "dueDate": "2024-02-15",
-    "items": [{"description": "Service", "amount": 1500}]
-  },
-  "confidence": 0.95,
-  "warnings": []
-}`,
-      clients: basePrompt + `Extract client data. Each record should have:
-{
-  "recordType": "clients",
-  "data": {
-    "name": "ABC Corp",
-    "contactName": "Jane Smith",
-    "email": "jane@abc.com",
-    "phone": "+1234567890",
-    "billingRate": 75.00
-  },
-  "confidence": 0.95,
-  "warnings": []
-}`,
-      timesheets: basePrompt + `Extract timesheet data. Each record should have:
-{
-  "recordType": "timesheets",
-  "data": {
-    "employeeName": "John Doe",
-    "date": "2024-01-15",
-    "hoursWorked": 8,
-    "notes": "Regular shift"
-  },
-  "confidence": 0.95,
-  "warnings": []
-}`,
-      other: basePrompt + `Extract any workforce-related data you find. Use your best judgment for structure.`,
-    };
-
-    return prompts[documentType] || prompts.other;
+    // Use prompts from centralized config
+    const configPrompt = migrationConfig.extractionPrompts[documentType] || migrationConfig.extractionPrompts.other;
+    return basePrompt + configPrompt;
   }
 
   /**
@@ -569,8 +487,8 @@ Extract data from the provided document and return a JSON response with this str
         
         try {
           const dateStr = data.date;
-          const startTimeStr = data.startTime || '09:00';
-          const endTimeStr = data.endTime || '17:00';
+          const startTimeStr = data.startTime || migrationConfig.scheduleDefaults.defaultStartTime;
+          const endTimeStr = data.endTime || migrationConfig.scheduleDefaults.defaultEndTime;
           
           // Parse timestamps
           startTime = new Date(`${dateStr}T${startTimeStr}:00`);
