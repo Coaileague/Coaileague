@@ -11449,6 +11449,7 @@ export const actorTypeEnum = pgEnum('actor_type', [
 // Event Sourcing Status
 export const eventStatusEnum = pgEnum('event_status', [
   'pending',    // Event logged, not yet committed
+  'prepared',   // Event prepared for processing (for schedule events)
   'committed',  // Event successfully committed to database
   'failed',     // Event failed to commit
   'rolled_back' // Event was rolled back

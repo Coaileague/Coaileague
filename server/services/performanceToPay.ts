@@ -233,8 +233,20 @@ async function calculateComplianceMetrics(
     r.reportTemplate?.toLowerCase().includes('safety')
   ).length;
 
-  // Training completion (placeholder - would integrate with LearnOS™)
-  const trainingCompletionRate = 85; // Default placeholder
+  // Training completion - Pull from actual training records
+  const trainingRecords = await db.select()
+    .from(trainingCertifications)
+    .where(and(
+      eq(trainingCertifications.employeeId, employeeId),
+      eq(trainingCertifications.workspaceId, workspaceId),
+      gte(trainingCertifications.completedDate, periodStart),
+      lte(trainingCertifications.completedDate, periodEnd)
+    ));
+  
+  const totalRequired = 12; // Configurable minimum annual trainings
+  const trainingCompletionRate = trainingRecords.length > 0 
+    ? Math.min((trainingRecords.length / totalRequired) * 100, 100)
+    : 0;
 
   return {
     complianceViolations,
