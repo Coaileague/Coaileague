@@ -2219,11 +2219,27 @@ export function setupWebSocket(server: Server) {
                   break;
                 }
                 
-                default:
-                  ws.send(JSON.stringify({
-                    type: 'error',
-                    message: `Command /${parsedCommand.command} is not yet implemented.`,
-                  }));
+                default: {
+                  // Command Not Implemented Handler
+                  const errorMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'System',
+                    senderType: 'system',
+                    message: `❌ Command '/${parsedCommand.command}' is not yet implemented.\n\nUse /help to see available commands.`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: errorMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
               }
               
               return; // Don't save command as regular message

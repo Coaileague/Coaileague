@@ -26828,6 +26828,28 @@ app.get("/api/metrics/processing/recent", requireAuth, readLimiter, async (req: 
 });
 
 // ============================================================================
+// TIER-4: PAYROLL DURATION TRACKING
+// ============================================================================
+
+app.get("/api/metrics/payroll/duration", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const avgPayrollDuration = processingMetricsService.getPayrollMetrics();
+
+    res.json({ 
+      success: true, 
+      data: {
+        automationType: 'payroll',
+        averageDurationMs: avgPayrollDuration,
+        successRate: processingMetricsService.getSuccessRate('payroll'),
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching payroll metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // TIER-2: JOB RETRIEVAL FOR AI SCHEDULING
 // ============================================================================
 

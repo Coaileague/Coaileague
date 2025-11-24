@@ -119,9 +119,41 @@ export function getRecentMetrics(hours: number = 24): ProcessingMetric[] {
   return completedMetrics.filter(m => m.endTime && m.endTime > cutoff);
 }
 
+/**
+ * Start payroll processing with duration tracking
+ */
+export function startPayrollProcessing(
+  sessionId: string,
+  employeeCount: number
+): ProcessingMetric {
+  return startProcessing(sessionId, 'payroll');
+}
+
+/**
+ * End payroll processing and track duration
+ */
+export function endPayrollProcessing(
+  sessionId: string,
+  employeeCount: number,
+  successCount: number,
+  failureCount: number
+): ProcessingMetric | null {
+  return endProcessing(sessionId, 'payroll', employeeCount, successCount, failureCount);
+}
+
+/**
+ * Get payroll processing metrics
+ */
+export function getPayrollMetrics(): number {
+  return getAverageProcessingDuration('payroll');
+}
+
 export const processingMetricsService = {
   startProcessing,
   endProcessing,
+  startPayrollProcessing,
+  endPayrollProcessing,
+  getPayrollMetrics,
   getSessionMetrics,
   getAverageProcessingDuration,
   getSuccessRate,
