@@ -27,18 +27,65 @@ export function WorkspaceTabsNav() {
     ? [] 
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
 
+  // DEBUG: Log families and routes for troubleshooting
+  useEffect(() => {
+    if (!isLoading && families.length === 0) {
+      console.warn('[TabsNav] WARNING: No families returned from selectSidebarFamilies', {
+        workspaceRole,
+        subscriptionTier,
+        isPlatformStaff,
+        currentLocation: location,
+      });
+    } else if (!isLoading) {
+      console.log('[TabsNav] Families loaded:', {
+        count: families.length,
+        activeFamily,
+        currentLocation: location,
+        families: families.map(f => ({
+          id: f.id,
+          label: f.label,
+          routeCount: f.routes.length,
+          routes: f.routes.map(r => ({ id: r.id, label: r.label, href: r.href }))
+        }))
+      });
+    }
+  }, [families, isLoading, workspaceRole, subscriptionTier, isPlatformStaff, location, activeFamily]);
+
   // Determine active family from current location
   useEffect(() => {
     for (const family of families) {
       const isInFamily = family.routes.some(route => location === route.href);
       if (isInFamily) {
         setActiveFamily(family.id);
+        console.debug('[TabsNav] Active family updated:', family.id, 'for location:', location);
         return;
       }
     }
   }, [location, families]);
 
-  if (families.length === 0) return null;
+  // Loading skeleton while families load
+  if (isLoading) {
+    return (
+      <div className="w-full border-b bg-background sticky top-0 z-30">
+        <div className="h-12 flex items-center px-4 gap-2 overflow-x-auto">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-6 w-20 bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback message if no families available (RBAC issue or misconfiguration)
+  if (families.length === 0) {
+    return (
+      <div className="w-full border-b bg-background sticky top-0 z-30 p-3">
+        <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+          ⚠️ Navigation unavailable. Role: {workspaceRole} | Tier: {subscriptionTier} | Staff: {isPlatformStaff ? 'Yes' : 'No'}. Check console for details.
+        </div>
+      </div>
+    );
+  }
 
   const currentFamily = families.find(f => f.id === activeFamily);
   const currentRoutes = currentFamily?.routes || [];
