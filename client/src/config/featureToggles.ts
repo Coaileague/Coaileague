@@ -78,6 +78,16 @@ export const FEATURE_TOGGLES = {
     errorTracking: true,
     performanceMonitoring: true,
   },
+
+  // Phase 4: Advanced Automation & Compliance
+  phase4: {
+    disputeResolution: true, // Phase 4C: Time entry dispute resolution with AI analysis
+    payrollDeductions: true, // Phase 4D: Advanced pre-tax/post-tax deductions management
+    payrollGarnishments: true, // Phase 4D: Court-ordered wage garnishments with priority ordering
+    realTimeShiftNotifications: true, // Phase 4A: WebSocket-powered real-time shift alerts
+    customSchedulerTracking: true, // Phase 4B: Autonomous scheduler with custom intervals
+    aiDisputeAnalysis: true, // Phase 4C: AI-powered dispute summarization with confidence scores
+  },
 };
 
 /**

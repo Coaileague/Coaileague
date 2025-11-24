@@ -243,10 +243,11 @@ export default function PayrollGarnishmentsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1" data-testid="option-priority-1">1 - Critical (Taxes, Child Support)</SelectItem>
-                          <SelectItem value="2" data-testid="option-priority-2">2 - High (Alimony, Court Orders)</SelectItem>
-                          <SelectItem value="3" data-testid="option-priority-3">3 - Normal (Student Loans)</SelectItem>
-                          <SelectItem value="4" data-testid="option-priority-4">4 - Low (Other)</SelectItem>
+                          {Object.entries(priorityConfig).map(([key, config]) => (
+                            <SelectItem key={key} value={key} data-testid={`option-priority-${key}`}>
+                              {key} - {config.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormDescription>Lower numbers are deducted first</FormDescription>
@@ -342,7 +343,7 @@ export default function PayrollGarnishmentsPage() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t">
-                      <p className="text-xs text-muted-foreground">{priorityLabels[garnishment.priority] || `Priority ${garnishment.priority}`}</p>
+                      <p className="text-xs text-muted-foreground">{priorityConfig[garnishment.priority as keyof typeof priorityConfig]?.label || `Priority ${garnishment.priority}`}</p>
                       <Button
                         variant="ghost"
                         size="sm"

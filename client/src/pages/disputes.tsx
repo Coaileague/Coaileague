@@ -18,6 +18,7 @@ import { AlertCircle, CheckCircle, Clock, FileText, Scale, User, Calendar, Eye, 
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { disputeStatusConfig, disputePriorityConfig, disputeTypesConfig, disputeMessages } from "@/config/disputeConfig";
 
 export default function DisputesPage() {
   const { user } = useAuth();
@@ -113,37 +114,29 @@ export default function DisputesPage() {
 
   const getStatusColor = (status: string | null) => {
     if (!status) return '';
-    switch (status) {
-      case 'pending': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'under_review': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'resolved': return 'bg-muted/10 text-green-500 border-primary/20';
-      case 'rejected': return 'bg-red-500/10 text-red-500 border-red-500/20';
-      case 'appealed': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
-      default: return '';
-    }
+    const config = disputeStatusConfig[status as keyof typeof disputeStatusConfig];
+    if (!config) return '';
+    return `${config.bgColor} ${config.textColor} border-${config.textColor}-500/20`;
   };
 
   const getPriorityColor = (priority: string | null) => {
     if (!priority) return '';
-    switch (priority) {
-      case 'low': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-      case 'normal': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'high': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      case 'urgent': return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default: return '';
-    }
+    const config = disputePriorityConfig[priority as keyof typeof disputePriorityConfig];
+    return config ? `${config.bgColor} ${config.textColor} ${config.borderColor}` : '';
   };
 
   const getStatusIcon = (status: string | null) => {
     if (!status) return <FileText className="w-4 h-4" />;
-    switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'under_review': return <Eye className="w-4 h-4" />;
-      case 'resolved': return <CheckCircle className="w-4 h-4" />;
-      case 'rejected': return <AlertCircle className="w-4 h-4" />;
-      case 'appealed': return <Scale className="w-4 h-4" />;
-      default: return <FileText className="w-4 h-4" />;
-    }
+    const config = disputeStatusConfig[status as keyof typeof disputeStatusConfig];
+    if (!config) return <FileText className="w-4 h-4" />;
+    const iconMap: Record<string, JSX.Element> = {
+      'pending': <Clock className="w-4 h-4" />,
+      'under_review': <Eye className="w-4 h-4" />,
+      'resolved': <CheckCircle className="w-4 h-4" />,
+      'rejected': <AlertCircle className="w-4 h-4" />,
+      'appealed': <Scale className="w-4 h-4" />,
+    };
+    return iconMap[status] || <FileText className="w-4 h-4" />;
   };
 
   // Show loading state
@@ -165,23 +158,23 @@ export default function DisputesPage() {
       {/* Mobile-optimized header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b safe-top">
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-page-title">Dispute Management</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Fair employee/employer transparency system</p>
+          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-page-title">{disputeMessages.title}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{disputeMessages.subtitle}</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="w-full sm:w-auto touch-target" data-testid="button-create-dispute">
               <Scale className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span className="truncate">File New Dispute</span>
+              <span className="truncate">{disputeMessages.fileButton}</span>
             </Button>
           </DialogTrigger>
           {/* Mobile: Full-screen dialog, Desktop: Standard modal */}
           <DialogContent className="w-full h-full sm:h-auto sm:w-auto sm:max-w-2xl p-0 sm:p-6 overflow-hidden bottom-sheet-enter">
             <div className="h-full overflow-y-auto p-4 sm:p-0">
             <DialogHeader>
-              <DialogTitle>File a Dispute</DialogTitle>
+              <DialogTitle>{disputeMessages.fileDialogTitle}</DialogTitle>
               <DialogDescription>
-                Submit a formal dispute for a performance review, employer rating, report, or composite score.
+                {disputeMessages.fileDialogDescription}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -199,10 +192,11 @@ export default function DisputesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="performance_review">Performance Review</SelectItem>
-                          <SelectItem value="employer_rating">Employer Rating</SelectItem>
-                          <SelectItem value="report_submission">RMS Form/Write-Up</SelectItem>
-                          <SelectItem value="composite_score">Composite Score</SelectItem>
+                          {Object.entries(disputeTypesConfig).map(([key, config]) => (
+                            <SelectItem key={key} value={key} data-testid={`option-dispute-${key}`}>
+                              {config.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
