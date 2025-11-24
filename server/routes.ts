@@ -99,6 +99,9 @@ import { processingMetricsService } from "./services/processingMetricsService";
 import { trainingRateService } from "./services/trainingRateService";
 import { analyticsDataService } from "./services/analyticsDataService";
 import { documentExtractionService } from "./services/documentExtraction";
+import { notificationEngine } from "./services/universalNotificationEngine";
+import { issueDetectionService } from "./services/issueDetectionService";
+import aiBrainConfig from "@shared/config/aiBrainGuardrails";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
@@ -27533,6 +27536,16 @@ app.post("/api/migration/import-extracted", requireAuth, requireManager, mutatio
       importedId = newClient[0].id;
     }
 
+    // Send success notification
+    await notificationEngine.sendNotification({
+      workspaceId,
+      type: "migration_complete",
+      title: "Data Import Complete",
+      message: `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} record imported successfully`,
+      metadata: { importedId, entityType },
+      severity: "info",
+    });
+
     res.json({
       success: true,
       message: `${entityType} imported successfully from extracted document data`,
@@ -27541,6 +27554,147 @@ app.post("/api/migration/import-extracted", requireAuth, requireManager, mutatio
   } catch (error: any) {
     console.error("Error importing extracted data:", error);
     res.status(500).json({ error: error.message || "Import failed" });
+  }
+});
+
+// ============================================================================
+// AI BRAIN: ISSUE DETECTION & ANALYSIS
+// ============================================================================
+
+app.post("/api/ai-brain/detect-issues", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { documentType, extractedData, documentId, useAIAnalysis } = req.body;
+
+    if (!documentType || !extractedData) {
+      return res.status(400).json({
+        error: "Missing required fields: documentType, extractedData",
+      });
+    }
+
+    const result = useAIAnalysis
+      ? await issueDetectionService.analyzeWithAI(workspaceId, documentType, extractedData, documentId)
+      : await issueDetectionService.detectIssues(workspaceId, documentType, extractedData, documentId);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Error detecting issues:", error);
+    res.status(500).json({ error: error.message || "Issue detection failed" });
+  }
+});
+
+app.post("/api/ai-brain/guardrails/validate", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { ruleType, value } = req.body;
+
+    if (!ruleType || value === undefined) {
+      return res.status(400).json({
+        error: "Missing required fields: ruleType, value",
+      });
+    }
+
+    const isViolated = aiBrainConfig.isGuardrailViolated(ruleType, value);
+
+    res.json({
+      success: true,
+      data: {
+        ruleType,
+        value,
+        isViolated,
+        message: isViolated ? `Guardrail violation: ${ruleType} exceeded` : "Within acceptable limits",
+      },
+    });
+  } catch (error: any) {
+    console.error("Error validating guardrails:", error);
+    res.status(500).json({ error: error.message || "Validation failed" });
+  }
+});
+
+app.get("/api/ai-brain/guardrails/config", requireAuth, requireManager, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    res.json({
+      success: true,
+      data: aiBrainConfig.guardrails,
+    });
+  } catch (error: any) {
+    console.error("Error fetching guardrails config:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch config" });
+  }
+});
+
+app.get("/api/notifications/user/:userId", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { userId } = req.params;
+    const { unreadOnly, limit, offset } = req.query;
+
+    // Verify user can access their own notifications
+    if (userId !== (req as any).user?.id && (req as any).user?.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const notifications = await notificationEngine.getUserNotifications(
+      workspaceId,
+      userId,
+      {
+        unreadOnly: unreadOnly === "true",
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+      }
+    );
+
+    res.json({
+      success: true,
+      data: notifications,
+      count: notifications.length,
+    });
+  } catch (error: any) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch notifications" });
+  }
+});
+
+app.post("/api/notifications/:notificationId/read", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { notificationId } = req.params;
+
+    const success = await notificationEngine.markAsRead(notificationId, workspaceId);
+
+    res.json({
+      success,
+      message: success ? "Notification marked as read" : "Failed to mark as read",
+    });
+  } catch (error: any) {
+    console.error("Error marking notification as read:", error);
+    res.status(500).json({ error: error.message || "Update failed" });
+  }
+});
+
+app.post("/api/notifications/send-test", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { notificationType } = req.body;
+
+    const result = await notificationEngine.sendNotification({
+      workspaceId,
+      type: notificationType || "document_extraction",
+      title: "Test Notification",
+      message: "This is a test notification from the AI Brain automation system",
+      metadata: { test: true },
+      severity: "info",
+    });
+
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Error sending test notification:", error);
+    res.status(500).json({ error: error.message || "Notification send failed" });
   }
 });
 
