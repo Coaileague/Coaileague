@@ -191,7 +191,7 @@ export async function getAnalyticsStats(
 
   // Fetch real health checks in parallel
   const dbHealthResult = await checkDatabase();
-  const dbStatus = dbHealthResult.status === 'operational' ? 'healthy' : dbHealthResult.status === 'degraded' ? 'degraded' : 'down';
+  const dbStatus = dbHealthResult.status === 'operational' ? 'healthy' : 'degraded';
   
   // Calculate average first response time from actual ticket data
   const avgResponseQuery = await db.execute(sql`
@@ -205,8 +205,8 @@ export async function getAnalyticsStats(
     LIMIT 1000
   `).catch(() => null);
   
-  const avgFirstResponseHours = avgResponseQuery?.result?.[0]?.avg_hours 
-    ? Math.round(parseFloat(avgResponseQuery.result[0].avg_hours) * 10) / 10
+  const avgFirstResponseHours = avgResponseQuery?.[0]?.avg_hours 
+    ? Math.round(parseFloat(avgResponseQuery[0].avg_hours) * 10) / 10
     : 2.5;
 
   const stats: AnalyticsStats = {

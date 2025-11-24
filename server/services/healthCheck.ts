@@ -355,3 +355,11 @@ export async function getServiceHealth(service: string): Promise<ServiceHealth |
       return null;
   }
 }
+
+/**
+ * Get active WebSocket connection count
+ * Exported for use in analytics and health checks
+ */
+export function getActiveConnectionCount(): number {
+  return wsCounter.getActiveConnectionCount();
+}
