@@ -13739,6 +13739,26 @@ ${application.email}`,
     }
   });
 
+
+  // Compliance Summary - Certification Expiration Overview
+  app.get('/api/compliance/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: "No workspace selected" });
+      }
+
+      const { getComplianceSummary } = await import('./services/complianceAlertService');
+      const summary = await getComplianceSummary(user.currentWorkspaceId);
+      
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching compliance summary:", error);
+      res.status(500).json({ message: "Failed to fetch compliance summary" });
+    }
+  });
+
   // KPI ALERTS - Real-Time Risk Notifications
   app.get('/api/kpi-alerts', isAuthenticated, async (req: any, res) => {
     try {
