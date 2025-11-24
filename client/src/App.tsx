@@ -128,6 +128,7 @@ import AdminBanners from "@/pages/admin-banners";
 import AdminTicketReviews from "@/pages/admin-ticket-reviews";
 import AutomationAuditLog from "@/pages/automation-audit-log";
 import AutomationSettings from "@/pages/automation-settings";
+import AIBrainDashboard from "@/pages/ai-brain-dashboard";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -372,6 +373,7 @@ function AppContent() {
               <Route path="/admin/ticket-reviews" component={AdminTicketReviews} />
               <Route path="/automation/audit-log" component={AutomationAuditLog} />
               <Route path="/automation/settings" component={AutomationSettings} />
+              <Route path="/ai/brain" component={AIBrainDashboard} />
               <Route path="/owner/hireos/workflow-builder" component={HiringWorkflowBuilder} />
               <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
               <Route path="/platform/users" component={PlatformUsers} />
