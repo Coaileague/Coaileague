@@ -77,6 +77,7 @@ import {
   orgInvitations,
   proposals,
   salesActivities,
+  passwordResetAuditLog,
   type User,
   type OrgInvitation,
   type InsertOrgInvitation,
@@ -202,7 +203,7 @@ import {
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
 import { db } from "./db";
-import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, count } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, count, gt } from "drizzle-orm";
 
 // Custom error for WAL transition failures
 export class InvalidWalTransitionError extends Error {
@@ -252,7 +253,23 @@ export type ListClientsOptions = ClientsQueryParams & {
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createPasswordResetToken(userId: string): Promise<string>;
+  
+  // Password reset audit trail and rate limiting
+  logPasswordResetAttempt(data: {
+    requestedBy: string;
+    requestedByWorkspaceId?: string;
+    targetUserId?: string | null;
+    targetEmail: string;
+    targetWorkspaceId?: string | null;
+    success: boolean;
+    outcomeCode: 'sent' | 'not_found' | 'rate_limited' | 'email_failed' | 'error';
+    reason?: string;
+  }): Promise<void>;
+  getPasswordResetAttempts(requestedBy: string, targetUserId: string | null, targetEmail: string, minutes: number): Promise<number>;
   
   // Workspace operations
   createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
@@ -757,6 +774,95 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          eq(users.email, usernameOrEmail),
+          eq(users.workId, usernameOrEmail)
+        )
+      );
+    return user;
+  }
+
+  async createPasswordResetToken(userId: string): Promise<string> {
+    const { randomBytes } = await import('crypto');
+    const token = randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000);
+    
+    await db
+      .update(users)
+      .set({
+        resetToken: token,
+        resetTokenExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    const user = await this.getUser(userId);
+    if (user && user.email) {
+      const { sendPasswordResetEmail } = await import('./services/emailService');
+      await sendPasswordResetEmail(user.email, token);
+    }
+
+    return token;
+  }
+
+  async logPasswordResetAttempt(data: {
+    requestedBy: string;
+    requestedByWorkspaceId?: string;
+    targetUserId?: string | null;
+    targetEmail: string;
+    targetWorkspaceId?: string | null;
+    success: boolean;
+    outcomeCode: 'sent' | 'not_found' | 'rate_limited' | 'email_failed' | 'error';
+    reason?: string;
+  }): Promise<void> {
+    await db.insert(passwordResetAuditLog).values({
+      requestedBy: data.requestedBy,
+      requestedByWorkspaceId: data.requestedByWorkspaceId || null,
+      targetUserId: data.targetUserId || null,
+      targetEmail: data.targetEmail,
+      targetWorkspaceId: data.targetWorkspaceId || null,
+      success: data.success,
+      outcomeCode: data.outcomeCode,
+      reason: data.reason || null,
+    });
+  }
+
+  async getPasswordResetAttempts(requestedBy: string, targetUserId: string | null, targetEmail: string, minutes: number): Promise<number> {
+    const since = new Date(Date.now() - minutes * 60 * 1000);
+    
+    if (targetUserId) {
+      // Count attempts by this requester for this specific target user (AND condition)
+      const userAttempts = await db.select()
+        .from(passwordResetAuditLog)
+        .where(and(
+          eq(passwordResetAuditLog.requestedBy, requestedBy),
+          eq(passwordResetAuditLog.targetUserId, targetUserId),
+          gt(passwordResetAuditLog.createdAt, since)
+        ));
+      return userAttempts.length;
+    } else {
+      // Count email-only attempts (when user not found) by this requester for this email
+      const emailAttempts = await db.select()
+        .from(passwordResetAuditLog)
+        .where(and(
+          eq(passwordResetAuditLog.requestedBy, requestedBy),
+          eq(passwordResetAuditLog.targetEmail, targetEmail),
+          gt(passwordResetAuditLog.createdAt, since)
+        ));
+      return emailAttempts.length;
+    }
   }
 
   // ============================================================================

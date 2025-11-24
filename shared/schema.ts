@@ -12051,3 +12051,37 @@ export const insertInvoiceAdjustmentSchema = createInsertSchema(invoiceAdjustmen
 
 export type InsertInvoiceAdjustment = z.infer<typeof insertInvoiceAdjustmentSchema>;
 export type InvoiceAdjustment = typeof invoiceAdjustments.$inferSelect;
+
+// ============================================================================
+// PASSWORD RESET AUDIT LOG TABLE (Compliance & Security)
+// ============================================================================
+
+export const passwordResetAuditLog = pgTable(
+  "password_reset_audit_log",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    requestedBy: varchar("requested_by").notNull(), // Staff user ID who triggered reset
+    requestedByWorkspaceId: varchar("requested_by_workspace_id"), // Staff workspace context
+    targetUserId: varchar("target_user_id"), // User whose password is being reset (null if user not found)
+    targetEmail: varchar("target_email").notNull(), // Email address used for reset
+    targetWorkspaceId: varchar("target_workspace_id"), // Target user's workspace (null if user not found)
+    success: boolean("success").notNull(), // Whether reset was successful
+    outcomeCode: varchar("outcome_code").notNull(), // 'sent', 'not_found', 'rate_limited', 'email_failed', 'error'
+    reason: text("reason"), // Success/failure reason
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("password_reset_audit_requested_by_idx").on(table.requestedBy),
+    index("password_reset_audit_target_idx").on(table.targetUserId),
+    index("password_reset_audit_email_idx").on(table.targetEmail),
+    index("password_reset_audit_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const insertPasswordResetAuditLogSchema = createInsertSchema(passwordResetAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPasswordResetAuditLog = z.infer<typeof insertPasswordResetAuditLogSchema>;
+export type PasswordResetAuditLog = typeof passwordResetAuditLog.$inferSelect;

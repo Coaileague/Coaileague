@@ -1157,8 +1157,44 @@ export function setupWebSocket(server: Server) {
                 }
                 
                 case 'verify': {
-                  // TODO: Implement user verification when storage methods are available
-                  const verifyMsg = `⚠️ Command Not Yet Implemented\n\nThe /verify command is currently under development. Please use alternative verification methods or contact a system administrator.`;
+                  // SECURITY: Verify authorization - staff only
+                  if (!ws.userType || (ws.userType !== 'staff' && ws.userType !== 'org_user')) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: '⛔ Unauthorized: This command requires staff privileges',
+                    }));
+                    break;
+                  }
+                  
+                  const username = parsedCommand.args[0];
+                  if (!username) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /verify <username>',
+                    }));
+                    break;
+                  }
+                  
+                  const user = await storage.getUserByUsernameOrEmail(username);
+                  
+                  let verifyMsg: string;
+                  if (!user) {
+                    verifyMsg = `❌ User Verification Failed\n\nUser "${username}" not found in the system.\n\nPlease check:\n• Username spelling\n• Email address\n• User may not be registered yet`;
+                  } else {
+                    const workspace = user.currentWorkspaceId 
+                      ? await storage.getWorkspace(user.currentWorkspaceId)
+                      : null;
+                    
+                    // SECURITY: Redact sensitive information
+                    const redactedEmail = user.email 
+                      ? `${user.email.substring(0, 3)}***@${user.email.split('@')[1]}` 
+                      : 'Not available';
+                    const redactedLastName = user.lastName 
+                      ? `${user.lastName.substring(0, 1)}***` 
+                      : 'N/A';
+                    
+                    verifyMsg = `✅ User Verification Successful\n\nUser: ${redactedEmail}\nName: ${user.firstName || 'N/A'} ${redactedLastName}\nOrganization: ${workspace?.name || 'Unknown'}\nRole: ${user.role || 'No role assigned'}\nEmail Verified: ${user.emailVerified ? 'Yes' : 'No'}\n\n✓ Credentials verified`;
+                  }
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
@@ -1167,38 +1203,183 @@ export function setupWebSocket(server: Server) {
                     senderType: 'bot',
                     message: verifyMsg,
                     messageType: 'text',
+                    visibleToStaffOnly: true,
                   });
                   
-                  if (clients) {
-                    clients.forEach((client) => {
-                      if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({ type: 'new_message', message: botMsg }));
-                      }
-                    });
-                  }
+                  // SECURITY: Send only to requesting user (not broadcast to all)
+                  ws.send(JSON.stringify({ type: 'new_message', message: botMsg }));
                   break;
                 }
                 
                 case 'resetpass': {
-                  // TODO: Implement password reset when storage methods are available
-                  const resetMsg = `⚠️ Command Not Yet Implemented\n\nThe /resetpass command is currently under development. Please use the standard password reset flow on the login page.`;
-                  
-                  const botMsg = await storage.createChatMessage({
-                    conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
-                    senderType: 'bot',
-                    message: resetMsg,
-                    messageType: 'text',
-                  });
-                  
-                  if (clients) {
-                    clients.forEach((client) => {
-                      if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({ type: 'new_message', message: botMsg }));
-                      }
-                    });
+                  // SECURITY: Verify authorization - SUPPORT STAFF ONLY (not org_user)
+                  if (!ws.userType || ws.userType !== 'staff') {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: '⛔ Unauthorized: This command requires staff privileges',
+                    }));
+                    break;
                   }
+                  
+                  // ADDITIONAL SECURITY: Verify support role (not just any staff)
+                  const staffRole = await storage.getUserPlatformRole(ws.userId || '');
+                  if (!staffRole || !['support_agent', 'deputy_admin', 'root_admin'].includes(staffRole)) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: '⛔ Unauthorized: This command requires support team privileges',
+                    }));
+                    break;
+                  }
+                  
+                  const email = parsedCommand.args[0];
+                  if (!email) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /resetpass <email>',
+                    }));
+                    break;
+                  }
+                  
+                  // Validate email format
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (!emailRegex.test(email)) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: '❌ Invalid email format',
+                    }));
+                    break;
+                  }
+                  
+                  let resetMsg: string;
+                  
+                  try {
+                    // Look up user by email
+                    const user = await storage.getUserByEmail(email);
+                    
+                    if (!user) {
+                      // SECURITY: Don't reveal user doesn't exist (user enumeration prevention)
+                      // But still log the email-only attempt for rate limiting
+                      await storage.logPasswordResetAttempt({
+                        requestedBy: ws.userId || '',
+                        requestedByWorkspaceId: ws.workspaceId || null,
+                        targetUserId: null, // User not found
+                        targetEmail: email,
+                        targetWorkspaceId: null,
+                        success: false,
+                        outcomeCode: 'not_found',
+                        reason: 'User not found',
+                      });
+                      
+                      // Check email-only rate limiting to prevent blind spraying
+                      const emailAttempts = await storage.getPasswordResetAttempts(ws.userId || '', null, email, 15);
+                      
+                      if (emailAttempts >= 3) {
+                        resetMsg = `❌ Rate Limit Exceeded\n\nToo many password reset attempts.\n\nLimit: 3 attempts per 15 minutes\nPlease try again later.`;
+                      } else {
+                        resetMsg = `✅ Password Reset Processed\n\nIf an account exists with this email, a password reset link has been sent.\n\nThe link will expire in 1 hour.`;
+                      }
+                    } else {
+                      // SECURITY: Check if this is a cross-workspace reset
+                      const staffWorkspaceId = ws.workspaceId; // Staff's workspace
+                      const targetWorkspaceId = user.currentWorkspaceId; // Target user's workspace
+                      
+                      if (staffWorkspaceId && targetWorkspaceId && staffWorkspaceId !== targetWorkspaceId) {
+                        // Cross-workspace reset - log and deny unless root_admin
+                        if (staffRole !== 'root_admin') {
+                          await storage.logPasswordResetAttempt({
+                            requestedBy: ws.userId || '',
+                            requestedByWorkspaceId: staffWorkspaceId,
+                            targetUserId: user.id,
+                            targetEmail: email,
+                            targetWorkspaceId: targetWorkspaceId,
+                            success: false,
+                            outcomeCode: 'error',
+                            reason: 'Cross-workspace reset blocked',
+                          });
+                          
+                          resetMsg = `❌ Cross-Workspace Reset Blocked\n\nYou cannot reset passwords for users in other workspaces.\n\nTarget workspace: ${targetWorkspaceId}\nYour workspace: ${staffWorkspaceId}`;
+                          
+                          // Send result and break early
+                          ws.send(JSON.stringify({ 
+                            type: 'system_message', 
+                            message: resetMsg 
+                          }));
+                          break;
+                        }
+                      }
+                      
+                      // Check rate limiting BEFORE attempting reset (AND condition: requester + target)
+                      const recentAttempts = await storage.getPasswordResetAttempts(ws.userId || '', user.id, email, 15);
+                      
+                      if (recentAttempts >= 3) {
+                        // IMPORTANT: Surface rate limit error to staff
+                        resetMsg = `❌ Rate Limit Exceeded\n\nToo many password reset attempts for this user.\n\nLimit: 3 resets per 15 minutes\nPlease try again later.`;
+                        
+                        // Log rate limit event (audit)
+                        await storage.logPasswordResetAttempt({
+                          requestedBy: ws.userId || 'unknown',
+                          requestedByWorkspaceId: ws.workspaceId || null,
+                          targetUserId: user.id,
+                          targetEmail: email,
+                          targetWorkspaceId: user.currentWorkspaceId || null,
+                          success: false,
+                          outcomeCode: 'rate_limited',
+                          reason: 'Rate limit exceeded',
+                        });
+                      } else {
+                        // Attempt password reset
+                        try {
+                          await storage.createPasswordResetToken(user.id);
+                          
+                          // Success - log audit event
+                          await storage.logPasswordResetAttempt({
+                            requestedBy: ws.userId || '',
+                            requestedByWorkspaceId: ws.workspaceId || null,
+                            targetUserId: user.id,
+                            targetEmail: email,
+                            targetWorkspaceId: user.currentWorkspaceId || null,
+                            success: true,
+                            outcomeCode: 'sent',
+                            reason: 'Reset email sent',
+                          });
+                          
+                          // Redact email for privacy
+                          const redactedEmail = `${email.substring(0, 3)}***@${email.split('@')[1]}`;
+                          
+                          resetMsg = `✅ Password Reset Email Sent\n\nA password reset link has been sent to:\n${redactedEmail}\n\nUser: ${user.firstName} ${user.lastName?.substring(0, 1)}***\n\nThe link will expire in 1 hour.`;
+                          
+                          console.log(`[AUDIT] Password reset triggered via WebSocket by ${ws.userId} for ${user.id}`);
+                        } catch (emailError) {
+                          // Email sending failed - surface error to staff
+                          console.error('[WEBSOCKET] Password reset email error:', emailError);
+                          
+                          // Log failure (audit)
+                          await storage.logPasswordResetAttempt({
+                            requestedBy: ws.userId || '',
+                            requestedByWorkspaceId: ws.workspaceId || null,
+                            targetUserId: user.id,
+                            targetEmail: email,
+                            targetWorkspaceId: user.currentWorkspaceId || null,
+                            success: false,
+                            outcomeCode: 'email_failed',
+                            reason: `Email send failed: ${(emailError as Error).message}`,
+                          });
+                          
+                          resetMsg = `❌ Password Reset Failed\n\nFailed to send password reset email.\n\nReason: ${(emailError as Error).message}\n\nPlease try again or contact system administrator.`;
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.error('[WEBSOCKET] Password reset error:', error);
+                    resetMsg = `❌ Password Reset Failed\n\nAn error occurred while processing the password reset.\n\nPlease try again or contact a system administrator.`;
+                  }
+                  
+                  // Send result only to requesting user (not broadcast)
+                  ws.send(JSON.stringify({ 
+                    type: 'system_message', 
+                    message: resetMsg 
+                  }));
+                  
                   break;
                 }
                 
