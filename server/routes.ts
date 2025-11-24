@@ -83,6 +83,8 @@ import { getTimeEntriesByEmployee, getTimeEntriesByWorkspace, getPendingTimeEntr
 import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData } from "./services/exportService";
 import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "./services/invoiceAdjustmentService";
 import { approveShift, rejectShift, getPendingShifts, getShiftWithDetails, bulkApproveShifts, getApprovalStats } from "./services/shiftApprovalService";
+import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
+import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
@@ -25900,6 +25902,166 @@ app.get("/api/shifts/stats", requireAuth, async (req: AuthenticatedRequest, res)
   } catch (error: any) {
     console.error('Error fetching shift stats:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// PHASE 4C: TIME ENTRY DISPUTE RESOLUTION ROUTES
+// ============================================================================
+
+app.get("/api/disputes/pending", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const disputes = await getPendingDisputes(workspaceId);
+    res.json({ success: true, data: disputes });
+  } catch (error: any) {
+    console.error('Error fetching pending disputes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/disputes/assigned-to-me", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const disputes = await getDisputesAssignedToUser(userId);
+    res.json({ success: true, data: disputes });
+  } catch (error: any) {
+    console.error('Error fetching assigned disputes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch("/api/disputes/:disputeId/approve", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { disputeId } = req.params;
+    const { resolution, resolutionAction } = req.body;
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const dispute = await approveDispute({
+      disputeId,
+      approvedBy: userId,
+      resolution: resolution || 'Dispute approved',
+      resolutionAction,
+    });
+    res.json({ success: true, data: dispute });
+  } catch (error: any) {
+    console.error('Error approving dispute:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.patch("/api/disputes/:disputeId/reject", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { disputeId } = req.params;
+    const { resolution, canBeAppealed } = req.body;
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+
+    const dispute = await rejectDispute({
+      disputeId,
+      rejectedBy: userId,
+      resolution: resolution || 'Dispute rejected',
+      canBeAppealed: canBeAppealed ?? true,
+    });
+    res.json({ success: true, data: dispute });
+  } catch (error: any) {
+    console.error('Error rejecting dispute:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// PHASE 4D: PAYROLL DEDUCTIONS & GARNISHMENTS ROUTES
+// ============================================================================
+
+app.post("/api/payroll/deductions/:payrollEntryId", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { payrollEntryId } = req.params;
+    const { employeeId, deductionType, amount, isPreTax, description } = req.body;
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const deduction = await addDeduction(
+      payrollEntryId,
+      employeeId,
+      workspaceId,
+      deductionType,
+      amount,
+      isPreTax ?? true,
+      description
+    );
+    res.json({ success: true, data: deduction });
+  } catch (error: any) {
+    console.error('Error adding deduction:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/payroll/garnishments/:payrollEntryId", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { payrollEntryId } = req.params;
+    const { employeeId, garnishmentType, amount, priority, caseNumber, description } = req.body;
+    const workspaceId = (req as any).workspace?.id;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const garnishment = await addGarnishment(
+      payrollEntryId,
+      employeeId,
+      workspaceId,
+      garnishmentType,
+      amount,
+      priority ?? 1,
+      caseNumber,
+      description
+    );
+    res.json({ success: true, data: garnishment });
+  } catch (error: any) {
+    console.error('Error adding garnishment:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get("/api/payroll/:payrollEntryId/deductions-total", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { payrollEntryId } = req.params;
+    
+    const totalDeductions = await calculateTotalDeductions(payrollEntryId);
+    const totalGarnishments = await calculateTotalGarnishments(payrollEntryId);
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        totalDeductions: totalDeductions.toString(),
+        totalGarnishments: totalGarnishments.toString(),
+        combined: totalDeductions.plus(totalGarnishments).toString(),
+      }
+    });
+  } catch (error: any) {
+    console.error('Error calculating deductions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/payroll/:payrollEntryId/apply-deductions", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { payrollEntryId } = req.params;
+    
+    const netPay = await applyDeductionsAndGarnishments(payrollEntryId);
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        netPayAfterDeductions: netPay.toString(),
+      }
+    });
+  } catch (error: any) {
+    console.error('Error applying deductions:', error);
+    res.status(400).json({ error: error.message });
   }
 });
 
