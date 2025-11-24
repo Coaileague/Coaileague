@@ -18,6 +18,7 @@ import { Trash2, Plus, DollarSign, CheckCircle, AlertCircle } from "lucide-react
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { deductionTypesConfig, payrollMessages } from "@/config/payrollConfig";
 
 const deductionSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -77,7 +78,7 @@ export default function PayrollDeductionsPage() {
       return response;
     },
     onSuccess: () => {
-      toast({ title: "✓ Deduction Added", description: "Payroll deduction created successfully" });
+      toast({ title: "✓ Deduction Added", description: payrollMessages.deductions.addSuccess });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll/deductions'] });
       setDialogOpen(false);
       form.reset();
@@ -93,7 +94,7 @@ export default function PayrollDeductionsPage() {
       return await apiRequest('DELETE', `/api/payroll/deductions/${deductionId}`, {});
     },
     onSuccess: () => {
-      toast({ title: "✓ Deduction Removed", description: "Payroll deduction deleted successfully" });
+      toast({ title: "✓ Deduction Removed", description: payrollMessages.deductions.deleteConfirm });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll/deductions'] });
       refetch();
     },
@@ -104,16 +105,11 @@ export default function PayrollDeductionsPage() {
 
   const isLoading = loadingEntries || loadingEmployees || loadingDeductions;
 
-  const deductionTypes: Record<string, string> = {
-    health_insurance: 'Health Insurance',
-    dental: 'Dental Insurance',
-    vision: 'Vision Insurance',
-    ira: 'IRA Contribution',
-    '401k': '401(k) Contribution',
-    hsa: 'HSA Contribution',
-    fsa: 'FSA Contribution',
-    other: 'Other Deduction',
-  };
+  // Extract labels from config
+  const deductionTypes = Object.entries(deductionTypesConfig).reduce((acc, [key, config]) => {
+    acc[key] = config.label;
+    return acc;
+  }, {} as Record<string, string>);
 
   const totalDeductions = deductions?.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0) || 0;
 
@@ -121,20 +117,20 @@ export default function PayrollDeductionsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Payroll Deductions</h1>
-          <p className="text-muted-foreground mt-2">Manage employee pre-tax and post-tax deductions</p>
+          <h1 className="text-3xl font-bold tracking-tight">{payrollMessages.deductions.title}</h1>
+          <p className="text-muted-foreground mt-2">{payrollMessages.deductions.description}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2" data-testid="button-add-deduction">
               <Plus className="w-4 h-4" />
-              Add Deduction
+              {payrollMessages.deductions.addButton}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Add Payroll Deduction</DialogTitle>
-              <DialogDescription>Create a new deduction for an employee's payroll entry</DialogDescription>
+              <DialogTitle>{payrollMessages.deductions.addDialogTitle}</DialogTitle>
+              <DialogDescription>{payrollMessages.deductions.addDialogDescription}</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit((data) => addDeductionMutation.mutate(data))} className="space-y-4">
@@ -238,8 +234,8 @@ export default function PayrollDeductionsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
-                        <FormLabel>Pre-Tax Deduction</FormLabel>
-                        <FormDescription>Deduct before calculating taxes</FormDescription>
+                        <FormLabel>{payrollMessages.deductions.preTaxLabel}</FormLabel>
+                        <FormDescription>{payrollMessages.deductions.preTaxDescription}</FormDescription>
                       </div>
                       <FormControl>
                         <Checkbox
@@ -288,7 +284,7 @@ export default function PayrollDeductionsPage() {
               ) : deductions?.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">No deductions found</p>
+                  <p className="text-muted-foreground">{payrollMessages.deductions.noDeductions}</p>
                 </div>
               ) : (
                 <ScrollArea className="h-[400px] pr-4">
