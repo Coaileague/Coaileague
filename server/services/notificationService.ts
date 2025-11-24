@@ -4,7 +4,7 @@
  */
 
 import { db } from '../db';
-import { notifications } from '@shared/schema';
+import { notifications, users } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 interface CreateNotificationParams {
@@ -44,6 +44,33 @@ export async function createNotification(params: CreateNotificationParams) {
       .returning();
 
     console.log(`[Notifications] Created notification for user ${params.userId}: ${params.title}`);
+
+    // CRITICAL: Send email to user
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, params.userId),
+      });
+      
+      if (user?.email) {
+        const { Resend } = await import('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
+        await resend.emails.send({
+          from: 'notifications@autoforce.platform',
+          to: user.email,
+          subject: params.title,
+          html: `
+            <p>${params.message}</p>
+            ${params.actionUrl ? `<a href="${process.env.APP_URL || 'https://autoforce.platform'}${params.actionUrl}">View Details</a>` : ''}
+          `,
+        });
+        
+        console.log(`[Email] Sent notification email to ${user.email}: ${params.title}`);
+      }
+    } catch (emailError) {
+      console.error('[Email] Failed to send email:', emailError);
+      // Don't fail notification if email fails
+    }
 
     return notification;
   } catch (error) {
