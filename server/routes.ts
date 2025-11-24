@@ -83,6 +83,7 @@ import { getTimeEntriesByEmployee, getTimeEntriesByWorkspace, getPendingTimeEntr
 import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData } from "./services/exportService";
 import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "./services/invoiceAdjustmentService";
 import { approveShift, rejectShift, getPendingShifts, getShiftWithDetails, bulkApproveShifts, getApprovalStats } from "./services/shiftApprovalService";
+import { employerRatingsService } from "./services/employerRatingsService";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
@@ -26264,24 +26265,64 @@ app.post("/api/payroll/:payrollEntryId/apply-deductions", requireAuth, mutationL
 // TIER-2 GAPS: RATINGS & COMPOSITE SCORES
 // ============================================================================
 
-app.get("/api/ratings/employer", requireAuth, async (req: AuthenticatedRequest, res) => {
+app.get("/api/ratings/employer", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = (req as any).workspace?.id;
-    const { targetId, period = '30d' } = req.query;
-    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+    const workspaceId = req.workspaceId!;
+    const { targetId, period = '30' } = req.query;
+    const periodDays = parseInt(period as string) || 30;
 
-    const ratings = await db
-      .select()
-      .from(employerRatings)
-      .where(and(
-        eq(employerRatings.workspaceId, workspaceId),
-        targetId ? eq(employerRatings.targetId, targetId as string) : undefined
-      ))
-      .limit(100);
+    const stats = await employerRatingsService.calculateEmployerRatingStats(
+      workspaceId,
+      targetId as string | undefined,
+      periodDays
+    );
 
-    res.json({ success: true, data: ratings });
+    res.json({ 
+      success: true, 
+      data: stats
+    });
   } catch (error: any) {
-    console.error('Error fetching employer ratings:', error);
+    console.error('Error calculating employer ratings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get employer rating trends
+app.get("/api/ratings/employer/trends", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { targetId, granularity = 'week' } = req.query;
+
+    const trends = await employerRatingsService.getRatingTrends(
+      workspaceId,
+      targetId as string | undefined,
+      granularity as 'week' | 'month'
+    );
+
+    res.json({ success: true, data: trends });
+  } catch (error: any) {
+    console.error('Error fetching rating trends:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Identify at-risk managers
+app.get("/api/ratings/at-risk-managers", requireAuth, requireManager, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { threshold = '3.0' } = req.query;
+
+    const atRiskManagers = await employerRatingsService.identifyAtRiskManagers(
+      workspaceId,
+      parseFloat(threshold as string) || 3.0
+    );
+
+    res.json({ 
+      success: true, 
+      data: atRiskManagers
+    });
+  } catch (error: any) {
+    console.error('Error identifying at-risk managers:', error);
     res.status(500).json({ error: error.message });
   }
 });
