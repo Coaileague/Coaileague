@@ -14,6 +14,7 @@ import {
   customRules,
   ruleExecutionLogs,
 } from "../../shared/schema";
+import { emailService } from "./emailService";
 
 export type RuleCondition = {
   field: string; // e.g., "hours_worked", "staffing_count", "tardiness_count"
@@ -212,9 +213,26 @@ export class RuleEngine {
           break;
 
         case "send_email":
-          // Queue email (would integrate with email service)
-          result.alerts.push(`Email queued: ${action.params.subject || 'Rule Alert'}`);
-          // TODO: Integrate with actual email service
+          // Send email via EmailService
+          try {
+            const emailResult = await emailService.sendEmail(
+              action.params.to || action.params.recipientEmail,
+              action.params.subject || 'Rule Alert',
+              action.params.html || `<p>${action.params.message || 'An automated alert from your business rules'}</p>`,
+              action.params.emailType || 'rule_alert',
+              context.workspaceId,
+              context.userId
+            );
+
+            if (emailResult.success) {
+              result.alerts.push(`✓ Email sent: ${action.params.subject || 'Rule Alert'}`);
+            } else {
+              result.alerts.push(`✗ Email failed: ${emailResult.error}`);
+            }
+          } catch (error: any) {
+            console.error('Rule engine email action failed:', error.message);
+            result.alerts.push(`Email error: ${error.message}`);
+          }
           break;
 
         case "block_action":
