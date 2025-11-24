@@ -12,6 +12,7 @@
 import { storage } from "../storage";
 import crypto from "crypto";
 import { emailService } from "./emailService";
+import { workflowConfig } from "@shared/config/workflowConfig";
 
 // ============================================================================
 // WORKFLOW INITIALIZATION

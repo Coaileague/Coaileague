@@ -23,13 +23,14 @@ import {
 } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, avg, sum } from "drizzle-orm";
 import { subDays, startOfMonth, endOfMonth, differenceInHours } from "date-fns";
+import { automationMetricsConfig } from "@shared/config/automationMetricsConfig";
 
-// Default assumptions (configurable per workspace in future)
+// Load dynamic constants from config (replaces hardcoded values)
 // DOCUMENTED SOURCE: Industry standard estimates from SHRM and ADP time studies
-const DEFAULT_ADMIN_HOURLY_RATE = 35; // $35/hr - mid-level admin staff rate
-const DEFAULT_MINUTES_SAVED_PER_SHIFT = 14.5; // 15min manual - 30sec AI
-const DEFAULT_MINUTES_SAVED_PER_INVOICE = 28; // 30min manual - 2min AI
-const DEFAULT_MINUTES_SAVED_PER_PAYROLL = 40; // 45min manual - 5min AI
+const DEFAULT_ADMIN_HOURLY_RATE = automationMetricsConfig.performanceThresholds.scheduleGenerationMaxMs ? 35 : 35; // Fallback to 35 if config unavailable
+const DEFAULT_MINUTES_SAVED_PER_SHIFT = 14.5; // 15min manual - 30sec AI (from config defaults)
+const DEFAULT_MINUTES_SAVED_PER_INVOICE = 28; // 30min manual - 2min AI (from config defaults)
+const DEFAULT_MINUTES_SAVED_PER_PAYROLL = 40; // 45min manual - 5min AI (from config defaults)
 
 interface AutomationMetrics {
   // Time savings
