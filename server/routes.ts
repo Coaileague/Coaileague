@@ -98,6 +98,7 @@ import { monitoringService } from "./services/monitoringService";
 import { processingMetricsService } from "./services/processingMetricsService";
 import { trainingRateService } from "./services/trainingRateService";
 import { analyticsDataService } from "./services/analyticsDataService";
+import { documentExtractionService } from "./services/documentExtraction";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';

@@ -1,0 +1,203 @@
+/**
+ * Document Extraction Service - AI Brain Document Intelligence
+ * Extract structured business data from uploaded documents for organization migration
+ * Powers business migration workflows with Gemini 2.0 Flash AI
+ */
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { db } from "../db";
+import { documents, workspaces } from "@shared/schema";
+import { eq } from "drizzle-orm";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+export interface ExtractedData {
+  documentId: string;
+  documentType: string;
+  extractedFields: Record<string, any>;
+  confidence: number;
+  rawText: string;
+  status: "success" | "failed" | "pending";
+  error?: string;
+  extractedAt: Date;
+}
+
+export interface DocumentUploadRequest {
+  workspaceId: string;
+  documentName: string;
+  documentType: "contract" | "invoice" | "employee_record" | "client_data" | "financial_statement" | "other";
+  fileData: string; // Base64 encoded
+  fileMimeType: string;
+}
+
+/**
+ * Extract structured data from a document using Gemini AI Vision
+ */
+export async function extractDocumentData(
+  workspaceId: string,
+  documentName: string,
+  documentType: string,
+  fileData: string,
+  fileMimeType: string
+): Promise<ExtractedData> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    // Define extraction prompts by document type
+    const extractionPrompts: Record<string, string> = {
+      contract: `Extract all important contract details. Return JSON with: { partyNames: string[], contractType: string, effectiveDate: string, expirationDate: string, keyTerms: object, signatories: string[], paymentTerms: string }`,
+      invoice: `Extract invoice data. Return JSON with: { invoiceNumber: string, issueDate: string, dueDate: string, vendorName: string, totalAmount: number, currency: string, lineItems: array, taxAmount: number, paymentTerms: string }`,
+      employee_record: `Extract employee information. Return JSON with: { employeeName: string, employeeID: string, department: string, position: string, hireDate: string, salary: number, emergencyContacts: array, certifications: array, performanceRating: number }`,
+      client_data: `Extract client/customer data. Return JSON with: { clientName: string, companyName: string, contactEmail: string, phone: string, address: string, industryType: string, annualRevenue: number, numberOfEmployees: number, contractValue: number }`,
+      financial_statement: `Extract financial data. Return JSON with: { totalRevenue: number, totalExpenses: number, netIncome: number, assets: number, liabilities: number, equity: number, reportingPeriod: string, accountantName: string, auditStatus: string }`,
+      other: `Extract all available structured data from this document. Return comprehensive JSON with all identifiable fields and values.`,
+    };
+
+    const prompt = extractionPrompts[documentType] || extractionPrompts.other;
+
+    // Convert base64 to buffer for Gemini API
+    const imageBuffer = Buffer.from(fileData, "base64");
+
+    const response = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: fileMimeType,
+          data: fileData,
+        },
+      },
+      {
+        text: `You are a business document expert. Carefully analyze this ${documentType} document and extract all structured data. ${prompt}. Return ONLY valid JSON, no markdown, no code blocks.`,
+      },
+    ]);
+
+    const responseText = response.response.text();
+    
+    // Parse extracted JSON
+    let extractedFields: Record<string, any> = {};
+    try {
+      extractedFields = JSON.parse(responseText);
+    } catch {
+      // Try to extract JSON from response if wrapped in markdown
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        extractedFields = JSON.parse(jsonMatch[0]);
+      }
+    }
+
+    return {
+      documentId: `doc_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      documentType,
+      extractedFields,
+      confidence: 0.85, // Default confidence - could be improved with semantic scoring
+      rawText: responseText,
+      status: "success",
+      extractedAt: new Date(),
+    };
+  } catch (error: any) {
+    console.error("Document extraction error:", error);
+    return {
+      documentId: `doc_${Date.now()}`,
+      documentType,
+      extractedFields: {},
+      confidence: 0,
+      rawText: "",
+      status: "failed",
+      error: error.message || "Failed to extract document data",
+      extractedAt: new Date(),
+    };
+  }
+}
+
+/**
+ * Extract multiple documents in batch for migration
+ */
+export async function batchExtractDocuments(
+  workspaceId: string,
+  documents: DocumentUploadRequest[]
+): Promise<ExtractedData[]> {
+  const results = await Promise.all(
+    documents.map((doc) =>
+      extractDocumentData(
+        workspaceId,
+        doc.documentName,
+        doc.documentType,
+        doc.fileData,
+        doc.fileMimeType
+      )
+    )
+  );
+
+  return results;
+}
+
+/**
+ * Map extracted fields to workspace schema for import
+ */
+export function mapExtractedToWorkspace(
+  extractedData: ExtractedData,
+  targetEntityType: string
+): Record<string, any> {
+  const extracted = extractedData.extractedFields;
+
+  const mappings: Record<string, Record<string, string>> = {
+    employee: {
+      name: "employeeName",
+      email: "contactEmail || email",
+      phone: "phone",
+      department: "department",
+      position: "position",
+      hireDate: "hireDate",
+      hourlyRate: "salary",
+    },
+    client: {
+      name: "clientName || companyName",
+      email: "contactEmail || email",
+      phone: "phone",
+      address: "address",
+      industry: "industryType",
+      annualRevenue: "annualRevenue",
+    },
+    vendor: {
+      name: "vendorName || partyNames[0]",
+      email: "contactEmail || email",
+      phone: "phone",
+      paymentTerms: "paymentTerms",
+    },
+  };
+
+  const mapping = mappings[targetEntityType] || {};
+  const mapped: Record<string, any> = {};
+
+  for (const [key, field] of Object.entries(mapping)) {
+    if (field in extracted) {
+      mapped[key] = extracted[field as keyof typeof extracted];
+    }
+  }
+
+  return mapped;
+}
+
+/**
+ * Validate extraction quality
+ */
+export function validateExtraction(
+  extractedData: ExtractedData,
+  requiredFields: string[]
+): { isValid: boolean; missingFields: string[]; confidence: number } {
+  const missingFields = requiredFields.filter(
+    (field) => !(field in extractedData.extractedFields)
+  );
+
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+    confidence: extractedData.confidence,
+  };
+}
+
+export const documentExtractionService = {
+  extractDocumentData,
+  batchExtractDocuments,
+  mapExtractedToWorkspace,
+  validateExtraction,
+};
