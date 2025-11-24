@@ -12,8 +12,10 @@ export interface AuthenticatedRequest extends Request {
     email?: string;
     firstName?: string;
     lastName?: string;
+    currentWorkspaceId?: string;
   };
   workspaceId?: string;
+  currentWorkspaceId?: string;
   workspaceRole?: WorkspaceRole;
   employeeId?: string;
   platformRole?: PlatformRole;

@@ -269,6 +269,7 @@ export interface IStorage {
   getEmployeeByUserId(userId: string): Promise<Employee | undefined>;
   getEmployeeById(employeeId: string): Promise<Employee | undefined>;
   getEmployeesByWorkspace(workspaceId: string): Promise<Employee[]>;
+  getWorkspaceMemberByUserId(userId: string): Promise<{ workspaceId: string; id: string } | undefined>;
   updateEmployee(id: string, workspaceId: string, data: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: string, workspaceId: string): Promise<boolean>;
   
@@ -906,6 +907,14 @@ export class DatabaseStorage implements IStorage {
   async getEmployeeByUserId(userId: string): Promise<Employee | undefined> {
     const [employee] = await db
       .select()
+      .from(employees)
+      .where(eq(employees.userId, userId));
+    return employee;
+  }
+
+  async getWorkspaceMemberByUserId(userId: string): Promise<{ workspaceId: string; id: string } | undefined> {
+    const [employee] = await db
+      .select({ workspaceId: employees.workspaceId, id: employees.id })
       .from(employees)
       .where(eq(employees.userId, userId));
     return employee;

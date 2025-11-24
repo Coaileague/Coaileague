@@ -4637,7 +4637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log escalation action
       await storage.createLeaderAction({
         workspaceId,
-        leaderId: requestorId,
+        requestorId,
         leaderEmail: req.user.email || '',
         leaderRole: req.workspaceRole,
         action: 'escalate_to_support',

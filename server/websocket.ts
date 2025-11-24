@@ -3903,5 +3903,22 @@ export function setupWebSocket(server: Server) {
         }
       });
     },
+    broadcastToWorkspace: (workspaceId: string, data: any) => {
+      const clients = shiftUpdateClients.get(workspaceId);
+      if (!clients || clients.size === 0) {
+        return;
+      }
+
+      const payload = JSON.stringify({
+        ...data,
+        timestamp: new Date().toISOString(),
+      });
+
+      clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(payload);
+        }
+      });
+    },
   };
 }
