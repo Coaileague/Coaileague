@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { useModules } from "@/config/moduleConfig";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -24,12 +25,27 @@ interface SearchMetadata {
   searchType: string;
 }
 
-export default function AIRecords() {
+export default function Records() {
+  const modules = useModules();
+  const module = modules.getModule('records');
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<string>("all");
   const [results, setResults] = useState<SearchResult | null>(null);
   const [metadata, setMetadata] = useState<SearchMetadata | null>(null);
   const { toast } = useToast();
+
+  if (!module?.enabled) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Module Not Available</CardTitle>
+            <CardDescription>Records & Documents is not enabled for your subscription tier</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Fetch search history
   const { data: searchHistory } = useQuery({

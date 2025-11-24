@@ -4,6 +4,7 @@ import type { ServiceHealth, ServiceStatus, HealthSummary } from '../../shared/h
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import Stripe from 'stripe';
+import { wsCounter } from './websocketCounter';
 
 // Cache health check results to prevent thrashing
 // Don't cache failures so recovery is detected quickly
@@ -73,21 +74,28 @@ export async function checkDatabase(): Promise<ServiceHealth> {
 }
 
 // WebSocket Chat Server health check
-// Note: This requires WebSocket server to expose connection count or heartbeat
+// Now uses actual connection count from wsCounter
 export async function checkChatWebSocket(): Promise<ServiceHealth> {
   const cached = getCached('chat_websocket');
   if (cached) return cached;
 
   try {
-    // In a production system, you'd check actual WebSocket server heartbeat
-    // For now, we'll mark as operational if the module is loaded
-    // TODO: Enhance with actual WebSocket connection count/heartbeat check
+    // Real WebSocket connection count from wsCounter
+    const activeConnections = wsCounter.getActiveConnectionCount();
+    const stats = wsCounter.getStatistics();
+    
+    const status: ServiceStatus = activeConnections > 0 ? 'operational' : 'degraded';
     const result: ServiceHealth = {
       service: 'chat_websocket',
-      status: 'operational',
+      status,
       isCritical: true,
-      message: 'Chat WebSocket server active',
+      message: `Chat WebSocket server active (${activeConnections} active connections, avg duration: ${stats.averageConnectionDuration}ms)`,
       lastChecked: new Date().toISOString(),
+      metadata: {
+        activeConnections,
+        averageMessageCount: stats.averageMessageCount,
+        averageConnectionDuration: stats.averageConnectionDuration,
+      },
     };
 
     setCache('chat_websocket', result, CACHE_TTL_MS);

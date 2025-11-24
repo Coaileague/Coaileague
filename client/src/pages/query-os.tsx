@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useModules } from "@/config/moduleConfig";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +62,9 @@ interface SessionInfo {
   lastActivity?: string;
 }
 
-export default function AIDiagnostics() {
+export default function Diagnostics() {
+  const modules = useModules();
+  const module = modules.getModule('diagnostics');
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -69,6 +72,19 @@ export default function AIDiagnostics() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showSessionViewer, setShowSessionViewer] = useState(false);
   const [showAuditLogs, setShowAuditLogs] = useState(false);
+
+  if (!module?.enabled) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Module Not Available</CardTitle>
+            <CardDescription>System Diagnostics is not enabled for your subscription tier</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // GATEKEEPER: Microsoft-style access control
   const platformRole = (user as any)?.platformRole;
