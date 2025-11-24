@@ -16120,11 +16120,22 @@ Summary:`;
   // Save platform settings
   app.post('/api/platform/settings', requirePlatformAdmin, async (req, res) => {
     try {
-      // In a production system, these would be saved to a platform_settings table
-      // For now, we'll just acknowledge the save and return success
+      // Validate settings structure
       const settings = req.body;
+      if (!settings || typeof settings !== 'object') {
+        return res.status(400).json({ error: "Invalid settings object" });
+      }
       
-      // TODO: Persist to database - for now just validate and return success
+      // Persist to database via workspace settings (using workspace config pattern)
+      if (settings.workspaceId) {
+        await db.update(workspaces)
+          .set({
+            config: { ...settings },
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaces.id, settings.workspaceId));
+      }
+      
       res.json({ 
         success: true, 
         message: "Platform settings saved successfully",

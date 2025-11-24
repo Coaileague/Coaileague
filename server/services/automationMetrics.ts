@@ -150,8 +150,7 @@ export async function getAutomationMetrics(workspaceId: string | null): Promise<
     allTimeMetrics[2].hoursSaved;
   
   // Calculate cost avoidance using workspace-specific or default hourly rate
-  // TODO: Make this configurable per workspace in workspace settings
-  const adminHourlyRate = DEFAULT_ADMIN_HOURLY_RATE;
+  const adminHourlyRate = await getWorkspaceAdminHourlyRate(workspaceId) || DEFAULT_ADMIN_HOURLY_RATE;
   const costAvoidanceMonthly = hoursSavedThisMonth * adminHourlyRate;
   const costAvoidanceTotal = hoursSavedAllTime * adminHourlyRate;
   
