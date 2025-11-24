@@ -246,11 +246,34 @@ export async function createPTODeniedNotification(
     endDate: string;
     reason?: string;
     deniedBy: string;
+    userEmail?: string;
+    userName?: string;
   }
 ) {
   const message = params.reason
     ? `Your time off request from ${params.startDate} to ${params.endDate} has been denied. Reason: ${params.reason}`
     : `Your time off request from ${params.startDate} to ${params.endDate} has been denied`;
+
+  // Send email notification if email provided
+  if (params.userEmail) {
+    await emailService.sendCustomEmail(
+      params.userEmail,
+      'Your PTO Request Has Been Denied',
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">PTO Request Denied</h2>
+        <p>Hello ${params.userName || 'Employee'},</p>
+        <p>Unfortunately, your time off request has been denied.</p>
+        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <p style="margin: 5px 0;"><strong>Requested Dates:</strong> ${params.startDate} to ${params.endDate}</p>
+          ${params.reason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${params.reason}</p>` : ''}
+        </div>
+        <p>Please contact your manager if you have questions about this decision or would like to discuss alternative dates.</p>
+      </div>`,
+      'pto_denied',
+      params.workspaceId,
+      params.userId
+    ).catch(err => console.error('[Notification] Failed to send PTO denial email:', err.message));
+  }
 
   return createAndBroadcastNotification(context, {
     workspaceId: params.workspaceId,
@@ -398,8 +421,30 @@ export async function createTimesheetApprovedNotification(
     periodStart: string;
     periodEnd: string;
     approvedBy: string;
+    userEmail?: string;
+    userName?: string;
   }
 ) {
+  // Send email notification if email provided
+  if (params.userEmail) {
+    await emailService.sendCustomEmail(
+      params.userEmail,
+      'Your Timesheet Has Been Approved',
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">Timesheet Approved</h2>
+        <p>Hello ${params.userName || 'Employee'},</p>
+        <p>Your timesheet has been reviewed and approved!</p>
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 5px 0;"><strong>Period:</strong> ${params.periodStart} to ${params.periodEnd}</p>
+          <p style="margin: 15px 0 5px 0;">You can now view your approved timesheet in your dashboard.</p>
+        </div>
+      </div>`,
+      'timesheet_approved',
+      params.workspaceId,
+      params.userId
+    ).catch(err => console.error('[Notification] Failed to send timesheet email:', err.message));
+  }
+
   return createAndBroadcastNotification(context, {
     workspaceId: params.workspaceId,
     userId: params.userId,
@@ -424,11 +469,34 @@ export async function createTimesheetRejectedNotification(
     periodEnd: string;
     reason?: string;
     rejectedBy: string;
+    userEmail?: string;
+    userName?: string;
   }
 ) {
   const message = params.reason
     ? `Your timesheet for ${params.periodStart} - ${params.periodEnd} has been rejected. Reason: ${params.reason}`
     : `Your timesheet for ${params.periodStart} - ${params.periodEnd} has been rejected`;
+
+  // Send email notification if email provided
+  if (params.userEmail) {
+    await emailService.sendCustomEmail(
+      params.userEmail,
+      'Your Timesheet Requires Revision',
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Timesheet Revision Required</h2>
+        <p>Hello ${params.userName || 'Employee'},</p>
+        <p>Your timesheet for the period below requires revision and resubmission.</p>
+        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <p style="margin: 5px 0;"><strong>Period:</strong> ${params.periodStart} to ${params.periodEnd}</p>
+          ${params.reason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${params.reason}</p>` : ''}
+        </div>
+        <p>Please review and resubmit your timesheet through your dashboard.</p>
+      </div>`,
+      'timesheet_rejected',
+      params.workspaceId,
+      params.userId
+    ).catch(err => console.error('[Notification] Failed to send rejection email:', err.message));
+  }
 
   return createAndBroadcastNotification(context, {
     workspaceId: params.workspaceId,
@@ -452,8 +520,31 @@ export async function createPayrollProcessedNotification(
     payrollId: string;
     period: string;
     amount: string;
+    userEmail?: string;
+    userName?: string;
   }
 ) {
+  // Send email notification if email provided
+  if (params.userEmail) {
+    await emailService.sendCustomEmail(
+      params.userEmail,
+      `Payroll Processed - ${params.period}`,
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Payroll Processed</h2>
+        <p>Hello ${params.userName || 'Employee'},</p>
+        <p>Your payroll has been processed and is ready for review.</p>
+        <div style="background-color: #eef2ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+          <p style="margin: 5px 0;"><strong>Pay Period:</strong> ${params.period}</p>
+          <p style="margin: 5px 0;"><strong>Amount:</strong> ${params.amount}</p>
+        </div>
+        <p>Log in to your dashboard to view detailed payroll information including deductions, taxes, and net pay.</p>
+      </div>`,
+      'payroll_processed',
+      params.workspaceId,
+      params.userId
+    ).catch(err => console.error('[Notification] Failed to send payroll email:', err.message));
+  }
+
   return createAndBroadcastNotification(context, {
     workspaceId: params.workspaceId,
     userId: params.userId,
