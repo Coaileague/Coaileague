@@ -26260,5 +26260,67 @@ app.post("/api/payroll/:payrollEntryId/apply-deductions", requireAuth, mutationL
   }
 });
 
+// ============================================================================
+// TIER-2 GAPS: RATINGS & COMPOSITE SCORES
+// ============================================================================
+
+app.get("/api/ratings/employer", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    const { targetId, period = '30d' } = req.query;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const ratings = await db
+      .select()
+      .from(employerRatings)
+      .where(and(
+        eq(employerRatings.workspaceId, workspaceId),
+        targetId ? eq(employerRatings.targetId, targetId as string) : undefined
+      ))
+      .limit(100);
+
+    res.json({ success: true, data: ratings });
+  } catch (error: any) {
+    console.error('Error fetching employer ratings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/analytics/composite-score", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = (req as any).workspace?.id;
+    const { employeeId } = req.query;
+    if (!workspaceId || !employeeId) return res.status(400).json({ error: 'Workspace and employeeId required' });
+
+    const reviews = await db
+      .select()
+      .from(performanceReviews)
+      .where(and(
+        eq(performanceReviews.workspaceId, workspaceId),
+        eq(performanceReviews.employeeId, employeeId as string)
+      ))
+      .orderBy(desc(performanceReviews.reviewDate))
+      .limit(10);
+
+    if (!reviews.length) {
+      return res.json({ success: true, data: { score: 0, reviewCount: 0 } });
+    }
+
+    const avgScore = reviews.reduce((sum, r) => sum + (parseFloat(r.compositeScore?.toString() || '0')), 0) / reviews.length;
+    res.json({ 
+      success: true, 
+      data: {
+        employeeId,
+        compositeScore: Math.round(avgScore * 100) / 100,
+        reviewCount: reviews.length,
+        latestReview: reviews[0]?.reviewDate
+      }
+    });
+  } catch (error: any) {
+    console.error('Error calculating composite score:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
   return server;
 }

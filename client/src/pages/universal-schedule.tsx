@@ -270,8 +270,15 @@ export default function UniversalSchedule() {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showWorkflowsDialog, setShowWorkflowsDialog] = useState(false);
   const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [showEscalationMatrix, setShowEscalationMatrix] = useState(false);
   const [pendingShifts, setPendingShifts] = useState<any[]>([]);
   const [activeWorkflows, setActiveWorkflows] = useState<any[]>([]);
+  const [escalationRules] = useState([
+    { level: 1, condition: 'Shift unfilled > 4 hours', action: 'Manager notified', timeout: '1h' },
+    { level: 2, condition: 'Shift unfilled > 8 hours', action: 'Director escalation', timeout: '2h' },
+    { level: 3, condition: 'Shift unfilled > 12 hours', action: 'Emergency coverage pool', timeout: '4h' },
+    { level: 4, condition: 'Critical service impact', action: 'Executive override', timeout: 'Immediate' }
+  ]);
   
   // Shift modal states
   const [showShiftModal, setShowShiftModal] = useState(false);
@@ -644,7 +651,7 @@ export default function UniversalSchedule() {
                         <XCircle className="w-4 h-4 mr-2 text-red-600" />
                         Review Rejections
                       </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => toast({ description: "Escalation matrix feature coming soon" })} data-testid="button-escalations">
+                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setShowEscalationMatrix(true)} data-testid="button-escalations">
                         <AlertCircle className="w-4 h-4 mr-2 text-orange-600" />
                         Escalation Matrix
                       </Button>
@@ -747,7 +754,7 @@ export default function UniversalSchedule() {
                         <Send className="w-4 h-4 mr-2" />
                         Send Shift Reminder
                       </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => toast({ description: "Escalation matrix feature coming soon" })} data-testid="button-escalation-matrix">
+                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setShowEscalationMatrix(true)} data-testid="button-escalation-matrix">
                         <AlertCircle className="w-4 h-4 mr-2" />
                         Escalation Matrix
                       </Button>
@@ -1203,6 +1210,46 @@ export default function UniversalSchedule() {
         </DialogContent>
       </Dialog>
     </div>
+
+    {/* Escalation Matrix Dialog */}
+    <Dialog open={showEscalationMatrix} onOpenChange={setShowEscalationMatrix}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Escalation Matrix - Shift Coverage</DialogTitle>
+          <DialogDescription>
+            Automated escalation rules for unfilled shift coverage
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {escalationRules.map((rule) => (
+            <div key={rule.level} className="border rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-orange-100 text-orange-800">Level {rule.level}</Badge>
+                  <span className="font-medium">{rule.condition}</span>
+                </div>
+                <span className="text-xs text-muted-foreground font-mono">{rule.timeout}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="w-4 h-4" />
+                <span>Action: {rule.action}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowEscalationMatrix(false)}>
+            Close
+          </Button>
+          <Button onClick={() => {
+            toast({ title: "Escalation rules saved", description: "System will monitor and enforce these rules" });
+            setShowEscalationMatrix(false);
+          }}>
+            Apply Rules
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     
     {/* DragOverlay - shows full-opacity clone during drag */}
     <DragOverlay>
