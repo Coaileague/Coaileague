@@ -118,6 +118,7 @@ export async function getComplianceSummary(workspaceId: string) {
     const expiringCount = await db
       .select()
       .from(employeeSkills)
+      .innerJoin(employees, eq(employeeSkills.employeeId, employees.id))
       .where(
         and(
           eq(employees.workspaceId, workspaceId),
@@ -132,6 +133,7 @@ export async function getComplianceSummary(workspaceId: string) {
     const expiredCount = await db
       .select()
       .from(employeeSkills)
+      .innerJoin(employees, eq(employeeSkills.employeeId, employees.id))
       .where(
         and(
           eq(employees.workspaceId, workspaceId),
