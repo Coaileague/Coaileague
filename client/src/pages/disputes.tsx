@@ -116,7 +116,7 @@ export default function DisputesPage() {
     if (!status) return '';
     const config = disputeStatusConfig[status as keyof typeof disputeStatusConfig];
     if (!config) return '';
-    return `${config.bgColor} ${config.textColor} border-${config.textColor}-500/20`;
+    return `${config.bgColor} ${config.textColor} ${config.borderColor}`;
   };
 
   const getPriorityColor = (priority: string | null) => {
