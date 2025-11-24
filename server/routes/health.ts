@@ -234,8 +234,27 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
           status: 'submitted',
         });
 
-        // TODO: Auto-create support ticket and HelpOS queue entry
-        // This will be implemented in a future iteration
+        // Auto-create support ticket for critical services
+        if (isCriticalService) {
+          try {
+            const supportTicket = await storage.createSupportTicket({
+              workspaceId,
+              userId,
+              title: `[CRITICAL] ${reportData.serviceKey} failure - ${reportData.errorType}`,
+              description: `Auto-generated from incident report:\n\nService: ${reportData.serviceKey}\nError: ${reportData.errorMessage}\n\nUser Message: ${reportData.userMessage}`,
+              priority: 'high',
+              status: 'open',
+              category: 'technical',
+              screenshotKey,
+              incidentId: incident.id,
+              assignedTo: undefined, // Will be assigned by support routing
+            });
+            console.log(`[AUTO-TICKET] Support ticket created: ${supportTicket.id} for incident ${incident.id}`);
+          } catch (ticketError: any) {
+            console.error(`[AUTO-TICKET] Failed to create support ticket:`, ticketError);
+            // Don't fail the incident report if ticket creation fails
+          }
+        }
 
         res.status(201).json({
           success: true,
