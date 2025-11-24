@@ -255,6 +255,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   // Enhanced HelpDesk state
   const [ticketStatus, setTicketStatus] = useState<'new' | 'assigned' | 'investigating' | 'waiting_user' | 'resolved' | 'escalated'>('investigating');
   const [showContextPanel, setShowContextPanel] = useState(true);
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   
   // Seasonal animations toggle (staff only)
   const [seasonalAnimationsEnabled, setSeasonalAnimationsEnabled] = useState(() => {
@@ -1435,6 +1436,21 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 </Badge>
               )}
             </div>
+            {!showContextPanel && isStaff && (
+              <div className="mt-2">
+                <Select value={priorityFilter} onValueChange={(value: any) => setPriorityFilter(value)}>
+                  <SelectTrigger data-testid="select-priority-filter" className="h-8 text-xs">
+                    <SelectValue placeholder="Filter by priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="low">Low Priority</SelectItem>
+                    <SelectItem value="medium">Medium Priority</SelectItem>
+                    <SelectItem value="high">High Priority</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           {/* Content Area - Context Panel or User List */}
