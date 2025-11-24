@@ -38,7 +38,7 @@ export async function getTrainingCompletionRate(
       eq(trainingCertifications.employeeId, employeeId)
     ));
 
-  const completed = trainings.filter(t => t.completedDate).length;
+  const completed = trainings.filter(t => t.issuedDate).length;
   const required = getWorkspaceRequiredTrainings(workspaceId);
   const completionRate = required > 0 ? Math.min((completed / required) * 100, 100) : 0;
 
@@ -48,8 +48,8 @@ export async function getTrainingCompletionRate(
     requiredCertifications: required,
     completionRate: Math.round(completionRate),
     lastCompletedDate: trainings
-      .filter(t => t.completedDate)
-      .sort((a, b) => (b.completedDate?.getTime() || 0) - (a.completedDate?.getTime() || 0))[0]?.completedDate,
+      .filter(t => t.issuedDate)
+      .sort((a, b) => (b.issuedDate?.getTime() || 0) - (a.issuedDate?.getTime() || 0))[0]?.issuedDate,
   };
 }
 

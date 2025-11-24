@@ -58,7 +58,7 @@ export async function getAnalyticsSummary(
     ));
 
   const totalHoursPaid = timeEntryData.reduce((sum: number, t) => {
-    return sum + parseFloat(t.hoursWorked?.toString() || '0');
+    return sum + parseFloat(t.totalHours?.toString() || '0');
   }, 0);
 
   // Payroll data
@@ -67,8 +67,8 @@ export async function getAnalyticsSummary(
     .from(payrollEntries)
     .where(and(
       eq(payrollEntries.workspaceId, workspaceId),
-      gte(payrollEntries.payrollDate, start),
-      lte(payrollEntries.payrollDate, end)
+      gte(payrollEntries.createdAt, start),
+      lte(payrollEntries.createdAt, end)
     ));
 
   const avgHourlyRate = activeEmployees.length > 0
