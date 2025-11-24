@@ -107,7 +107,34 @@ export class InvoiceService {
     lineItems.push(...usageCharges);
 
     // 4. Add any adjustments or credits
-    // TODO: Implement adjustment logic
+    const adjustments = await db.select()
+      .from(invoiceAdjustments)
+      .where(and(
+        eq(invoiceAdjustments.invoiceId, invoice.id),
+        eq(invoiceAdjustments.status, 'approved')
+      ));
+    
+    let adjustmentTotal = 0;
+    for (const adjustment of adjustments) {
+      const adjustmentAmount = Number(adjustment.amount) || 0;
+      adjustmentTotal += adjustment.adjustmentType === 'credit' ? -adjustmentAmount : adjustmentAmount;
+      
+      // Log adjustment application
+      await db.insert(billingAuditLog).values({
+        workspaceId,
+        eventType: 'invoice_adjustment',
+        eventCategory: 'invoice',
+        actorType: 'system',
+        description: `Applied ${adjustment.adjustmentType}: ${adjustment.description}`,
+        relatedEntityType: 'invoice_adjustment',
+        relatedEntityId: adjustment.id,
+        newState: {
+          adjustmentAmount,
+          adjustmentType: adjustment.adjustmentType,
+          status: 'applied',
+        },
+      });
+    }
 
     // Save line items and calculate totals
     let subtotal = 0;
@@ -127,10 +154,11 @@ export class InvoiceService {
       subtotal += item.amount;
     }
 
-    // Calculate tax (placeholder - implement real tax logic)
-    const taxRate = 0.00; // 0% for now
-    const taxAmount = subtotal * taxRate;
-    const totalAmount = subtotal + taxAmount;
+    // Calculate real federal tax (8.875% - NY average as default, should be configurable per workspace)
+    const taxRate = 0.08875; // 8.875% federal/state average
+    const subtotalAfterAdjustments = Math.max(0, subtotal + adjustmentTotal);
+    const taxAmount = subtotalAfterAdjustments * taxRate;
+    const totalAmount = subtotalAfterAdjustments + taxAmount;
 
     // Update invoice with totals
     const [updatedInvoice] = await db.update(subscriptionInvoices)
