@@ -3,6 +3,7 @@ import {
   workspaces,
   billingAuditLog,
   subscriptionInvoices,
+  users,
   type Workspace,
 } from '@shared/schema';
 import { eq, and, lte } from 'drizzle-orm';
@@ -18,6 +19,24 @@ export interface AccountStateChange {
 }
 
 export class AccountStateService {
+  /**
+   * Verify if an actor has admin or support permissions
+   */
+  private async isAdminOrSupport(actorId: string | undefined): Promise<boolean> {
+    if (!actorId) return false;
+    
+    try {
+      const [actor] = await db.select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, actorId))
+        .limit(1);
+      
+      return actor && (actor.role === 'admin' || actor.role === 'root' || actor.role === 'support');
+    } catch (error) {
+      return false;
+    }
+  }
+
   /**
    * Transition account to a new state with audit logging
    */
@@ -162,10 +181,12 @@ export class AccountStateService {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
 
-    // If account requires support, only admins can reactivate
+    // If account requires support, only admins/support can reactivate
     if (workspace.accountState === 'requires_support') {
-      // TODO: Verify actorId is admin/support
-      // For now, allow any reactivation
+      const isAdmin = await this.isAdminOrSupport(actorId);
+      if (!isAdmin) {
+        throw new Error('Only administrators or support staff can reactivate suspended accounts. Access denied.');
+      }
     }
 
     return this.transitionState({
