@@ -409,14 +409,10 @@ function AppContent() {
     <ProtectedRoute>
       <CommandPalette />
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-        <div className="flex h-screen w-full">
-          {/* Desktop Sidebar */}
-          {!isMobileChat && !isMobile && <AppSidebar />}
-          
-          {/* Main content container */}
-          <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
-            {/* Desktop sidebar toggle + workspace info */}
-            {!isHelpDesk && !isMobile && (
+        <div className="flex flex-col h-screen w-full">
+          {/* Header + Tabs Navigation (stacked vertically) */}
+          {!isHelpDesk && !isMobile && (
+            <>
               <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -428,20 +424,29 @@ function AppContent() {
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Demo Banner - positioned to account for fixed header (hidden on mobile) */}
-            {!isMobile && <DemoBanner />}
+              <WorkspaceTabsNav />
+            </>
+          )}
+          
+          {/* Main content with sidebar */}
+          <div className="flex flex-1 min-h-0 w-full overflow-hidden">
+            {/* Desktop Sidebar */}
+            {!isMobileChat && !isMobile && <AppSidebar />}
+            
+            {/* Main content container */}
+            <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
+              {/* Demo Banner - positioned to account for fixed header (hidden on mobile) */}
+              {!isMobile && <DemoBanner />}
 
             {/* Compact top-right utility cluster - HIDDEN on mobile and when universal header is shown */}
             {!isMobileChat && !isHelpDesk && !isMobile && !true && (
               <AppUtilityCluster setLocation={setLocation} />
             )}
 
-            {/* Main content area */}
-            <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
-              {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
-              {!isMobileChat && !isHelpDesk && !isMobile && false && <PageBreadcrumb />}
+              {/* Main content area */}
+              <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
+                {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
+                {!isMobileChat && !isHelpDesk && !isMobile && false && <PageBreadcrumb />}
               
               <Switch>
                 <Route path="/" component={Dashboard} />
@@ -580,7 +585,8 @@ function AppContent() {
                 
                 <Route component={NotFound} />
               </Switch>
-            </main>
+              </main>
+            </div>
           </div>
         </div>
       </SidebarProvider>
