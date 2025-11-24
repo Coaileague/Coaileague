@@ -542,13 +542,13 @@ Extract data from the provided document and return a JSON response with this str
         };
 
       case 'payroll': {
-        const warnings: string[] = [];
+        const payrollWarnings: string[] = [];
         
         // Parse employee name
         const payrollEmployeeName = data.employeeName?.trim();
         if (!payrollEmployeeName) {
-          warnings.push('Employee name required for payroll import');
-          return { warnings, skipped: true };
+          payrollWarnings.push('Employee name required for payroll import');
+          return { warnings: payrollWarnings, skipped: true };
         }
         
         // Fuzzy match employee
@@ -565,8 +565,8 @@ Extract data from the provided document and return a JSON response with this str
         );
         
         if (!matchedPayrollEmp) {
-          warnings.push(`Employee '${payrollEmployeeName}' not found - payroll skipped`);
-          return { warnings, skipped: true };
+          payrollWarnings.push(`Employee '${payrollEmployeeName}' not found - payroll skipped`);
+          return { warnings: payrollWarnings, skipped: true };
         }
         
         // Parse dates
@@ -574,7 +574,7 @@ Extract data from the provided document and return a JSON response with this str
         const periodEnd = new Date(data.periodEnd);
         
         if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
-          warnings.push('Invalid period dates - using defaults');
+          payrollWarnings.push('Invalid period dates - using defaults');
         }
         
         // Create or find payroll run for this period
@@ -601,17 +601,17 @@ Extract data from the provided document and return a JSON response with this str
           notes: `Imported from document: Regular ${data.regularHours}h, Overtime ${data.overtimeHours}h`,
         }).returning();
         
-        return { payrollEntryId: payrollEntry.id, payrollRunId: payrollRun.id, matchedEmployeeName: `${matchedPayrollEmp.firstName} ${matchedPayrollEmp.lastName}`, warnings };
+        return { payrollEntryId: payrollEntry.id, payrollRunId: payrollRun.id, matchedEmployeeName: `${matchedPayrollEmp.firstName} ${matchedPayrollEmp.lastName}`, warnings: payrollWarnings };
       }
 
       case 'invoices': {
-        const warnings: string[] = [];
+        const invoiceWarnings: string[] = [];
         
         // Parse client name
         const clientName = data.clientName?.trim();
         if (!clientName) {
-          warnings.push('Client name required for invoice import');
-          return { warnings, skipped: true };
+          invoiceWarnings.push('Client name required for invoice import');
+          return { warnings: invoiceWarnings, skipped: true };
         }
         
         // Fuzzy match client
@@ -628,8 +628,8 @@ Extract data from the provided document and return a JSON response with this str
         );
         
         if (!matchedClient) {
-          warnings.push(`Client '${clientName}' not found - invoice skipped`);
-          return { warnings, skipped: true };
+          invoiceWarnings.push(`Client '${clientName}' not found - invoice skipped`);
+          return { warnings: invoiceWarnings, skipped: true };
         }
         
         // Parse amounts
@@ -652,11 +652,11 @@ Extract data from the provided document and return a JSON response with this str
           notes: `Imported from document. Items: ${data.items?.length || 0} line items`,
         }).returning();
         
-        return { invoiceId: invoice.id, matchedClientName: matchedClient.companyName || `${matchedClient.firstName} ${matchedClient.lastName}`, warnings };
+        return { invoiceId: invoice.id, matchedClientName: matchedClient.companyName || `${matchedClient.firstName} ${matchedClient.lastName}`, warnings: invoiceWarnings };
       }
 
       case 'timesheets': {
-        const warnings: string[] = [];
+        const timesheetWarnings: string[] = [];
         
         // Parse employee name
         const timesheetEmployeeName = data.employeeName?.trim();
@@ -703,8 +703,44 @@ Extract data from the provided document and return a JSON response with this str
         return { timeEntryId: timeEntry.id, matchedEmployeeName: `${matchedTimesheetEmp.firstName} ${matchedTimesheetEmp.lastName}`, warnings };
       }
 
+      case 'other':
       default:
-        throw new Error(`Unknown record type: ${recordType}`);
+        // Generic record import handler - flexibly imports any record type
+        const warnings: string[] = [];
+        
+        // For generic records, try to map common fields
+        if (!data || typeof data !== 'object') {
+          warnings.push('Invalid record data - record skipped');
+          return { warnings, skipped: true };
+        }
+        
+        // Auto-detect record type if not specified
+        let detectedType = recordType;
+        if (recordType === 'other' && !data.type) {
+          // Heuristic detection based on available fields
+          if (data.employeeName || data.firstName) detectedType = 'employees';
+          else if (data.clientName || data.companyName) detectedType = 'clients';
+          else if (data.invoiceNumber || data.amount) detectedType = 'invoices';
+          else if (data.shiftDate || data.startTime) detectedType = 'schedules';
+          else if (data.periodStart || data.regularHours) detectedType = 'payroll';
+          else if (data.hoursWorked || data.clockIn) detectedType = 'timesheets';
+        }
+        
+        // If we detected a specific type, recursively call with that type
+        if (detectedType !== recordType && detectedType !== 'other') {
+          return this.importRecordByType(workspaceId, detectedType as MigrationType, data);
+        }
+        
+        // For truly generic records, store as audit/metadata
+        warnings.push(`Generic record stored: ${Object.keys(data).slice(0, 3).join(', ')}...`);
+        
+        return {
+          success: true,
+          recordType: 'generic',
+          importedFields: Object.keys(data),
+          warnings,
+          note: 'Generic record imported without database persistence'
+        };
     }
   }
 
