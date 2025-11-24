@@ -58,7 +58,8 @@ export async function getWorkspaceJobs(workspaceId: string): Promise<JobInfo[]> 
     .from(employees)
     .where(eq(employees.workspaceId, workspaceId));
 
-  const uniqueRoles = [...new Set(allEmployees.map(e => e.role).filter(Boolean))];
+  const rolesArray = allEmployees.map(e => e.role).filter((r): r is string => Boolean(r));
+  const uniqueRoles = Array.from(new Set(rolesArray));
   const jobs: JobInfo[] = [];
 
   for (const role of uniqueRoles) {
