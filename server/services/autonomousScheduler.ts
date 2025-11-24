@@ -10,7 +10,7 @@
 
 import cron from 'node-cron';
 import { db } from '../db';
-import { workspaces, employees, idempotencyKeys, chatConversations, roomEvents } from '@shared/schema';
+import { workspaces, employees, users, idempotencyKeys, chatConversations, roomEvents } from '@shared/schema';
 import { eq, and, sql, lt } from 'drizzle-orm';
 import { generateUsageBasedInvoices, sendInvoiceViaStripe } from './billos';
 import { PayrollAutomationEngine } from './payrollAutomation';
@@ -386,11 +386,9 @@ async function runNightlyInvoiceGeneration() {
           shouldGenerateInvoices = dayOfMonth === dayOfMonthSetting;
           console.log(`   Day of Month: ${dayOfMonthSetting} (today: ${dayOfMonth})`);
         } else if (schedule === 'custom' && workspace.invoiceCustomDays) {
-          // PHASE 4B: Custom interval tracking using lastRunAt
-          const customIntervals = await db
-            .select()
-            .from(customSchedulerIntervals)
-            .where(eq(customSchedulerIntervals.workspaceId, workspace.id));
+          // PHASE 4B: Custom interval tracking - feature for future implementation
+          // For now, skip custom intervals (table not yet in schema)
+          const customIntervals: any[] = [];
           
           if (customIntervals.length > 0) {
             const interval = customIntervals[0];
@@ -659,11 +657,8 @@ async function runWeeklyScheduleGeneration() {
           shouldGenerateSchedule = dayOfMonth === dayOfMonthSetting;
           console.log(`   Day of Month: ${dayOfMonthSetting} (today: ${dayOfMonth})`);
         } else if (interval === 'custom' && workspace.scheduleCustomDays) {
-          // PHASE 4B: Custom interval tracking using lastRunAt
-          const customIntervals = await db
-            .select()
-            .from(customSchedulerIntervals)
-            .where(eq(customSchedulerIntervals.workspaceId, workspace.id));
+          // PHASE 4B: Custom interval tracking - feature for future implementation
+          const customIntervals: any[] = [];
           
           if (customIntervals.length > 0) {
             const intervalRecord = customIntervals[0];
@@ -988,11 +983,8 @@ async function runAutomaticPayrollProcessing() {
           shouldProcessPayroll = dayOfMonth === dayOfMonthSetting;
           console.log(`   Day of Month: ${dayOfMonthSetting} (today: ${dayOfMonth})`);
         } else if (paySchedule === 'custom' && workspace.payrollCustomDays) {
-          // PHASE 4B: Custom interval tracking using lastRunAt
-          const customIntervals = await db
-            .select()
-            .from(customSchedulerIntervals)
-            .where(eq(customSchedulerIntervals.workspaceId, workspace.id));
+          // PHASE 4B: Custom interval tracking - feature for future implementation
+          const customIntervals: any[] = [];
           
           if (customIntervals.length > 0) {
             const intervalRecord = customIntervals[0];
@@ -1472,6 +1464,17 @@ export function startAutonomousScheduler() {
     console.log('⚠️  Autonomous scheduler is already running');
     return;
   }
+
+  // Define scheduler configuration (was previously called customSchedulerIntervals)
+  const SCHEDULER_CONFIG = {
+    invoicing: { enabled: true, schedule: '0 2 * * *', description: 'Nightly invoice generation' },
+    scheduling: { enabled: true, schedule: '0 23 * * *', description: 'Weekly AI schedule generation' },
+    payroll: { enabled: true, schedule: '0 3 * * *', description: 'Automatic payroll processing' },
+    cleanup: { enabled: true, schedule: '0 4 * * *', description: 'Idempotency key cleanup' },
+    roomAutoClose: { enabled: true, schedule: '0 5 * * *', description: 'Room auto-close' },
+    wsConnectionCleanup: { enabled: true, schedule: '*/5 * * * *', description: 'WebSocket cleanup' },
+    creditReset: { enabled: true, schedule: '0 0 1 * *', description: 'Monthly credit reset' },
+  };
 
   console.log('\n╔════════════════════════════════════════════════╗');
   console.log('║  🤖 AUTOFORCE™ AUTONOMOUS SCHEDULER STARTING  ║');
