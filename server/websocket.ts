@@ -670,6 +670,18 @@ export function setupWebSocket(server: Server) {
                   userRoleInfo = 'guest/customer';
                 }
               }
+              
+              // =========================================================================
+              // SECURITY: Populate server-derived authentication context
+              // This binds the user session to the WebSocket for /verify and /resetpass
+              // =========================================================================
+              ws.serverAuth = {
+                userId: payload.userId,
+                workspaceId: conversation.workspaceId || '',
+                role: platformRole || 'user',
+                sessionId: ws.sessionId!,
+                authenticatedAt: new Date(),
+              };
             }
 
             // RATE LIMITING: Track connection (enforce 3 concurrent connections max)
