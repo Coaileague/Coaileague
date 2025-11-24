@@ -2,6 +2,7 @@
 // For non-technical support staff to help customers
 
 import { eq, like, or, desc, and, isNull, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { db } from "./db";
 import {
   workspaces,
@@ -13,6 +14,7 @@ import {
   timeEntries,
   shifts,
   clients,
+  systemAuditLogs,
   type Workspace,
   type User,
   type Employee,
@@ -22,6 +24,7 @@ import {
   type TimeEntry,
   type Shift,
 } from "@shared/schema";
+import { getUncachableResendClient } from "./email";
 
 // ============================================================================
 // Customer Search & Discovery
@@ -357,18 +360,26 @@ export async function sendPasswordResetEmail(
 
     const resetUrl = `${process.env.APP_URL || 'https://app.replit.dev'}/reset-password?token=${resetToken}`;
     
-    const emailSent = await sendEmailViaResend({
-      to: user.email,
-      subject: 'Password Reset Request',
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 24 hours.</p>`,
-    }).catch(() => false);
+    try {
+      const { client, fromEmail } = await getUncachableResendClient();
+      await client.emails.send({
+        from: fromEmail || 'noreply@resend.dev',
+        to: user.email,
+        subject: 'Password Reset Request',
+        html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 24 hours.</p>`,
+      });
 
-    return {
-      success: emailSent,
-      message: emailSent 
-        ? `Password reset email sent to ${user.email}`
-        : 'Failed to send reset email',
-    };
+      return {
+        success: true,
+        message: `Password reset email sent to ${user.email}`,
+      };
+    } catch (emailError) {
+      console.error('[Admin] Email send error:', emailError);
+      return {
+        success: false,
+        message: 'Failed to send reset email via email service',
+      };
+    }
   } catch (error) {
     console.error('[Admin] Password reset error:', error);
     return {
