@@ -715,15 +715,15 @@ Extract data from the provided document and return a JSON response with this str
         }
         
         // Auto-detect record type if not specified
-        let detectedType = recordType;
+        let detectedType: MigrationType = recordType;
         if (recordType === 'other' && !data.type) {
           // Heuristic detection based on available fields
-          if (data.employeeName || data.firstName) detectedType = 'employees';
-          else if (data.clientName || data.companyName) detectedType = 'clients';
-          else if (data.invoiceNumber || data.amount) detectedType = 'invoices';
-          else if (data.shiftDate || data.startTime) detectedType = 'schedules';
-          else if (data.periodStart || data.regularHours) detectedType = 'payroll';
-          else if (data.hoursWorked || data.clockIn) detectedType = 'timesheets';
+          if (data.employeeName || data.firstName) detectedType = 'employees' as MigrationType;
+          else if (data.clientName || data.companyName) detectedType = 'clients' as MigrationType;
+          else if (data.invoiceNumber || data.amount) detectedType = 'invoices' as MigrationType;
+          else if (data.shiftDate || data.startTime) detectedType = 'schedules' as MigrationType;
+          else if (data.periodStart || data.regularHours) detectedType = 'payroll' as MigrationType;
+          else if (data.hoursWorked || data.clockIn) detectedType = 'timesheets' as MigrationType;
         }
         
         // If we detected a specific type, recursively call with that type
