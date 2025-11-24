@@ -259,7 +259,7 @@ export class EmailService {
           errorMessage: errorMessage || null,
           sentAt: status === 'sent' ? new Date() : null,
         })
-        .where(db.eq(emailEvents.id, eventId));
+        .where(eq(emailEvents.id, eventId));
     } catch (error: any) {
       console.error('[EmailService] Failed to update email event:', error.message);
     }
@@ -483,6 +483,27 @@ export class EmailService {
       'manager_onboarding',
       workspaceId,
       managerId
+    );
+  }
+  /**
+   * Send custom email (for rule engine and automation workflows)
+   * Public method for external use
+   */
+  async sendCustomEmail(
+    to: string,
+    subject: string,
+    html: string,
+    emailType?: string,
+    workspaceId?: string,
+    userId?: string
+  ): Promise<EmailResult> {
+    return this.sendEmail(
+      to,
+      subject,
+      html,
+      emailType || 'custom_email',
+      workspaceId,
+      userId
     );
   }
 }

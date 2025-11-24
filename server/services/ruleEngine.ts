@@ -215,7 +215,7 @@ export class RuleEngine {
         case "send_email":
           // Send email via EmailService
           try {
-            const emailResult = await emailService.sendEmail(
+            const emailResult = await emailService.sendCustomEmail(
               action.params.to || action.params.recipientEmail,
               action.params.subject || 'Rule Alert',
               action.params.html || `<p>${action.params.message || 'An automated alert from your business rules'}</p>`,
