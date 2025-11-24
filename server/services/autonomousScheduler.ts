@@ -28,6 +28,7 @@ import { createNotification } from './notificationService';
 import { withCredits } from './billing/creditWrapper';
 import { sendMonitoringAlert } from './externalMonitoring';
 import { checkDatabase, checkChatWebSocket, checkStripe } from './healthCheck';
+import { checkExpiringCertifications } from './complianceAlertService';
 
 // ============================================================================
 // IDEMPOTENCY FINGERPRINTING
@@ -1550,6 +1551,15 @@ export function startAutonomousScheduler() {
     console.log(`   ${SCHEDULER_CONFIG.creditReset.description}\n`);
   }
 
+  // Compliance Alert Job - Daily at 8 AM
+  cron.schedule('0 8 * * *', () => {
+    console.log(`🕐 [CRON EXECUTING] Compliance check triggered at ${new Date().toISOString()}`);
+    checkExpiringCertifications().catch(err => console.error('Compliance check error:', err));
+  });
+  console.log('✅ Compliance Alert Automation:');
+  console.log('   Schedule: 0 8 * * * (daily 8 AM)');
+  console.log('   Alerts HR 30 days before certification expiry\n');
+
   isSchedulerRunning = true;
 
   console.log('╔════════════════════════════════════════════════╗');
@@ -1567,5 +1577,6 @@ export const manualTriggers = {
   cleanup: runIdempotencyKeyCleanup,
   roomAutoClose: runRoomAutoClose,
   wsConnectionCleanup: runWebSocketConnectionCleanup,
+  compliance: checkExpiringCertifications,
   creditReset: resetMonthlyCredits,
 };
