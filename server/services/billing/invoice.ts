@@ -229,7 +229,9 @@ export class InvoiceService {
     // Create line items
     const lineItems: InvoiceLineItemInput[] = [];
 
-    for (const [featureKey, data] of featureMap.entries()) {
+    const entries = Array.from(featureMap.entries());
+    for (let i = 0; i < entries.length; i++) {
+      const [featureKey, data] = entries[i];
       if (data.totalCost > 0) {
         lineItems.push({
           itemType: 'usage',
@@ -246,6 +248,7 @@ export class InvoiceService {
         });
       }
     }
+      }
 
     return lineItems;
   }

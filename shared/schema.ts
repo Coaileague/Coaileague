@@ -11910,3 +11910,144 @@ export const insertEmailEventSchema = createInsertSchema(emailEvents).omit({
 
 export type InsertEmailEvent = z.infer<typeof insertEmailEventSchema>;
 export type EmailEvent = typeof emailEvents.$inferSelect;
+
+// ============================================================================
+// SUPPORT TICKET ESCALATION TRACKING (NEW - Tier 1 Critical Fix #5)
+// ============================================================================
+
+export const supportTicketEscalations = pgTable(
+  "support_tickets_escalation",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    supportTicketId: varchar("support_ticket_id").notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+
+    // Escalation details
+    escalationLevel: integer("escalation_level").default(1), // 1-3 (tier 1, tier 2, tier 3)
+    escalationReason: text("escalation_reason").notNull(),
+    escalationNotes: text("escalation_notes"),
+
+    // Assignment
+    escalatedTo: varchar("escalated_to").references(() => users.id, { onDelete: 'set null' }),
+    escalatedBy: varchar("escalated_by").references(() => users.id, { onDelete: 'set null' }),
+
+    // Status
+    status: varchar("status").notNull().default('open'), // 'open', 'in_progress', 'resolved', 'closed'
+    resolvedAt: timestamp("resolved_at"),
+    resolutionNotes: text("resolution_notes"),
+
+    // Timing
+    escalatedAt: timestamp("escalated_at").defaultNow(),
+    targetResolutionTime: timestamp("target_resolution_time"), // SLA compliance
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("support_ticket_escalation_ticket_idx").on(table.supportTicketId),
+    index("support_ticket_escalation_workspace_idx").on(table.workspaceId),
+    index("support_ticket_escalation_status_idx").on(table.status),
+    index("support_ticket_escalation_level_idx").on(table.escalationLevel),
+  ]
+);
+
+export const insertSupportTicketEscalationSchema = createInsertSchema(supportTicketEscalations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSupportTicketEscalation = z.infer<typeof insertSupportTicketEscalationSchema>;
+export type SupportTicketEscalation = typeof supportTicketEscalations.$inferSelect;
+
+// ============================================================================
+// SUPPORT TICKET HISTORY AUDIT TRAIL (NEW - Tier 1 Critical Fix #5)
+// ============================================================================
+
+export const supportTicketHistory = pgTable(
+  "support_ticket_history",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    supportTicketId: varchar("support_ticket_id").notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+
+    // Change tracking
+    changeType: varchar("change_type").notNull(), // 'status_change', 'assignment_change', 'note_added', 'priority_change', 'category_change'
+    previousValue: text("previous_value"),
+    newValue: text("new_value"),
+    changeDescription: text("change_description"),
+
+    // Actor
+    changedBy: varchar("changed_by").references(() => users.id, { onDelete: 'set null' }),
+    changedByName: varchar("changed_by_name"),
+    changedByRole: varchar("changed_by_role"), // 'customer', 'admin', 'support', 'system'
+
+    // Context
+    changeReason: text("change_reason"),
+    metadata: jsonb("metadata"), // Additional context
+
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("support_ticket_history_ticket_idx").on(table.supportTicketId),
+    index("support_ticket_history_workspace_idx").on(table.workspaceId),
+    index("support_ticket_history_type_idx").on(table.changeType),
+    index("support_ticket_history_created_idx").on(table.createdAt),
+  ]
+);
+
+export const insertSupportTicketHistorySchema = createInsertSchema(supportTicketHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSupportTicketHistory = z.infer<typeof insertSupportTicketHistorySchema>;
+export type SupportTicketHistory = typeof supportTicketHistory.$inferSelect;
+
+// ============================================================================
+// INVOICE ADJUSTMENTS TABLE (NEW - Tier 1 Critical Fix #2)
+// ============================================================================
+
+export const invoiceAdjustments = pgTable(
+  "invoice_adjustments",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    invoiceId: varchar("invoice_id").notNull().references(() => subscriptionInvoices.id, { onDelete: 'cascade' }),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+
+    // Adjustment details
+    adjustmentType: varchar("adjustment_type").notNull(), // 'credit', 'discount', 'correction', 'overage_waiver', 'proration'
+    description: text("description").notNull(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+
+    // Reasoning
+    reason: text("reason"),
+    supportTicketId: varchar("support_ticket_id").references(() => supportTickets.id),
+
+    // Authorization
+    createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: 'set null' }),
+    approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+    approvedAt: timestamp("approved_at"),
+    status: varchar("status").notNull().default('pending'), // 'pending', 'approved', 'applied', 'rejected'
+
+    // Metadata
+    metadata: jsonb("metadata"),
+
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("invoice_adjustments_invoice_idx").on(table.invoiceId),
+    index("invoice_adjustments_workspace_idx").on(table.workspaceId),
+    index("invoice_adjustments_type_idx").on(table.adjustmentType),
+    index("invoice_adjustments_status_idx").on(table.status),
+  ]
+);
+
+export const insertInvoiceAdjustmentSchema = createInsertSchema(invoiceAdjustments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInvoiceAdjustment = z.infer<typeof insertInvoiceAdjustmentSchema>;
+export type InvoiceAdjustment = typeof invoiceAdjustments.$inferSelect;
