@@ -133,14 +133,67 @@ export class ComplianceMonitoringService {
    * Check certification/license expiration
    * Flag certifications expiring within 30 days
    * 
-   * NOTE: Certification tracking currently disabled until employee metadata system is enhanced.
-   * This prevents false positives. Will be enabled when certification data is available.
+   * ENABLED: Now checks employee certifications stored in database
    */
   private static async checkCertificationCompliance(workspaceId: string): Promise<ComplianceIssue[]> {
     const issues: ComplianceIssue[] = [];
 
-    // FUTURE: Add certification tracking to employee schema or separate table
-    // For now, skip to avoid false positives
+    try {
+      // Get all employees with expiring certifications
+      const today = new Date();
+      const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const allEmployees = await db.select()
+        .from(employees)
+        .where(eq(employees.workspaceId, workspaceId));
+
+      for (const emp of allEmployees) {
+        // Parse certifications from employee metadata if available
+        // For now, check for expiration date fields in database
+        if (emp.certificationExpiresAt) {
+          const expirationDate = new Date(emp.certificationExpiresAt);
+          
+          if (expirationDate < thirtyDaysFromNow && expirationDate > today) {
+            issues.push({
+              id: `cert-expiring-${emp.id}-${Date.now()}`,
+              type: 'CERTIFICATION',
+              severity: 'HIGH',
+              title: `Certification Expiring Soon: ${emp.firstName} ${emp.lastName}`,
+              description: `Employee certification expires on ${expirationDate.toDateString()}. Renewal or recertification may be required.`,
+              affectedEntity: {
+                type: 'employee',
+                id: emp.id,
+                name: `${emp.firstName} ${emp.lastName}`,
+              },
+              regulation: 'State/Federal Certification Requirements',
+              dueDate: expirationDate,
+              detected_at: new Date(),
+              resolution: 'Notify employee of expiring certification and provide recertification options.',
+            });
+          } else if (expirationDate < today) {
+            issues.push({
+              id: `cert-expired-${emp.id}-${Date.now()}`,
+              type: 'CERTIFICATION',
+              severity: 'CRITICAL',
+              title: `Certification EXPIRED: ${emp.firstName} ${emp.lastName}`,
+              description: `Employee certification expired on ${expirationDate.toDateString()}. Immediate renewal required before continued work.`,
+              affectedEntity: {
+                type: 'employee',
+                id: emp.id,
+                name: `${emp.firstName} ${emp.lastName}`,
+              },
+              regulation: 'State/Federal Certification Requirements',
+              dueDate: expirationDate,
+              detected_at: new Date(),
+              resolution: 'URGENT: Suspend work assignments until certification is renewed.',
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[ComplianceMonitoring] Error checking certifications:', error);
+      // Non-critical - continue with other checks
+    }
 
     return issues;
   }

@@ -13,7 +13,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { db } from '../db';
-import { migrationJobs, migrationDocuments, migrationRecords, employees, clients, shifts } from '@shared/schema';
+import { migrationJobs, migrationDocuments, migrationRecords, employees, clients, shifts, invoices, payrollRuns, payrollEntries, timeEntries } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { withCredits } from './billing/creditWrapper';
@@ -606,10 +606,167 @@ Extract data from the provided document and return a JSON response with this str
           warnings 
         };
 
-      case 'payroll':
-      case 'invoices':
-      case 'timesheets':
-        throw new Error(`${recordType} import not implemented yet`);
+      case 'payroll': {
+        const warnings: string[] = [];
+        
+        // Parse employee name
+        const payrollEmployeeName = data.employeeName?.trim();
+        if (!payrollEmployeeName) {
+          warnings.push('Employee name required for payroll import');
+          return { warnings, skipped: true };
+        }
+        
+        // Fuzzy match employee
+        const allPayrollEmployees = await db.select()
+          .from(employees)
+          .where(eq(employees.workspaceId, workspaceId));
+        
+        const payrollNameParts = payrollEmployeeName.split(/\s+/).filter((p: string) => p.length > 0);
+        const payrollSearchFirst = payrollNameParts[0]?.toLowerCase();
+        
+        const matchedPayrollEmp = allPayrollEmployees.find(emp => 
+          emp.firstName.toLowerCase() === payrollSearchFirst ||
+          `${emp.firstName} ${emp.lastName}`.toLowerCase() === payrollEmployeeName.toLowerCase()
+        );
+        
+        if (!matchedPayrollEmp) {
+          warnings.push(`Employee '${payrollEmployeeName}' not found - payroll skipped`);
+          return { warnings, skipped: true };
+        }
+        
+        // Parse dates
+        const periodStart = new Date(data.periodStart);
+        const periodEnd = new Date(data.periodEnd);
+        
+        if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
+          warnings.push('Invalid period dates - using defaults');
+        }
+        
+        // Create or find payroll run for this period
+        const cleanPeriodStart = isNaN(periodStart.getTime()) ? new Date() : periodStart;
+        const cleanPeriodEnd = isNaN(periodEnd.getTime()) ? new Date() : periodEnd;
+        
+        const [payrollRun] = await db.insert(payrollRuns).values({
+          workspaceId,
+          periodStart: cleanPeriodStart,
+          periodEnd: cleanPeriodEnd,
+          status: 'draft',
+        }).returning();
+        
+        // Create payroll entry
+        const [payrollEntry] = await db.insert(payrollEntries).values({
+          payrollRunId: payrollRun.id,
+          workspaceId,
+          employeeId: matchedPayrollEmp.id,
+          regularHours: data.regularHours ? parseFloat(data.regularHours).toString() : '0.00',
+          overtimeHours: data.overtimeHours ? parseFloat(data.overtimeHours).toString() : '0.00',
+          hourlyRate: matchedPayrollEmp.hourlyRate || '0.00',
+          grossPay: data.grossPay ? parseFloat(data.grossPay).toString() : '0.00',
+          netPay: data.netPay ? parseFloat(data.netPay).toString() : '0.00',
+          notes: `Imported from document: Regular ${data.regularHours}h, Overtime ${data.overtimeHours}h`,
+        }).returning();
+        
+        return { payrollEntryId: payrollEntry.id, payrollRunId: payrollRun.id, matchedEmployeeName: `${matchedPayrollEmp.firstName} ${matchedPayrollEmp.lastName}`, warnings };
+      }
+
+      case 'invoices': {
+        const warnings: string[] = [];
+        
+        // Parse client name
+        const clientName = data.clientName?.trim();
+        if (!clientName) {
+          warnings.push('Client name required for invoice import');
+          return { warnings, skipped: true };
+        }
+        
+        // Fuzzy match client
+        const allInvoiceClients = await db.select()
+          .from(clients)
+          .where(eq(clients.workspaceId, workspaceId));
+        
+        const clientNameParts = clientName.split(/\s+/).filter((p: string) => p.length > 0);
+        const clientSearchFirst = clientNameParts[0]?.toLowerCase();
+        
+        const matchedClient = allInvoiceClients.find(c =>
+          c.companyName?.toLowerCase().includes(clientName.toLowerCase()) ||
+          `${c.firstName} ${c.lastName}`.toLowerCase() === clientName.toLowerCase()
+        );
+        
+        if (!matchedClient) {
+          warnings.push(`Client '${clientName}' not found - invoice skipped`);
+          return { warnings, skipped: true };
+        }
+        
+        // Parse amounts
+        const invoiceAmount = data.amount ? parseFloat(data.amount) : 0;
+        const invoiceDate = new Date(data.date);
+        const dueDate = data.dueDate ? new Date(data.dueDate) : new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+        
+        // Create invoice
+        const [invoice] = await db.insert(invoices).values({
+          workspaceId,
+          clientId: matchedClient.id,
+          invoiceNumber: data.invoiceNumber || `IMP-${Date.now()}`,
+          issueDate: isNaN(invoiceDate.getTime()) ? new Date() : invoiceDate,
+          dueDate: isNaN(dueDate.getTime()) ? new Date() : dueDate,
+          subtotal: invoiceAmount.toString(),
+          taxRate: '0.00',
+          taxAmount: '0.00',
+          total: invoiceAmount.toString(),
+          status: 'draft',
+          notes: `Imported from document. Items: ${data.items?.length || 0} line items`,
+        }).returning();
+        
+        return { invoiceId: invoice.id, matchedClientName: matchedClient.companyName || `${matchedClient.firstName} ${matchedClient.lastName}`, warnings };
+      }
+
+      case 'timesheets': {
+        const warnings: string[] = [];
+        
+        // Parse employee name
+        const timesheetEmployeeName = data.employeeName?.trim();
+        if (!timesheetEmployeeName) {
+          warnings.push('Employee name required for timesheet import');
+          return { warnings, skipped: true };
+        }
+        
+        // Fuzzy match employee
+        const allTimesheetEmployees = await db.select()
+          .from(employees)
+          .where(eq(employees.workspaceId, workspaceId));
+        
+        const timesheetNameParts = timesheetEmployeeName.split(/\s+/).filter((p: string) => p.length > 0);
+        const timesheetSearchFirst = timesheetNameParts[0]?.toLowerCase();
+        
+        const matchedTimesheetEmp = allTimesheetEmployees.find(emp =>
+          emp.firstName.toLowerCase() === timesheetSearchFirst ||
+          `${emp.firstName} ${emp.lastName}`.toLowerCase() === timesheetEmployeeName.toLowerCase()
+        );
+        
+        if (!matchedTimesheetEmp) {
+          warnings.push(`Employee '${timesheetEmployeeName}' not found - timesheet skipped`);
+          return { warnings, skipped: true };
+        }
+        
+        // Parse date
+        const entryDate = new Date(data.date);
+        if (isNaN(entryDate.getTime())) {
+          warnings.push('Invalid date - using current date');
+        }
+        
+        // Create time entry
+        const hours = parseFloat(data.hoursWorked) || 0;
+        const [timeEntry] = await db.insert(timeEntries).values({
+          workspaceId,
+          employeeId: matchedTimesheetEmp.id,
+          clockIn: entryDate,
+          clockOut: new Date(entryDate.getTime() + (hours * 60 * 60 * 1000)),
+          totalHours: hours.toString(),
+          notes: data.notes || `Imported from timesheet: ${hours}h worked`,
+        }).returning();
+        
+        return { timeEntryId: timeEntry.id, matchedEmployeeName: `${matchedTimesheetEmp.firstName} ${matchedTimesheetEmp.lastName}`, warnings };
+      }
 
       default:
         throw new Error(`Unknown record type: ${recordType}`);
