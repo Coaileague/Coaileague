@@ -604,3 +604,16 @@ export async function createSystemNotification(
     createdBy: 'system',
   });
 }
+
+/**
+ * Send welcome notification when a new organization is created
+ * NOTE: Onboarding automation already handles welcome emails
+ * This is a placeholder for future in-app welcome notification
+ */
+export async function sendWelcomeOrgNotification(
+  workspaceId: string,
+  userId: string
+) {
+  console.log(`[Notifications] Welcome org notification triggered for workspace ${workspaceId}, user ${userId}`);
+  return Promise.resolve();
+}
