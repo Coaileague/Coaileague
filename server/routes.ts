@@ -27615,6 +27615,17 @@ app.post("/api/ai-brain/guardrails/validate", requireAuth, readLimiter, async (r
 
 app.get("/api/ai-brain/guardrails/config", requireAuth, requireManager, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
+    const workspaceId = req.workspaceId!;
+    
+    // Verify workspace access
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+    });
+
+    if (!workspace) {
+      return res.status(403).json({ error: "Workspace not found or access denied" });
+    }
+
     res.json({
       success: true,
       data: aiBrainConfig.guardrails,

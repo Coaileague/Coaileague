@@ -5,10 +5,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { AlertTriangle, Settings } from "lucide-react";
 
 export function GuardrailsDashboard() {
-  const { data: guardrailsConfig, isLoading } = useQuery({
+  const { data: guardrailsConfig, isLoading, error } = useQuery({
     queryKey: ["/api/ai-brain/guardrails/config"],
     queryFn: async () => {
       const response = await fetch("/api/ai-brain/guardrails/config");
+      if (!response.ok) throw new Error("Failed to fetch guardrails");
       const result = await response.json();
       return result.data;
     },
@@ -16,9 +17,19 @@ export function GuardrailsDashboard() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card data-testid="card-guardrails-loading">
         <CardContent className="pt-6">
           <p className="text-sm text-muted-foreground">Loading guardrails...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card data-testid="card-guardrails-error">
+        <CardContent className="pt-6">
+          <p className="text-sm text-destructive">Failed to load guardrails</p>
         </CardContent>
       </Card>
     );
@@ -49,7 +60,7 @@ export function GuardrailsDashboard() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card data-testid="card-guardrails-config">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -60,13 +71,13 @@ export function GuardrailsDashboard() {
         <CardContent>
           <div className="space-y-6">
             {guardrailsList.map((section) => (
-              <div key={section.category}>
+              <div key={section.category} data-testid={`section-guardrails-${section.category.toLowerCase().replace(/\s/g, "-")}`}>
                 <h3 className="font-semibold text-sm mb-3">{section.category}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {Object.entries(section.items).map(([key, value]) => {
                     if (typeof value === "object" && value !== null) {
                       return (
-                        <div key={key} className="border rounded-lg p-3">
+                        <div key={key} className="border rounded-lg p-3" data-testid={`guardrail-group-${key}`}>
                           <p className="text-xs font-medium text-muted-foreground">{key}</p>
                           <div className="mt-2 space-y-1">
                             {Object.entries(value).map(([subKey, subValue]) => (
@@ -84,9 +95,10 @@ export function GuardrailsDashboard() {
                       <div
                         key={key}
                         className="border rounded-lg p-3 flex justify-between items-center"
+                        data-testid={`guardrail-item-${key}`}
                       >
                         <span className="text-xs font-medium text-muted-foreground">{key}</span>
-                        <Badge variant="outline">
+                        <Badge variant="outline" data-testid={`badge-${key}`}>
                           {typeof value === "number" ? (
                             key.includes("Bytes")
                               ? formatBytes(value)
@@ -103,7 +115,7 @@ export function GuardrailsDashboard() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-testid="card-guardrails-status">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" />
@@ -112,19 +124,19 @@ export function GuardrailsDashboard() {
         </CardHeader>
         <CardContent>
           <div className="text-sm space-y-2">
-            <div className="flex justify-between">
+            <div className="flex justify-between" data-testid="status-extraction">
               <span>Document Extraction:</span>
               <Badge variant="outline">Active</Badge>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between" data-testid="status-migration">
               <span>Data Migration:</span>
               <Badge variant="outline">Active</Badge>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between" data-testid="status-detection">
               <span>Issue Detection:</span>
               <Badge variant="outline">Active</Badge>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between" data-testid="status-cost">
               <span>Cost Control:</span>
               <Badge variant="outline">Active</Badge>
             </div>

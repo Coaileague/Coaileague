@@ -487,6 +487,7 @@ function AppContent() {
                 <Route path="/audit-logs" component={AuditLogs} />
                 <Route path="/automation-control" component={AutomationControl} />
                 <Route path="/ai/command-center" component={AICommandCenter} />
+                <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/billing" component={Billing} />
                 <Route path="/usage" component={UsageDashboard} />
                 <Route path="/integrations" component={IntegrationsPage} />

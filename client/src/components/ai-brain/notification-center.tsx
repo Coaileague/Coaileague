@@ -26,12 +26,13 @@ export function NotificationCenter({ userId, workspaceId }: NotificationCenterPr
   const [filter, setFilter] = useState<"all" | "unread">("unread");
   const { toast } = useToast();
 
-  const { data: notifications, isLoading, refetch } = useQuery({
+  const { data: notifications, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/notifications/user", userId, filter],
     queryFn: async () => {
       const response = await fetch(
         `/api/notifications/user/${userId}?unreadOnly=${filter === "unread"}&limit=20`
       );
+      if (!response.ok) throw new Error("Failed to fetch notifications");
       const result = await response.json();
       return result.data || [];
     },
@@ -60,14 +61,14 @@ export function NotificationCenter({ userId, workspaceId }: NotificationCenterPr
   };
 
   return (
-    <Card>
+    <Card data-testid="card-notifications">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
             Notifications
           </div>
-          <Badge variant="outline">
+          <Badge variant="outline" data-testid="badge-unread-count">
             {notifications?.filter((n: Notification) => !n.read).length || 0} unread
           </Badge>
         </CardTitle>
@@ -93,6 +94,11 @@ export function NotificationCenter({ userId, workspaceId }: NotificationCenterPr
           </Button>
         </div>
 
+        {error && (
+          <p className="text-sm text-destructive text-center py-4" data-testid="error-notification-failed">
+            Failed to load notifications
+          </p>
+        )}
         {isLoading ? (
           <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
         ) : notifications?.length === 0 ? (

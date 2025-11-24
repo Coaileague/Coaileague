@@ -39,12 +39,15 @@ export function DocumentExtractionUpload() {
         fileMimeType: file.type,
       });
     },
-    onSuccess: (data) => {
-      setResults(data.data);
-      toast({
-        title: "Extraction Complete",
-        description: `Document extracted with ${Object.keys(data.data.extractedFields).length} fields`,
-      });
+    onSuccess: (response: any) => {
+      const extractedResult = response?.data as ExtractionResult;
+      if (extractedResult) {
+        setResults(extractedResult);
+        toast({
+          title: "Extraction Complete",
+          description: `Document extracted with ${Object.keys(extractedResult.extractedFields).length} fields`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({

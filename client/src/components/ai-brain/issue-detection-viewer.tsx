@@ -24,7 +24,7 @@ export function IssueDetectionViewer({
   extractedData,
   onIssuesDetected,
 }: IssueDetectionViewerProps) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["/api/ai-brain/detect-issues", documentType],
     queryFn: async () => {
       const response = await fetch("/api/ai-brain/detect-issues", {
@@ -36,6 +36,7 @@ export function IssueDetectionViewer({
           useAIAnalysis: false,
         }),
       });
+      if (!response.ok) throw new Error("Failed to detect issues");
       const result = await response.json();
       onIssuesDetected?.(result.data.issues);
       return result.data;
@@ -67,9 +68,19 @@ export function IssueDetectionViewer({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card data-testid="card-issues-loading">
         <CardContent className="pt-6">
           <p className="text-sm text-muted-foreground">Analyzing data quality...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card data-testid="card-issues-error">
+        <CardContent className="pt-6">
+          <p className="text-sm text-destructive">Failed to analyze data quality</p>
         </CardContent>
       </Card>
     );
@@ -78,7 +89,7 @@ export function IssueDetectionViewer({
   if (!data) return null;
 
   return (
-    <Card>
+    <Card data-testid="card-issues-results">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Issue Detection
