@@ -92,6 +92,8 @@ import { aiSchedulingTriggerService } from "./services/aiSchedulingTriggerServic
 import { escalationMatrixService } from "./services/escalationMatrixService";
 import { workflowStatusService } from "./services/workflowStatusService";
 import { employeePatternService } from "./services/employeePatternService";
+import { jobRetrievalService } from "./services/jobRetrievalService";
+import { helposSettingsService } from "./services/helposSettingsService";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
@@ -26738,6 +26740,113 @@ app.get("/api/breaks/compliance-report", requireAuth, requireManager, readLimite
     });
   } catch (error: any) {
     console.error('Error fetching break compliance report:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// TIER-2: JOB RETRIEVAL FOR AI SCHEDULING
+// ============================================================================
+
+app.get("/api/jobs/by-role/:role", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { role } = req.params;
+
+    const job = await jobRetrievalService.getJobByRole(workspaceId, role);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job role not found' });
+    }
+
+    res.json({ success: true, data: job });
+  } catch (error: any) {
+    console.error('Error fetching job info:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/jobs/workspace", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+
+    const jobs = await jobRetrievalService.getWorkspaceJobs(workspaceId);
+
+    res.json({ 
+      success: true, 
+      data: jobs,
+      count: jobs.length,
+    });
+  } catch (error: any) {
+    console.error('Error fetching workspace jobs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/jobs/:jobTitle/employees", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { jobTitle } = req.params;
+
+    const employees = await jobRetrievalService.getEmployeesForJob(workspaceId, decodeURIComponent(jobTitle));
+
+    res.json({ 
+      success: true, 
+      data: employees,
+      count: employees.length,
+    });
+  } catch (error: any) {
+    console.error('Error fetching employees for job:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// TIER-2: HELPOS BOT SETTINGS
+// ============================================================================
+
+app.get("/api/helpos/settings", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+
+    const settings = helposSettingsService.getHelposSettings(workspaceId);
+
+    res.json({ success: true, data: settings });
+  } catch (error: any) {
+    console.error('Error fetching HelpOS settings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/helpos/settings", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const updates = req.body;
+
+    const settings = helposSettingsService.updateHelposSettings(workspaceId, updates);
+
+    res.json({ success: true, data: settings });
+  } catch (error: any) {
+    console.error('Error updating HelpOS settings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/helpos/toggle/:enabled", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { enabled } = req.params;
+    const isEnabled = enabled === 'true';
+
+    const settings = helposSettingsService.toggleHelposBot(workspaceId, isEnabled);
+
+    res.json({ 
+      success: true, 
+      data: settings,
+      message: `HelpOS bot ${isEnabled ? 'enabled' : 'disabled'}`,
+    });
+  } catch (error: any) {
+    console.error('Error toggling HelpOS bot:', error);
     res.status(500).json({ error: error.message });
   }
 });
