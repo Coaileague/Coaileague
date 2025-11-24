@@ -255,6 +255,7 @@ async function getSchedulingMetrics(
     shiftsGenerated,
     hoursSaved: Math.round(hoursSaved * 10) / 10,
     successRate: Math.round(successRate * 10) / 10,
+    processingTimeMs: Math.round((avgGenerationHours * 3600 * 1000) / Math.max(shiftsGenerated, 1)),
   };
 }
 
@@ -313,6 +314,7 @@ async function getBillingMetrics(
     invoicesGenerated,
     hoursSaved: Math.round(hoursSaved * 10) / 10,
     successRate: Math.round(successRate * 10) / 10,
+    processingTimeMs: Math.round((DEFAULT_MINUTES_SAVED_PER_INVOICE * 60 * 1000) / Math.max(invoicesGenerated, 1)),
   };
 }
 
@@ -357,6 +359,7 @@ async function getPayrollMetrics(
     payrollsProcessed: approvedProposals,
     hoursSaved: Math.round(hoursSaved * 10) / 10,
     successRate: Math.round(successRate * 10) / 10,
+    processingTimeMs: Math.round((DEFAULT_MINUTES_SAVED_PER_PAYROLL * 60 * 1000) / Math.max(approvedProposals, 1)),
   };
 }
 

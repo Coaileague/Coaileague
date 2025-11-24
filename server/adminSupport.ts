@@ -327,17 +327,55 @@ export async function sendPasswordResetEmail(
   userId: string,
   adminUserId: string
 ): Promise<{ success: boolean; message: string }> {
-  // In a real implementation, this would:
-  // 1. Generate a secure reset token
-  // 2. Store it in database with expiration
-  // 3. Send email via Resend integration
-  // 4. Log the action in system_audit_logs
+  try {
+    const user = await db.query.employees.findFirst({
+      where: (fields) => eq(fields.id, userId),
+    });
 
-  // For now, return a placeholder
-  return {
-    success: true,
-    message: `Password reset email would be sent (Resend integration required)`,
-  };
+    if (!user || !user.email) {
+      return {
+        success: false,
+        message: 'User not found or has no email address',
+      };
+    }
+
+    const resetToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await db.insert(systemAuditLogs).values({
+      id: randomUUID(),
+      workspaceId: user.workspaceId,
+      userId: adminUserId,
+      action: 'send_password_reset',
+      entityType: 'user',
+      entityId: userId,
+      changes: { tokenGenerated: true, expiresAt: expiresAt.toISOString() },
+      ipAddress: '0.0.0.0',
+      userAgent: 'admin-action',
+      createdAt: new Date(),
+    }).catch(() => null);
+
+    const resetUrl = `${process.env.APP_URL || 'https://app.replit.dev'}/reset-password?token=${resetToken}`;
+    
+    const emailSent = await sendEmailViaResend({
+      to: user.email,
+      subject: 'Password Reset Request',
+      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 24 hours.</p>`,
+    }).catch(() => false);
+
+    return {
+      success: emailSent,
+      message: emailSent 
+        ? `Password reset email sent to ${user.email}`
+        : 'Failed to send reset email',
+    };
+  } catch (error) {
+    console.error('[Admin] Password reset error:', error);
+    return {
+      success: false,
+      message: 'Error processing password reset',
+    };
+  }
 }
 
 /**

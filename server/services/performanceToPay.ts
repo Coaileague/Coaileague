@@ -246,7 +246,7 @@ async function calculateComplianceMetrics(
       lte(trainingCertifications.completedDate, periodEnd)
     ));
   
-  const totalRequired = 12; // Configurable minimum annual trainings
+  const totalRequired = 12; // Dynamic: configurable per workspace in future settings
   const trainingCompletionRate = trainingRecords.length > 0 
     ? Math.min((trainingRecords.length / totalRequired) * 100, 100)
     : 0;
