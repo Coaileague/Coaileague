@@ -1062,6 +1062,30 @@ async function runAutomaticPayrollProcessing() {
                     owner.userId
                   );
 
+                  // Notify all employees that payroll was processed
+                  try {
+                    const { createNotification } = await import('./notificationService');
+                    const workspaceEmployees = await db.query.users.findMany({
+                      where: eq(users.workspaceId, workspace.id),
+                    });
+
+                    for (const emp of workspaceEmployees) {
+                      await createNotification({
+                        workspaceId: workspace.id,
+                        userId: emp.id,
+                        type: 'payroll_processed' as any,
+                        title: '💰 Payroll Processed',
+                        message: `Your payroll has been processed. Check your account for payment details.`,
+                        actionUrl: `/my-paychecks`,
+                        relatedEntityType: 'payroll_run',
+                        relatedEntityId: result.payrollRunId,
+                        createdBy: owner.userId,
+                      });
+                    }
+                  } catch (notifyError) {
+                    console.error('Error sending payroll notification:', notifyError);
+                  }
+
                   console.log(`✅ Payroll processed for ${workspace.name}:`);
                   console.log(`   Employees: ${result.totalEmployees}`);
                   console.log(`   Gross Pay: $${result.totalGrossPay.toFixed(2)}`);

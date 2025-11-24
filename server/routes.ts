@@ -5301,6 +5301,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const shift = await storage.createShift(validated);
       
+      // Notify assigned employees about new shift
+      try {
+        if (shift.assignedEmployeeIds && Array.isArray(shift.assignedEmployeeIds)) {
+          for (const empId of shift.assignedEmployeeIds) {
+            const empUser = await db.query.users.findFirst({
+              where: eq(users.id, empId),
+            });
+            if (empUser) {
+              await createNotification({
+                workspaceId,
+                userId: empId,
+                type: 'shift_assigned' as any,
+                title: '📅 New Shift Assigned',
+                message: `You've been assigned to a shift on ${new Date(shift.startTime).toLocaleDateString()}`,
+                actionUrl: `/schedule`,
+                relatedEntityType: 'shift',
+                relatedEntityId: shift.id,
+                createdBy: userId,
+              });
+            }
+          }
+        }
+      } catch (notifyError) {
+        console.error('Error sending shift notification:', notifyError);
+      }
+      
       // Create shift orders (post orders) if provided
       if (postOrders && Array.isArray(postOrders) && postOrders.length > 0) {
         const POST_ORDER_TEMPLATES = [
@@ -21974,6 +22000,32 @@ Return ONLY valid JSON array with this exact structure:
         complianceCategory: complianceData?.category || null,
         regulatoryReference: complianceData?.regulatoryReference || null,
       });
+
+      // Notify HR/Managers that a dispute was filed
+      try {
+        const managers = await db.query.users.findMany({
+          where: and(
+            eq(users.workspaceId, user.currentWorkspaceId),
+            inArray(users.role, ['owner', 'manager', 'hr_manager'])
+          ),
+        });
+
+        for (const manager of managers) {
+          await createNotification({
+            workspaceId: user.currentWorkspaceId,
+            userId: manager.id,
+            type: 'dispute_filed' as any,
+            title: '🚨 New Dispute Filed',
+            message: `${employee.firstName || 'Employee'} filed a dispute: "${data.title}"`,
+            actionUrl: `/disputes/${dispute.id}`,
+            relatedEntityType: 'dispute',
+            relatedEntityId: dispute.id,
+            createdBy: userId,
+          });
+        }
+      } catch (notifyError) {
+        console.error('Error sending dispute notification:', notifyError);
+      }
 
       res.json(dispute);
     } catch (error) {
