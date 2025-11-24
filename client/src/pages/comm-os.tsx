@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useModules } from "@/config/moduleConfig";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +59,9 @@ import { SupportChatroomList } from "@/components/support-chatroom-list";
 import { MessageSearch } from "@/components/message-search";
 import { WebRTCCall } from "@/components/webrtc-call";
 
-export default function AICommunications() {
+export default function Communications() {
+  const modules = useModules();
+  const module = modules.getModule('communications');
   const { user } = useAuth();
   const { toast } = useToast();
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
@@ -67,6 +70,19 @@ export default function AICommunications() {
   const [newRoomDialogOpen, setNewRoomDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<"pdf" | "html">("pdf");
+
+  if (!module?.enabled) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Module Not Available</CardTitle>
+            <CardDescription>Communications is not enabled for your subscription tier</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Check if user has any support/admin platform role
   const isSupportStaff = user?.platformRole && ['root_admin', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(user.platformRole);

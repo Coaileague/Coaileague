@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { useModules } from "@/config/moduleConfig";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -46,11 +47,26 @@ interface AiInsight {
   createdAt: string;
 }
 
-export default function AIAnalytics() {
+export default function Insights() {
+  const modules = useModules();
+  const module = modules.getModule('insights');
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [dismissingInsight, setDismissingInsight] = useState<string | null>(null);
   const [dismissReason, setDismissReason] = useState("");
   const { toast } = useToast();
+
+  if (!module?.enabled) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Module Not Available</CardTitle>
+            <CardDescription>Business Insights is not enabled for your subscription tier</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Fetch insights
   const { data: insights = [], isLoading } = useQuery<AiInsight[]>({
