@@ -133,6 +133,7 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { UniversalNavHeader } from "@/components/universal-nav-header";
 import { NotificationsCenter } from "@/components/notifications-center";
+import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 
 // Compact top-right utility cluster - Fortune 500 aesthetic
 function AppUtilityCluster({ setLocation }: any) {
