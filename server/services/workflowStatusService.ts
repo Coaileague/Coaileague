@@ -3,8 +3,8 @@
  */
 
 import { db } from "../db";
-import { employees, shifts, automationConfig } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { employees, shifts } from "@shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface ActiveWorkflow {
   id: string;
@@ -55,7 +55,7 @@ export async function getActiveWorkflows(
     .from(employees)
     .where(and(
       eq(employees.workspaceId, workspaceId),
-      (db) => db.sql`created_at > NOW() - INTERVAL '30 days'`
+      sql`${employees.createdAt} > NOW() - INTERVAL '30 days'`
     ));
 
   if (newEmployees.length > 0) {
