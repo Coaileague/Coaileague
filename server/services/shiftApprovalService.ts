@@ -18,6 +18,7 @@ export interface ShiftApprovalRequest {
 
 /**
  * Approve a shift for publishing
+ * PHASE 4A: Broadcasts real-time notification to workspace WebSocket clients
  */
 export async function approveShift(
   shiftId: string,
@@ -37,11 +38,21 @@ export async function approveShift(
   if (!result[0]) throw new Error(`Shift ${shiftId} not found`);
 
   console.log(`[SHIFT APPROVAL] Shift ${shiftId} approved by ${approvedBy}`);
+  
+  // PHASE 4A: Real-time notification broadcast
+  try {
+    const { broadcastShiftUpdate } = require('../websocket');
+    broadcastShiftUpdate(result[0].workspaceId, 'shift_updated', result[0], shiftId);
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to broadcast shift approval:', error);
+  }
+  
   return result[0];
 }
 
 /**
  * Reject a shift and optionally auto-replace it
+ * PHASE 4A: Broadcasts real-time notification to workspace WebSocket clients
  */
 export async function rejectShift(
   shiftId: string,
@@ -63,6 +74,14 @@ export async function rejectShift(
   if (!result[0]) throw new Error(`Shift ${shiftId} not found`);
 
   console.log(`[SHIFT APPROVAL] Shift ${shiftId} rejected by ${rejectedBy}: ${reason}`);
+  
+  // PHASE 4A: Real-time notification broadcast
+  try {
+    const { broadcastShiftUpdate } = require('../websocket');
+    broadcastShiftUpdate(result[0].workspaceId, 'shift_deleted', result[0], shiftId);
+  } catch (error) {
+    console.error('[NOTIFICATION ERROR] Failed to broadcast shift rejection:', error);
+  }
   
   if (autoReplace) {
     console.log(`[SHIFT APPROVAL] Auto-replacement triggered for shift ${shiftId}`);

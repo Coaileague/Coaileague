@@ -385,9 +385,23 @@ async function runNightlyInvoiceGeneration() {
           shouldGenerateInvoices = dayOfMonth === dayOfMonthSetting;
           console.log(`   Day of Month: ${dayOfMonthSetting} (today: ${dayOfMonth})`);
         } else if (schedule === 'custom' && workspace.invoiceCustomDays) {
-          // TODO: Implement custom interval tracking (needs lastRunDate in DB)
-          console.log(`   ℹ️  Custom schedule not yet implemented (${workspace.invoiceCustomDays} days)`);
-          shouldGenerateInvoices = false;
+          // PHASE 4B: Custom interval tracking using lastRunAt
+          const customIntervals = await db
+            .select()
+            .from(customSchedulerIntervals)
+            .where(eq(customSchedulerIntervals.workspaceId, workspace.id));
+          
+          if (customIntervals.length > 0) {
+            const interval = customIntervals[0];
+            if (interval.lastRunAt) {
+              const daysSinceLastRun = Math.floor((today.getTime() - new Date(interval.lastRunAt).getTime()) / (1000 * 60 * 60 * 24));
+              shouldGenerateInvoices = daysSinceLastRun >= workspace.invoiceCustomDays;
+              console.log(`   Custom interval: ${daysSinceLastRun} days since last run (threshold: ${workspace.invoiceCustomDays})`);
+            } else {
+              shouldGenerateInvoices = true; // First run
+              console.log(`   Custom interval: First run`);
+            }
+          }
         }
         
         if (shouldGenerateInvoices) {
@@ -644,9 +658,23 @@ async function runWeeklyScheduleGeneration() {
           shouldGenerateSchedule = dayOfMonth === dayOfMonthSetting;
           console.log(`   Day of Month: ${dayOfMonthSetting} (today: ${dayOfMonth})`);
         } else if (interval === 'custom' && workspace.scheduleCustomDays) {
-          // TODO: Implement custom interval tracking (needs lastRunDate in DB)
-          console.log(`   ℹ️  Custom schedule not yet implemented (${workspace.scheduleCustomDays} days)`);
-          shouldGenerateSchedule = false;
+          // PHASE 4B: Custom interval tracking using lastRunAt
+          const customIntervals = await db
+            .select()
+            .from(customSchedulerIntervals)
+            .where(eq(customSchedulerIntervals.workspaceId, workspace.id));
+          
+          if (customIntervals.length > 0) {
+            const intervalRecord = customIntervals[0];
+            if (intervalRecord.lastRunAt) {
+              const daysSinceLastRun = Math.floor((today.getTime() - new Date(intervalRecord.lastRunAt).getTime()) / (1000 * 60 * 60 * 24));
+              shouldGenerateSchedule = daysSinceLastRun >= workspace.scheduleCustomDays;
+              console.log(`   Custom interval: ${daysSinceLastRun} days since last run (threshold: ${workspace.scheduleCustomDays})`);
+            } else {
+              shouldGenerateSchedule = true; // First run
+              console.log(`   Custom interval: First run`);
+            }
+          }
         }
         
         if (shouldGenerateSchedule) {
@@ -959,9 +987,23 @@ async function runAutomaticPayrollProcessing() {
           shouldProcessPayroll = dayOfMonth === dayOfMonthSetting;
           console.log(`   Day of Month: ${dayOfMonthSetting} (today: ${dayOfMonth})`);
         } else if (paySchedule === 'custom' && workspace.payrollCustomDays) {
-          // TODO: Implement custom interval logic (needs lastRunDate in DB)
-          console.log(`   ℹ️  Custom schedule not yet implemented (${workspace.payrollCustomDays} days)`);
-          shouldProcessPayroll = false;
+          // PHASE 4B: Custom interval tracking using lastRunAt
+          const customIntervals = await db
+            .select()
+            .from(customSchedulerIntervals)
+            .where(eq(customSchedulerIntervals.workspaceId, workspace.id));
+          
+          if (customIntervals.length > 0) {
+            const intervalRecord = customIntervals[0];
+            if (intervalRecord.lastRunAt) {
+              const daysSinceLastRun = Math.floor((today.getTime() - new Date(intervalRecord.lastRunAt).getTime()) / (1000 * 60 * 60 * 24));
+              shouldProcessPayroll = daysSinceLastRun >= workspace.payrollCustomDays;
+              console.log(`   Custom interval: ${daysSinceLastRun} days since last run (threshold: ${workspace.payrollCustomDays})`);
+            } else {
+              shouldProcessPayroll = true; // First run
+              console.log(`   Custom interval: First run`);
+            }
+          }
         }
 
         if (shouldProcessPayroll) {
