@@ -222,6 +222,9 @@ export class MigrationService {
       .where(eq(migrationJobs.id, jobId));
 
     const importedRecords = [];
+    let importedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
 
     for (const recordId of recordIds) {
       // Get record with workspace scoping (security: prevent cross-tenant access)
@@ -247,17 +250,37 @@ export class MigrationService {
           record.extractedData
         );
 
-        // Update record with imported data
-        await db.update(migrationRecords)
-          .set({
-            importStatus: 'imported',
-            importedRecordId: importedData.employeeId || importedData.clientId || 'imported',
-            importedToTable: record.recordType === 'employees' ? 'employees' : record.recordType === 'clients' ? 'clients' : 'unknown',
-            importedAt: new Date(),
-          })
-          .where(eq(migrationRecords.id, recordId));
+        // Handle skipped records separately
+        if (importedData.skipped) {
+          // Record as SKIPPED, not successful
+          await db.update(migrationRecords)
+            .set({
+              importStatus: 'skipped',
+              importedRecordId: null, // No record created
+              importedToTable: null,
+              importedAt: new Date(),
+              importError: importedData.warnings?.length > 0 ? importedData.warnings.join('; ') : 'Record skipped',
+            })
+            .where(eq(migrationRecords.id, recordId));
 
-        importedRecords.push({ recordId, success: true, importedData });
+          skippedCount++;
+          importedRecords.push({ recordId, success: false, skipped: true, warnings: importedData.warnings });
+
+        } else {
+          // Record as successful import
+          await db.update(migrationRecords)
+            .set({
+              importStatus: 'imported',
+              importedRecordId: importedData.employeeId || importedData.clientId || importedData.shiftId || null,
+              importedToTable: record.recordType === 'employees' ? 'employees' : record.recordType === 'clients' ? 'clients' : record.recordType === 'schedules' ? 'shifts' : 'unknown',
+              importedAt: new Date(),
+              importError: importedData.warnings?.length > 0 ? importedData.warnings.join('; ') : null,
+            })
+            .where(eq(migrationRecords.id, recordId));
+
+          importedCount++;
+          importedRecords.push({ recordId, success: true, importedData });
+        }
 
       } catch (error) {
         console.error(`❌ Failed to import record ${recordId}:`, error);
@@ -269,12 +292,12 @@ export class MigrationService {
           })
           .where(eq(migrationRecords.id, recordId));
 
+        failedCount++;
         importedRecords.push({ recordId, success: false, error: error instanceof Error ? error.message : String(error) });
       }
     }
 
     // Update job with import results
-    const importedCount = importedRecords.filter(r => r.success).length;
     await db.update(migrationJobs)
       .set({
         status: 'completed',
@@ -282,11 +305,13 @@ export class MigrationService {
       })
       .where(eq(migrationJobs.id, jobId));
 
-    console.log(`✅ Migration job completed: ${jobId}, ${importedCount}/${recordIds.length} records imported`);
+    console.log(`✅ Migration job completed: ${jobId}, ${importedCount} imported, ${skippedCount} skipped, ${failedCount} failed`);
 
     return {
       job,
       importedCount,
+      skippedCount,
+      failedCount,
       totalAttempted: recordIds.length,
       results: importedRecords,
     };
@@ -470,7 +495,7 @@ Extract data from the provided document and return a JSON response with this str
       case 'clients':
         // Import client with safe name parsing (handles single-word names)
         const rawName = data.contactName || data.name || '';
-        const clientNameParts = rawName.trim().split(/\s+/).filter(p => p.length > 0);
+        const clientNameParts = rawName.trim().split(/\s+/).filter((p: string) => p.length > 0);
         const clientFirstName = clientNameParts.length > 0 ? clientNameParts[0] : 'Unknown';
         const clientLastName = clientNameParts.length > 1 ? clientNameParts.slice(1).join(' ') : 'Client';
         
@@ -486,8 +511,100 @@ Extract data from the provided document and return a JSON response with this str
         return { clientId: client.id };
 
       case 'schedules':
-        // Would need to match employee names to IDs first
-        throw new Error('Schedule import requires employee matching - not implemented yet');
+        const warnings: string[] = [];
+        
+        // 1. Validate required fields
+        const employeeName = data.employeeName?.trim();
+        if (!employeeName) {
+          throw new Error('employeeName is required for schedule import');
+        }
+        
+        if (!data.date) {
+          throw new Error('date is required for schedule import');
+        }
+        
+        // 2. Parse employee name
+        const scheduleNameParts = employeeName.split(/\s+/).filter((p: string) => p.length > 0);
+        const scheduleFirstName = scheduleNameParts[0];
+        const scheduleLastName = scheduleNameParts.length > 1 ? scheduleNameParts.slice(1).join(' ') : null;
+        
+        // 3. Fetch all employees for workspace and do fuzzy matching in-memory
+        const allEmployees = await db.select()
+          .from(employees)
+          .where(eq(employees.workspaceId, workspaceId));
+        
+        // Fuzzy match: exact match on full name (case-insensitive) or first name only
+        const matchingEmployees = allEmployees.filter(emp => {
+          const empFullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+          const searchFullName = employeeName.toLowerCase();
+          const searchFirstName = scheduleFirstName.toLowerCase();
+          
+          // Exact match on full name
+          if (empFullName === searchFullName) {
+            return true;
+          }
+          
+          // Match on first name only (case-insensitive)
+          if (emp.firstName.toLowerCase() === searchFirstName) {
+            return true;
+          }
+          
+          return false;
+        });
+        
+        // 4. Handle matching results
+        if (matchingEmployees.length === 0) {
+          warnings.push(`Employee '${employeeName}' not found - shift skipped`);
+          return { warnings, skipped: true };
+        }
+        
+        let matchedEmployee = matchingEmployees[0];
+        if (matchingEmployees.length > 1) {
+          warnings.push(`Multiple employees match '${employeeName}' - used first match (${matchedEmployee.firstName} ${matchedEmployee.lastName})`);
+        }
+        
+        // 5. Parse date and times
+        let startTime: Date;
+        let endTime: Date;
+        
+        try {
+          const dateStr = data.date;
+          const startTimeStr = data.startTime || '09:00';
+          const endTimeStr = data.endTime || '17:00';
+          
+          // Parse timestamps
+          startTime = new Date(`${dateStr}T${startTimeStr}:00`);
+          endTime = new Date(`${dateStr}T${endTimeStr}:00`);
+          
+          // Validate parsed dates
+          if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+            throw new Error('Invalid date/time format');
+          }
+        } catch (error) {
+          warnings.push('Could not parse date/time - using defaults');
+          const today = new Date();
+          const dateStr = today.toISOString().split('T')[0];
+          startTime = new Date(`${dateStr}T09:00:00`);
+          endTime = new Date(`${dateStr}T17:00:00`);
+        }
+        
+        // 6. Create shift
+        const [shift] = await db.insert(shifts).values({
+          workspaceId,
+          employeeId: matchedEmployee.id,
+          startTime,
+          endTime,
+          status: 'published',
+          title: data.role?.trim() || 'Shift',
+          description: data.location?.trim() || null,
+        }).returning();
+        
+        return { 
+          shiftId: shift.id, 
+          matchedEmployeeId: matchedEmployee.id,
+          matchedEmployeeName: `${matchedEmployee.firstName} ${matchedEmployee.lastName}`,
+          warnings 
+        };
 
       case 'payroll':
       case 'invoices':
