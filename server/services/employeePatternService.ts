@@ -120,7 +120,7 @@ export async function getEmployeePattern(
       completionRate,
     },
     availabilityPattern,
-    skillTags: employee.jobTitle ? [employee.jobTitle] : [],
+    skillTags: employee.department ? [employee.department] : [],
   };
 }
 
