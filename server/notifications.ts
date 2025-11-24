@@ -1,4 +1,5 @@
 import { IStorage } from './storage';
+import { emailService } from './services/emailService';
 
 interface NotificationHelperContext {
   storage: IStorage;
@@ -98,8 +99,31 @@ export async function createShiftAssignedNotification(
     shiftTitle: string;
     shiftDate: string;
     assignedBy: string;
+    userEmail?: string;
+    userName?: string;
   }
 ) {
+  // Send email notification if email provided
+  if (params.userEmail) {
+    await emailService.sendCustomEmail(
+      params.userEmail,
+      `New Shift Assignment: ${params.shiftTitle}`,
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">New Shift Assigned</h2>
+        <p>Hello ${params.userName || 'Employee'},</p>
+        <p>You have been assigned to a new shift:</p>
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Shift:</strong> ${params.shiftTitle}</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${params.shiftDate}</p>
+        </div>
+        <p>Please ensure you're available for this shift.</p>
+      </div>`,
+      'shift_assigned',
+      params.workspaceId,
+      params.userId
+    ).catch(err => console.error('[Notification] Failed to send shift email:', err.message));
+  }
+
   return createAndBroadcastNotification(context, {
     workspaceId: params.workspaceId,
     userId: params.userId,
@@ -173,8 +197,31 @@ export async function createPTOApprovedNotification(
     startDate: string;
     endDate: string;
     approvedBy: string;
+    userEmail?: string;
+    userName?: string;
   }
 ) {
+  // Send email notification if email provided
+  if (params.userEmail) {
+    await emailService.sendCustomEmail(
+      params.userEmail,
+      'Your PTO Request Has Been Approved',
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">PTO Request Approved</h2>
+        <p>Hello ${params.userName || 'Employee'},</p>
+        <p>Your time off request has been approved!</p>
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 5px 0;"><strong>Start Date:</strong> ${params.startDate}</p>
+          <p style="margin: 5px 0;"><strong>End Date:</strong> ${params.endDate}</p>
+        </div>
+        <p>Enjoy your time off!</p>
+      </div>`,
+      'pto_approved',
+      params.workspaceId,
+      params.userId
+    ).catch(err => console.error('[Notification] Failed to send PTO email:', err.message));
+  }
+
   return createAndBroadcastNotification(context, {
     workspaceId: params.workspaceId,
     userId: params.userId,
