@@ -5326,6 +5326,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (notifyError) {
         console.error('Error sending shift notification:', notifyError);
       }
+
+      // AUDIT LOG: Shift created
+      try {
+        await storage.createAuditLog({
+          workspaceId,
+          action: 'shift_created',
+          entityType: 'shift',
+          entityId: shift.id,
+          userId,
+          details: {
+            date: new Date(shift.startTime).toISOString().split('T')[0],
+            positions: shift.assignedEmployeeIds?.length || 0,
+            location: validated.location,
+          },
+        });
+      } catch (auditError) {
+        console.error('Audit log error:', auditError);
+      }
       
       // Create shift orders (post orders) if provided
       if (postOrders && Array.isArray(postOrders) && postOrders.length > 0) {
@@ -22027,6 +22045,25 @@ Return ONLY valid JSON array with this exact structure:
         console.error('Error sending dispute notification:', notifyError);
       }
 
+      // AUDIT LOG: Dispute filed
+      try {
+        await storage.createAuditLog({
+          workspaceId: user.currentWorkspaceId,
+          action: 'dispute_created',
+          entityType: 'dispute',
+          entityId: dispute.id,
+          userId,
+          details: {
+            title: data.title,
+            type: data.disputeType,
+            amount: data.amountDisputed,
+            filedBy: employee.firstName,
+          },
+        });
+      } catch (auditError) {
+        console.error('Audit log error:', auditError);
+      }
+
       res.json(dispute);
     } catch (error) {
       console.error("Error creating dispute:", error);
@@ -27614,7 +27651,7 @@ app.post("/api/migration/import-extracted", requireAuth, requireManager, mutatio
 // AI BRAIN: ISSUE DETECTION & ANALYSIS
 // ============================================================================
 
-app.post("/api/ai-brain/detect-issues", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+app.post("/api/ai-brain/detect-issues", requireAuth, requireManager, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { documentType, extractedData, documentId, useAIAnalysis } = req.body;
@@ -27639,8 +27676,9 @@ app.post("/api/ai-brain/detect-issues", requireAuth, readLimiter, async (req: Au
   }
 });
 
-app.post("/api/ai-brain/guardrails/validate", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+app.post("/api/ai-brain/guardrails/validate", requireAuth, requireManager, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
+    const workspaceId = req.workspaceId!;
     const { ruleType, value } = req.body;
 
     if (!ruleType || value === undefined) {
