@@ -96,8 +96,8 @@ export class InvoiceService {
         amount: addon.price,
         addonId: addon.id,
         metadata: {
-          addonType: addon.type,
-          pricingModel: addon.pricingModel,
+          pricingType: addon.pricingType,
+          usageUnit: addon.usageUnit,
         },
       });
     }
@@ -171,13 +171,13 @@ export class InvoiceService {
     workspaceId: string,
     periodStart: Date,
     periodEnd: Date
-  ): Promise<Array<{ id: string; name: string; price: number; type: string; pricingModel: string }>> {
+  ): Promise<Array<{ id: string; name: string; price: number; pricingType: string; usageUnit: string }>> {
     const activeAddons = await db.select({
       id: billingAddons.id,
       name: billingAddons.name,
       price: billingAddons.basePrice,
-      type: billingAddons.type,
-      pricingModel: billingAddons.pricingModel,
+      pricingType: billingAddons.pricingType,
+      usageUnit: billingAddons.usageUnit,
     })
       .from(workspaceAddons)
       .innerJoin(billingAddons, eq(workspaceAddons.addonId, billingAddons.id))
@@ -192,8 +192,8 @@ export class InvoiceService {
       id: addon.id,
       name: addon.name,
       price: Number(addon.price) || 0,
-      type: addon.type,
-      pricingModel: addon.pricingModel,
+      pricingType: addon.pricingType,
+      usageUnit: addon.usageUnit || 'session',
     }));
   }
 
