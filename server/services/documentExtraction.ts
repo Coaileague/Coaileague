@@ -6,7 +6,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "../db";
-import { documents, workspaces } from "@shared/schema";
+import { workspaces } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");

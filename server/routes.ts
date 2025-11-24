@@ -27402,5 +27402,147 @@ app.post("/api/migrations/employee-match", requireAuth, async (req: Authenticate
   }
 });
 
+// ============================================================================
+// AI BRAIN: DOCUMENT EXTRACTION FOR BUSINESS MIGRATION
+// ============================================================================
+
+app.post("/api/documents/extract", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { documentName, documentType, fileData, fileMimeType } = req.body;
+
+    if (!documentName || !documentType || !fileData || !fileMimeType) {
+      return res.status(400).json({
+        error: "Missing required fields: documentName, documentType, fileData, fileMimeType",
+      });
+    }
+
+    const extracted = await documentExtractionService.extractDocumentData(
+      workspaceId,
+      documentName,
+      documentType,
+      fileData,
+      fileMimeType
+    );
+
+    res.json({
+      success: extracted.status === "success",
+      data: extracted,
+    });
+  } catch (error: any) {
+    console.error("Error extracting document:", error);
+    res.status(500).json({ error: error.message || "Document extraction failed" });
+  }
+});
+
+app.post("/api/documents/batch-extract", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { documents } = req.body;
+
+    if (!Array.isArray(documents) || documents.length === 0) {
+      return res.status(400).json({ error: "documents must be a non-empty array" });
+    }
+
+    const results = await documentExtractionService.batchExtractDocuments(
+      workspaceId,
+      documents.map((doc: any) => ({
+        workspaceId,
+        documentName: doc.documentName,
+        documentType: doc.documentType,
+        fileData: doc.fileData,
+        fileMimeType: doc.fileMimeType,
+      }))
+    );
+
+    const successful = results.filter((r) => r.status === "success");
+    const failed = results.filter((r) => r.status === "failed");
+
+    res.json({
+      success: failed.length === 0,
+      data: results,
+      summary: {
+        total: results.length,
+        successful: successful.length,
+        failed: failed.length,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error in batch extraction:", error);
+    res.status(500).json({ error: error.message || "Batch extraction failed" });
+  }
+});
+
+app.post("/api/documents/validate", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { extractedData, targetEntityType, requiredFields } = req.body;
+
+    if (!extractedData || !targetEntityType) {
+      return res.status(400).json({
+        error: "Missing required fields: extractedData, targetEntityType",
+      });
+    }
+
+    const validation = documentExtractionService.validateExtraction(
+      extractedData,
+      requiredFields || []
+    );
+
+    const mapped = documentExtractionService.mapExtractedToWorkspace(
+      extractedData,
+      targetEntityType
+    );
+
+    res.json({
+      success: validation.isValid,
+      validation,
+      mapped,
+    });
+  } catch (error: any) {
+    console.error("Error validating extraction:", error);
+    res.status(500).json({ error: error.message || "Validation failed" });
+  }
+});
+
+app.post("/api/migration/import-extracted", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { entityType, mappedData } = req.body;
+
+    if (!entityType || !mappedData) {
+      return res.status(400).json({
+        error: "Missing required fields: entityType, mappedData",
+      });
+    }
+
+    let importedId = "";
+    
+    if (entityType === "employee") {
+      const newEmployee = await db.insert(employees).values({
+        ...mappedData,
+        workspaceId,
+        id: `emp_${Date.now()}`,
+      });
+      importedId = newEmployee[0].id;
+    } else if (entityType === "client") {
+      const newClient = await db.insert(clients).values({
+        ...mappedData,
+        workspaceId,
+        id: `cli_${Date.now()}`,
+      });
+      importedId = newClient[0].id;
+    }
+
+    res.json({
+      success: true,
+      message: `${entityType} imported successfully from extracted document data`,
+      importedId,
+    });
+  } catch (error: any) {
+    console.error("Error importing extracted data:", error);
+    res.status(500).json({ error: error.message || "Import failed" });
+  }
+});
+
   return server;
 }
