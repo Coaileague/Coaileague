@@ -94,6 +94,8 @@ import { workflowStatusService } from "./services/workflowStatusService";
 import { employeePatternService } from "./services/employeePatternService";
 import { jobRetrievalService } from "./services/jobRetrievalService";
 import { helposSettingsService } from "./services/helposSettingsService";
+import { monitoringService } from "./services/monitoringService";
+import { processingMetricsService } from "./services/processingMetricsService";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
 import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoHours } from './services/ptoAccrual';
@@ -26740,6 +26742,87 @@ app.get("/api/breaks/compliance-report", requireAuth, requireManager, readLimite
     });
   } catch (error: any) {
     console.error('Error fetching break compliance report:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// TIER-2: MONITORING SERVICE (Real-time Health)
+// ============================================================================
+
+app.get("/api/monitoring/system-health", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const healthReport = await monitoringService.checkSystemHealth();
+
+    res.json({ 
+      success: true, 
+      data: healthReport,
+    });
+  } catch (error: any) {
+    console.error('Error checking system health:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/monitoring/component/:component/history", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { component } = req.params;
+    const { hoursBack } = req.query;
+
+    const history = monitoringService.getComponentHealthHistory(
+      component,
+      hoursBack ? parseInt(hoursBack as string) : 24
+    );
+
+    res.json({ 
+      success: true, 
+      data: history,
+      count: history.length,
+    });
+  } catch (error: any) {
+    console.error('Error fetching component history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// TIER-4: PROCESSING METRICS
+// ============================================================================
+
+app.get("/api/metrics/processing/:automationType/average-duration", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { automationType } = req.params;
+
+    const avgDuration = processingMetricsService.getAverageProcessingDuration(automationType);
+    const successRate = processingMetricsService.getSuccessRate(automationType);
+
+    res.json({ 
+      success: true, 
+      data: {
+        automationType,
+        averageDurationMs: avgDuration,
+        successRate,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching processing metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/metrics/processing/recent", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { hours } = req.query;
+
+    const metrics = processingMetricsService.getRecentMetrics(hours ? parseInt(hours as string) : 24);
+
+    res.json({ 
+      success: true, 
+      data: metrics,
+      count: metrics.length,
+    });
+  } catch (error: any) {
+    console.error('Error fetching recent metrics:', error);
     res.status(500).json({ error: error.message });
   }
 });
