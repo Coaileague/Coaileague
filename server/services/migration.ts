@@ -661,8 +661,8 @@ Extract data from the provided document and return a JSON response with this str
         // Parse employee name
         const timesheetEmployeeName = data.employeeName?.trim();
         if (!timesheetEmployeeName) {
-          warnings.push('Employee name required for timesheet import');
-          return { warnings, skipped: true };
+          timesheetWarnings.push('Employee name required for timesheet import');
+          return { warnings: timesheetWarnings, skipped: true };
         }
         
         // Fuzzy match employee
@@ -679,14 +679,14 @@ Extract data from the provided document and return a JSON response with this str
         );
         
         if (!matchedTimesheetEmp) {
-          warnings.push(`Employee '${timesheetEmployeeName}' not found - timesheet skipped`);
-          return { warnings, skipped: true };
+          timesheetWarnings.push(`Employee '${timesheetEmployeeName}' not found - timesheet skipped`);
+          return { warnings: timesheetWarnings, skipped: true };
         }
         
         // Parse date
         const entryDate = new Date(data.date);
         if (isNaN(entryDate.getTime())) {
-          warnings.push('Invalid date - using current date');
+          timesheetWarnings.push('Invalid date - using current date');
         }
         
         // Create time entry
@@ -700,18 +700,18 @@ Extract data from the provided document and return a JSON response with this str
           notes: data.notes || `Imported from timesheet: ${hours}h worked`,
         }).returning();
         
-        return { timeEntryId: timeEntry.id, matchedEmployeeName: `${matchedTimesheetEmp.firstName} ${matchedTimesheetEmp.lastName}`, warnings };
+        return { timeEntryId: timeEntry.id, matchedEmployeeName: `${matchedTimesheetEmp.firstName} ${matchedTimesheetEmp.lastName}`, warnings: timesheetWarnings };
       }
 
       case 'other':
       default:
         // Generic record import handler - flexibly imports any record type
-        const warnings: string[] = [];
+        const genericWarnings: string[] = [];
         
         // For generic records, try to map common fields
         if (!data || typeof data !== 'object') {
-          warnings.push('Invalid record data - record skipped');
-          return { warnings, skipped: true };
+          genericWarnings.push('Invalid record data - record skipped');
+          return { warnings: genericWarnings, skipped: true };
         }
         
         // Auto-detect record type if not specified
@@ -732,13 +732,13 @@ Extract data from the provided document and return a JSON response with this str
         }
         
         // For truly generic records, store as audit/metadata
-        warnings.push(`Generic record stored: ${Object.keys(data).slice(0, 3).join(', ')}...`);
+        genericWarnings.push(`Generic record stored: ${Object.keys(data).slice(0, 3).join(', ')}...`);
         
         return {
           success: true,
           recordType: 'generic',
           importedFields: Object.keys(data),
-          warnings,
+          warnings: genericWarnings,
           note: 'Generic record imported without database persistence'
         };
     }
