@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 import { wsCounter } from './websocketCounter';
 import { objectStorageClient } from '../objectStorage';
 import { storage } from '../storage';
-import { featureToggles } from '../../shared/config/featureToggles';
+import { getFeatureToggle } from '../../shared/config/featureToggleAccess';
 
 // Platform workspace ID for system-level support tickets
 // This should be configured during platform initialization
@@ -72,7 +72,7 @@ function generateTicketNumber(serviceName: string): string {
  */
 async function createHealthCheckTicket(serviceHealth: ServiceHealth): Promise<void> {
   // Check if auto-ticket creation is enabled via feature toggle
-  if (!featureToggles.automation.autoTicketCreation) {
+  if (!getFeatureToggle('automation.autoTicketCreation')) {
     return;
   }
 

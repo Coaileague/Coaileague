@@ -101,6 +101,7 @@ import {
 } from './services/auth/mfa';
 import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
+import { configRegistry } from './services/configRegistry';
 import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { clientsQuerySchema } from "../shared/validation/pagination";
@@ -797,6 +798,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error clearing all updates:', error);
       res.status(500).json({ message: 'Failed to clear all updates' });
+    }
+  });
+
+  // ============================================================================
+  // DYNAMIC CONFIGURATION MANAGEMENT (Admin Only)
+  // ============================================================================
+
+  /**
+   * POST /api/config/apply-changes
+   * Apply configuration changes at runtime
+   * 
+   * Security: Platform admin only (root_admin)
+   * Rate limited: Mutation limiter
+   * Audit logged: All changes tracked
+   * 
+   * Body: { changes: Array<{ scope: string, key: string, value: any }> }
+   * Example:
+   * {
+   *   "changes": [
+   *     { "scope": "featureToggles", "key": "ai.autoScheduling", "value": true },
+   *     { "scope": "featureToggles", "key": "analytics.dashboards", "value": false }
+   *   ]
+   * }
+   */
+  app.post('/api/config/apply-changes', requirePlatformAdmin, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { changes } = req.body;
+
+      // Validate request body
+      if (!changes || !Array.isArray(changes)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Invalid request body. Expected { changes: Array<{ scope, key, value }> }' 
+        });
+      }
+
+      if (changes.length === 0) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'No changes provided' 
+        });
+      }
+
+      // Validate each change before applying
+      const validationErrors: string[] = [];
+      for (let i = 0; i < changes.length; i++) {
+        const change = changes[i];
+        
+        if (!change.scope || !change.key || change.value === undefined) {
+          validationErrors.push(`Change ${i}: Missing required fields (scope, key, value)`);
+          continue;
+        }
+
+        try {
+          configRegistry.validateChange(change.scope, change.key, change.value);
+        } catch (error: any) {
+          validationErrors.push(`Change ${i} (${change.scope}.${change.key}): ${error.message}`);
+        }
+      }
+
+      // If any validation errors, return them all
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors
+        });
+      }
+
+      // Apply all changes atomically
+      try {
+        await configRegistry.applyChanges(changes);
+      } catch (error: any) {
+        console.error('[ConfigChange] Failed to apply changes:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to apply configuration changes',
+          error: error.message
+        });
+      }
+
+      // Create audit log entries (console + database)
+      for (const change of changes) {
+        const logMessage = `[ConfigChange] Admin ${userId} changed ${change.scope}.${change.key} to ${change.value}`;
+        console.log(logMessage);
+
+        // Store in audit trail table if it exists
+        try {
+          await db.insert(auditTrail).values({
+            workspaceId: 'platform-admin', // Platform-level change
+            userId,
+            action: 'config.update',
+            resourceType: 'configuration',
+            resourceId: `${change.scope}.${change.key}`,
+            details: {
+              scope: change.scope,
+              key: change.key,
+              value: change.value,
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch (auditError) {
+          // Non-critical - log but don't fail the request
+          console.error('[ConfigChange] Failed to create audit trail entry:', auditError);
+        }
+      }
+
+      // Clear cache to force reload
+      configRegistry.clearCache();
+
+      // Return success with applied changes
+      res.json({
+        success: true,
+        message: `Successfully applied ${changes.length} configuration change(s)`,
+        changes: changes.map(c => ({
+          scope: c.scope,
+          key: c.key,
+          value: c.value,
+          applied: true
+        })),
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('[ConfigChange] Unexpected error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while processing configuration changes',
+        error: error.message
+      });
+    }
+  });
+
+  /**
+   * GET /api/config/current
+   * Get current configuration values
+   * 
+   * Security: Platform admin only (root_admin)
+   * Rate limited: Read limiter
+   * 
+   * Query params: ?scope=featureToggles
+   */
+  app.get('/api/config/current', requirePlatformAdmin, readLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { scope } = req.query;
+
+      if (!scope || typeof scope !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Scope query parameter is required (e.g., ?scope=featureToggles)'
+        });
+      }
+
+      // Get current config
+      const config = configRegistry.getConfig(scope);
+
+      // Get available keys for this scope
+      const availableKeys = configRegistry.getAvailableKeys(scope);
+
+      res.json({
+        success: true,
+        scope,
+        config,
+        availableKeys,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('[ConfigQuery] Error fetching config:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch configuration',
+        error: error.message
+      });
     }
   });
 
