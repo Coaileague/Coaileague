@@ -15,6 +15,12 @@ export const API_ENDPOINTS = {
     passwordResetRequest: "/api/auth/reset-password-request",
     passwordResetConfirm: "/api/auth/reset-password-confirm",
     changePassword: "/api/auth/change-password",
+    // MFA endpoints
+    setupMfa: "/api/auth/mfa/setup",
+    enableMfa: "/api/auth/mfa/enable",
+    disableMfa: "/api/auth/mfa/disable",
+    mfaStatus: "/api/auth/mfa/status",
+    regenerateBackupCodes: "/api/auth/mfa/backup-codes/regenerate",
   },
 
   // Workspace
@@ -52,6 +58,8 @@ export const API_ENDPOINTS = {
     update: "/api/shifts/:id",
     delete: "/api/shifts/:id",
     publish: "/api/shifts/:id/publish",
+    pendingActions: "/api/shifts/approvals/pending",
+    approveAction: "/api/shifts/approvals/:id/approve",
   },
 
   // Time Entries
@@ -63,6 +71,12 @@ export const API_ENDPOINTS = {
     delete: "/api/time-entries/:id",
     clockIn: "/api/time-entries/clock-in",
     clockOut: "/api/time-entries/clock-out",
+    startBreak: "/api/time-entries/start-break",
+    endBreak: "/api/time-entries/end-break",
+    pendingApprovals: "/api/time-entries/pending-approvals",
+    approve: "/api/time-entries/:id/approve",
+    reject: "/api/time-entries/:id/reject",
+    approveEdit: "/api/time-entries/:id/approve-edit",
   },
 
   // Invoices & Billing
@@ -115,6 +129,10 @@ export const API_ENDPOINTS = {
     messages: "/api/chat/messages",
     gemini: "/api/chat/gemini",
     geminiStatus: "/api/chat/gemini/status",
+    createConversation: "/api/chat/conversations/create",
+    closeConversation: "/api/chat/conversations/:id/close",
+    sendMessage: "/api/chat/messages/send",
+    grantVoice: "/api/chat/conversations/:id/grant-voice",
   },
 
   // Notifications
@@ -140,6 +158,14 @@ export const API_ENDPOINTS = {
     health: "/api/health",
     featureUpdates: "/api/feature-updates",
     feedback: "/api/feedback",
+    // User management
+    changeUserRole: "/api/admin/users/:id/role",
+    lockAccount: "/api/admin/users/:id/lock",
+    unlockAccount: "/api/admin/users/:id/unlock",
+    suspendAccount: "/api/admin/users/:id/suspend",
+    unsuspendAccount: "/api/admin/users/:id/unsuspend",
+    freezeAccount: "/api/admin/users/:id/freeze",
+    unfreezeAccount: "/api/admin/users/:id/unfreeze",
   },
   
   // Analytics
@@ -159,6 +185,53 @@ export const API_ENDPOINTS = {
   credits: {
     balance: "/api/credits/balance/:workspaceId",
     usage: "/api/credits/usage-breakdown/:workspaceId",
+  },
+
+  // Benefits
+  benefits: {
+    list: "/api/benefits",
+    create: "/api/benefits",
+    get: "/api/benefits/:id",
+    update: "/api/benefits/:id",
+    delete: "/api/benefits/:id",
+  },
+
+  // Grievances/Disputes
+  grievances: {
+    list: "/api/grievances",
+    file: "/api/grievances/file",
+    get: "/api/grievances/:id",
+    disputeable: "/api/grievances/disputeable",
+    resolve: "/api/grievances/:id/resolve",
+  },
+
+  // PTO (Paid Time Off)
+  pto: {
+    list: "/api/pto",
+    create: "/api/pto",
+    get: "/api/pto/:id",
+    approve: "/api/pto/:id/approve",
+    deny: "/api/pto/:id/deny",
+    cancel: "/api/pto/:id/cancel",
+  },
+
+  // Performance Reviews
+  reviews: {
+    list: "/api/reviews",
+    create: "/api/reviews",
+    get: "/api/reviews/:id",
+    update: "/api/reviews/:id",
+    submit: "/api/reviews/:id/submit",
+  },
+
+  // Sales/CRM
+  sales: {
+    leads: "/api/sales/leads",
+    addLead: "/api/sales/leads",
+    getLead: "/api/sales/leads/:id",
+    updateLead: "/api/sales/leads/:id",
+    templates: "/api/sales/templates",
+    sendEmail: "/api/sales/send-email",
   },
 };
 
