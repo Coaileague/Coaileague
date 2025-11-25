@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
     logout: "/api/auth/logout",
     register: "/api/auth/register",
     me: "/api/auth/me",
+    current: "/api/auth/me",
     passwordResetRequest: "/api/auth/reset-password-request",
     passwordResetConfirm: "/api/auth/reset-password-confirm",
     changePassword: "/api/auth/change-password",
@@ -21,7 +22,9 @@ export const API_ENDPOINTS = {
     list: "/api/workspaces/all",
     switch: "/api/workspace/switch/:workspaceId",
     get: "/api/workspace",
+    current: "/api/workspace",
     health: "/api/workspace/health",
+    getHealth: "/api/workspace/health",
     status: "/api/workspace/status",
     customMessages: "/api/workspace/custom-messages",
     upgrade: "/api/workspace/upgrade",
@@ -133,9 +136,15 @@ export const API_ENDPOINTS = {
   // Platform/Admin
   admin: {
     stats: "/api/analytics/stats",
+    getStats: "/api/analytics/stats",
     health: "/api/health",
     featureUpdates: "/api/feature-updates",
     feedback: "/api/feedback",
+  },
+  
+  // Analytics
+  analytics: {
+    getStats: "/api/analytics/stats",
   },
 
   // User Settings
