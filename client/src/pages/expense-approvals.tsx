@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -7,21 +7,29 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, DollarSign, Calendar, MapPin, FileText, Receipt, Paperclip, ExternalLink } from "lucide-react";
+import { CheckCircle2, XCircle, DollarSign, Calendar, MapPin, FileText, Receipt, Paperclip, ExternalLink, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
+import { SwipeableApprovalCard } from "@/components/ui/swipeable-approval-card";
 
 export default function ExpenseApprovalsPage() {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewNotes, setReviewNotes] = useState("");
 
-  const { data: expenses = [], isLoading } = useQuery<any[]>({
+  const { data: expenses = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ['/api/expenses'],
   });
+
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const { data: expenseDetails } = useQuery({
     queryKey: ['/api/expenses', selectedExpenseId],
@@ -146,17 +154,66 @@ export default function ExpenseApprovalsPage() {
   const reimbursedExpenses = expenses.filter((e: any) => e.status === 'reimbursed');
 
   if (isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="p-4 sm:p-6 flex justify-center items-center h-64">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
-  return (
-    <div className="container mx-auto p-6 max-w-7xl" data-testid="page-expense-approvals">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold" data-testid="heading-expense-approvals">Expense Approvals</h1>
-        <p className="text-muted-foreground">Review and approve employee expense reimbursements</p>
+  const MobileExpenseCard = ({ expense, onApprove, onDeny }: { 
+    expense: any; 
+    onApprove: () => void; 
+    onDeny: () => void; 
+  }) => (
+    <SwipeableApprovalCard
+      id={expense.id}
+      title={expense.description}
+      subtitle={`${format(new Date(expense.expenseDate), "MMM dd")} • $${parseFloat(expense.amount).toFixed(2)}`}
+      badge={getStatusBadge(expense.status)}
+      onApprove={onApprove}
+      onDeny={onDeny}
+      approveLabel="Approve"
+      denyLabel="Reject"
+      showDesktopButtons={false}
+    >
+      <div className="space-y-1">
+        {expense.merchant && (
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <FileText className="w-3 h-3" />
+            {expense.merchant}
+          </p>
+        )}
+        {expense.mileageDistance && (
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {parseFloat(expense.mileageDistance).toFixed(1)} miles
+          </p>
+        )}
+      </div>
+    </SwipeableApprovalCard>
+  );
+
+  const pageContent = (
+    <div className="container mx-auto p-4 sm:p-6 max-w-7xl" data-testid="page-expense-approvals">
+      <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="heading-expense-approvals">Expense Approvals</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Review and approve expense reimbursements</p>
+        </div>
+        {isMobile && (
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={handleRefresh}
+            data-testid="button-refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
@@ -192,7 +249,7 @@ export default function ExpenseApprovalsPage() {
           <TabsTrigger value="reimbursed" data-testid="tab-reimbursed">Reimbursed</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="space-y-4">
+        <TabsContent value="pending" className="space-y-3 sm:space-y-4">
           {pendingExpenses.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
@@ -200,6 +257,20 @@ export default function ExpenseApprovalsPage() {
                 No pending expenses to review
               </CardContent>
             </Card>
+          ) : isMobile ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground text-center px-4 py-2">
+                Swipe right to approve, left to reject
+              </p>
+              {pendingExpenses.map((expense: any) => (
+                <MobileExpenseCard
+                  key={expense.id}
+                  expense={expense}
+                  onApprove={() => handleReview(expense, 'approve')}
+                  onDeny={() => handleReview(expense, 'reject')}
+                />
+              ))}
+            </div>
           ) : (
             pendingExpenses.map((expense: any) => (
               <Card key={expense.id} data-testid={`card-expense-${expense.id}`}>
@@ -207,7 +278,7 @@ export default function ExpenseApprovalsPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg">{expense.description}</CardTitle>
-                      <CardDescription className="flex items-center gap-4 mt-2">
+                      <CardDescription className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {format(new Date(expense.expenseDate), "MMM dd, yyyy")}
@@ -221,13 +292,13 @@ export default function ExpenseApprovalsPage() {
                         {expense.mileageDistance && (
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
-                            {parseFloat(expense.mileageDistance).toFixed(1)} miles @ ${parseFloat(expense.mileageRate).toFixed(3)}/mi
+                            {parseFloat(expense.mileageDistance).toFixed(1)} mi @ ${parseFloat(expense.mileageRate).toFixed(3)}/mi
                           </span>
                         )}
                       </CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-2xl font-bold" data-testid={`text-amount-${expense.id}`}>
+                      <div className="text-xl sm:text-2xl font-bold" data-testid={`text-amount-${expense.id}`}>
                         ${parseFloat(expense.amount).toFixed(2)}
                       </div>
                       {getStatusBadge(expense.status)}
@@ -238,18 +309,20 @@ export default function ExpenseApprovalsPage() {
                   <div className="flex gap-2 justify-end">
                     <Button
                       variant="destructive"
+                      size="sm"
                       onClick={() => handleReview(expense, 'reject')}
                       data-testid={`button-reject-${expense.id}`}
                     >
-                      <XCircle className="w-4 h-4 mr-2" />
+                      <XCircle className="w-4 h-4 mr-1 sm:mr-2" />
                       Reject
                     </Button>
                     <Button
                       variant="default"
+                      size="sm"
                       onClick={() => handleReview(expense, 'approve')}
                       data-testid={`button-approve-${expense.id}`}
                     >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      <CheckCircle2 className="w-4 h-4 mr-1 sm:mr-2" />
                       Approve
                     </Button>
                   </div>
@@ -395,4 +468,17 @@ export default function ExpenseApprovalsPage() {
       </Dialog>
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <MobilePageWrapper
+        onRefresh={handleRefresh}
+        enablePullToRefresh
+      >
+        {pageContent}
+      </MobilePageWrapper>
+    );
+  }
+
+  return pageContent;
 }
