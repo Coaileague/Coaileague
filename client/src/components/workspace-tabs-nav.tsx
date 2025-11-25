@@ -90,10 +90,20 @@ export function WorkspaceTabsNav() {
   const currentFamily = families.find(f => f.id === activeFamily);
   const currentRoutes = currentFamily?.routes || [];
 
+  // Handle family tab change - navigate to first route in selected family
+  const handleFamilyChange = (familyId: string) => {
+    setActiveFamily(familyId);
+    const targetFamily = families.find(f => f.id === familyId);
+    if (targetFamily && targetFamily.routes.length > 0) {
+      const firstRoute = targetFamily.routes[0];
+      setLocation(firstRoute.href);
+    }
+  };
+
   return (
     <div className="w-full border-b bg-background sticky top-0 z-30">
       {/* Main Tabs - Shows family tabs */}
-      <Tabs value={activeFamily} onValueChange={setActiveFamily} className="w-full">
+      <Tabs value={activeFamily} onValueChange={handleFamilyChange} className="w-full">
         <TabsList className={cn(
           "w-full rounded-none border-0 bg-background p-0",
           "h-auto flex justify-start overflow-x-auto overflow-y-hidden",
