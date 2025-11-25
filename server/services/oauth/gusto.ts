@@ -300,8 +300,8 @@ export class GustoOAuthService {
     await db.update(partnerConnections)
       .set({
         status: 'disconnected',
-        accessToken: null,
-        refreshToken: null,
+        accessToken: '',
+        refreshToken: '',
       })
       .where(eq(partnerConnections.id, connectionId));
   }
