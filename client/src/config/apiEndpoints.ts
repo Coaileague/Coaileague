@@ -20,7 +20,8 @@ export const API_ENDPOINTS = {
     enableMfa: "/api/auth/mfa/enable",
     disableMfa: "/api/auth/mfa/disable",
     mfaStatus: "/api/auth/mfa/status",
-    regenerateBackupCodes: "/api/auth/mfa/backup-codes/regenerate",
+    verifyMfa: "/api/auth/mfa/verify",
+    regenerateBackupCodes: "/api/auth/mfa/regenerate-backup-codes",
   },
 
   // Workspace
@@ -58,8 +59,10 @@ export const API_ENDPOINTS = {
     update: "/api/shifts/:id",
     delete: "/api/shifts/:id",
     publish: "/api/shifts/:id/publish",
-    pendingActions: "/api/shifts/approvals/pending",
-    approveAction: "/api/shifts/approvals/:id/approve",
+    approve: "/api/shifts/:shiftId/approve",
+    bulkApprove: "/api/shifts/bulk-approve",
+    pendingActions: "/api/shift-actions/pending",
+    approveAction: "/api/shift-actions/:id/approve",
   },
 
   // Time Entries
@@ -70,13 +73,13 @@ export const API_ENDPOINTS = {
     update: "/api/time-entries/:id",
     delete: "/api/time-entries/:id",
     clockIn: "/api/time-entries/clock-in",
-    clockOut: "/api/time-entries/clock-out",
-    startBreak: "/api/time-entries/start-break",
-    endBreak: "/api/time-entries/end-break",
-    pendingApprovals: "/api/time-entries/pending-approvals",
+    clockOut: "/api/time-entries/:id/clock-out",
+    pendingApprovals: "/api/time-entries/pending",
     approve: "/api/time-entries/:id/approve",
     reject: "/api/time-entries/:id/reject",
-    approveEdit: "/api/time-entries/:id/approve-edit",
+    bulkApprove: "/api/time-entries/bulk-approve",
+    calculateHours: "/api/time-entries/calculate-hours",
+    exportCsv: "/api/time-entries/export/csv",
   },
 
   // Invoices & Billing
@@ -126,13 +129,18 @@ export const API_ENDPOINTS = {
   // Chat & Messaging
   chat: {
     conversations: "/api/chat/conversations",
-    messages: "/api/chat/messages",
+    messages: "/api/chat/conversations/:id/messages",
     gemini: "/api/chat/gemini",
     geminiStatus: "/api/chat/gemini/status",
-    createConversation: "/api/chat/conversations/create",
+    createConversation: "/api/chat/conversations",
     closeConversation: "/api/chat/conversations/:id/close",
-    sendMessage: "/api/chat/messages/send",
     grantVoice: "/api/chat/conversations/:id/grant-voice",
+    typing: "/api/chat/conversations/:id/typing",
+    mainRoom: "/api/chat/main-room",
+    mainRoomMessages: "/api/chat/main-room/messages",
+    macros: "/api/chat/macros",
+    unreadCount: "/api/chat/unread-count",
+    markAsRead: "/api/chat/mark-as-read",
   },
 
   // Notifications
@@ -196,23 +204,56 @@ export const API_ENDPOINTS = {
     delete: "/api/benefits/:id",
   },
 
-  // Grievances/Disputes
-  grievances: {
-    list: "/api/grievances",
-    file: "/api/grievances/file",
-    get: "/api/grievances/:id",
-    disputeable: "/api/grievances/disputeable",
-    resolve: "/api/grievances/:id/resolve",
+  // Disputes (Time Entry Disputes, Grievances)
+  disputes: {
+    list: "/api/disputes",
+    create: "/api/disputes",
+    get: "/api/disputes/:id",
+    myDisputes: "/api/disputes/my-disputes",
+    pending: "/api/disputes/pending",
+    pendingReview: "/api/disputes/pending-review",
+    assignedToMe: "/api/disputes/assigned-to-me",
+    resolve: "/api/disputes/:id/resolve",
+    approve: "/api/disputes/:disputeId/approve",
+    reject: "/api/disputes/:disputeId/reject",
+    assign: "/api/disputes/:id/assign",
+    review: "/api/disputes/:id/review",
+    aiAnalysis: "/api/disputes/:id/ai-analysis",
+    analyzeSentiment: "/api/disputes/analyze-sentiment",
   },
 
-  // PTO (Paid Time Off)
+  // Grievances (alias for disputes for frontend compatibility)
+  grievances: {
+    list: "/api/disputes",
+    file: "/api/disputes",
+    get: "/api/disputes/:id",
+    disputeable: "/api/disputes/pending",
+    resolve: "/api/disputes/:id/resolve",
+  },
+
+  // PTO (Paid Time Off) - uses pto and time-off-requests endpoints
   pto: {
     list: "/api/pto",
     create: "/api/pto",
     get: "/api/pto/:id",
     approve: "/api/pto/:id/approve",
     deny: "/api/pto/:id/deny",
-    cancel: "/api/pto/:id/cancel",
+  },
+
+  // Time Off Requests (extended PTO system)
+  timeOffRequests: {
+    list: "/api/time-off-requests",
+    create: "/api/time-off-requests",
+    pending: "/api/time-off-requests/pending",
+    updateStatus: "/api/time-off-requests/:id/status",
+  },
+
+  // Timesheet Edit Requests
+  timesheetEditRequests: {
+    list: "/api/timesheet-edit-requests",
+    create: "/api/timesheet-edit-requests",
+    pending: "/api/timesheet-edit-requests/pending",
+    review: "/api/timesheet-edit-requests/:id/review",
   },
 
   // Performance Reviews
