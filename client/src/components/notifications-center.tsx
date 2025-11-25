@@ -1,11 +1,12 @@
-
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { apiGet, apiPost } from "@/lib/apiClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiGet, apiPost, apiPatch } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
 import { navConfig } from "@/config/navigationConfig";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { SwipeableDismissCard } from "@/components/ui/swipeable-approval-card";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -36,6 +37,7 @@ interface Notification {
 
 export function NotificationsCenter() {
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Get current user info
   const { data: currentUser } = useQuery<{ id: string; email?: string }>({ 
@@ -166,46 +168,13 @@ export function NotificationsCenter() {
           ) : (
             <div className="divide-y">
               {notifications.map((notification) => (
-                <div
+                <NotificationItem
                   key={notification.id}
-                  className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
-                    !notification.isRead ? 'bg-accent/50' : ''
-                  }`}
-                  onClick={() => {
-                    markAsRead(notification.id);
-                    if (notification.actionUrl) {
-                      // Use navConfig routes where possible, fallback to dynamic actionUrl from API
-                      const configRoute = Object.values(navConfig).flatMap(group => 
-                        typeof group === 'object' ? Object.values(group) : []
-                      ).find(route => route === notification.actionUrl);
-                      window.location.href = notification.actionUrl;
-                    }
-                  }}
-                >
-                  <div className="flex gap-3">
-                    <div className="mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium leading-tight">
-                          {notification.title}
-                        </p>
-                        {!notification.isRead && (
-                          <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1" />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(notification.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                  notification={notification}
+                  isMobile={isMobile}
+                  onMarkAsRead={() => markAsRead(notification.id)}
+                  getNotificationIcon={getNotificationIcon}
+                />
               ))}
             </div>
           )}
@@ -213,4 +182,73 @@ export function NotificationsCenter() {
       </PopoverContent>
     </Popover>
   );
+}
+
+interface NotificationItemProps {
+  notification: Notification;
+  isMobile: boolean;
+  onMarkAsRead: () => void;
+  getNotificationIcon: (type: string) => React.ReactNode;
+}
+
+function NotificationItem({
+  notification,
+  isMobile,
+  onMarkAsRead,
+  getNotificationIcon,
+}: NotificationItemProps) {
+  const handleClick = () => {
+    onMarkAsRead();
+    if (notification.actionUrl) {
+      window.location.href = notification.actionUrl;
+    }
+  };
+
+  const content = (
+    <div
+      className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
+        !notification.isRead ? 'bg-accent/50' : ''
+      }`}
+      onClick={handleClick}
+      data-testid={`notification-item-${notification.id}`}
+    >
+      <div className="flex gap-3">
+        <div className="mt-0.5">
+          {getNotificationIcon(notification.type)}
+        </div>
+        <div className="flex-1 space-y-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-medium leading-tight">
+              {notification.title}
+            </p>
+            {!notification.isRead && (
+              <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1" />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {notification.message}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(notification.createdAt), {
+              addSuffix: true,
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <SwipeableDismissCard
+        id={notification.id}
+        onDismiss={onMarkAsRead}
+        dismissDirection="left"
+      >
+        {content}
+      </SwipeableDismissCard>
+    );
+  }
+
+  return content;
 }
