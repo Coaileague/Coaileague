@@ -1,0 +1,145 @@
+{
+  "alerts": [
+    {
+      "name": "Health Endpoint Critical",
+      "endpoint": "/api/health",
+      "threshold": "status != healthy",
+      "duration": "5 minutes",
+      "severity": "CRITICAL",
+      "action": "Page on-call engineer immediately",
+      "description": "App is down or degraded"
+    },
+    {
+      "name": "Response Time High",
+      "metric": "response_time_p95",
+      "threshold": "> 2000ms",
+      "duration": "10 minutes",
+      "severity": "HIGH",
+      "action": "Alert ops team to investigate database/resource usage",
+      "description": "API responses are slow"
+    },
+    {
+      "name": "Error Rate Elevated",
+      "metric": "error_rate",
+      "threshold": "> 1%",
+      "duration": "5 minutes",
+      "severity": "HIGH",
+      "action": "Review error logs and notify engineering",
+      "description": "More than 1% of requests are failing"
+    },
+    {
+      "name": "Database Connection Pool Exhausted",
+      "metric": "db_active_connections",
+      "threshold": "> 80 of max",
+      "duration": "2 minutes",
+      "severity": "CRITICAL",
+      "action": "Increase pool size or identify connection leaks",
+      "description": "Database connections nearly exhausted"
+    },
+    {
+      "name": "Memory Usage Critical",
+      "metric": "memory_usage",
+      "threshold": "> 80%",
+      "duration": "5 minutes",
+      "severity": "HIGH",
+      "action": "Check for memory leaks or restart app",
+      "description": "Server memory nearly full"
+    },
+    {
+      "name": "CPU Usage High",
+      "metric": "cpu_usage",
+      "threshold": "> 75%",
+      "duration": "10 minutes",
+      "severity": "MEDIUM",
+      "action": "Monitor and consider scaling",
+      "description": "CPU is consistently high"
+    },
+    {
+      "name": "Autonomous Job Failed",
+      "endpoint": "/api/dev/automation-audit-logs",
+      "threshold": "job_status == failed",
+      "duration": "immediate",
+      "severity": "HIGH",
+      "action": "Alert HR/Finance teams and investigate job logs",
+      "description": "Scheduled automation job did not complete"
+    },
+    {
+      "name": "Stripe Integration Down",
+      "metric": "stripe_api_health",
+      "threshold": "status == down",
+      "duration": "2 minutes",
+      "severity": "CRITICAL",
+      "action": "Check Stripe status page and notify finance",
+      "description": "Stripe payment processing unavailable"
+    },
+    {
+      "name": "Email Service Failed",
+      "metric": "email_delivery_rate",
+      "threshold": "< 90%",
+      "duration": "30 minutes",
+      "severity": "MEDIUM",
+      "action": "Check Resend dashboard and retry failed emails",
+      "description": "Email delivery rate below threshold"
+    },
+    {
+      "name": "Rate Limit Abuse Detected",
+      "metric": "rate_limit_violations",
+      "threshold": "> 50 in 1 hour from single IP",
+      "duration": "immediate",
+      "severity": "MEDIUM",
+      "action": "Block IP if attack pattern detected",
+      "description": "Possible DDoS or brute force attack"
+    }
+  ],
+  "notification_channels": [
+    {
+      "name": "Critical Alert - Slack",
+      "type": "slack",
+      "severity": "CRITICAL",
+      "channel": "#autoforce-critical-alerts",
+      "format": "@channel 🚨 {alert_name}: {description}"
+    },
+    {
+      "name": "High Alert - Email",
+      "type": "email",
+      "severity": "HIGH",
+      "recipients": ["ops@company.com", "devops@company.com"],
+      "format": "{alert_name} - {description} - Check {endpoint}"
+    },
+    {
+      "name": "Medium Alert - Slack",
+      "type": "slack",
+      "severity": "MEDIUM",
+      "channel": "#autoforce-alerts",
+      "format": "{alert_name}: {description}"
+    },
+    {
+      "name": "Critical Alert - PagerDuty",
+      "type": "pagerduty",
+      "severity": "CRITICAL",
+      "service_id": "CONFIGURE_ME",
+      "urgency": "high"
+    }
+  ],
+  "monitoring_schedule": {
+    "health_check": "every 5 minutes",
+    "performance_metrics": "every 1 minute",
+    "job_monitoring": "every 10 minutes",
+    "database_health": "every 5 minutes",
+    "integration_status": "every 10 minutes"
+  },
+  "escalation_policy": {
+    "critical": {
+      "wait_time": "5 minutes",
+      "escalate_to": "On-call engineer + Manager"
+    },
+    "high": {
+      "wait_time": "15 minutes",
+      "escalate_to": "On-call engineer"
+    },
+    "medium": {
+      "wait_time": "60 minutes",
+      "escalate_to": "Team lead"
+    }
+  }
+}
