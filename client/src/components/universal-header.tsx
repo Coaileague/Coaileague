@@ -45,17 +45,20 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
 
   const handleLogout = async () => {
     try {
-      // Call logout API using centralized config
-      await fetch(LOGOUT_CONFIG.endpoint, { 
-        method: LOGOUT_CONFIG.method, 
-        credentials: "include" 
-      });
-      // IMMEDIATELY clear the auth cache so component re-renders as unauthenticated
-      // This prevents showing cached auth data while the page navigates
+      // IMMEDIATELY clear the auth cache BEFORE redirect so component re-renders as unauthenticated
       LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
         queryClient.setQueryData([key], null);
       });
-      // Redirect using config
+      // Invalidate all queries to ensure cached data is cleared
+      await queryClient.invalidateQueries();
+      
+      // Call logout API in the background (fire and forget)
+      fetch(LOGOUT_CONFIG.endpoint, { 
+        method: LOGOUT_CONFIG.method, 
+        credentials: "include" 
+      }).catch(err => console.error("Logout API call failed:", err));
+      
+      // Redirect immediately after clearing cache - don't wait for API
       if (LOGOUT_CONFIG.fullPageReload) {
         window.location.href = LOGOUT_CONFIG.redirectPath;
       } else {
@@ -63,7 +66,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
       }
     } catch (error) {
       console.error("Logout failed:", error);
-      // Still clear cache and redirect even if logout fails
+      // Still clear cache and redirect even if clearing fails
       LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
         queryClient.setQueryData([key], null);
       });
