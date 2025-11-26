@@ -17,34 +17,31 @@ import { queryClient } from "@/lib/queryClient";
  */
 export async function performLogout() {
   try {
-    // 1. Call logout API endpoint (from centralized config)
-    await fetch(LOGOUT_CONFIG.endpoint, {
+    // 1. Clear all cached auth data IMMEDIATELY before API call
+    // This ensures component re-renders as unauthenticated right away
+    LOGOUT_CONFIG.cacheKeysToClear.forEach((key) => {
+      queryClient.setQueryData([key], null);
+    });
+
+    // 2. Invalidate all queries to force refetch
+    await queryClient.invalidateQueries();
+
+    // 3. Call logout API in background (fire and forget)
+    fetch(LOGOUT_CONFIG.endpoint, {
       method: LOGOUT_CONFIG.method,
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
-    });
+    }).catch(err => console.error("Logout API call failed:", err));
 
-    // 2. Clear all cached auth data IMMEDIATELY
-    LOGOUT_CONFIG.cacheKeysToClear.forEach((key) => {
-      queryClient.setQueryData([key], null);
-    });
-
-    // 3. Invalidate all queries to force refetch
-    await queryClient.invalidateQueries();
-
-    // 4. Redirect user (from centralized config)
-    if (LOGOUT_CONFIG.fullPageReload) {
-      window.location.href = LOGOUT_CONFIG.redirectPath;
-    } else {
-      // SPA navigation
-      window.location.href = LOGOUT_CONFIG.redirectPath;
-    }
+    // 4. Redirect user immediately (from centralized config)
+    // Don't wait for API - cache is already cleared
+    window.location.href = LOGOUT_CONFIG.redirectPath;
   } catch (error) {
     console.error(LOGOUT_CONFIG.logoutErrorMessage, error);
 
-    // Still clear cache and redirect even if API call fails
+    // Still clear cache and redirect even if cache clearing fails
     LOGOUT_CONFIG.cacheKeysToClear.forEach((key) => {
       queryClient.setQueryData([key], null);
     });
