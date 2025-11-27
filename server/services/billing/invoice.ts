@@ -8,6 +8,7 @@ import {
   aiUsageDailyRollups,
   workspaces,
   billingAuditLog,
+  invoiceAdjustments,
   type InsertSubscriptionInvoice,
   type SubscriptionInvoice,
   type InsertSubscriptionLineItem,

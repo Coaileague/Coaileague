@@ -85,8 +85,9 @@ export class SkillRegistry {
    */
   async getAvailableSkills(context: SkillContext): Promise<SkillManifest[]> {
     const available: SkillManifest[] = [];
+    const skills = Array.from(this.skills.values());
 
-    for (const skill of this.skills.values()) {
+    for (const skill of skills) {
       const canExecute = await skill.canExecute(context);
       if (canExecute) {
         available.push(skill.getManifest());
