@@ -30,6 +30,7 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 **Technical Implementations & Feature Specifications:**
 - **AI Brain Services**: Fully implemented for document extraction (Gemini 2.0 Flash integration), issue detection (AI analysis + rule-based), and autonomous scheduling.
 - **Financials**: Real Stripe integration handles payment processing, payroll, invoicing, deductions, and tax calculations.
+- **Email Automation**: Full Resend integration with per-email billing. Supports sales, marketing, onboarding, client_onboarding, upsell, support, and notification email types. Pre-built templates available. API at `/api/emails/*` with endpoints for send, campaign, template, history, and pricing.
 - **Notifications**: Utilizes WebSockets for real-time notifications and Resend for email delivery.
 - **Compliance**: Daily certification checks, HR alerts, and a comprehensive dispute resolution system.
 - **Data Management**: PostgreSQL database with 140+ indexed and optimized tables.
