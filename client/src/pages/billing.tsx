@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,21 +21,111 @@ import {
   Zap,
   Brain,
   Database,
-  Calendar
+  Calendar,
+  Crown,
+  Check,
+  ArrowUp,
+  ArrowDown,
+  Users,
+  Sparkles,
+  RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Workspace } from "@shared/schema";
 import { WorkspaceLayout } from "@/components/workspace-layout";
 import { CheckpointAlert } from "@/components/checkpoint-alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface PricingTier {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  formattedMonthlyPrice: string;
+  formattedYearlyPrice: string;
+  yearlySavingsPercent: number;
+  maxEmployees: number;
+  monthlyCredits: number;
+  features: string[];
+  popular?: boolean;
+}
+
+interface PricingData {
+  tiers: PricingTier[];
+  creditPacks: any[];
+  overages: any;
+}
+
+interface SubscriptionDetails {
+  tier: string;
+  status: string;
+  billingCycle: string;
+  stripeSubscriptionId: string | null;
+  stripeCustomerId: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  credits: {
+    total: number;
+    used: number;
+    remaining: number;
+  };
+  limits: {
+    maxEmployees: number;
+    currentEmployees: number;
+    employeesRemaining: number;
+  };
+}
 
 export default function Billing() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'upgrade') {
+      setSelectedTab('subscription');
+    }
+  }, []);
 
   // Fetch workspace details
   const { data: workspace, isLoading: workspaceLoading } = useQuery<Workspace>({
     queryKey: ["/api/workspace"],
+    enabled: !!user,
+  });
+
+  // Fetch subscription details
+  const { data: subscriptionDetails, isLoading: subscriptionLoading, refetch: refetchSubscription } = useQuery<SubscriptionDetails>({
+    queryKey: ["/api/billing/subscription"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  // Fetch pricing tiers
+  const { data: pricingData, isLoading: pricingLoading } = useQuery<PricingData>({
+    queryKey: ["/api/billing/pricing"],
     enabled: !!user,
   });
 
@@ -86,6 +176,78 @@ export default function Billing() {
       });
     },
   });
+
+  // Change subscription mutation
+  const changeSubscriptionMutation = useMutation({
+    mutationFn: async ({ newTier, billingCycle }: { newTier: string; billingCycle: string }) => {
+      return await apiRequest("POST", "/api/billing/subscription/change", { newTier, billingCycle });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workspace"] });
+      setUpgradeDialogOpen(false);
+      setSelectedTier(null);
+      toast({
+        title: "Subscription Updated!",
+        description: "Your subscription has been changed successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Subscription Change Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cancel subscription mutation
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (immediate: boolean = false) => {
+      return await apiRequest("POST", "/api/billing/subscription/cancel", { immediate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workspace"] });
+      setCancelDialogOpen(false);
+      toast({
+        title: "Subscription Cancelled",
+        description: "Your subscription will end at the current billing period.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cancellation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getCurrentTierOrder = (tier: string) => {
+    const order: Record<string, number> = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+    return order[tier.toLowerCase()] ?? 0;
+  };
+
+  const isUpgrade = (targetTier: string) => {
+    const currentTier = (subscriptionDetails?.tier || workspace?.subscriptionTier || 'free').toLowerCase();
+    return getCurrentTierOrder(targetTier) > getCurrentTierOrder(currentTier);
+  };
+
+  const handleSelectTier = (tier: PricingTier) => {
+    const currentTier = (subscriptionDetails?.tier || workspace?.subscriptionTier || 'free').toLowerCase();
+    if (tier.id.toLowerCase() === currentTier) return;
+    setSelectedTier(tier);
+    setUpgradeDialogOpen(true);
+  };
+
+  const handleConfirmChange = () => {
+    if (!selectedTier) return;
+    changeSubscriptionMutation.mutate({
+      newTier: selectedTier.id,
+      billingCycle,
+    });
+  };
 
   if (workspaceLoading) {
     return (
@@ -148,7 +310,7 @@ export default function Billing() {
       <CheckpointAlert workspaceId={workspace?.id || null} variant="detailed" />
 
       {/* Upgrade CTA Section */}
-      {workspace?.tier === 'free' && (
+      {(workspace?.subscriptionTier === 'free' || !workspace?.subscriptionTier) && (
         <Card className="border-[hsl(var(--cad-blue))]/30 bg-[hsl(var(--cad-blue))]/5">
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -169,10 +331,14 @@ export default function Billing() {
 
       {/* Main Content Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <CreditCard className="h-4 w-4 mr-2" />
             Overview
+          </TabsTrigger>
+          <TabsTrigger value="subscription" data-testid="tab-subscription">
+            <Crown className="h-4 w-4 mr-2" />
+            Plans
           </TabsTrigger>
           <TabsTrigger value="invoices" data-testid="tab-invoices">
             <FileText className="h-4 w-4 mr-2" />
@@ -190,18 +356,63 @@ export default function Billing() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* Current Plan */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-primary" />
+                  Current Plan
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-current-plan">
-                  {workspace?.subscriptionTier || "Professional"}
+                <div className="text-2xl font-bold capitalize" data-testid="text-current-plan">
+                  {subscriptionDetails?.tier || workspace?.subscriptionTier || "Free"}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Platform fee: {workspace?.platformFeePercentage || 6}%
+                  {subscriptionDetails?.status === 'active' ? (
+                    <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
+                  ) : subscriptionDetails?.status === 'trial' ? (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/30">Trial</Badge>
+                  ) : subscriptionDetails?.status === 'past_due' ? (
+                    <Badge variant="destructive">Past Due</Badge>
+                  ) : (
+                    <Badge variant="secondary">{subscriptionDetails?.status || 'Active'}</Badge>
+                  )}
+                </p>
+                {subscriptionDetails?.currentPeriodEnd && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Renews: {format(new Date(subscriptionDetails.currentPeriodEnd), "MMM d, yyyy")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Employee Usage */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  Employees
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-employee-count">
+                  {subscriptionDetails?.limits?.currentEmployees || 0}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /{subscriptionDetails?.limits?.maxEmployees || 5}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ 
+                      width: `${Math.min(100, ((subscriptionDetails?.limits?.currentEmployees || 0) / (subscriptionDetails?.limits?.maxEmployees || 1)) * 100)}%` 
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {subscriptionDetails?.limits?.employeesRemaining || 0} remaining
                 </p>
               </CardContent>
             </Card>
@@ -269,6 +480,200 @@ export default function Billing() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Subscription Tab */}
+        <TabsContent value="subscription" className="space-y-6">
+          {/* Current Subscription Status */}
+          {subscriptionDetails && subscriptionDetails.tier !== 'free' && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-primary" />
+                      Current Subscription
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {subscriptionDetails.tier.charAt(0).toUpperCase() + subscriptionDetails.tier.slice(1)} plan
+                      {subscriptionDetails.billingCycle && ` - billed ${subscriptionDetails.billingCycle}`}
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={subscriptionDetails.status === 'active' ? 'default' : 'secondary'}>
+                      {subscriptionDetails.status}
+                    </Badge>
+                    {subscriptionDetails.cancelAtPeriodEnd && (
+                      <p className="text-xs text-amber-500 mt-1">Cancels at period end</p>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">AI Credits</p>
+                    <p className="text-lg font-semibold">
+                      {subscriptionDetails.credits?.remaining?.toLocaleString() || 0} / {subscriptionDetails.credits?.total?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Employees</p>
+                    <p className="text-lg font-semibold">
+                      {subscriptionDetails.limits?.currentEmployees || 0} / {subscriptionDetails.limits?.maxEmployees || 0}
+                    </p>
+                  </div>
+                  {subscriptionDetails.currentPeriodEnd && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Renewal Date</p>
+                      <p className="text-lg font-semibold">
+                        {format(new Date(subscriptionDetails.currentPeriodEnd), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              {!subscriptionDetails.cancelAtPeriodEnd && subscriptionDetails.tier !== 'free' && (
+                <CardFooter className="border-t pt-4">
+                  <Button 
+                    variant="ghost" 
+                    className="text-muted-foreground" 
+                    onClick={() => setCancelDialogOpen(true)}
+                    data-testid="button-cancel-subscription"
+                  >
+                    Cancel Subscription
+                  </Button>
+                </CardFooter>
+              )}
+            </Card>
+          )}
+
+          {/* Billing Cycle Toggle */}
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              variant={billingCycle === "monthly" ? "default" : "outline"}
+              onClick={() => setBillingCycle("monthly")}
+              data-testid="button-billing-monthly"
+            >
+              Monthly
+            </Button>
+            <Button
+              variant={billingCycle === "yearly" ? "default" : "outline"}
+              onClick={() => setBillingCycle("yearly")}
+              className="gap-2"
+              data-testid="button-billing-yearly"
+            >
+              Yearly
+              <Badge variant="secondary" className="text-xs">Save up to 17%</Badge>
+            </Button>
+          </div>
+
+          {/* Pricing Cards */}
+          {pricingLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : pricingData?.tiers ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {pricingData.tiers.map((tier) => {
+                const currentTier = (subscriptionDetails?.tier || workspace?.subscriptionTier || 'free').toLowerCase();
+                const isCurrent = tier.id.toLowerCase() === currentTier;
+                const isUpgrading = isUpgrade(tier.id);
+                const price = billingCycle === "monthly" ? tier.monthlyPrice : tier.yearlyPrice;
+                const formattedPrice = billingCycle === "monthly" ? tier.formattedMonthlyPrice : tier.formattedYearlyPrice;
+
+                return (
+                  <Card 
+                    key={tier.id} 
+                    className={`relative ${tier.popular ? 'border-primary shadow-lg' : ''} ${isCurrent ? 'border-primary/50 bg-primary/5' : ''}`}
+                    data-testid={`card-tier-${tier.id}`}
+                  >
+                    {tier.popular && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pb-2">
+                      <CardTitle className="text-xl">{tier.name}</CardTitle>
+                      <CardDescription className="min-h-[40px]">{tier.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="text-center">
+                        <div className="text-4xl font-bold">{formattedPrice}</div>
+                        <p className="text-sm text-muted-foreground">
+                          per {billingCycle === "monthly" ? "month" : "year"}
+                        </p>
+                        {billingCycle === "yearly" && tier.yearlySavingsPercent > 0 && (
+                          <Badge variant="secondary" className="mt-2">
+                            Save {tier.yearlySavingsPercent}%
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 pt-4 border-t">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>Up to {tier.maxEmployees === -1 ? 'Unlimited' : tier.maxEmployees} employees</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Sparkles className="h-4 w-4 text-muted-foreground" />
+                          <span>{tier.monthlyCredits.toLocaleString()} AI credits/month</span>
+                        </div>
+                      </div>
+
+                      <ul className="space-y-2">
+                        {tier.features.slice(0, 4).map((feature, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm">
+                            <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                        {tier.features.length > 4 && (
+                          <li className="text-sm text-muted-foreground pl-6">
+                            +{tier.features.length - 4} more features
+                          </li>
+                        )}
+                      </ul>
+                    </CardContent>
+                    <CardFooter>
+                      <Button
+                        className="w-full gap-2"
+                        variant={isCurrent ? "outline" : tier.popular ? "default" : "outline"}
+                        disabled={isCurrent || changeSubscriptionMutation.isPending}
+                        onClick={() => handleSelectTier(tier)}
+                        data-testid={`button-select-tier-${tier.id}`}
+                      >
+                        {isCurrent ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4" />
+                            Current Plan
+                          </>
+                        ) : isUpgrading ? (
+                          <>
+                            <ArrowUp className="h-4 w-4" />
+                            Upgrade
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDown className="h-4 w-4" />
+                            Downgrade
+                          </>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Unable to load pricing information. Please try again later.</p>
+              <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/billing/pricing"] })}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Invoices Tab */}
@@ -469,6 +874,106 @@ export default function Billing() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Upgrade/Downgrade Confirmation Dialog */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTier && isUpgrade(selectedTier.id) ? 'Upgrade' : 'Change'} to {selectedTier?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedTier && isUpgrade(selectedTier.id) ? (
+                <>
+                  You're upgrading to the {selectedTier.name} plan. Your new features will be available immediately.
+                  You'll be charged a prorated amount for the remainder of your billing period.
+                </>
+              ) : (
+                <>
+                  You're changing to the {selectedTier?.name} plan. This change will take effect at the end of your current billing period.
+                  You'll continue to have access to your current features until then.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTier && (
+            <div className="py-4 space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-md bg-muted/50">
+                <div>
+                  <p className="font-semibold">{selectedTier.name}</p>
+                  <p className="text-sm text-muted-foreground">{billingCycle} billing</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">
+                    {billingCycle === "monthly" ? selectedTier.formattedMonthlyPrice : selectedTier.formattedYearlyPrice}
+                  </p>
+                  <p className="text-sm text-muted-foreground">per {billingCycle === "monthly" ? "month" : "year"}</p>
+                </div>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span>Up to {selectedTier.maxEmployees === -1 ? 'Unlimited' : selectedTier.maxEmployees} employees</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedTier.monthlyCredits.toLocaleString()} AI credits per month</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmChange}
+              disabled={changeSubscriptionMutation.isPending}
+              data-testid="button-confirm-change"
+            >
+              {changeSubscriptionMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Confirm ${selectedTier && isUpgrade(selectedTier.id) ? 'Upgrade' : 'Change'}`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Subscription Confirmation */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your subscription will remain active until the end of your current billing period.
+              After that, you'll be moved to the free tier with limited features.
+              You can resubscribe at any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cancelSubscriptionMutation.mutate(false)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-cancel"
+            >
+              {cancelSubscriptionMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                'Yes, Cancel Subscription'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </WorkspaceLayout>
   );
 }
