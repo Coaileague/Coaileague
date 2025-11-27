@@ -1190,3 +1190,148 @@ timeEntryRouter.get('/reports/compliance', requireAuth, requireWorkspaceRole(['d
 
 // Note: This is a named export, not default export
 // Used in server/routes.ts as: import { timeEntryRouter } from "./time-entry-routes";
+
+// ============================================================================
+// ADMIN & SUPPORT STAFF ENDPOINTS - Full workspace visibility
+// ============================================================================
+
+/**
+ * GET /api/time-entries/workspace/all - Admin/support: Search all time entries in workspace
+ * Searchable by employee, date range, status - for payroll/billing/compliance
+ */
+timeEntryRouter.get('/workspace/all', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin', 'support_manager']), async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user?.currentWorkspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const { employeeId, startDate, endDate, status, page = '1', limit = '50' } = req.query;
+    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const pageSize = parseInt(limit as string);
+
+    let query = db.select({
+      id: timeEntries.id,
+      employeeId: timeEntries.employeeId,
+      clockIn: timeEntries.clockIn,
+      clockOut: timeEntries.clockOut,
+      totalHours: timeEntries.totalHours,
+      status: timeEntries.status,
+      createdAt: timeEntries.createdAt,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      email: employees.email,
+    })
+    .from(timeEntries)
+    .innerJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .where(eq(timeEntries.workspaceId, user.currentWorkspaceId));
+
+    // Apply filters
+    const conditions = [];
+    if (employeeId) {
+      conditions.push(eq(timeEntries.employeeId, employeeId as string));
+    }
+    if (status) {
+      conditions.push(eq(timeEntries.status, status as string));
+    }
+    if (startDate) {
+      conditions.push(gte(timeEntries.clockIn, new Date(startDate as string)));
+    }
+    if (endDate) {
+      conditions.push(lte(timeEntries.clockOut, new Date(endDate as string)));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions) as any);
+    }
+
+    const entries = await query.orderBy(desc(timeEntries.clockIn)).limit(pageSize).offset(offset);
+    
+    // Get total count
+    let countQuery = db.select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(timeEntries)
+      .where(eq(timeEntries.workspaceId, user.currentWorkspaceId));
+
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(and(...conditions) as any);
+    }
+
+    const [{ count }] = await countQuery;
+
+    res.json({
+      entries: entries.map(e => ({
+        ...e,
+        employeeName: `${e.firstName || ''} ${e.lastName || ''}`.trim(),
+      })),
+      pagination: {
+        page: parseInt(page as string),
+        limit: pageSize,
+        total: count,
+        pages: Math.ceil(count / pageSize),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching workspace time entries:', error);
+    res.status(500).json({ error: 'Failed to fetch time entries' });
+  }
+});
+
+/**
+ * GET /api/time-entries/workspace/stats - Admin: Payroll/billing stats for workspace
+ * Total hours, pending approvals, compliance issues by employee
+ */
+timeEntryRouter.get('/workspace/stats', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user?.currentWorkspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const { startDate, endDate } = req.query;
+
+    // Build date filters
+    let dateConditions = [];
+    if (startDate) {
+      dateConditions.push(gte(timeEntries.clockIn, new Date(startDate as string)));
+    }
+    if (endDate) {
+      dateConditions.push(lte(timeEntries.clockOut, new Date(endDate as string)));
+    }
+
+    // Aggregate stats by employee
+    const stats = await db.select({
+      employeeId: timeEntries.employeeId,
+      employeeName: sql<string>`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`,
+      totalHours: sql<number>`COALESCE(SUM(${timeEntries.totalHours}), 0)`,
+      totalEntries: sql<number>`COUNT(${timeEntries.id})`,
+      approvedEntries: sql<number>`SUM(CASE WHEN ${eq(timeEntries.status, 'approved')} THEN 1 ELSE 0 END)`,
+      pendingEntries: sql<number>`SUM(CASE WHEN ${eq(timeEntries.status, 'pending')} THEN 1 ELSE 0 END)`,
+      rejectedEntries: sql<number>`SUM(CASE WHEN ${eq(timeEntries.status, 'rejected')} THEN 1 ELSE 0 END)`,
+    })
+    .from(timeEntries)
+    .innerJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .where(and(
+      eq(timeEntries.workspaceId, user.currentWorkspaceId),
+      ...(dateConditions.length > 0 ? [and(...dateConditions)] : [])
+    ) as any)
+    .groupBy(timeEntries.employeeId, employees.firstName, employees.lastName);
+
+    const totalStats = {
+      totalEmployeesWithEntries: stats.length,
+      totalHours: stats.reduce((sum, s) => sum + (s.totalHours || 0), 0),
+      totalEntries: stats.reduce((sum, s) => sum + (s.totalEntries || 0), 0),
+      pendingApprovals: stats.reduce((sum, s) => sum + (s.pendingEntries || 0), 0),
+      rejectedCount: stats.reduce((sum, s) => sum + (s.rejectedEntries || 0), 0),
+    };
+
+    res.json({
+      period: { startDate, endDate },
+      totalStats,
+      byEmployee: stats,
+      generatedAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Error fetching workspace stats:', error);
+    res.status(500).json({ error: 'Failed to generate stats' });
+  }
+});
