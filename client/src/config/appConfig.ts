@@ -1,59 +1,59 @@
 /**
  * Master Application Configuration
- * Single source of truth for ALL app settings
- * Edit here to change behavior everywhere instantly
+ * References the centralized platformConfig for consistency
+ * Edit shared/platformConfig.ts to change values everywhere instantly
  */
 
+import { PLATFORM, UI, PAGINATION, TIMING, WORKSPACE } from "@shared/platformConfig";
+
 export const APP_CONFIG = {
-  // App Identity
-  appName: "AutoForce™",
-  appTagline: "Autonomous Workforce Management",
-  version: "1.0.0",
+  // App Identity - from centralized config
+  appName: PLATFORM.name,
+  appTagline: PLATFORM.tagline,
+  version: PLATFORM.version,
   
   // UI Behavior
   ui: {
-    defaultTheme: "light",
-    animationDuration: 300,
-    transitionDuration: 200,
-    toastDuration: 3000,
-    notificationDuration: 6000,
+    defaultTheme: UI.defaultTheme,
+    animationDuration: UI.animationDuration,
+    transitionDuration: UI.transitionDuration,
+    toastDuration: UI.toastDuration,
+    notificationDuration: UI.notificationDuration,
   },
 
   // Pagination & Lists
   pagination: {
-    defaultPageSize: 10,
-    maxPageSize: 100,
-    pageSizeOptions: [5, 10, 20, 50, 100],
+    defaultPageSize: PAGINATION.defaultPageSize,
+    maxPageSize: PAGINATION.maxPageSize,
+    pageSizeOptions: [...PAGINATION.pageSizeOptions],
   },
 
   // Timeouts & Retries
   timing: {
-    requestTimeout: 30000,
-    maxRetries: 3,
-    retryDelay: 1000,
-    cacheExpiry: 5 * 60 * 1000, // 5 minutes
+    requestTimeout: TIMING.requestTimeout,
+    maxRetries: TIMING.maxRetries,
+    retryDelay: TIMING.retryDelay,
+    cacheExpiry: TIMING.cacheExpiry,
   },
 
   // Workspace defaults
   workspace: {
-    defaultTimezone: "UTC",
-    defaultCurrency: "USD",
-    defaultLanguage: "en",
+    defaultTimezone: WORKSPACE.defaultTimezone,
+    defaultCurrency: WORKSPACE.defaultCurrency,
+    defaultLanguage: WORKSPACE.defaultLanguage,
   },
 
   // Security
   security: {
-    sessionTimeout: 30 * 60 * 1000, // 30 minutes
+    sessionTimeout: TIMING.sessionTimeout,
     requireMfa: false,
     enableCors: true,
   },
-
-  // Feature Toggles (moved to featureToggles.ts)
-  // Messages (moved to messages.ts)
-  // Defaults (moved to defaults.ts)
-  // API Endpoints (moved to apiEndpoints.ts)
 };
 
 export function getAppConfig() {
   return APP_CONFIG;
 }
+
+// Re-export platform config for convenience
+export { PLATFORM, UI, PAGINATION, TIMING, WORKSPACE } from "@shared/platformConfig";
