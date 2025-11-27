@@ -27,6 +27,7 @@ import { ServiceHealthProvider } from "@/contexts/ServiceHealthContext";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
