@@ -114,12 +114,50 @@ function getStateTaxRate(state: string): number {
 
 /**
  * Extract state abbreviation from address string
- * Production: Use proper address parsing library
+ * Gap #8: Improved address parsing with multiple patterns
  */
 function extractStateFromAddress(address: string): string {
-  // Simple regex to extract 2-letter state code
-  const stateMatch = address.match(/,\s*([A-Z]{2})\s*/);
-  return stateMatch ? stateMatch[1] : '';
+  if (!address) return '';
+  
+  const normalized = address.toUpperCase().trim();
+  
+  // Pattern 1: Standard format "City, ST ZIP"
+  let match = normalized.match(/,\s*([A-Z]{2})\s+\d{5}/);
+  if (match) return match[1];
+  
+  // Pattern 2: "City, ST" without ZIP
+  match = normalized.match(/,\s*([A-Z]{2})(?:\s*$|,)/);
+  if (match) return match[1];
+  
+  // Pattern 3: Full state name extraction
+  const stateNames: Record<string, string> = {
+    'CALIFORNIA': 'CA', 'TEXAS': 'TX', 'FLORIDA': 'FL', 'NEW YORK': 'NY',
+    'PENNSYLVANIA': 'PA', 'ILLINOIS': 'IL', 'OHIO': 'OH', 'GEORGIA': 'GA',
+    'MICHIGAN': 'MI', 'COLORADO': 'CO', 'MASSACHUSETTS': 'MA', 'NEW JERSEY': 'NJ',
+    'VIRGINIA': 'VA', 'WASHINGTON': 'WA', 'ARIZONA': 'AZ', 'OREGON': 'OR',
+    'MARYLAND': 'MD', 'MINNESOTA': 'MN', 'WISCONSIN': 'WI', 'NORTH CAROLINA': 'NC',
+    'SOUTH CAROLINA': 'SC', 'TENNESSEE': 'TN', 'INDIANA': 'IN', 'MISSOURI': 'MO',
+    'ALABAMA': 'AL', 'KENTUCKY': 'KY', 'LOUISIANA': 'LA', 'OKLAHOMA': 'OK',
+    'CONNECTICUT': 'CT', 'IOWA': 'IA', 'NEVADA': 'NV', 'ARKANSAS': 'AR',
+    'MISSISSIPPI': 'MS', 'KANSAS': 'KS', 'UTAH': 'UT', 'NEW MEXICO': 'NM',
+    'WEST VIRGINIA': 'WV', 'NEBRASKA': 'NE', 'IDAHO': 'ID', 'MAINE': 'ME',
+    'NEW HAMPSHIRE': 'NH', 'HAWAII': 'HI', 'MONTANA': 'MT', 'RHODE ISLAND': 'RI',
+    'DELAWARE': 'DE', 'SOUTH DAKOTA': 'SD', 'NORTH DAKOTA': 'ND', 'ALASKA': 'AK',
+    'DISTRICT OF COLUMBIA': 'DC', 'DC': 'DC', 'VERMONT': 'VT', 'WYOMING': 'WY'
+  };
+  
+  for (const [name, code] of Object.entries(stateNames)) {
+    if (normalized.includes(name)) return code;
+  }
+  
+  // Pattern 4: Just state code anywhere in address
+  const validStates = Object.values(stateNames);
+  for (const state of validStates) {
+    const pattern = new RegExp(`\\b${state}\\b`);
+    if (pattern.test(normalized)) return state;
+  }
+  
+  return '';
 }
 
 /**
