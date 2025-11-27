@@ -58,7 +58,7 @@ billingRouter.use(async (req, res, next) => {
  */
 billingRouter.post('/usage', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -75,7 +75,7 @@ billingRouter.post('/usage', async (req, res) => {
 
     const event = await usageMeteringService.recordUsage({
       workspaceId,
-      userId: req.user?.id,
+      userId: req.user!.id,
       featureKey: input.featureKey,
       usageType: input.usageType,
       usageAmount: input.usageAmount,
@@ -99,7 +99,7 @@ billingRouter.post('/usage', async (req, res) => {
  */
 billingRouter.get('/usage/summary', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -148,7 +148,7 @@ billingRouter.get('/usage/summary', async (req, res) => {
  */
 billingRouter.get('/usage/metrics', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -200,7 +200,7 @@ billingRouter.post('/usage/estimate', async (req, res) => {
  */
 billingRouter.get('/credits', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -229,7 +229,7 @@ billingRouter.get('/credits', async (req, res) => {
  */
 billingRouter.get('/credits/balance', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -248,7 +248,7 @@ billingRouter.get('/credits/balance', async (req, res) => {
  */
 billingRouter.get('/transactions', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -277,8 +277,8 @@ billingRouter.get('/transactions', async (req, res) => {
  */
 billingRouter.post('/credits/purchase', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
-    const userId = req.user?.id;
+    const workspaceId = req.user!.currentWorkspaceId;
+    const userId = req.user!.id;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -361,7 +361,7 @@ billingRouter.post('/credits/purchase', async (req, res) => {
  */
 billingRouter.post('/credits/auto-recharge', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -395,7 +395,7 @@ billingRouter.post('/credits/auto-recharge', async (req, res) => {
  */
 billingRouter.get('/invoices', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -414,7 +414,7 @@ billingRouter.get('/invoices', async (req, res) => {
  */
 billingRouter.get('/invoices/:id', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -442,7 +442,7 @@ billingRouter.get('/invoices/:id', async (req, res) => {
  */
 billingRouter.get('/features/:featureKey', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -462,7 +462,7 @@ billingRouter.get('/features/:featureKey', async (req, res) => {
  */
 billingRouter.get('/features', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -481,8 +481,8 @@ billingRouter.get('/features', async (req, res) => {
  */
 billingRouter.post('/features/:addonId/toggle', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
-    const userId = req.user?.id;
+    const workspaceId = req.user!.currentWorkspaceId;
+    const userId = req.user!.id;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -524,7 +524,7 @@ billingRouter.get('/addons/available', async (req, res) => {
  */
 billingRouter.get('/addons', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -543,8 +543,8 @@ billingRouter.get('/addons', async (req, res) => {
  */
 billingRouter.post('/addons/:addonId/purchase', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
-    const userId = req.user?.id;
+    const workspaceId = req.user!.currentWorkspaceId;
+    const userId = req.user!.id;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -565,8 +565,8 @@ billingRouter.post('/addons/:addonId/purchase', async (req, res) => {
  */
 billingRouter.post('/addons/:addonId/cancel', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
-    const userId = req.user?.id;
+    const workspaceId = req.user!.currentWorkspaceId;
+    const userId = req.user!.id;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -594,7 +594,7 @@ billingRouter.post('/addons/:addonId/cancel', async (req, res) => {
  */
 billingRouter.get('/account/status', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -613,8 +613,8 @@ billingRouter.get('/account/status', async (req, res) => {
  */
 billingRouter.post('/account/reactivate', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
-    const userId = req.user?.id;
+    const workspaceId = req.user!.currentWorkspaceId;
+    const userId = req.user!.id;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -641,7 +641,7 @@ billingRouter.post('/account/reactivate', async (req, res) => {
  */
 billingRouter.post('/create-checkout-session', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -665,7 +665,7 @@ billingRouter.post('/create-checkout-session', async (req, res) => {
       cancel_url: cancelUrl,
       metadata: {
         workspaceId,
-        userId: req.user?.id,
+        userId: req.user!.id,
       },
     });
 
@@ -681,7 +681,7 @@ billingRouter.post('/create-checkout-session', async (req, res) => {
  */
 billingRouter.post('/create-payment-intent', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -695,7 +695,7 @@ billingRouter.post('/create-payment-intent', async (req, res) => {
       currency: 'usd',
       metadata: {
         workspaceId,
-        userId: req.user?.id,
+        userId: req.user!.id,
       },
     });
 
@@ -715,7 +715,7 @@ billingRouter.post('/create-payment-intent', async (req, res) => {
 billingRouter.get('/verify-payment/:workspaceId', async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    if (req.user?.currentWorkspaceId !== workspaceId) {
+    if (req.user!.currentWorkspaceId !== workspaceId) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -746,7 +746,7 @@ billingRouter.get('/verify-payment/:workspaceId', async (req, res) => {
  */
 billingRouter.get('/subscription', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -766,7 +766,7 @@ billingRouter.get('/subscription', async (req, res) => {
  */
 billingRouter.post('/subscription', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -801,7 +801,7 @@ billingRouter.post('/subscription', async (req, res) => {
  */
 billingRouter.post('/subscription/change', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -834,7 +834,7 @@ billingRouter.post('/subscription/change', async (req, res) => {
  */
 billingRouter.post('/subscription/cancel', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -866,7 +866,7 @@ billingRouter.post('/subscription/cancel', async (req, res) => {
  */
 billingRouter.get('/usage/employees', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -886,7 +886,7 @@ billingRouter.get('/usage/employees', async (req, res) => {
  */
 billingRouter.get('/usage/can-add-employee', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -906,7 +906,7 @@ billingRouter.get('/usage/can-add-employee', async (req, res) => {
  */
 billingRouter.get('/usage/history', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -967,7 +967,7 @@ billingRouter.get('/pricing', async (req, res) => {
  */
 billingRouter.get('/trial', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -987,7 +987,7 @@ billingRouter.get('/trial', async (req, res) => {
  */
 billingRouter.post('/trial/start', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -1011,7 +1011,7 @@ billingRouter.post('/trial/start', async (req, res) => {
  */
 billingRouter.post('/trial/extend', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -1043,7 +1043,7 @@ billingRouter.post('/trial/extend', async (req, res) => {
  */
 billingRouter.post('/refunds', async (req, res) => {
   try {
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.user!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -1066,7 +1066,7 @@ billingRouter.post('/refunds', async (req, res) => {
     // Log refund
     await db.insert(subscriptionPayments).values({
       workspaceId,
-      subscriptionId: input.invoiceId,
+      subscriptionId: input.invoiceId || "unknown",
       stripePaymentId: refund.id,
       amount: -input.amount,
       currency: 'usd',

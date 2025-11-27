@@ -74,10 +74,15 @@ export const BRANDING = {
     lightBg: "#ffffff",
   },
   logo: {
-    svg: "/logo.svg",
-    icon192: "/icon-192.png",
-    icon512: "/icon-512.png",
-    favicon: "/favicon.ico",
+    svg: "/logo.svg",           // CoAIleague AI network gradient logo
+    icon192: "/icon-192.png",   // 192px app icon
+    icon512: "/icon-512.png",   // 512px app icon
+    favicon: "/favicon.ico",    // Browser tab favicon
+    brandColors: {
+      primary: "#3b82f6",       // Blue (AI, trust, intelligence)
+      secondary: "#10b981",     // Green (automation, growth)
+      accent: "#06b6d4",        // Cyan (innovation, future)
+    }
   },
   fonts: {
     heading: "Inter, system-ui, sans-serif",
