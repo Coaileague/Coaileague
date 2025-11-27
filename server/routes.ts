@@ -384,7 +384,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json(health);
-  });
   
   // ✅ SECURITY: WebSocket authentication implemented for Live HelpDesk
   // - Dual authentication paths: Ticket + email OR Work ID + email
@@ -433,7 +432,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching notifications:', error);
       res.status(500).json({ message: 'Failed to fetch notifications' });
     }
-  });
 
   // Toggle notification read status (mark as read/unread)
   app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -466,7 +464,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error toggling notification read status:', error);
       res.status(500).json({ message: 'Failed to toggle notification read status' });
     }
-  });
 
   // Mark all notifications as read
   app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -498,7 +495,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error marking all notifications as read:', error);
       res.status(500).json({ message: 'Failed to mark all notifications as read' });
     }
-  });
 
   // Delete notification
   app.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -531,7 +527,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting notification:', error);
       res.status(500).json({ message: 'Failed to delete notification' });
     }
-  });
 
   // ============================================================================
   // SECURE USER IDENTITY & AUTHORIZATION ENDPOINTS
@@ -561,7 +556,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching workspace role:', error);
       res.status(500).json({ message: 'Failed to fetch workspace role' });
     }
-  });
   
   // Get current user's platform role (secure)
   app.get('/api/me/platform-role', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -582,7 +576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching platform role:', error);
       res.status(500).json({ message: 'Failed to fetch platform role' });
     }
-  });
   
   // Get workspace features available to current user (SERVER-SIDE VALIDATION)
   app.get('/api/me/workspace-features', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -628,7 +621,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching workspace features:', error);
       res.status(500).json({ message: 'Failed to fetch workspace features' });
     }
-  });
 
   // Get active feature updates (platform-wide, shown to all users)
   app.get('/api/feature-updates', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -698,7 +690,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching feature updates:', error);
       res.status(500).json({ message: 'Failed to fetch feature updates' });
     }
-  });
 
   // Dismiss a specific feature update (platform-wide, user-scoped)
   app.post('/api/feature-updates/:id/dismiss', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -744,7 +735,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error dismissing update:', error);
       res.status(500).json({ message: 'Failed to dismiss update' });
     }
-  });
 
   // Clear all feature updates for user (dismiss all in one action)
   app.post('/api/feature-updates/clear-all', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -818,7 +808,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error clearing all updates:', error);
       res.status(500).json({ message: 'Failed to clear all updates' });
     }
-  });
 
   // ============================================================================
   // DYNAMIC CONFIGURATION MANAGEMENT (Admin Only)
@@ -949,7 +938,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message
       });
     }
-  });
 
   /**
    * GET /api/config/current
@@ -993,7 +981,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message
       });
     }
-  });
 
   // Submit user feedback
   app.post('/api/feedback', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1022,7 +1009,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error submitting feedback:', error);
       res.status(500).json({ message: 'Failed to submit feedback' });
     }
-  });
 
   // ============================================================================
   // HELPOS™ AI SUPPORT SYSTEM
@@ -1064,7 +1050,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-  });
 
   // Create support ticket from floating chat (CoAIleague AI)
   app.post('/api/support/create-ticket', chatMessageLimiter, async (req, res) => {
@@ -1132,7 +1117,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-  });
 
   // HelpOS™ bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
   app.post('/api/support/helpos-chat', chatMessageLimiter, async (req, res) => {
@@ -1349,7 +1333,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('HelpOS™ chat error:', error);
       res.status(500).json({ message: error.message || 'Failed to process HelpOS™ chat' });
     }
-  });
 
   // HelpOS™ staff copilot - AI suggestions for support agents
   app.post('/api/support/helpos-copilot', requireAuth, async (req, res) => {
@@ -1376,7 +1359,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('HelpOS™ copilot error:', error);
       res.status(500).json({ message: error.message || 'Failed to generate suggestion' });
     }
-  });
 
   // Get all workspaces user has access to (for workspace switcher)
   app.get('/api/workspaces/all', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1394,7 +1376,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching workspaces:', error);
       res.status(500).json({ message: 'Failed to fetch workspaces' });
     }
-  });
 
   // Switch workspace
   app.post('/api/workspace/switch/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1418,7 +1399,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error switching workspace:', error);
       res.status(500).json({ message: 'Failed to switch workspace' });
     }
-  });
 
   // ============================================================================
   // HEALTH CHECK & MONITORING (No rate limiting)
@@ -1514,7 +1494,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         services: checks
       });
     }
-  });
 
   // Workspace health endpoint - returns simplified status for non-technical users
   app.get('/api/workspace/health', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1583,7 +1562,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Workspace health check error:', error);
       res.status(500).json({ error: 'Failed to check workspace health' });
     }
-  });
 
   // Organization status endpoint - returns org-aware status for universal toast notifications
   app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1621,7 +1599,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Failed to fetch workspace status:', error);
       res.status(500).json({ error: 'Failed to fetch workspace status' });
     }
-  });
 
   // Get custom organization status messages - per-org customization
   app.get('/api/workspace/custom-messages', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1641,7 +1618,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Failed to fetch custom messages:', error);
       res.status(500).json({ error: 'Failed to fetch custom messages' });
     }
-  });
   
   // SECURITY: Apply rate limiting BEFORE auth routes to prevent brute-force attacks
   app.use('/api', apiLimiter);
@@ -1872,7 +1848,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error.message || 'Registration failed. Please try again.',
       });
     }
-  });
   
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -1883,7 +1858,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
-  });
 
   // Update user profile - supports both Replit Auth and custom session auth
   app.patch('/api/auth/profile', async (req: any, res) => {
@@ -1926,7 +1900,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
     }
-  });
 
   // ============================================================================
   // MULTI-FACTOR AUTHENTICATION (MFA) ROUTES - WITH RBAC
@@ -1942,7 +1915,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error checking MFA status:", error);
       res.status(500).json({ message: "Failed to check MFA status" });
     }
-  });
 
   // Setup MFA - Generate secret and QR code
   app.post('/api/auth/mfa/setup', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1964,7 +1936,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error setting up MFA:", error);
       res.status(500).json({ message: "Failed to setup MFA" });
     }
-  });
 
   // Enable MFA - Verify first token and activate
   app.post('/api/auth/mfa/enable', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1994,7 +1965,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error enabling MFA:", error);
       res.status(500).json({ message: "Failed to enable MFA" });
     }
-  });
 
   // Verify MFA token during login (public endpoint for login flow)
   app.post('/api/auth/mfa/verify', async (req: any, res) => {
@@ -2019,7 +1989,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error verifying MFA token:", error);
       res.status(500).json({ message: "Failed to verify token" });
     }
-  });
 
   // Disable MFA - Requires password OR MFA token confirmation
   app.post('/api/auth/mfa/disable', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2067,7 +2036,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error disabling MFA:", error);
       res.status(500).json({ message: "Failed to disable MFA" });
     }
-  });
 
   // Regenerate backup codes
   app.post('/api/auth/mfa/regenerate-backup-codes', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2083,7 +2051,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error regenerating backup codes:", error);
       res.status(500).json({ message: "Failed to regenerate backup codes" });
     }
-  });
 
   // Demo login route - bypasses authentication for demo workspace
   // ⚠️  SECURITY: Grants full org_owner + enterprise access for E2E testing
@@ -2143,7 +2110,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in demo login:", error);
       res.status(500).json({ message: "Failed to start demo" });
     }
-  });
 
   // Platform Staff Demo Login - separate endpoint for security clarity
   // ⚠️  SECURITY: Grants root_admin platform access for E2E testing  
@@ -2202,7 +2168,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in platform demo login:", error);
       res.status(500).json({ message: "Failed to start platform demo" });
     }
-  });
 
   // ============================================================================
   // COMPANY REPORTS & ANALYTICS (Manager/Owner Access)
@@ -2310,7 +2275,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating report:", error);
       res.status(500).json({ message: "Failed to generate report" });
     }
-  });
 
   // ============================================================================
   // EXPORT FUNCTIONALITY (PDF/CSV/Excel) - Enterprise Feature #3
@@ -2395,7 +2359,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating invoice PDF:", error);
       res.status(500).json({ message: "Failed to generate PDF" });
     }
-  });
 
   // Export payroll report as CSV
   app.get('/api/payroll/export/csv', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -2448,7 +2411,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error exporting payroll CSV:", error);
       res.status(500).json({ message: "Failed to export payroll" });
     }
-  });
 
   // Export time entries as CSV
   app.get('/api/time-entries/export/csv', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -2479,7 +2441,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error exporting time entries CSV:", error);
       res.status(500).json({ message: "Failed to export time entries" });
     }
-  });
 
   // Share report via workflow
   app.post('/api/reports/share', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -2529,7 +2490,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error sharing report:", error);
       res.status(500).json({ message: "Failed to share report" });
     }
-  });
 
   // ============================================================================
   // WORKSPACE ROUTES
@@ -2601,7 +2561,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching workspace:", error);
       res.status(500).json({ message: "Failed to fetch workspace" });
     }
-  });
 
   // Update workspace (Users can only update basic settings, Platform Admin can update critical org info)
   app.patch('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2648,7 +2607,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating workspace:", error);
       res.status(400).json({ message: error.message || "Failed to update workspace" });
     }
-  });
 
   /**
    * Shared helper for automation updates with biweekly anchor seeding
@@ -2748,7 +2706,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating invoicing automation:", error);
       res.status(400).json({ message: error.message || "Failed to update invoicing automation" });
     }
-  });
 
   // Update workspace automation settings - Payroll
   app.patch('/api/workspace/automation/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2802,7 +2759,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating payroll automation:", error);
       res.status(400).json({ message: error.message || "Failed to update payroll automation" });
     }
-  });
 
   // Update workspace automation settings - Scheduling
   app.patch('/api/workspace/automation/scheduling', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2856,7 +2812,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating scheduling automation:", error);
       res.status(400).json({ message: error.message || "Failed to update scheduling automation" });
     }
-  });
 
   // Update workspace organization info (Platform Admin Staff ONLY)
   app.patch('/api/admin/workspace/:workspaceId', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -2883,7 +2838,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating workspace (admin):", error);
       res.status(400).json({ message: error.message || "Failed to update workspace" });
     }
-  });
 
   // Get workspace theme
   app.get('/api/workspace/theme', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2902,7 +2856,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching workspace theme:", error);
       res.json(null);
     }
-  });
 
   // Get available business categories
   app.get('/api/business-categories', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2913,7 +2866,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching business categories:", error);
       res.status(500).json({ message: "Failed to fetch business categories" });
     }
-  });
 
   // Seed form templates for workspace based on business category
   app.post('/api/workspace/seed-form-templates', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2952,7 +2904,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error seeding form templates:", error);
       res.status(500).json({ message: error.message || "Failed to seed form templates" });
     }
-  });
 
   // Upgrade workspace billing tier
   app.post('/api/workspace/upgrade', isAuthenticated, async (req: any, res) => {
@@ -3003,7 +2954,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error upgrading workspace:", error);
       res.status(500).json({ message: error.message || "Failed to upgrade workspace" });
     }
-  });
 
   // ============================================================================
   // EMPLOYEE ROUTES (Multi-tenant isolated)
@@ -3045,7 +2995,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching employees:", error);
       res.status(500).json({ message: "Failed to fetch employees" });
     }
-  });
 
   // PROTECTED: Manager or platform staff
   app.post('/api/employees', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -3189,7 +3138,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating employee:", error);
       res.status(400).json({ message: error.message || "Failed to create employee" });
     }
-  });
 
   // PROTECTED: Manager or platform staff
   app.patch('/api/employees/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -3215,7 +3163,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating employee:", error);
       res.status(400).json({ message: error.message || "Failed to update employee" });
     }
-  });
 
   // PROTECTED: Owner only (destructive operation)
   app.delete('/api/employees/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -3237,7 +3184,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting employee:", error);
       res.status(500).json({ message: "Failed to delete employee" });
     }
-  });
 
   // DUPLICATE REMOVED - This endpoint is defined earlier at line 1878
 
@@ -3303,7 +3249,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching workspace access:', error);
       res.status(500).json({ message: 'Failed to fetch workspace access' });
     }
-  });
 
   /**
    * Get workspace usage and cost summary
@@ -3339,7 +3284,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching usage summary:', error);
       res.status(500).json({ message: 'Failed to fetch usage summary' });
     }
-  });
 
   // ==================== CREDIT SYSTEM API ROUTES ====================
 
@@ -3386,7 +3330,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit balance:', error);
       res.status(500).json({ message: 'Failed to fetch credit balance' });
     }
-  });
 
   /**
    * Get credit usage breakdown for current month
@@ -3410,7 +3353,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit usage breakdown:', error);
       res.status(500).json({ message: 'Failed to fetch usage breakdown' });
     }
-  });
 
   /**
    * Get credit transaction history
@@ -3442,7 +3384,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit transactions:', error);
       res.status(500).json({ message: 'Failed to fetch transactions' });
     }
-  });
 
   /**
    * Get available credit packs for purchase
@@ -3487,7 +3428,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit packs:', error);
       res.status(500).json({ message: 'Failed to fetch credit packs' });
     }
-  });
 
   /**
    * Create Stripe checkout session for credit purchase
@@ -3528,7 +3468,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error creating credit purchase session:', error);
       res.status(500).json({ message: 'Failed to create checkout session' });
     }
-  });
 
   /**
    * Stripe webhook handler for credit purchases
@@ -3565,7 +3504,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Webhook] Error processing Stripe webhook:', error);
       res.status(400).json({ error: 'Webhook processing failed' });
     }
-  });
 
   // ==================== REPORTING API ROUTES ====================
   
@@ -3598,7 +3536,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating billable hours report:', error);
       res.status(500).json({ message: 'Failed to generate billable hours report' });
     }
-  });
 
   /**
    * Payroll Report
@@ -3627,7 +3564,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating payroll report:', error);
       res.status(500).json({ message: 'Failed to generate payroll report' });
     }
-  });
 
   /**
    * Client Summary Report
@@ -3656,7 +3592,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating client summary report:', error);
       res.status(500).json({ message: 'Failed to generate client summary report' });
     }
-  });
 
   /**
    * Employee Activity Report
@@ -3685,7 +3620,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating employee activity report:', error);
       res.status(500).json({ message: 'Failed to generate employee activity report' });
     }
-  });
 
   /**
    * Audit Logs Report
@@ -3714,7 +3648,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating audit logs report:', error);
       res.status(500).json({ message: 'Failed to generate audit logs report' });
     }
-  });
 
   // Get current employee profile (Employee Self-Service)
   // Get current user's employee record - supports BOTH custom auth and Replit auth
@@ -3759,7 +3692,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching employee profile:", error);
       res.status(500).json({ message: "Failed to fetch employee profile" });
     }
-  });
 
   // Get current user's complete identity (ALL user types) - RBAC tracking
   // Returns external IDs for employees (EMP-XXXX), support agents (SUP-XXXX), clients (CLI-XXXX), orgs (ORG-XXXX)
@@ -3884,7 +3816,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user identity:", error);
       res.status(500).json({ message: "Failed to fetch user identity" });
     }
-  });
 
   // Update employee contact information (Employee Self-Service)
   app.patch('/api/employees/me/contact-info', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -3924,7 +3855,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating contact info:", error);
       res.status(400).json({ message: error.message || "Failed to update contact information" });
     }
-  });
 
   // Get employee's own documents (Employee Self-Service)
   app.get('/api/hireos/documents/me', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -3946,7 +3876,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching employee documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
     }
-  });
 
   // Approve employee and set pay rate (post-onboarding) - MANAGER/OWNER ONLY
   app.post('/api/employees/approve', requireManager, async (req: any, res) => {
@@ -4000,7 +3929,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.status(400).json({ message: error.message || "Failed to approve employee" });
     }
-  });
 
   // ============================================================================
   // EMPLOYEE BENEFITS ROUTES (HR Management)
@@ -4021,7 +3949,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching benefits:", error);
       res.status(500).json({ message: "Failed to fetch benefits" });
     }
-  });
 
   app.get('/api/benefits/employee/:employeeId', isAuthenticated, async (req: any, res) => {
     try {
@@ -4039,7 +3966,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching employee benefits:", error);
       res.status(500).json({ message: "Failed to fetch employee benefits" });
     }
-  });
 
   app.post('/api/benefits', isAuthenticated, async (req: any, res) => {
     try {
@@ -4064,7 +3990,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating benefit:", error);
       res.status(400).json({ message: error.message || "Failed to create benefit" });
     }
-  });
 
   app.patch('/api/benefits/:id', isAuthenticated, async (req: any, res) => {
     try {
@@ -4095,7 +4020,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating benefit:", error);
       res.status(400).json({ message: error.message || "Failed to update benefit" });
     }
-  });
 
   app.delete('/api/benefits/:id', isAuthenticated, async (req: any, res) => {
     try {
@@ -4118,7 +4042,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting benefit:", error);
       res.status(500).json({ message: "Failed to delete benefit" });
     }
-  });
 
   // ============================================================================
   // PERFORMANCE REVIEW ROUTES (HR Management)
@@ -4139,7 +4062,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching reviews:", error);
       res.status(500).json({ message: "Failed to fetch reviews" });
     }
-  });
 
   app.post('/api/reviews', isAuthenticated, async (req: any, res) => {
     try {
@@ -4162,7 +4084,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating review:", error);
       res.status(400).json({ message: error.message || "Failed to create review" });
     }
-  });
 
   app.patch('/api/reviews/:id', isAuthenticated, async (req: any, res) => {
     try {
@@ -4193,7 +4114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating review:", error);
       res.status(400).json({ message: error.message || "Failed to update review" });
     }
-  });
 
   // ============================================================================
   // PTO REQUEST ROUTES (HR Management)
@@ -4215,7 +4135,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching PTO requests:", error);
       res.status(500).json({ message: "Failed to fetch PTO requests" });
     }
-  });
 
   app.post('/api/pto', isAuthenticated, async (req: any, res) => {
     try {
@@ -4238,7 +4157,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to create PTO request" });
     }
-  });
 
   app.patch('/api/pto/:id/approve', isAuthenticated, async (req: any, res) => {
     try {
@@ -4262,7 +4180,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error approving PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to approve PTO request" });
     }
-  });
 
   app.patch('/api/pto/:id/deny', isAuthenticated, async (req: any, res) => {
     try {
@@ -4286,7 +4203,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error denying PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to deny PTO request" });
     }
-  });
 
   // ============================================================================
   // HR AUTOMATION - PTO ACCRUAL & PERFORMANCE REVIEW REMINDERS
@@ -4302,7 +4218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching PTO balances:", error);
       res.status(500).json({ message: "Failed to fetch PTO balances" });
     }
-  });
   
   // Get specific employee PTO balance
   app.get('/api/hr/pto-balances/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -4321,7 +4236,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching employee PTO balance:", error);
       res.status(500).json({ message: "Failed to fetch PTO balance" });
     }
-  });
   
   // Manually trigger weekly PTO accrual (Owner only)
   app.post('/api/hr/pto-accrual/run', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -4338,7 +4252,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error running PTO accrual:", error);
       res.status(500).json({ message: "Failed to run PTO accrual" });
     }
-  });
   
   // Get performance review reminders summary (Manager/Owner only)
   app.get('/api/hr/review-reminders/summary', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -4350,7 +4263,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching review reminder summary:", error);
       res.status(500).json({ message: "Failed to fetch review reminders" });
     }
-  });
   
   // Get all overdue performance reviews (Manager/Owner only)
   app.get('/api/hr/review-reminders/overdue', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -4362,7 +4274,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching overdue reviews:", error);
       res.status(500).json({ message: "Failed to fetch overdue reviews" });
     }
-  });
   
   // Get upcoming performance reviews (Manager/Owner only)
   app.get('/api/hr/review-reminders/upcoming', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -4375,7 +4286,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching upcoming reviews:", error);
       res.status(500).json({ message: "Failed to fetch upcoming reviews" });
     }
-  });
 
   // ============================================================================
   // EMPLOYEE TERMINATION ROUTES (HR Management)
@@ -4396,7 +4306,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching terminations:", error);
       res.status(500).json({ message: "Failed to fetch terminations" });
     }
-  });
 
   app.post('/api/terminations', isAuthenticated, async (req: any, res) => {
     try {
@@ -4419,7 +4328,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating termination:", error);
       res.status(400).json({ message: error.message || "Failed to create termination" });
     }
-  });
 
   app.patch('/api/terminations/:id', isAuthenticated, async (req: any, res) => {
     try {
@@ -4450,7 +4358,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating termination:", error);
       res.status(400).json({ message: error.message || "Failed to update termination" });
     }
-  });
 
   app.patch('/api/terminations/:id/complete', isAuthenticated, async (req: any, res) => {
     try {
@@ -4473,7 +4380,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error completing termination:", error);
       res.status(400).json({ message: error.message || "Failed to complete termination" });
     }
-  });
 
   // ============================================================================
   // LEADERS HUB - Organization Leaders Management (Owner/Manager Self-Service)
@@ -4575,7 +4481,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching leader stats:", error);
       res.status(500).json({ message: "Failed to fetch leader stats" });
     }
-  });
   
   // Get pending tasks for leader
   
@@ -4591,7 +4496,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching recent actions:", error);
       res.status(500).json({ message: "Failed to fetch recent actions" });
     }
-  });
   
   // Reset employee password (leader self-service)
   app.post('/api/leaders/reset-password', isAuthenticated, requireLeader, async (req: any, res) => {
@@ -4661,7 +4565,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error resetting password:", error);
       res.status(500).json({ message: "Failed to reset password" });
     }
-  });
   
   // Unlock employee account (leader self-service)
   app.post('/api/leaders/unlock-account', isAuthenticated, requireLeader, async (req: any, res) => {
@@ -4714,7 +4617,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error unlocking account:", error);
       res.status(500).json({ message: "Failed to unlock account" });
     }
-  });
   
   // Update employee contact info (leader self-service)
   app.patch('/api/leaders/update-contact', isAuthenticated, requireLeader, async (req: any, res) => {
@@ -4778,7 +4680,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating contact info:", error);
       res.status(500).json({ message: "Failed to update contact information" });
     }
-  });
 
   // Create escalation ticket to platform support
   app.post('/api/leaders/escalate', isAuthenticated, requireLeader, async (req: any, res) => {
@@ -4858,7 +4759,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating escalation ticket:", error);
       res.status(500).json({ message: "Failed to create escalation ticket" });
     }
-  });
 
   // Get escalation tickets for workspace
   app.get('/api/leaders/escalations', isAuthenticated, requireLeader, async (req: any, res) => {
@@ -4871,7 +4771,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching escalation tickets:", error);
       res.status(500).json({ message: "Failed to fetch escalation tickets" });
     }
-  });
 
   // Update escalation ticket status (platform staff only)
   app.patch('/api/leaders/escalations/:id/status', isAuthenticated, async (req: any, res) => {
@@ -4980,7 +4879,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating escalation ticket:", error);
       res.status(500).json({ message: "Failed to update escalation ticket" });
     }
-  });
 
   // ============================================================================
   // CLIENT ROUTES (Multi-tenant isolated)
@@ -5047,7 +4945,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching clients:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
     }
-  });
 
   // PROTECTED: Lightweight client lookup for dropdowns/selectors (unpaginated)
   app.get('/api/clients/lookup', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -5077,7 +4974,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching clients for lookup:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
     }
-  });
 
   // PROTECTED: Manager or platform staff
   app.post('/api/clients', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -5155,7 +5051,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating client:", error);
       res.status(400).json({ message: error.message || "Failed to create client" });
     }
-  });
 
   // PROTECTED: Manager or platform staff
   app.patch('/api/clients/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -5181,7 +5076,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating client:", error);
       res.status(400).json({ message: error.message || "Failed to update client" });
     }
-  });
 
   // PROTECTED: Manager or platform staff
   app.delete('/api/clients/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -5203,7 +5097,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
     }
-  });
 
   // ============================================================================
   // SHIFT ROUTES (Multi-tenant isolated)
@@ -5283,7 +5176,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching shifts:", error);
       res.status(500).json({ message: "Failed to fetch shifts" });
     }
-  });
 
   app.post('/api/shifts', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
@@ -5464,7 +5356,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating shift:", error);
       res.status(400).json({ message: error.message || "Failed to create shift" });
     }
-  });
 
   app.patch('/api/shifts/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
@@ -5512,7 +5403,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating shift:", error);
       res.status(400).json({ message: error.message || "Failed to update shift" });
     }
-  });
 
   app.delete('/api/shifts/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
@@ -5556,7 +5446,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting shift:", error);
       res.status(500).json({ message: "Failed to delete shift" });
     }
-  });
 
   // ============================================================================
   // SCHEDULE WEEK STATS - Calculate weekly statistics for schedule view
@@ -5639,7 +5528,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error calculating week stats:", error);
       res.status(500).json({ message: "Failed to calculate week stats" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ AI FILL - Auto-assign best employee to open shift
@@ -5800,7 +5688,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in AI Fill:", error);
       res.status(500).json({ message: error.message || "Failed to auto-assign shift" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ FILL REQUEST MARKETPLACE - External Contractor Matching
@@ -5955,7 +5842,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating fill request:", error);
       res.status(500).json({ message: error.message || "Failed to create fill request" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ CONTRACTOR OFFER RESPONSE - Token-based Accept/Decline
@@ -6261,7 +6147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error processing contractor response:", error);
       res.status(500).json({ message: error.message || "Failed to process response" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ SHIFT MANAGEMENT - Denial, Acknowledgment, Auto-Replacement
@@ -6298,7 +6183,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error acknowledging shift:", error);
       res.status(500).json({ message: "Failed to acknowledge shift" });
     }
-  });
 
   // Employee denies AI-generated shift (triggers auto-replacement)
   app.post('/api/shifts/:id/deny', requireAuth, requireEmployee, async (req: AuthenticatedRequest, res) => {
@@ -6523,7 +6407,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error denying shift:", error);
       res.status(500).json({ message: error.message || "Failed to deny shift" });
     }
-  });
 
   // Bulk create shifts (recurring)
   app.post('/api/shifts/bulk', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -6577,7 +6460,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating bulk shifts:", error);
       res.status(400).json({ message: error.message || "Failed to create bulk shifts" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ AI - TOGGLE & USAGE-BASED BILLING
@@ -6641,7 +6523,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error toggling SmartSchedule AI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
     }
-  });
   
   // Get SmartSchedule AI status - Reads from DB
   app.get('/api/scheduleos/ai/status', isAuthenticated, async (req: any, res) => {
@@ -6659,7 +6540,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: "Failed to get AI status" });
     }
-  });
   
   // Generate AI Schedule with Smart Approval (99% AI, 1% Human Governance)
   app.post('/api/scheduleos/smart-generate', isAuthenticated, requireManager, async (req: any, res) => {
@@ -6800,7 +6680,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("AI Scheduling™ Smart Generate Error:", error);
       res.status(500).json({ message: error.message || "Failed to generate schedule" });
     }
-  });
   
   // List All Schedule Proposals (for workflow approval page)
   app.get('/api/scheduleos/proposals', isAuthenticated, requireManager, async (req: any, res) => {
@@ -6855,7 +6734,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching schedule proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
     }
-  });
   
   // Get Schedule Proposal Details
   app.get('/api/scheduleos/proposals/:id', isAuthenticated, async (req: any, res) => {
@@ -6881,7 +6759,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch proposal" });
     }
-  });
   
   // Approve Schedule Proposal
   app.patch('/api/scheduleos/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
@@ -6949,7 +6826,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("AI Scheduling™ Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve proposal" });
     }
-  });
   
   // Reject Schedule Proposal
   app.patch('/api/scheduleos/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
@@ -6991,7 +6867,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject proposal" });
     }
-  });
   
   // ==================== INVOICE PROPOSALS ====================
   
@@ -7014,7 +6889,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invoice proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
     }
-  });
   
   // Approve Invoice Proposal
   app.patch('/api/invoices/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7055,7 +6929,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Billing Platform Invoice Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve invoice" });
     }
-  });
   
   // Reject Invoice Proposal
   app.patch('/api/invoices/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7097,7 +6970,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject invoice" });
     }
-  });
   
   // ==================== PAYROLL PROPOSALS ====================
   
@@ -7120,7 +6992,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching payroll proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
     }
-  });
   
   // Approve Payroll Proposal
   app.patch('/api/payroll/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7161,7 +7032,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("OperationsOS™ Payroll Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve payroll" });
     }
-  });
   
   // Reject Payroll Proposal
   app.patch('/api/payroll/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7203,7 +7073,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject payroll" });
     }
-  });
   
   // AI Scheduling™ - Migrate schedule from external apps (Deputy, WhenIWork, GetSling)
   app.post('/api/scheduleos/migrate-schedule', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7240,7 +7109,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Schedule migration error:", error);
       res.status(500).json({ message: error.message || "Failed to migrate schedule" });
     }
-  });
 
   // AI Scheduling™ - Import extracted shifts from migration
   app.post('/api/scheduleos/import-migrated-shifts', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7324,7 +7192,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Shift import error:", error);
       res.status(500).json({ message: error.message || "Failed to import shifts" });
     }
-  });
   
   // Request Service Coverage
   app.post('/api/scheduleos/request-service', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7358,7 +7225,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to find coverage" });
     }
-  });
   
   // Publish Schedule
   app.post('/api/schedules/publish', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7384,7 +7250,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to publish schedule" });
     }
-  });
   
   // ============================================================================
   // SCHEDULEOS™ AI - Trial & Activation (Subscriber Pays All Model)
@@ -7432,7 +7297,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error starting AI Scheduling™ trial:", error);
       res.status(500).json({ message: "Failed to start trial" });
     }
-  });
 
   // Create Payment Intent for Scheduling Platform activation (SECURE: Server-side creation)
   app.post('/api/scheduleos/payment-intent', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7547,7 +7411,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Stripe] Error creating Payment Intent:', error);
       res.status(500).json({ error: "Failed to create payment intent", details: error.message });
     }
-  });
 
   // Activate AI Scheduling™ with payment (SECURE: Validates Payment Intent ownership and prevents reuse)
   app.post('/api/scheduleos/activate', isAuthenticated, requireManager, async (req: any, res) => {
@@ -7734,7 +7597,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error activating AI Scheduling™:", error);
       res.status(500).json({ message: "Failed to activate AI Scheduling™" });
     }
-  });
 
   // Check AI Scheduling™ status (trial/activated)
   app.get('/api/scheduleos/status', async (req: any, res) => {
@@ -7816,7 +7678,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error checking AI Scheduling™ status:", error);
       res.status(500).json({ message: "Failed to check status" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ AI - Intelligent Auto-Scheduling (Trial or Activated Required)
@@ -8032,7 +7893,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "SCHEDULEOS_ERROR"
       });
     }
-  });
 
   // Acknowledge AI-generated shift (employee confirmation)
   app.post('/api/scheduleos/acknowledge/:shiftId', isAuthenticated, async (req: any, res) => {
@@ -8070,7 +7930,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error acknowledging shift:", error);
       res.status(500).json({ message: "Failed to acknowledge shift" });
     }
-  });
 
   // ============================================================================
   // SCHEDULEOS™ SMART AI - Auto-Schedule Employees to Open Shifts
@@ -8086,7 +7945,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       preferExperience: z.boolean().optional(),
       balanceWorkload: z.boolean().optional()
     }).optional()
-  });
 
   app.post('/api/schedule-smart-ai', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     const user = req.user!;
@@ -8160,7 +8018,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('AI Scheduling™ AI error:', error);
       res.status(500).json({ error: error.message || 'AI scheduling failed' });
     }
-  });
 
   // ============================================================================
   // SHIFT TEMPLATE ROUTES (Multi-tenant isolated)
@@ -8181,7 +8038,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching shift templates:", error);
       res.status(500).json({ message: "Failed to fetch shift templates" });
     }
-  });
 
   app.post('/api/shift-templates', isAuthenticated, async (req: any, res) => {
     try {
@@ -8201,7 +8057,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating shift template:", error);
       res.status(400).json({ message: error.message || "Failed to create shift template" });
     }
-  });
 
   app.delete('/api/shift-templates/:id', isAuthenticated, async (req: any, res) => {
     try {
@@ -8222,7 +8077,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting shift template:", error);
       res.status(500).json({ message: "Failed to delete shift template" });
     }
-  });
 
   // ============================================================================
   // SHIFT ACKNOWLEDGMENT ROUTES (Post Orders & Special Orders)
@@ -8264,7 +8118,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching shift acknowledgments:", error);
       res.status(500).json({ message: "Failed to fetch acknowledgments" });
     }
-  });
 
   // Create a new acknowledgment (Post Order/Special Order)
   app.post('/api/shifts/:shiftId/acknowledgments', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -8327,7 +8180,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating shift acknowledgment:", error);
       res.status(400).json({ message: error.message || "Failed to create acknowledgment" });
     }
-  });
 
   // Employee acknowledges a shift acknowledgment
   app.patch('/api/acknowledgments/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -8373,7 +8225,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error acknowledging:", error);
       res.status(500).json({ message: "Failed to acknowledge" });
     }
-  });
 
   // Employee denies/declines a shift acknowledgment
   app.patch('/api/acknowledgments/:id/deny', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -8419,7 +8270,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error denying acknowledgment:", error);
       res.status(500).json({ message: "Failed to deny acknowledgment" });
     }
-  });
 
   // Delete an acknowledgment (manager only)
   app.delete('/api/acknowledgments/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -8448,7 +8298,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting acknowledgment:", error);
       res.status(500).json({ message: "Failed to delete acknowledgment" });
     }
-  });
 
   // ============================================================================
   // TIME ENTRY ROUTES (Multi-tenant isolated)
@@ -8469,7 +8318,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching time entries:", error);
       res.status(500).json({ message: "Failed to fetch time entries" });
     }
-  });
 
   app.post('/api/time-entries', isAuthenticated, async (req: any, res) => {
     try {
@@ -8492,7 +8340,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating time entry:", error);
       res.status(400).json({ message: error.message || "Failed to create time entry" });
     }
-  });
 
   // ============================================================================
   // INVOICE ROUTES (Multi-tenant isolated)
@@ -8630,7 +8477,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error auto-generating invoices:", error);
       res.status(500).json({ message: error.message || "Failed to auto-generate invoices" });
     }
-  });
 
   // Send invoice email to client
   app.post('/api/invoices/:id/send-email', isAuthenticated, async (req: any, res) => {
@@ -8681,7 +8527,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error sending invoice email:", error);
       res.status(500).json({ message: error.message || "Failed to send invoice email" });
     }
-  });
   
   // PROTECTED: Managers and auditors only
   app.get('/api/invoices', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
@@ -8699,7 +8544,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invoices:", error);
       res.status(500).json({ message: "Failed to fetch invoices" });
     }
-  });
 
   // Get line items for a specific invoice (with authorization check) - PROTECTED: Manager/auditor/client
   app.get('/api/invoices/:invoiceId/line-items', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
@@ -8732,7 +8576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invoice line items:", error);
       res.status(500).json({ message: "Failed to fetch invoice line items" });
     }
-  });
 
   app.post('/api/invoices', isAuthenticated, async (req: any, res) => {
     try {
@@ -8760,7 +8603,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating invoice:", error);
       res.status(400).json({ message: error.message || "Failed to create invoice" });
     }
-  });
 
   app.post('/api/invoices/generate-from-time', isAuthenticated, async (req: any, res) => {
     try {
@@ -8863,7 +8705,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating invoice from time entries:", error);
       res.status(400).json({ message: error.message || "Failed to generate invoice" });
     }
-  });
 
   // ============================================================================
   // BILLOS™ - EXTENDED INVOICE & BILLING FEATURES
@@ -8890,7 +8731,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating client rate:", error);
       res.status(400).json({ message: error.message || "Failed to create client rate" });
     }
-  });
 
   app.get('/api/client-rates/:clientId', isAuthenticated, async (req: any, res) => {
     try {
@@ -8907,7 +8747,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching client rates:", error);
       res.status(500).json({ message: "Failed to fetch client rates" });
     }
-  });
 
   // Process delinquent invoices and send reminders (Manager/Owner only)
   app.post('/api/invoices/process-reminders', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -8922,7 +8761,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error processing reminders:", error);
       res.status(500).json({ message: error.message || "Failed to process reminders" });
     }
-  });
 
   // Get reminder history for an invoice (Manager/Owner only)
   app.get('/api/invoices/:invoiceId/reminders', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -8946,7 +8784,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invoice reminders:", error);
       res.status(500).json({ message: "Failed to fetch invoice reminders" });
     }
-  });
 
   // Get all reminders needing attention (Manager/Owner only)
   app.get('/api/invoices/reminders/needs-attention', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -8975,7 +8812,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching urgent reminders:", error);
       res.status(500).json({ message: "Failed to fetch urgent reminders" });
     }
-  });
 
   // ============================================================================
   // EXPENSEOS™ - EMPLOYEE EXPENSE MANAGEMENT
@@ -8991,7 +8827,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching expense categories:", error);
       res.status(500).json({ message: "Failed to fetch expense categories" });
     }
-  });
 
   // Seed default expense categories (Manager/Admin only) - For existing workspaces
   app.post('/api/expense-categories/seed', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9029,7 +8864,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error seeding expense categories:", error);
       res.status(500).json({ message: error.message || "Failed to seed expense categories" });
     }
-  });
 
   // Create expense category (Manager/Admin only)
   app.post('/api/expense-categories', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9045,7 +8879,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating expense category:", error);
       res.status(400).json({ message: error.message || "Failed to create expense category" });
     }
-  });
 
   // Submit expense
   app.post('/api/expenses', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9073,7 +8906,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating expense:", error);
       res.status(400).json({ message: error.message || "Failed to create expense" });
     }
-  });
 
   // Get expenses (employees see their own, managers see all)
   app.get('/api/expenses', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9104,7 +8936,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching expenses:", error);
       res.status(500).json({ message: "Failed to fetch expenses" });
     }
-  });
 
   // Get single expense with receipts
   app.get('/api/expenses/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9122,7 +8953,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching expense:", error);
       res.status(500).json({ message: "Failed to fetch expense" });
     }
-  });
 
   // Upload expense receipt to object storage
   app.post('/api/expenses/:id/receipts', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9218,7 +9048,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error uploading receipt:", error);
       res.status(400).json({ message: error.message || "Failed to upload receipt" });
     }
-  });
 
   // Approve expense (Manager/Admin only)
   app.patch('/api/expenses/:id/approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9238,7 +9067,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error approving expense:", error);
       res.status(500).json({ message: error.message || "Failed to approve expense" });
     }
-  });
 
   // Reject expense (Manager/Admin only)
   app.patch('/api/expenses/:id/reject', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9262,7 +9090,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error rejecting expense:", error);
       res.status(500).json({ message: error.message || "Failed to reject expense" });
     }
-  });
 
   // Mark expense as paid (Manager/Admin only)
   app.patch('/api/expenses/:id/mark-paid', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9282,7 +9109,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error marking expense as paid:", error);
       res.status(500).json({ message: error.message || "Failed to mark expense as paid" });
     }
-  });
 
   // ============================================================================
   // I-9 RE-VERIFICATION & COMPLIANCE
@@ -9298,7 +9124,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching I-9 records:", error);
       res.status(500).json({ message: "Failed to fetch I-9 records" });
     }
-  });
 
   // Get expiring I-9 authorizations (Manager/Admin only)
   app.get('/api/i9-records/expiring', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9311,7 +9136,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching expiring I-9 records:", error);
       res.status(500).json({ message: "Failed to fetch expiring I-9 records" });
     }
-  });
 
   // Get I-9 record by employee ID
   app.get('/api/i9-records/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9337,7 +9161,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching I-9 record:", error);
       res.status(500).json({ message: "Failed to fetch I-9 record" });
     }
-  });
 
   // ============================================================================
   // POLICIOS™ - POLICY & HANDBOOK MANAGEMENT
@@ -9361,7 +9184,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating policy:", error);
       res.status(400).json({ message: error.message || "Failed to create policy" });
     }
-  });
 
   // Get all policies for workspace
   app.get('/api/policies', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9373,7 +9195,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching policies:", error);
       res.status(500).json({ message: "Failed to fetch policies" });
     }
-  });
 
   // Get single policy
   app.get('/api/policies/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9390,7 +9211,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching policy:", error);
       res.status(500).json({ message: "Failed to fetch policy" });
     }
-  });
 
   // Publish policy (Manager/Admin only)
   app.patch('/api/policies/:id/publish', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9409,7 +9229,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error publishing policy:", error);
       res.status(500).json({ message: "Failed to publish policy" });
     }
-  });
 
   // Acknowledge policy (Employee)
   app.post('/api/policies/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -9445,7 +9264,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error acknowledging policy:", error);
       res.status(400).json({ message: error.message || "Failed to acknowledge policy" });
     }
-  });
 
   // Get policy acknowledgments (Manager/Admin only)
   app.get('/api/policies/:id/acknowledgments', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9456,7 +9274,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching policy acknowledgments:", error);
       res.status(500).json({ message: "Failed to fetch policy acknowledgments" });
     }
-  });
 
   // ============================================================================
   // TIME ENTRY APPROVAL (Multi-Level Approval Workflow)
@@ -9505,7 +9322,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error approving time entry:", error);
       res.status(500).json({ message: error.message || "Failed to approve time entry" });
     }
-  });
 
   // Reject time entry (Manager/Admin only)
   app.patch('/api/time-entries/:id/reject', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9555,7 +9371,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error rejecting time entry:", error);
       res.status(500).json({ message: error.message || "Failed to reject time entry" });
     }
-  });
 
   // Get pending time entries (Manager/Admin only) - FOR APPROVAL DASHBOARD
   app.get('/api/time-entries/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9601,7 +9416,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching pending time entries:", error);
       res.status(500).json({ message: error.message || "Failed to fetch pending time entries" });
     }
-  });
 
   // Bulk approve time entries (Manager/Admin only)
   app.post('/api/time-entries/bulk-approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -9672,7 +9486,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error bulk approving time entries:", error);
       res.status(500).json({ message: error.message || "Failed to bulk approve time entries" });
     }
-  });
 
   // ============================================================================
   // TIME TRACKING ROUTES
@@ -9693,7 +9506,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching time entries:", error);
       res.status(500).json({ message: "Failed to fetch time entries" });
     }
-  });
 
   app.post('/api/time-entries/clock-in', isAuthenticated, async (req: any, res) => {
     try {
@@ -9736,7 +9548,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error clocking in:", error);
       res.status(400).json({ message: error.message || "Failed to clock in" });
     }
-  });
 
   app.patch('/api/time-entries/:id/clock-out', isAuthenticated, async (req: any, res) => {
     try {
@@ -9800,7 +9611,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error clocking out:", error);
       res.status(400).json({ message: error.message || "Failed to clock out" });
     }
-  });
 
   // ============================================================================
   // SHIFT AUDIT DATA AGGREGATION - Comprehensive shift data for audit viewer
@@ -9938,7 +9748,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching shift audit data:", error);
       res.status(500).json({ message: error.message || "Failed to fetch shift audit data" });
     }
-  });
 
   // ============================================================================
   // MANUAL CHAT CREATION API - Create chatrooms with participants and guest tokens
@@ -10037,7 +9846,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating chat:", error);
       res.status(500).json({ message: error.message || "Failed to create chat" });
     }
-  });
 
   // ============================================================================
   // SHIFT CHATROOM API - Auto-created chatrooms for shift communication
@@ -10058,7 +9866,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching active shift chatrooms:", error);
       res.status(400).json({ message: error.message || "Failed to fetch shift chatrooms" });
     }
-  });
 
   app.get('/api/shift-chatrooms/:shiftId/:timeEntryId', isAuthenticated, async (req: any, res) => {
     try {
@@ -10086,7 +9893,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching shift chatroom:", error);
       res.status(400).json({ message: error.message || "Failed to fetch shift chatroom" });
     }
-  });
 
   app.post('/api/shift-chatrooms/:conversationId/messages', isAuthenticated, async (req: any, res) => {
     try {
@@ -10121,7 +9927,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error sending shift chat message:", error);
       res.status(400).json({ message: error.message || "Failed to send message" });
     }
-  });
 
   app.get('/api/time-entries/unbilled/:clientId', isAuthenticated, async (req: any, res) => {
     try {
@@ -10138,7 +9943,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching unbilled time entries:", error);
       res.status(500).json({ message: "Failed to fetch unbilled time entries" });
     }
-  });
 
   // ============================================================================
   // ANALYTICS ROUTES
@@ -10170,7 +9974,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
     }
-  });
 
   // ============================================================================
   // MANAGER ASSIGNMENT ROUTES
@@ -10210,7 +10013,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating manager assignment:", error);
       res.status(500).json({ message: "Failed to create manager assignment" });
     }
-  });
 
   // Get manager assignments by workspace
   app.get('/api/manager-assignments', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -10222,7 +10024,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching manager assignments:", error);
       res.status(500).json({ message: "Failed to fetch manager assignments" });
     }
-  });
 
   // Get assignments for a specific manager
   app.get('/api/manager-assignments/manager/:managerId', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -10234,7 +10035,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching manager assignments:", error);
       res.status(500).json({ message: "Failed to fetch manager assignments" });
     }
-  });
 
   // Get assignments for a specific employee
   app.get('/api/manager-assignments/employee/:employeeId', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -10246,7 +10046,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching manager assignments:", error);
       res.status(500).json({ message: "Failed to fetch manager assignments" });
     }
-  });
 
   // Delete manager assignment (owners only)
   app.delete('/api/manager-assignments/:id', isAuthenticated, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -10263,7 +10062,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting manager assignment:", error);
       res.status(500).json({ message: "Failed to delete manager assignment" });
     }
-  });
 
   // ============================================================================
   // ONBOARDING ROUTES
@@ -10316,7 +10114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating onboarding invite:", error);
       res.status(400).json({ message: error.message || "Failed to create invite" });
     }
-  });
   
   // Get invite by token (public route)
   app.get('/api/onboarding/invite/:token', async (req, res) => {
@@ -10341,7 +10138,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invite:", error);
       res.status(500).json({ message: "Failed to fetch invite" });
     }
-  });
   
   // List all invites for workspace
   app.get('/api/onboarding/invites', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -10353,7 +10149,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invites:", error);
       res.status(500).json({ message: "Failed to fetch invites" });
     }
-  });
   
   // Create/start onboarding application (public route with valid token)
   app.post('/api/onboarding/application', async (req, res) => {
@@ -10399,7 +10194,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating application:", error);
       res.status(400).json({ message: error.message || "Failed to create application" });
     }
-  });
   
   // Get onboarding application
   app.get('/api/onboarding/application/:id', async (req, res) => {
@@ -10422,7 +10216,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching application:", error);
       res.status(500).json({ message: "Failed to fetch application" });
     }
-  });
   
   // Update onboarding application (public route during onboarding, or authenticated)
   app.patch('/api/onboarding/application/:id', async (req, res) => {
@@ -10445,7 +10238,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating application:", error);
       res.status(400).json({ message: error.message || "Failed to update application" });
     }
-  });
   
   // List all applications for workspace
   app.get('/api/onboarding/applications', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -10457,7 +10249,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });
     }
-  });
   
   // Search employees and applications
   app.get('/api/employees/search', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -10475,7 +10266,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error searching employees:", error);
       res.status(500).json({ message: "Failed to search employees" });
     }
-  });
   
   // Create document signature
   app.post('/api/onboarding/signatures', async (req, res) => {
@@ -10494,7 +10284,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating signature:", error);
       res.status(400).json({ message: error.message || "Failed to create signature" });
     }
-  });
   
   // Get signatures for application
   app.get('/api/onboarding/signatures/:applicationId', async (req, res) => {
@@ -10506,7 +10295,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching signatures:", error);
       res.status(500).json({ message: "Failed to fetch signatures" });
     }
-  });
   
   // Create certification
   app.post('/api/onboarding/certifications', async (req, res) => {
@@ -10518,7 +10306,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating certification:", error);
       res.status(400).json({ message: error.message || "Failed to create certification" });
     }
-  });
   
   // Get certifications for application
   app.get('/api/onboarding/certifications/:applicationId', async (req, res) => {
@@ -10530,7 +10317,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching certifications:", error);
       res.status(500).json({ message: "Failed to fetch certifications" });
     }
-  });
 
   // Upload document during onboarding (public route with token validation)
   app.post('/api/onboarding/documents/upload-url', mutationLimiter, async (req, res) => {
@@ -10595,7 +10381,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating upload URL:", error);
       res.status(500).json({ message: error.message || "Failed to generate upload URL" });
     }
-  });
 
   // Confirm document upload and store metadata (after client uploads to signed URL)
   app.post('/api/onboarding/documents/confirm', mutationLimiter, async (req, res) => {
@@ -10679,7 +10464,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error confirming document upload:", error);
       res.status(500).json({ message: error.message || "Failed to confirm upload" });
     }
-  });
 
   // Get documents for onboarding application (public route with validation)
   app.get('/api/onboarding/documents/:applicationId', async (req, res) => {
@@ -10713,7 +10497,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching onboarding documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
     }
-  });
 
   // Get contracts for onboarding application (public route with validation)
   app.get('/api/onboarding/contracts/:applicationId', async (req, res) => {
@@ -10888,7 +10671,6 @@ ${application.email}`,
       console.error("Error fetching onboarding contracts:", error);
       res.status(500).json({ message: "Failed to fetch contracts" });
     }
-  });
 
   // Sign a contract (public route with validation)
   app.post('/api/onboarding/contracts/:contractId/sign', mutationLimiter, async (req, res) => {
@@ -10954,7 +10736,6 @@ ${application.email}`,
       console.error("Error signing contract:", error);
       res.status(500).json({ message: error.message || "Failed to sign contract" });
     }
-  });
 
   // ============================================================================
   // HIREOS™ - Digital File Cabinet & Compliance Workflow
@@ -11014,7 +10795,6 @@ ${application.email}`,
       console.error("Error uploading document:", error);
       res.status(400).json({ message: error.message || "Failed to upload document" });
     }
-  });
 
   // Get employee documents (with filters) - HR managers can view all documents
   app.get('/api/hireos/documents/:employeeId', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
@@ -11049,7 +10829,6 @@ ${application.email}`,
       console.error("Error fetching documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
     }
-  });
 
   // Approve document (manager/owner/hr_manager only)
   app.post('/api/hireos/documents/:documentId/approve', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
@@ -11078,7 +10857,6 @@ ${application.email}`,
       console.error("Error approving document:", error);
       res.status(400).json({ message: error.message || "Failed to approve document" });
     }
-  });
 
   // Reject document (manager/owner/hr_manager only)
   app.post('/api/hireos/documents/:documentId/reject', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
@@ -11111,7 +10889,6 @@ ${application.email}`,
       console.error("Error rejecting document:", error);
       res.status(400).json({ message: error.message || "Failed to reject document" });
     }
-  });
 
   // Log document access (for compliance audit trail)
   app.post('/api/hireos/documents/:documentId/access', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -11158,7 +10935,6 @@ ${application.email}`,
       console.error("Error logging document access:", error);
       res.status(400).json({ message: error.message || "Failed to log access" });
     }
-  });
 
   // Get document access logs (for compliance audit)
   app.get('/api/hireos/documents/:documentId/access-logs', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
@@ -11186,7 +10962,6 @@ ${application.email}`,
       console.error("Error fetching access logs:", error);
       res.status(500).json({ message: "Failed to fetch access logs" });
     }
-  });
 
   // Create/update onboarding workflow template (owner only)
   app.post('/api/hireos/workflow-templates', isAuthenticated, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -11210,7 +10985,6 @@ ${application.email}`,
       console.error("Error creating workflow template:", error);
       res.status(400).json({ message: error.message || "Failed to create template" });
     }
-  });
 
   // Get workflow templates
   app.get('/api/hireos/workflow-templates', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -11229,7 +11003,6 @@ ${application.email}`,
       console.error("Error fetching workflow templates:", error);
       res.status(500).json({ message: "Failed to fetch templates" });
     }
-  });
 
   // Create onboarding checklist from template
   app.post('/api/hireos/checklists', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -11293,7 +11066,6 @@ ${application.email}`,
       console.error("Error creating checklist:", error);
       res.status(400).json({ message: error.message || "Failed to create checklist" });
     }
-  });
 
   // Update checklist progress
   app.patch('/api/hireos/checklists/:checklistId', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -11339,7 +11111,6 @@ ${application.email}`,
       console.error("Error updating checklist:", error);
       res.status(400).json({ message: error.message || "Failed to update checklist" });
     }
-  });
 
   // Get compliance report (I-9 expiry, missing docs, etc) - MANAGER/OWNER ONLY
   app.get('/api/hireos/compliance-report', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -11358,7 +11129,6 @@ ${application.email}`,
       console.error("Error generating compliance report:", error);
       res.status(500).json({ message: "Failed to generate report" });
     }
-  });
 
   // Generate complete onboarding packet as PDF (all documents + audit trail) - HR managers can generate packets
   app.get('/api/hireos/documents/:employeeId/packet', isAuthenticated, requireHRManager, async (req: AuthenticatedRequest, res) => {
@@ -11667,7 +11437,6 @@ ${application.email}`,
       console.error("Error generating PDF packet:", error);
       res.status(500).json({ message: "Failed to generate PDF packet" });
     }
-  });
 
   // ============================================================================
   // STRIPE PAYMENT PROCESSING (Full implementation ready for key activation)
@@ -11690,7 +11459,6 @@ ${application.email}`,
       publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || null,
       isConfigured: !!stripe,
     });
-  });
 
   // Create Stripe Connect account for workspace
   app.post('/api/stripe/connect-account', isAuthenticated, async (req: any, res) => {
@@ -11743,7 +11511,6 @@ ${application.email}`,
       console.error("Error creating Stripe Connect account:", error);
       res.status(500).json({ message: error.message || "Failed to create Stripe account" });
     }
-  });
 
   // Generate Stripe Connect onboarding link
   app.post('/api/stripe/onboarding-link', isAuthenticated, async (req: any, res) => {
@@ -11771,7 +11538,6 @@ ${application.email}`,
       console.error("Error creating onboarding link:", error);
       res.status(500).json({ message: error.message });
     }
-  });
 
   // Process invoice payment with platform fee
   app.post('/api/stripe/pay-invoice', async (req, res) => {
@@ -11843,7 +11609,6 @@ ${application.email}`,
       console.error("Error processing payment:", error);
       res.status(500).json({ message: error.message || "Payment failed" });
     }
-  });
 
   // Create subscription for workspace tier upgrade
   app.post('/api/stripe/create-subscription', isAuthenticated, async (req: any, res) => {
@@ -11935,7 +11700,6 @@ ${application.email}`,
       console.error("Error creating subscription:", error);
       res.status(500).json({ message: error.message });
     }
-  });
 
   // Webhook handler for Stripe events
   app.post('/api/stripe/webhook', async (req, res) => {
@@ -12041,7 +11805,6 @@ ${application.email}`,
       console.error('Webhook error:', error.message);
       res.status(400).send(`Webhook Error: ${error.message}`);
     }
-  });
 
   // ============================================================================
   // ONLINE INVOICE PAYMENTS - STRIPE INTEGRATION
@@ -12165,7 +11928,6 @@ ${application.email}`,
       console.error('Error creating payment intent:', error);
       res.status(500).json({ message: error.message || 'Failed to create payment intent' });
     }
-  });
 
   // Get invoice payment status (public - no auth required)
   app.get('/api/invoices/:id/payment-status', async (req, res) => {
@@ -12203,7 +11965,6 @@ ${application.email}`,
       console.error('Error getting payment status:', error);
       res.status(500).json({ message: error.message || 'Failed to get payment status' });
     }
-  });
 
   // Get payment history for a client (auth required)
   app.get('/api/clients/:clientId/payments', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12239,7 +12000,6 @@ ${application.email}`,
       console.error('Error getting client payments:', error);
       res.status(500).json({ message: error.message || 'Failed to get payments' });
     }
-  });
 
   // ============================================================================
   // EMPLOYEE ONBOARDING & MANAGEMENT
@@ -12282,7 +12042,6 @@ ${application.email}`,
       console.error('Error getting payroll info:', error);
       res.status(500).json({ message: error.message || 'Failed to get payroll information' });
     }
-  });
 
   // Update employee payroll information - CRITICAL: Requires OWNER+ role  
   app.put('/api/employees/:employeeId/payroll', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -12366,7 +12125,6 @@ ${application.email}`,
       console.error('Error updating payroll info:', error);
       res.status(500).json({ message: error.message || 'Failed to update payroll information' });
     }
-  });
 
   // Get employee availability
   app.get('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12391,7 +12149,6 @@ ${application.email}`,
       console.error('Error getting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to get availability' });
     }
-  });
 
   // Set employee availability
   app.post('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12442,7 +12199,6 @@ ${application.email}`,
       console.error('Error setting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to set availability' });
     }
-  });
 
   // Get pending time-off requests for managers (with employee details)
   app.get('/api/time-off-requests/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -12479,7 +12235,6 @@ ${application.email}`,
       console.error('Error fetching pending time-off requests:', error);
       res.status(500).json({ message: error.message || 'Failed to fetch pending time-off requests' });
     }
-  });
 
   // Get time off requests for employee
   app.get('/api/employees/:employeeId/time-off', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12504,7 +12259,6 @@ ${application.email}`,
       console.error('Error getting time off requests:', error);
       res.status(500).json({ message: error.message || 'Failed to get time off requests' });
     }
-  });
 
   // Create time off request
   app.post('/api/time-off-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12559,7 +12313,6 @@ ${application.email}`,
       console.error('Error creating time off request:', error);
       res.status(500).json({ message: error.message || 'Failed to create time off request' });
     }
-  });
 
   // Approve/deny time off request (manager only)
   app.put('/api/time-off-requests/:id/status', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -12633,7 +12386,6 @@ ${application.email}`,
       console.error('Error updating time off request:', error);
       res.status(500).json({ message: error.message || 'Failed to update time off request' });
     }
-  });
 
   // Contract document management
   app.get('/api/employees/:employeeId/contracts', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12658,7 +12410,6 @@ ${application.email}`,
       console.error('Error getting contracts:', error);
       res.status(500).json({ message: error.message || 'Failed to get contracts' });
     }
-  });
 
   // Submit contract document (I9, W9, W4) - Requires OWNER+  
   app.post('/api/contract-documents', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -12696,7 +12447,6 @@ ${application.email}`,
       console.error('Error creating contract document:', error);
       res.status(500).json({ message: error.message || 'Failed to create contract document' });
     }
-  });
 
   // Approve/reject contract document
   app.put('/api/contract-documents/:id/status', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12737,7 +12487,6 @@ ${application.email}`,
       console.error('Error updating contract status:', error);
       res.status(500).json({ message: error.message || 'Failed to update contract status' });
     }
-  });
 
   // ============================================================================
   // SHIFT MANAGEMENT - Accept/Deny/Switch
@@ -12766,7 +12515,6 @@ ${application.email}`,
       console.error('Error getting shift actions:', error);
       res.status(500).json({ message: error.message || 'Failed to get shift actions' });
     }
-  });
 
   // Accept/Deny shift
   app.post('/api/shifts/:shiftId/respond', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12799,7 +12547,6 @@ ${application.email}`,
       console.error('Error responding to shift:', error);
       res.status(500).json({ message: error.message || 'Failed to respond to shift' });
     }
-  });
 
   // Request shift switch
   app.post('/api/shifts/:shiftId/switch', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -12828,7 +12575,6 @@ ${application.email}`,
       console.error('Error requesting shift switch:', error);
       res.status(500).json({ message: error.message || 'Failed to request shift switch' });
     }
-  });
 
   // Get pending shift actions for managers
   app.get('/api/shift-actions/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -12873,7 +12619,6 @@ ${application.email}`,
       console.error('Error fetching pending shift actions:', error);
       res.status(500).json({ message: error.message || 'Failed to fetch pending shift actions' });
     }
-  });
 
   // Approve/deny shift switch (manager only)
   app.put('/api/shift-actions/:id/approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -12950,7 +12695,6 @@ ${application.email}`,
       console.error('Error approving shift action:', error);
       res.status(500).json({ message: error.message || 'Failed to approve shift action' });
     }
-  });
 
   // ============================================================================
   // TIMESHEET EDIT REQUESTS - Employees cannot edit own timesheets
@@ -13007,7 +12751,6 @@ ${application.email}`,
       console.error('Error creating edit request:', error);
       res.status(500).json({ message: error.message || 'Failed to create edit request' });
     }
-  });
 
   // Get pending timesheet edit requests for managers (with employee and time entry details)
   app.get('/api/timesheet-edit-requests/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -13046,7 +12789,6 @@ ${application.email}`,
       console.error('Error fetching pending edit requests:', error);
       res.status(500).json({ message: error.message || 'Failed to fetch pending edit requests' });
     }
-  });
 
   // Get edit requests for supervisor/manager
   app.get('/api/timesheet-edit-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -13076,7 +12818,6 @@ ${application.email}`,
       console.error('Error getting edit requests:', error);
       res.status(500).json({ message: error.message || 'Failed to get edit requests' });
     }
-  });
 
   // Approve/deny timesheet edit request (supervisor/manager only)
   app.put('/api/timesheet-edit-requests/:id/review', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -13180,7 +12921,6 @@ ${application.email}`,
       console.error('Error reviewing edit request:', error);
       res.status(500).json({ message: error.message || 'Failed to review edit request' });
     }
-  });
 
   // ============================================================================
   // ORGANIZATION ONBOARDING & MANAGEMENT
@@ -13222,7 +12962,6 @@ ${application.email}`,
       console.error('Error starting onboarding:', error);
       res.status(500).json({ message: error.message || 'Failed to start onboarding' });
     }
-  });
 
   // Update onboarding progress
   app.put('/api/organization-onboarding/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -13263,7 +13002,6 @@ ${application.email}`,
       console.error('Error updating onboarding:', error);
       res.status(500).json({ message: error.message || 'Failed to update onboarding' });
     }
-  });
 
   // Complete onboarding
   app.post('/api/organization-onboarding/:id/complete', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -13296,7 +13034,6 @@ ${application.email}`,
       console.error('Error completing onboarding:', error);
       res.status(500).json({ message: error.message || 'Failed to complete onboarding' });
     }
-  });
 
   // Get onboarding status
   app.get('/api/organization-onboarding/status', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -13321,7 +13058,6 @@ ${application.email}`,
       console.error('Error getting onboarding status:', error);
       res.status(500).json({ message: error.message || 'Failed to get onboarding status' });
     }
-  });
 
   // ============================================================================
   // SUPPORT & CONTACT ROUTES
@@ -13400,7 +13136,6 @@ ${application.email}`,
       console.error("Error processing contact form:", error);
       res.status(500).json({ message: "Failed to submit contact form. Please try again." });
     }
-  });
 
   // ============================================================================
   // REPORT MANAGEMENT SYSTEM (RMS) ROUTES
@@ -13421,7 +13156,6 @@ ${application.email}`,
       console.error("Error fetching report templates:", error);
       res.status(500).json({ message: "Failed to fetch report templates" });
     }
-  });
 
   // Toggle template activation for workspace
   app.post('/api/report-templates/:id/toggle', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -13436,7 +13170,6 @@ ${application.email}`,
       console.error("Error toggling template activation:", error);
       res.status(500).json({ message: "Failed to toggle template activation" });
     }
-  });
 
   // Get report submissions (for employees/supervisors)
   app.get('/api/report-submissions', isAuthenticated, async (req: any, res) => {
@@ -13457,7 +13190,6 @@ ${application.email}`,
       console.error("Error fetching report submissions:", error);
       res.status(500).json({ message: "Failed to fetch report submissions" });
     }
-  });
 
   // Create new report submission
   app.post('/api/report-submissions', isAuthenticated, async (req: any, res) => {
@@ -13479,7 +13211,6 @@ ${application.email}`,
       console.error("Error creating report submission:", error);
       res.status(500).json({ message: "Failed to create report submission" });
     }
-  });
 
   // Update report submission (for drafts or revisions)
   app.patch('/api/report-submissions/:id', isAuthenticated, async (req: any, res) => {
@@ -13491,7 +13222,6 @@ ${application.email}`,
       console.error("Error updating report submission:", error);
       res.status(500).json({ message: "Failed to update report submission" });
     }
-  });
 
   // Supervisor approve/reject report
   app.post('/api/report-submissions/:id/review', isAuthenticated, requireManager, async (req: any, res) => {
@@ -13512,7 +13242,6 @@ ${application.email}`,
       console.error("Error reviewing report submission:", error);
       res.status(500).json({ message: "Failed to review report submission" });
     }
-  });
 
   // Send approved report to client via email
   app.post('/api/report-submissions/:id/send-to-client', isAuthenticated, requireManager, async (req: any, res) => {
@@ -13601,7 +13330,6 @@ ${application.email}`,
       console.error("Error sending report to client:", error);
       res.status(500).json({ message: "Failed to send report to client" });
     }
-  });
 
   // Generate customer access token for approved report
   app.post('/api/report-submissions/:id/generate-access', isAuthenticated, async (req: any, res) => {
@@ -13625,7 +13353,6 @@ ${application.email}`,
       console.error("Error generating customer access:", error);
       res.status(500).json({ message: "Failed to generate customer access" });
     }
-  });
 
   // Customer portal - view report by access token (no auth required)
   app.get('/api/customer-reports/:token', async (req, res) => {
@@ -13650,7 +13377,6 @@ ${application.email}`,
       console.error("Error fetching customer report:", error);
       res.status(500).json({ message: "Failed to fetch report" });
     }
-  });
 
   // ============================================================================
   // MONOPOLISTIC REPORTOS™ FEATURES
@@ -13682,7 +13408,6 @@ ${application.email}`,
       console.error("Error generating labor violations report:", error);
       res.status(500).json({ message: "Failed to generate labor violations report" });
     }
-  });
 
   app.get('/api/compliance-reports/tax-remittance', isAuthenticated, async (req: any, res) => {
     try {
@@ -13709,7 +13434,6 @@ ${application.email}`,
       console.error("Error generating tax remittance report:", error);
       res.status(500).json({ message: "Failed to generate tax remittance report" });
     }
-  });
 
   app.get('/api/compliance-reports/audit-log', isAuthenticated, async (req: any, res) => {
     try {
@@ -13737,7 +13461,6 @@ ${application.email}`,
       console.error("Error generating audit log report:", error);
       res.status(500).json({ message: "Failed to generate audit log report" });
     }
-  });
 
 
   // Compliance Summary - Certification Expiration Overview
@@ -13757,7 +13480,6 @@ ${application.email}`,
       console.error("Error fetching compliance summary:", error);
       res.status(500).json({ message: "Failed to fetch compliance summary" });
     }
-  });
 
   // KPI ALERTS - Real-Time Risk Notifications
   app.get('/api/kpi-alerts', isAuthenticated, async (req: any, res) => {
@@ -13774,7 +13496,6 @@ ${application.email}`,
       console.error("Error fetching KPI alerts:", error);
       res.status(500).json({ message: "Failed to fetch KPI alerts" });
     }
-  });
 
   app.post('/api/kpi-alerts', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -13795,7 +13516,6 @@ ${application.email}`,
       console.error("Error creating KPI alert:", error);
       res.status(500).json({ message: "Failed to create KPI alert" });
     }
-  });
 
   app.patch('/api/kpi-alerts/:id', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -13812,7 +13532,6 @@ ${application.email}`,
       console.error("Error updating KPI alert:", error);
       res.status(500).json({ message: "Failed to update KPI alert" });
     }
-  });
 
   app.delete('/api/kpi-alerts/:id', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -13833,7 +13552,6 @@ ${application.email}`,
       console.error("Error deleting KPI alert:", error);
       res.status(500).json({ message: "Failed to delete KPI alert" });
     }
-  });
 
   app.get('/api/kpi-alert-triggers', isAuthenticated, async (req: any, res) => {
     try {
@@ -13850,7 +13568,6 @@ ${application.email}`,
       console.error("Error fetching KPI alert triggers:", error);
       res.status(500).json({ message: "Failed to fetch KPI alert triggers" });
     }
-  });
 
   app.post('/api/kpi-alert-triggers/:id/acknowledge', isAuthenticated, async (req: any, res) => {
     try {
@@ -13863,7 +13580,6 @@ ${application.email}`,
       console.error("Error acknowledging alert:", error);
       res.status(500).json({ message: "Failed to acknowledge alert" });
     }
-  });
 
   // AI EXECUTIVE SUMMARIES - GPT-4 Narrative Generation
   app.post('/api/reports/:id/generate-summary', isAuthenticated, async (req: any, res) => {
@@ -13912,7 +13628,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error generating AI summary:", error);
       res.status(500).json({ message: "Failed to generate AI summary" });
     }
-  });
 
   // BENCHMARK METRICS - Peer Comparison Data
   app.get('/api/benchmark-metrics', isAuthenticated, async (req: any, res) => {
@@ -13930,7 +13645,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching benchmark metrics:", error);
       res.status(500).json({ message: "Failed to fetch benchmark metrics" });
     }
-  });
 
   app.post('/api/benchmark-metrics', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -13950,7 +13664,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error creating benchmark metric:", error);
       res.status(500).json({ message: "Failed to create benchmark metric" });
     }
-  });
 
   // ============================================================================
   // MONOPOLISTIC REPORT WORKFLOW ENGINE
@@ -13971,7 +13684,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching workflow configs:", error);
       res.status(500).json({ message: "Failed to fetch workflow configs" });
     }
-  });
 
   app.post('/api/workflow-configs', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -13991,7 +13703,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error creating workflow config:", error);
       res.status(500).json({ message: "Failed to create workflow config" });
     }
-  });
 
   app.patch('/api/workflow-configs/:id', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -14008,7 +13719,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error updating workflow config:", error);
       res.status(500).json({ message: "Failed to update workflow config" });
     }
-  });
 
   app.delete('/api/workflow-configs/:id', isAuthenticated, requireOwner, async (req: any, res) => {
     try {
@@ -14029,7 +13739,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error deleting workflow config:", error);
       res.status(500).json({ message: "Failed to delete workflow config" });
     }
-  });
 
   // APPROVAL QUEUE & PROCESSING
   app.get('/api/approvals/pending', isAuthenticated, async (req: any, res) => {
@@ -14046,7 +13755,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching pending approvals:", error);
       res.status(500).json({ message: "Failed to fetch pending approvals" });
     }
-  });
 
   app.post('/api/approvals/:stepId/process', isAuthenticated, async (req: any, res) => {
     try {
@@ -14073,7 +13781,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error processing approval:", error);
       res.status(500).json({ message: error.message || "Failed to process approval" });
     }
-  });
 
   app.get('/api/report-submissions/:id/approval-status', isAuthenticated, async (req: any, res) => {
     try {
@@ -14091,7 +13798,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching approval status:", error);
       res.status(500).json({ message: "Failed to fetch approval status" });
     }
-  });
 
   // LOCKED REPORT RECORDS (Audit Trail)
   app.get('/api/locked-reports', isAuthenticated, async (req: any, res) => {
@@ -14116,7 +13822,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching locked reports:", error);
       res.status(500).json({ message: "Failed to fetch locked reports" });
     }
-  });
 
   app.get('/api/locked-reports/:id', isAuthenticated, async (req: any, res) => {
     try {
@@ -14132,7 +13837,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching locked report:", error);
       res.status(500).json({ message: "Failed to fetch locked report" });
     }
-  });
 
   // REPORT ANALYTICS (Cross-Referenced Data)
   app.get('/api/report-analytics', isAuthenticated, async (req: any, res) => {
@@ -14160,7 +13864,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error generating report analytics:", error);
       res.status(500).json({ message: "Failed to generate report analytics" });
     }
-  });
 
   // INDUSTRY TEMPLATES - Seed workspace with pre-built templates
   app.post('/api/report-templates/seed-industry', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -14182,7 +13885,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error seeding industry templates:", error);
       res.status(500).json({ message: "Failed to seed industry templates" });
     }
-  });
 
   // Support Tickets - Create ticket (requires authentication to get workspaceId)
   app.post('/api/support/tickets', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -14219,7 +13921,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error creating support ticket:", error);
       res.status(500).json({ message: "Failed to create support ticket" });
     }
-  });
 
   // Get support tickets for current workspace
   app.get('/api/support/tickets', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -14236,7 +13937,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching support tickets:", error);
       res.status(500).json({ message: "Failed to fetch support tickets" });
     }
-  });
 
   // Update support ticket status
   app.patch('/api/support/tickets/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -14248,7 +13948,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error updating support ticket:", error);
       res.status(500).json({ message: "Failed to update support ticket" });
     }
-  });
 
   // Escalate support ticket to platform support (org leaders only)
   app.post('/api/support/tickets/:id/escalate', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -14315,7 +14014,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error escalating support ticket:", error);
       res.status(500).json({ message: "Failed to escalate support ticket" });
     }
-  });
 
   // Get escalated tickets (platform support only)
   app.get('/api/support/escalated', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14333,7 +14031,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error fetching escalated tickets:", error);
       res.status(500).json({ message: "Failed to fetch escalated tickets" });
     }
-  });
 
   // Assign escalated ticket to platform staff
   app.patch('/api/support/escalated/:id/assign', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14372,7 +14069,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error assigning escalated ticket:", error);
       res.status(500).json({ message: "Failed to assign escalated ticket" });
     }
-  });
 
   // Add platform notes to escalated ticket
   app.patch('/api/support/escalated/:id/notes', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14399,7 +14095,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error updating platform notes:", error);
       res.status(500).json({ message: "Failed to update platform notes" });
     }
-  });
 
   // Resolve escalated ticket
   app.patch('/api/support/escalated/:id/resolve', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14452,7 +14147,6 @@ Keep it professional, actionable, and under 250 words.`;
       console.error("Error resolving escalated ticket:", error);
       res.status(500).json({ message: "Failed to resolve escalated ticket" });
     }
-  });
 
   // Generate AI summary of support conversation
   app.post('/api/support/tickets/:id/generate-summary', chatMessageLimiter, async (req, res) => {
@@ -14532,7 +14226,6 @@ Summary:`;
       console.error('Error generating summary:', error);
       res.status(500).json({ message: 'Failed to generate summary' });
     }
-  });
 
   // Close support ticket and email summary to user
   app.post('/api/support/tickets/:id/close', chatMessageLimiter, async (req, res) => {
@@ -14612,7 +14305,6 @@ Summary:`;
       console.error('Error closing ticket:', error);
       res.status(500).json({ message: 'Failed to close ticket' });
     }
-  });
 
   // ============================================================================
   // ADMIN SUPPORT ROUTES - Platform Administration
@@ -14640,7 +14332,6 @@ Summary:`;
       console.error("Error searching customers:", error);
       res.status(500).json({ message: "Failed to search customers" });
     }
-  });
 
   // Get workspace detail (platform admin only)
   app.get('/api/admin/support/workspace/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14662,7 +14353,6 @@ Summary:`;
       console.error("Error fetching workspace detail:", error);
       res.status(500).json({ message: "Failed to fetch workspace detail" });
     }
-  });
 
   // Get platform statistics (platform admin only)
   app.get('/api/admin/support/stats', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14673,7 +14363,6 @@ Summary:`;
       console.error("Error fetching platform stats:", error);
       res.status(500).json({ message: "Failed to fetch platform statistics" });
     }
-  });
 
   // ============================================================================
   // EXTERNAL IDENTIFIER LOOKUP SYSTEM
@@ -14696,7 +14385,6 @@ Summary:`;
       console.error("Error performing support lookup:", error);
       res.status(500).json({ message: "Failed to perform lookup" });
     }
-  });
 
   // Change user role (platform admin action)
   app.post('/api/admin/support/change-role', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14711,7 +14399,6 @@ Summary:`;
       console.error("Error changing user role:", error);
       res.status(500).json({ message: "Failed to change user role" });
     }
-  });
 
   // DEMO WORKSPACE REFRESH - Idempotent data repopulation for testing
   app.post('/api/admin/demo-workspace/refresh', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -14731,7 +14418,6 @@ Summary:`;
       console.error("❌ Error refreshing demo workspace:", error);
       res.status(500).json({ message: "Failed to refresh demo workspace", error: error instanceof Error ? error.message : String(error) });
     }
-  });
 
   // ACCOUNT CONTROL ACTIONS - Suspend/Freeze/Lock accounts
   
@@ -14754,7 +14440,6 @@ Summary:`;
       console.error("Error suspending account:", error);
       res.status(500).json({ message: "Failed to suspend account" });
     }
-  });
   
   // Unsuspend account
   app.post('/api/admin/support/unsuspend-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14774,7 +14459,6 @@ Summary:`;
       console.error("Error unsuspending account:", error);
       res.status(500).json({ message: "Failed to unsuspend account" });
     }
-  });
   
   // Freeze account (for non-payment)
   app.post('/api/admin/support/freeze-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14794,7 +14478,6 @@ Summary:`;
       console.error("Error freezing account:", error);
       res.status(500).json({ message: "Failed to freeze account" });
     }
-  });
   
   // Unfreeze account
   app.post('/api/admin/support/unfreeze-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14813,7 +14496,6 @@ Summary:`;
       console.error("Error unfreezing account:", error);
       res.status(500).json({ message: "Failed to unfreeze account" });
     }
-  });
   
   // Lock account (emergency lock)
   app.post('/api/admin/support/lock-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14833,7 +14515,6 @@ Summary:`;
       console.error("Error locking account:", error);
       res.status(500).json({ message: "Failed to lock account" });
     }
-  });
   
   // Unlock account
   app.post('/api/admin/support/unlock-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14852,7 +14533,6 @@ Summary:`;
       console.error("Error unlocking account:", error);
       res.status(500).json({ message: "Failed to unlock account" });
     }
-  });
 
   // ============================================================================
   // ADMIN POWER TOOLS - User/Employee Management (Cross-Workspace)
@@ -14881,7 +14561,6 @@ Summary:`;
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
     }
-  });
 
   // Change user role (promote/demote)
   app.post('/api/admin/support/change-user-role', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -14905,7 +14584,6 @@ Summary:`;
       console.error("Error changing user role:", error);
       res.status(500).json({ message: "Failed to change user role" });
     }
-  });
 
   // ============================================================================
   // ADMIN POWER TOOLS - Client Management (Cross-Workspace)
@@ -14957,7 +14635,6 @@ Summary:`;
       console.error("Error creating client:", error);
       res.status(400).json({ message: error.message || "Failed to create client" });
     }
-  });
 
   // Delete client from any workspace
   app.post('/api/admin/support/delete-client', isAuthenticated, async (req: any, res) => {
@@ -14982,7 +14659,6 @@ Summary:`;
       console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
     }
-  });
 
   // ============================================================================
   // ADMIN POWER TOOLS - Payment & Invoice Control
@@ -15016,7 +14692,6 @@ Summary:`;
       console.error("Error processing payment:", error);
       res.status(500).json({ message: "Failed to process payment" });
     }
-  });
 
   // Force clear invoice (admin override)
   app.post('/api/admin/support/force-clear-invoice', isAuthenticated, async (req: any, res) => {
@@ -15044,7 +14719,6 @@ Summary:`;
       console.error("Error clearing invoice:", error);
       res.status(500).json({ message: "Failed to clear invoice" });
     }
-  });
 
   // ============================================================================
   // ADMIN POWER TOOLS - Service Control
@@ -15074,7 +14748,6 @@ Summary:`;
       console.error("Error resetting chat:", error);
       res.status(500).json({ message: "Failed to reset chat" });
     }
-  });
 
   // Force close service/feature for workspace
   app.post('/api/admin/support/force-close-service', isAuthenticated, async (req: any, res) => {
@@ -15092,7 +14765,6 @@ Summary:`;
       console.error("Error force closing service:", error);
       res.status(500).json({ message: "Failed to force close service" });
     }
-  });
 
   // Update subscription tier (platform admin action)
   app.post('/api/admin/support/update-subscription', isAuthenticated, async (req: any, res) => {
@@ -15107,7 +14779,6 @@ Summary:`;
       console.error("Error updating subscription:", error);
       res.status(500).json({ message: "Failed to update subscription" });
     }
-  });
 
   // Get Stripe status (platform admin diagnostic)
   app.get('/api/admin/support/stripe-status/:workspaceId', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -15121,7 +14792,6 @@ Summary:`;
       console.error("Error fetching Stripe status:", error);
       res.status(500).json({ message: "Failed to fetch Stripe status" });
     }
-  });
 
   // Create support ticket (admin on behalf of customer)
   app.post('/api/admin/support/create-ticket', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -15139,7 +14809,6 @@ Summary:`;
       console.error("Error creating support ticket:", error);
       res.status(500).json({ message: "Failed to create support ticket" });
     }
-  });
 
   // Update ticket status (admin action)
   app.post('/api/admin/support/update-ticket', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -15154,7 +14823,6 @@ Summary:`;
       console.error("Error updating ticket:", error);
       res.status(500).json({ message: "Failed to update ticket" });
     }
-  });
 
   // ============================================================================
   // PLATFORM ADMIN ROUTES (Root Command Center)
@@ -15171,7 +14839,6 @@ Summary:`;
   // Platform dashboard statistics
   app.get('/api/platform/stats', requirePlatformStaff, async (req, res) => {
     await getPlatformStats(req, res);
-  });
 
   // Universal analytics stats for dashboard (works for both workspace and platform users)
   app.get('/api/analytics/stats', requireAuth, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
@@ -15204,7 +14871,6 @@ Summary:`;
       console.error("Error fetching analytics stats:", error);
       res.status(500).json({ message: "Failed to fetch analytics statistics" });
     }
-  });
 
   // AI Compliance Audit Logs - Comprehensive activity tracking
   app.get('/api/audit-logs', requireAuth, requireProfessional, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
@@ -15262,7 +14928,6 @@ Summary:`;
       console.error("Error fetching audit logs:", error);
       res.status(500).json({ message: "Failed to fetch audit logs" });
     }
-  });
 
   // Personal staff data (assigned tickets, etc.)
   app.get('/api/platform/personal-data', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -15305,17 +14970,14 @@ Summary:`;
       console.error("Error fetching personal staff data:", error);
       res.status(500).json({ error: "Failed to fetch personal data" });
     }
-  });
 
   // Search workspaces (cross-tenant admin search)
   app.get('/api/platform/workspaces/search', requirePlatformStaff, async (req, res) => {
     await searchWorkspaces(req, res);
-  });
 
   // Get workspace admin detail
   app.get('/api/platform/workspaces/:workspaceId', requirePlatformStaff, async (req, res) => {
     await getWorkspaceAdminDetail(req, res);
-  });
 
   // ============================================================================
   // MASTER KEYS - ROOT-ONLY ORGANIZATION MANAGEMENT
@@ -15328,7 +14990,6 @@ Summary:`;
     status: z.enum(['active', 'suspended', 'cancelled', 'trialing']).optional(),
     limit: z.coerce.number().min(1).max(100).default(50),
     offset: z.coerce.number().min(0).default(0),
-  });
 
   const masterKeysUpdateSchema = z.object({
     featureToggles: z.object({
@@ -15352,11 +15013,9 @@ Summary:`;
     adminNotes: z.string().max(5000).optional(),
     adminFlags: z.array(z.string().max(50)).max(20).optional(),
     actionDescription: z.string().min(1).max(500),
-  });
 
   const masterKeysResetSchema = z.object({
     reason: z.string().min(1).max(500),
-  });
 
   // Search/List all organizations with Master Keys access
   app.get('/api/platform/master-keys/organizations', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15410,7 +15069,6 @@ Summary:`;
       }
       res.status(500).json({ error: "Failed to fetch organizations" });
     }
-  });
 
   // Get detailed organization info for Master Keys management
   app.get('/api/platform/master-keys/organizations/:id', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15458,7 +15116,6 @@ Summary:`;
       console.error("Error fetching organization detail:", error);
       res.status(500).json({ error: "Failed to fetch organization detail" });
     }
-  });
 
   // Update organization features and billing (Master Keys)
   app.patch('/api/platform/master-keys/organizations/:id', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15660,7 +15317,6 @@ Summary:`;
       }
       res.status(500).json({ error: "Failed to update organization" });
     }
-  });
 
   // Reset organization to defaults
   app.post('/api/platform/master-keys/organizations/:id/reset', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15742,7 +15398,6 @@ Summary:`;
       }
       res.status(500).json({ error: "Failed to reset organization" });
     }
-  });
 
   // Backfill client userId for existing clients (link clients to users by email)
   app.post('/api/platform/master-keys/clients/backfill-users', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15818,7 +15473,6 @@ Summary:`;
       console.error('Backfill error:', error);
       res.status(500).json({ error: 'Backfill failed', details: error.message });
     }
-  });
 
   // ============================================================================
   // USER MANAGEMENT - ROOT ADMIN DASHBOARD
@@ -15883,7 +15537,6 @@ Summary:`;
       console.error("Error searching users:", error);
       res.status(500).json({ error: "Failed to search users" });
     }
-  });
 
   // Get all platform users (staff) - ROOT/DEPUTY ADMIN only
   app.get('/api/platform/users', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15926,7 +15579,6 @@ Summary:`;
       console.error("Error fetching platform users:", error);
       res.status(500).json({ error: "Failed to fetch platform users" });
     }
-  });
 
   // Get user details by ID (ROOT/DEPUTY ADMIN only)
   app.get('/api/platform/users/:userId', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -15985,7 +15637,6 @@ Summary:`;
       console.error("Error fetching user details:", error);
       res.status(500).json({ error: "Failed to fetch user details" });
     }
-  });
 
   // Update user (ROOT only)
   app.patch('/api/platform/users/:userId', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -16030,7 +15681,6 @@ Summary:`;
       console.error("Error updating user:", error);
       res.status(500).json({ error: "Failed to update user" });
     }
-  });
 
   // Set user password (ROOT only)
   app.post('/api/platform/users/:userId/set-password', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -16057,7 +15707,6 @@ Summary:`;
       console.error("Error setting password:", error);
       res.status(500).json({ error: "Failed to set password" });
     }
-  });
 
   // Grant platform role (ROOT only)
   app.post('/api/platform/users/:userId/grant-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -16104,7 +15753,6 @@ Summary:`;
       console.error("Error granting platform role:", error);
       res.status(500).json({ error: "Failed to grant platform role" });
     }
-  });
 
   // Revoke platform role (ROOT only)
   app.post('/api/platform/users/:userId/revoke-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -16129,7 +15777,6 @@ Summary:`;
       console.error("Error revoking platform role:", error);
       res.status(500).json({ error: "Failed to revoke platform role" });
     }
-  });
 
   // Create new user (ROOT only)
   app.post('/api/platform/users', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -16183,7 +15830,6 @@ Summary:`;
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Failed to create user" });
     }
-  });
   
   // Save platform settings
   app.post('/api/platform/settings', requirePlatformAdmin, async (req, res) => {
@@ -16213,7 +15859,6 @@ Summary:`;
       console.error("Error saving platform settings:", error);
       res.status(500).json({ message: error.message || "Failed to save settings" });
     }
-  });
 
   // ============================================================================
   // LIVE CHAT ROUTES (WebSocket Support System)
@@ -16272,7 +15917,6 @@ Summary:`;
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
     }
-  });
 
   // Create new conversation
   app.post('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
@@ -16295,7 +15939,6 @@ Summary:`;
       console.error("Error creating conversation:", error);
       res.status(400).json({ message: error.message || "Failed to create conversation" });
     }
-  });
 
   // Get conversation messages
   app.get('/api/chat/conversations/:id/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16361,7 +16004,6 @@ Summary:`;
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
     }
-  });
 
   // Update conversation (assign agent, change status, etc.)
   app.patch('/api/chat/conversations/:id', isAuthenticated, async (req: any, res) => {
@@ -16396,7 +16038,6 @@ Summary:`;
       console.error("Error updating conversation:", error);
       res.status(400).json({ message: error.message || "Failed to update conversation" });
     }
-  });
 
   // Close conversation
   app.post('/api/chat/conversations/:id/close', isAuthenticated, async (req: any, res) => {
@@ -16426,7 +16067,6 @@ Summary:`;
       console.error("Error closing conversation:", error);
       res.status(500).json({ message: "Failed to close conversation" });
     }
-  });
 
   // ============================================================================
   // LIVE CHATROOM (IRC/MSN Style - Single Room Always Open)
@@ -16459,7 +16099,6 @@ Summary:`;
       console.error("Error getting main room:", error);
       res.status(500).json({ message: "Failed to get main room" });
     }
-  });
   
   // Get all messages from main room (live feed)
   app.get('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16486,7 +16125,6 @@ Summary:`;
       console.error("Error fetching main room messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
     }
-  });
   
   // Send message to main room
   app.post('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16541,7 +16179,6 @@ Summary:`;
       console.error("Error sending message:", error);
       res.status(400).json({ message: error.message || "Failed to send message" });
     }
-  });
 
   // Grant voice to user (remove silence) - Managers and Owners only
   app.post('/api/chat/conversations/:id/grant-voice', isAuthenticated, requireManager, async (req: any, res) => {
@@ -16591,7 +16228,6 @@ Summary:`;
       console.error("Error granting voice:", error);
       res.status(500).json({ message: "Failed to grant voice" });
     }
-  });
 
   // Help bot: Send AI response
   app.post('/api/chat/help-bot/respond', isAuthenticated, async (req: any, res) => {
@@ -16634,7 +16270,6 @@ Summary:`;
       console.error("Error generating bot response:", error);
       res.status(500).json({ message: "Failed to generate bot response" });
     }
-  });
 
   // Gemini AI: Generate chat response (with usage-based billing)
   app.post('/api/chat/gemini', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16688,7 +16323,6 @@ Summary:`;
         available: false 
       });
     }
-  });
 
   // Check Gemini AI availability
   app.get('/api/chat/gemini/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16708,7 +16342,6 @@ Summary:`;
         message: "Failed to check AI status" 
       });
     }
-  });
 
   // ============================================================================
   // CHAT MACROS & TYPING INDICATORS (Premium Chat Features)
@@ -16757,7 +16390,6 @@ Summary:`;
       console.error("Error fetching chat macros:", error);
       res.status(500).json({ message: "Failed to fetch chat macros" });
     }
-  });
 
   // Create new chat macro - Support agents only
   app.post('/api/chat/macros', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16829,7 +16461,6 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to create chat macro" });
     }
-  });
 
   // Delete chat macro - Support agents only
   app.delete('/api/chat/macros/:id', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16871,7 +16502,6 @@ Summary:`;
       console.error("Error deleting chat macro:", error);
       res.status(500).json({ message: "Failed to delete chat macro" });
     }
-  });
 
   // Start typing indicator
   app.post('/api/chat/conversations/:id/typing', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16923,7 +16553,6 @@ Summary:`;
       console.error("Error starting typing indicator:", error);
       res.status(500).json({ message: "Failed to start typing indicator" });
     }
-  });
 
   // Stop typing indicator
   app.delete('/api/chat/conversations/:id/typing', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -16968,7 +16597,6 @@ Summary:`;
       console.error("Error stopping typing indicator:", error);
       res.status(500).json({ message: "Failed to stop typing indicator" });
     }
-  });
 
   // ============================================================================
   // HELPDESK SYSTEM API ROUTES (Professional Support Chat Rooms)
@@ -16989,7 +16617,6 @@ Summary:`;
       console.error("Error fetching HelpDesk room:", error);
       res.status(500).json({ message: "Failed to fetch HelpDesk room" });
     }
-  });
 
   // List all support rooms - Staff only (for room selector)
   app.get('/api/helpdesk/rooms', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17012,7 +16639,6 @@ Summary:`;
       console.error("Error listing HelpDesk rooms:", error);
       res.status(500).json({ message: "Failed to list rooms" });
     }
-  });
 
   // Create organization chatroom - Organization owners/managers only
   app.post('/api/helpdesk/rooms', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17070,7 +16696,6 @@ Summary:`;
       console.error("Error creating organization room:", error);
       res.status(500).json({ message: "Failed to create room" });
     }
-  });
 
   // Toggle HelpDesk room status (open/closed) - Staff only
   app.post('/api/helpdesk/room/:slug/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17101,7 +16726,6 @@ Summary:`;
       console.error("Error updating HelpDesk room status:", error);
       res.status(500).json({ message: "Failed to update room status" });
     }
-  });
 
   // ============================================================================
   // CHAT TICKET OPERATIONS - RBAC Filtered Support Tickets
@@ -17163,7 +16787,6 @@ Summary:`;
       console.error('Error fetching chat ticket:', error);
       res.status(500).json({ error: 'Failed to fetch ticket' });
     }
-  });
   
   app.get('/api/chat/tickets', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -17219,7 +16842,6 @@ Summary:`;
       console.error('Error fetching chat tickets:', error);
       res.status(500).json({ error: 'Failed to fetch tickets' });
     }
-  });
 
   // Get HelpDesk queue data - All authenticated users can view
   app.get('/api/helpdesk/queue', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17253,7 +16875,6 @@ Summary:`;
       console.error("Error fetching HelpDesk queue:", error);
       res.status(500).json({ message: "Failed to fetch queue data" });
     }
-  });
 
   // Toggle HelpOS AI on/off - Staff only
   app.post('/api/helpdesk/ai/toggle', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17295,7 +16916,6 @@ Summary:`;
       console.error("Error toggling HelpOS AI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
     }
-  });
 
   // Get HelpOS AI status - Staff only
   app.get('/api/helpdesk/ai/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17333,7 +16953,6 @@ Summary:`;
       console.error("Error fetching HelpOS AI status:", error);
       res.status(500).json({ message: "Failed to fetch AI status" });
     }
-  });
 
   // Authenticate customer with ticket number + email (no login required)
   app.post('/api/helpdesk/authenticate-ticket', async (req, res) => {
@@ -17423,7 +17042,6 @@ Summary:`;
       console.error("Error authenticating ticket:", error);
       res.status(500).json({ message: "Failed to authenticate ticket. Please try again." });
     }
-  });
 
   // Authenticate support staff with work ID + email (no platform login required)
   app.post('/api/helpdesk/authenticate-workid', async (req, res) => {
@@ -17490,7 +17108,6 @@ Summary:`;
       console.error("Error authenticating work ID:", error);
       res.status(500).json({ message: "Failed to authenticate. Please try again." });
     }
-  });
 
   // Verify ticket and grant chat access (gatekeeper MOMJJ)
   app.post('/api/helpdesk/verify-ticket', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17551,7 +17168,6 @@ Summary:`;
       console.error("Error verifying ticket:", error);
       res.status(500).json({ message: "Failed to verify ticket" });
     }
-  });
 
   // Accept terms and save acknowledgment for audit compliance
   // This endpoint allows BOTH authenticated users AND guests (ticket holders)
@@ -17607,7 +17223,6 @@ Summary:`;
       console.error("Error saving terms acknowledgment:", error);
       res.status(500).json({ message: "Failed to save terms acceptance" });
     }
-  });
 
   // Check if user has access to a HelpDesk room
   app.get('/api/helpdesk/check-access/:roomSlug', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17653,7 +17268,6 @@ Summary:`;
       console.error("Error checking access:", error);
       res.status(500).json({ message: "Failed to check access" });
     }
-  });
 
   // Revoke ticket access - Staff only
   app.post('/api/helpdesk/revoke-access', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -17682,7 +17296,6 @@ Summary:`;
       console.error("Error revoking access:", error);
       res.status(500).json({ message: "Failed to revoke access" });
     }
-  });
 
   // ============================================================================
   // SALES PORTAL API ROUTES (Platform Staff Only)
@@ -17715,7 +17328,6 @@ Summary:`;
     contactPhone: z.string().optional(),
     contactTitle: z.string().optional(),
     estimatedEmployees: z.number().int().positive().optional(),
-  });
 
   // Create a new lead
     try {
@@ -17742,7 +17354,6 @@ Summary:`;
       console.error("Error creating lead:", error);
       res.status(500).json({ message: "Failed to create lead" });
     }
-  });
 
   // Zod validation schema for sales email
   const sendSalesEmailSchema = z.object({
@@ -17751,14 +17362,12 @@ Summary:`;
     toName: z.string().optional(),
     companyName: z.string().min(1, "Company name is required"),
     industry: z.string().optional(),
-  });
 
   // Zod validation for AI lead generation
   const aiLeadGenerationSchema = z.object({
     industry: z.string().min(1, "Industry is required"),
     targetRegion: z.string().optional(),
     numberOfLeads: z.number().int().min(1).max(20).default(5), // Limit to prevent cost abuse
-  });
 
   // Zod validation for AI-generated lead output
   const aiGeneratedLeadSchema = z.object({
@@ -17769,7 +17378,6 @@ Summary:`;
     estimatedEmployees: z.number().int().positive(),
     painPoints: z.string(),
     leadScore: z.number().int().min(0).max(100),
-  });
 
   // AI Lead Generation - Discover potential clients automatically
     try {
@@ -17905,7 +17513,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error generating AI leads:", error);
       res.status(500).json({ message: "Failed to generate leads" });
     }
-  });
 
   // Update lead status and notes
     try {
@@ -17940,7 +17547,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating lead:", error);
       res.status(500).json({ message: "Failed to update lead" });
     }
-  });
 
   // Send email with AI personalization
     try {
@@ -18054,7 +17660,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error sending email:", error);
       res.status(500).json({ message: "Failed to send email" });
     }
-  });
 
   // ============================================================================
   // CUSTOM FORMS - Organization-Specific Form Templates
@@ -18076,7 +17681,6 @@ Return ONLY valid JSON array with this exact structure:
     isActive: z.boolean().optional(),
     accessibleBy: z.any().optional(), // JSON array
     createdByRole: z.string().optional(),
-  });
 
   const updateCustomFormSchema = z.object({
     name: z.string().min(1).max(200).optional(),
@@ -18091,7 +17695,6 @@ Return ONLY valid JSON array with this exact structure:
     maxDocuments: z.number().int().positive().optional(),
     isActive: z.boolean().optional(),
     accessibleBy: z.any().optional(),
-  });
 
   // Get all custom forms for organization
   app.get('/api/custom-forms', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -18109,7 +17712,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching custom forms:", error);
       res.status(500).json({ message: "Failed to fetch custom forms" });
     }
-  });
 
   // Get custom form by ID
   app.get('/api/custom-forms/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -18138,10 +17740,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching custom form:", error);
       res.status(500).json({ message: "Failed to fetch custom form" });
     }
-  });
-
-  // Create custom form (Platform Staff only)
-  app.post('/api/custom-forms', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const platformRole = req.platformRole;
@@ -18176,7 +17774,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating custom form:", error);
       res.status(500).json({ message: "Failed to create custom form" });
     }
-  });
 
   // Update custom form (Platform Staff only)
   app.patch('/api/custom-forms/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -18204,7 +17801,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating custom form:", error);
       res.status(500).json({ message: "Failed to update custom form" });
     }
-  });
 
   // Delete custom form (Platform Staff only)
   app.delete('/api/custom-forms/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -18222,7 +17818,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting custom form:", error);
       res.status(500).json({ message: "Failed to delete custom form" });
     }
-  });
 
   // ============================================================================
   // CUSTOM FORM SUBMISSIONS
@@ -18237,7 +17832,6 @@ Return ONLY valid JSON array with this exact structure:
     eSignature: z.any().optional(), // JSON signature data
     documents: z.any().optional(), // JSON documents array
     status: z.enum(['draft', 'completed', 'archived']).optional(),
-  });
 
   // Get all form submissions for organization
   app.get('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -18255,7 +17849,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching form submissions:", error);
       res.status(500).json({ message: "Failed to fetch form submissions" });
     }
-  });
 
   // Get form submission by ID
   app.get('/api/custom-form-submissions/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -18284,7 +17877,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching form submission:", error);
       res.status(500).json({ message: "Failed to fetch form submission" });
     }
-  });
 
   // Submit custom form
   app.post('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -18328,7 +17920,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error submitting form:", error);
       res.status(500).json({ message: "Failed to submit form" });
     }
-  });
 
   // ============================================================================
   // HELPDESK FEEDBACK & REVIEW SYSTEM
@@ -18355,7 +17946,6 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
 
   // Get closed tickets for review (admin/training)
   app.get("/api/helpdesk/reviews", requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -18365,7 +17955,6 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get testimonials (5-star reviews for publicity)
   app.get("/api/helpdesk/testimonials", async (req, res) => {
@@ -18375,7 +17964,6 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
 
   // ============================================================================
   // MOTD (Message of the Day) ROUTES
@@ -18430,7 +18018,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching MOTD:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Create or update MOTD (staff only)
   app.post("/api/helpdesk/motd", requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -18488,7 +18075,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating MOTD:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Acknowledge MOTD
   app.post("/api/helpdesk/motd/acknowledge", requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -18529,7 +18115,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error acknowledging MOTD:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // ============================================================================
   // CHAT AGREEMENT ACCEPTANCE - Terms & Conditions Tracking
@@ -18590,7 +18175,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error recording agreement acceptance:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Check if user has accepted agreement for a room
   app.get("/api/helpdesk/agreement/check/:roomSlug", async (req: any, res) => {
@@ -18632,7 +18216,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error checking agreement acceptance:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get complete customer context for support staff (profile, tickets, workspace, chat history)
   app.get("/api/helpdesk/user-context/:userId", requirePlatformStaff, async (req: any, res) => {
@@ -18786,7 +18369,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching user context:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // ============================================================================
   // PROMOTIONAL BANNERS - Dashboard-manageable promotional banners for landing page
@@ -18807,7 +18389,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching active banner:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get all promotional banners (public - everyone can view active banners)
   app.get('/api/promotional-banners', async (req, res) => {
@@ -18823,7 +18404,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching banners:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get ALL promotional banners including inactive (staff only - for banner manager)
   app.get('/api/promotional-banners/admin/all', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -18838,7 +18418,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching all banners:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Create promotional banner (staff only)
   app.post('/api/promotional-banners', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -18888,7 +18467,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating banner:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Update promotional banner (staff only)
   app.patch('/api/promotional-banners/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -18936,7 +18514,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating banner:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Delete promotional banner (staff only)
   app.delete('/api/promotional-banners/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -18957,7 +18534,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting banner:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // ============================================================================
   // INTELLIGENT AUTOMATION - AI Knowledge Base, Predictive Alerts, Auto Reports
@@ -19060,7 +18636,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error in AI knowledge retrieval:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get knowledge articles (with search/filter)
   app.get('/api/knowledge/articles', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -19100,7 +18675,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching knowledge articles:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Create knowledge article (staff only)
   app.post('/api/knowledge/articles', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -19141,7 +18715,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating knowledge article:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Generate Predictive Scheduling Alerts - Detect over-allocation before it happens
   app.post('/api/scheduling/generate-alerts', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19200,7 +18773,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error generating capacity alerts:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get active capacity alerts
   app.get('/api/scheduling/alerts', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -19224,7 +18796,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching capacity alerts:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Generate Automated Status Report for employee
   app.post('/api/reports/auto-generate', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -19326,7 +18897,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error generating auto report:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // Get auto-generated reports
   app.get('/api/reports/auto', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -19351,7 +18921,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching auto reports:", error);
       res.status(500).json({ error: error.message });
     }
-  });
 
   // ============================================================================
   // PAYROLLOS™ ROUTES - Automated Payroll Processing (99% automation + 1% QC)
@@ -19405,7 +18974,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating payroll run:", error);
       res.status(500).json({ message: error.message || "Failed to create payroll run" });
     }
-  });
 
   // Get payroll runs for workspace
   app.get('/api/payroll/runs', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19417,7 +18985,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching payroll runs:", error);
       res.status(500).json({ message: "Failed to fetch payroll runs" });
     }
-  });
 
   // Get single payroll run with details
   app.get('/api/payroll/runs/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19440,7 +19007,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching payroll run:", error);
       res.status(500).json({ message: "Failed to fetch payroll run" });
     }
-  });
 
   // Approve payroll run (1% human QC)
   app.post('/api/payroll/runs/:id/approve', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -19467,7 +19033,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error approving payroll run:", error);
       res.status(500).json({ message: "Failed to approve payroll run" });
     }
-  });
 
   // Process approved payroll run (trigger payment distribution)
   app.post('/api/payroll/runs/:id/process', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -19494,7 +19059,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error processing payroll run:", error);
       res.status(500).json({ message: "Failed to process payroll run" });
     }
-  });
 
   // Get employee paychecks (employee portal)
   app.get('/api/payroll/my-paychecks', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -19521,7 +19085,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching paychecks:", error);
       res.status(500).json({ message: "Failed to fetch paychecks" });
     }
-  });
 
   // ============================================================================
   // PREDICTIONOS™ - AI-Powered Predictive Analytics (Monopolistic Feature #1)
@@ -19563,7 +19126,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("PredictionOS™ turnover analysis failed:", error);
       res.status(500).json({ message: error.message || "Failed to analyze turnover risk" });
     }
-  });
   
   // Get turnover predictions for all employees
   app.get('/api/predict/turnover/workspace', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19590,7 +19152,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching turnover predictions:", error);
       res.status(500).json({ message: "Failed to fetch predictions" });
     }
-  });
   
   // Predict schedule cost overrun
   app.post('/api/predict/cost-overrun', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19625,7 +19186,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("PredictionOS™ cost variance analysis failed:", error);
       res.status(500).json({ message: error.message || "Failed to analyze cost variance" });
     }
-  });
 
   // ============================================================================
   // CUSTOM WORKFLOW RULES - Visual Rule Builder (Monopolistic Feature #2)
@@ -19649,7 +19209,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating custom rule:", error);
       res.status(400).json({ message: error.message || "Failed to create rule" });
     }
-  });
   
   // Get all custom rules for workspace
   app.get('/api/custom-rules', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19667,7 +19226,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching custom rules:", error);
       res.status(500).json({ message: "Failed to fetch rules" });
     }
-  });
   
   // Update custom rule
   app.patch('/api/custom-rules/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -19702,7 +19260,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating custom rule:", error);
       res.status(400).json({ message: error.message || "Failed to update rule" });
     }
-  });
   
   // Delete custom rule
   app.delete('/api/custom-rules/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -19731,7 +19288,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting custom rule:", error);
       res.status(500).json({ message: "Failed to delete rule" });
     }
-  });
   
   // Get rule execution logs
   app.get('/api/custom-rules/:id/executions', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19754,7 +19310,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching rule executions:", error);
       res.status(500).json({ message: "Failed to fetch executions" });
     }
-  });
 
   // ============================================================================
   // GEO-COMPLIANCE & AUDIT TRAIL (Monopolistic Feature #3)
@@ -19793,7 +19348,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching audit trail:", error);
       res.status(500).json({ message: "Failed to fetch audit trail" });
     }
-  });
   
   // Get time entry discrepancies (geo-compliance violations)
   app.get('/api/compliance/discrepancies', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19815,7 +19369,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching discrepancies:", error);
       res.status(500).json({ message: "Failed to fetch discrepancies" });
     }
-  });
   
   // Resolve time entry discrepancy
   app.patch('/api/compliance/discrepancies/:id/resolve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19853,7 +19406,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error resolving discrepancy:", error);
       res.status(500).json({ message: "Failed to resolve discrepancy" });
     }
-  });
 
   // ============================================================================
   // ENGAGEMENTOS™ - Bidirectional Employee-Employer Intelligence (Monopolistic Feature #4)
@@ -19883,7 +19435,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating pulse survey template:", error);
       res.status(500).json({ message: "Failed to create pulse survey template" });
     }
-  });
   
   // List pulse survey templates
   app.get('/api/engagement/pulse-surveys/templates', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19910,7 +19461,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching pulse survey templates:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey templates" });
     }
-  });
   
   // Get single pulse survey template
   app.get('/api/engagement/pulse-surveys/templates/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -19936,7 +19486,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching pulse survey template:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey template" });
     }
-  });
   
   // Update pulse survey template
   app.patch('/api/engagement/pulse-surveys/templates/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -19971,7 +19520,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating pulse survey template:", error);
       res.status(500).json({ message: "Failed to update pulse survey template" });
     }
-  });
   
   // [2] PULSE SURVEY RESPONSES (All Employees)
   
@@ -20072,7 +19620,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error submitting pulse survey response:", error);
       res.status(500).json({ message: "Failed to submit pulse survey response" });
     }
-  });
   
   // Get pulse survey responses (Manager only)
   app.get('/api/engagement/pulse-surveys/responses', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20106,7 +19653,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching pulse survey responses:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey responses" });
     }
-  });
   
   // [2.5] AUTOMATED PULSE SURVEY DISTRIBUTION
   
@@ -20120,7 +19666,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching survey distribution summary:", error);
       res.status(500).json({ message: "Failed to fetch survey distribution summary" });
     }
-  });
   
   // Get all employees due for surveys today (Manager/Owner only)
   app.get('/api/engagement/pulse-surveys/distribution', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20132,7 +19677,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching survey distributions:", error);
       res.status(500).json({ message: "Failed to fetch survey distributions" });
     }
-  });
   
   // Get pending surveys for specific employee
   app.get('/api/engagement/pulse-surveys/distribution/employee/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -20146,7 +19690,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching employee pending surveys:", error);
       res.status(500).json({ message: "Failed to fetch pending surveys" });
     }
-  });
   
   // Get survey analytics (Manager/Owner only)
   app.get('/api/engagement/pulse-surveys/analytics/:surveyId', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20166,7 +19709,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error calculating survey analytics:", error);
       res.status(500).json({ message: "Failed to calculate survey analytics" });
     }
-  });
   
   // [3] EMPLOYER RATINGS (All Employees)
   
@@ -20217,7 +19759,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error submitting employer rating:", error);
       res.status(500).json({ message: "Failed to submit employer rating" });
     }
-  });
   
   // Get employer ratings (Manager only)
   app.get('/api/engagement/employer-ratings', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20251,7 +19792,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching employer ratings:", error);
       res.status(500).json({ message: "Failed to fetch employer ratings" });
     }
-  });
   
   // [4] ANONYMOUS SUGGESTIONS (All Employees)
   
@@ -20303,7 +19843,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error submitting anonymous suggestion:", error);
       res.status(500).json({ message: "Failed to submit anonymous suggestion" });
     }
-  });
   
   // List anonymous suggestions (Manager only)
   app.get('/api/engagement/suggestions', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20344,7 +19883,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching anonymous suggestions:", error);
       res.status(500).json({ message: "Failed to fetch anonymous suggestions" });
     }
-  });
   
   // Update suggestion status (Manager only)
   app.patch('/api/engagement/suggestions/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20380,7 +19918,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating suggestion:", error);
       res.status(500).json({ message: "Failed to update suggestion" });
     }
-  });
   
   // [5] EMPLOYEE RECOGNITION (All Employees + Managers)
   
@@ -20456,7 +19993,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating employee recognition:", error);
       res.status(500).json({ message: "Failed to create employee recognition" });
     }
-  });
   
   // Get employee recognition feed
   app.get('/api/engagement/recognition', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -20490,7 +20026,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching employee recognitions:", error);
       res.status(500).json({ message: "Failed to fetch employee recognitions" });
     }
-  });
   
   // [6] EMPLOYEE HEALTH SCORES (Manager/Owner Only)
   
@@ -20533,7 +20068,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching employee health scores:", error);
       res.status(500).json({ message: "Failed to fetch employee health scores" });
     }
-  });
   
   // Take action on employee health score
   app.patch('/api/engagement/health-scores/:id/action', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20570,7 +20104,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating health score action:", error);
       res.status(500).json({ message: "Failed to update health score action" });
     }
-  });
   
   // [7] EMPLOYER BENCHMARK SCORES (Manager/Owner Only)
   
@@ -20606,7 +20139,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching employer benchmarks:", error);
       res.status(500).json({ message: "Failed to fetch employer benchmarks" });
     }
-  });
   
   // [8] CALCULATION TRIGGERS (Manager/Owner Only)
   
@@ -20632,7 +20164,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error calculating health score:", error);
       res.status(500).json({ message: "Failed to calculate health score" });
     }
-  });
   
   // Batch calculate health scores for all employees
   app.post('/api/engagement/health-scores/calculate-batch', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -20658,7 +20189,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error batch calculating health scores:", error);
       res.status(500).json({ message: "Failed to batch calculate health scores" });
     }
-  });
   
   // Manually trigger employer benchmark calculation
   app.post('/api/engagement/benchmarks/calculate', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20688,7 +20218,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error calculating employer benchmark:", error);
       res.status(500).json({ message: "Failed to calculate employer benchmark" });
     }
-  });
 
   // ============================================================================
   // TRAININGOS™ - LEARNING MANAGEMENT SYSTEM (LMS)
@@ -20729,7 +20258,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching training courses:", error);
       res.status(500).json({ message: "Failed to fetch training courses" });
     }
-  });
   
   // Get single training course
   app.get('/api/training/courses/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -20755,7 +20283,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching training course:", error);
       res.status(500).json({ message: "Failed to fetch training course" });
     }
-  });
   
   // Create training course (Manager/Owner only)
   app.post('/api/training/courses', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20780,7 +20307,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to create training course" });
     }
-  });
   
   // Update training course (Manager/Owner only)
   app.patch('/api/training/courses/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20821,7 +20347,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to update training course" });
     }
-  });
   
   // Delete training course (Manager/Owner only)
   app.delete('/api/training/courses/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -20851,7 +20376,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting training course:", error);
       res.status(500).json({ message: "Failed to delete training course" });
     }
-  });
   
   // [2] COURSE ENROLLMENTS
   
@@ -20898,7 +20422,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching training enrollments:", error);
       res.status(500).json({ message: "Failed to fetch training enrollments" });
     }
-  });
   
   // Enroll in a course
   app.post('/api/training/courses/:id/enroll', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -20969,7 +20492,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to enroll in course" });
     }
-  });
   
   // Update enrollment progress
   app.patch('/api/training/enrollments/:id/progress', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -21028,7 +20550,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to update enrollment progress" });
     }
-  });
   
   // [3] CERTIFICATIONS
   
@@ -21075,7 +20596,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching certifications:", error);
       res.status(500).json({ message: "Failed to fetch certifications" });
     }
-  });
   
   // Issue certification (Manager/Owner only)
   app.post('/api/training/certifications', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21140,7 +20660,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to issue certification" });
     }
-  });
 
   // ============================================================================
   // BUDGETOS™ - BUDGET PLANNING & FORECASTING
@@ -21178,7 +20697,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching budgets:", error);
       res.status(500).json({ message: "Failed to fetch budgets" });
     }
-  });
   
   // Get single budget
   app.get('/api/budgets/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21204,7 +20722,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching budget:", error);
       res.status(500).json({ message: "Failed to fetch budget" });
     }
-  });
   
   // Create budget (Manager/Owner only)
   app.post('/api/budgets', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21229,7 +20746,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to create budget" });
     }
-  });
   
   // Update budget (Manager/Owner only)
   app.patch('/api/budgets/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21270,7 +20786,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to update budget" });
     }
-  });
   
   // Delete budget (Owner only)
   app.delete('/api/budgets/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -21300,7 +20815,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting budget:", error);
       res.status(500).json({ message: "Failed to delete budget" });
     }
-  });
   
   // [2] BUDGET LINE ITEMS
   
@@ -21335,7 +20849,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching budget line items:", error);
       res.status(500).json({ message: "Failed to fetch budget line items" });
     }
-  });
   
   // Create budget line item
   app.post('/api/budgets/:budgetId/line-items', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21375,7 +20888,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to create budget line item" });
     }
-  });
   
   // Update budget line item
   app.patch('/api/budgets/:budgetId/line-items/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21427,7 +20939,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to update budget line item" });
     }
-  });
   
   // Delete budget line item
   app.delete('/api/budgets/:budgetId/line-items/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21471,7 +20982,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting budget line item:", error);
       res.status(500).json({ message: "Failed to delete budget line item" });
     }
-  });
   
   // [3] BUDGET VARIANCE ANALYSIS
   
@@ -21516,7 +21026,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching budget variances:", error);
       res.status(500).json({ message: "Failed to fetch budget variances" });
     }
-  });
   
   // Create budget variance snapshot
   app.post('/api/budgets/:budgetId/variances', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21556,7 +21065,6 @@ Return ONLY valid JSON array with this exact structure:
       }
       res.status(500).json({ message: "Failed to create budget variance" });
     }
-  });
 
   // ============================================================================
   // INTEGRATIONOS™ - EXTERNAL ECOSYSTEM LAYER (MONOPOLISTIC LOCK-IN)
@@ -21589,7 +21097,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching integrations:", error);
       res.status(500).json({ message: "Failed to fetch integrations" });
     }
-  });
   
   // [2] CONNECTIONS - Manage workspace integrations (Manager/Owner)
   app.get('/api/integrations/connections', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21607,7 +21114,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching connections:", error);
       res.status(500).json({ message: "Failed to fetch connections" });
     }
-  });
   
   // Connect to an integration
   app.post('/api/integrations/connections', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21661,7 +21167,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating connection:", error);
       res.status(500).json({ message: "Failed to create connection" });
     }
-  });
   
   // Disconnect an integration
   app.delete('/api/integrations/connections/:id', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21686,7 +21191,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error disconnecting integration:", error);
       res.status(500).json({ message: "Failed to disconnect integration" });
     }
-  });
   
   // [3] API KEYS - Developer access management (Owner only)
   app.get('/api/integrations/api-keys', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -21719,7 +21223,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching API keys:", error);
       res.status(500).json({ message: "Failed to fetch API keys" });
     }
-  });
   
   // Create API key
   app.post('/api/integrations/api-keys', requireAuth, requireOwner, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21762,7 +21265,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating API key:", error);
       res.status(500).json({ message: "Failed to create API key" });
     }
-  });
   
   // Revoke API key
   app.delete('/api/integrations/api-keys/:id', requireAuth, requireOwner, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21786,7 +21288,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error revoking API key:", error);
       res.status(500).json({ message: "Failed to revoke API key" });
     }
-  });
   
   // [4] WEBHOOKS - Event subscriptions (Manager/Owner)
   app.get('/api/integrations/webhooks', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21804,7 +21305,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching webhooks:", error);
       res.status(500).json({ message: "Failed to fetch webhooks" });
     }
-  });
   
   // Create webhook subscription
   app.post('/api/integrations/webhooks', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21837,7 +21337,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating webhook:", error);
       res.status(500).json({ message: "Failed to create webhook" });
     }
-  });
   
   // Toggle webhook active status
   app.patch('/api/integrations/webhooks/:id/toggle', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21872,7 +21371,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error toggling webhook:", error);
       res.status(500).json({ message: "Failed to toggle webhook" });
     }
-  });
   
   // Delete webhook
   app.delete('/api/integrations/webhooks/:id', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
@@ -21892,7 +21390,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error deleting webhook:", error);
       res.status(500).json({ message: "Failed to delete webhook" });
     }
-  });
   
   // Get webhook delivery history
   app.get('/api/integrations/webhooks/:id/deliveries', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -21915,7 +21412,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching webhook deliveries:", error);
       res.status(500).json({ message: "Failed to fetch webhook deliveries" });
     }
-  });
 
   // ============================================================================
   // DISPUTES - Fair Employee/Employer Transparency System
@@ -22081,7 +21577,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating dispute:", error);
       res.status(500).json({ message: "Failed to create dispute" });
     }
-  });
 
   // Get all disputes for current workspace (with filters) - HR/Manager only
   app.get('/api/disputes', isAuthenticated, requireHRManager, async (req: any, res) => {
@@ -22108,7 +21603,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching disputes:", error);
       res.status(500).json({ message: "Failed to fetch disputes" });
     }
-  });
 
   // Get disputes filed by current user
   app.get('/api/disputes/my-disputes', isAuthenticated, async (req: any, res) => {
@@ -22125,7 +21619,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching my disputes:", error);
       res.status(500).json({ message: "Failed to fetch disputes" });
     }
-  });
 
   // Get disputes for a specific target (e.g., all disputes for a performance review)
   app.get('/api/disputes/target/:targetType/:targetId', isAuthenticated, async (req: any, res) => {
@@ -22143,7 +21636,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching target disputes:", error);
       res.status(500).json({ message: "Failed to fetch disputes" });
     }
-  });
 
   // Get a single dispute by ID
   app.get('/api/disputes/:id', isAuthenticated, async (req: any, res) => {
@@ -22174,7 +21666,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching dispute:", error);
       res.status(500).json({ message: "Failed to fetch dispute" });
     }
-  });
 
   // Assign a dispute to an HR/Manager
   app.patch('/api/disputes/:id/assign', isAuthenticated, requireHRManager, async (req: any, res) => {
@@ -22203,7 +21694,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error assigning dispute:", error);
       res.status(500).json({ message: "Failed to assign dispute" });
     }
-  });
 
   // Update a dispute (for adding notes, evidence, etc.)
   app.patch('/api/disputes/:id', isAuthenticated, async (req: any, res) => {
@@ -22226,7 +21716,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating dispute:", error);
       res.status(500).json({ message: "Failed to update dispute" });
     }
-  });
 
   // Resolve a dispute
   app.post('/api/disputes/:id/resolve', isAuthenticated, requireHRManager, async (req: any, res) => {
@@ -22261,7 +21750,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error resolving dispute:", error);
       res.status(500).json({ message: "Failed to resolve dispute" });
     }
-  });
 
   // Apply changes from a resolved dispute (update the original record)
   app.post('/api/disputes/:id/apply-changes', isAuthenticated, requireHRManager, async (req: any, res) => {
@@ -22309,7 +21797,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error applying dispute changes:", error);
       res.status(500).json({ message: "Failed to apply dispute changes" });
     }
-  });
 
   // ========================================================================
   // AUTOSCHEDULER AUDIT TRACKER™ - AI-Powered Grievance Review
@@ -22373,7 +21860,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching pending disputes:", error);
       res.status(500).json({ message: "Failed to fetch pending disputes" });
     }
-  });
 
   // Manager review and decision on dispute
   app.post('/api/disputes/:id/review', isAuthenticated, requireHRManager, async (req: any, res) => {
@@ -22422,7 +21908,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error reviewing dispute:", error);
       res.status(500).json({ message: "Failed to review dispute" });
     }
-  });
 
   // Get employee's complete audit record (read-only view)
   app.get('/api/employee/audit-record', isAuthenticated, async (req: any, res) => {
@@ -22517,7 +22002,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching audit record:", error);
       res.status(500).json({ message: "Failed to fetch audit record" });
     }
-  });
 
   // Get items that can be disputed (for grievance filing form)
   app.get('/api/employee/disputeable-items', isAuthenticated, async (req: any, res) => {
@@ -22560,7 +22044,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching disputeable items:", error);
       res.status(500).json({ message: "Failed to fetch disputeable items" });
     }
-  });
 
   // ============================================================================
   // CROSS-ORGANIZATIONAL EMPLOYEE REPUTATION API (for hiring managers)
@@ -22738,7 +22221,6 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error fetching investigation context:", error);
       res.status(500).json({ message: "Failed to fetch investigation context" });
     }
-  });
 
   // AI-powered dispute analysis (for support staff)
   app.post('/api/disputes/:id/ai-analysis', isAuthenticated, requirePlatformStaff, async (req: any, res) => {
@@ -22947,7 +22429,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error generating AI analysis:", error);
       res.status(500).json({ message: "Failed to generate AI analysis" });
     }
-  });
 
   // ============================================================================
   // SUPPORT RESOLUTION ACTIONS API (for platform staff)
@@ -23002,7 +22483,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error deleting performance review:", error);
       res.status(500).json({ message: "Failed to delete performance review" });
     }
-  });
 
   // Edit a performance review (with explanation)
   app.patch('/api/support/performance-reviews/:id', isAuthenticated, requirePlatformStaff, async (req: any, res) => {
@@ -23060,7 +22540,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error updating performance review:", error);
       res.status(500).json({ message: "Failed to update performance review" });
     }
-  });
 
   // Delete an employer rating (with explanation)
   app.delete('/api/support/employer-ratings/:id', isAuthenticated, requirePlatformStaff, async (req: any, res) => {
@@ -23117,7 +22596,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error deleting employer rating:", error);
       res.status(500).json({ message: "Failed to delete employer rating" });
     }
-  });
 
   // Edit an employer rating (with explanation)
   app.patch('/api/support/employer-ratings/:id', isAuthenticated, requirePlatformStaff, async (req: any, res) => {
@@ -23180,7 +22658,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error updating employer rating:", error);
       res.status(500).json({ message: "Failed to update employer rating" });
     }
-  });
 
   // Delete a report submission (write-up) (with explanation)
   app.delete('/api/support/report-submissions/:id', isAuthenticated, requirePlatformStaff, async (req: any, res) => {
@@ -23236,7 +22713,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error deleting report submission:", error);
       res.status(500).json({ message: "Failed to delete report submission" });
     }
-  });
 
   // Get employee reputation data (visible to hiring managers platform-wide)
   app.get('/api/employee-reputation/:employeeId', isAuthenticated, async (req: any, res) => {
@@ -23368,7 +22844,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching employee reputation:", error);
       res.status(500).json({ message: "Failed to fetch employee reputation data" });
     }
-  });
 
   // ============================================================================
   // ONBOARDING ROUTES
@@ -23405,7 +22880,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching onboarding progress:", error);
       res.status(500).json({ message: "Failed to fetch onboarding progress" });
     }
-  });
 
   // Mark onboarding as skipped
   app.post('/api/onboarding/skip', async (req: any, res) => {
@@ -23446,7 +22920,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error skipping onboarding:", error);
       res.status(500).json({ message: "Failed to skip onboarding" });
     }
-  });
 
   // Mark onboarding as complete
   app.post('/api/onboarding/complete', async (req: any, res) => {
@@ -23509,7 +22982,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
     }
-  });
 
   // ==========================================
   // SALES MVP: DealOS™ + BidOS™ Routes
@@ -23526,7 +22998,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching deals:", error);
       res.status(500).json({ message: "Failed to fetch deals" });
     }
-  });
 
     try {
       const { workspaceId } = req;
@@ -23546,7 +23017,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       }
       res.status(500).json({ message: "Failed to create deal" });
     }
-  });
 
     try {
       const { workspaceId } = req;
@@ -23559,7 +23029,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching RFPs:", error);
       res.status(500).json({ message: "Failed to fetch RFPs" });
     }
-  });
 
     try {
       const { workspaceId } = req;
@@ -23579,7 +23048,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       }
       res.status(500).json({ message: "Failed to create RFP" });
     }
-  });
 
     try {
       const { workspaceId } = req;
@@ -23592,7 +23060,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
-  });
 
     try {
       const { workspaceId } = req;
@@ -23612,7 +23079,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       }
       res.status(500).json({ message: "Failed to create lead" });
     }
-  });
 
   // ============================================================================
   // RECORDOS™ - AI-POWERED NATURAL LANGUAGE SEARCH API
@@ -23752,7 +23218,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error performing AI search:", error);
       res.status(500).json({ message: "Search failed" });
     }
-  });
 
   // GET /api/search/history - Get search history
   app.get("/api/search/history", requireAuth, async (req, res) => {
@@ -23770,7 +23235,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching search history:", error);
       res.status(500).json({ message: "Failed to fetch search history" });
     }
-  });
 
   // ============================================================================
   // AUTOMATION TESTING & MANUAL TRIGGERS (Development & Testing Only)
@@ -23823,7 +23287,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error seeding expired keys:', error);
       res.status(500).json({ message: 'Failed to seed expired keys' });
     }
-  });
 
   /**
    * DEVELOPMENT ONLY: Manually trigger automation jobs for testing
@@ -23860,7 +23323,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error triggering automation:', error);
       res.status(500).json({ message: 'Failed to trigger automation' });
     }
-  });
 
   /**
    * DEVELOPMENT ONLY: Query automation audit logs
@@ -23907,7 +23369,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error fetching automation audit logs:', error);
       res.status(500).json({ message: 'Failed to fetch automation audit logs' });
     }
-  });
 
   /**
    * DEVELOPMENT ONLY: Query idempotency keys for debugging
@@ -23942,7 +23403,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error fetching idempotency keys:', error);
       res.status(500).json({ message: 'Failed to fetch idempotency keys' });
     }
-  });
 
   // ============================================================================
   // INSIGHTOS™ - AI ANALYTICS & AUTONOMOUS INSIGHTS API
@@ -23969,7 +23429,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching insights:", error);
       res.status(500).json({ message: "Failed to fetch insights" });
     }
-  });
 
   // POST /api/insights/dismiss/:id - Dismiss an insight
   app.post("/api/insights/dismiss/:id", requireAuth, async (req, res) => {
@@ -24001,7 +23460,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error dismissing insight:", error);
       res.status(500).json({ message: "Failed to dismiss insight" });
     }
-  });
 
   // POST /api/insights/generate - Generate AI insights using GPT-4o (Manager+ only)
   app.post("/api/insights/generate", requireManager, async (req, res) => {
@@ -24167,7 +23625,6 @@ Respond with valid JSON array only.`
       console.error("Error generating AI insights:", error);
       res.status(500).json({ message: "Failed to generate insights" });
     }
-  });
 
   // GET /api/insights/metrics - Get metrics snapshots
   app.get("/api/insights/metrics", requireAuth, async (req, res) => {
@@ -24189,7 +23646,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching metrics:", error);
       res.status(500).json({ message: "Failed to fetch metrics" });
     }
-  });
 
   // POST /api/signatures - Save e-signature with immutable object storage
   app.post('/api/signatures', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24310,7 +23766,6 @@ Respond with valid JSON array only.`
       console.error("Error saving signature:", error);
       res.status(500).json({ message: error.message || "Failed to save signature" });
     }
-  });
 
   // Helper function to parse object storage paths
   function parseObjectPath(path: string): { bucketName: string; objectName: string } {
@@ -24354,7 +23809,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching chat rooms:", error);
       res.status(500).json({ message: "Failed to fetch chat rooms" });
     }
-  });
   
   // GET /api/comm-os/rooms/live - Get live room data with WebSocket connections
   app.get('/api/comm-os/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24407,7 +23861,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching live rooms:", error);
       res.status(500).json({ message: "Failed to fetch live rooms" });
     }
-  });
   
   // POST /api/comm-os/rooms/:id/join - Join a chat room
   app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24441,7 +23894,6 @@ Respond with valid JSON array only.`
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
     }
-  });
   
   // POST /api/comm-os/rooms/:id/leave - Leave a chat room
   app.post('/api/comm-os/rooms/:id/leave', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24459,7 +23911,6 @@ Respond with valid JSON array only.`
       console.error("Error leaving room:", error);
       res.status(500).json({ message: "Failed to leave room" });
     }
-  });
   
   // GET /api/comm-os/messages/search - Search messages across rooms
   app.get('/api/comm-os/messages/search', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24538,7 +23989,6 @@ Respond with valid JSON array only.`
       console.error("Error searching messages:", error);
       res.status(500).json({ message: "Failed to search messages" });
     }
-  });
 
   // GET /api/support/chatrooms - Get formatted chatroom list for support staff (with participant counts, activity, etc.)
   app.get('/api/support/chatrooms', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24606,7 +24056,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching support chatrooms:", error);
       res.status(500).json({ message: "Failed to fetch support chatrooms" });
     }
-  });
 
   // GET /api/comm-os/onboarding-status - Check organization onboarding status
   app.get('/api/comm-os/onboarding-status', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24626,7 +24075,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching onboarding status:", error);
       res.status(500).json({ message: "Failed to fetch onboarding status" });
     }
-  });
 
   // POST /api/comm-os/complete-onboarding - Complete onboarding and create room
   app.post('/api/comm-os/complete-onboarding', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24680,7 +24128,6 @@ Respond with valid JSON array only.`
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
     }
-  });
 
   // POST /api/comm-os/rooms/:id/join - Support staff join room
   app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24750,7 +24197,6 @@ Respond with valid JSON array only.`
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
     }
-  });
 
   // POST /api/comm-os/rooms/:id/suspend - Suspend room (support staff only)
   app.post('/api/comm-os/rooms/:id/suspend', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24796,7 +24242,6 @@ Respond with valid JSON array only.`
       console.error("Error suspending room:", error);
       res.status(500).json({ message: "Failed to suspend room" });
     }
-  });
 
   // POST /api/comm-os/rooms/:id/lift-suspension - Lift room suspension (support staff only)
   app.post('/api/comm-os/rooms/:id/lift-suspension', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24836,7 +24281,6 @@ Respond with valid JSON array only.`
       console.error("Error lifting suspension:", error);
       res.status(500).json({ message: "Failed to lift suspension" });
     }
-  });
 
   // ============================================================================
   // PRIVATE MESSAGES / DM SYSTEM
@@ -24858,7 +24302,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
     }
-  });
 
   // GET /api/private-messages/:conversationId - Get messages in a conversation
   app.get('/api/private-messages/:conversationId', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24872,7 +24315,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
     }
-  });
 
   // POST /api/private-messages/upload - Upload file for private message
   app.post('/api/private-messages/upload', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24926,7 +24368,6 @@ Respond with valid JSON array only.`
       console.error("Error uploading file:", error);
       res.status(500).json({ message: error.message || "Failed to upload file" });
     }
-  });
 
   // POST /api/private-messages/send - Send a private message
   app.post('/api/private-messages/send', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24964,7 +24405,6 @@ Respond with valid JSON array only.`
       console.error("Error sending message:", error);
       res.status(500).json({ message: "Failed to send message" });
     }
-  });
 
   // POST /api/private-messages/start - Start a new conversation
   app.post('/api/private-messages/start', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -24988,7 +24428,6 @@ Respond with valid JSON array only.`
       console.error("Error starting conversation:", error);
       res.status(500).json({ message: "Failed to start conversation" });
     }
-  });
 
   // POST /api/private-messages/:conversationId/mark-read - Mark messages as read
   app.post('/api/private-messages/:conversationId/mark-read', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25003,7 +24442,6 @@ Respond with valid JSON array only.`
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
     }
-  });
 
   // GET /api/users/search - Search users for new conversations
   app.get('/api/users/search', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25025,7 +24463,6 @@ Respond with valid JSON array only.`
       console.error("Error searching users:", error);
       res.status(500).json({ message: "Failed to search users" });
     }
-  });
 
   // ============================================================================
   // DM AUDIT & INVESTIGATION ROUTES
@@ -25061,7 +24498,6 @@ Respond with valid JSON array only.`
       console.error("Error creating audit request:", error);
       res.status(500).json({ message: "Failed to create audit request" });
     }
-  });
 
   // GET /api/dm-audit/requests - List all audit requests for workspace
   app.get('/api/dm-audit/requests', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -25078,7 +24514,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching audit requests:", error);
       res.status(500).json({ message: "Failed to fetch audit requests" });
     }
-  });
 
   // POST /api/dm-audit/requests/:id/approve - Approve audit request
   app.post('/api/dm-audit/requests/:id/approve', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -25105,7 +24540,6 @@ Respond with valid JSON array only.`
       console.error("Error approving audit request:", error);
       res.status(500).json({ message: "Failed to approve audit request" });
     }
-  });
 
   // POST /api/dm-audit/requests/:id/deny - Deny audit request
   app.post('/api/dm-audit/requests/:id/deny', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -25123,7 +24557,6 @@ Respond with valid JSON array only.`
       console.error("Error denying audit request:", error);
       res.status(500).json({ message: "Failed to deny audit request" });
     }
-  });
 
   // GET /api/dm-audit/messages/:conversationId - View DM messages with audit access
   app.get('/api/dm-audit/messages/:conversationId', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -25152,7 +24585,6 @@ Respond with valid JSON array only.`
       console.error("Error accessing DM messages:", error);
       res.status(403).json({ message: error.message || "Audit access denied" });
     }
-  });
 
   // GET /api/dm-audit/access-logs/:conversationId - View access logs for a conversation
   app.get('/api/dm-audit/access-logs/:conversationId', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
@@ -25165,7 +24597,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching access logs:", error);
       res.status(500).json({ message: "Failed to fetch access logs" });
     }
-  });
 
   // Chat Export Routes for Support Staff
   // POST /api/chat-export/support-conversation/:id - Export support conversation (PDF or HTML)
@@ -25247,7 +24678,6 @@ Respond with valid JSON array only.`
       console.error("Error exporting support conversation:", error);
       res.status(500).json({ message: "Failed to export conversation" });
     }
-  });
 
   // POST /api/chat-export/comm-room/:id - Export AI Communications room (PDF or HTML)
   app.post('/api/chat-export/comm-room/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25330,7 +24760,6 @@ Respond with valid JSON array only.`
       console.error("Error exporting chat room:", error);
       res.status(500).json({ message: "Failed to export chat room" });
     }
-  });
 
   // POST /api/chat-export/private-conversation/:id - Export private DM conversation (requires audit approval)
   app.post('/api/chat-export/private-conversation/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25419,7 +24848,6 @@ Respond with valid JSON array only.`
       console.error("Error exporting private conversation:", error);
       res.status(403).json({ message: error.message || "Failed to export conversation - audit approval required" });
     }
-  });
 
   // ============================================================================
   // OVERSIGHT API - 1% Autonomous Oversight Queue
@@ -25451,7 +24879,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching oversight events:", error);
       res.status(500).json({ message: "Failed to fetch oversight events" });
     }
-  });
 
   // GET /api/oversight/stats - Get oversight statistics
   app.get('/api/oversight/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25493,7 +24920,6 @@ Respond with valid JSON array only.`
       console.error("Error fetching oversight stats:", error);
       res.status(500).json({ message: "Failed to fetch oversight stats" });
     }
-  });
 
   // PATCH /api/oversight/:id/approve - Approve an oversight event
   app.patch('/api/oversight/:id/approve', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25561,7 +24987,6 @@ Respond with valid JSON array only.`
       console.error("Error approving oversight event:", error);
       res.status(500).json({ message: "Failed to approve oversight event" });
     }
-  });
 
   // PATCH /api/oversight/:id/reject - Reject an oversight event
   app.patch('/api/oversight/:id/reject', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -25633,7 +25058,6 @@ Respond with valid JSON array only.`
       console.error("Error rejecting oversight event:", error);
       res.status(500).json({ message: "Failed to reject oversight event" });
     }
-  });
 
   // ============================================================================
   // AUTONOMOUS OPERATIONS TEST ENDPOINTS (Development/Testing Only)
@@ -25655,7 +25079,6 @@ Respond with valid JSON array only.`
         message: error.message 
       });
     }
-  });
 
   app.post('/api/test/autonomous/schedule', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
     try {
@@ -25674,7 +25097,6 @@ Respond with valid JSON array only.`
         message: error.message 
       });
     }
-  });
 
   app.post('/api/test/autonomous/payroll', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
     try {
@@ -25693,7 +25115,6 @@ Respond with valid JSON array only.`
         message: error.message 
       });
     }
-  });
 
   // ============================================================================
   // SERVICE HEALTH & INCIDENT REPORTING ROUTES
