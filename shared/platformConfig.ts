@@ -32,6 +32,36 @@ export const WORKSPACE = {
 } as const;
 
 // ============================================================================
+// RESPONSIVE & MOBILE CONFIGURATION
+// ============================================================================
+export const RESPONSIVE = {
+  breakpoints: {
+    mobile: 320,
+    small: 480,
+    tablet: 768,
+    desktop: 1024,
+    wide: 1280,
+    ultrawide: 1536,
+  },
+  touchTargetMinSize: 44,  // WCAG accessibility standard
+  headerHeights: {
+    mobile: 56,
+    tablet: 64,
+    desktop: 80,
+  },
+  safeAreaInsets: {
+    top: "var(--safe-area-inset-top, 0px)",
+    bottom: "var(--safe-area-inset-bottom, 0px)",
+    left: "var(--safe-area-inset-left, 0px)",
+    right: "var(--safe-area-inset-right, 0px)",
+  },
+  zoomLimits: {
+    min: 0.8,
+    max: 2.0,
+  },
+} as const;
+
+// ============================================================================
 // BRANDING & THEMING
 // ============================================================================
 export const BRANDING = {

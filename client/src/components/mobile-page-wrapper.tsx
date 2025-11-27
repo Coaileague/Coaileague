@@ -1,6 +1,7 @@
 /**
  * Mobile Page Wrapper & Layout Primitives
  * Optimized container for mobile pages with pull-to-refresh, safe areas, and responsive layouts
+ * Uses centralized MOBILE_CONFIG for all sizing and behavior
  */
 
 import { ReactNode } from 'react';
@@ -8,6 +9,7 @@ import { usePullToRefresh } from "@/hooks/use-touch-swipe";
 import { PullToRefreshIndicator } from "./pull-to-refresh-indicator";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { MOBILE_CONFIG } from "@/config/mobileConfig";
 
 interface MobilePageWrapperProps {
   children: React.ReactNode;
@@ -89,14 +91,24 @@ export function MobilePageHeader({
         'px-4 py-3 md:px-6 md:py-4',
         className
       )}
-      style={{ zIndex: 'var(--z-sticky)' }}
+      style={{
+        zIndex: 'var(--z-sticky)',
+        minHeight: isMobile
+          ? `${MOBILE_CONFIG.header.heightMobile}px`
+          : `${MOBILE_CONFIG.header.heightTablet}px`,
+      }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {backButton && onBack && (
             <button
               onClick={onBack}
-              className="mobile-touch-target shrink-0 p-2 -ml-2 hover-elevate active-elevate-2 rounded-lg"
+              className="mobile-touch-target shrink-0 hover-elevate active-elevate-2 rounded-lg"
+              style={{
+                minHeight: `${MOBILE_CONFIG.touchTargets.minHeight}px`,
+                minWidth: `${MOBILE_CONFIG.touchTargets.minWidth}px`,
+                padding: `${MOBILE_CONFIG.touchTargets.padding}px`,
+              }}
               data-testid="button-back"
             >
               <svg
@@ -138,6 +150,7 @@ export function MobilePageHeader({
 
 /**
  * MobileGrid - Responsive grid that adapts to screen size
+ * Uses MOBILE_CONFIG for columns configuration
  */
 interface MobileGridProps {
   children: ReactNode;
@@ -152,22 +165,24 @@ interface MobileGridProps {
 
 export function MobileGrid({
   children,
-  cols = { mobile: 1, tablet: 2, desktop: 3 },
-  gap = 4,
+  cols = {
+    mobile: MOBILE_CONFIG.grid.columnsMobile,
+    tablet: MOBILE_CONFIG.grid.columnsTablet,
+    desktop: MOBILE_CONFIG.grid.columnsDesktop,
+  },
+  gap = MOBILE_CONFIG.spacing.md,
   className,
 }: MobileGridProps) {
-  const gapClass = `gap-${gap}`;
-  
   return (
     <div
       className={cn(
-        'grid',
-        gapClass,
-        `grid-cols-${cols.mobile || 1}`,
-        `md:grid-cols-${cols.tablet || 2}`,
-        `lg:grid-cols-${cols.desktop || 3}`,
+        'grid w-full',
         className
       )}
+      style={{
+        gridTemplateColumns: `repeat(${cols.mobile}, minmax(0, 1fr))`,
+        gap: `${gap}px`,
+      }}
     >
       {children}
     </div>

@@ -19,8 +19,23 @@ Key capabilities include:
 - Ask before making major changes
 - I prefer detailed explanations
 
+### Latest Updates (Session)
+- ✅ Fixed logout glitch on universal header - logout button now hidden on public pages
+- ✅ Created centralized mobile configuration (`client/src/config/mobileConfig.ts`)
+- ✅ Implemented ResponsiveScaleWrapper for auto-sizing on small screens and zoom levels
+- ✅ Updated mobile-page-wrapper to use centralized config instead of hardcoded values
+- ✅ Resend email automation fully integrated with API key configured
+- ✅ All autonomous jobs running (billing, payroll, scheduling, compliance, WebSocket cleanup)
+
 ### System Architecture
 The system employs a multi-tenant architecture with robust RBAC security and multi-tenant isolation. All application settings are dynamically managed through centralized configuration files, eliminating hardcoded values.
+
+**Mobile & Responsive Design:**
+- Mobile config centralized in `client/src/config/mobileConfig.ts` with breakpoints, touch targets, typography scaling
+- ResponsiveScaleWrapper component auto-scales content for accessibility and small screens
+- Handles zoom levels up to 2.0x for users with vision needs
+- Touch targets follow WCAG 44x44px standard
+- Safe area insets for notched devices
 
 **UI/UX Decisions:**
 - Mobile-first design with responsive layouts for cards, tables, and forms.

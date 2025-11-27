@@ -12,6 +12,7 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { LOGOUT_CONFIG } from "@/config/logout";
+import { MOBILE_CONFIG } from "@/config/mobileConfig";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -24,6 +25,9 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   
   // Determine if user is authenticated
   const isAuthenticated = !!user;
+  
+  // Check if we're on a public page - hide logout if so
+  const isPublicPage = MOBILE_CONFIG.publicPages.includes(location as any);
   
   // Safe scroll function for SPA navigation
   const scrollToFeatures = () => {
@@ -212,18 +216,20 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               </div>
             </>
           ) : (
-            // WORKSPACE NAVIGATION - Minimal header, PeekRailNav handles main nav
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                data-testid="button-logout"
-                className="text-foreground/80 hover:text-foreground"
-              >
-                Logout
-              </Button>
-            </div>
+            // WORKSPACE NAVIGATION - Only show logout if NOT on public page
+            !isPublicPage && (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  data-testid="button-logout"
+                  className="text-foreground/80 hover:text-foreground"
+                >
+                  Logout
+                </Button>
+              </div>
+            )
           )}
         </div>
       </div>
