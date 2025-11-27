@@ -32,6 +32,7 @@ import integrationRouter from "./integrationRoutes"; // Partner Integration OAut
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
+import emailRouter from "./routes/emails"; // Email Campaigns & Prospect Targeting
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -1671,6 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
   app.use('/api/automation', requireAuth, automationRouter);
+  app.use('/api/emails', requireAuth, emailRouter);
 
   // Data Migration routes (Import from external platforms) - REQUIRES AUTH
   app.use('/api/migration', requireAuth, migrationRouter);
