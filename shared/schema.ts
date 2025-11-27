@@ -2115,6 +2115,7 @@ export const invoices = pgTable("invoices", {
   // Payment
   status: invoiceStatusEnum("status").default('draft'),
   paidAt: timestamp("paid_at"),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0.00"), // Track partial payments
   paymentIntentId: varchar("payment_intent_id"), // Stripe Payment Intent ID
   stripeInvoiceId: varchar("stripe_invoice_id"), // Stripe Invoice ID for automated billing
   sentAt: timestamp("sent_at"), // When invoice was sent to client
@@ -12088,3 +12089,220 @@ export const insertPasswordResetAuditLogSchema = createInsertSchema(passwordRese
 
 export type InsertPasswordResetAuditLog = z.infer<typeof insertPasswordResetAuditLogSchema>;
 export type PasswordResetAuditLog = typeof passwordResetAuditLog.$inferSelect;
+
+// ============================================================================
+// SENTIMENT ANALYSIS HISTORY (Gap #2 - Persist sentiment for trend analysis)
+// ============================================================================
+
+export const sentimentTrendEnum = pgEnum('sentiment_trend', ['improving', 'stable', 'declining']);
+
+export const sentimentHistory = pgTable(
+  "sentiment_history",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }),
+    
+    // Sentiment data
+    overallScore: decimal("overall_score", { precision: 3, scale: 2 }).notNull(), // 0.00 to 1.00
+    positiveScore: decimal("positive_score", { precision: 3, scale: 2 }),
+    negativeScore: decimal("negative_score", { precision: 3, scale: 2 }),
+    neutralScore: decimal("neutral_score", { precision: 3, scale: 2 }),
+    
+    // Analysis context
+    sourceType: varchar("source_type").notNull(), // 'feedback', 'survey', 'review', 'message', 'note'
+    sourceId: varchar("source_id"), // Reference to source entity
+    sourceText: text("source_text"), // Original text analyzed (optional, for audit)
+    
+    // AI analysis details
+    keyTopics: jsonb("key_topics"), // Extracted themes/topics
+    emotionBreakdown: jsonb("emotion_breakdown"), // Detailed emotion analysis
+    actionableInsights: jsonb("actionable_insights"), // AI recommendations
+    
+    // Trend tracking
+    previousScore: decimal("previous_score", { precision: 3, scale: 2 }),
+    trend: sentimentTrendEnum("trend"),
+    
+    analyzedAt: timestamp("analyzed_at").defaultNow(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("sentiment_history_workspace_idx").on(table.workspaceId),
+    index("sentiment_history_employee_idx").on(table.employeeId),
+    index("sentiment_history_source_idx").on(table.sourceType),
+    index("sentiment_history_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const insertSentimentHistorySchema = createInsertSchema(sentimentHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSentimentHistory = z.infer<typeof insertSentimentHistorySchema>;
+export type SentimentHistory = typeof sentimentHistory.$inferSelect;
+
+// ============================================================================
+// AI BRAIN JOB QUEUE (Gap #13 - Persistent job queue for restart resilience)
+// ============================================================================
+
+export const jobStatusEnum = pgEnum('job_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
+export const jobPriorityEnum = pgEnum('job_priority', ['low', 'normal', 'high', 'critical']);
+
+export const aiBrainJobQueue = pgTable(
+  "ai_brain_job_queue",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    
+    // Job definition
+    jobType: varchar("job_type").notNull(), // 'document_extraction', 'issue_detection', 'sentiment_analysis', etc.
+    skillId: varchar("skill_id"), // Reference to AI Brain skill
+    
+    // Job data
+    inputData: jsonb("input_data").notNull(), // Job parameters
+    outputData: jsonb("output_data"), // Job result
+    
+    // Status tracking
+    status: jobStatusEnum("status").default('pending'),
+    priority: jobPriorityEnum("priority").default('normal'),
+    
+    // Retry handling
+    attempts: integer("attempts").default(0),
+    maxAttempts: integer("max_attempts").default(3),
+    lastError: text("last_error"),
+    nextRetryAt: timestamp("next_retry_at"),
+    
+    // Timing
+    scheduledFor: timestamp("scheduled_for").defaultNow(),
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at"),
+    
+    // Audit
+    createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("ai_brain_job_queue_workspace_idx").on(table.workspaceId),
+    index("ai_brain_job_queue_status_idx").on(table.status),
+    index("ai_brain_job_queue_priority_idx").on(table.priority),
+    index("ai_brain_job_queue_scheduled_idx").on(table.scheduledFor),
+    index("ai_brain_job_queue_type_idx").on(table.jobType),
+  ]
+);
+
+export const insertAiBrainJobQueueSchema = createInsertSchema(aiBrainJobQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiBrainJobQueue = z.infer<typeof insertAiBrainJobQueueSchema>;
+export type AiBrainJobQueue = typeof aiBrainJobQueue.$inferSelect;
+
+// ============================================================================
+// GUSTO SYNC HISTORY (Gap #12 - Persist Gusto integration data)
+// ============================================================================
+
+export const gustoSyncStatusEnum = pgEnum('gusto_sync_status', ['pending', 'syncing', 'completed', 'failed', 'partial']);
+
+export const gustoSyncHistory = pgTable(
+  "gusto_sync_history",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    
+    // Sync details
+    syncType: varchar("sync_type").notNull(), // 'employees', 'payroll', 'time_off', 'benefits', 'full'
+    direction: varchar("direction").notNull().default('inbound'), // 'inbound' or 'outbound'
+    
+    // Status
+    status: gustoSyncStatusEnum("status").default('pending'),
+    
+    // Statistics
+    recordsProcessed: integer("records_processed").default(0),
+    recordsCreated: integer("records_created").default(0),
+    recordsUpdated: integer("records_updated").default(0),
+    recordsFailed: integer("records_failed").default(0),
+    
+    // Details
+    syncDetails: jsonb("sync_details"), // Detailed sync log
+    errorLog: jsonb("error_log"), // Errors encountered
+    
+    // Gusto references
+    gustoCompanyId: varchar("gusto_company_id"),
+    gustoPayrollId: varchar("gusto_payroll_id"),
+    
+    // Timing
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at"),
+    
+    // Audit
+    triggeredBy: varchar("triggered_by").references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("gusto_sync_history_workspace_idx").on(table.workspaceId),
+    index("gusto_sync_history_status_idx").on(table.status),
+    index("gusto_sync_history_type_idx").on(table.syncType),
+    index("gusto_sync_history_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const insertGustoSyncHistorySchema = createInsertSchema(gustoSyncHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertGustoSyncHistory = z.infer<typeof insertGustoSyncHistorySchema>;
+export type GustoSyncHistory = typeof gustoSyncHistory.$inferSelect;
+
+// ============================================================================
+// ENGAGEMENT SCORE HISTORY (Gap #4 - Track historical engagement for trends)
+// ============================================================================
+
+export const engagementScoreHistory = pgTable(
+  "engagement_score_history",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    
+    // Score data
+    overallScore: decimal("overall_score", { precision: 5, scale: 2 }).notNull(), // 0-100
+    participationRate: decimal("participation_rate", { precision: 5, scale: 2 }),
+    responseCount: integer("response_count").default(0),
+    
+    // Breakdown by category
+    categoryScores: jsonb("category_scores"), // { satisfaction: 75, culture: 80, growth: 70 }
+    
+    // Benchmarking
+    industryPercentile: integer("industry_percentile"), // 0-100
+    companySize: varchar("company_size"), // 'small', 'medium', 'large', 'enterprise'
+    industry: varchar("industry"),
+    
+    // Period tracking
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    periodType: varchar("period_type").notNull(), // 'weekly', 'monthly', 'quarterly', 'annual'
+    
+    // Trend vs previous period
+    previousScore: decimal("previous_score", { precision: 5, scale: 2 }),
+    scoreDelta: decimal("score_delta", { precision: 5, scale: 2 }),
+    
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("engagement_score_history_workspace_idx").on(table.workspaceId),
+    index("engagement_score_history_period_idx").on(table.periodStart),
+    index("engagement_score_history_type_idx").on(table.periodType),
+  ]
+);
+
+export const insertEngagementScoreHistorySchema = createInsertSchema(engagementScoreHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEngagementScoreHistory = z.infer<typeof insertEngagementScoreHistorySchema>;
+export type EngagementScoreHistory = typeof engagementScoreHistory.$inferSelect;
