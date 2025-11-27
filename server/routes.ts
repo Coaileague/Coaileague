@@ -73,6 +73,7 @@ import {
 } from "./email";
 import { emailService } from "./services/emailService";
 import { calculateStateTax, calculateBonusTaxation } from "./services/taxCalculator";
+import emailRouter from "./routes/emails";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -1679,6 +1680,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const dispatchRouter = (await import('./routes/dispatch')).default;
   app.use('/api/dispatch', dispatchRouter);
 
+  // Register Email Automation routes (Resend integration with billing)
+  app.use("/api/emails", requireAuth, emailRouter);
   // Register AI Communications Chat Upload routes (file uploads with security, workroom attachments)
   const chatUploadsRouter = (await import('./routes/chat-uploads')).default;
   app.use('/api/chat/upload', chatUploadsRouter);
