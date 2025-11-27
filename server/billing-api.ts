@@ -18,12 +18,24 @@ import { eq } from 'drizzle-orm';
 import { isAuthenticated } from './replitAuth';
 import { requireAuth } from './auth';
 import Stripe from 'stripe';
+import { isFeatureEnabled } from '@shared/platformConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
 });
 
 export const billingRouter = Router();
+
+// Feature flag check - Billing API
+billingRouter.use((req, res, next) => {
+  if (!isFeatureEnabled('enableBillingAPI')) {
+    return res.status(503).json({ 
+      error: 'Billing API is currently disabled',
+      feature: 'enableBillingAPI'
+    });
+  }
+  next();
+});
 
 // Apply authentication to all billing routes (supports both Replit Auth and custom auth)
 // Use Replit Auth middleware for testing, falls back to custom auth

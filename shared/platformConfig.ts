@@ -257,23 +257,44 @@ export const TIMING = {
 } as const;
 
 // ============================================================================
-// FEATURE TOGGLES
+// FEATURE TOGGLES - Production Ready
 // ============================================================================
+// Edit these to enable/disable features across the entire platform
+// Changes take effect immediately on restart
 export const FEATURES = {
+  // Core AI Features
   enableAI: true,
-  enableContractorPool: true,
-  enableGPS: true,
-  enableMFA: false,
-  enableNotifications: true,
-  enableWebSocket: true,
-  enableAutonomousScheduling: true,
-  enableAutonomousBilling: true,
-  enableDisputeResolution: true,
   enableDocumentExtraction: true,
   enableSentimentAnalysis: true,
-  enableComplianceAlerts: true,
+  enableAutonomousScheduling: true,
+  
+  // Autonomous Jobs
+  enableAutonomousBilling: true,
   enablePayrollAutomation: true,
   enableInvoiceAutomation: true,
+  enableComplianceAlerts: true,
+  
+  // Billing System (NEW)
+  enableBillingAPI: true,
+  enableStripeWebhooks: true,
+  enableTrialSystem: true,
+  enableUsageTracking: true,
+  enableOverageBilling: true,
+  enableCreditSystem: true,
+  
+  // Real-Time Features
+  enableWebSocket: true,
+  enableNotifications: true,
+  enableDisputeResolution: true,
+  
+  // Workforce Features
+  enableContractorPool: true,
+  enableGPS: true,
+  
+  // Enterprise Features
+  enableMFA: false,
+  enableAdvancedAnalytics: true,
+  enableCustomReporting: true,
 } as const;
 
 // ============================================================================
