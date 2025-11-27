@@ -46,7 +46,7 @@ export function MiniAdBanner({ onDismiss }: MiniBannerProps) {
     {
       icon: Star,
       title: "Premium Features",
-      subtitle: "Unlock all AutoForce™ capabilities",
+      subtitle: "Unlock all CoAIleague capabilities",
       gradient: "from-indigo-500 via-purple-500 to-pink-500",
       iconColor: "text-blue-700 dark:text-blue-400",
       badge: "SAVE 40%"

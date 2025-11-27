@@ -496,7 +496,7 @@ export default function Contact() {
               </div>
               <div className="space-y-2 text-sm">
                 <p className="text-gray-600">
-                  AutoForce™ is a fully online platform. All support and communications are handled digitally for maximum efficiency.
+                  CoAIleague is a fully online platform. All support and communications are handled digitally for maximum efficiency.
                 </p>
                 <div className="pt-2 space-y-1">
                   <p className="text-xs font-semibold text-gray-900">General Inquiries:</p>
@@ -538,7 +538,7 @@ export default function Contact() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-foreground/70">
-              <span>© 2025 AutoForce™. Elite-grade workforce automation.</span>
+              <span>© 2025 CoAIleague. Elite-grade workforce automation.</span>
             </div>
             <div className="flex items-center gap-6">
               <ReenableChatButton />

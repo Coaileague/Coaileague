@@ -225,7 +225,7 @@ export function ServiceFailureDialog({ error, isOpen, onClose, onReset }: Servic
                 <DialogTitle data-testid="dialog-title-success">Report Submitted</DialogTitle>
               </div>
               <DialogDescription data-testid="dialog-description-success">
-                Thank you for helping us improve AutoForce™. Our team will investigate this issue.
+                Thank you for helping us improve CoAIleague. Our team will investigate this issue.
               </DialogDescription>
             </DialogHeader>
           </>

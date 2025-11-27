@@ -18,7 +18,7 @@ const helpArticles: HelpArticle[] = [
   {
     id: "1",
     title: "Getting Started Guide",
-    description: "Learn the basics of AutoForce™ and set up your workspace",
+    description: "Learn the basics of CoAIleague and set up your workspace",
     category: "Basics",
     icon: Book,
   },
@@ -72,7 +72,7 @@ export default function Help() {
     <div className="container mx-auto p-4 sm:p-6 max-w-6xl">
       <PageHeader
         title="Help Center"
-        description="Find answers and learn how to use AutoForce™"
+        description="Find answers and learn how to use CoAIleague"
         align="center"
       />
 
@@ -115,7 +115,7 @@ export default function Help() {
                   <Video className="h-8 w-8 text-primary mb-2" />
                   <CardTitle className="text-lg">Product Updates</CardTitle>
                   <CardDescription>
-                    See what's new in AutoForce™
+                    See what's new in CoAIleague
                   </CardDescription>
                 </CardHeader>
               </Link>

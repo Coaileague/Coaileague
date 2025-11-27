@@ -706,7 +706,7 @@ export default function UniversalSchedule() {
                       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => {
                         try {
                           await apiRequest('POST', '/api/ai/trigger-fill', {});
-                          toast({ title: "AI Fill Triggered", description: "AutoForce™ AI is optimizing your schedule" });
+                          toast({ title: "AI Fill Triggered", description: "CoAIleague AI is optimizing your schedule" });
                         } catch (error: any) {
                           toast({ description: error.message, variant: "destructive" });
                         }

@@ -19,7 +19,7 @@ interface TutorialSlide {
 
 const tutorialSlides: TutorialSlide[] = [
   {
-    title: "Welcome to AutoForce™ HelpDesk!",
+    title: "Welcome to CoAIleague HelpDesk!",
     content: "This quick tutorial will help you understand how to use our professional support chat system effectively.",
   },
   {

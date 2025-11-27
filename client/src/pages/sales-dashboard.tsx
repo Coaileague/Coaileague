@@ -190,7 +190,7 @@ export default function SalesDashboard() {
                   <Mail className="h-5 w-5" />
                   Send Trial Invite
                 </CardTitle>
-                <CardDescription>Invite an organization to try AutoForce</CardDescription>
+                <CardDescription>Invite an organization to try CoAIleague</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

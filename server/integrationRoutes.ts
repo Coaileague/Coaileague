@@ -400,7 +400,7 @@ router.get('/connections', requireAuth, requireWorkspaceMembership('query'), asy
 /**
  * POST /api/integrations/quickbooks/sync-client
  * 
- * Sync AutoForce client to QuickBooks customer
+ * Sync CoAIleague client to QuickBooks customer
  */
 router.post('/quickbooks/sync-client', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
@@ -427,7 +427,7 @@ router.post('/quickbooks/sync-client', requireAuth, requireWorkspaceMembership()
 /**
  * POST /api/integrations/quickbooks/create-invoice
  * 
- * Create invoice in QuickBooks from AutoForce invoice
+ * Create invoice in QuickBooks from CoAIleague invoice
  */
 router.post('/quickbooks/create-invoice', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
@@ -485,7 +485,7 @@ router.post('/quickbooks/record-payment', requireAuth, requireWorkspaceMembershi
 /**
  * POST /api/integrations/gusto/sync-employee
  * 
- * Sync AutoForce employee to Gusto
+ * Sync CoAIleague employee to Gusto
  */
 router.post('/gusto/sync-employee', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {

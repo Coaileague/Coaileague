@@ -218,7 +218,7 @@ export function generatePDF(
         `}
         
         <div class="footer">
-          AutoForce™ - Autonomous Workforce Management Platform
+          CoAIleague - Autonomous Workforce Management Platform
         </div>
         
         <script>

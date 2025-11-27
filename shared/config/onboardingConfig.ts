@@ -7,8 +7,8 @@
 export const onboardingConfig = {
   // Email Configuration
   email: {
-    fromAddress: process.env.VITE_ONBOARDING_FROM_EMAIL || 'onboarding@autoforce.ai',
-    supportEmail: process.env.VITE_ONBOARDING_SUPPORT_EMAIL || 'support@autoforce.ai',
+    fromAddress: process.env.VITE_ONBOARDING_FROM_EMAIL || 'onboarding@coaileague.ai',
+    supportEmail: process.env.VITE_ONBOARDING_SUPPORT_EMAIL || 'support@coaileague.ai',
   },
 
   // Onboarding Workflow Steps

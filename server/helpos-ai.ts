@@ -71,7 +71,7 @@ export class HelpOSAI {
     }
 
     try {
-      const prompt = `You are HelpOS™, a friendly AI support assistant for AutoForce™.
+      const prompt = `You are HelpOS™, a friendly AI support assistant for CoAIleague.
 
 User just joined: ${userName} (${userType})
 ${context ? `Context: ${context}` : ''}

@@ -842,7 +842,7 @@ export class InvoiceService {
         </div>
 
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #94a3b8; font-size: 12px; text-align: center;">
-          <p style="margin: 5px 0;">This is an automated invoice notification from AutoForce™</p>
+          <p style="margin: 5px 0;">This is an automated invoice notification from CoAIleague</p>
           <p style="margin: 5px 0;">If you have questions about this invoice, please contact your service provider.</p>
         </div>
       </div>

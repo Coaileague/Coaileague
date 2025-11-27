@@ -95,7 +95,7 @@ export function ResponsiveAppFrame({ children }: { children: ReactNode }) {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`AutoForce™ PWA install: ${outcome}`);
+    console.log(`CoAIleague PWA install: ${outcome}`);
     setDeferredPrompt(null);
   };
 

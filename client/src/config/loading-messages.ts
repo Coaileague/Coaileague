@@ -16,7 +16,7 @@ export const LOADING_MESSAGES = [
   "Generating productivity reports... 📈",
   "Warming up the database... 🔥",
   "Activating workforce intelligence... 🎯",
-  "Assembling your AutoForce team... 👥",
+  "Assembling your CoAIleague team... 👥",
   "Energizing the platform... ⚙️",
   "Loading your workforce magic... ✨",
   "Preparing autonomous workflows... 🚀",

@@ -261,7 +261,7 @@ export default function UsageDashboard() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
-                    AutoForce Markup
+                    CoAIleague Markup
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -381,7 +381,7 @@ export default function UsageDashboard() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Usage Billing Transparency</AlertTitle>
               <AlertDescription>
-                AutoForce™ tracks all AI and partner API usage with complete transparency. 
+                CoAIleague tracks all AI and partner API usage with complete transparency. 
                 Costs are billed monthly based on your subscription tier markup ({Math.round(summary.markupRate * 100)}% for {summary.workspaceTier} tier). 
                 Base costs reflect actual consumption from Google Gemini, QuickBooks, Gusto, and Stripe.
               </AlertDescription>

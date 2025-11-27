@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { AutoForceStaticLogo } from "@/components/autoforce-static-logo";
+import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
 import { AlertTriangle, UserX, VolumeX, MessageCircleWarning, Ban } from "lucide-react";
 
 interface CompactModerationDialogProps {
@@ -87,7 +87,7 @@ export function CompactModerationDialog({
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3">
           <div className="flex-shrink-0">
-            <AutoForceStaticLogo size="sm" variant="icon" />
+            <CoAIleagueStaticLogo size="sm" variant="icon" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">

@@ -148,7 +148,7 @@ export function HelpDeskProgressHeader({
           </div>
         </div>
 
-        {/* Progressive Color Bars - AutoForce emerald/cyan gradient (or red for escalated) */}
+        {/* Progressive Color Bars - CoAIleague emerald/cyan gradient (or red for escalated) */}
         <div className="mt-3 flex items-center gap-1">
           {LIFECYCLE_STEPS.map((step) => {
             const stepConfig = LIFECYCLE_PHASE_CONFIG[step];

@@ -35,7 +35,7 @@ import {
   Timer, UserX, TrendingUp, Key, Mail, ListChecks, Tag, ClipboardList,
   History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch, Home
 } from "lucide-react";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
@@ -50,7 +50,7 @@ import { MotdDialog } from "@/components/motd-dialog";
 import { AnimatedStatusBar } from "@/components/animated-status-bar";
 import { ChatAgreementModal } from "@/components/chat-agreement-modal";
 import { UserDiagnosticsPanel } from "@/components/user-diagnostics-panel";
-import { AutoforceAiTester } from "@/components/helpos-ai-tester";
+import { CoAIleagueAiTester } from "@/components/helpos-ai-tester";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { CHAT_BUBBLE_CONFIG } from "@/config/chatBubble";
@@ -82,13 +82,13 @@ const CHAT_CONFIG = {
     ticketCreated: {
       title: '✓ Ticket Created',
       description: (id: string) =>
-        `Ticket #${id} - AutoForce™ AI is analyzing your issue. An agent will be with you shortly.`,
+        `Ticket #${id} - CoAIleague AI is analyzing your issue. An agent will be with you shortly.`,
     },
     ticketAssigned: {
       title: '✅ Agent Assigned',
       message: (id: string) =>
         `✅ An agent is now helping you!\n\nTicket #${id} has been assigned. Your chat is no longer read-only.`,
-      sender: 'AutoForce™ AI',
+      sender: 'CoAIleague AI',
     },
   },
   roles: {
@@ -132,7 +132,7 @@ interface HelpDeskProps {
   forceMobileLayout?: boolean; // Force mobile layout regardless of screen size
 }
 
-// Desktop IRC/MSN-style 3-column chatroom with AutoForce™ professional branding
+// Desktop IRC/MSN-style 3-column chatroom with CoAIleague professional branding
 // Can also be forced to mobile layout for /mobilechat route
 export function HelpDesk(props?: HelpDeskProps & any) {
   // Auto-detect mobile layout based on viewport width
@@ -484,8 +484,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       queryClient.invalidateQueries({ queryKey: ['/api/helpdesk/motd'] });
       setShowMotd(false);
       toast({
-        title: "Welcome to AutoForce™ HelpDesk!",
-        description: "You can now access the support chat powered by AutoForce™ AI",
+        title: "Welcome to CoAIleague HelpDesk!",
+        description: "You can now access the support chat powered by CoAIleague AI",
       });
     },
   });
@@ -549,8 +549,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             const positionInQueue = silencedUsers.size; // Count of silenced users
             
             sendMessage(
-              `${CHAT_CONFIG.messages.queueUpdate.label}\nTicket: ${newTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nAutoForce™ AI is reviewing your issue. An agent will be assigned shortly.`,
-              'AutoForce™ AI',
+              `${CHAT_CONFIG.messages.queueUpdate.label}\nTicket: ${newTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nCoAIleague AI is reviewing your issue. An agent will be assigned shortly.`,
+              'CoAIleague AI',
               'system'
             );
           }
@@ -578,7 +578,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     // Role priority (lower number = higher priority)
     const rolePriority: Record<string, number> = {
       'root_admin': 0,        // Root admin at absolute top (you)
-      'bot': 1,               // AutoForce™ AI bot
+      'bot': 1,               // CoAIleague AI bot
       'deputy_admin': 2,      // Deputy administrators
       'support_manager': 3,   // Support managers
       'sysop': 4,             // System operators
@@ -688,13 +688,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   };
 
 
-  // Get user type icon - AutoForce™ logo ONLY for staff, avatars for users
+  // Get user type icon - CoAIleague logo ONLY for staff, avatars for users
   const getUserTypeIcon = (userType: string, role: string, userName: string = 'User') => {
-    // ROOT ADMIN - Detailed AutoForce™ logo (COMPACT SIZE)
+    // ROOT ADMIN - Detailed CoAIleague logo (COMPACT SIZE)
     if (role === 'root_admin') {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
-          <AutoForceAFLogo size="sm" variant="icon" />
+          <CoAIleagueAFLogo size="sm" variant="icon" />
         </div>
       );
     }
@@ -708,11 +708,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       );
     }
     
-    // ALL STAFF (deputy_admin, support_manager, sysop) - AutoForce™ logo (COMPACT SIZE)
+    // ALL STAFF (deputy_admin, support_manager, sysop) - CoAIleague logo (COMPACT SIZE)
     if (['deputy_admin', 'support_manager', 'sysop'].includes(role)) {
       return (
         <div className="flex items-center justify-center scale-[0.55]">
-          <AutoForceAFLogo size="sm" variant="icon" />
+          <CoAIleagueAFLogo size="sm" variant="icon" />
         </div>
       );
     }
@@ -779,7 +779,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     /**
      * HARDCODED SUPERSCRIPT ROLE DISPLAY - DESKTOP CHAT ONLY
      * DO NOT MODIFY WITHOUT EXPLICIT USER PERMISSION
-     * Makes role display like ™ in AutoForce™ AI - superscript but large enough to read
+     * Makes role display like ™ in CoAIleague AI - superscript but large enough to read
      * for older users or those with vision difficulties
      */
     // Inline superscript role badge - ONLY for staff and bot roles
@@ -1232,7 +1232,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
             <div className="space-y-2">
 
-              {/* Chat Messages - Modern bubbles with AutoForce™ professional styling */}
+              {/* Chat Messages - Modern bubbles with CoAIleague professional styling */}
               {messages.map((msg, idx) => {
                 const isSelf = msg.senderId === user?.id;
                 const role = (msg as any).role || 'guest';
@@ -1269,7 +1269,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         {/* Header: Name with inline superscript role badge + Timestamp */}
                         <div className="flex items-center gap-1 sm:gap-1.5 mb-1 flex-wrap min-w-0">
                           <span className={`text-sm font-bold ${nameColor} truncate`}>
-                            {role === 'bot' ? 'AutoForce™ AI' : actualName.split('(')[0].trim()}
+                            {role === 'bot' ? 'CoAIleague AI' : actualName.split('(')[0].trim()}
                             {/* Role badge as inline superscript like mathematical notation */}
                             {getRoleIcon(role)}
                           </span>
@@ -1360,7 +1360,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               {isGuest && isSilenced && !justGotVoice ? (
                 <div className="flex-grow p-3 sm:p-3.5 border-2 border-amber-200 dark:border-amber-900 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-100 text-base">
                   <p className="font-semibold mb-1">📞 You're in Queue (Spectator Mode)</p>
-                  <p className="text-sm">Your chat is read-only while waiting. AutoForce™ AI will assist you shortly.</p>
+                  <p className="text-sm">Your chat is read-only while waiting. CoAIleague AI will assist you shortly.</p>
                 </div>
               ) : (
                 <>
@@ -1460,7 +1460,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 id: selectedUserId,
                 name: uniqueUsers.find(u => u.id === selectedUserId)?.name || "User",
                 email: "customer@example.com",
-                organization: "AutoForce™ Customer",
+                organization: "CoAIleague Customer",
                 subscriptionTier: "professional" as const,
                 accountCreated: new Date().toISOString().split('T')[0],
               }}
@@ -1468,7 +1468,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               suggestedArticles={[
                 {
                   id: "kb-001",
-                  title: "Getting Started with AutoForce™",
+                  title: "Getting Started with CoAIleague",
                   url: "/help/getting-started",
                   relevance: 0.95,
                 },
@@ -1505,7 +1505,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                           {getStatusIndicator(u.status || 'online')}
                         </div>
                         
-                        {/* User Type Icon - AutoForce™ Logo for staff, Avatar for users */}
+                        {/* User Type Icon - CoAIleague Logo for staff, Avatar for users */}
                         <div className="flex-shrink-0">
                           {getUserTypeIcon(u.userType || 'guest', u.role, u.name)}
                         </div>
@@ -1514,7 +1514,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-0.5 flex-wrap">
                             <span className={`text-sm font-semibold break-words ${getRoleColor(u.role)}`}>
-                              {u.role === 'bot' ? 'AutoForce™ AI' : u.name}
+                              {u.role === 'bot' ? 'CoAIleague AI' : u.name}
                               {/* Inline superscript role badge */}
                               {getRoleIcon(u.role)}
                             </span>
@@ -1805,7 +1805,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Welcome to AutoForce™ Support</DialogTitle>
+            <DialogTitle>Welcome to CoAIleague Support</DialogTitle>
             <DialogDescription>
               Please provide some information so our support team can better assist you.
             </DialogDescription>
@@ -1991,7 +1991,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           open={showTutorial}
           onClose={() => setShowTutorial(false)}
           title="HelpDesk Tutorial"
-          description="Welcome to AutoForce™ HelpDesk! Here's how to use the system: 1) Use the command buttons to quickly access features. 2) Type /help to see all available commands. 3) Staff will assist you shortly. 4) Use the chat to describe your issue clearly."
+          description="Welcome to CoAIleague HelpDesk! Here's how to use the system: 1) Use the command buttons to quickly access features. 2) Type /help to see all available commands. 3) Staff will assist you shortly. 4) Use the chat to describe your issue clearly."
           confirmLabel="Got it!"
           onConfirm={() => setShowTutorial(false)}
         />
@@ -2219,7 +2219,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 });
                 
                 toast({
-                  title: newState ? "AutoForce™ AI Enabled" : "AutoForce™ AI Disabled",
+                  title: newState ? "CoAIleague AI Enabled" : "CoAIleague AI Disabled",
                   description: newState 
                     ? "AI costs are billed to customer credits" 
                     : "Standard support mode active",
@@ -2242,7 +2242,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 border-gray-200 text-gray-900 [&>button]:text-gray-500 [&>button]:opacity-100 [&>button]:hover:text-gray-900 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-gray-900">
-              <AutoForceAFLogo size="sm" variant="icon" />
+              <CoAIleagueAFLogo size="sm" variant="icon" />
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-blue-400" />
                 User Profile & Diagnostics
@@ -2314,7 +2314,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         </div>
                         <div>
                           <h3 className="text-gray-900 font-bold text-lg">
-                            {selectedUserId.startsWith('helpbot') ? 'AutoForce™ AI' : 'System Bot'}
+                            {selectedUserId.startsWith('helpbot') ? 'CoAIleague AI' : 'System Bot'}
                           </h3>
                           <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
                             System-Generated AI Assistant
@@ -2523,14 +2523,14 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 )}
               </div>
             ) : (
-              /* Loading state with AutoForce™ branding */
+              /* Loading state with CoAIleague branding */
               <div className="text-center py-8">
                 <div className="mb-4 flex justify-center">
-                  <AutoForceAFLogo size="lg" variant="icon" className="opacity-75" />
+                  <CoAIleagueAFLogo size="lg" variant="icon" className="opacity-75" />
                 </div>
                 <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-gray-600 text-sm font-medium">Loading user information...</p>
-                <p className="text-gray-600 text-xs mt-1">Powered by AutoForce™</p>
+                <p className="text-gray-600 text-xs mt-1">Powered by CoAIleague</p>
               </div>
             )}
           </div>

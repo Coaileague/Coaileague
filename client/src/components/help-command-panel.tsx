@@ -1,5 +1,5 @@
 /**
- * Help Command Panel - Grid-based command center with AutoForce™ branding
+ * Help Command Panel - Grid-based command center with CoAIleague branding
  * Each command is a visual box with logo, controls, and actions
  */
 
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import {
   MessageSquare, Users, Shield, Zap, Settings, AlertCircle, 
   UserPlus, Lock, Unlock, UserX, RefreshCw, Bell, Flag,
@@ -31,7 +31,7 @@ interface CommandItem {
 const COMMAND_BOXES: CommandItem[] = [
   // Chat & Support
   { id: 'welcome', name: 'Welcome', description: 'Greet new users', icon: MessageSquare, color: 'from-blue-500 to-blue-600', action: '/welcome', staffOnly: true },
-  { id: 'ai-intro', name: 'AI Intro', description: 'AutoForce™ AI greeting', icon: Sparkles, color: 'from-violet-500 to-purple-600', action: '/intro', staffOnly: true },
+  { id: 'ai-intro', name: 'AI Intro', description: 'CoAIleague AI greeting', icon: Sparkles, color: 'from-violet-500 to-purple-600', action: '/intro', staffOnly: true },
   { id: 'details', name: 'Request Details', description: 'Ask for more info', icon: FileText, color: 'from-blue-500 to-blue-600', action: '/details', staffOnly: true },
   { id: 'screenshot', name: 'Screenshot', description: 'Request screenshot', icon: Eye, color: 'from-primary to-accent', action: '/screenshot', staffOnly: true },
   
@@ -112,13 +112,13 @@ export function HelpCommandPanel({
           
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <AutoForceAFLogo size="sm" variant="icon" />
+              <CoAIleagueAFLogo size="sm" variant="icon" />
             </div>
             <div>
               <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
                 Command Center
                 <Badge className="bg-white/20 text-white border-white/30">
-                  AutoForce™ AI
+                  CoAIleague AI
                 </Badge>
               </DialogTitle>
               <p className="text-sm text-blue-100 mt-1">
@@ -140,7 +140,7 @@ export function HelpCommandPanel({
                 <div className="relative overflow-hidden rounded-xl border-2 border-slate-600/50 bg-slate-800/50 backdrop-blur-sm transition-all hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1">
                   {/* Logo Badge */}
                   <div className="absolute top-2 left-2 z-10 scale-50">
-                    <AutoForceAFLogo size="sm" variant="icon" className="opacity-50" />
+                    <CoAIleagueAFLogo size="sm" variant="icon" className="opacity-50" />
                   </div>
                   
                   {/* Close X (decorative) */}

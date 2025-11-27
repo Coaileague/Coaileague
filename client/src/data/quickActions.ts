@@ -1,6 +1,6 @@
 /**
  * Quick Action Registry
- * Single source of truth for all quick access links throughout AutoForce™
+ * Single source of truth for all quick access links throughout CoAIleague
  * Provides role-based access, platform-aware routing, and deduplication
  */
 
@@ -386,7 +386,7 @@ export const quickActionsRegistry: QuickAction[] = [
     desktopPath: '/os-family-platform',
     requiresAuth: true,
     testId: 'quick-all',
-    description: 'View all AutoForce™ features'
+    description: 'View all CoAIleague features'
   },
 ];
 

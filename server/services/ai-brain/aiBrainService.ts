@@ -1,7 +1,7 @@
 /**
  * UNIFIED AI BRAIN ORCHESTRATOR
  * 
- * This is the ONE AI system for AutoForce™ that:
+ * This is the ONE AI system for CoAIleague that:
  * - Learns from all organizations (cross-tenant intelligence)
  * - Provides unified intelligence across all features
  * - Manages all AI operations through one central service
@@ -174,7 +174,7 @@ export class AIBrainService {
   private async executeHelpOSSupport(job: AiBrainJob): Promise<{ output: any; tokensUsed: number }> {
     const { message, conversationHistory } = job.input;
 
-    const systemPrompt = `You are AutoForce™ AI Support Assistant, a helpful and knowledgeable assistant for the AutoForce™ workforce management platform.
+    const systemPrompt = `You are CoAIleague AI Support Assistant, a helpful and knowledgeable assistant for the CoAIleague workforce management platform.
 
 You help users with:
 - Time tracking and clock in/out issues
@@ -216,7 +216,7 @@ Be concise, professional, and helpful. If you don't know something specific to t
       job.workspaceId || undefined
     );
 
-    const systemPrompt = `You are AutoForce™ AI Scheduling AI, an expert at creating optimal employee schedules.
+    const systemPrompt = `You are CoAIleague AI Scheduling AI, an expert at creating optimal employee schedules.
 
 Analyze the provided shifts, employees, and constraints to create an optimal schedule assignment.
 Consider:
@@ -363,7 +363,7 @@ Return a JSON object with:
   private async executePrediction(job: AiBrainJob): Promise<{ output: any; tokensUsed: number; confidence: number }> {
     const { predictionType, historicalData } = job.input;
 
-    const systemPrompt = `You are AutoForce™ IntelligenceOS AI, an expert at predictive workforce analytics.
+    const systemPrompt = `You are CoAIleague IntelligenceOS AI, an expert at predictive workforce analytics.
 
 Analyze historical data and provide insights for: ${predictionType}
 

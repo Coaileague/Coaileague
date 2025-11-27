@@ -79,7 +79,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
       name: 'Intelligent Shift Scheduler',
       version: '1.0.0',
       description: 'AI-based employee assignment for shift scheduling using weighted scoring across employee qualifications, proximity, and client relationship history',
-      author: 'AutoForce Platform',
+      author: 'CoAIleague Platform',
       category: 'scheduling',
       requiredTier: 'professional',
       requiredRole: ['owner', 'admin', 'manager'],

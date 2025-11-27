@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Building2 } from "lucide-react";
-import { AutoForceStaticLogo } from "@/components/autoforce-static-logo";
+import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
 import { WFLogoCompact } from "@/components/wf-logo";
 
 interface BrandedInputDialogProps {

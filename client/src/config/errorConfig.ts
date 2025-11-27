@@ -1,7 +1,7 @@
 /**
  * Universal Error Configuration System
  * 
- * Centralized error handling configuration following AutoForce™ universal dynamic pattern.
+ * Centralized error handling configuration following CoAIleague universal dynamic pattern.
  * Every error message, handler, and behavior is configurable and centralized.
  */
 

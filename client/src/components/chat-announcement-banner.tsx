@@ -221,7 +221,7 @@ export function ChatAnnouncementBanner({
       },
       {
         id: '5',
-        text: 'AutoForce™ Elite - Priority support + advanced automation',
+        text: 'CoAIleague Elite - Priority support + advanced automation',
         type: 'promo',
         link: '/pricing',
         icon: 'award'

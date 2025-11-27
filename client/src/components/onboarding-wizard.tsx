@@ -24,7 +24,7 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "welcome",
     family: "overview",
-    title: "Welcome to AutoForce™",
+    title: "Welcome to CoAIleague",
     description: "The complete workforce optimization platform built for modern enterprises",
     icon: Sparkles,
     features: [
@@ -38,7 +38,7 @@ const onboardingSteps: OnboardingStep[] = [
     id: "os-families",
     family: "overview",
     title: "4 OS Families Overview",
-    description: "AutoForce™ organizes features into 4 logical families for easy navigation",
+    description: "CoAIleague organizes features into 4 logical families for easy navigation",
     icon: Sparkles,
     features: [
       "📡 Communication & Collaboration - Team chat, DMs, support",
@@ -222,7 +222,7 @@ const onboardingSteps: OnboardingStep[] = [
     id: "completion",
     family: "overview",
     title: "Tour Complete!",
-    description: "You're ready to start using AutoForce™",
+    description: "You're ready to start using CoAIleague",
     icon: CheckCircle2,
     features: [
       "Click any OS Family in the sidebar to explore modules",
@@ -296,7 +296,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
       });
       toast({
         title: "Onboarding complete!",
-        description: "You've completed the platform tour. Welcome to AutoForce™!",
+        description: "You've completed the platform tour. Welcome to CoAIleague!",
       });
       onClose();
     } catch (error) {

@@ -1079,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user info (support both auth methods)
       let userId: string | null = null;
       let workspaceId: string | null = null;
-      let userEmail = 'guest@autoforce.local';
+      let userEmail = 'guest@coaileague.local';
       
       // Try custom auth first (session-based)
       if (authReq.session?.userId) {
@@ -1092,7 +1092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userEmail = authReq.user?.claims?.email || userEmail;
       }
       
-      // For guests, use AutoForce Platform workspace
+      // For guests, use CoAIleague Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
       if (!workspaceId) {
         workspaceId = PLATFORM_WORKSPACE_ID;
@@ -1167,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // New anonymous user
       }
       
-      // For anonymous users, use AutoForce Platform workspace
+      // For anonymous users, use CoAIleague Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
       let workspaceId: string;
       
@@ -1451,7 +1451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ticketNumber: `SUPT-${Date.now()}`,
         type: 'support',
         priority: severity === 'critical' ? 'urgent' : 'high',
-        requestedBy: 'AutoForce Monitor',
+        requestedBy: 'CoAIleague Monitor',
         subject: `[${severity.toUpperCase()}] ${service} Service Failure`,
         description: `${message}\n\nDetected: ${new Date().toISOString()}`,
         status: 'open',

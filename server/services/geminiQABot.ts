@@ -1,5 +1,5 @@
 /**
- * Gemini-Powered Q&A Bot for AutoForce™
+ * Gemini-Powered Q&A Bot for CoAIleague
  * Provides intelligent responses to user questions in HelpDesk
  */
 
@@ -34,7 +34,7 @@ export function shouldBotRespond(message: string): boolean {
   if (lowerMsg.startsWith('/')) return false;
   
   // Respond to questions or help requests
-  const helpKeywords = ['help', 'how', 'what', 'why', 'when', 'where', 'who', '?', 'can you', 'could you', 'please', 'explain', 'autoforce', 'schedule', 'invoice', 'payroll'];
+  const helpKeywords = ['help', 'how', 'what', 'why', 'when', 'where', 'who', '?', 'can you', 'could you', 'please', 'explain', 'coaileague', 'schedule', 'invoice', 'payroll'];
   return helpKeywords.some(keyword => lowerMsg.includes(keyword));
 }
 
@@ -60,10 +60,10 @@ export async function getAiResponse(
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
     // Build system prompt
-    const systemPrompt = `You are HelpOS™, an AI assistant for AutoForce™ - an AI-powered workforce management platform.
+    const systemPrompt = `You are HelpOS™, an AI assistant for CoAIleague - an AI-powered workforce management platform.
 
 YOUR ROLE:
-- Answer questions about AutoForce™ features (scheduling, payroll, billing, employees, compliance)
+- Answer questions about CoAIleague features (scheduling, payroll, billing, employees, compliance)
 - Provide helpful, concise responses (2-3 sentences max)
 - Be professional, friendly, and solution-oriented
 

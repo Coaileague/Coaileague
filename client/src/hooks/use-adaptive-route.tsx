@@ -1,7 +1,7 @@
 /**
  * useAdaptiveRoute Hook
  * Resolves the correct route based on device platform (mobile/tablet/desktop)
- * Used throughout AutoForce™ for intelligent routing
+ * Used throughout CoAIleague for intelligent routing
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -88,7 +88,7 @@ export function useLastDashboardRoute() {
   
   useEffect(() => {
     // Load from session storage on mount
-    const stored = sessionStorage.getItem('autoforce_last_dashboard');
+    const stored = sessionStorage.getItem('coaileague_last_dashboard');
     if (stored) {
       setLastRoute(stored);
     }
@@ -96,12 +96,12 @@ export function useLastDashboardRoute() {
   
   const updateLastRoute = useCallback((route: string) => {
     setLastRoute(route);
-    sessionStorage.setItem('autoforce_last_dashboard', route);
+    sessionStorage.setItem('coaileague_last_dashboard', route);
   }, []);
   
   const clearLastRoute = useCallback(() => {
     setLastRoute('/dashboard');
-    sessionStorage.removeItem('autoforce_last_dashboard');
+    sessionStorage.removeItem('coaileague_last_dashboard');
   }, []);
   
   return {
@@ -113,7 +113,7 @@ export function useLastDashboardRoute() {
 
 /**
  * Feature-specific route maps
- * Centralized routing logic for key AutoForce™ features
+ * Centralized routing logic for key CoAIleague features
  */
 export const FEATURE_ROUTES = {
   chat: {

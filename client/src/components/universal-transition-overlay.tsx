@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AutoForceAFLogo } from "./autoforce-af-logo";
+import { CoAIleagueAFLogo } from "./coaileague-af-logo";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 import { 
   Loader2, CheckCircle, XCircle, AlertCircle, 
@@ -479,14 +479,14 @@ export function UniversalTransitionOverlay({
                 }}
                 className="flex flex-col items-center gap-2"
               >
-                <AutoForceAFLogo 
+                <CoAIleagueAFLogo 
                   variant="icon" 
                   size="md" 
                   animated={status === "loading"}
                 />
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl sm:text-2xl font-black bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
-                    AutoForce
+                    CoAIleague
                   </span>
                   <span className="text-[8px] font-black text-primary align-super">™</span>
                 </div>

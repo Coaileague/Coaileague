@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ServerCrash, Home, RefreshCw, MessageSquare } from "lucide-react";
 import { useState } from "react";
-import { AutoForceStaticLogo } from "@/components/autoforce-static-logo";
+import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
 
 export default function Error500() {
   const [, setLocation] = useLocation();
@@ -30,7 +30,7 @@ export default function Error500() {
         <CardHeader className="text-center pb-4 pt-8">
           <div className="flex justify-center mb-6">
             <div className="p-3 bg-muted rounded-lg border">
-              <AutoForceStaticLogo variant="icon" size="md" />
+              <CoAIleagueStaticLogo variant="icon" size="md" />
             </div>
           </div>
 
@@ -99,7 +99,7 @@ export default function Error500() {
               Error Code: 500 - Internal Server Error
             </p>
             <p className="text-xs text-muted-foreground/50">
-              AutoForce™ - 99.9% Uptime SLA Guarantee
+              CoAIleague - 99.9% Uptime SLA Guarantee
             </p>
           </div>
         </CardContent>

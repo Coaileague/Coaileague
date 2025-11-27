@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Dynamic Theme System
+ * CoAIleague Dynamic Theme System
  * Central configuration for all colors, spacing, typography, and layout
  * Change values here to instantly update the entire application
  */
@@ -9,7 +9,7 @@ export const THEME = {
   colors: {
     // Primary Brand Colors
     primary: {
-      main: '#2563eb',        // AutoForce Blue
+      main: '#2563eb',        // CoAIleague Blue
       dark: '#1d4ed8',        // Darker shade for hover/active
       light: '#3b82f6',       // Lighter shade for accents
       pale: '#dbeafe',        // Pale background

@@ -48,8 +48,8 @@ export async function generateMfaSecret(userId: string, userEmail: string): Prom
 }> {
   // Generate TOTP secret
   const secret = speakeasy.generateSecret({
-    name: `AutoForce™ (${userEmail})`,
-    issuer: 'AutoForce',
+    name: `CoAIleague (${userEmail})`,
+    issuer: 'CoAIleague',
     length: 32,
   });
 

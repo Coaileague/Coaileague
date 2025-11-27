@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { SupportCommandDrawer } from "./support-command-drawer";
 import { MobileUserActionSheet } from "./mobile-user-action-sheet";
-import { AutoForceLogo } from "./workforceos-logo";
+import { CoAIleagueLogo } from "./workforceos-logo";
 import { StaffNameDisplay } from "./staff-name-display";
 import { MessageTextWithIcons } from "./message-text-with-icons";
 import type { ChatMessage } from "@shared/schema";
@@ -102,7 +102,7 @@ export function MobileChatLayout({
         <div key={msg.id} className="py-2 px-3 bg-blue-500/10 rounded-lg">
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-3.5 h-3.5">
-              <AutoForceLogo />
+              <CoAIleagueLogo />
             </div>
             <StaffNameDisplay name={msg.senderName || 'HelpOS™'} className="text-xs font-bold text-blue-400" />
           </div>
@@ -151,7 +151,7 @@ export function MobileChatLayout({
         />
         <div className="flex items-center gap-2 flex-1 justify-center">
           <div className="w-6 h-6">
-            <AutoForceLogo />
+            <CoAIleagueLogo />
           </div>
           <span className="text-sm font-bold">Support Chat</span>
         </div>

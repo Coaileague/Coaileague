@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Employee Scoring Service
+ * CoAIleague Employee Scoring Service
  * 
  * Implements weighted scoring algorithm for AI-powered shift matching.
  * 

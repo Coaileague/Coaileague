@@ -230,7 +230,7 @@ class HelpOSService {
   private provider: AIProvider;
 
   constructor() {
-    this.provider = new GeminiProvider(); // AutoForce™ AI Brain - Gemini 2.0 Flash
+    this.provider = new GeminiProvider(); // CoAIleague AI Brain - Gemini 2.0 Flash
   }
 
   detectIssueCategory(message: string): string | undefined {
@@ -264,7 +264,7 @@ class HelpOSService {
     const messages = [
       {
         role: 'system',
-        content: 'You are HelpOS™, AutoForce\'s AI support assistant. Generate a brief 2-3 sentence summary of this support conversation and recommend specific actionable steps for the human agent. Format as markdown with **Summary:** and **Recommended Actions:** sections.'
+        content: 'You are HelpOS™, CoAIleague\'s AI support assistant. Generate a brief 2-3 sentence summary of this support conversation and recommend specific actionable steps for the human agent. Format as markdown with **Summary:** and **Recommended Actions:** sections.'
       },
       {
         role: 'user',
@@ -419,13 +419,13 @@ class HelpOSService {
     }
 
     // Build AI chat messages
-    const systemPrompt = `You are HelpOS™, the AI-powered support assistant for AutoForce™ - a comprehensive workforce management platform for emergency services and service industries.
+    const systemPrompt = `You are HelpOS™, the AI-powered support assistant for CoAIleague - a comprehensive workforce management platform for emergency services and service industries.
 
 **Your Role:**
-- Provide helpful, professional support for AutoForce™ users
+- Provide helpful, professional support for CoAIleague users
 - Use the knowledge base to answer common questions
 - Be concise but thorough (2-4 sentences typically)
-- Use AutoForce™ branding (with ™ symbol)
+- Use CoAIleague branding (with ™ symbol)
 - Reference specific OS modules: AI Communications, OperationsOS™, Billing Platform, IntelligenceOS™, AuditOS™, MarketingOS™
 - If you can't solve the issue after 3 attempts, suggest escalation to human support
 

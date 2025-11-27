@@ -184,7 +184,7 @@ billingRouter.post('/usage/estimate', async (req, res) => {
 // ============================================================================
 
 /**
- * Get full credit account details (for AutoForce credit system)
+ * Get full credit account details (for CoAIleague credit system)
  */
 billingRouter.get('/credits', async (req, res) => {
   try {

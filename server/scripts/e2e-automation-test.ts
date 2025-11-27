@@ -372,7 +372,7 @@ function testEmailDelivery(): void {
   
   // Simulate template structure (since templates are internal to EmailService)
   const verificationTemplate = {
-    subject: 'Verify Your AutoForce™ Account',
+    subject: 'Verify Your CoAIleague Account',
     hasHtml: true,
     containsFirstName: true,
     containsVerificationUrl: true,
@@ -386,7 +386,7 @@ function testEmailDelivery(): void {
   
   // Test password reset template structure
   const passwordResetTemplate = {
-    subject: 'Reset Your AutoForce™ Password',
+    subject: 'Reset Your CoAIleague Password',
     hasHtml: true,
     containsResetUrl: true,
   };
@@ -592,7 +592,7 @@ function printFinalSummary(): void {
 async function main(): Promise<void> {
   console.log('\n');
   console.log('╔══════════════════════════════════════════════════════════════════════╗');
-  console.log('║          AUTOFORCE™ E2E AUTOMATION TEST SUITE                       ║');
+  console.log('║          COAILEAGUE™ E2E AUTOMATION TEST SUITE                       ║');
   console.log('║          Invoice, Payroll & Email Automation Verification           ║');
   console.log('╚══════════════════════════════════════════════════════════════════════╝');
   console.log(`\n  Test Run: ${new Date().toISOString()}`);

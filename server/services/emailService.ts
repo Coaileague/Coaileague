@@ -1,7 +1,7 @@
 /**
  * CENTRALIZED EMAIL SERVICE
  * 
- * Unifies all email notifications across AutoForce™ with:
+ * Unifies all email notifications across CoAIleague with:
  * - Persistent audit trail (emailEvents table)
  * - Queue-compatible error handling
  * - Notification category abstraction
@@ -52,12 +52,12 @@ const emailTemplates = {
     firstName: string;
     verificationUrl: string;
   }) => ({
-    subject: 'Verify Your AutoForce™ Account',
+    subject: 'Verify Your CoAIleague Account',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Verify Your Email Address</h2>
         <p>Hello ${data.firstName},</p>
-        <p>Thank you for signing up for AutoForce™! Please verify your email address to activate your account.</p>
+        <p>Thank you for signing up for CoAIleague! Please verify your email address to activate your account.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${data.verificationUrl}" 
              style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
@@ -67,7 +67,7 @@ const emailTemplates = {
         <p style="color: #6b7280; font-size: 14px;">This link will expire in 24 hours.</p>
         <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
           If you did not create an account, please ignore this email.<br>
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -77,12 +77,12 @@ const emailTemplates = {
     firstName: string;
     resetUrl: string;
   }) => ({
-    subject: 'Reset Your AutoForce™ Password',
+    subject: 'Reset Your CoAIleague Password',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Password Reset Request</h2>
         <p>Hello ${data.firstName},</p>
-        <p>We received a request to reset your password for your AutoForce™ account.</p>
+        <p>We received a request to reset your password for your CoAIleague account.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${data.resetUrl}" 
              style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
@@ -95,7 +95,7 @@ const emailTemplates = {
           <p style="margin: 5px 0 0 0; font-size: 14px;">If you did not request this password reset, please ignore this email and your password will remain unchanged.</p>
         </div>
         <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -111,7 +111,7 @@ const emailTemplates = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #16a34a;">Support Ticket Received</h2>
         <p>Hello ${data.name},</p>
-        <p>Thank you for contacting AutoForce™ support. Your ticket has been received and assigned a tracking number.</p>
+        <p>Thank you for contacting CoAIleague support. Your ticket has been received and assigned a tracking number.</p>
         <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
           <p style="margin: 5px 0;"><strong>Ticket Number:</strong> ${data.ticketNumber}</p>
           <p style="margin: 5px 0;"><strong>Subject:</strong> ${data.subject}</p>
@@ -119,7 +119,7 @@ const emailTemplates = {
         </div>
         <p>Our support team will review your request and respond as soon as possible.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated confirmation from AutoForce™ Support.
+          This is an automated confirmation from CoAIleague Support.
         </p>
       </div>
     `
@@ -140,9 +140,9 @@ const emailTemplates = {
           <p style="margin: 5px 0;"><strong>Report Number:</strong> ${data.reportNumber}</p>
           <p style="margin: 5px 0;"><strong>Title:</strong> ${data.reportTitle}</p>
         </div>
-        <p>Please log in to your AutoForce™ portal to view the full report details.</p>
+        <p>Please log in to your CoAIleague portal to view the full report details.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™ ReportOS.
+          This is an automated message from CoAIleague ReportOS.
         </p>
       </div>
     `
@@ -154,12 +154,12 @@ const emailTemplates = {
     tempPassword: string;
     workspaceName: string;
   }) => ({
-    subject: `Your AutoForce™ Account - Temporary Password`,
+    subject: `Your CoAIleague Account - Temporary Password`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Welcome to ${data.workspaceName}</h2>
         <p>Hello ${data.firstName},</p>
-        <p>Your AutoForce™ account has been created. Use the credentials below to log in for the first time:</p>
+        <p>Your CoAIleague account has been created. Use the credentials below to log in for the first time:</p>
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Email:</strong> ${data.email}</p>
           <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background-color: #fff; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${data.tempPassword}</code></p>
@@ -169,7 +169,7 @@ const emailTemplates = {
           <p style="margin: 5px 0 0 0; font-size: 14px;">You will be required to change this password upon your first login for security purposes.</p>
         </div>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -192,7 +192,7 @@ const emailTemplates = {
         </div>
         <p>Please ensure all onboarding tasks are completed and the employee has access to necessary systems.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated notification from AutoForce™.
+          This is an automated notification from CoAIleague.
         </p>
       </div>
     `
@@ -590,7 +590,7 @@ export class EmailService {
       firstName: firstName || 'Employee',
       email,
       tempPassword,
-      workspaceName: workspaceName || 'AutoForce™',
+      workspaceName: workspaceName || 'CoAIleague',
     });
 
     return this.sendEmail(
@@ -616,7 +616,7 @@ export class EmailService {
     const template = emailTemplates.managerOnboardingNotification({
       managerName: managerName || 'Manager',
       employeeName,
-      workspaceName: workspaceName || 'AutoForce™',
+      workspaceName: workspaceName || 'CoAIleague',
     });
 
     return this.sendEmail(

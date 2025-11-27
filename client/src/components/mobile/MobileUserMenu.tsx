@@ -105,7 +105,7 @@ export function MobileUserMenu({ className }: MobileUserMenuProps) {
       await apiRequest("POST", "/api/auth/logout");
       toast({
         title: "Signed out successfully",
-        description: "You have been logged out of AutoForce™",
+        description: "You have been logged out of CoAIleague",
       });
       setLocation("/auth/login");
     } catch (error) {

@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Core Automation API Routes
+ * CoAIleague Core Automation API Routes
  * 
  * Endpoints for triggering the three core automation workflows:
  * 1. AI Scheduling (with confidence scoring and approval queue)
@@ -431,7 +431,7 @@ automationRouter.post('/invoice/anchor-close', async (req: any, res: Response) =
                 needsReview,
                 anchorDate,
               },
-              createdBy: 'system-autoforce',
+              createdBy: 'system-coaileague',
             });
           }
         }
@@ -642,7 +642,7 @@ automationRouter.post('/payroll/anchor-close', async (req: any, res: Response) =
                 needsReview,
                 anchorDate,
               },
-              createdBy: 'system-autoforce',
+              createdBy: 'system-coaileague',
             });
           }
         }

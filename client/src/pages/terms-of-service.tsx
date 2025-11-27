@@ -13,7 +13,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
             <p className="text-foreground/90 mb-4">
-              By accessing or using AutoForce™ (the "Service"), you agree to be bound by these Terms of Service ("Terms"). 
+              By accessing or using CoAIleague (the "Service"), you agree to be bound by these Terms of Service ("Terms"). 
               If you do not agree to these Terms, you may not access or use the Service.
             </p>
           </section>
@@ -21,7 +21,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
             <p className="text-foreground/90 mb-4">
-              AutoForce™ provides autonomous workforce management solutions for emergency services and service-related 
+              CoAIleague provides autonomous workforce management solutions for emergency services and service-related 
               industries, including:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
@@ -52,14 +52,14 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">4. Subscription Plans and Billing</h2>
             <p className="text-foreground/90 mb-4">
-              AutoForce™ offers multiple subscription tiers (Free, Starter, Professional, Enterprise) with varying 
+              CoAIleague offers multiple subscription tiers (Free, Starter, Professional, Enterprise) with varying 
               features and usage limits. You agree to:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>Pay all fees associated with your selected plan</li>
               <li>Provide valid payment information</li>
               <li>Allow us to charge your payment method on a recurring basis</li>
-              <li>Usage-based charges for AutoForce™ AI automation features beyond plan limits</li>
+              <li>Usage-based charges for CoAIleague AI automation features beyond plan limits</li>
             </ul>
             <p className="text-foreground/90 mb-4">
               We reserve the right to modify pricing with 30 days' notice. Continued use after price changes 
@@ -68,9 +68,9 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">5. AutoForce™ AI Automation Features</h2>
+            <h2 className="text-2xl font-semibold mb-4">5. CoAIleague AI Automation Features</h2>
             <p className="text-foreground/90 mb-4">
-              Our AutoForce™ AI system operates under a "99% AI, 1% human governance" model:
+              Our CoAIleague AI system operates under a "99% AI, 1% human governance" model:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>AI-generated schedules with ≥95% confidence are auto-approved</li>
@@ -84,7 +84,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">6. Data Ownership and Privacy</h2>
             <p className="text-foreground/90 mb-4">
-              You retain ownership of all data you input into the Service. By using AutoForce™, you grant us a 
+              You retain ownership of all data you input into the Service. By using CoAIleague, you grant us a 
               limited license to process your data solely to provide the Service. See our{" "}
               <a href="/privacy" className="text-primary hover:underline" data-testid="link-privacy-policy">Privacy Policy</a>{" "}
               for details on how we collect, use, and protect your data.
@@ -121,7 +121,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">9. Limitation of Liability</h2>
             <p className="text-foreground/90 mb-4">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, AUTOFORCE™ SHALL NOT BE LIABLE FOR:
+              TO THE MAXIMUM EXTENT PERMITTED BY LAW, COAILEAGUE™ SHALL NOT BE LIABLE FOR:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>Indirect, incidental, or consequential damages</li>
@@ -134,7 +134,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">10. Indemnification</h2>
             <p className="text-foreground/90 mb-4">
-              You agree to indemnify and hold AutoForce™ harmless from any claims, damages, or expenses arising from:
+              You agree to indemnify and hold CoAIleague harmless from any claims, damages, or expenses arising from:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>Your use of the Service</li>
@@ -191,7 +191,7 @@ export default function TermsOfService() {
             </p>
             <ul className="list-none pl-0 mb-4 text-foreground/90">
               <li className="mb-2">
-                <strong>Email:</strong> legal@autoforce.example.com
+                <strong>Email:</strong> legal@coaileague.example.com
               </li>
               <li className="mb-2">
                 <strong>Address:</strong> [Your Business Address]
@@ -201,7 +201,7 @@ export default function TermsOfService() {
 
           <div className="mt-12 pt-8 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              AutoForce™ and its AI Brain technology are trademarks of [Your Company Name].
+              CoAIleague and its AI Brain technology are trademarks of [Your Company Name].
             </p>
           </div>
         </div>

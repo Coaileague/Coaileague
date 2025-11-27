@@ -510,7 +510,7 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
         email: client.email || undefined,
         name: client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || undefined,
         metadata: {
-          autoforceClientId: client.id,
+          coaileagueClientId: client.id,
           workspaceId: invoice.workspaceId,
         },
       });
@@ -530,7 +530,7 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
       days_until_due: 30,
       auto_advance: false, // Keep manual finalization for safety
       metadata: {
-        autoforceInvoiceId: invoice.id,
+        coaileagueInvoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
         workspaceId: invoice.workspaceId,
       },

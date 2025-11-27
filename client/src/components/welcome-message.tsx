@@ -10,7 +10,7 @@ export function WelcomeMessage() {
   });
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
-  const workspaceName = workspace?.name || 'AutoForce™';
+  const workspaceName = workspace?.name || 'CoAIleague';
 
   const getTimeBasedGreeting = () => {
     const hour = new Date().getHours();

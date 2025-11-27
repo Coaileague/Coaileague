@@ -25,7 +25,7 @@ export async function generateGeminiResponse(options: GeminiChatOptions): Promis
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-    const systemPrompt = options.systemPrompt || `You are a helpful AI assistant for AutoForce™, an autonomous workforce management platform. 
+    const systemPrompt = options.systemPrompt || `You are a helpful AI assistant for CoAIleague, an autonomous workforce management platform. 
 You help users with:
 - Time tracking and scheduling questions
 - Billing and payroll inquiries

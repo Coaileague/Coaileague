@@ -1,21 +1,21 @@
 import { cn } from "@/lib/utils";
 import { logoConfig, getLogoSize } from "@/config/logoConfig";
 
-interface AutoForceStaticLogoProps {
+interface CoAIleagueStaticLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
   variant?: "icon" | "full" | "wordmark";
   className?: string;
 }
 
 /**
- * AutoForce™ Static Logo - Non-Animated
+ * CoAIleague Static Logo - Non-Animated
  * Use this in forms, dialogs, modals, and places where animation doesn't fit
  */
-export function AutoForceStaticLogo({
+export function CoAIleagueStaticLogo({
   size = "md",
   variant = "icon",
   className,
-}: AutoForceStaticLogoProps) {
+}: CoAIleagueStaticLogoProps) {
   const sizeConfig = getLogoSize(size);
 
   const StaticAFLogo = () => (

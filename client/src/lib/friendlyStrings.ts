@@ -2,7 +2,7 @@
  * Friendly Strings - Plain English vocabulary for non-technical users
  * 
  * This module provides simple, grandmother-friendly language to replace
- * technical jargon throughout the AutoForce platform.
+ * technical jargon throughout the CoAIleague platform.
  */
 
 export const FRIENDLY_LABELS = {

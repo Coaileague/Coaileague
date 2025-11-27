@@ -19,7 +19,7 @@ import {
   Lock, Unlock, Ban, XCircle, ShieldAlert, UserCog, FileText, AlertCircle, Key,
   Flag, Code, Activity as ActivityIcon, HelpCircle, Gauge, Webhook, ScrollText
 } from "lucide-react";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { TimeGreeting } from "@/components/time-greeting";
 import {
   DropdownMenu,
@@ -300,7 +300,7 @@ export default function RootAdminDashboard() {
               {/* Logo and Title - Centered on Large Screens */}
               <div className="flex items-start gap-3 lg:col-start-2 lg:flex-col lg:items-center lg:text-center">
                 <div className="transform hover:scale-105 transition-transform duration-300">
-                  <AutoForceAFLogo size="lg" variant="icon" />
+                  <CoAIleagueAFLogo size="lg" variant="icon" />
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent">

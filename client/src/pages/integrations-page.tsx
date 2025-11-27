@@ -308,7 +308,7 @@ export default function IntegrationsPage() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Need Help Getting Started?</strong> Contact AutoForce support and we'll help you set up these connections.
+          <strong>Need Help Getting Started?</strong> Contact CoAIleague support and we'll help you set up these connections.
         </AlertDescription>
       </Alert>
 
@@ -358,12 +358,12 @@ export default function IntegrationsPage() {
           <div>
             <h3 className="font-semibold text-foreground mb-2">How Billing Works</h3>
             <p>
-              You pay only for what you use. AutoForce charges you for the actual cost plus a small service fee based on your plan.
+              You pay only for what you use. CoAIleague charges you for the actual cost plus a small service fee based on your plan.
             </p>
           </div>
           <div className="pt-2 border-t">
             <a
-              href="https://autoforce.example.com/docs/integrations"
+              href="https://coaileague.example.com/docs/integrations"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline flex items-center gap-1"

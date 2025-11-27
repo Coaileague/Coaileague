@@ -1,4 +1,4 @@
-// AutoForce Compact Logo Component
+// CoAIleague Compact Logo Component
 // Perfect for inline use in chat, user lists, badges
 // Transparent background, animated glow, professional look
 
@@ -90,7 +90,7 @@ export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
           </feMerge>
         </filter>
         
-        {/* Gradient for professional look - AutoForce Blue */}
+        {/* Gradient for professional look - CoAIleague Blue */}
         <linearGradient id={`compact-gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#2563eb" />
           <stop offset="50%" stopColor="#3b82f6" />
@@ -104,7 +104,7 @@ export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
         </linearGradient>
       </defs>
       
-      {/* Rounded Container Circle - AutoForce Blue */}
+      {/* Rounded Container Circle - CoAIleague Blue */}
       <circle
         cx="20"
         cy="16"

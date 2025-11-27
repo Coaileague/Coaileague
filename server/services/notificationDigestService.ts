@@ -132,7 +132,7 @@ async function generateAiSummary(batch: DigestBatch): Promise<{ summary: string;
       `${idx + 1}. [${n.type}] ${n.title}: ${n.message}`
     ).join('\n');
 
-    const prompt = `You are an AI assistant summarizing notifications for a user in AutoForce™, an AI-powered workforce management platform.
+    const prompt = `You are an AI assistant summarizing notifications for a user in CoAIleague, an AI-powered workforce management platform.
 
 NOTIFICATIONS TO SUMMARIZE (${batch.notifications.length} total):
 ${notificationList}

@@ -9,7 +9,7 @@ import { useAuth } from "./useAuth";
 
 // Professional loading messages pool
 const PROFESSIONAL_MESSAGES = [
-  "Initializing AutoForce™...",
+  "Initializing CoAIleague...",
   "Loading workspace modules...",
   "Preparing your dashboard...",
   "Securing your connection...",

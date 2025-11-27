@@ -175,9 +175,9 @@ export const navConfig = {
 
   // External URLs
   external: {
-    docs: "https://docs.autoforce.com",
-    support: "https://support.autoforce.com",
-    status: "https://status.autoforce.com",
+    docs: "https://docs.coaileague.com",
+    support: "https://support.coaileague.com",
+    status: "https://status.coaileague.com",
   },
 } as const;
 

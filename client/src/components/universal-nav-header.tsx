@@ -1,7 +1,7 @@
 /**
  * Universal Navigation Header - Works on ALL pages (mobile + desktop)
  * Provides hamburger menu access to navigation on every page
- * Matches Fortune 500 professional aesthetic with AutoForce branding
+ * Matches Fortune 500 professional aesthetic with CoAIleague branding
  */
 
 import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle } from "lucide-react";
@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { selectCondensedMobileFamilies, getDesktopOnlyRoutes } from "@/lib/osModules";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
@@ -116,7 +116,7 @@ export function UniversalNavHeader() {
               <div className="p-6 border-b border-border bg-sidebar">
                 <Link href="/dashboard" onClick={handleNavigate} className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
                   <div className="w-12 h-12 shrink-0">
-                    <AutoForceAFLogo variant="icon" size="md" animated={false} />
+                    <CoAIleagueAFLogo variant="icon" size="md" animated={false} />
                   </div>
                   <div>
                     <h1 className="text-xl font-bold leading-tight">
@@ -344,10 +344,10 @@ export function UniversalNavHeader() {
           </div>
         </div>
 
-        {/* Center: AutoForce Branding */}
+        {/* Center: CoAIleague Branding */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-2">
           <div className="flex items-baseline gap-1">
-            <span className="hidden sm:inline text-base font-bold whitespace-nowrap">AutoForce</span>
+            <span className="hidden sm:inline text-base font-bold whitespace-nowrap">CoAIleague</span>
             <span className="sm:hidden text-lg font-bold">AF</span>
             <span className="text-[8px] sm:text-[10px] font-bold align-super">™</span>
           </div>

@@ -243,7 +243,7 @@ export default function OversightHub() {
             <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">All Clear!</h3>
             <p className="text-muted-foreground">
-              No items need your review right now. AutoForce™ is handling everything smoothly.
+              No items need your review right now. CoAIleague is handling everything smoothly.
             </p>
           </CardContent>
         </Card>

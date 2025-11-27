@@ -56,12 +56,12 @@ export async function createNotification(params: CreateNotificationParams) {
         const resend = new Resend(process.env.RESEND_API_KEY);
         
         await resend.emails.send({
-          from: 'notifications@autoforce.platform',
+          from: 'notifications@coaileague.platform',
           to: user.email,
           subject: params.title,
           html: `
             <p>${params.message}</p>
-            ${params.actionUrl ? `<a href="${process.env.APP_URL || 'https://autoforce.platform'}${params.actionUrl}">View Details</a>` : ''}
+            ${params.actionUrl ? `<a href="${process.env.APP_URL || 'https://coaileague.platform'}${params.actionUrl}">View Details</a>` : ''}
           `,
         });
         
@@ -87,7 +87,7 @@ export async function sendWelcomeOrgNotification(workspaceId: string, ownerId: s
     workspaceId,
     userId: ownerId,
     type: 'welcome_org',
-    title: 'Welcome to AutoForce!',
+    title: 'Welcome to CoAIleague!',
     message: `Your organization "${orgName}" is ready. Our AI Brain will help you manage your workforce with 99% automation. Get started by adding employees and creating your first schedule.`,
     actionUrl: '/dashboard',
     relatedEntityType: 'workspace',

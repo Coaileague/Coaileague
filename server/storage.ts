@@ -5915,7 +5915,7 @@ export class DatabaseStorage implements IStorage {
       auditRequestId: authCheck.auditRequest?.id,
       accessedBy: requestedBy,
       accessedByName: 'Support Staff',
-      accessedByEmail: 'support@autoforce.com',
+      accessedByEmail: 'support@coaileague.com',
       accessedByRole: 'support',
       accessReason: 'Chat export',
       messagesViewed: messages.length,

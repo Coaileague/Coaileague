@@ -20,7 +20,7 @@ import { selectSidebarFamilies } from "@/lib/osModules";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Button } from "@/components/ui/button";
 import { PlanBadge } from "@/components/plan-badge";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
@@ -82,12 +82,12 @@ export function AppSidebar() {
         <Link href="/dashboard" className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
           {state === 'collapsed' ? (
             <div className="w-12 h-12 flex items-center justify-center">
-              <AutoForceAFLogo variant="icon" size="md" animated={false} />
+              <CoAIleagueAFLogo variant="icon" size="md" animated={false} />
             </div>
           ) : (
             <>
               <div className="w-12 h-12 shrink-0">
-                <AutoForceAFLogo variant="icon" size="md" animated={false} />
+                <CoAIleagueAFLogo variant="icon" size="md" animated={false} />
               </div>
               <div>
                 <h1 className="text-xl font-bold leading-tight">
@@ -296,7 +296,7 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => window.open('https://docs.autoforce.com', '_blank')}
+              onClick={() => window.open('https://docs.coaileague.com', '_blank')}
               className="w-10 h-10"
               data-testid="button-sidebar-help-collapsed"
             >

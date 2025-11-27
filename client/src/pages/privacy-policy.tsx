@@ -13,11 +13,11 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
             <p className="text-foreground/90 mb-4">
-              AutoForce™ ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we 
+              CoAIleague ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we 
               collect, use, disclose, and safeguard your information when you use our workforce management platform.
             </p>
             <p className="text-foreground/90 mb-4">
-              By using AutoForce™, you agree to the collection and use of information in accordance with this policy. 
+              By using CoAIleague, you agree to the collection and use of information in accordance with this policy. 
               If you do not agree with our policies and practices, please do not use our Service.
             </p>
           </section>
@@ -57,7 +57,7 @@ export default function PrivacyPolicy() {
             <p className="text-foreground/90 mb-4">We use collected information to:</p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li><strong>Provide Services:</strong> Time tracking, scheduling, invoicing, payroll, AI-powered automation</li>
-              <li><strong>AI Processing:</strong> Train and improve AutoForce™ AI automation and intelligent support algorithms</li>
+              <li><strong>AI Processing:</strong> Train and improve CoAIleague AI automation and intelligent support algorithms</li>
               <li><strong>Analytics:</strong> Monitor usage patterns, improve features, optimize performance</li>
               <li><strong>Communications:</strong> Send updates, invoices, support responses, security alerts</li>
               <li><strong>Compliance:</strong> Maintain audit trails, generate compliance reports, ensure labor law adherence</li>
@@ -68,13 +68,13 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">4. AutoForce™ AI and Intelligent Automation</h2>
+            <h2 className="text-2xl font-semibold mb-4">4. CoAIleague AI and Intelligent Automation</h2>
             <p className="text-foreground/90 mb-4">
-              Our AutoForce™ AI system processes your data to:
+              Our CoAIleague AI system processes your data to:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>Generate automated schedules based on employee availability and preferences</li>
-              <li>Provide intelligent support responses through AutoForce™ AI</li>
+              <li>Provide intelligent support responses through CoAIleague AI</li>
               <li>Analyze patterns to improve scheduling accuracy</li>
               <li>Predict staffing needs and optimize labor costs</li>
             </ul>
@@ -114,7 +114,7 @@ export default function PrivacyPolicy() {
             <p className="text-foreground/90 mb-4">We may disclose information when required by law or to:</p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li>Comply with legal obligations, court orders, or subpoenas</li>
-              <li>Protect the rights, property, or safety of AutoForce™, our users, or the public</li>
+              <li>Protect the rights, property, or safety of CoAIleague, our users, or the public</li>
               <li>Investigate fraud, security breaches, or terms of service violations</li>
             </ul>
           </section>
@@ -183,7 +183,7 @@ export default function PrivacyPolicy() {
             </ul>
 
             <p className="text-foreground/90 mb-4 mt-6">
-              To exercise these rights, contact us at privacy@autoforce.example.com. We will respond within 30 days.
+              To exercise these rights, contact us at privacy@coaileague.example.com. We will respond within 30 days.
             </p>
           </section>
 
@@ -205,9 +205,9 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">10. Children's Privacy</h2>
             <p className="text-foreground/90 mb-4">
-              AutoForce™ is not intended for use by individuals under 18 years of age. We do not knowingly collect 
+              CoAIleague is not intended for use by individuals under 18 years of age. We do not knowingly collect 
               personal information from children under 18. If you believe we have collected information from a child 
-              under 18, please contact us immediately at privacy@autoforce.example.com.
+              under 18, please contact us immediately at privacy@coaileague.example.com.
             </p>
           </section>
 
@@ -251,10 +251,10 @@ export default function PrivacyPolicy() {
             </p>
             <ul className="list-none pl-0 mb-4 text-foreground/90">
               <li className="mb-2">
-                <strong>Privacy Team Email:</strong> privacy@autoforce.example.com
+                <strong>Privacy Team Email:</strong> privacy@coaileague.example.com
               </li>
               <li className="mb-2">
-                <strong>Data Protection Officer:</strong> dpo@autoforce.example.com
+                <strong>Data Protection Officer:</strong> dpo@coaileague.example.com
               </li>
               <li className="mb-2">
                 <strong>Mailing Address:</strong> [Your Business Address]

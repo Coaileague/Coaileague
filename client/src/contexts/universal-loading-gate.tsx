@@ -3,7 +3,7 @@ import { createContext, useContext, useMemo, ReactNode } from 'react';
 /**
  * UniversalLoadingGate - SINGLE SOURCE OF TRUTH for loading visibility
  * 
- * All loading systems (ProtectedRoute, OverlayController, AutoForceLoader, etc.)
+ * All loading systems (ProtectedRoute, OverlayController, CoAIleagueLoader, etc.)
  * check this gate before rendering any loading overlay.
  * 
  * If we're on a public route, isLoadingBlocked = true

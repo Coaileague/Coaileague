@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Loader2, UserPlus, Mail, Lock, User, CheckCircle2, XCircle, Github } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { SiGoogle, SiFacebook } from "react-icons/si";
@@ -68,7 +68,7 @@ export default function Register() {
 
       toast({
         title: "Account created!",
-        description: "Welcome to AutoForce™",
+        description: "Welcome to CoAIleague",
       });
 
       // Auto-login after registration
@@ -89,12 +89,12 @@ export default function Register() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <AutoForceAFLogo variant="full" size="sm" />
+            <CoAIleagueAFLogo variant="full" size="sm" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Create Account</CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Get started with AutoForce™ today
+              Get started with CoAIleague today
             </CardDescription>
           </div>
         </CardHeader>

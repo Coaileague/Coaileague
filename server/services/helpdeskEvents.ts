@@ -164,7 +164,7 @@ export class HelpDeskEventManager {
       await db.insert(auditLogs).values({
         workspaceId: null, // Will be set by caller when they have workspace context
         userId: userId,
-        userEmail: 'system@autoforce.app',
+        userEmail: 'system@coaileague.app',
         userRole: 'system',
         action: 'other',
         actionDescription: event.type,

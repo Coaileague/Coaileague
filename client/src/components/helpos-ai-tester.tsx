@@ -25,7 +25,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 
-export function AutoforceAiTester() {
+export function CoAIleagueAiTester() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("Hi, I need help logging in");
   const [aiResponse, setAiResponse] = useState("");
@@ -50,7 +50,7 @@ export function AutoforceAiTester() {
     onSuccess: () => {
       toast({
         title: "✅ Workspace Selected",
-        description: "AutoForce™ AI is ready",
+        description: "CoAIleague AI is ready",
       });
     },
     onError: (error: any) => {
@@ -97,7 +97,7 @@ export function AutoforceAiTester() {
     onSuccess: (data: any) => {
       setAiResponse(data.message || "No response from AI");
       toast({
-        title: "✅ AutoForce™ AI Active",
+        title: "✅ CoAIleague AI Active",
         description: "Intelligent automation system responding",
       });
     },

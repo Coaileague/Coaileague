@@ -1,5 +1,5 @@
 /**
- * Automation Value Metrics - AutoForce™
+ * Automation Value Metrics - CoAIleague
  * Calculates ROI and efficiency metrics for autonomous operations
  * 
  * Metrics:

@@ -105,7 +105,7 @@ export function PWAInstallPrompt() {
               <Smartphone className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg" data-testid="text-pwa-title">Install AutoForce™</CardTitle>
+              <CardTitle className="text-lg" data-testid="text-pwa-title">Install CoAIleague</CardTitle>
               <CardDescription data-testid="text-pwa-description">
                 Get the best experience with our app
               </CardDescription>

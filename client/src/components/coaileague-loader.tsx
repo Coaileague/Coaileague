@@ -1,13 +1,13 @@
 /**
- * AutoForce™ Universal Loader Component
+ * CoAIleague Universal Loader Component
  * 
- * Professional, consistent loading experience across all AutoForce™ platforms
+ * Professional, consistent loading experience across all CoAIleague platforms
  * Replaces scattered loading states with unified branding and animations
  * Supports multiple scenarios: workspace, schedule, payroll, invoice, email, analytics
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { AutoForceAFLogo } from "./autoforce-af-logo";
+import { CoAIleagueAFLogo } from "./coaileague-af-logo";
 import { Loader2 } from "lucide-react";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 
@@ -21,7 +21,7 @@ export type LoadingScenario =
   | "analytics" 
   | "general";
 
-interface AutoForceLoaderProps {
+interface CoAIleagueLoaderProps {
   isVisible: boolean;
   message?: string;
   submessage?: string;
@@ -33,11 +33,11 @@ interface AutoForceLoaderProps {
 const scenarioMessages: Record<LoadingScenario, { title: string; description: string }> = {
   workspace: {
     title: "Loading your workspace...",
-    description: "Initializing AutoForce™ AI Brain"
+    description: "Initializing CoAIleague AI Brain"
   },
   onboarding: {
     title: "Setting up your workspace...",
-    description: "Configuring AutoForce™ AI Brain for your organization"
+    description: "Configuring CoAIleague AI Brain for your organization"
   },
   schedule: {
     title: "Optimizing schedule...",
@@ -45,7 +45,7 @@ const scenarioMessages: Record<LoadingScenario, { title: string; description: st
   },
   invoice: {
     title: "Generating invoices...",
-    description: "AutoForce™ calculating billable hours and costs"
+    description: "CoAIleague calculating billable hours and costs"
   },
   payroll: {
     title: "Processing payroll...",
@@ -61,18 +61,18 @@ const scenarioMessages: Record<LoadingScenario, { title: string; description: st
   },
   general: {
     title: "Loading...",
-    description: "AutoForce™ preparing your request"
+    description: "CoAIleague preparing your request"
   }
 };
 
-export function AutoForceLoader({
+export function CoAIleagueLoader({
   isVisible,
   message,
   submessage,
   scenario = "general",
   progress,
   variant = "full"
-}: AutoForceLoaderProps) {
+}: CoAIleagueLoaderProps) {
   // CRITICAL: Respect universal loading gate - NEVER show on public routes
   const { isLoadingBlocked } = useUniversalLoadingGate();
   
@@ -93,16 +93,16 @@ export function AutoForceLoader({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
-          data-testid="autoforce-loader-overlay"
+          data-testid="coaileague-loader-overlay"
         >
           <div className="flex flex-col items-center gap-6 p-6 text-center">
-            {/* AutoForce™ Logo */}
+            {/* CoAIleague Logo */}
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
               <div className="w-16 h-16">
-                <AutoForceAFLogo />
+                <CoAIleagueAFLogo />
               </div>
             </motion.div>
 
@@ -136,9 +136,9 @@ export function AutoForceLoader({
               </div>
             )}
 
-            {/* AutoForce™ branding */}
+            {/* CoAIleague branding */}
             <p className="text-xs text-muted-foreground mt-2">
-              Powered by AutoForce™ AI Brain
+              Powered by CoAIleague AI Brain
             </p>
           </div>
         </motion.div>

@@ -67,7 +67,7 @@ export default function Homepage() {
             <div>
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-md">
                 <Cpu className="w-4 h-4" />
-                AutoForce™ AI Brain — Autonomous Workforce Intelligence
+                CoAIleague AI Brain — Autonomous Workforce Intelligence
               </div>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 Replace $100K+ in
@@ -77,7 +77,7 @@ export default function Homepage() {
                 </span>
               </h1>
               <p className="text-xl text-gray-700 mb-6 leading-relaxed">
-                Let <strong className="text-gray-900">AutoForce™ AI Brain</strong> autonomously handle your scheduling, payroll processing, and client invoicing. 
+                Let <strong className="text-gray-900">CoAIleague AI Brain</strong> autonomously handle your scheduling, payroll processing, and client invoicing. 
                 <strong className="text-blue-600"> Save hundreds of thousands annually</strong> on HR and admin staff.
               </p>
               
@@ -116,7 +116,7 @@ export default function Homepage() {
               <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-gray-200">
                 <div className="flex items-center gap-2">
                   <Cpu className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-700"><strong>AutoForce™ AI Brain</strong> Powered</span>
+                  <span className="text-sm text-gray-700"><strong>CoAIleague AI Brain</strong> Powered</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-5 h-5 text-gray-600" />
@@ -136,7 +136,7 @@ export default function Homepage() {
                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                   <div className="flex items-center gap-2">
                     <Cpu className="w-5 h-5 text-blue-600" />
-                    <span className="font-bold text-gray-900">AutoForce™ AI Brain</span>
+                    <span className="font-bold text-gray-900">CoAIleague AI Brain</span>
                   </div>
                   <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
@@ -214,7 +214,7 @@ export default function Homepage() {
                   </div>
                   <Link href="/support" className="block w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl" data-testid="button-watch-demo">
                     <MessageSquare className="w-4 h-4" />
-                    Experience AutoForce™ AI Brain
+                    Experience CoAIleague AI Brain
                   </Link>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export default function Homepage() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 shadow-md">
               <Cpu className="w-4 h-4" />
-              Powered by AutoForce™ AI Brain — Neural Workforce Engine
+              Powered by CoAIleague AI Brain — Neural Workforce Engine
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               AI Replaces Your Most Expensive Staff
@@ -413,7 +413,7 @@ export default function Homepage() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2025 AutoForce™. All rights reserved.</p>
+            <p>&copy; 2025 CoAIleague. All rights reserved.</p>
           </div>
         </div>
       </footer>

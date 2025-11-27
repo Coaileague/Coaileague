@@ -59,7 +59,7 @@ export async function getUncachableResendClient() {
           }
         }
       } as any,
-      fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@autoforce.ai'
+      fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@coaileague.ai'
     };
   }
   
@@ -151,7 +151,7 @@ export const emailTemplates = {
         </div>
         <p>Please review the invoice in your dashboard.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -193,7 +193,7 @@ export const emailTemplates = {
           If you have already submitted payment, please disregard this notice. If you have questions about this invoice, please contact us immediately.
         </p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated reminder from AutoForce™ Billing.
+          This is an automated reminder from CoAIleague Billing.
         </p>
       </div>
     `
@@ -305,7 +305,7 @@ export const emailTemplates = {
         </div>
         <p>Please contact your manager if you have questions about this decision.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -330,7 +330,7 @@ export const emailTemplates = {
         </div>
         <p>The schedule has been updated accordingly.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -357,7 +357,7 @@ export const emailTemplates = {
         </div>
         <p>Please contact your manager if you have questions about this decision.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -380,7 +380,7 @@ export const emailTemplates = {
         </div>
         <p>Your timesheet has been updated with the approved changes.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `
@@ -405,7 +405,7 @@ export const emailTemplates = {
         </div>
         <p>Please contact your manager if you have questions about this decision.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from AutoForce™.
+          This is an automated message from CoAIleague.
         </p>
       </div>
     `

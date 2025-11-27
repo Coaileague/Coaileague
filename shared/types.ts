@@ -1,4 +1,4 @@
-// Shared TypeScript types for AutoForce™
+// Shared TypeScript types for CoAIleague
 // Reusable type definitions for consistent typing across server and client
 
 import type { Client, Employee, Invoice } from './schema';

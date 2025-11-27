@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Data Migration Service
+ * CoAIleague Data Migration Service
  * 
  * Enables importing data from external platforms using Gemini Vision AI.
  * Supports: employees, schedules, payroll, invoices, clients, timesheets
@@ -8,7 +8,7 @@
  * 1. Upload - User uploads document (PDF/image)
  * 2. Analyze - Gemini Vision extracts data
  * 3. Review - User reviews extracted records
- * 4. Import - Records imported into AutoForce
+ * 4. Import - Records imported into CoAIleague
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -200,7 +200,7 @@ export class MigrationService {
   }
 
   /**
-   * Step 3: Import migration records into AutoForce
+   * Step 3: Import migration records into CoAIleague
    */
   async importRecords(jobId: string, recordIds: string[], workspaceId: string) {
     // Get job with workspace scoping (security: prevent cross-tenant access)
@@ -382,7 +382,7 @@ export class MigrationService {
    * Build extraction prompt for specific document type (from config)
    */
   private buildExtractionPrompt(documentType: MigrationType): string {
-    const basePrompt = `You are a data extraction AI for AutoForce™ workforce management.
+    const basePrompt = `You are a data extraction AI for CoAIleague workforce management.
 Extract data from the provided document and return a JSON response with this structure:
 
 {

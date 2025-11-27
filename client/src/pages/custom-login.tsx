@@ -138,7 +138,7 @@ export default function CustomLogin() {
                 AF
               </div>
               <div>
-                <div className="font-semibold" style={{ color: THEME.colors.text.primary }}>AUTOFORCE</div>
+                <div className="font-semibold" style={{ color: THEME.colors.text.primary }}>COAILEAGUE</div>
                 <div className="text-xs" style={{ color: THEME.colors.text.placeholder }}>Workforce Intelligence</div>
               </div>
             </button>

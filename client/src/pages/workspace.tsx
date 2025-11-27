@@ -9,7 +9,7 @@ import {
   CheckCircle, Receipt, ShieldCheck, Book, MessageSquare,
   Truck, HelpCircle, ArrowRight, Activity
 } from "lucide-react";
-import { AutoForceLoader } from "@/components/autoforce-loader";
+import { CoAIleagueLoader } from "@/components/coaileague-loader";
 import type { WorkspaceFeature } from "@shared/workspaceFeatures";
 
 const iconMap: Record<string, any> = {
@@ -49,9 +49,9 @@ export default function Workspace() {
   const workspaceRole = featuresData?.workspaceRole;
 
   // Only show loader if actually loading AND not on a public route
-  // AutoForceLoader internally checks universal gate anyway
+  // CoAIleagueLoader internally checks universal gate anyway
   if (isLoading || featuresLoading) {
-    return <AutoForceLoader isVisible={true} scenario="workspace" />;
+    return <CoAIleagueLoader isVisible={true} scenario="workspace" />;
   }
 
   if (!user) {

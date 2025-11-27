@@ -1,5 +1,5 @@
 /**
- * ReportService - Centralized reporting and analytics for AutoForce™
+ * ReportService - Centralized reporting and analytics for CoAIleague
  * 
  * Provides role-scoped, tier-aware reporting across all OS modules:
  * - Billing Platform: Billable hours, invoices, client summaries

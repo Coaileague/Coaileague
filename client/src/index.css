@@ -1,4 +1,4 @@
-/* AutoForce™ Responsive Design System - Auto-resizing for mobile/tablet/desktop */
+/* CoAIleague™ Responsive Design System - Auto-resizing for mobile/tablet/desktop */
 @import './styles/responsive.css';
 @import './styles/mobile.css';
 
@@ -71,8 +71,8 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   /* Automatic computation of border around primary / danger buttons */
   --opaque-button-border-intensity: -8; /* In terms of percentages */
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active - AutoForce blue tint */
-  --elevate-1: rgba(11, 77, 255, .06);  /* AutoForce blue tint */
+  /* Backgrounds applied on top of other backgrounds when hovered/active - CoAIleague blue tint */
+  --elevate-1: rgba(11, 77, 255, .06);  /* CoAIleague blue tint */
   --elevate-2: rgba(11, 77, 255, .12);
 
   /* ========================================================================
@@ -146,7 +146,7 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   --sidebar-border: 213 16% 86%;       /* Light border */
 
-  --sidebar-primary: 221 83% 53%;      /* AutoForce blue #2563eb - Active items */
+  --sidebar-primary: 221 83% 53%;      /* CoAIleague blue #2563eb - Active items */
 
   --sidebar-primary-foreground: 0 0% 100%;
 
@@ -154,7 +154,7 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   --sidebar-accent-foreground: 217 33% 12%;  /* Dark text on hover */
 
-  --sidebar-ring: 221 83% 53%;         /* AutoForce blue #2563eb focus ring */
+  --sidebar-ring: 221 83% 53%;         /* CoAIleague blue #2563eb focus ring */
 
   /* Popovers */
   --popover: 210 12% 96%;              /* Light gray */
@@ -163,13 +163,13 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   --popover-border: 213 16% 86%;       /* Neutral border */
 
-  /* Primary - AutoForce Blue (#2563eb from public pages) */
-  --primary: 221 83% 53%;              /* AutoForce blue #2563eb - Primary CTAs */
+  /* Primary - CoAIleague Blue (#2563eb from public pages) */
+  --primary: 221 83% 53%;              /* CoAIleague blue #2563eb - Primary CTAs */
 
   --primary-foreground: 0 0% 100%;     /* White text */
 
   /* Secondary - Professional Steel Blue */
-  --secondary: 217 91% 60%;            /* AutoForce blue-500 #3b82f6 - Secondary actions */
+  --secondary: 217 91% 60%;            /* CoAIleague blue-500 #3b82f6 - Secondary actions */
 
   --secondary-foreground: 0 0% 100%;   /* White text */
 
@@ -178,7 +178,7 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   --muted-foreground: 220 76% 55%;     /* Steel blue - Professional secondary text */
 
-  /* Accent - AutoForce Blue Accent */
+  /* Accent - CoAIleague Blue Accent */
   --accent: 212 96% 78%;               /* Blue-300 #93c5fd - Highlights */
 
   --accent-foreground: 217 33% 17%;    /* Dark text for better contrast */
@@ -190,11 +190,11 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   /* Input & Ring */
   --input: 213 16% 86%;                /* Neutral border */
-  --ring: 221 83% 53%;                 /* AutoForce blue #2563eb focus ring */
+  --ring: 221 83% 53%;                 /* CoAIleague blue #2563eb focus ring */
   
-  /* Charts - AutoForce Blue Palette */
-  --chart-1: 221 83% 53%;              /* AutoForce Blue #2563eb */
-  --chart-2: 217 91% 60%;              /* AutoForce Blue-500 #3b82f6 */
+  /* Charts - CoAIleague Blue Palette */
+  --chart-1: 221 83% 53%;              /* CoAIleague Blue #2563eb */
+  --chart-2: 217 91% 60%;              /* CoAIleague Blue-500 #3b82f6 */
   --chart-3: 38 72% 48%;               /* Subdued Amber */
   --chart-4: 212 96% 78%;              /* Blue-300 #93c5fd */
   --chart-5: 0 65% 52%;                /* Subdued Red */
@@ -271,8 +271,8 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active - AutoForce blue tint */
-  --elevate-1: rgba(11, 77, 255, 0.06);  /* AutoForce blue tint */
+  /* Backgrounds applied on top of other backgrounds when hovered/active - CoAIleague blue tint */
+  --elevate-1: rgba(11, 77, 255, 0.06);  /* CoAIleague blue tint */
   --elevate-2: rgba(11, 77, 255, 0.12);
 
   /* AUTOFORCE™ DARK MODE - Blue-tinted Navy (matches homepage) */
@@ -289,30 +289,30 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   --sidebar: 217 64% 10%;              /* Deep navy matching background */
   --sidebar-foreground: 210 40% 80%;   /* Lighter blue-gray for better visibility */
   --sidebar-border: 217 60% 20%;       /* Blue-tinted border */
-  --sidebar-primary: 221 83% 58%;      /* AutoForce blue #2563eb - Slightly brighter for dark mode */
+  --sidebar-primary: 221 83% 58%;      /* CoAIleague blue #2563eb - Slightly brighter for dark mode */
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 215 24% 18%;       /* Hover state */
   --sidebar-accent-foreground: 210 40% 85%;  /* Even lighter for hover visibility */
-  --sidebar-ring: 221 83% 58%;         /* AutoForce blue focus ring */
+  --sidebar-ring: 221 83% 58%;         /* CoAIleague blue focus ring */
   
   /* Popovers */
   --popover: 215 24% 18%;
   --popover-foreground: 210 20% 96%;
   --popover-border: 215 20% 25%;
   
-  /* Primary - AutoForce Blue */
-  --primary: 221 83% 58%;              /* AutoForce blue #2563eb - Slightly brighter for dark mode */
+  /* Primary - CoAIleague Blue */
+  --primary: 221 83% 58%;              /* CoAIleague blue #2563eb - Slightly brighter for dark mode */
   --primary-foreground: 0 0% 100%;
   
   /* Secondary - Professional Steel Blue */
-  --secondary: 217 91% 63%;            /* AutoForce blue-500 #3b82f6 - Brighter for dark mode */
+  --secondary: 217 91% 63%;            /* CoAIleague blue-500 #3b82f6 - Brighter for dark mode */
   --secondary-foreground: 0 0% 100%;
   
   /* Muted */
   --muted: 215 22% 22%;
   --muted-foreground: 200 70% 65%;     /* Cyan-tinted blue - Dark mode secondary text */
   
-  /* Accent - AutoForce Blue Accent */
+  /* Accent - CoAIleague Blue Accent */
   --accent: 212 96% 78%;               /* Blue-300 #93c5fd - Accent */
   --accent-foreground: 217 28% 14%;    /* Dark text on accent */
   
@@ -322,11 +322,11 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   
   /* Input & Ring */
   --input: 215 20% 25%;
-  --ring: 221 83% 58%;                 /* AutoForce blue #2563eb focus ring */
+  --ring: 221 83% 58%;                 /* CoAIleague blue #2563eb focus ring */
   
-  /* Charts - AutoForce Blue Dark Mode Palette */
-  --chart-1: 221 83% 58%;              /* AutoForce Blue #2563eb */
-  --chart-2: 217 91% 63%;              /* AutoForce Blue-500 #3b82f6 */
+  /* Charts - CoAIleague Blue Dark Mode Palette */
+  --chart-1: 221 83% 58%;              /* CoAIleague Blue #2563eb */
+  --chart-2: 217 91% 63%;              /* CoAIleague Blue-500 #3b82f6 */
   --chart-3: 38 72% 52%;               /* Subdued Amber */
   --chart-4: 212 96% 78%;              /* Blue-300 #93c5fd */
   --chart-5: 0 65% 52%;                /* Subdued Red */
@@ -504,7 +504,7 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
   .no-default-active-elevate {}
 
-  /* Mobile Schedule Gradients - AutoForce™ Professional (HSL format) */
+  /* Mobile Schedule Gradients - CoAIleague™ Professional (HSL format) */
   .gradient-mobile-header {
     background: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(188 96% 57%) 100%);
   }
@@ -2224,11 +2224,11 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   }
 }
 
-/* AutoForce™ Logo Brand Colors - CSP-safe (no inline styles) */
+/* CoAIleague™ Logo Brand Colors - CSP-safe (no inline styles) */
 .autoforce-logo-auto { color: #1F2937 !important; }
 .autoforce-logo-force { color: #10b981 !important; }
 
-/* AutoForce™ Logo - Extra specificity to override all other styles */
+/* CoAIleague™ Logo - Extra specificity to override all other styles */
 span[data-testid="logo-text-auto"].autoforce-logo-auto,
 .autoforce-logo-auto[data-testid="logo-text-auto"] {
   color: #1F2937 !important;

@@ -159,7 +159,7 @@ export async function withCredits<T>(
     try {
       await creditManager.deductCredits({
         workspaceId,
-        userId: userId || 'system-autoforce',
+        userId: userId || 'system-coaileague',
         featureKey,
         featureName: description || featureKey,
         description,

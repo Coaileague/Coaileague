@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Core Automation Engine
+ * CoAIleague Core Automation Engine
  * 
  * Implements the three core automation workflows:
  * 1. AI Scheduling with confidence scoring and approval queue
@@ -281,7 +281,7 @@ export class AutomationEngine {
       },
       async () => {
         // Build comprehensive prompt
-        const prompt = `You are an expert workforce scheduling AI for AutoForce™. Generate an optimized schedule based on:
+        const prompt = `You are an expert workforce scheduling AI for CoAIleague. Generate an optimized schedule based on:
 
 **Date Range:** ${params.startDate.toISOString()} to ${params.endDate.toISOString()}
 
@@ -447,7 +447,7 @@ Return ONLY valid JSON (no markdown):
 
         const billingRate = 75; // Default rate (client may not have this field)
 
-        const prompt = `You are an invoicing AI for AutoForce™. Generate an invoice for client services:
+        const prompt = `You are an invoicing AI for CoAIleague. Generate an invoice for client services:
 
 **Client:** ${params.client.companyName || params.client.firstName || 'Unknown'}
 **Period:** ${params.startDate.toISOString().split('T')[0]} to ${params.endDate.toISOString().split('T')[0]}
@@ -631,7 +631,7 @@ Return ONLY valid JSON (no markdown):
         const hourlyRate = typeof hourlyRateStr === 'string' ? parseFloat(hourlyRateStr) : hourlyRateStr;
         const otRate = hourlyRate * 1.5;
 
-        const prompt = `You are a payroll processing AI for AutoForce™. Calculate payroll for an employee:
+        const prompt = `You are a payroll processing AI for CoAIleague. Calculate payroll for an employee:
 
 **Employee:** ${params.employee.firstName} ${params.employee.lastName}
 **Period:** ${params.startDate.toISOString().split('T')[0]} to ${params.endDate.toISOString().split('T')[0]}
@@ -780,7 +780,7 @@ Return ONLY valid JSON (no markdown):
   }> {
     const transactionId = `migrate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    const prompt = `You are a data extraction AI for AutoForce™. Extract schedule information from this image.
+    const prompt = `You are a data extraction AI for CoAIleague. Extract schedule information from this image.
 
 **Task:** Analyze the schedule/timesheet image and extract:
 1. All employee names

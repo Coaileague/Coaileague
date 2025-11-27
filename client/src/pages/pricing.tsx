@@ -123,7 +123,7 @@ export default function Pricing() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">Replace $250K-$430K</span> in Administrative Salaries
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Pay once per month. Save $192K-$216K annually in net savings. AutoForce™ replaces 3-5 high-end administrative positions with AI automation.
+            Pay once per month. Save $192K-$216K annually in net savings. CoAIleague replaces 3-5 high-end administrative positions with AI automation.
           </p>
         </div>
 
@@ -382,16 +382,16 @@ export default function Pricing() {
           <div className="space-y-4">
             {[
               {
-                q: "Why is AutoForce™ priced so much higher than other workforce management tools?",
-                a: "Because we replace entire positions, not just software. Traditional tools like When I Work or Deputy cost $2-5/employee but still require a payroll specialist ($90K/yr), billing coordinator ($85K/yr), and scheduler ($77K/yr). AutoForce™ eliminates these salaries entirely through AI automation. At $4,999-$17,999/month, you save $192K-$216K annually in NET savings—more than paying for itself.",
+                q: "Why is CoAIleague priced so much higher than other workforce management tools?",
+                a: "Because we replace entire positions, not just software. Traditional tools like When I Work or Deputy cost $2-5/employee but still require a payroll specialist ($90K/yr), billing coordinator ($85K/yr), and scheduler ($77K/yr). CoAIleague eliminates these salaries entirely through AI automation. At $4,999-$17,999/month, you save $192K-$216K annually in NET savings—more than paying for itself.",
               },
               {
-                q: "What positions does AutoForce™ actually replace?",
-                a: "AutoForce™ replaces 3-5 high-end administrative positions: Senior Payroll Specialist ($90K/yr), Senior Billing Specialist ($85K/yr), Workforce Scheduler ($77K/yr), HR Operations Analyst ($82K/yr), and Admin Operations Manager ($97K/yr). These aren't entry-level roles—they're experienced professionals that cost $250K-$430K/year in combined salaries.",
+                q: "What positions does CoAIleague actually replace?",
+                a: "CoAIleague replaces 3-5 high-end administrative positions: Senior Payroll Specialist ($90K/yr), Senior Billing Specialist ($85K/yr), Workforce Scheduler ($77K/yr), HR Operations Analyst ($82K/yr), and Admin Operations Manager ($97K/yr). These aren't entry-level roles—they're experienced professionals that cost $250K-$430K/year in combined salaries.",
               },
               {
                 q: "Is there still a free trial?",
-                a: "Yes! Try AutoForce™ free for 30 days with up to 5 employees. All Professional features are unlocked so you can experience the full power of AI automation. No credit card required. When you upgrade, your data migrates seamlessly.",
+                a: "Yes! Try CoAIleague free for 30 days with up to 5 employees. All Professional features are unlocked so you can experience the full power of AI automation. No credit card required. When you upgrade, your data migrates seamlessly.",
               },
               {
                 q: "Can I start with Starter and upgrade later?",
@@ -410,8 +410,8 @@ export default function Pricing() {
                 a: "AI features (AI Support Bot, Training Tutor, RFP Analysis) use a credit-based system. Each tier includes monthly AI credits: Starter gets $50/mo (500 credits), Professional gets $200/mo (2,000 credits), Enterprise gets $1,000/mo (10,000 credits). Additional credits can be purchased at 100 credits = $10. Most customers stay within their monthly allocation.",
               },
               {
-                q: "Is AutoForce™ worth it for smaller companies?",
-                a: "If you have 10+ employees and currently employ a scheduler, billing coordinator, or payroll specialist, AutoForce™ delivers strong ROI immediately. Even at our premium pricing, replacing just 2-3 positions ($252K/year in salaries) costs $60K/year on the Starter plan—a net savings of $192K/year.",
+                q: "Is CoAIleague worth it for smaller companies?",
+                a: "If you have 10+ employees and currently employ a scheduler, billing coordinator, or payroll specialist, CoAIleague delivers strong ROI immediately. Even at our premium pricing, replacing just 2-3 positions ($252K/year in salaries) costs $60K/year on the Starter plan—a net savings of $192K/year.",
               },
             ].map((faq) => (
               <div
@@ -435,7 +435,7 @@ export default function Pricing() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-foreground/70">
-              <span className="text-xs sm:text-sm">© 2025 AutoForce™ by Drill Consulting 360. Enterprise-grade workforce automation.</span>
+              <span className="text-xs sm:text-sm">© 2025 CoAIleague by Drill Consulting 360. Enterprise-grade workforce automation.</span>
             </div>
             <div className="flex gap-4 sm:gap-6 text-xs text-gray-600">
               <a href="/support" className="hover:text-blue-600 transition-colors" data-testid="link-support">

@@ -7,8 +7,8 @@ interface AnimatedLogoProps {
 }
 
 /**
- * AutoForce Animated Logo - Professional Brand Design
- * Features: Circular AF badge with AutoForce Blue gradient
+ * CoAIleague Animated Logo - Professional Brand Design
+ * Features: Circular AF badge with CoAIleague Blue gradient
  * Animations: Pulsing glow, floating animation
  */
 export function WorkforceOSAnimatedLogo({ 
@@ -25,7 +25,7 @@ export function WorkforceOSAnimatedLogo({
   };
 
   if (!animated) {
-    // Static version - AutoForce AF badge
+    // Static version - CoAIleague AF badge
     return (
       <div className={cn("flex items-center justify-center", className)}>
         <div 
@@ -41,14 +41,14 @@ export function WorkforceOSAnimatedLogo({
     );
   }
 
-  // Animated version - AutoForce AF badge with glow effects
+  // Animated version - CoAIleague AF badge with glow effects
   return (
     <div className={cn("flex items-center justify-center relative", className)} data-testid="logo-animated">
       {/* Multi-layer glow effects */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
       <div className="absolute inset-0 bg-primary/15 blur-2xl rounded-full scale-125 animate-pulse" style={{ animationDelay: "0.5s" }} />
       
-      {/* Main AutoForce AF badge */}
+      {/* Main CoAIleague AF badge */}
       <div 
         className={cn(
           "relative z-10 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-2xl animate-pulse",

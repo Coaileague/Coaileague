@@ -27,7 +27,7 @@ export function HeaderBillboard() {
   });
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
-  const workspaceName = workspace?.name || 'AutoForce™';
+  const workspaceName = workspace?.name || 'CoAIleague';
 
   // Update greeting based on time of day
   useEffect(() => {

@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AutoForceStaticLogo } from "@/components/autoforce-static-logo";
+import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
 import { Shield, FileText, AlertCircle } from "lucide-react";
 
 interface ChatAgreementModalProps {
@@ -25,11 +25,11 @@ export function ChatAgreementModal({ onAccept, isSubmitting = false, roomName = 
   };
 
   const agreementText = `
-AUTOFORCE™ SUPPORT CHAT - TERMS & CONDITIONS
+COAILEAGUE™ SUPPORT CHAT - TERMS & CONDITIONS
 
 LAST UPDATED: October 17, 2025
 VERSION: 1.0
-OPERATOR: AutoForce™ Support
+OPERATOR: CoAIleague Support
 
 BY ACCESSING THIS SUPPORT CHAT, YOU AGREE TO THE FOLLOWING TERMS:
 
@@ -37,7 +37,7 @@ BY ACCESSING THIS SUPPORT CHAT, YOU AGREE TO THE FOLLOWING TERMS:
 By clicking "I Agree" and entering this support chat, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not agree, you must exit immediately.
 
 2. SERVICE DESCRIPTION & LIMITATIONS
-This AutoForce™ Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by AutoForce™.
+This CoAIleague Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by CoAIleague.
 
 IMPORTANT: We do NOT guarantee that every issue will be resolved immediately or at all. Some issues may require:
 • Platform upgrades or updates
@@ -60,7 +60,7 @@ You agree to:
 • Accept that staff behavior is professional and any perceived rudeness may be due to communication style differences or urgent priorities
 
 4. COMPLETE DISCLAIMER OF WARRANTIES
-THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. AUTOFORCE™ AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
+THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. COAILEAGUE™ AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
 • Chat availability, uptime, or accessibility
 • Response times, resolution times, or issue resolution
 • Accuracy, completeness, or reliability of information provided
@@ -69,7 +69,7 @@ THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLI
 • Compatibility with external services or hosting providers
 
 5. COMPREHENSIVE LIMITATION OF LIABILITY
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT AUTOFORCE™ AND ALL OF OUR:
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT COAILEAGUE™ AND ALL OF OUR:
 • Staff members and support representatives
 • Ownership, officers, directors, and managers  
 • Agents, contractors, and representatives
@@ -130,7 +130,7 @@ Consult qualified professionals for specialized advice.
 • You are responsible for maintaining ticket confidentiality
 
 10. INTELLECTUAL PROPERTY
-All chat content, software, and documentation are proprietary to AutoForce™. You may not reproduce, distribute, or create derivative works without written permission.
+All chat content, software, and documentation are proprietary to CoAIleague. You may not reproduce, distribute, or create derivative works without written permission.
 
 11. TERMINATION
 We reserve the right to:
@@ -147,11 +147,11 @@ These Terms are governed by the laws of [Your Jurisdiction], without regard to c
 
 14. CONTACT INFORMATION
 For questions about these Terms:
-Email: legal@autoforce.com
-Support: support@autoforce.com
+Email: legal@coaileague.com
+Support: support@coaileague.com
 
 15. ENTIRE AGREEMENT
-These Terms, along with our Privacy Policy and Service Agreement, constitute the entire agreement between you and AutoForce™ regarding this Service.
+These Terms, along with our Privacy Policy and Service Agreement, constitute the entire agreement between you and CoAIleague regarding this Service.
 
 BY CLICKING "I AGREE" BELOW, YOU ACKNOWLEDGE THAT:
 ✓ You have read and understood all terms
@@ -170,7 +170,7 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
         <div className="p-3 sm:p-4 border-b border-primary/30 bg-slate-900 shrink-0">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-primary rounded-lg">
-              <AutoForceStaticLogo className="h-5 w-5 sm:h-6 sm:w-6" variant="icon" />
+              <CoAIleagueStaticLogo className="h-5 w-5 sm:h-6 sm:w-6" variant="icon" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-base sm:text-lg font-bold text-white truncate">Terms & Conditions</h2>

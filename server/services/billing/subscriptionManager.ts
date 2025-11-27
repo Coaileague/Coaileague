@@ -1,7 +1,7 @@
 /**
  * Subscription Management Service
  * 
- * Manages AutoForce™ base subscriptions (Free/Starter/Professional/Enterprise)
+ * Manages CoAIleague base subscriptions (Free/Starter/Professional/Enterprise)
  * - Monthly/yearly billing cycles
  * - Stripe subscription integration
  * - Credit allocation by tier

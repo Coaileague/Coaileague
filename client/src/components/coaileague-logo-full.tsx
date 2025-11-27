@@ -1,15 +1,15 @@
 import { cn } from "@/lib/utils";
 import { logoConfig, isAnimationEnabled, getAnimationConfig } from "@/config/logoConfig";
 
-interface AutoForceLogoFullProps {
+interface CoAIleagueLogoFullProps {
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
 /**
- * AutoForce™ Full Logo with Autonomous Network Icon
+ * CoAIleague Full Logo with Autonomous Network Icon
  */
-export function AutoForceLogoFull({ size = "md", className }: AutoForceLogoFullProps) {
+export function CoAIleagueLogoFull({ size = "md", className }: CoAIleagueLogoFullProps) {
   const svgSizes = {
     sm: logoConfig.sizes.svg.sm,
     md: logoConfig.sizes.svg.md,

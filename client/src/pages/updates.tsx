@@ -40,7 +40,7 @@ const updates: Update[] = [
   },
   {
     id: "3",
-    title: "Animated AutoForce™ Logo",
+    title: "Animated CoAIleague Logo",
     description: "Brand refresh featuring our new animated logo with pulsing hub, rotating ring, and network connections - representing autonomous workforce management at scale.",
     date: "2025-11-05",
     category: "improvement",

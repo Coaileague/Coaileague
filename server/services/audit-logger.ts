@@ -430,7 +430,7 @@ export class AuditLogger {
     const context: AuditContext = {
       actorId: 'system',
       actorType: 'SYSTEM',
-      actorName: 'AutoForce™ System',
+      actorName: 'CoAIleague System',
       workspaceId: action.workspaceId,
       requestId: `sys_${Date.now()}`,
     };

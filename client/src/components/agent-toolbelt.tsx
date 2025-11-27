@@ -48,7 +48,7 @@ interface AgentToolbeltProps {
 }
 
 const macros = [
-  { id: 'greeting', label: 'Greeting', text: 'Hello! Thanks for reaching out to AutoForce™ Support. How can I assist you today?' },
+  { id: 'greeting', label: 'Greeting', text: 'Hello! Thanks for reaching out to CoAIleague Support. How can I assist you today?' },
   { id: 'investigation', label: 'Investigating', text: 'I\'m looking into this issue for you. I\'ll have an update shortly.' },
   { id: 'need_info', label: 'Need Info', text: 'To help resolve this, could you provide more details about when this started?' },
   { id: 'resolved', label: 'Resolved', text: 'Great! I\'m glad we could resolve this. Is there anything else I can help with?' },

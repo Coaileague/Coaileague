@@ -10,7 +10,7 @@ import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 /**
  * Tier-based markup configuration
  * 
- * Revenue Model: Users pay ALL costs (AI tokens + partner APIs) + AutoForce™ markup
+ * Revenue Model: Users pay ALL costs (AI tokens + partner APIs) + CoAIleague markup
  * 
  * Markup Tiers:
  * - Free: 50% markup (high margin to encourage upgrades)
@@ -261,7 +261,7 @@ export class CostAggregationService {
     // Add summary line if multiple categories
     if (lineItems.length > 1) {
       lineItems.push({
-        description: `AutoForce™ Platform Markup (${costSummary.markupRate * 100}% - ${costSummary.workspaceTier.toUpperCase()} tier)`,
+        description: `CoAIleague Platform Markup (${costSummary.markupRate * 100}% - ${costSummary.workspaceTier.toUpperCase()} tier)`,
         amount: 0, // Markup is already included in individual line items
         quantity: 1,
         metadata: {

@@ -99,7 +99,7 @@ export function ReenableChatButton() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white mb-1">Need Help?</p>
-            <p className="text-xs text-slate-300 mb-3 leading-relaxed">Connect with our AutoForce™ support team</p>
+            <p className="text-xs text-slate-300 mb-3 leading-relaxed">Connect with our CoAIleague support team</p>
             <Button
               onClick={handleReenableChat}
               size="sm"

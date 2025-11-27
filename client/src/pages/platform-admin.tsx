@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 
 interface PlatformStats {
   totalWorkspaces: number;
@@ -148,7 +148,7 @@ export default function PlatformAdmin() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* WorkForceOS™ Logo */}
-          <AutoForceAFLogo size="sm" variant="icon" />
+          <CoAIleagueAFLogo size="sm" variant="icon" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Platform Admin</h1>
             <p className="text-sm sm:text-base text-muted-foreground">

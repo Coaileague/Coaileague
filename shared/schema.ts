@@ -401,7 +401,7 @@ export type WorkspaceTheme = typeof workspaceThemes.$inferSelect;
 // ROLE HIERARCHY ENUMS
 // ============================================================================
 
-// Platform Support Staff Roles (AutoForce™ Internal Team - Platform Level)
+// Platform Support Staff Roles (CoAIleague Internal Team - Platform Level)
 // Root Admin → Deputy Admin → SysOp / Support Manager → Support Agent / Compliance Officer
 // These roles manage the PLATFORM ITSELF, not individual client organizations
 export const platformRoleEnum = pgEnum('platform_role', [
@@ -10365,7 +10365,7 @@ export const partnerApiUsageEvents = pgTable("partner_api_usage_events", {
   errorCode: varchar("error_code"),
   
   // Context
-  featureKey: varchar("feature_key"), // Which AutoForce feature triggered this (e.g., 'billos_invoice_creation')
+  featureKey: varchar("feature_key"), // Which CoAIleague feature triggered this (e.g., 'billos_invoice_creation')
   activityType: varchar("activity_type"), // 'invoice_creation', 'payroll_submission', 'customer_sync'
   metadata: jsonb("metadata"), // Additional context (invoice ID, payroll run ID, etc.)
   
@@ -10392,7 +10392,7 @@ export const insertPartnerApiUsageEventSchema = createInsertSchema(partnerApiUsa
 export type InsertPartnerApiUsageEvent = z.infer<typeof insertPartnerApiUsageEventSchema>;
 export type PartnerApiUsageEvent = typeof partnerApiUsageEvents.$inferSelect;
 
-// Partner Data Mappings - Map AutoForce entities to partner entities
+// Partner Data Mappings - Map CoAIleague entities to partner entities
 export const partnerDataMappings = pgTable("partner_data_mappings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -10403,7 +10403,7 @@ export const partnerDataMappings = pgTable("partner_data_mappings", {
   
   // Entity mapping
   entityType: varchar("entity_type").notNull(), // 'client', 'employee', 'invoice', 'payroll_run'
-  autoforceEntityId: varchar("autoforce_entity_id").notNull(), // AutoForce entity ID (clients.id, employees.id, etc.)
+  coaileagueEntityId: varchar("coaileague_entity_id").notNull(), // CoAIleague entity ID (clients.id, employees.id, etc.)
   partnerEntityId: varchar("partner_entity_id").notNull(), // Partner entity ID (QBO Customer ID, Gusto Employee ID)
   partnerEntityName: varchar("partner_entity_name"), // Partner entity name for display
   
@@ -10426,13 +10426,13 @@ export const partnerDataMappings = pgTable("partner_data_mappings", {
   partnerIdx: index("partner_mappings_partner_idx").on(table.partnerType),
   connectionIdx: index("partner_mappings_connection_idx").on(table.partnerConnectionId),
   entityTypeIdx: index("partner_mappings_entity_type_idx").on(table.entityType),
-  autoforceEntityIdx: index("partner_mappings_autoforce_idx").on(table.autoforceEntityId),
+  coaileagueEntityIdx: index("partner_mappings_coaileague_idx").on(table.coaileagueEntityId),
   partnerEntityIdx: index("partner_mappings_partner_entity_idx").on(table.partnerEntityId),
   uniqueMapping: uniqueIndex("unique_partner_mapping").on(
     table.workspaceId,
     table.partnerType,
     table.entityType,
-    table.autoforceEntityId
+    table.coaileagueEntityId
   ),
 }));
 

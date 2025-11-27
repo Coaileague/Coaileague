@@ -255,7 +255,7 @@ export function canAccessRoute(
 }
 
 /**
- * AutoForce™ OS Modules Registry
+ * CoAIleague OS Modules Registry
  * Consolidated into 4 high-level suites for better organization:
  * 1. Executive Control - Finance, Settings, Platform Admin
  * 2. Operations Hub - Scheduling, Time, Training
@@ -638,7 +638,7 @@ export const osModules: OSModule[] = [
 ];
 
 /**
- * Platform Support Module (for AutoForce staff - root_admin, deputy_admin, sysop, support)
+ * Platform Support Module (for CoAIleague staff - root_admin, deputy_admin, sysop, support)
  * Consolidated admin control center - ONE unified dashboard
  */
 export const platformSupportModule: OSModule = {

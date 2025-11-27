@@ -11,7 +11,7 @@ import {
   HelpCircle, MessageSquare, LayoutDashboard, AlertTriangle, Building2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { useTransition } from "@/contexts/transition-context";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { queryClient } from "@/lib/queryClient";
@@ -570,7 +570,7 @@ export default function Dashboard() {
             <div className="flex flex-col items-center text-center gap-4">
               {/* Logo */}
               <div className="transform hover:scale-105 transition-transform duration-300">
-                <AutoForceAFLogo variant="full" size="md" />
+                <CoAIleagueAFLogo variant="full" size="md" />
               </div>
               
               {/* Welcome Text - Centered */}
@@ -599,7 +599,7 @@ export default function Dashboard() {
                 </div>
                 
                 <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
-                  {workspaceRole === 'org_owner' ? 'Manage your entire workforce with AutoForce™' : 
+                  {workspaceRole === 'org_owner' ? 'Manage your entire workforce with CoAIleague' : 
                    workspaceRole === 'org_admin' ? 'Administer your organization' :
                    workspaceRole === 'department_manager' ? 'Oversee your team performance' :
                    workspaceRole === 'supervisor' ? 'Lead your team to success' :

@@ -2,7 +2,7 @@
  * Enhanced Loading System - Usage Examples
  * 
  * This file demonstrates how to use the new enhanced loading system
- * across different scenarios in AutoForce™
+ * across different scenarios in CoAIleague
  */
 
 import { useState } from "react";

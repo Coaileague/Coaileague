@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Data Migration API Routes
+ * CoAIleague Data Migration API Routes
  * 
  * Endpoints for importing data from external platforms:
  * - POST /upload - Upload document for analysis
@@ -113,7 +113,7 @@ migrationRouter.post('/analyze/:documentId', async (req: any, res: Response) => 
 
 /**
  * POST /api/migration/import/:jobId
- * Import selected records into AutoForce
+ * Import selected records into CoAIleague
  */
 migrationRouter.post('/import/:jobId', async (req: any, res: Response) => {
   try {

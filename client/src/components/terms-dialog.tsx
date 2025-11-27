@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle } from "lucide-react";
-import { AutoForceStaticLogo } from "@/components/autoforce-static-logo";
+import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
 
 interface TermsDialogProps {
   open: boolean;
@@ -45,16 +45,16 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
         onEscapeKeyDown={(e) => e.preventDefault()}
         data-testid="terms-dialog"
       >
-        {/* Header with AutoForce Branding */}
+        {/* Header with CoAIleague Branding */}
         <DialogHeader className="border-b border-slate-600 pb-4">
           <div className="flex items-center gap-4">
-            {/* AutoForce Logo */}
+            {/* CoAIleague Logo */}
             <div className="flex items-center justify-center">
-              <AutoForceStaticLogo size="md" variant="icon" />
+              <CoAIleagueStaticLogo size="md" variant="icon" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-2xl font-black text-white">
-                AutoForce™ Support Terms
+                CoAIleague Support Terms
               </DialogTitle>
               <DialogDescription className="text-sm text-slate-300 mt-1 font-semibold">
                 Legal Agreement Required for Support Access
@@ -68,8 +68,8 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
           <div className="space-y-4 text-sm text-slate-200 py-2">
             <section className="bg-gradient-to-r from-blue-600 to-slate-700 border-l-4 border-white p-4 rounded shadow-md">
               <p className="font-semibold text-white">
-                AUTOFORCE™ SUPPORT CHAT - TERMS & CONDITIONS<br/>
-                OPERATOR: AutoForce™ Support<br/><br/>
+                COAILEAGUE™ SUPPORT CHAT - TERMS & CONDITIONS<br/>
+                OPERATOR: CoAIleague Support<br/><br/>
                 BY ACCEPTING, YOU AGREE TO THE FOLLOWING LEGALLY BINDING TERMS
               </p>
             </section>
@@ -77,8 +77,8 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
             <section>
               <h3 className="font-bold text-base text-white mb-2">1. SERVICE DESCRIPTION & LIMITATIONS</h3>
               <p className="mb-2">
-                This AutoForce™ Support Chat provides real-time customer support, technical assistance, and general inquiries. 
-                This is a professional business communication channel operated by AutoForce™.
+                This CoAIleague Support Chat provides real-time customer support, technical assistance, and general inquiries. 
+                This is a professional business communication channel operated by CoAIleague.
               </p>
               <p className="font-semibold text-blue-400 mb-2">IMPORTANT:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
@@ -105,7 +105,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
             <section>
               <h3 className="font-bold text-base text-white mb-2">3. COMPLETE DISCLAIMER OF WARRANTIES</h3>
               <p className="mb-2">
-                THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES. AUTOFORCE™ AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
+                THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES. COAILEAGUE™ AND ALL AFFILIATED PARTIES MAKE NO GUARANTEES REGARDING:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>Chat availability, uptime, or accessibility</li>
@@ -119,7 +119,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
             <section>
               <h3 className="font-bold text-base text-white mb-2">4. COMPREHENSIVE LIMITATION OF LIABILITY</h3>
               <p className="mb-2 font-semibold">
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT AUTOFORCE™, DRILL CONSULTING 360, AND ALL OF OUR:
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT COAILEAGUE™, DRILL CONSULTING 360, AND ALL OF OUR:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-2">
                 <li>Staff members and support representatives</li>
@@ -169,7 +169,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
                 ALL PRICES EXCLUDE TAXES. YOU ARE RESPONSIBLE FOR ALL APPLICABLE TAXES.
               </p>
               <p className="mb-2">
-                All subscription prices, fees, and charges displayed on AutoForce™ are exclusive of any and all taxes, including but not limited to:
+                All subscription prices, fees, and charges displayed on CoAIleague are exclusive of any and all taxes, including but not limited to:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-2">
                 <li>Sales tax, use tax, value-added tax (VAT), goods and services tax (GST)</li>
@@ -185,7 +185,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
                 <li>Consulting with your own tax professionals regarding your tax obligations</li>
               </ul>
               <p className="font-bold text-red-400">
-                AutoForce™ does NOT collect, calculate, report, or remit any taxes on your behalf. We are NOT responsible for your tax compliance in any jurisdiction.
+                CoAIleague does NOT collect, calculate, report, or remit any taxes on your behalf. We are NOT responsible for your tax compliance in any jurisdiction.
               </p>
             </section>
 

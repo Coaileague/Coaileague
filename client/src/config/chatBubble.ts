@@ -140,7 +140,7 @@ export const CHAT_BUBBLE_CONFIG = {
 
   // ===== CONTENT =====
   content: {
-    initialMessage: "Hi! I'm AutoForce™ AI, your intelligent support system. How can I help you today?",
+    initialMessage: "Hi! I'm CoAIleague AI, your intelligent support system. How can I help you today?",
     headerTitle: 'Live Chat - AI Support',
     messagePlaceholder: 'Type your message...',
     identificationTitle: 'Connect with a Support Agent',

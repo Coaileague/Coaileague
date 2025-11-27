@@ -1,9 +1,9 @@
 // DEPRECATED: This file is kept for backward compatibility only
-// Please use @/components/autoforce-af-logo instead
+// Please use @/components/coaileague-af-logo instead
 // This file will be removed in a future version
 
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 
 // Re-export for backward compatibility
-export { AutoForceAFLogo as AutoForceLogo };
-export { AutoForceAFLogo as WorkforceOSLogo };
+export { CoAIleagueAFLogo as CoAIleagueLogo };
+export { CoAIleagueAFLogo as WorkforceOSLogo };

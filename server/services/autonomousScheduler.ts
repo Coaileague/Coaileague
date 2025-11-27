@@ -1,6 +1,6 @@
 /**
  * Autonomous Scheduler Service
- * Runs scheduled jobs for AutoForce™ autonomous operations:
+ * Runs scheduled jobs for CoAIleague autonomous operations:
  * - Nightly invoice generation (Smart Billing)
  * - Weekly schedule generation (AI Scheduling)
  * - Automatic payroll processing (Auto Payroll)
@@ -141,7 +141,7 @@ const SYSTEM_WORKSPACE_ID = 'system';
  */
 const COAILEAGUE_AUTOMATION_USER = {
   userId: 'system-coaileague',
-  userName: 'AutoForce™ Automation',
+  userName: 'CoAIleague Automation',
   userEmail: 'automation@coaileague.ai',
   userRole: 'system' as const,
 };

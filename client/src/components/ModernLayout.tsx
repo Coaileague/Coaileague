@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { performLogout } from "@/lib/logoutHandler";
 
 interface ModernLayoutProps {
@@ -37,7 +37,7 @@ export default function ModernLayout({ children }: ModernLayoutProps) {
       <header className="bg-[hsl(var(--cad-chrome))] border-b border-[hsl(var(--cad-border))] px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-50 flex-shrink-0">
         <div className="flex items-center justify-between">
           <Link href="/dashboard">
-            <AutoForceAFLogo size="sm" variant="full" className="cursor-pointer hover:opacity-80" />
+            <CoAIleagueAFLogo size="sm" variant="full" className="cursor-pointer hover:opacity-80" />
           </Link>
           
           <button 

@@ -39,7 +39,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
-        console.log('AutoForce™ PWA: Service Worker registered', registration.scope);
+        console.log('CoAIleague PWA: Service Worker registered', registration.scope);
         
         // Check for updates periodically
         setInterval(() => {
@@ -47,7 +47,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         }, 60000); // Check every minute
       })
       .catch((error) => {
-        console.error('AutoForce™ PWA: Service Worker registration failed', error);
+        console.error('CoAIleague PWA: Service Worker registration failed', error);
       });
   });
 }

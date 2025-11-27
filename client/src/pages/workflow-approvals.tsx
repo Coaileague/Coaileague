@@ -1,5 +1,5 @@
 /**
- * Workflow Approval Page - AutoForce™
+ * Workflow Approval Page - CoAIleague
  * 99% AI, 1% Human Governance approval system
  * 
  * RBAC: owner, admin, manager, accountant, hr_manager roles

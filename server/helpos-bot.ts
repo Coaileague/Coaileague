@@ -182,7 +182,7 @@ export function startIntakeFlow(
   
   activeBotConversations.set(conversationId, conversation);
   
-  return "👋 Welcome to AutoForce™ Support! I'm HelpOS, your AI assistant.\n\nI'll help create a support ticket for you. First, can you briefly describe what you need help with? (Just a short summary)";
+  return "👋 Welcome to CoAIleague Support! I'm HelpOS, your AI assistant.\n\nI'll help create a support ticket for you. First, can you briefly describe what you need help with? (Just a short summary)";
 }
 
 /**

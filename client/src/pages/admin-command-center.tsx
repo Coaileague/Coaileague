@@ -31,7 +31,7 @@ import {
   UserCog,
   KeyRound,
 } from "lucide-react";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { MasterKeysPanel } from "@/components/master-keys-panel";
 import { UserManagementPanel } from "@/components/user-management-panel";
 import { TimeGreeting } from "@/components/time-greeting";

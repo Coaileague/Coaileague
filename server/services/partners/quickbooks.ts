@@ -136,10 +136,10 @@ export class QuickBooksService {
   }
 
   /**
-   * Sync AutoForce client to QuickBooks customer
+   * Sync CoAIleague client to QuickBooks customer
    * 
    * @param workspaceId - Workspace ID
-   * @param clientId - AutoForce client ID
+   * @param clientId - CoAIleague client ID
    * @param userId - User performing sync (for audit)
    * @returns QuickBooks customer ID
    */
@@ -153,7 +153,7 @@ export class QuickBooksService {
     const accessToken = await this.getAccessToken(connection.id);
     const realmId = connection.realmId!;
 
-    // Get AutoForce client data
+    // Get CoAIleague client data
     const [client] = await db.select()
       .from(clients)
       .where(
@@ -176,7 +176,7 @@ export class QuickBooksService {
           eq(partnerDataMappings.workspaceId, workspaceId),
           eq(partnerDataMappings.partnerType, 'quickbooks'),
           eq(partnerDataMappings.entityType, 'client'),
-          eq(partnerDataMappings.autoforceEntityId, clientId)
+          eq(partnerDataMappings.coaileagueEntityId, clientId)
         )
       )
       .limit(1);
@@ -267,7 +267,7 @@ export class QuickBooksService {
         partnerConnectionId: connection.id,
         partnerType: 'quickbooks',
         entityType: 'client',
-        autoforceEntityId: clientId,
+        coaileagueEntityId: clientId,
         partnerEntityId: result.customerId,
         partnerEntityName: client.name,
         syncStatus: 'synced',
@@ -281,10 +281,10 @@ export class QuickBooksService {
   }
 
   /**
-   * Create invoice in QuickBooks from AutoForce invoice
+   * Create invoice in QuickBooks from CoAIleague invoice
    * 
    * @param workspaceId - Workspace ID
-   * @param invoiceId - AutoForce invoice ID
+   * @param invoiceId - CoAIleague invoice ID
    * @param userId - User performing operation
    * @returns QuickBooks invoice ID
    */
@@ -298,7 +298,7 @@ export class QuickBooksService {
     const accessToken = await this.getAccessToken(connection.id);
     const realmId = connection.realmId!;
 
-    // Get AutoForce invoice data
+    // Get CoAIleague invoice data
     const [invoice] = await db.select()
       .from(invoices)
       .where(
@@ -321,7 +321,7 @@ export class QuickBooksService {
           eq(partnerDataMappings.workspaceId, workspaceId),
           eq(partnerDataMappings.partnerType, 'quickbooks'),
           eq(partnerDataMappings.entityType, 'client'),
-          eq(partnerDataMappings.autoforceEntityId, invoice.clientId)
+          eq(partnerDataMappings.coaileagueEntityId, invoice.clientId)
         )
       )
       .limit(1);
@@ -343,7 +343,7 @@ export class QuickBooksService {
         {
           DetailType: 'SalesItemLineDetail',
           Amount: Number(invoice.totalAmount),
-          Description: `AutoForce™ Invoice #${invoice.invoiceNumber}`,
+          Description: `CoAIleague Invoice #${invoice.invoiceNumber}`,
           SalesItemLineDetail: {
             ItemRef: { value: '1', name: 'Services' }, // Default service item
             Qty: 1,
@@ -376,7 +376,7 @@ export class QuickBooksService {
         operationType: 'create_invoice',
         featureKey: 'invoice_creation',
         metadata: {
-          autoforceInvoiceId: invoiceId,
+          coaileagueInvoiceId: invoiceId,
           invoiceNumber: invoice.invoiceNumber,
           amount: invoice.totalAmount,
         },
@@ -391,7 +391,7 @@ export class QuickBooksService {
       partnerConnectionId: connection.id,
       partnerType: 'quickbooks',
       entityType: 'invoice',
-      autoforceEntityId: invoiceId,
+      coaileagueEntityId: invoiceId,
       partnerEntityId: result.invoiceId,
       partnerEntityName: `Invoice #${invoice.invoiceNumber}`,
       syncStatus: 'synced',
@@ -424,7 +424,7 @@ export class QuickBooksService {
           eq(partnerDataMappings.workspaceId, workspaceId),
           eq(partnerDataMappings.partnerType, 'quickbooks'),
           eq(partnerDataMappings.entityType, 'invoice'),
-          eq(partnerDataMappings.autoforceEntityId, invoiceId)
+          eq(partnerDataMappings.coaileagueEntityId, invoiceId)
         )
       )
       .limit(1);

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import {
   Users, MessageSquare, Ticket, Clock, AlertCircle, 
   CheckCircle, UserX, Volume2, VolumeX, Star,
@@ -143,7 +143,7 @@ export function QueueManagerPanel({
         <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center gap-3 mb-2">
-              <AutoForceAFLogo size="sm" variant="icon" />
+              <CoAIleagueAFLogo size="sm" variant="icon" />
               <div>
                 <DialogTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />

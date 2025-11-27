@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Input } from "@/components/ui/input";
 import {
   Book,
@@ -92,7 +92,7 @@ export default function Support() {
 
   const faqs = [
     {
-      question: "How do I get started with AutoForce™?",
+      question: "How do I get started with CoAIleague?",
       answer: "Getting started is simple: 1) Sign up for a free trial, 2) Create your workspace and invite your first employee, 3) Set up your clients and schedule your first shift, 4) Start tracking time and generating invoices. Our interactive demo walks you through each step, or schedule a personalized onboarding session with our team.",
     },
     {
@@ -105,15 +105,15 @@ export default function Support() {
     },
     {
       question: "Can I import existing employee data?",
-      answer: "Yes! AutoForce™ supports bulk import via CSV for employees, clients, and historical data. Our team can also assist with custom data migration from other HR systems like ADP, Workday, or BambooHR during your onboarding process.",
+      answer: "Yes! CoAIleague supports bulk import via CSV for employees, clients, and historical data. Our team can also assist with custom data migration from other HR systems like ADP, Workday, or BambooHR during your onboarding process.",
     },
     {
       question: "How does automated invoice generation work?",
-      answer: "Select unbilled time entries for one or more clients, and AutoForce™ automatically generates professional invoices with calculated hours, rates, taxes, and platform fees. Invoices can be sent via email or downloaded as PDF. You can track payment status and generate reports for accounting.",
+      answer: "Select unbilled time entries for one or more clients, and CoAIleague automatically generates professional invoices with calculated hours, rates, taxes, and platform fees. Invoices can be sent via email or downloaded as PDF. You can track payment status and generate reports for accounting.",
     },
     {
       question: "What security measures are in place?",
-      answer: "AutoForce™ uses bank-level encryption (AES-256), SOC 2 Type II compliance, multi-factor authentication, role-based access control, and immutable audit logs. All data is backed up hourly with 99.9% uptime SLA for Enterprise customers. We're also GDPR and CCPA compliant.",
+      answer: "CoAIleague uses bank-level encryption (AES-256), SOC 2 Type II compliance, multi-factor authentication, role-based access control, and immutable audit logs. All data is backed up hourly with 99.9% uptime SLA for Enterprise customers. We're also GDPR and CCPA compliant.",
     },
     {
       question: "How do I upgrade or downgrade my plan?",
@@ -144,7 +144,7 @@ export default function Support() {
     <div className="min-h-screen bg-white">
       {/* Top Bar */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white shadow-md border-b border-gray-200 flex items-center justify-between px-6">
-        <AutoForceAFLogo size="sm" variant="full" />
+        <CoAIleagueAFLogo size="sm" variant="full" />
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -448,8 +448,8 @@ export default function Support() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-              <AutoForceAFLogo size="sm" variant="icon" />
-              <span className="whitespace-nowrap">© 2025 AutoForce™</span>
+              <CoAIleagueAFLogo size="sm" variant="icon" />
+              <span className="whitespace-nowrap">© 2025 CoAIleague</span>
             </div>
             <div className="flex gap-3 sm:gap-6 text-xs text-gray-500 flex-wrap">
               <a href="/contact" className="hover:text-gray-900 whitespace-nowrap" data-testid="link-contact">

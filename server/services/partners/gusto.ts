@@ -169,10 +169,10 @@ export class GustoService {
   }
 
   /**
-   * Sync AutoForce employee to Gusto
+   * Sync CoAIleague employee to Gusto
    * 
    * @param workspaceId - Workspace ID
-   * @param employeeId - AutoForce employee ID
+   * @param employeeId - CoAIleague employee ID
    * @param userId - User performing sync
    * @returns Gusto employee ID
    */
@@ -185,7 +185,7 @@ export class GustoService {
     const accessToken = await this.getAccessToken(connection.id);
     const companyId = await this.getCompanyId(connection);
 
-    // Get AutoForce employee data
+    // Get CoAIleague employee data
     const [employee] = await db.select()
       .from(employees)
       .where(
@@ -208,7 +208,7 @@ export class GustoService {
           eq(partnerDataMappings.workspaceId, workspaceId),
           eq(partnerDataMappings.partnerType, 'gusto'),
           eq(partnerDataMappings.entityType, 'employee'),
-          eq(partnerDataMappings.autoforceEntityId, employeeId)
+          eq(partnerDataMappings.coaileagueEntityId, employeeId)
         )
       )
       .limit(1);
@@ -288,7 +288,7 @@ export class GustoService {
         partnerConnectionId: connection.id,
         partnerType: 'gusto',
         entityType: 'employee',
-        autoforceEntityId: employeeId,
+        coaileagueEntityId: employeeId,
         partnerEntityId: result.employeeId,
         partnerEntityName: `${employee.firstName} ${employee.lastName}`,
         syncStatus: 'synced',
@@ -305,7 +305,7 @@ export class GustoService {
    * Create payroll run in Gusto
    * 
    * @param workspaceId - Workspace ID
-   * @param payrollRunId - AutoForce payroll run ID
+   * @param payrollRunId - CoAIleague payroll run ID
    * @param userId - User performing operation
    * @returns Gusto payroll ID
    */
@@ -318,7 +318,7 @@ export class GustoService {
     const accessToken = await this.getAccessToken(connection.id);
     const companyId = await this.getCompanyId(connection);
 
-    // Get AutoForce payroll run
+    // Get CoAIleague payroll run
     const [payrollRun] = await db.select()
       .from(payrollRuns)
       .where(
@@ -378,7 +378,7 @@ export class GustoService {
       partnerConnectionId: connection.id,
       partnerType: 'gusto',
       entityType: 'payroll_run',
-      autoforceEntityId: payrollRunId,
+      coaileagueEntityId: payrollRunId,
       partnerEntityId: result.payrollId,
       partnerEntityName: `Payroll ${payrollRun.startDate.toLocaleDateString()}`,
       syncStatus: 'synced',
@@ -394,7 +394,7 @@ export class GustoService {
    * Submit time activities to Gusto for payroll
    * 
    * @param workspaceId - Workspace ID
-   * @param payrollRunId - AutoForce payroll run ID
+   * @param payrollRunId - CoAIleague payroll run ID
    * @param userId - User performing operation
    */
   async submitTimeActivities(
@@ -427,7 +427,7 @@ export class GustoService {
             eq(partnerDataMappings.workspaceId, workspaceId),
             eq(partnerDataMappings.partnerType, 'gusto'),
             eq(partnerDataMappings.entityType, 'employee'),
-            eq(partnerDataMappings.autoforceEntityId, entry.employeeId)
+            eq(partnerDataMappings.coaileagueEntityId, entry.employeeId)
           )
         )
         .limit(1);
@@ -485,7 +485,7 @@ export class GustoService {
    * Process payroll run (finalize and submit)
    * 
    * @param workspaceId - Workspace ID
-   * @param payrollRunId - AutoForce payroll run ID
+   * @param payrollRunId - CoAIleague payroll run ID
    * @param userId - User performing operation
    */
   async processPayroll(
@@ -504,7 +504,7 @@ export class GustoService {
           eq(partnerDataMappings.workspaceId, workspaceId),
           eq(partnerDataMappings.partnerType, 'gusto'),
           eq(partnerDataMappings.entityType, 'payroll_run'),
-          eq(partnerDataMappings.autoforceEntityId, payrollRunId)
+          eq(partnerDataMappings.coaileagueEntityId, payrollRunId)
         )
       )
       .limit(1);

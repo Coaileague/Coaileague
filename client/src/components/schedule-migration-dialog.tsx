@@ -107,7 +107,7 @@ export function ScheduleMigrationDialog() {
       } else {
         toast({
           title: "✅ Import Complete",
-          description: `Created ${successCount} shifts in AutoForce™`,
+          description: `Created ${successCount} shifts in CoAIleague`,
         });
       }
       

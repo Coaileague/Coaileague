@@ -126,7 +126,7 @@ export async function scheduleSmartAI(request: ScheduleSmartRequest): Promise<Sc
     role: emp.role
   }));
 
-  const systemPrompt = `You are AI Scheduling™, AutoForce's intelligent scheduling AI powered by weighted constraint optimization.
+  const systemPrompt = `You are AI Scheduling™, CoAIleague's intelligent scheduling AI powered by weighted constraint optimization.
 
 Your task: Assign employees to open shifts using HARD and SOFT constraints:
 

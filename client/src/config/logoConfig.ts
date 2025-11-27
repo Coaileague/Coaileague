@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Logo Configuration - Premium Autonomous Platform Design
+ * CoAIleague Logo Configuration - Premium Autonomous Platform Design
  * 
  * Sophisticated icon representing autonomous workforce management:
  * - Central core (the platform)
@@ -10,7 +10,7 @@
 
 export const logoConfig = {
   brand: {
-    name: "AutoForce",
+    name: "CoAIleague",
     trademark: "™",
     tagline: "Autonomous Workforce Management",
     taglineAlt: "Autonomous Management Solutions",
@@ -153,7 +153,7 @@ export const logoConfig = {
   },
 
   accessibility: {
-    ariaLabel: "AutoForce™ - Autonomous Workforce Management Platform",
+    ariaLabel: "CoAIleague - Autonomous Workforce Management Platform",
     testIdPrefix: "logo",
   },
 };

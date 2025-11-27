@@ -1,5 +1,5 @@
 /**
- * AutoForce™ Responsive Utility Functions
+ * CoAIleague Responsive Utility Functions
  * Helper functions for responsive design
  */
 

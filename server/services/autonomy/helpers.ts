@@ -1,7 +1,7 @@
 /**
  * AUTONOMY AUDIT PHASE 1: Idempotency & Rate Versioning Helpers
  * 
- * Critical production safeguards for AutoForce™ autonomous operations:
+ * Critical production safeguards for CoAIleague autonomous operations:
  * 1. Idempotency - Prevent duplicate invoice/payroll/timesheet processing
  * 2. Rate Versioning - Historical rate accuracy for reproducible invoicing/payroll
  */

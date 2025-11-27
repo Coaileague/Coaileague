@@ -1,4 +1,4 @@
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function LogoShowcase() {
           <Card>
             <CardContent className="p-12 flex flex-col items-center">
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 border border-primary/20">
-                <AutoForceAFLogo 
+                <CoAIleagueAFLogo 
                   size="hero" 
                   variant="full"
                 />
@@ -42,7 +42,7 @@ export default function LogoShowcase() {
           <Card className="">
             <CardContent className="p-12">
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 flex justify-center">
-                <AutoForceAFLogo 
+                <CoAIleagueAFLogo 
                   size="xl" 
                   variant="full"
                 />
@@ -61,28 +61,28 @@ export default function LogoShowcase() {
             
             <Card className="">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceAFLogo size="sm" />
+                <CoAIleagueAFLogo size="sm" />
                 <span className="text-xs text-muted-foreground">Small</span>
               </CardContent>
             </Card>
 
             <Card className="">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceAFLogo size="md" />
+                <CoAIleagueAFLogo size="md" />
                 <span className="text-xs text-muted-foreground">Medium</span>
               </CardContent>
             </Card>
 
             <Card className="">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceAFLogo size="lg" />
+                <CoAIleagueAFLogo size="lg" />
                 <span className="text-xs text-muted-foreground">Large</span>
               </CardContent>
             </Card>
 
             <Card className="">
               <CardContent className="p-8 flex flex-col items-center gap-4">
-                <AutoForceAFLogo size="xl" />
+                <CoAIleagueAFLogo size="xl" />
                 <span className="text-xs text-muted-foreground">Extra Large</span>
               </CardContent>
             </Card>
@@ -96,21 +96,21 @@ export default function LogoShowcase() {
             
             <Card className="bg-slate-950 border-slate-800">
               <CardContent className="p-8 flex flex-col items-center">
-                <AutoForceAFLogo size="lg" />
+                <CoAIleagueAFLogo size="lg" />
                 <span className="text-xs text-slate-500 mt-4">Dark Background</span>
               </CardContent>
             </Card>
 
             <Card className="bg-white border-slate-200">
               <CardContent className="p-8 flex flex-col items-center">
-                <AutoForceAFLogo size="lg" />
+                <CoAIleagueAFLogo size="lg" />
                 <span className="text-xs text-slate-500 mt-4">Light Background</span>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-slate-950 to-slate-900 border-primary">
               <CardContent className="p-8 flex flex-col items-center">
-                <AutoForceAFLogo size="lg" />
+                <CoAIleagueAFLogo size="lg" />
                 <span className="text-xs text-primary mt-4">Emerald Background</span>
               </CardContent>
             </Card>

@@ -11,8 +11,8 @@ export const CHAT_SERVER_CONFIG = {
     main: {
       id: 'helpdesk',
       slug: 'helpdesk',
-      name: 'AutoForce™ HelpDesk',
-      description: 'Live support chat powered by AutoForce™ AI',
+      name: 'CoAIleague HelpDesk',
+      description: 'Live support chat powered by CoAIleague AI',
       status: 'open' as const,
       visibility: 'public' as const,
     },
@@ -58,26 +58,26 @@ export const CHAT_SERVER_CONFIG = {
         waitTime: 'Wait Time',
         position: 'Position in Queue',
       },
-      footer: 'AutoForce™ AI is reviewing your issue. An agent will be assigned shortly.',
+      footer: 'CoAIleague AI is reviewing your issue. An agent will be assigned shortly.',
     },
 
     // Ticket status messages
     ticketCreated: {
       title: '✓ Ticket Created',
       description: (ticketId: string) =>
-        `Ticket #${ticketId} - AutoForce™ AI is analyzing your issue. An agent will be with you shortly.`,
+        `Ticket #${ticketId} - CoAIleague AI is analyzing your issue. An agent will be with you shortly.`,
     },
 
     ticketAssigned: {
       title: '✅ Agent Assigned',
       message: (ticketId: string) =>
         `✅ An agent is now helping you!\n\nTicket #${ticketId} has been assigned. Your chat is no longer read-only.`,
-      sender: 'AutoForce™ AI',
+      sender: 'CoAIleague AI',
     },
 
     // Welcome/intro messages
     welcome: {
-      title: 'Welcome to AutoForce™ Support',
+      title: 'Welcome to CoAIleague Support',
       description:
         'Please provide some information so our support team can better assist you.',
     },

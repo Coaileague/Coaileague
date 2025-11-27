@@ -80,7 +80,7 @@ export async function extractScheduleFromFile(
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-  const systemPrompt = `You are AutoForce™ AI Scheduling™ Migration Assistant.
+  const systemPrompt = `You are CoAIleague AI Scheduling™ Migration Assistant.
 
 **MISSION**: Extract schedule data from ${request.sourceApp || "external scheduling app"} screenshots/PDFs.
 

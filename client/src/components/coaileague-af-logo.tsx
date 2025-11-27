@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { logoConfig, getLogoSize } from "@/config/logoConfig";
 
-interface AutoForceAFLogoProps {
+interface CoAIleagueAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
   variant?: "icon" | "full" | "wordmark";
   animated?: boolean;
@@ -9,15 +9,15 @@ interface AutoForceAFLogoProps {
 }
 
 /**
- * AutoForce™ Energy-Based AF Logo
+ * CoAIleague Energy-Based AF Logo
  * Letters form from energy, glow, and dissolve back
  */
-export function AutoForceAFLogo({
+export function CoAIleagueAFLogo({
   size = "md",
   variant = "icon",
   animated = true,
   className,
-}: AutoForceAFLogoProps) {
+}: CoAIleagueAFLogoProps) {
   const sizeConfig = getLogoSize(size);
 
   const EnergyAFLogo = () => (
@@ -134,4 +134,4 @@ export function AutoForceAFLogo({
   );
 }
 
-export { AutoForceAFLogo as AnimatedAutoForceLogo };
+export { CoAIleagueAFLogo as AnimatedCoAIleagueLogo };

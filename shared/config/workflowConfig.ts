@@ -79,7 +79,7 @@ export const workflowConfig = {
   // Escalation Rules
   escalationRules: {
     enableAutoEscalation: process.env.VITE_WORKFLOW_AUTO_ESCALATE === 'true' || true,
-    escalationNotificationEmails: process.env.VITE_WORKFLOW_ESCALATION_EMAILS?.split(',') || ['admin@autoforce.ai'],
+    escalationNotificationEmails: process.env.VITE_WORKFLOW_ESCALATION_EMAILS?.split(',') || ['admin@coaileague.ai'],
     escalationAlertSeverity: process.env.VITE_WORKFLOW_ESCALATION_SEVERITY || 'HIGH',
   },
 

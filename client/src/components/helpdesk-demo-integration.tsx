@@ -48,7 +48,7 @@ export function HelpDeskEnhancedDemo() {
   const mockKBArticles = [
     {
       id: "kb-001",
-      title: "Getting Started with AutoForce™",
+      title: "Getting Started with CoAIleague",
       url: "/help/getting-started",
       relevance: 0.95,
     },
@@ -72,7 +72,7 @@ export function HelpDeskEnhancedDemo() {
     <div className="h-screen flex flex-col bg-background">
       {/* Header with branding */}
       <header className="border-b px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">AutoForce™ Support</h1>
+        <h1 className="text-xl font-bold">CoAIleague Support</h1>
         <div className="text-sm text-muted-foreground">
           Enhanced HelpDesk Demo
         </div>

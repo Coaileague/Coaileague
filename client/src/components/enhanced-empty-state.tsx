@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 
 interface EnhancedEmptyStateProps {
   icon: LucideIcon;
@@ -57,7 +57,7 @@ export function EnhancedEmptyState({
       {/* WorkforceOS Logo */}
       {showLogo && (
         <div className="mb-4">
-          <AutoForceAFLogo size="sm" variant="icon" animated={false} />
+          <CoAIleagueAFLogo size="sm" variant="icon" animated={false} />
         </div>
       )}
 

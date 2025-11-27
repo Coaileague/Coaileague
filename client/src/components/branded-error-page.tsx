@@ -1,4 +1,4 @@
-import { AutoForceLogo } from "./workforceos-logo";
+import { CoAIleagueLogo } from "./workforceos-logo";
 import { AlertTriangle, Ban, ServerCrash, Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -28,7 +28,7 @@ export function BrandedErrorPage({
     "404": {
       icon: AlertTriangle,
       defaultTitle: "Page Not Found",
-      defaultMessage: "The page you're looking for doesn't exist in AutoForce™.",
+      defaultMessage: "The page you're looking for doesn't exist in CoAIleague.",
       color: "text-blue-500"
     },
     "403": {
@@ -40,7 +40,7 @@ export function BrandedErrorPage({
     "500": {
       icon: ServerCrash,
       defaultTitle: "System Error",
-      defaultMessage: "AutoForce™ encountered an unexpected error. Our team has been notified.",
+      defaultMessage: "CoAIleague encountered an unexpected error. Our team has been notified.",
       color: "text-purple-500"
     },
     "error": {
@@ -62,7 +62,7 @@ export function BrandedErrorPage({
       <div className="max-w-md w-full bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-lg p-8 flex flex-col items-center gap-6">
         {/* Logo */}
         <div className="animate-pulse">
-          <AutoForceLogo size="lg" variant="full" />
+          <CoAIleagueLogo size="lg" variant="full" />
         </div>
 
         {/* Error Icon */}
@@ -119,14 +119,14 @@ export function BrandedErrorPage({
             className="text-blue-700 dark:text-blue-400 hover:underline"
             data-testid="link-contact-support"
           >
-            AutoForce™ Support
+            CoAIleague Support
           </button>
         </div>
       </div>
 
       {/* Branding Footer */}
       <div className="mt-8 text-xs text-white/30 animate-pulse">
-        Powered by AutoForce™ Platform
+        Powered by CoAIleague Platform
       </div>
     </div>
   );

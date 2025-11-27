@@ -197,9 +197,9 @@ export function HelpDeskCommandBar({
                 </div>
               </div>
 
-              {/* AutoForce™ AI Toggle */}
+              {/* CoAIleague AI Toggle */}
               <div className="flex items-center gap-2 pr-4 border-r-2 border-slate-300">
-                <span className="text-xs text-slate-900 font-bold">AutoForce™ AI:</span>
+                <span className="text-xs text-slate-900 font-bold">CoAIleague AI:</span>
                 <Button
                   onClick={onToggleAI}
                   variant="outline"

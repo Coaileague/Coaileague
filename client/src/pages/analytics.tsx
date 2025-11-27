@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { DollarSign, Clock, Users, UserCheck, TrendingUp, FileText, BarChart3, Download, FileSpreadsheet } from "lucide-react";
-import { AutoForceAFLogo } from "@/components/autoforce-af-logo";
+import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Button } from "@/components/ui/button";
 import { exportReport } from "@/lib/exportUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -120,7 +120,7 @@ export default function Analytics() {
           <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-3xl p-6 sm:p-8">
             <div className="flex flex-wrap items-center gap-4">
               <div className="transform hover:scale-105 transition-transform duration-300">
-                <AutoForceAFLogo size="lg" variant="icon" />
+                <CoAIleagueAFLogo size="lg" variant="icon" />
               </div>
               <div className="flex-1 min-w-[200px]">
                 <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-1" data-testid="heading-analytics">

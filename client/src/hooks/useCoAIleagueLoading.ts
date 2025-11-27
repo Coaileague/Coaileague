@@ -1,18 +1,18 @@
 /**
- * useAutoForceLoading - Hook for managing AutoForce™ loading states
+ * useCoAIleagueLoading - Hook for managing CoAIleague loading states
  * 
- * Provides a simple interface for showing/hiding the universal AutoForce™ loader
+ * Provides a simple interface for showing/hiding the universal CoAIleague loader
  * Usage:
- *   const { showLoading, hideLoading, updateMessage } = useAutoForceLoading();
+ *   const { showLoading, hideLoading, updateMessage } = useCoAIleagueLoading();
  *   showLoading('workspace');
  *   await doSomething();
  *   hideLoading();
  */
 
 import { useState, useCallback } from "react";
-import type { LoadingScenario } from "@/components/autoforce-loader";
+import type { LoadingScenario } from "@/components/coaileague-loader";
 
-export function useAutoForceLoading() {
+export function useCoAIleagueLoading() {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState<string | undefined>();
   const [submessage, setSubmessage] = useState<string | undefined>();

@@ -127,7 +127,7 @@ export function CADMenuBar() {
         { label: "Report Bug", action: () => window.open("/contact", "_blank") },
         { label: "Feature Request", action: () => window.open("/contact", "_blank") },
         { separator: true },
-        { label: "About AutoForce™" },
+        { label: "About CoAIleague" },
       ],
     },
   ];

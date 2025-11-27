@@ -300,9 +300,9 @@ export default function PayInvoice() {
   return (
     <div className="min-h-screen bg-background py-8 px-4" data-testid="page-pay-invoice">
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* AutoForce™ Branding */}
+        {/* CoAIleague Branding */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-foreground">AutoForce™</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-foreground">CoAIleague</h1>
           <p className="text-sm text-gray-700 dark:text-gray-400">Autonomous Workforce Management Solutions</p>
         </div>
 

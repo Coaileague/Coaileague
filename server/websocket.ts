@@ -276,7 +276,7 @@ interface DispatchUnitStatusUpdatePayload {
 type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | BanUserPayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload | CallInitiatedPayload | CallAcceptedPayload | CallRejectedPayload | CallEndedPayload | WebRTCOfferPayload | WebRTCAnswerPayload | WebRTCIceCandidatePayload | JoinDispatchUpdatesPayload | DispatchGPSUpdatePayload | DispatchIncidentUpdatePayload | DispatchUnitStatusUpdatePayload;
 
 // In-memory MOTD storage (staff can update)
-let currentMOTD = "Welcome to AutoForce™ HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
+let currentMOTD = "Welcome to CoAIleague HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
 
 // GLOBAL CONNECTION TRACKING for Platform Stats
 const globalConnections = {
@@ -592,7 +592,7 @@ export function setupWebSocket(server: Server) {
                   const newConversation = await storage.createChatConversation({
                     subject: supportRoom.name,
                     conversationType: 'open_chat',
-                    workspaceId: supportRoom.workspaceId || 'autoforce-platform-workspace',
+                    workspaceId: supportRoom.workspaceId || 'coaileague-platform-workspace',
                     participants: [],
                     isActive: true,
                   });
@@ -1074,7 +1074,7 @@ export function setupWebSocket(server: Server) {
                   
                   if (!existingTicket && ws.workspaceId) {
                     // NO TICKET: Provide welcome message with instructions
-                    welcomeMessage = "👋 Welcome to AutoForce™ Support! I'm HelpOS, your AI assistant.\n\nHow can I help you today? Please describe your question or issue, and I'll do my best to assist you.";
+                    welcomeMessage = "👋 Welcome to CoAIleague Support! I'm HelpOS, your AI assistant.\n\nHow can I help you today? Please describe your question or issue, and I'll do my best to assist you.";
                     ticketNumber = `INTAKE-${Date.now().toString().slice(-6)}`; // Temp ID until real ticket created
                   } else {
                     // HAS TICKET: Use existing ticket or create temp one
@@ -1173,7 +1173,7 @@ export function setupWebSocket(server: Server) {
                 if (isStaff) {
                   greeting = `Welcome back, ${displayName}! Support chat is active. Right-click users for quick actions.`;
                 } else {
-                  greeting = `Welcome to AutoForce™ Support! You can send messages right away. A support agent will assist you shortly. Feel free to describe your issue or ask any questions.`;
+                  greeting = `Welcome to CoAIleague Support! You can send messages right away. A support agent will assist you shortly. Feel free to describe your issue or ask any questions.`;
                 }
 
                 // Send welcome message ONLY to the joining user (not saved to DB)

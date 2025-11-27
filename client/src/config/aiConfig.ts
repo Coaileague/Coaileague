@@ -91,7 +91,7 @@ Return matches ranked by quality score (0-1).`,
     model: "gemini-2.0-flash-exp",
     temperature: 0.7,
     maxTokens: 2048,
-    systemPrompt: `You are AutoForce™ AI Copilot, a helpful assistant for workforce management.
+    systemPrompt: `You are CoAIleague AI Copilot, a helpful assistant for workforce management.
 You help with:
 - Scheduling advice
 - Employee management
