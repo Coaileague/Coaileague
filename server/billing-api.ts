@@ -845,6 +845,74 @@ billingRouter.post('/subscription/cancel', async (req, res) => {
   }
 });
 
+// ============================================================================
+// EMPLOYEE USAGE & OVERAGE ENDPOINTS
+// ============================================================================
+
+/**
+ * Get employee usage and overage status
+ */
+billingRouter.get('/usage/employees', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { usageTracker } = await import('./services/billing/usageTracker');
+    const usage = await usageTracker.getEmployeeUsage(workspaceId);
+    
+    res.json(usage);
+  } catch (error: any) {
+    console.error('Failed to get employee usage:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Check if workspace can add more employees
+ */
+billingRouter.get('/usage/can-add-employee', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { usageTracker } = await import('./services/billing/usageTracker');
+    const result = await usageTracker.canAddEmployee(workspaceId);
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to check employee limit:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get employee usage history
+ */
+billingRouter.get('/usage/history', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { days } = z.object({
+      days: z.string().transform(s => parseInt(s) || 30).optional(),
+    }).parse(req.query);
+
+    const { usageTracker } = await import('./services/billing/usageTracker');
+    const history = await usageTracker.getUsageHistory(workspaceId, days);
+    
+    res.json(history);
+  } catch (error: any) {
+    console.error('Failed to get usage history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * Get pricing configuration (public endpoint for pricing page)
  */
