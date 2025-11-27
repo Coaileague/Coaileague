@@ -945,3 +945,79 @@ billingRouter.get('/pricing', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============================================================================
+// TRIAL MANAGEMENT ENDPOINTS
+// ============================================================================
+
+/**
+ * Get trial status for current workspace
+ */
+billingRouter.get('/trial', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { trialManager } = await import('./services/billing/trialManager');
+    const status = await trialManager.getTrialStatus(workspaceId);
+    
+    res.json(status);
+  } catch (error: any) {
+    console.error('Failed to get trial status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Start a free trial
+ */
+billingRouter.post('/trial/start', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { trialManager } = await import('./services/billing/trialManager');
+    const result = await trialManager.startTrial(workspaceId);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, trialEndsAt: result.trialEndsAt });
+  } catch (error: any) {
+    console.error('Failed to start trial:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Extend trial (admin only)
+ */
+billingRouter.post('/trial/extend', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { days } = z.object({
+      days: z.number().min(1).max(30).default(7),
+    }).parse(req.body);
+
+    const { trialManager } = await import('./services/billing/trialManager');
+    const result = await trialManager.extendTrial(workspaceId, days);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, newEndsAt: result.newEndsAt });
+  } catch (error: any) {
+    console.error('Failed to extend trial:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
