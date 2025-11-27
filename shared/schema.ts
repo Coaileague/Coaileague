@@ -222,6 +222,21 @@ export const workspaces = pgTable("workspaces", {
   billing_override_applied_at: timestamp("billing_override_applied_at"),
   billing_override_expires_at: timestamp("billing_override_expires_at"), // Auto-revert date
 
+  // ============================================================================
+  // GAP FIXES - CONFIGURABLE SETTINGS (Gap #6, #7, #8)
+  // ============================================================================
+  
+  // HelpOS Bot Configuration (Gap #7)
+  enableHelpOSBot: boolean("enable_helpos_bot").default(true), // Allow disabling bot per workspace
+  
+  // Client Tax Rate Configuration (Gap #8)
+  defaultTaxRate: decimal("default_tax_rate", { precision: 5, scale: 4 }).default("0.08875"), // Default 8.875%
+  taxJurisdiction: varchar("tax_jurisdiction"), // State/country for tax lookup
+  
+  // Industry Benchmarking (Gap #5)
+  industry: varchar("industry"), // For benchmark comparisons
+  companySize: varchar("company_size"), // 'small', 'medium', 'large', 'enterprise'
+
   // Manual Adjustments & Notes
   admin_notes: text("admin_notes"), // ROOT private notes about this org
   admin_flags: text("admin_flags").array().default(sql`ARRAY[]::text[]`), // Tags: 'vip', 'watchlist', 'partner', 'delinquent'

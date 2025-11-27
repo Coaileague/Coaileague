@@ -1,5 +1,6 @@
 // EngagementOS™ Calculation Engine
 // Calculates employee health scores and employer benchmarks from engagement data
+// Updated with Gap #4 (trend tracking) and Gap #5 (industry benchmarking)
 
 import { db } from "../db";
 import { 
@@ -9,9 +10,11 @@ import {
   employeeRecognition,
   employeeHealthScores,
   employerBenchmarkScores,
-  employees
+  employees,
+  workspaces,
+  engagementScoreHistory
 } from "@shared/schema";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, avg } from "drizzle-orm";
 
 interface HealthScoreCalculationInput {
   workspaceId: string;
@@ -374,16 +377,23 @@ export async function calculateEmployerBenchmark(input: BenchmarkCalculationInpu
       highRiskFlags.push('Burnout risk - unsustainable workload');
     }
     
-    // 6. Calculate trend vs previous period (simplified - would need historical data)
-    // For now, we'll mark as 'stable' - in production would compare to previous benchmark
-    const scoreTrend = 'stable';
-    const monthOverMonthChange = 0;
+    // 6. Calculate trend vs previous period (Gap #4 - Real historical comparison)
+    const previousBenchmark = await getPreviousBenchmark(workspaceId, benchmarkType, targetId, periodStart);
+    let scoreTrend = 'stable';
+    let monthOverMonthChange = 0;
     
-    // 7. Industry benchmarking (monopolistic cross-platform data)
-    // In production, this would query anonymized aggregate data across ALL WorkforceOS customers
-    // For now, using industry averages (3.5 out of 5 = 70th percentile)
-    const industryAverageScore = 3.5;
-    const percentileRank = overallScore >= industryAverageScore ? 75 : 50; // Simplified
+    if (previousBenchmark) {
+      const prevScore = parseFloat(previousBenchmark.overallScore);
+      monthOverMonthChange = overallScore - prevScore;
+      
+      if (monthOverMonthChange > 0.2) scoreTrend = 'improving';
+      else if (monthOverMonthChange < -0.2) scoreTrend = 'declining';
+    }
+    
+    // 7. Industry benchmarking (Gap #5 - Real aggregate data from all workspaces)
+    const industryBenchmark = await calculateIndustryBenchmark(workspaceId);
+    const industryAverageScore = industryBenchmark.averageScore;
+    const percentileRank = industryBenchmark.percentileRank;
     
     // 8. Insert benchmark record
     const benchmarkData = {
@@ -421,6 +431,228 @@ export async function calculateEmployerBenchmark(input: BenchmarkCalculationInpu
   } catch (error) {
     console.error('[EngagementOS™] Error calculating employer benchmark:', error);
     throw error;
+  }
+}
+
+// ============================================================================
+// GAP #4: HISTORICAL TREND TRACKING
+// ============================================================================
+
+/**
+ * Get previous benchmark for trend comparison
+ */
+async function getPreviousBenchmark(
+  workspaceId: string,
+  benchmarkType: string,
+  targetId: string | undefined,
+  currentPeriodStart: Date
+): Promise<{ overallScore: string } | null> {
+  try {
+    const conditions = [
+      eq(employerBenchmarkScores.workspaceId, workspaceId),
+      eq(employerBenchmarkScores.benchmarkType, benchmarkType),
+      lte(employerBenchmarkScores.periodEnd, currentPeriodStart)
+    ];
+    
+    if (targetId) {
+      conditions.push(eq(employerBenchmarkScores.targetId, targetId));
+    }
+    
+    const [previous] = await db
+      .select({ overallScore: employerBenchmarkScores.overallScore })
+      .from(employerBenchmarkScores)
+      .where(and(...conditions))
+      .orderBy(desc(employerBenchmarkScores.periodEnd))
+      .limit(1);
+    
+    return previous || null;
+  } catch (error) {
+    console.error('[EngagementOS™] Error getting previous benchmark:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// GAP #5: REAL INDUSTRY BENCHMARKING
+// ============================================================================
+
+/**
+ * Calculate industry benchmark from aggregate cross-workspace data
+ * Uses anonymized data from all workspaces with matching industry
+ */
+async function calculateIndustryBenchmark(workspaceId: string): Promise<{
+  averageScore: number;
+  percentileRank: number;
+  totalComparisons: number;
+}> {
+  try {
+    // Get current workspace's industry and company size
+    const [workspace] = await db
+      .select({
+        industry: workspaces.industry,
+        companySize: workspaces.companySize,
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+    
+    // Get all benchmark scores from the same industry (anonymized)
+    const industryScores = await db
+      .select({
+        overallScore: employerBenchmarkScores.overallScore,
+        workspaceId: employerBenchmarkScores.workspaceId,
+      })
+      .from(employerBenchmarkScores)
+      .innerJoin(workspaces, eq(employerBenchmarkScores.workspaceId, workspaces.id))
+      .where(
+        workspace?.industry 
+          ? eq(workspaces.industry, workspace.industry)
+          : sql`1=1` // No industry filter if not set
+      )
+      .orderBy(desc(employerBenchmarkScores.createdAt))
+      .limit(100);
+    
+    if (industryScores.length === 0) {
+      return { averageScore: 3.5, percentileRank: 50, totalComparisons: 0 };
+    }
+    
+    // Calculate average score
+    const scores = industryScores.map(s => parseFloat(s.overallScore || '3.5'));
+    const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+    
+    // Get current workspace's latest score
+    const [currentScore] = await db
+      .select({ overallScore: employerBenchmarkScores.overallScore })
+      .from(employerBenchmarkScores)
+      .where(eq(employerBenchmarkScores.workspaceId, workspaceId))
+      .orderBy(desc(employerBenchmarkScores.createdAt))
+      .limit(1);
+    
+    const myScore = currentScore ? parseFloat(currentScore.overallScore) : averageScore;
+    
+    // Calculate percentile rank
+    const belowCount = scores.filter(s => s < myScore).length;
+    const percentileRank = Math.round((belowCount / scores.length) * 100);
+    
+    return {
+      averageScore: Math.round(averageScore * 100) / 100,
+      percentileRank,
+      totalComparisons: industryScores.length,
+    };
+  } catch (error) {
+    console.error('[EngagementOS™] Error calculating industry benchmark:', error);
+    return { averageScore: 3.5, percentileRank: 50, totalComparisons: 0 };
+  }
+}
+
+/**
+ * Save engagement score to history for trend analysis
+ */
+export async function saveEngagementScoreHistory(
+  workspaceId: string,
+  overallScore: number,
+  periodStart: Date,
+  periodEnd: Date,
+  periodType: string,
+  categoryScores?: Record<string, number>
+): Promise<void> {
+  try {
+    // Get previous score for trend calculation
+    const [previous] = await db
+      .select({
+        overallScore: engagementScoreHistory.overallScore,
+      })
+      .from(engagementScoreHistory)
+      .where(eq(engagementScoreHistory.workspaceId, workspaceId))
+      .orderBy(desc(engagementScoreHistory.createdAt))
+      .limit(1);
+    
+    const previousScore = previous ? parseFloat(previous.overallScore) : null;
+    const scoreDelta = previousScore !== null ? overallScore - previousScore : null;
+    
+    // Get industry percentile
+    const { percentileRank, totalComparisons } = await calculateIndustryBenchmark(workspaceId);
+    
+    // Get workspace industry info
+    const [workspace] = await db
+      .select({
+        industry: workspaces.industry,
+        companySize: workspaces.companySize,
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+    
+    await db.insert(engagementScoreHistory).values({
+      workspaceId,
+      overallScore: overallScore.toFixed(2),
+      categoryScores: categoryScores || {},
+      industryPercentile: percentileRank,
+      companySize: workspace?.companySize,
+      industry: workspace?.industry,
+      periodStart,
+      periodEnd,
+      periodType,
+      previousScore: previousScore?.toFixed(2),
+      scoreDelta: scoreDelta?.toFixed(2),
+    });
+    
+    console.log(`[EngagementOS™] Saved engagement score history: ${overallScore.toFixed(2)} (percentile: ${percentileRank})`);
+  } catch (error) {
+    console.error('[EngagementOS™] Error saving engagement score history:', error);
+  }
+}
+
+/**
+ * Get engagement trend for a workspace
+ */
+export async function getEngagementTrend(
+  workspaceId: string,
+  periodType?: string,
+  limit: number = 12
+): Promise<{
+  scores: Array<{ score: number; period: string; delta: number | null }>;
+  trend: 'improving' | 'stable' | 'declining';
+  averageScore: number;
+  industryPercentile: number;
+}> {
+  try {
+    const conditions = [eq(engagementScoreHistory.workspaceId, workspaceId)];
+    if (periodType) {
+      conditions.push(eq(engagementScoreHistory.periodType, periodType));
+    }
+    
+    const history = await db
+      .select()
+      .from(engagementScoreHistory)
+      .where(and(...conditions))
+      .orderBy(desc(engagementScoreHistory.periodStart))
+      .limit(limit);
+    
+    const scores = history.map(h => ({
+      score: parseFloat(h.overallScore),
+      period: h.periodStart?.toISOString().slice(0, 10) || '',
+      delta: h.scoreDelta ? parseFloat(h.scoreDelta) : null,
+    }));
+    
+    const averageScore = scores.length > 0
+      ? scores.reduce((a, b) => a + b.score, 0) / scores.length
+      : 0;
+    
+    // Determine trend from recent deltas
+    const recentDeltas = scores.slice(0, 5).filter(s => s.delta !== null).map(s => s.delta!);
+    const avgDelta = recentDeltas.length > 0
+      ? recentDeltas.reduce((a, b) => a + b, 0) / recentDeltas.length
+      : 0;
+    
+    let trend: 'improving' | 'stable' | 'declining' = 'stable';
+    if (avgDelta > 2) trend = 'improving';
+    else if (avgDelta < -2) trend = 'declining';
+    
+    const industryPercentile = history[0]?.industryPercentile || 50;
+    
+    return { scores, trend, averageScore, industryPercentile };
+  } catch (error) {
+    console.error('[EngagementOS™] Error getting engagement trend:', error);
+    return { scores: [], trend: 'stable', averageScore: 0, industryPercentile: 50 };
   }
 }
 

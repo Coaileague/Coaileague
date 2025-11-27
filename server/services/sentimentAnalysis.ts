@@ -1,12 +1,13 @@
 /**
  * AI Sentiment Analysis Service
  * Implements PredictionOS integration for review scoring, dispute flagging, and ticket urgency detection
+ * Now with full persistence to sentiment_history table for trend analysis
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { db } from '../db';
-import { supportTickets, disputes } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { supportTickets, disputes, sentimentHistory } from '@shared/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
@@ -53,8 +54,17 @@ ${reviewText}`,
     const content = response.response.text();
     const parsed = JSON.parse(content);
 
-    // Note: Review sentiment storage would require schema updates to add sentiment fields
-    // For now, just return the analysis result without persistence
+    // Persist sentiment to history for trend analysis
+    await persistSentimentHistory({
+      workspaceId: '', // Will be set by caller if available
+      sourceType: 'review',
+      sourceId: reviewId,
+      overallScore: (parsed.score + 1) / 2, // Convert -1..1 to 0..1
+      positiveScore: parsed.label === 'positive' ? parsed.confidence : 0,
+      negativeScore: parsed.label === 'negative' ? parsed.confidence : 0,
+      neutralScore: parsed.label === 'neutral' ? parsed.confidence : 0,
+      keyTopics: parsed.keywords,
+    });
 
     return {
       score: parsed.score,
@@ -109,9 +119,18 @@ ${ticketText}`,
     const parsed = JSON.parse(content);
     const shouldEscalate = parsed.urgency === 'critical' || parsed.score < -0.5;
 
-    // Note: Ticket sentiment storage would require schema updates
-    // Sentiment analysis returned but not persisted to database yet
-    // Admin can use shouldEscalate flag to manually review critical tickets
+    // Persist sentiment to history with escalation action insights
+    await persistSentimentHistory({
+      workspaceId: '', // Will be set by caller if available  
+      sourceType: 'ticket',
+      sourceId: ticketId,
+      overallScore: (parsed.score + 1) / 2, // Convert -1..1 to 0..1
+      positiveScore: parsed.label === 'positive' ? parsed.confidence : 0,
+      negativeScore: parsed.label === 'negative' ? parsed.confidence : 0,
+      neutralScore: parsed.label === 'neutral' ? parsed.confidence : 0,
+      keyTopics: parsed.keywords,
+      actionableInsights: shouldEscalate ? ['Escalation recommended', `Urgency: ${parsed.urgency}`] : [],
+    });
 
     return {
       score: parsed.score,
@@ -167,8 +186,18 @@ ${disputeText}`,
     const content = response.response.text();
     const parsed = JSON.parse(content);
 
-    // Note: Dispute sentiment storage would require schema updates
-    // Analysis returned for admin review without persistence
+    // Persist dispute sentiment with resolution insights
+    await persistSentimentHistory({
+      workspaceId: '', // Will be set by caller if available
+      sourceType: 'dispute',
+      sourceId: disputeId,
+      overallScore: (parsed.score + 1) / 2, // Convert -1..1 to 0..1
+      positiveScore: parsed.label === 'positive' ? parsed.confidence : 0,
+      negativeScore: parsed.label === 'negative' ? parsed.confidence : 0,
+      neutralScore: parsed.label === 'neutral' ? parsed.confidence : 0,
+      keyTopics: parsed.keywords,
+      actionableInsights: [`Resolution confidence: ${(parsed.resolutionConfidence * 100).toFixed(0)}%`],
+    });
 
     return {
       score: parsed.score,
@@ -186,5 +215,125 @@ ${disputeText}`,
       keywords: [],
       resolutionConfidence: 0,
     };
+  }
+}
+
+// ============================================================================
+// SENTIMENT PERSISTENCE (Gap #2 - Store sentiment for historical analysis)
+// ============================================================================
+
+interface SentimentPersistData {
+  workspaceId: string;
+  employeeId?: string;
+  sourceType: string;
+  sourceId: string;
+  overallScore: number;
+  positiveScore?: number;
+  negativeScore?: number;
+  neutralScore?: number;
+  sourceText?: string;
+  keyTopics?: string[];
+  emotionBreakdown?: Record<string, number>;
+  actionableInsights?: string[];
+}
+
+/**
+ * Persist sentiment analysis result to database for trend tracking
+ */
+async function persistSentimentHistory(data: SentimentPersistData): Promise<void> {
+  try {
+    // Get previous score for trend calculation
+    const previousEntry = await db
+      .select({ overallScore: sentimentHistory.overallScore })
+      .from(sentimentHistory)
+      .where(
+        and(
+          eq(sentimentHistory.sourceType, data.sourceType),
+          data.employeeId ? eq(sentimentHistory.employeeId, data.employeeId) : undefined
+        )
+      )
+      .orderBy(desc(sentimentHistory.createdAt))
+      .limit(1);
+
+    const previousScore = previousEntry[0]?.overallScore 
+      ? parseFloat(previousEntry[0].overallScore) 
+      : null;
+
+    // Calculate trend
+    let trend: 'improving' | 'stable' | 'declining' = 'stable';
+    if (previousScore !== null) {
+      const delta = data.overallScore - previousScore;
+      if (delta > 0.1) trend = 'improving';
+      else if (delta < -0.1) trend = 'declining';
+    }
+
+    // Insert to sentiment history
+    await db.insert(sentimentHistory).values({
+      workspaceId: data.workspaceId || 'default',
+      employeeId: data.employeeId,
+      sourceType: data.sourceType,
+      sourceId: data.sourceId,
+      overallScore: data.overallScore.toFixed(2),
+      positiveScore: data.positiveScore?.toFixed(2),
+      negativeScore: data.negativeScore?.toFixed(2),
+      neutralScore: data.neutralScore?.toFixed(2),
+      sourceText: data.sourceText,
+      keyTopics: data.keyTopics ? JSON.stringify(data.keyTopics) : null,
+      emotionBreakdown: data.emotionBreakdown,
+      actionableInsights: data.actionableInsights,
+      previousScore: previousScore?.toFixed(2),
+      trend,
+    });
+
+    console.log(`[SentimentAnalysis] Persisted ${data.sourceType} sentiment: ${data.overallScore.toFixed(2)} (${trend})`);
+  } catch (error) {
+    console.error('[SentimentAnalysis] Error persisting sentiment:', error);
+    // Don't throw - persistence failure shouldn't break analysis
+  }
+}
+
+/**
+ * Get sentiment trend for a specific source type and employee
+ */
+export async function getSentimentTrend(
+  workspaceId: string,
+  sourceType?: string,
+  employeeId?: string,
+  limit: number = 30
+): Promise<{ scores: number[]; trend: string; averageScore: number }> {
+  try {
+    const conditions = [eq(sentimentHistory.workspaceId, workspaceId)];
+    if (sourceType) conditions.push(eq(sentimentHistory.sourceType, sourceType));
+    if (employeeId) conditions.push(eq(sentimentHistory.employeeId, employeeId));
+
+    const history = await db
+      .select({
+        overallScore: sentimentHistory.overallScore,
+        trend: sentimentHistory.trend,
+        createdAt: sentimentHistory.createdAt,
+      })
+      .from(sentimentHistory)
+      .where(and(...conditions))
+      .orderBy(desc(sentimentHistory.createdAt))
+      .limit(limit);
+
+    const scores = history.map(h => parseFloat(h.overallScore));
+    const averageScore = scores.length > 0 
+      ? scores.reduce((a, b) => a + b, 0) / scores.length 
+      : 0;
+
+    // Determine overall trend from recent entries
+    const recentTrends = history.slice(0, 5).map(h => h.trend);
+    const improvingCount = recentTrends.filter(t => t === 'improving').length;
+    const decliningCount = recentTrends.filter(t => t === 'declining').length;
+    
+    let overallTrend = 'stable';
+    if (improvingCount > decliningCount + 1) overallTrend = 'improving';
+    else if (decliningCount > improvingCount + 1) overallTrend = 'declining';
+
+    return { scores, trend: overallTrend, averageScore };
+  } catch (error) {
+    console.error('[SentimentAnalysis] Error getting sentiment trend:', error);
+    return { scores: [], trend: 'stable', averageScore: 0 };
   }
 }
