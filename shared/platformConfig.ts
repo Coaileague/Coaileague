@@ -295,6 +295,7 @@ export const FEATURES = {
   // Workforce Features
   enableContractorPool: true,
   enableGPS: true,
+  enableGamification: true,  // Employee engagement & recognition
   
   // Enterprise Features
   enableMFA: false,

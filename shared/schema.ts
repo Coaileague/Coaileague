@@ -12321,3 +12321,187 @@ export const insertEngagementScoreHistorySchema = createInsertSchema(engagementS
 
 export type InsertEngagementScoreHistory = z.infer<typeof insertEngagementScoreHistorySchema>;
 export type EngagementScoreHistory = typeof engagementScoreHistory.$inferSelect;
+
+// ============================================================================
+// GAMIFICATION SYSTEM - Employee Engagement & Recognition
+// ============================================================================
+
+// Achievement categories
+export const achievementCategoryEnum = pgEnum('achievement_category', [
+  'attendance', 'performance', 'teamwork', 'learning', 'milestone', 'special'
+]);
+
+// Achievement definitions
+export const achievements = pgTable("achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Achievement details
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: achievementCategoryEnum("category").default('performance'),
+  icon: varchar("icon"), // Lucide icon name or emoji
+  
+  // Points and rarity
+  pointsValue: integer("points_value").default(10),
+  rarity: varchar("rarity").default('common'), // 'common', 'uncommon', 'rare', 'epic', 'legendary'
+  
+  // Criteria for automatic awarding
+  triggerType: varchar("trigger_type"), // 'clock_in_streak', 'hours_worked', 'tasks_completed', 'manual', etc.
+  triggerThreshold: integer("trigger_threshold"), // e.g., 7 for 7-day streak
+  
+  // Display
+  isActive: boolean("is_active").default(true),
+  isGlobal: boolean("is_global").default(false), // Platform-wide or workspace-specific
+  sortOrder: integer("sort_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+}, (table) => [
+  index("achievements_workspace_idx").on(table.workspaceId),
+  index("achievements_category_idx").on(table.category),
+  index("achievements_active_idx").on(table.isActive),
+]);
+
+export const insertAchievementSchema = createInsertSchema(achievements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+
+// Employee achievements (earned)
+export const employeeAchievements = pgTable("employee_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  achievementId: varchar("achievement_id").notNull().references(() => achievements.id, { onDelete: 'cascade' }),
+  
+  // Award details
+  earnedAt: timestamp("earned_at").defaultNow(),
+  pointsAwarded: integer("points_awarded").default(0),
+  
+  // Reason/context
+  reason: text("reason"),
+  metadata: jsonb("metadata"), // Additional context data
+  
+  // Notification tracking
+  isNotified: boolean("is_notified").default(false),
+  notifiedAt: timestamp("notified_at"),
+}, (table) => [
+  index("employee_achievements_workspace_idx").on(table.workspaceId),
+  index("employee_achievements_employee_idx").on(table.employeeId),
+  index("employee_achievements_achievement_idx").on(table.achievementId),
+  index("employee_achievements_earned_idx").on(table.earnedAt),
+]);
+
+export const insertEmployeeAchievementSchema = createInsertSchema(employeeAchievements).omit({
+  id: true,
+});
+
+export type InsertEmployeeAchievement = z.infer<typeof insertEmployeeAchievementSchema>;
+export type EmployeeAchievement = typeof employeeAchievements.$inferSelect;
+
+// Employee points ledger
+export const employeePoints = pgTable("employee_points", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Current totals (denormalized for performance)
+  totalPoints: integer("total_points").default(0),
+  currentLevel: integer("current_level").default(1),
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  
+  // Monthly/weekly tracking
+  pointsThisMonth: integer("points_this_month").default(0),
+  pointsThisWeek: integer("points_this_week").default(0),
+  
+  // Achievement counts
+  achievementsEarned: integer("achievements_earned").default(0),
+  
+  // Last activity
+  lastActivityAt: timestamp("last_activity_at"),
+  lastClockIn: timestamp("last_clock_in"),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("employee_points_workspace_idx").on(table.workspaceId),
+  index("employee_points_employee_idx").on(table.employeeId),
+  index("employee_points_total_idx").on(table.totalPoints),
+  index("employee_points_level_idx").on(table.currentLevel),
+]);
+
+export const insertEmployeePointsSchema = createInsertSchema(employeePoints).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertEmployeePoints = z.infer<typeof insertEmployeePointsSchema>;
+export type EmployeePoints = typeof employeePoints.$inferSelect;
+
+// Points transaction history
+export const pointsTransactions = pgTable("points_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Transaction details
+  points: integer("points").notNull(), // Positive for earning, negative for spending
+  transactionType: varchar("transaction_type").notNull(), // 'achievement', 'bonus', 'reward_redemption', 'manual'
+  
+  // Reference
+  referenceId: varchar("reference_id"), // Achievement ID, time entry ID, etc.
+  referenceType: varchar("reference_type"), // 'achievement', 'time_entry', 'manual'
+  
+  description: text("description"),
+  awardedBy: varchar("awarded_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("points_transactions_workspace_idx").on(table.workspaceId),
+  index("points_transactions_employee_idx").on(table.employeeId),
+  index("points_transactions_type_idx").on(table.transactionType),
+  index("points_transactions_created_idx").on(table.createdAt),
+]);
+
+export const insertPointsTransactionSchema = createInsertSchema(pointsTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPointsTransaction = z.infer<typeof insertPointsTransactionSchema>;
+export type PointsTransaction = typeof pointsTransactions.$inferSelect;
+
+// Leaderboard cache (refreshed periodically)
+export const leaderboardCache = pgTable("leaderboard_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Period
+  period: varchar("period").notNull(), // 'daily', 'weekly', 'monthly', 'all_time'
+  periodStart: timestamp("period_start"),
+  periodEnd: timestamp("period_end"),
+  
+  // Rankings (JSON array of {employeeId, rank, points, name})
+  rankings: jsonb("rankings").notNull(),
+  
+  // Cache metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+}, (table) => [
+  index("leaderboard_cache_workspace_idx").on(table.workspaceId),
+  index("leaderboard_cache_period_idx").on(table.period),
+  index("leaderboard_cache_expires_idx").on(table.expiresAt),
+]);
+
+export const insertLeaderboardCacheSchema = createInsertSchema(leaderboardCache).omit({
+  id: true,
+  calculatedAt: true,
+});
+
+export type InsertLeaderboardCache = z.infer<typeof insertLeaderboardCacheSchema>;
+export type LeaderboardCache = typeof leaderboardCache.$inferSelect;

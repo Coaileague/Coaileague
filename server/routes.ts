@@ -30,6 +30,7 @@ import { aiBrainRouter } from "./ai-brain-routes"; // Unified AI Brain System
 import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
+import { gamificationRouter } from "./gamification-api"; // Employee Engagement & Recognition System
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { auditContextMiddleware } from "./middleware/audit";
@@ -1666,6 +1667,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Universal Time Tracking & Clock System
   app.use('/api/time-entries', timeEntryRouter);
+
+  // Register Gamification & Employee Engagement System
+  app.use('/api/gamification', gamificationRouter);
 
   // Register Unified AI Brain System (cross-org learning, job execution, global patterns)
   app.use('/api/ai-brain', aiBrainRouter);

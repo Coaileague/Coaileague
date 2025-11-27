@@ -3,7 +3,11 @@
 
 import { Router } from 'express';
 import { db } from "./db";
+import { gamificationService } from "./services/gamification/gamificationService";
+import { isFeatureEnabled } from '@shared/platformConfig';
 import { eq, and, isNull, desc, gte, lte, sql } from "drizzle-orm";
+import { startOfWeek, endOfWeek, subDays } from "date-fns";
+import './types';
 import { 
   timeEntries,
   timeEntryBreaks,
@@ -236,6 +240,31 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
+    // Gamification: Update streak and award points on clock-in
+    if (isFeatureEnabled('enableGamification')) {
+      try {
+        const { streak, isNewRecord } = await gamificationService.updateStreak(
+          user.currentWorkspaceId,
+          employee.id
+        );
+        await gamificationService.awardPoints({
+          workspaceId: user.currentWorkspaceId,
+          employeeId: employee.id,
+          points: 5,
+          transactionType: 'clock_in',
+          referenceId: newEntry.id,
+          referenceType: 'time_entry',
+          description: 'Daily clock-in bonus',
+        });
+        await gamificationService.checkStreakAchievements(
+          user.currentWorkspaceId,
+          employee.id,
+          streak
+        );
+      } catch (gamError) {
+        console.error('Gamification update failed (non-blocking):', gamError);
+      }
+    }
 
     res.status(201).json({ 
       message: 'Clocked in successfully',
@@ -450,7 +479,6 @@ timeEntryRouter.post('/break/start', requireAuth, mutationLimiter, async (req: A
       actionType: 'start_break',
       description: `Started ${breakType} break at ${breakStartTime.toLocaleTimeString()}`,
       payload: { breakType, isPaid },
-      ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
 
@@ -539,7 +567,6 @@ timeEntryRouter.post('/break/end', requireAuth, mutationLimiter, async (req: Aut
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
-
     res.json({ 
       message: 'Break ended',
       break: updatedBreak,
@@ -700,7 +727,7 @@ timeEntryRouter.get('/entries/:id', requireAuth, readLimiter, async (req: Authen
 /**
  * POST /api/time-entries/:id/approve - Approve a time entry
  */
-timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole(['department_manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -768,7 +795,6 @@ timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole([
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
-
     res.json({ 
       message: 'Time entry approved',
       timeEntry: updatedEntry
@@ -782,7 +808,7 @@ timeEntryRouter.post('/entries/:id/approve', requireAuth, requireWorkspaceRole([
 /**
  * POST /api/time-entries/:id/reject - Reject a time entry
  */
-timeEntryRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
+timeEntryRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['department_manager', 'org_admin', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -847,7 +873,6 @@ timeEntryRouter.post('/entries/:id/reject', requireAuth, requireWorkspaceRole(['
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
-
     res.json({ 
       message: 'Time entry rejected',
       timeEntry: updatedEntry
@@ -893,6 +918,273 @@ timeEntryRouter.get('/active', requireAuth, readLimiter, async (req: Authenticat
   } catch (error) {
     console.error('Error fetching active employees:', error);
     res.status(500).json({ error: 'Failed to fetch active employees' });
+  }
+});
+
+// ============================================================================
+// TIMESHEET REPORTS ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/time-entries/reports/summary - Get timesheet summary report
+ * Aggregates hours by employee for a date range (weekly, bi-weekly, monthly)
+ */
+timeEntryRouter.get('/reports/summary', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user?.currentWorkspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const { startDate, endDate, period = 'weekly', employeeId } = req.query;
+
+    // Calculate date range based on period
+    let rangeStart: Date;
+    let rangeEnd: Date;
+    const now = new Date();
+
+    if (startDate && endDate) {
+      rangeStart = new Date(startDate as string);
+      rangeEnd = new Date(endDate as string);
+    } else {
+      switch (period) {
+        case 'biweekly':
+          rangeStart = subDays(now, 14);
+          rangeEnd = now;
+          break;
+        case 'monthly':
+          rangeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          rangeEnd = now;
+          break;
+        case 'weekly':
+        default:
+          rangeStart = startOfWeek(now, { weekStartsOn: 1 });
+          rangeEnd = endOfWeek(now, { weekStartsOn: 1 });
+      }
+    }
+
+    // Build query conditions
+    const conditions = [
+      eq(timeEntries.workspaceId, user.currentWorkspaceId),
+      gte(timeEntries.clockIn, rangeStart),
+      lte(timeEntries.clockIn, rangeEnd)
+    ];
+
+    if (employeeId) {
+      conditions.push(eq(timeEntries.employeeId, employeeId as string));
+    }
+
+    // Aggregate by employee
+    const summary = await db.select({
+      employeeId: timeEntries.employeeId,
+      employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
+      email: employees.email,
+      totalEntries: sql<number>`COUNT(${timeEntries.id})`,
+      totalHours: sql<number>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS DECIMAL)), 0)`,
+      regularHours: sql<number>`LEAST(COALESCE(SUM(CAST(${timeEntries.totalHours} AS DECIMAL)), 0), 40)`,
+      overtimeHours: sql<number>`GREATEST(COALESCE(SUM(CAST(${timeEntries.totalHours} AS DECIMAL)), 0) - 40, 0)`,
+      approvedHours: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.status} = 'approved' THEN CAST(${timeEntries.totalHours} AS DECIMAL) ELSE 0 END), 0)`,
+      pendingHours: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.status} = 'pending' THEN CAST(${timeEntries.totalHours} AS DECIMAL) ELSE 0 END), 0)`,
+      rejectedHours: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.status} = 'rejected' THEN CAST(${timeEntries.totalHours} AS DECIMAL) ELSE 0 END), 0)`,
+      avgHoursPerDay: sql<number>`COALESCE(AVG(CAST(${timeEntries.totalHours} AS DECIMAL)), 0)`,
+      totalBreakMinutes: sql<number>`COALESCE(SUM(CAST((SELECT SUM(CAST(duration AS DECIMAL)) FROM time_entry_breaks WHERE time_entry_breaks.time_entry_id = ${timeEntries.id}) AS DECIMAL)), 0)`,
+      earliestClockIn: sql<Date>`MIN(${timeEntries.clockIn})`,
+      latestClockOut: sql<Date>`MAX(${timeEntries.clockOut})`
+    })
+    .from(timeEntries)
+    .innerJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .where(and(...conditions))
+    .groupBy(timeEntries.employeeId, employees.firstName, employees.lastName, employees.email);
+
+    // Calculate workspace totals
+    const workspaceTotals = summary.reduce((acc, emp) => ({
+      totalEmployees: acc.totalEmployees + 1,
+      totalHours: acc.totalHours + (typeof emp.totalHours === 'number' ? emp.totalHours : 0),
+      totalRegularHours: acc.totalRegularHours + (typeof emp.regularHours === 'number' ? emp.regularHours : 0),
+      totalOvertimeHours: acc.totalOvertimeHours + (typeof emp.overtimeHours === 'number' ? emp.overtimeHours : 0),
+      totalApprovedHours: acc.totalApprovedHours + (typeof emp.approvedHours === 'number' ? emp.approvedHours : 0),
+      totalPendingHours: acc.totalPendingHours + (typeof emp.pendingHours === 'number' ? emp.pendingHours : 0)
+    }), {
+      totalEmployees: 0,
+      totalHours: 0,
+      totalRegularHours: 0,
+      totalOvertimeHours: 0,
+      totalApprovedHours: 0,
+      totalPendingHours: 0
+    });
+
+    res.json({
+      period: {
+        type: period,
+        startDate: rangeStart,
+        endDate: rangeEnd
+      },
+      employees: summary,
+      totals: workspaceTotals,
+      generatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error generating timesheet summary:', error);
+    res.status(500).json({ error: 'Failed to generate timesheet summary' });
+  }
+});
+
+/**
+ * GET /api/time-entries/reports/export - Export timesheet data as CSV
+ */
+timeEntryRouter.get('/reports/export', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user?.currentWorkspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const { startDate, endDate, format: exportFormat = 'csv', employeeId } = req.query;
+
+    // Build conditions
+    const conditions = [eq(timeEntries.workspaceId, user.currentWorkspaceId)];
+
+    if (startDate) {
+      conditions.push(gte(timeEntries.clockIn, new Date(startDate as string)));
+    }
+    if (endDate) {
+      conditions.push(lte(timeEntries.clockIn, new Date(endDate as string)));
+    }
+    if (employeeId) {
+      conditions.push(eq(timeEntries.employeeId, employeeId as string));
+    }
+
+    // Fetch all time entries for export
+    const entries = await db.select({
+      id: timeEntries.id,
+      employeeId: timeEntries.employeeId,
+      employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
+      employeeEmail: employees.email,
+      clockIn: timeEntries.clockIn,
+      clockOut: timeEntries.clockOut,
+      totalHours: timeEntries.totalHours,
+      hourlyRate: timeEntries.hourlyRate,
+      totalAmount: timeEntries.totalAmount,
+      status: timeEntries.status,
+      approvedBy: timeEntries.approvedBy,
+      approvedAt: timeEntries.approvedAt,
+      notes: timeEntries.notes
+    })
+    .from(timeEntries)
+    .innerJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .where(and(...conditions))
+    .orderBy(desc(timeEntries.clockIn));
+
+    if (exportFormat === 'csv') {
+      // Generate CSV content
+      const headers = [
+        'Employee Name',
+        'Employee Email',
+        'Clock In',
+        'Clock Out',
+        'Total Hours',
+        'Hourly Rate',
+        'Total Amount',
+        'Status',
+        'Approved At',
+        'Notes'
+      ];
+
+      const rows = entries.map(entry => [
+        entry.employeeName,
+        entry.employeeEmail || '',
+        entry.clockIn ? new Date(entry.clockIn).toISOString() : '',
+        entry.clockOut ? new Date(entry.clockOut).toISOString() : '',
+        entry.totalHours || '',
+        entry.hourlyRate || '',
+        entry.totalAmount || '',
+        entry.status || 'pending',
+        entry.approvedAt ? new Date(entry.approvedAt).toISOString() : '',
+        (entry.notes || '').replace(/"/g, '""')
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="timesheet_${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvContent);
+    } else {
+      // Return JSON for other processing
+      res.json({ entries, exportedAt: new Date() });
+    }
+  } catch (error) {
+    console.error('Error exporting timesheet:', error);
+    res.status(500).json({ error: 'Failed to export timesheet' });
+  }
+});
+
+/**
+ * GET /api/time-entries/reports/compliance - Compliance report for labor law tracking
+ */
+timeEntryRouter.get('/reports/compliance', requireAuth, requireWorkspaceRole(['department_manager', 'org_admin', 'org_owner']), readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user?.currentWorkspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const { startDate, endDate } = req.query;
+    const rangeStart = startDate ? new Date(startDate as string) : subDays(new Date(), 7);
+    const rangeEnd = endDate ? new Date(endDate as string) : new Date();
+
+    // Check for compliance issues
+    const complianceData = await db.select({
+      employeeId: timeEntries.employeeId,
+      employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
+      date: sql<string>`DATE(${timeEntries.clockIn})`,
+      dailyHours: sql<number>`SUM(CAST(${timeEntries.totalHours} AS DECIMAL))`,
+      breakMinutes: sql<number>`COALESCE(SUM(CAST((SELECT SUM(CAST(duration AS DECIMAL)) FROM time_entry_breaks WHERE time_entry_breaks.time_entry_id = ${timeEntries.id}) AS DECIMAL)), 0)`,
+      entriesCount: sql<number>`COUNT(${timeEntries.id})`
+    })
+    .from(timeEntries)
+    .innerJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .where(and(
+      eq(timeEntries.workspaceId, user.currentWorkspaceId),
+      gte(timeEntries.clockIn, rangeStart),
+      lte(timeEntries.clockIn, rangeEnd)
+    ))
+    .groupBy(timeEntries.employeeId, employees.firstName, employees.lastName, sql`DATE(${timeEntries.clockIn})`);
+
+    // Identify violations
+    const violations = complianceData.filter(entry => {
+      const dailyHours = typeof entry.dailyHours === 'number' ? entry.dailyHours : 0;
+      const breakMinutes = typeof entry.breakMinutes === 'number' ? entry.breakMinutes : 0;
+      
+      return (
+        dailyHours > 12 || // Over 12 hours in a day
+        (dailyHours > 6 && breakMinutes < 30) // Worked over 6 hours without adequate break
+      );
+    }).map(entry => ({
+      ...entry,
+      violations: [
+        ...(typeof entry.dailyHours === 'number' && entry.dailyHours > 12 
+          ? ['Exceeded 12 hours daily limit'] 
+          : []),
+        ...(typeof entry.dailyHours === 'number' && entry.dailyHours > 6 && 
+           typeof entry.breakMinutes === 'number' && entry.breakMinutes < 30 
+          ? ['Insufficient break time (requires 30min for 6+ hour shift)'] 
+          : [])
+      ]
+    }));
+
+    res.json({
+      period: { startDate: rangeStart, endDate: rangeEnd },
+      totalEmployees: new Set(complianceData.map(e => e.employeeId)).size,
+      totalViolations: violations.length,
+      violations,
+      generatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error generating compliance report:', error);
+    res.status(500).json({ error: 'Failed to generate compliance report' });
   }
 });
 

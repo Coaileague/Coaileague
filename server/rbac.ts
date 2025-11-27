@@ -1,19 +1,14 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { db } from './db';
-import { employees, workspaces, platformRoles, users } from '@shared/schema';
+import { employees, workspaces, platformRoles, users, type User } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
+import './types';
 
 export type WorkspaceRole = 'org_owner' | 'org_admin' | 'department_manager' | 'supervisor' | 'staff' | 'auditor' | 'contractor';
 export type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none';
 
 export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    currentWorkspaceId?: string;
-  };
+  user?: User;
   workspaceId?: string;
   currentWorkspaceId?: string;
   workspaceRole?: WorkspaceRole;
@@ -381,12 +376,7 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
         return res.status(401).json({ error: 'User not found' });
       }
       
-      req.user = {
-        id: user.id,
-        email: user.email ?? undefined,
-        firstName: user.firstName ?? undefined,
-        lastName: user.lastName ?? undefined,
-      };
+      req.user = user;
     }
 
     const platformRole = await getUserPlatformRole(req.user!.id);
