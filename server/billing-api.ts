@@ -724,3 +724,156 @@ billingRouter.get('/verify-payment/:workspaceId', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// ============================================================================
+// SUBSCRIPTION MANAGEMENT ENDPOINTS
+// ============================================================================
+
+/**
+ * Get current subscription details
+ */
+billingRouter.get('/subscription', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+    const details = await subscriptionManager.getSubscriptionDetails(workspaceId);
+    
+    res.json(details);
+  } catch (error: any) {
+    console.error('Failed to get subscription details:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Create new subscription (upgrade from free tier)
+ */
+billingRouter.post('/subscription', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const input = z.object({
+      tier: z.enum(['starter', 'professional', 'enterprise']),
+      billingCycle: z.enum(['monthly', 'yearly']),
+      paymentMethodId: z.string().optional(),
+    }).parse(req.body);
+
+    const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+    const result = await subscriptionManager.createSubscription({
+      workspaceId,
+      tier: input.tier,
+      billingCycle: input.billingCycle,
+      paymentMethodId: input.paymentMethodId,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to create subscription:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Upgrade or downgrade subscription
+ */
+billingRouter.post('/subscription/change', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const input = z.object({
+      newTier: z.enum(['free', 'starter', 'professional', 'enterprise']),
+      billingCycle: z.enum(['monthly', 'yearly']),
+    }).parse(req.body);
+
+    const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+    const result = await subscriptionManager.changeSubscriptionTier(
+      workspaceId,
+      input.newTier,
+      input.billingCycle
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to change subscription:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Cancel subscription
+ */
+billingRouter.post('/subscription/cancel', async (req, res) => {
+  try {
+    const workspaceId = req.user?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { immediate } = z.object({
+      immediate: z.boolean().default(false),
+    }).parse(req.body);
+
+    const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+    const result = await subscriptionManager.cancelSubscription(workspaceId, immediate);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, message: immediate ? 'Subscription cancelled immediately' : 'Subscription will cancel at end of billing period' });
+  } catch (error: any) {
+    console.error('Failed to cancel subscription:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Get pricing configuration (public endpoint for pricing page)
+ */
+billingRouter.get('/pricing', async (req, res) => {
+  try {
+    const { BILLING, formatPrice, getYearlySavingsPercent } = await import('@shared/billingConfig');
+    
+    const tiers = Object.entries(BILLING.tiers).map(([key, tier]) => ({
+      id: tier.id,
+      name: tier.name,
+      description: tier.description,
+      monthlyPrice: tier.monthlyPrice,
+      yearlyPrice: tier.yearlyPrice,
+      formattedMonthlyPrice: formatPrice(tier.monthlyPrice),
+      formattedYearlyPrice: formatPrice(tier.yearlyPrice),
+      yearlySavingsPercent: getYearlySavingsPercent(key as any),
+      maxEmployees: tier.maxEmployees,
+      monthlyCredits: tier.monthlyCredits,
+      features: tier.features,
+      popular: 'popular' in tier ? tier.popular : false,
+    }));
+
+    res.json({
+      tiers,
+      creditPacks: Object.values(BILLING.creditPacks),
+      overages: BILLING.overages,
+    });
+  } catch (error: any) {
+    console.error('Failed to get pricing:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
