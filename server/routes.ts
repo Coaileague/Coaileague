@@ -32,7 +32,6 @@ import integrationRouter from "./integrationRoutes"; // Partner Integration OAut
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
-import emailRouter from "./routes/emails"; // Email Campaigns & Prospect Targeting
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -1672,7 +1671,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
   app.use('/api/automation', requireAuth, automationRouter);
-  app.use('/api/emails', requireAuth, emailRouter);
 
   // Data Migration routes (Import from external platforms) - REQUIRES AUTH
   app.use('/api/migration', requireAuth, migrationRouter);
@@ -17691,7 +17689,6 @@ Summary:`;
   // ============================================================================
 
   // Get all email templates
-  app.get('/api/sales/templates', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const templates = await db.select().from(emailTemplates).orderBy(emailTemplates.createdAt);
       res.json(templates);
@@ -17699,10 +17696,8 @@ Summary:`;
       console.error("Error fetching email templates:", error);
       res.status(500).json({ message: "Failed to fetch email templates" });
     }
-  });
 
   // Get all leads
-  app.get('/api/sales/leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const allLeads = await db.select().from(leads).orderBy(leads.createdAt);
       res.json(allLeads);
@@ -17724,7 +17719,6 @@ Summary:`;
   });
 
   // Create a new lead
-  app.post('/api/sales/leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       // Validate request body
       const validationResult = createLeadSchema.safeParse(req.body);
@@ -17779,7 +17773,6 @@ Summary:`;
   });
 
   // AI Lead Generation - Discover potential clients automatically
-  app.post('/api/sales/ai-generate-leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       // Validate request body
       const validationResult = aiLeadGenerationSchema.safeParse(req.body);
@@ -17916,7 +17909,6 @@ Return ONLY valid JSON array with this exact structure:
   });
 
   // Update lead status and notes
-  app.patch('/api/sales/leads/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const { leadStatus, notes, nextFollowUpDate, leadScore, estimatedValue } = req.body;
@@ -17952,7 +17944,6 @@ Return ONLY valid JSON array with this exact structure:
   });
 
   // Send email with AI personalization
-  app.post('/api/sales/send-email', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       // Validate request body
       const validationResult = sendSalesEmailSchema.safeParse(req.body);
@@ -23525,8 +23516,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
   // SALES MVP: DealOS™ + BidOS™ Routes
   // ==========================================
 
-  // GET /api/sales/deals - Fetch all deals
-  app.get("/api/sales/deals", requireAuth, async (req, res) => {
     try {
       const { workspaceId } = req;
       const allDeals = await db.query.deals.findMany({
@@ -23540,8 +23529,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
-  // POST /api/sales/deals - Create new deal (RBAC: Manager+ only)
-  app.post("/api/sales/deals", requireManager, async (req, res) => {
     try {
       const { workspaceId } = req;
       
@@ -23562,8 +23549,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
-  // GET /api/sales/rfps - Fetch all RFPs
-  app.get("/api/sales/rfps", requireAuth, async (req, res) => {
     try {
       const { workspaceId } = req;
       const allRfps = await db.query.rfps.findMany({
@@ -23577,8 +23562,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
-  // POST /api/sales/rfps - Create new RFP (RBAC: Manager+ only)
-  app.post("/api/sales/rfps", requireManager, async (req, res) => {
     try {
       const { workspaceId } = req;
       
@@ -23599,8 +23582,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
-  // GET /api/sales/leads - Fetch all leads
-  app.get("/api/sales/leads", requireAuth, async (req, res) => {
     try {
       const { workspaceId } = req;
       const allLeads = await db.query.leads.findMany({
@@ -23614,8 +23595,6 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     }
   });
 
-  // POST /api/sales/leads - Create new lead (RBAC: Manager+ only)
-  app.post("/api/sales/leads", requireManager, async (req, res) => {
     try {
       const { workspaceId } = req;
       
@@ -25723,7 +25702,6 @@ Respond with valid JSON array only.`
 // ============================================================================
 // SALES ROUTES
 // ============================================================================
-app.get("/api/sales/invitations", requireAuth, async (req, res) => {
   try {
     const list = await db.select().from(orgInvitations);
     res.json(list);
@@ -25732,7 +25710,6 @@ app.get("/api/sales/invitations", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
   try {
     const { email, organizationName, contactName, offeredTier } = req.body;
     const token = Math.random().toString(36).substring(2, 15);
@@ -25752,7 +25729,6 @@ app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/api/sales/proposals", requireAuth, async (req, res) => {
   try {
     const list = await db.select().from(salesProposals);
     res.json(list);
@@ -25761,7 +25737,6 @@ app.get("/api/sales/proposals", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/sales/proposals", requireAuth, async (req, res) => {
   try {
     const { title, description, prospectEmail, prospectName, prospectOrganization, suggestedTier, estimatedValue } = req.body;
     const result = await db.insert(salesProposals).values({
