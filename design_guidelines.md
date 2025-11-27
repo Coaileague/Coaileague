@@ -1,4 +1,4 @@
-# AutoForce™ Design System v3.0 - Fortune 500 Professional
+# CoAIleague Design System v3.0 - Fortune 500 Professional
 ## Enterprise Workforce Management Platform for Emergency Services
 
 ---
@@ -16,24 +16,24 @@
 
 **Lightning Bolt Icon**: Rapid response symbol in circular badge
 **Gradient Treatment**: Subdued evergreen gradient (minimal, reserved for hero/CTA only)
-**Variants**: Icon-only (32px-64px), Wordmark (Icon + "AutoForce™"), Full branding
+**Variants**: Icon-only (32px-64px), Wordmark (Icon + "CoAIleague"), Full branding
 **Animation**: Subtle loading indicators (no glow effects), professional and understated
 **Dark Mode Adaptive**: Automatic contrast adjustment for accessibility
 
 ---
 
-## Color System - AutoForce™ Professional Palette
+## Color System - CoAIleague Professional Palette
 
 ### Primary Brand Colors - Professional Blue Theme
-- **AutoForce Blue Primary**: #2563eb - rgb(37, 99, 235) - Primary actions, CTAs, brand identity
-- **AutoForce Blue Dark**: #1d4ed8 - rgb(29, 78, 216) - Hover states, emphasis
-- **AutoForce Blue Light**: #3b82f6 - rgb(59, 130, 246) - Accents, highlights
-- **AutoForce Blue Pale**: #dbeafe - rgb(219, 234, 254) - Light backgrounds, badges
+- **CoAIleague Blue Primary**: #2563eb - rgb(37, 99, 235) - Primary actions, CTAs, brand identity
+- **CoAIleague Blue Dark**: #1d4ed8 - rgb(29, 78, 216) - Hover states, emphasis
+- **CoAIleague Blue Light**: #3b82f6 - rgb(59, 130, 246) - Accents, highlights
+- **CoAIleague Blue Pale**: #dbeafe - rgb(219, 234, 254) - Light backgrounds, badges
 - **Logo Gradient**: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) - Brand identity
 - **CTA Gradient**: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) - Primary buttons
 
 ### Page Backgrounds - Light & Professional
-- **Hero/Landing Background**: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%) - AutoForce blue gradient
+- **Hero/Landing Background**: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%) - CoAIleague blue gradient
 - **App Background**: #ffffff - Clean white for application pages
 - **Card Surface**: #ffffff - White elevated panels
 - **Input Background**: #f8fafc - Subtle gray for form fields
@@ -49,7 +49,7 @@
 - **Primary Border**: #e2e8f0 - rgb(226, 232, 240) - Card borders, dividers
 - **Accent Border**: #93c5fd - rgb(147, 197, 253) - Highlighted borders
 - **Input Border**: #e2e8f0 - 2px solid borders
-- **Focus Ring**: rgba(37, 99, 235, 0.1) - AutoForce blue focus state
+- **Focus Ring**: rgba(37, 99, 235, 0.1) - CoAIleague blue focus state
 
 ### Shadows - Soft & Professional
 - **Card Shadow**: 0 20px 60px rgba(0, 0, 0, 0.1) - Login/signup cards
@@ -61,7 +61,7 @@
 - **Success**: #10b981 - Emerald green for success states
 - **Warning**: #f59e0b - Amber for warnings
 - **Error**: #ef4444 - Red for errors
-- **Info**: #2563eb - AutoForce blue for information
+- **Info**: #2563eb - CoAIleague blue for information
 
 ---
 
