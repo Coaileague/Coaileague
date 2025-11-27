@@ -9,8 +9,7 @@ interface CoAIleagueAFLogoProps {
 }
 
 /**
- * CoAIleague Energy-Based AF Logo
- * Letters form from energy, glow, and dissolve back
+ * CoAIleague Gradient Logo - Professional gradient badge with brand text
  */
 export function CoAIleagueAFLogo({
   size = "md",
@@ -20,55 +19,18 @@ export function CoAIleagueAFLogo({
 }: CoAIleagueAFLogoProps) {
   const sizeConfig = getLogoSize(size);
 
-  const EnergyAFLogo = () => (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <defs>
-        <style>
-          {`
-          @keyframes pulse-energy {
-            0%, 100% { r: 2.5; opacity: 1; filter: drop-shadow(0 0 4px rgba(255, 193, 7, 1)); }
-            50% { r: 8; opacity: 0.3; filter: drop-shadow(0 0 15px rgba(255, 193, 7, 0.5)); }
-          }
-
-          @keyframes fade-letters {
-            0% { opacity: 0; }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
-          }
-
-          @keyframes glow-letters {
-            0%, 100% { filter: drop-shadow(0 0 0px rgba(255, 193, 7, 0)); }
-            20%, 80% { filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.8)); }
-          }
-
-          .energy { animation: pulse-energy 4s ease-in-out infinite; }
-          .letter-a { animation: fade-letters 4s ease-in-out infinite, glow-letters 4s ease-in-out infinite; }
-          .letter-f { animation: fade-letters 4s ease-in-out infinite 0.15s, glow-letters 4s ease-in-out infinite 0.15s; }
-          `}
-        </style>
-      </defs>
-
-      {/* Letter A - Left side */}
-      <g className="letter-a">
-        <line x1="32" y1="25" x2="18" y2="70" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-        <line x1="32" y1="25" x2="46" y2="70" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-        <line x1="23" y1="48" x2="41" y2="48" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-      </g>
-
-      {/* Letter F - Right side */}
-      <g className="letter-f">
-        <line x1="68" y1="25" x2="68" y2="70" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-        <line x1="68" y1="25" x2="82" y2="25" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-        <line x1="68" y1="47" x2="80" y2="47" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-      </g>
-    </svg>
+  // Gradient circle - no AF letters
+  const GradientBadge = () => (
+    <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+      <div className="absolute inset-0 rounded-full opacity-50 bg-gradient-to-tr from-blue-300 to-transparent blur-xl" />
+      <span className="relative text-white font-black text-xs">CO</span>
+    </div>
   );
 
   if (variant === "wordmark") {
     return (
-      <div className={cn("flex items-center gap-1", className)}>
-        <span className="font-bold text-slate-900 dark:text-white" style={{ fontSize: "24px" }}>
+      <div className={cn("flex items-center gap-2", className)}>
+        <span className="font-black text-slate-900 dark:text-white text-xl">
           {logoConfig.brand.name}
         </span>
         <span className="text-xs align-super text-slate-900 dark:text-white">
@@ -83,50 +45,47 @@ export function CoAIleagueAFLogo({
       <div
         className={cn(
           "relative inline-flex items-center justify-center",
-          logoConfig.badge.shape,
-          logoConfig.badge.gradient,
-          logoConfig.badge.shadow,
+          "rounded-full",
+          "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600",
+          "shadow-lg border border-blue-300/30",
+          "group hover:shadow-xl hover:shadow-blue-500/30 transition-shadow",
           sizeConfig.container,
-          "border border-white/20",
-          "group",
           className
         )}
       >
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white to-transparent transition-opacity duration-500 rounded-full" />
-        <div className="relative z-10 w-3/4 h-3/4">
-          <EnergyAFLogo />
-        </div>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-40 bg-gradient-to-tr from-blue-300 to-transparent transition-opacity duration-500 rounded-full blur-lg" />
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent opacity-40" />
+        <span className="relative text-white font-black text-xs md:text-sm z-10">CO</span>
       </div>
     );
   }
 
+  // Full variant with text
   return (
-    <div className={cn("flex items-center gap-4", className)}>
+    <div className={cn("flex items-center gap-3 md:gap-4", className)}>
       <div
         className={cn(
           "relative inline-flex items-center justify-center shrink-0",
-          logoConfig.badge.shape,
-          logoConfig.badge.gradient,
-          logoConfig.badge.shadow,
+          "rounded-full",
+          "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600",
+          "shadow-lg border border-blue-300/30",
+          "group hover:shadow-xl hover:shadow-blue-500/30 transition-all",
           sizeConfig.container,
-          "border border-white/20",
-          "group"
         )}
       >
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-white to-transparent transition-opacity duration-500 rounded-full" />
-        <div className="relative z-10 w-3/4 h-3/4">
-          <EnergyAFLogo />
-        </div>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-40 bg-gradient-to-tr from-blue-300 to-transparent transition-opacity duration-500 rounded-full blur-lg" />
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent opacity-40" />
+        <span className="relative text-white font-black text-xs md:text-sm z-10">CO</span>
       </div>
 
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-2">
-          <span className="font-black text-slate-900 dark:text-white text-3xl">
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <div className="flex items-baseline gap-1 md:gap-2 flex-wrap">
+          <span className="font-black text-slate-900 dark:text-white text-lg md:text-2xl truncate">
             {logoConfig.brand.name}
           </span>
           <span className="text-xs text-slate-900 dark:text-white">™</span>
         </div>
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+        <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400 truncate">
           {logoConfig.brand.taglineAlt}
         </p>
       </div>
