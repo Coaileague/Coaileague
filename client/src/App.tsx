@@ -77,7 +77,6 @@ import SalesPortal from "@/pages/sales-portal";
 import LogoShowcase from "@/pages/logo-showcase";
 import Chatrooms from "@/pages/chatrooms";
 import PayrollDashboard from "@/pages/payroll-dashboard";
-import EmailCampaigns from "@/pages/email-campaigns";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
 import EngagementDashboard from "@/pages/engagement-dashboard";
@@ -287,7 +286,6 @@ function AppContent() {
               <Route path="/engagement/employee" component={EmployeeEngagement} />
               <Route path="/analytics/reports" component={AnalyticsReportsPage} />
               <Route path="/clients" component={Clients} />
-              <Route path="/email-campaigns" component={EmailCampaigns} />
               <Route path="/invoices" component={Invoices} />
               <Route path="/reports" component={Reports} />
               <Route path="/analytics" component={Analytics} />
