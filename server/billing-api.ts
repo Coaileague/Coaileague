@@ -19,6 +19,8 @@ import { isAuthenticated } from './replitAuth';
 import { requireAuth } from './auth';
 import Stripe from 'stripe';
 import { isFeatureEnabled } from '@shared/platformConfig';
+// Import type augmentation for Express Request.user
+import './types';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
