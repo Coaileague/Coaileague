@@ -384,6 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json(health);
+  });
   
   // ✅ SECURITY: WebSocket authentication implemented for Live HelpDesk
   // - Dual authentication paths: Ticket + email OR Work ID + email
@@ -408,7 +409,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // Get user notifications
-  });
   app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -561,9 +561,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching workspace role:', error);
       res.status(500).json({ message: 'Failed to fetch workspace role' });
     }
+  });
   
   // Get current user's platform role (secure)
-  });
   app.get('/api/me/platform-role', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -582,9 +582,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching platform role:', error);
       res.status(500).json({ message: 'Failed to fetch platform role' });
     }
+  });
   
   // Get workspace features available to current user (SERVER-SIDE VALIDATION)
-  });
   app.get('/api/me/workspace-features', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -949,6 +949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message
       });
     }
+  });
 
   /**
    * GET /api/config/current
@@ -959,7 +960,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * 
    * Query params: ?scope=featureToggles
    */
-  });
   app.get('/api/config/current', requirePlatformAdmin, readLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const { scope } = req.query;
@@ -1641,6 +1641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Failed to fetch custom messages:', error);
       res.status(500).json({ error: 'Failed to fetch custom messages' });
     }
+  });
   
   // SECURITY: Apply rate limiting BEFORE auth routes to prevent brute-force attacks
   app.use('/api', apiLimiter);
@@ -1694,7 +1695,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // Organization Registration - Atomic transaction creates User → Workspace → Employee → Credits
-  });
   app.post('/api/auth/register', async (req: any, res) => {
     try {
       const {
@@ -1872,8 +1872,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error.message || 'Registration failed. Please try again.',
       });
     }
-  
   });
+  
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -2648,6 +2648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating workspace:", error);
       res.status(400).json({ message: error.message || "Failed to update workspace" });
     }
+  });
 
   /**
    * Shared helper for automation updates with biweekly anchor seeding
@@ -2697,7 +2698,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Update workspace automation settings - Invoicing
-  });
   app.patch('/api/workspace/automation/invoicing', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3303,13 +3303,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching workspace access:', error);
       res.status(500).json({ message: 'Failed to fetch workspace access' });
     }
+  });
 
   /**
    * Get workspace usage and cost summary
    * Returns AI token usage, partner API usage, and cost breakdown with tier markup
    * RBAC: org_owner and org_admin only (billing visibility)
    */
-  });
   app.get('/api/workspace/usage-summary', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3386,12 +3386,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit balance:', error);
       res.status(500).json({ message: 'Failed to fetch credit balance' });
     }
+  });
 
   /**
    * Get credit usage breakdown for current month
    * Shows credits spent by feature
    */
-  });
   app.get('/api/credits/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3410,12 +3410,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit usage breakdown:', error);
       res.status(500).json({ message: 'Failed to fetch usage breakdown' });
     }
+  });
 
   /**
    * Get credit transaction history
    * RBAC: org_owner and org_admin only
    */
-  });
   app.get('/api/credits/transactions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3442,11 +3442,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit transactions:', error);
       res.status(500).json({ message: 'Failed to fetch transactions' });
     }
+  });
 
   /**
    * Get available credit packs for purchase
    */
-  });
   app.get('/api/credits/packs', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3487,12 +3487,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error fetching credit packs:', error);
       res.status(500).json({ message: 'Failed to fetch credit packs' });
     }
+  });
 
   /**
    * Create Stripe checkout session for credit purchase
    * RBAC: org_owner and org_admin only
    */
-  });
   app.post('/api/credits/purchase', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3528,12 +3528,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[API] Error creating credit purchase session:', error);
       res.status(500).json({ message: 'Failed to create checkout session' });
     }
+  });
 
   /**
    * Stripe webhook handler for credit purchases
    * Public endpoint (no auth) - validates via Stripe signature
    */
-  });
   app.post('/api/webhooks/stripe/credits', async (req, res) => {
     const signature = req.headers['stripe-signature'];
 
@@ -3598,6 +3598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating billable hours report:', error);
       res.status(500).json({ message: 'Failed to generate billable hours report' });
     }
+  });
 
   /**
    * Payroll Report
@@ -3605,7 +3606,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * RBAC: manager+ (view_payroll capability)
    * Tier: professional+
    */
-  });
   app.get('/api/reports/payroll', requireAuth, requireManager, requireProfessional, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = await getWorkspaceForUser(req.user!.id);
@@ -3627,6 +3627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating payroll report:', error);
       res.status(500).json({ message: 'Failed to generate payroll report' });
     }
+  });
 
   /**
    * Client Summary Report
@@ -3634,7 +3635,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * RBAC: manager+ (view_invoices capability)
    * Tier: starter+
    */
-  });
   app.get('/api/reports/client-summary', requireAuth, requireManager, requireStarter, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = await getWorkspaceForUser(req.user!.id);
@@ -3656,6 +3656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating client summary report:', error);
       res.status(500).json({ message: 'Failed to generate client summary report' });
     }
+  });
 
   /**
    * Employee Activity Report
@@ -3663,7 +3664,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * RBAC: supervisor+ (approve_timesheets capability)
    * Tier: starter+
    */
-  });
   app.get('/api/reports/employee-activity', requireAuth, requireSupervisor, requireStarter, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = await getWorkspaceForUser(req.user!.id);
@@ -3685,6 +3685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Reports] Error generating employee activity report:', error);
       res.status(500).json({ message: 'Failed to generate employee activity report' });
     }
+  });
 
   /**
    * Audit Logs Report
@@ -3692,7 +3693,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * RBAC: manager+ (view_audit_logs capability)
    * Tier: professional+
    */
-  });
   app.get('/api/reports/audit-logs', requireAuth, requireManager, requireProfessional, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = await getWorkspaceForUser(req.user!.id);
@@ -4302,9 +4302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching PTO balances:", error);
       res.status(500).json({ message: "Failed to fetch PTO balances" });
     }
+  });
   
   // Get specific employee PTO balance
-  });
   app.get('/api/hr/pto-balances/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -4321,9 +4321,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching employee PTO balance:", error);
       res.status(500).json({ message: "Failed to fetch PTO balance" });
     }
+  });
   
   // Manually trigger weekly PTO accrual (Owner only)
-  });
   app.post('/api/hr/pto-accrual/run', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -4338,9 +4338,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error running PTO accrual:", error);
       res.status(500).json({ message: "Failed to run PTO accrual" });
     }
+  });
   
   // Get performance review reminders summary (Manager/Owner only)
-  });
   app.get('/api/hr/review-reminders/summary', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -4350,9 +4350,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching review reminder summary:", error);
       res.status(500).json({ message: "Failed to fetch review reminders" });
     }
+  });
   
   // Get all overdue performance reviews (Manager/Owner only)
-  });
   app.get('/api/hr/review-reminders/overdue', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -4362,9 +4362,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching overdue reviews:", error);
       res.status(500).json({ message: "Failed to fetch overdue reviews" });
     }
+  });
   
   // Get upcoming performance reviews (Manager/Owner only)
-  });
   app.get('/api/hr/review-reminders/upcoming', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -4575,11 +4575,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching leader stats:", error);
       res.status(500).json({ message: "Failed to fetch leader stats" });
     }
+  });
   
   // Get pending tasks for leader
   
   // Get recent leader actions (audit trail)
-  });
   app.get('/api/leaders/recent-actions', isAuthenticated, requireLeader, async (req: any, res) => {
     try {
       const workspaceId = req.workspaceId;
@@ -4591,9 +4591,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching recent actions:", error);
       res.status(500).json({ message: "Failed to fetch recent actions" });
     }
+  });
   
   // Reset employee password (leader self-service)
-  });
   app.post('/api/leaders/reset-password', isAuthenticated, requireLeader, async (req: any, res) => {
     try {
       const workspaceId = req.workspaceId;
@@ -4661,9 +4661,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error resetting password:", error);
       res.status(500).json({ message: "Failed to reset password" });
     }
+  });
   
   // Unlock employee account (leader self-service)
-  });
   app.post('/api/leaders/unlock-account', isAuthenticated, requireLeader, async (req: any, res) => {
     try {
       const workspaceId = req.workspaceId;
@@ -4714,9 +4714,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error unlocking account:", error);
       res.status(500).json({ message: "Failed to unlock account" });
     }
+  });
   
   // Update employee contact info (leader self-service)
-  });
   app.patch('/api/leaders/update-contact', isAuthenticated, requireLeader, async (req: any, res) => {
     try {
       const workspaceId = req.workspaceId;
@@ -6641,9 +6641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error toggling SmartSchedule AI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
     }
+  });
   
   // Get SmartSchedule AI status - Reads from DB
-  });
   app.get('/api/scheduleos/ai/status', isAuthenticated, async (req: any, res) => {
     try {
       const { workspaceId } = req.query;
@@ -6659,9 +6659,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: "Failed to get AI status" });
     }
+  });
   
   // Generate AI Schedule with Smart Approval (99% AI, 1% Human Governance)
-  });
   app.post('/api/scheduleos/smart-generate', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -6800,9 +6800,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("AI Scheduling™ Smart Generate Error:", error);
       res.status(500).json({ message: error.message || "Failed to generate schedule" });
     }
+  });
   
   // List All Schedule Proposals (for workflow approval page)
-  });
   app.get('/api/scheduleos/proposals', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -6855,9 +6855,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching schedule proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
     }
+  });
   
   // Get Schedule Proposal Details
-  });
   app.get('/api/scheduleos/proposals/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -6881,9 +6881,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch proposal" });
     }
+  });
   
   // Approve Schedule Proposal
-  });
   app.patch('/api/scheduleos/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -6949,9 +6949,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("AI Scheduling™ Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve proposal" });
     }
+  });
   
   // Reject Schedule Proposal
-  });
   app.patch('/api/scheduleos/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -6991,11 +6991,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject proposal" });
     }
+  });
   
   // ==================== INVOICE PROPOSALS ====================
   
   // List All Invoice Proposals
-  });
   app.get('/api/invoices/proposals', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -7014,9 +7014,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invoice proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
     }
+  });
   
   // Approve Invoice Proposal
-  });
   app.patch('/api/invoices/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -7055,9 +7055,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Billing Platform Invoice Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve invoice" });
     }
+  });
   
   // Reject Invoice Proposal
-  });
   app.patch('/api/invoices/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -7097,11 +7097,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject invoice" });
     }
+  });
   
   // ==================== PAYROLL PROPOSALS ====================
   
   // List All Payroll Proposals
-  });
   app.get('/api/payroll/proposals', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -7120,9 +7120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching payroll proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
     }
+  });
   
   // Approve Payroll Proposal
-  });
   app.patch('/api/payroll/proposals/:id/approve', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -7161,9 +7161,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("OperationsOS™ Payroll Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve payroll" });
     }
+  });
   
   // Reject Payroll Proposal
-  });
   app.patch('/api/payroll/proposals/:id/reject', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -7203,9 +7203,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject payroll" });
     }
+  });
   
   // AI Scheduling™ - Migrate schedule from external apps (Deputy, WhenIWork, GetSling)
-  });
   app.post('/api/scheduleos/migrate-schedule', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const { fileData, mimeType, sourceApp } = req.body;
@@ -7324,9 +7324,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Shift import error:", error);
       res.status(500).json({ message: error.message || "Failed to import shifts" });
     }
+  });
   
   // Request Service Coverage
-  });
   app.post('/api/scheduleos/request-service', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -7358,9 +7358,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to find coverage" });
     }
+  });
   
   // Publish Schedule
-  });
   app.post('/api/schedules/publish', isAuthenticated, requireManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -7384,13 +7384,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to publish schedule" });
     }
+  });
   
   // ============================================================================
   // SCHEDULEOS™ AI - Trial & Activation (Subscriber Pays All Model)
   // ============================================================================
   
   // Start 7-day free trial (any user can start)
-  });
   app.post('/api/scheduleos/start-trial', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -8086,13 +8086,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       preferExperience: z.boolean().optional(),
       balanceWorkload: z.boolean().optional()
     }).optional()
-
   });
+
   app.post('/api/schedule-smart-ai', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     const user = req.user!;
     const workspaceId = user.currentWorkspaceId;
     
-  });
     if (!workspaceId) {
       return res.status(400).json({ error: "No workspace selected" });
     }
@@ -8682,9 +8681,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error sending invoice email:", error);
       res.status(500).json({ message: error.message || "Failed to send invoice email" });
     }
+  });
   
   // PROTECTED: Managers and auditors only
-  });
   app.get('/api/invoices', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -10317,9 +10316,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating onboarding invite:", error);
       res.status(400).json({ message: error.message || "Failed to create invite" });
     }
+  });
   
   // Get invite by token (public route)
-  });
   app.get('/api/onboarding/invite/:token', async (req, res) => {
     try {
       const { token } = req.params;
@@ -10342,9 +10341,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invite:", error);
       res.status(500).json({ message: "Failed to fetch invite" });
     }
+  });
   
   // List all invites for workspace
-  });
   app.get('/api/onboarding/invites', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -10354,9 +10353,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching invites:", error);
       res.status(500).json({ message: "Failed to fetch invites" });
     }
+  });
   
   // Create/start onboarding application (public route with valid token)
-  });
   app.post('/api/onboarding/application', async (req, res) => {
     try {
       const { inviteToken, ...applicationData } = req.body;
@@ -10400,9 +10399,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating application:", error);
       res.status(400).json({ message: error.message || "Failed to create application" });
     }
+  });
   
   // Get onboarding application
-  });
   app.get('/api/onboarding/application/:id', async (req, res) => {
     try {
       const { id } = req.params;
@@ -10423,9 +10422,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching application:", error);
       res.status(500).json({ message: "Failed to fetch application" });
     }
+  });
   
   // Update onboarding application (public route during onboarding, or authenticated)
-  });
   app.patch('/api/onboarding/application/:id', async (req, res) => {
     try {
       const { id } = req.params;
@@ -10446,9 +10445,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating application:", error);
       res.status(400).json({ message: error.message || "Failed to update application" });
     }
+  });
   
   // List all applications for workspace
-  });
   app.get('/api/onboarding/applications', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -10458,9 +10457,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });
     }
+  });
   
   // Search employees and applications
-  });
   app.get('/api/employees/search', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -10476,9 +10475,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error searching employees:", error);
       res.status(500).json({ message: "Failed to search employees" });
     }
+  });
   
   // Create document signature
-  });
   app.post('/api/onboarding/signatures', async (req, res) => {
     try {
       const signatureData = req.body;
@@ -10495,9 +10494,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating signature:", error);
       res.status(400).json({ message: error.message || "Failed to create signature" });
     }
+  });
   
   // Get signatures for application
-  });
   app.get('/api/onboarding/signatures/:applicationId', async (req, res) => {
     try {
       const { applicationId } = req.params;
@@ -10507,9 +10506,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching signatures:", error);
       res.status(500).json({ message: "Failed to fetch signatures" });
     }
+  });
   
   // Create certification
-  });
   app.post('/api/onboarding/certifications', async (req, res) => {
     try {
       const certificationData = req.body;
@@ -10519,9 +10518,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating certification:", error);
       res.status(400).json({ message: error.message || "Failed to create certification" });
     }
+  });
   
   // Get certifications for application
-  });
   app.get('/api/onboarding/certifications/:applicationId', async (req, res) => {
     try {
       const { applicationId } = req.params;
@@ -11691,9 +11690,9 @@ ${application.email}`,
       publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || null,
       isConfigured: !!stripe,
     });
+  });
 
   // Create Stripe Connect account for workspace
-  });
   app.post('/api/stripe/connect-account', isAuthenticated, async (req: any, res) => {
     try {
       if (!stripe) {
@@ -14755,9 +14754,9 @@ Summary:`;
       console.error("Error suspending account:", error);
       res.status(500).json({ message: "Failed to suspend account" });
     }
+  });
   
   // Unsuspend account
-  });
   app.post('/api/admin/support/unsuspend-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = req.body;
@@ -14775,9 +14774,9 @@ Summary:`;
       console.error("Error unsuspending account:", error);
       res.status(500).json({ message: "Failed to unsuspend account" });
     }
+  });
   
   // Freeze account (for non-payment)
-  });
   app.post('/api/admin/support/freeze-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId, reason } = req.body;
@@ -14795,9 +14794,9 @@ Summary:`;
       console.error("Error freezing account:", error);
       res.status(500).json({ message: "Failed to freeze account" });
     }
+  });
   
   // Unfreeze account
-  });
   app.post('/api/admin/support/unfreeze-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = req.body;
@@ -14814,9 +14813,9 @@ Summary:`;
       console.error("Error unfreezing account:", error);
       res.status(500).json({ message: "Failed to unfreeze account" });
     }
+  });
   
   // Lock account (emergency lock)
-  });
   app.post('/api/admin/support/lock-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId, reason } = req.body;
@@ -14834,9 +14833,9 @@ Summary:`;
       console.error("Error locking account:", error);
       res.status(500).json({ message: "Failed to lock account" });
     }
+  });
   
   // Unlock account
-  });
   app.post('/api/admin/support/unlock-account', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = req.body;
@@ -15172,9 +15171,9 @@ Summary:`;
   // Platform dashboard statistics
   app.get('/api/platform/stats', requirePlatformStaff, async (req, res) => {
     await getPlatformStats(req, res);
+  });
 
   // Universal analytics stats for dashboard (works for both workspace and platform users)
-  });
   app.get('/api/analytics/stats', requireAuth, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
     try {
       const { getAnalyticsStats } = await import("./services/analyticsStats");
@@ -15311,11 +15310,12 @@ Summary:`;
   // Search workspaces (cross-tenant admin search)
   app.get('/api/platform/workspaces/search', requirePlatformStaff, async (req, res) => {
     await searchWorkspaces(req, res);
+  });
 
   // Get workspace admin detail
-  });
   app.get('/api/platform/workspaces/:workspaceId', requirePlatformStaff, async (req, res) => {
     await getWorkspaceAdminDetail(req, res);
+  });
 
   // ============================================================================
   // MASTER KEYS - ROOT-ONLY ORGANIZATION MANAGEMENT
@@ -15328,8 +15328,8 @@ Summary:`;
     status: z.enum(['active', 'suspended', 'cancelled', 'trialing']).optional(),
     limit: z.coerce.number().min(1).max(100).default(50),
     offset: z.coerce.number().min(0).default(0),
-
   });
+
   const masterKeysUpdateSchema = z.object({
     featureToggles: z.object({
       scheduleos: z.boolean().optional(),
@@ -15352,14 +15352,13 @@ Summary:`;
     adminNotes: z.string().max(5000).optional(),
     adminFlags: z.array(z.string().max(50)).max(20).optional(),
     actionDescription: z.string().min(1).max(500),
-
   });
+
   const masterKeysResetSchema = z.object({
     reason: z.string().min(1).max(500),
   });
 
   // Search/List all organizations with Master Keys access
-  });
   app.get('/api/platform/master-keys/organizations', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       // Validate query params
@@ -16184,9 +16183,9 @@ Summary:`;
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Failed to create user" });
     }
+  });
   
   // Save platform settings
-  });
   app.post('/api/platform/settings', requirePlatformAdmin, async (req, res) => {
     try {
       // Validate settings structure
@@ -16460,9 +16459,9 @@ Summary:`;
       console.error("Error getting main room:", error);
       res.status(500).json({ message: "Failed to get main room" });
     }
+  });
   
   // Get all messages from main room (live feed)
-  });
   app.get('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // Ensure room exists first
@@ -16487,9 +16486,9 @@ Summary:`;
       console.error("Error fetching main room messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
     }
+  });
   
   // Send message to main room
-  });
   app.post('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -17164,8 +17163,8 @@ Summary:`;
       console.error('Error fetching chat ticket:', error);
       res.status(500).json({ error: 'Failed to fetch ticket' });
     }
-  
   });
+  
   app.get('/api/chat/tickets', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { mapTicketStatusToHeaderStatus, calculateSLARemaining } = await import('@shared/helpdeskUtils');
@@ -17690,6 +17689,7 @@ Summary:`;
   // ============================================================================
 
   // Get all email templates
+  app.get('/api/sales/templates', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const templates = await db.select().from(emailTemplates).orderBy(emailTemplates.createdAt);
       res.json(templates);
@@ -17700,6 +17700,7 @@ Summary:`;
   });
 
   // Get all leads
+  app.get('/api/sales/leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const allLeads = await db.select().from(leads).orderBy(leads.createdAt);
       res.json(allLeads);
@@ -17707,8 +17708,367 @@ Summary:`;
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
-
   });
+
+  // Zod validation schema for lead creation
+  const createLeadSchema = z.object({
+    companyName: z.string().min(1, "Company name is required"),
+    contactEmail: z.string().email("Valid email is required"),
+    contactName: z.string().optional(),
+    industry: z.string().optional(),
+    contactPhone: z.string().optional(),
+    contactTitle: z.string().optional(),
+    estimatedEmployees: z.number().int().positive().optional(),
+  });
+
+  // Create a new lead
+  app.post('/api/sales/leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Validate request body
+      const validationResult = createLeadSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid lead data",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const validatedData = validationResult.data;
+
+      const [newLead] = await db.insert(leads).values({
+        ...validatedData,
+        leadStatus: 'new',
+        leadSource: 'manual',
+        leadScore: 0,
+      }).returning();
+
+      res.json(newLead);
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      res.status(500).json({ message: "Failed to create lead" });
+    }
+  });
+
+  // Zod validation schema for sales email
+  const sendSalesEmailSchema = z.object({
+    templateId: z.string().min(1, "Template ID is required"),
+    toEmail: z.string().email("Valid email is required"),
+    toName: z.string().optional(),
+    companyName: z.string().min(1, "Company name is required"),
+    industry: z.string().optional(),
+  });
+
+  // Zod validation for AI lead generation
+  const aiLeadGenerationSchema = z.object({
+    industry: z.string().min(1, "Industry is required"),
+    targetRegion: z.string().optional(),
+    numberOfLeads: z.number().int().min(1).max(20).default(5), // Limit to prevent cost abuse
+  });
+
+  // Zod validation for AI-generated lead output
+  const aiGeneratedLeadSchema = z.object({
+    companyName: z.string().min(1),
+    contactName: z.string().min(1),
+    contactTitle: z.string().min(1),
+    contactEmail: z.string().email(),
+    estimatedEmployees: z.number().int().positive(),
+    painPoints: z.string(),
+    leadScore: z.number().int().min(0).max(100),
+  });
+
+  // AI Lead Generation - Discover potential clients automatically
+  app.post('/api/sales/ai-generate-leads', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Validate request body
+      const validationResult = aiLeadGenerationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const { industry, targetRegion, numberOfLeads } = validationResult.data;
+
+      // Check if OpenAI is configured
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ 
+          message: "AI lead generation requires OpenAI API key. Please configure OPENAI_API_KEY.",
+          error: "OPENAI_NOT_CONFIGURED"
+        });
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Use AI to generate qualified leads
+      const aiResponse = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a B2B sales research assistant for WorkforceOS, a Fortune 500-grade workforce management platform. Your job is to identify potential clients who would benefit from automated scheduling, time tracking, HR management, and compliance reporting.`
+          },
+          {
+            role: 'user',
+            content: `Generate ${numberOfLeads} SYNTHETIC/EXAMPLE sales leads for the ${industry} industry${targetRegion ? ` in the ${targetRegion} region` : ''}. 
+
+IMPORTANT: Create FICTIONAL companies and contacts for demonstration purposes only. Do NOT use real company names or real people.
+
+For each SYNTHETIC lead, provide:
+1. Company Name (fictional example: "Example Security Services LLC")
+2. Contact Name (fictional: "John Doe" / "Jane Smith")
+3. Contact Title (realistic title like "HR Director" or "Operations Manager")
+4. Contact Email (use example.com domain: firstname.lastname@example.com)
+5. Estimated Employees (realistic for industry)
+6. Why they need WorkforceOS (2-3 pain points)
+7. Lead Score (0-100 based on fit)
+
+Return ONLY valid JSON array with this exact structure:
+[
+  {
+    "companyName": "string",
+    "contactName": "string", 
+    "contactTitle": "string",
+    "contactEmail": "string",
+    "estimatedEmployees": number,
+    "painPoints": "string",
+    "leadScore": number
+  }
+]`
+          }
+        ],
+        temperature: 0.8,
+        max_tokens: 2000,
+      });
+
+      const aiContent = aiResponse.choices[0]?.message?.content || '[]';
+      
+      // Parse AI response
+      let generatedLeads;
+      try {
+        // Extract JSON from response (AI might wrap it in markdown)
+        const jsonMatch = aiContent.match(/\[[\s\S]*\]/);
+        generatedLeads = JSON.parse(jsonMatch ? jsonMatch[0] : aiContent);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", aiContent);
+        return res.status(500).json({ message: "AI generated invalid response format" });
+      }
+
+      // Validate each generated lead with strict schema
+      const insertedLeads = [];
+      const validationErrors = [];
+
+      for (let i = 0; i < generatedLeads.length; i++) {
+        const leadValidation = aiGeneratedLeadSchema.safeParse(generatedLeads[i]);
+        
+        if (!leadValidation.success) {
+          validationErrors.push({
+            leadIndex: i,
+            errors: leadValidation.error.errors
+          });
+          continue; // Skip invalid leads
+        }
+
+        const validLead = leadValidation.data;
+
+        // Additional safety: Ensure email uses example.com or clearly synthetic domain
+        if (!validLead.contactEmail.includes('example.com') && 
+            !validLead.contactEmail.includes('demo.com') &&
+            !validLead.contactEmail.includes('test.com')) {
+          validationErrors.push({
+            leadIndex: i,
+            error: "Email must use synthetic domain (example.com, demo.com, or test.com)"
+          });
+          continue;
+        }
+
+        // Insert validated lead into database
+        const [newLead] = await db.insert(leads).values({
+          companyName: validLead.companyName,
+          contactName: validLead.contactName,
+          contactTitle: validLead.contactTitle,
+          contactEmail: validLead.contactEmail,
+          estimatedEmployees: validLead.estimatedEmployees,
+          industry,
+          leadStatus: 'new',
+          leadScore: validLead.leadScore,
+          notes: `🤖 AI Generated Lead (Synthetic Demo Data)\n\nPain Points:\n${validLead.painPoints}`,
+          source: 'ai_generated',
+        }).returning();
+        
+        insertedLeads.push(newLead);
+      }
+
+      res.json({ 
+        success: true, 
+        count: insertedLeads.length,
+        leads: insertedLeads,
+        validationErrors: validationErrors.length > 0 ? validationErrors : undefined,
+        warning: insertedLeads.length === 0 ? "No valid leads generated. AI may have produced invalid data." : undefined
+      });
+    } catch (error) {
+      console.error("Error generating AI leads:", error);
+      res.status(500).json({ message: "Failed to generate leads" });
+    }
+  });
+
+  // Update lead status and notes
+  app.patch('/api/sales/leads/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { leadStatus, notes, nextFollowUpDate, leadScore, estimatedValue } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+      
+      if (leadStatus) updateData.leadStatus = leadStatus;
+      if (notes !== undefined) updateData.notes = notes;
+      if (nextFollowUpDate !== undefined) updateData.nextFollowUpDate = nextFollowUpDate ? new Date(nextFollowUpDate) : null;
+      if (leadScore !== undefined) updateData.leadScore = leadScore;
+      if (estimatedValue !== undefined) updateData.estimatedValue = estimatedValue;
+
+      // Update last contacted timestamp if status changed to contacted
+      if (leadStatus && ['contacted', 'qualified', 'demo_scheduled', 'proposal_sent'].includes(leadStatus)) {
+        updateData.lastContactedAt = new Date();
+      }
+
+      const [updatedLead] = await db
+        .update(leads)
+        .set(updateData)
+        .where(eq(leads.id, id))
+        .returning();
+
+      if (!updatedLead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+
+      res.json(updatedLead);
+    } catch (error) {
+      console.error("Error updating lead:", error);
+      res.status(500).json({ message: "Failed to update lead" });
+    }
+  });
+
+  // Send email with AI personalization
+  app.post('/api/sales/send-email', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Validate request body
+      const validationResult = sendSalesEmailSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const { templateId, toEmail, toName, companyName, industry } = validationResult.data;
+
+      // Get the email template
+      const [template] = await db.select().from(emailTemplates).where(eq(emailTemplates.id, templateId)).limit(1);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+
+      // Get Resend client with error handling
+      const { getUncachableResendClient } = await import('./email');
+      let client, fromEmail;
+      
+      try {
+        const result = await getUncachableResendClient();
+        client = result.client;
+        fromEmail = result.fromEmail;
+      } catch (credError) {
+        console.error("Resend configuration error:", credError);
+        return res.status(503).json({ 
+          message: "Email service is not configured. Please contact support.",
+          error: "RESEND_NOT_CONFIGURED"
+        });
+      }
+
+      // Personalize email content
+      let subject = template.subject;
+      let bodyHtml = template.bodyTemplate;
+
+      // Replace template variables (safe string replacement)
+      const replacements: Record<string, string> = {
+        '{{companyName}}': companyName,
+        '{{contactName}}': toName || 'there',
+        '{{industry}}': industry || 'your industry',
+      };
+
+      Object.entries(replacements).forEach(([key, value]) => {
+        subject = subject.split(key).join(value);
+        bodyHtml = bodyHtml.split(key).join(value);
+      });
+
+      // AI personalization if enabled
+      if (template.useAI && template.aiPrompt) {
+        try {
+          // Check if OpenAI is configured
+          if (!process.env.OPENAI_API_KEY) {
+            console.warn("OpenAI API key not configured, skipping AI personalization");
+          } else {
+            const OpenAI = (await import('openai')).default;
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+            const aiResponse = await openai.chat.completions.create({
+              model: 'gpt-4',
+              messages: [
+                {
+                  role: 'system',
+                  content: template.aiPrompt || 'Personalize this sales email to be more engaging and relevant to the company.'
+                },
+                {
+                  role: 'user',
+                  content: `Company: ${companyName}\nIndustry: ${industry || 'Unknown'}\n\nEmail Body:\n${bodyHtml}`
+                }
+              ],
+              max_tokens: 500,
+            });
+
+            bodyHtml = aiResponse.choices[0]?.message?.content || bodyHtml;
+          }
+        } catch (aiError) {
+          console.error("AI personalization failed, using template:", aiError);
+          // Continue with template version if AI fails
+        }
+      }
+
+      // Send email via Resend
+      const { data, error } = await client.emails.send({
+        from: fromEmail,
+        to: toEmail,
+        subject,
+        html: bodyHtml,
+      });
+
+      if (error) {
+        console.error("Resend error:", error);
+        return res.status(500).json({ message: "Failed to send email", error });
+      }
+
+      // Log email send
+      await db.insert(emailSends).values({
+        templateId,
+        toEmail,
+        subject,
+        bodyHtml,
+        status: 'sent',
+      });
+
+      res.json({ success: true, emailId: data?.id });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
+  // ============================================================================
+  // CUSTOM FORMS - Organization-Specific Form Templates
+  // ============================================================================
+
+  // Validation schemas for custom forms
   const createCustomFormSchema = z.object({
     workspaceId: z.string().min(1, "Organization ID is required"),
     name: z.string().min(1, "Form name is required").max(200),
@@ -17724,8 +18084,8 @@ Summary:`;
     isActive: z.boolean().optional(),
     accessibleBy: z.any().optional(), // JSON array
     createdByRole: z.string().optional(),
-
   });
+
   const updateCustomFormSchema = z.object({
     name: z.string().min(1).max(200).optional(),
     description: z.string().optional(),
@@ -17739,8 +18099,8 @@ Summary:`;
     maxDocuments: z.number().int().positive().optional(),
     isActive: z.boolean().optional(),
     accessibleBy: z.any().optional(),
-
   });
+
   // Get all custom forms for organization
   app.get('/api/custom-forms', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -17786,6 +18146,10 @@ Summary:`;
       console.error("Error fetching custom form:", error);
       res.status(500).json({ message: "Failed to fetch custom form" });
     }
+  });
+
+  // Create custom form (Platform Staff only)
+  app.post('/api/custom-forms', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const platformRole = req.platformRole;
@@ -17881,9 +18245,8 @@ Summary:`;
     eSignature: z.any().optional(), // JSON signature data
     documents: z.any().optional(), // JSON documents array
     status: z.enum(['draft', 'completed', 'archived']).optional(),
+  });
 
-  });
-  });
   // Get all form submissions for organization
   app.get('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -19208,9 +19571,9 @@ Summary:`;
       console.error("PredictionOS™ turnover analysis failed:", error);
       res.status(500).json({ message: error.message || "Failed to analyze turnover risk" });
     }
+  });
   
   // Get turnover predictions for all employees
-  });
   app.get('/api/predict/turnover/workspace', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19235,9 +19598,9 @@ Summary:`;
       console.error("Error fetching turnover predictions:", error);
       res.status(500).json({ message: "Failed to fetch predictions" });
     }
+  });
   
   // Predict schedule cost overrun
-  });
   app.post('/api/predict/cost-overrun', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19294,9 +19657,9 @@ Summary:`;
       console.error("Error creating custom rule:", error);
       res.status(400).json({ message: error.message || "Failed to create rule" });
     }
+  });
   
   // Get all custom rules for workspace
-  });
   app.get('/api/custom-rules', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19312,9 +19675,9 @@ Summary:`;
       console.error("Error fetching custom rules:", error);
       res.status(500).json({ message: "Failed to fetch rules" });
     }
+  });
   
   // Update custom rule
-  });
   app.patch('/api/custom-rules/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19347,9 +19710,9 @@ Summary:`;
       console.error("Error updating custom rule:", error);
       res.status(400).json({ message: error.message || "Failed to update rule" });
     }
+  });
   
   // Delete custom rule
-  });
   app.delete('/api/custom-rules/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19376,9 +19739,9 @@ Summary:`;
       console.error("Error deleting custom rule:", error);
       res.status(500).json({ message: "Failed to delete rule" });
     }
+  });
   
   // Get rule execution logs
-  });
   app.get('/api/custom-rules/:id/executions', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19438,9 +19801,9 @@ Summary:`;
       console.error("Error fetching audit trail:", error);
       res.status(500).json({ message: "Failed to fetch audit trail" });
     }
+  });
   
   // Get time entry discrepancies (geo-compliance violations)
-  });
   app.get('/api/compliance/discrepancies', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19460,9 +19823,9 @@ Summary:`;
       console.error("Error fetching discrepancies:", error);
       res.status(500).json({ message: "Failed to fetch discrepancies" });
     }
+  });
   
   // Resolve time entry discrepancy
-  });
   app.patch('/api/compliance/discrepancies/:id/resolve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19528,9 +19891,9 @@ Summary:`;
       console.error("Error creating pulse survey template:", error);
       res.status(500).json({ message: "Failed to create pulse survey template" });
     }
+  });
   
   // List pulse survey templates
-  });
   app.get('/api/engagement/pulse-surveys/templates', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19555,9 +19918,9 @@ Summary:`;
       console.error("Error fetching pulse survey templates:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey templates" });
     }
+  });
   
   // Get single pulse survey template
-  });
   app.get('/api/engagement/pulse-surveys/templates/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19581,9 +19944,9 @@ Summary:`;
       console.error("Error fetching pulse survey template:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey template" });
     }
+  });
   
   // Update pulse survey template
-  });
   app.patch('/api/engagement/pulse-surveys/templates/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19616,11 +19979,11 @@ Summary:`;
       console.error("Error updating pulse survey template:", error);
       res.status(500).json({ message: "Failed to update pulse survey template" });
     }
+  });
   
   // [2] PULSE SURVEY RESPONSES (All Employees)
   
   // Submit pulse survey response
-  });
   app.post('/api/engagement/pulse-surveys/responses', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19717,9 +20080,9 @@ Summary:`;
       console.error("Error submitting pulse survey response:", error);
       res.status(500).json({ message: "Failed to submit pulse survey response" });
     }
+  });
   
   // Get pulse survey responses (Manager only)
-  });
   app.get('/api/engagement/pulse-surveys/responses', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19751,11 +20114,11 @@ Summary:`;
       console.error("Error fetching pulse survey responses:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey responses" });
     }
+  });
   
   // [2.5] AUTOMATED PULSE SURVEY DISTRIBUTION
   
   // Get survey distribution summary (Manager/Owner only)
-  });
   app.get('/api/engagement/pulse-surveys/distribution/summary', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19765,9 +20128,9 @@ Summary:`;
       console.error("Error fetching survey distribution summary:", error);
       res.status(500).json({ message: "Failed to fetch survey distribution summary" });
     }
+  });
   
   // Get all employees due for surveys today (Manager/Owner only)
-  });
   app.get('/api/engagement/pulse-surveys/distribution', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19777,9 +20140,9 @@ Summary:`;
       console.error("Error fetching survey distributions:", error);
       res.status(500).json({ message: "Failed to fetch survey distributions" });
     }
+  });
   
   // Get pending surveys for specific employee
-  });
   app.get('/api/engagement/pulse-surveys/distribution/employee/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19791,9 +20154,9 @@ Summary:`;
       console.error("Error fetching employee pending surveys:", error);
       res.status(500).json({ message: "Failed to fetch pending surveys" });
     }
+  });
   
   // Get survey analytics (Manager/Owner only)
-  });
   app.get('/api/engagement/pulse-surveys/analytics/:surveyId', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19811,11 +20174,11 @@ Summary:`;
       console.error("Error calculating survey analytics:", error);
       res.status(500).json({ message: "Failed to calculate survey analytics" });
     }
+  });
   
   // [3] EMPLOYER RATINGS (All Employees)
   
   // Submit employer rating
-  });
   app.post('/api/engagement/employer-ratings', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19862,9 +20225,9 @@ Summary:`;
       console.error("Error submitting employer rating:", error);
       res.status(500).json({ message: "Failed to submit employer rating" });
     }
+  });
   
   // Get employer ratings (Manager only)
-  });
   app.get('/api/engagement/employer-ratings', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19896,11 +20259,11 @@ Summary:`;
       console.error("Error fetching employer ratings:", error);
       res.status(500).json({ message: "Failed to fetch employer ratings" });
     }
+  });
   
   // [4] ANONYMOUS SUGGESTIONS (All Employees)
   
   // Submit anonymous suggestion
-  });
   app.post('/api/engagement/suggestions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19948,9 +20311,9 @@ Summary:`;
       console.error("Error submitting anonymous suggestion:", error);
       res.status(500).json({ message: "Failed to submit anonymous suggestion" });
     }
+  });
   
   // List anonymous suggestions (Manager only)
-  });
   app.get('/api/engagement/suggestions', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -19989,9 +20352,9 @@ Summary:`;
       console.error("Error fetching anonymous suggestions:", error);
       res.status(500).json({ message: "Failed to fetch anonymous suggestions" });
     }
+  });
   
   // Update suggestion status (Manager only)
-  });
   app.patch('/api/engagement/suggestions/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20025,11 +20388,11 @@ Summary:`;
       console.error("Error updating suggestion:", error);
       res.status(500).json({ message: "Failed to update suggestion" });
     }
+  });
   
   // [5] EMPLOYEE RECOGNITION (All Employees + Managers)
   
   // Create employee recognition (peer or manager)
-  });
   app.post('/api/engagement/recognition', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20101,9 +20464,9 @@ Summary:`;
       console.error("Error creating employee recognition:", error);
       res.status(500).json({ message: "Failed to create employee recognition" });
     }
+  });
   
   // Get employee recognition feed
-  });
   app.get('/api/engagement/recognition', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20135,11 +20498,11 @@ Summary:`;
       console.error("Error fetching employee recognitions:", error);
       res.status(500).json({ message: "Failed to fetch employee recognitions" });
     }
+  });
   
   // [6] EMPLOYEE HEALTH SCORES (Manager/Owner Only)
   
   // Get employee health scores
-  });
   app.get('/api/engagement/health-scores', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20178,9 +20541,9 @@ Summary:`;
       console.error("Error fetching employee health scores:", error);
       res.status(500).json({ message: "Failed to fetch employee health scores" });
     }
+  });
   
   // Take action on employee health score
-  });
   app.patch('/api/engagement/health-scores/:id/action', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20215,11 +20578,11 @@ Summary:`;
       console.error("Error updating health score action:", error);
       res.status(500).json({ message: "Failed to update health score action" });
     }
+  });
   
   // [7] EMPLOYER BENCHMARK SCORES (Manager/Owner Only)
   
   // Get employer benchmark scores
-  });
   app.get('/api/engagement/benchmarks', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20251,11 +20614,11 @@ Summary:`;
       console.error("Error fetching employer benchmarks:", error);
       res.status(500).json({ message: "Failed to fetch employer benchmarks" });
     }
+  });
   
   // [8] CALCULATION TRIGGERS (Manager/Owner Only)
   
   // Manually trigger health score calculation for a single employee
-  });
   app.post('/api/engagement/health-scores/calculate', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20277,9 +20640,9 @@ Summary:`;
       console.error("Error calculating health score:", error);
       res.status(500).json({ message: "Failed to calculate health score" });
     }
+  });
   
   // Batch calculate health scores for all employees
-  });
   app.post('/api/engagement/health-scores/calculate-batch', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20303,9 +20666,9 @@ Summary:`;
       console.error("Error batch calculating health scores:", error);
       res.status(500).json({ message: "Failed to batch calculate health scores" });
     }
+  });
   
   // Manually trigger employer benchmark calculation
-  });
   app.post('/api/engagement/benchmarks/calculate', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20374,9 +20737,9 @@ Summary:`;
       console.error("Error fetching training courses:", error);
       res.status(500).json({ message: "Failed to fetch training courses" });
     }
+  });
   
   // Get single training course
-  });
   app.get('/api/training/courses/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20400,9 +20763,9 @@ Summary:`;
       console.error("Error fetching training course:", error);
       res.status(500).json({ message: "Failed to fetch training course" });
     }
+  });
   
   // Create training course (Manager/Owner only)
-  });
   app.post('/api/training/courses', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20425,9 +20788,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to create training course" });
     }
+  });
   
   // Update training course (Manager/Owner only)
-  });
   app.patch('/api/training/courses/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20466,9 +20829,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to update training course" });
     }
+  });
   
   // Delete training course (Manager/Owner only)
-  });
   app.delete('/api/training/courses/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20496,11 +20859,11 @@ Summary:`;
       console.error("Error deleting training course:", error);
       res.status(500).json({ message: "Failed to delete training course" });
     }
+  });
   
   // [2] COURSE ENROLLMENTS
   
   // Get employee enrollments
-  });
   app.get('/api/training/enrollments', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20543,9 +20906,9 @@ Summary:`;
       console.error("Error fetching training enrollments:", error);
       res.status(500).json({ message: "Failed to fetch training enrollments" });
     }
+  });
   
   // Enroll in a course
-  });
   app.post('/api/training/courses/:id/enroll', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20614,9 +20977,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to enroll in course" });
     }
+  });
   
   // Update enrollment progress
-  });
   app.patch('/api/training/enrollments/:id/progress', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20673,11 +21036,11 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to update enrollment progress" });
     }
+  });
   
   // [3] CERTIFICATIONS
   
   // Get employee certifications
-  });
   app.get('/api/training/certifications', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20720,9 +21083,9 @@ Summary:`;
       console.error("Error fetching certifications:", error);
       res.status(500).json({ message: "Failed to fetch certifications" });
     }
+  });
   
   // Issue certification (Manager/Owner only)
-  });
   app.post('/api/training/certifications', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20823,9 +21186,9 @@ Summary:`;
       console.error("Error fetching budgets:", error);
       res.status(500).json({ message: "Failed to fetch budgets" });
     }
+  });
   
   // Get single budget
-  });
   app.get('/api/budgets/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20849,9 +21212,9 @@ Summary:`;
       console.error("Error fetching budget:", error);
       res.status(500).json({ message: "Failed to fetch budget" });
     }
+  });
   
   // Create budget (Manager/Owner only)
-  });
   app.post('/api/budgets', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20874,9 +21237,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to create budget" });
     }
+  });
   
   // Update budget (Manager/Owner only)
-  });
   app.patch('/api/budgets/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20915,9 +21278,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to update budget" });
     }
+  });
   
   // Delete budget (Owner only)
-  });
   app.delete('/api/budgets/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20945,11 +21308,11 @@ Summary:`;
       console.error("Error deleting budget:", error);
       res.status(500).json({ message: "Failed to delete budget" });
     }
+  });
   
   // [2] BUDGET LINE ITEMS
   
   // Get line items for a budget
-  });
   app.get('/api/budgets/:budgetId/line-items', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -20980,9 +21343,9 @@ Summary:`;
       console.error("Error fetching budget line items:", error);
       res.status(500).json({ message: "Failed to fetch budget line items" });
     }
+  });
   
   // Create budget line item
-  });
   app.post('/api/budgets/:budgetId/line-items', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21020,9 +21383,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to create budget line item" });
     }
+  });
   
   // Update budget line item
-  });
   app.patch('/api/budgets/:budgetId/line-items/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21072,9 +21435,9 @@ Summary:`;
       }
       res.status(500).json({ message: "Failed to update budget line item" });
     }
+  });
   
   // Delete budget line item
-  });
   app.delete('/api/budgets/:budgetId/line-items/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21116,11 +21479,11 @@ Summary:`;
       console.error("Error deleting budget line item:", error);
       res.status(500).json({ message: "Failed to delete budget line item" });
     }
+  });
   
   // [3] BUDGET VARIANCE ANALYSIS
   
   // Get variances for a budget
-  });
   app.get('/api/budgets/:budgetId/variances', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21161,9 +21524,9 @@ Summary:`;
       console.error("Error fetching budget variances:", error);
       res.status(500).json({ message: "Failed to fetch budget variances" });
     }
+  });
   
   // Create budget variance snapshot
-  });
   app.post('/api/budgets/:budgetId/variances', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21234,9 +21597,9 @@ Summary:`;
       console.error("Error fetching integrations:", error);
       res.status(500).json({ message: "Failed to fetch integrations" });
     }
+  });
   
   // [2] CONNECTIONS - Manage workspace integrations (Manager/Owner)
-  });
   app.get('/api/integrations/connections', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21252,9 +21615,9 @@ Summary:`;
       console.error("Error fetching connections:", error);
       res.status(500).json({ message: "Failed to fetch connections" });
     }
+  });
   
   // Connect to an integration
-  });
   app.post('/api/integrations/connections', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21306,9 +21669,9 @@ Summary:`;
       console.error("Error creating connection:", error);
       res.status(500).json({ message: "Failed to create connection" });
     }
+  });
   
   // Disconnect an integration
-  });
   app.delete('/api/integrations/connections/:id', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21331,9 +21694,9 @@ Summary:`;
       console.error("Error disconnecting integration:", error);
       res.status(500).json({ message: "Failed to disconnect integration" });
     }
+  });
   
   // [3] API KEYS - Developer access management (Owner only)
-  });
   app.get('/api/integrations/api-keys', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21364,9 +21727,9 @@ Summary:`;
       console.error("Error fetching API keys:", error);
       res.status(500).json({ message: "Failed to fetch API keys" });
     }
+  });
   
   // Create API key
-  });
   app.post('/api/integrations/api-keys', requireAuth, requireOwner, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21407,9 +21770,9 @@ Summary:`;
       console.error("Error creating API key:", error);
       res.status(500).json({ message: "Failed to create API key" });
     }
+  });
   
   // Revoke API key
-  });
   app.delete('/api/integrations/api-keys/:id', requireAuth, requireOwner, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21431,9 +21794,9 @@ Summary:`;
       console.error("Error revoking API key:", error);
       res.status(500).json({ message: "Failed to revoke API key" });
     }
+  });
   
   // [4] WEBHOOKS - Event subscriptions (Manager/Owner)
-  });
   app.get('/api/integrations/webhooks', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21449,9 +21812,9 @@ Summary:`;
       console.error("Error fetching webhooks:", error);
       res.status(500).json({ message: "Failed to fetch webhooks" });
     }
+  });
   
   // Create webhook subscription
-  });
   app.post('/api/integrations/webhooks', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21482,9 +21845,9 @@ Summary:`;
       console.error("Error creating webhook:", error);
       res.status(500).json({ message: "Failed to create webhook" });
     }
+  });
   
   // Toggle webhook active status
-  });
   app.patch('/api/integrations/webhooks/:id/toggle', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21517,9 +21880,9 @@ Summary:`;
       console.error("Error toggling webhook:", error);
       res.status(500).json({ message: "Failed to toggle webhook" });
     }
+  });
   
   // Delete webhook
-  });
   app.delete('/api/integrations/webhooks/:id', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -21537,9 +21900,9 @@ Summary:`;
       console.error("Error deleting webhook:", error);
       res.status(500).json({ message: "Failed to delete webhook" });
     }
+  });
   
   // Get webhook delivery history
-  });
   app.get('/api/integrations/webhooks/:id/deliveries', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -23160,6 +23523,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
   // SALES MVP: DealOS™ + BidOS™ Routes
   // ==========================================
 
+  // GET /api/sales/deals - Fetch all deals
+  app.get("/api/sales/deals", requireAuth, async (req, res) => {
     try {
       const { workspaceId } = req;
       const allDeals = await db.query.deals.findMany({
@@ -23171,7 +23536,10 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching deals:", error);
       res.status(500).json({ message: "Failed to fetch deals" });
     }
+  });
 
+  // POST /api/sales/deals - Create new deal (RBAC: Manager+ only)
+  app.post("/api/sales/deals", requireManager, async (req, res) => {
     try {
       const { workspaceId } = req;
       
@@ -23190,7 +23558,10 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       }
       res.status(500).json({ message: "Failed to create deal" });
     }
+  });
 
+  // GET /api/sales/rfps - Fetch all RFPs
+  app.get("/api/sales/rfps", requireAuth, async (req, res) => {
     try {
       const { workspaceId } = req;
       const allRfps = await db.query.rfps.findMany({
@@ -23202,7 +23573,10 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching RFPs:", error);
       res.status(500).json({ message: "Failed to fetch RFPs" });
     }
+  });
 
+  // POST /api/sales/rfps - Create new RFP (RBAC: Manager+ only)
+  app.post("/api/sales/rfps", requireManager, async (req, res) => {
     try {
       const { workspaceId } = req;
       
@@ -23221,7 +23595,10 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       }
       res.status(500).json({ message: "Failed to create RFP" });
     }
+  });
 
+  // GET /api/sales/leads - Fetch all leads
+  app.get("/api/sales/leads", requireAuth, async (req, res) => {
     try {
       const { workspaceId } = req;
       const allLeads = await db.query.leads.findMany({
@@ -23233,7 +23610,10 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
+  });
 
+  // POST /api/sales/leads - Create new lead (RBAC: Manager+ only)
+  app.post("/api/sales/leads", requireManager, async (req, res) => {
     try {
       const { workspaceId } = req;
       
@@ -23463,12 +23843,12 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error seeding expired keys:', error);
       res.status(500).json({ message: 'Failed to seed expired keys' });
     }
+  });
 
   /**
    * DEVELOPMENT ONLY: Manually trigger automation jobs for testing
    * Supports: invoicing, scheduling, payroll, cleanup
    */
-  });
   app.post('/api/dev/trigger-automation/:jobType', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobType } = req.params;
@@ -23500,12 +23880,12 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error triggering automation:', error);
       res.status(500).json({ message: 'Failed to trigger automation' });
     }
+  });
 
   /**
    * DEVELOPMENT ONLY: Query automation audit logs
    * Returns recent automation lifecycle events for verification
    */
-  });
   app.get('/api/dev/automation-audit-logs', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -23547,12 +23927,12 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error('[DEV] Error fetching automation audit logs:', error);
       res.status(500).json({ message: 'Failed to fetch automation audit logs' });
     }
+  });
 
   /**
    * DEVELOPMENT ONLY: Query idempotency keys for debugging
    * Shows recent keys with their status and metadata
    */
-  });
   app.get('/api/dev/idempotency-keys', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const { limit = 50, status } = req.query;
@@ -23994,9 +24374,9 @@ Respond with valid JSON array only.`
       console.error("Error fetching chat rooms:", error);
       res.status(500).json({ message: "Failed to fetch chat rooms" });
     }
+  });
   
   // GET /api/comm-os/rooms/live - Get live room data with WebSocket connections
-  });
   app.get('/api/comm-os/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -24047,9 +24427,9 @@ Respond with valid JSON array only.`
       console.error("Error fetching live rooms:", error);
       res.status(500).json({ message: "Failed to fetch live rooms" });
     }
+  });
   
   // POST /api/comm-os/rooms/:id/join - Join a chat room
-  });
   app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const roomId = req.params.id;
@@ -24081,9 +24461,9 @@ Respond with valid JSON array only.`
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
     }
+  });
   
   // POST /api/comm-os/rooms/:id/leave - Leave a chat room
-  });
   app.post('/api/comm-os/rooms/:id/leave', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const roomId = req.params.id;
@@ -24099,9 +24479,9 @@ Respond with valid JSON array only.`
       console.error("Error leaving room:", error);
       res.status(500).json({ message: "Failed to leave room" });
     }
+  });
   
   // GET /api/comm-os/messages/search - Search messages across rooms
-  });
   app.get('/api/comm-os/messages/search', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -25341,6 +25721,7 @@ Respond with valid JSON array only.`
 // ============================================================================
 // SALES ROUTES
 // ============================================================================
+app.get("/api/sales/invitations", requireAuth, async (req, res) => {
   try {
     const list = await db.select().from(orgInvitations);
     res.json(list);
@@ -25349,6 +25730,7 @@ Respond with valid JSON array only.`
   }
 });
 
+app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
   try {
     const { email, organizationName, contactName, offeredTier } = req.body;
     const token = Math.random().toString(36).substring(2, 15);
@@ -25368,6 +25750,7 @@ Respond with valid JSON array only.`
   }
 });
 
+app.get("/api/sales/proposals", requireAuth, async (req, res) => {
   try {
     const list = await db.select().from(salesProposals);
     res.json(list);
@@ -25376,6 +25759,7 @@ Respond with valid JSON array only.`
   }
 });
 
+app.post("/api/sales/proposals", requireAuth, async (req, res) => {
   try {
     const { title, description, prospectEmail, prospectName, prospectOrganization, suggestedTier, estimatedValue } = req.body;
     const result = await db.insert(salesProposals).values({
