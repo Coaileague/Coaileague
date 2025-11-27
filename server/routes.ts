@@ -17705,7 +17705,6 @@ Summary:`;
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
-  });
 
   // Zod validation schema for lead creation
   const createLeadSchema = z.object({

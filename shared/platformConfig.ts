@@ -44,6 +44,8 @@ export const BRANDING = {
     lightBg: "#ffffff",
   },
   logo: {
+    component: "CoAIleagueIcon",
+    description: "Neural network symbolism with blue→green→cyan gradient",
     svg: "/logo.svg",
     icon192: "/icon-192.png",
     icon512: "/icon-512.png",
