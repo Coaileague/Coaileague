@@ -117,20 +117,20 @@ export default function CustomLogin() {
         />
       )}
 
-      <div className="min-h-screen flex flex-col" style={{ background: THEME.pages.login.background }}>
+      <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: THEME.pages.login.background }}>
         {/* Header */}
         <div className="border-b" style={{ background: THEME.pages.login.header.bg, borderColor: THEME.pages.login.header.borderColor }}>
-          <div className="container mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-5 flex items-center justify-between gap-2">
             <button 
               onClick={() => setLocation("/")}
-              className="hover-elevate transition-all"
+              className="hover-elevate transition-all shrink-0"
               data-testid="button-logo-login"
             >
-              <CoAIleagueLogo width={150} height={40} showTagline={false} />
+              <CoAIleagueLogo width={120} height={32} showTagline={false} className="sm:w-[150px] sm:h-[40px]" />
             </button>
             <button
               onClick={() => setLocation("/")}
-              className="text-sm font-medium transition-colors"
+              className="text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] px-3 flex items-center"
               style={{ color: THEME.colors.primary.light }}
               data-testid="link-back-landing"
             >
@@ -140,7 +140,7 @@ export default function CustomLogin() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-6">
+        <div className="flex-1 flex items-center justify-center p-3 sm:p-6">
           <div 
             className="w-full animate-[fadeInUp_0.6s_ease]"
             style={{

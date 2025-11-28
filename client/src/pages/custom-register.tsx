@@ -78,25 +78,25 @@ export default function CustomRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-gradient p-4">
-      <div className="w-full max-w-2xl space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-gradient p-3 sm:p-4 overflow-x-hidden">
+      <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
         {/* Logo and Branding */}
-        <div className="flex flex-col items-center gap-4">
-          <CoAIleagueLogo width={200} height={50} showTagline={false} />
+        <div className="flex flex-col items-center gap-3 sm:gap-4">
+          <CoAIleagueLogo width={160} height={40} showTagline={false} className="sm:w-[200px] sm:h-[50px]" />
         </div>
 
         {/* Register Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
-            <CardDescription>
+          <CardHeader className="space-y-1.5 p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl">Create Account</CardTitle>
+            <CardDescription className="text-sm">
               Start your free trial - no credit card required
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="firstName"

@@ -91,76 +91,76 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Universal Header */}
       <UniversalHeader variant="public" />
 
       {/* Contact Hero */}
-      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
-        <div className="text-center space-y-4 mb-12">
+      <section className="container mx-auto px-3 sm:px-6 pt-16 sm:pt-24 pb-8 sm:pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+        <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12">
           <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
-            <span className="text-xs uppercase tracking-wider text-gray-500 font-mono">
+            <div className="h-1 w-8 sm:w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
+            <span className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-mono">
               Enterprise Support
             </span>
-            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
+            <div className="h-1 w-8 sm:w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
           </div>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900" data-testid="heading-contact">
+          <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100 px-2" data-testid="heading-contact">
             Contact Our Team
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-2">
             Elite-grade support for your workforce operations. Our experts are available 24/7 to ensure your success.
           </p>
         </div>
 
         {/* Support Channels Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-16">
-          <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4" data-testid="card-email-support">
-            <div className="h-12 w-12 rounded-md bg-blue-50 flex items-center justify-center">
-              <Mail className="h-6 w-6 text-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-16">
+          <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-email-support">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center">
+              <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">Email Support</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Email Support</h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 Get detailed technical assistance
               </p>
               <div className="space-y-1 pt-2">
                 <a
                   href="mailto:support@coaileague.com"
-                  className="text-sm font-mono text-blue-600 hover:underline block"
+                  className="text-xs sm:text-sm font-mono text-blue-600 hover:underline block break-all"
                   data-testid="link-email-support"
                 >
                   support@coaileague.com
                 </a>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Response time: &lt;24 hours
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4" data-testid="card-live-chat">
-            <div className="h-12 w-12 rounded-md bg-purple-50 flex items-center justify-center">
-              <MessageSquare className="h-6 w-6 text-purple-600" />
+          <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-live-chat">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">Live Chat</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Live Chat</h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 Instant answers from our team
               </p>
               <div className="pt-2">
                 <Link href="/chat">
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-9 shadow-md"
+                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white min-h-[44px] shadow-md"
                     data-testid="button-start-chat"
                     disabled={isLoadingAuth}
                   >
-                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
                     Start Chat
                   </Button>
                 </Link>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Available 24/7 for all tiers
                 </p>
               </div>

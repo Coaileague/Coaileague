@@ -108,83 +108,83 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Universal Header */}
       <UniversalHeader variant="public" />
 
       {/* Pricing Hero */}
-      <section className="pt-24 pb-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
+      <section className="pt-16 sm:pt-24 pb-8 sm:pb-16 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
         <div className="container mx-auto max-w-7xl">
-        <div className="text-center space-y-4 mb-12">
-          <Badge className="bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 border-blue-200 mb-2 shadow-md">
-            <Sparkles className="h-3 w-3 mr-1" />
-            Enterprise-Grade ROI
+        <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12">
+          <Badge className="bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 border-blue-200 mb-2 shadow-md dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700">
+            <Sparkles className="h-3 w-3 mr-1 shrink-0" />
+            <span className="truncate">Enterprise-Grade ROI</span>
           </Badge>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">Replace $250K-$430K</span> in Administrative Salaries
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100 px-2">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600 break-words">Replace $250K-$430K</span> in Administrative Salaries
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-2">
             Pay once per month. Save $192K-$216K annually in net savings. CoAIleague replaces 3-5 high-end administrative positions with AI automation.
           </p>
         </div>
 
         {/* Pricing Tiers */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {tiers.map((tier, index) => (
             <Card
               key={tier.name}
-              className={`bg-white border-2 shadow-md p-8 space-y-6 relative hover:border-blue-300 hover:shadow-2xl transition-all ${
-                tier.popular ? "border-blue-300 shadow-xl" : "border-gray-200"
+              className={`bg-white dark:bg-gray-900 border-2 shadow-md p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 relative hover:border-blue-300 hover:shadow-2xl transition-all ${
+                tier.popular ? "border-blue-300 shadow-xl" : "border-gray-200 dark:border-gray-700"
               }`}
               data-testid={`card-pricing-${tier.name.toLowerCase().replace(/\s+/g, "-")}`}
             >
               {tier.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-600 text-white border-none shadow-lg">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-600 text-white border-none shadow-lg whitespace-nowrap">
                   Best Value
                 </Badge>
               )}
 
-              <div className="space-y-3">
-                <h3 className="text-2xl font-bold text-gray-900">
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {tier.name}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   {tier.description}
                 </p>
                 
                 {/* ROI Badge */}
-                <div className="flex items-center gap-2 pt-2">
-                  <TrendingUp className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-700">
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2 pt-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600 shrink-0" />
+                  <span className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400">
                     {tier.roi}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 break-words">
                     • {tier.savings}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-4xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">
                   {tier.price}
                   {tier.price !== "Contact Sales" && tier.price !== "Custom" && (
-                    <span className="text-lg font-normal text-gray-500">
+                    <span className="text-sm sm:text-lg font-normal text-gray-500 dark:text-gray-400">
                       /mo
                     </span>
                   )}
                 </div>
                 {tier.price !== "Contact Sales" && tier.price !== "Custom" && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Billed annually • 14-day free trial
                   </p>
                 )}
               </div>
 
               <Button
-                className={`w-full h-11 shadow-md ${
+                className={`w-full min-h-[44px] shadow-md ${
                   tier.popular
                     ? "bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white"
-                    : "bg-white text-gray-900 border-2 border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+                    : "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-2 border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
                 variant={tier.popular ? "default" : "outline"}
                 onClick={() => window.location.href = tier.cta === "Contact Sales" ? "/contact" : "/api/login"}
@@ -193,23 +193,23 @@ export default function Pricing() {
                 {tier.cta}
               </Button>
 
-              <div className="space-y-3 pt-4 border-t border-gray-200">
+              <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
                 {tier.features.map((feature) => (
                   <div
                     key={feature.name}
-                    className="flex items-start gap-3 text-sm"
+                    className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm"
                   >
                     {feature.included ? (
-                      <Check className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <Check className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0 mt-0.5" />
                     ) : (
-                      <X className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 shrink-0 mt-0.5" />
                     )}
                     <span
-                      className={
+                      className={`break-words ${
                         feature.included
-                          ? "text-gray-700"
-                          : "text-gray-400"
-                      }
+                          ? "text-gray-700 dark:text-gray-300"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
                     >
                       {feature.name}
                     </span>
@@ -223,17 +223,17 @@ export default function Pricing() {
       </section>
 
       {/* Cost Breakdown */}
-      <section className="py-16 px-6 bg-white">
+      <section className="py-8 sm:py-16 px-3 sm:px-6 bg-white dark:bg-gray-900">
         <div className="container mx-auto max-w-6xl">
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">Why Our Pricing Makes Sense</h2>
-              <p className="text-gray-600">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="text-center space-y-2 px-2">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">Why Our Pricing Makes Sense</h2>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 Compare our monthly fee to the staff costs you're replacing
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               {[
                 {
                   plan: "Starter",
@@ -275,36 +275,36 @@ export default function Pricing() {
                   netSavings: "$216k/yr"
                 },
               ].map((breakdown) => (
-                <div key={breakdown.plan} className="bg-gradient-to-br from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4 hover:shadow-xl transition-shadow">
+                <div key={breakdown.plan} className="bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4 hover:shadow-xl transition-shadow">
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-lg text-gray-900">
+                    <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-gray-100">
                       {breakdown.plan}
                     </h3>
-                    <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600 font-mono">
+                    <div className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600 font-mono">
                       {breakdown.price}
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm">
-                    <div className="text-xs text-blue-700 uppercase tracking-wide font-semibold">
+                  <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                    <div className="text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wide font-semibold">
                       Replaces:
                     </div>
                     {breakdown.replaces.map((item) => (
-                      <div key={item} className="flex items-center gap-2 text-gray-700">
-                        <Check className="h-3 w-3 text-blue-600" />
-                        {item}
+                      <div key={item} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                        <Check className="h-3 w-3 text-blue-600 shrink-0 mt-0.5" />
+                        <span className="break-words text-xs sm:text-sm">{item}</span>
                       </div>
                     ))}
                   </div>
 
-                  <div className="pt-4 border-t border-blue-300 space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Annual plan cost:</span>
-                      <span className="text-blue-600 font-mono font-semibold">-{breakdown.costOfPlan}</span>
+                  <div className="pt-3 sm:pt-4 border-t border-blue-300 dark:border-blue-700 space-y-1">
+                    <div className="flex justify-between text-xs sm:text-sm gap-2">
+                      <span className="text-gray-600 dark:text-gray-400">Annual plan cost:</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-mono font-semibold">-{breakdown.costOfPlan}</span>
                     </div>
-                    <div className="flex justify-between text-sm font-semibold pt-2">
-                      <span className="text-gray-900">Net savings:</span>
-                      <span className="text-blue-700 font-mono text-lg">+{breakdown.netSavings}</span>
+                    <div className="flex justify-between text-xs sm:text-sm font-semibold pt-2 gap-2">
+                      <span className="text-gray-900 dark:text-gray-100">Net savings:</span>
+                      <span className="text-blue-700 dark:text-blue-400 font-mono text-sm sm:text-lg">+{breakdown.netSavings}</span>
                     </div>
                   </div>
                 </div>
@@ -312,16 +312,16 @@ export default function Pricing() {
             </div>
 
             {/* Overage Information */}
-            <div className="mt-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">
-              <div className="flex items-start gap-3">
-                <TrendingUp className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-gray-900">Fair Usage & Overage Billing</h3>
-                  <p className="text-sm text-gray-700">
+            <div className="mt-4 sm:mt-8 p-4 sm:p-6 bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="space-y-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100">Fair Usage & Overage Billing</h3>
+                  <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 break-words">
                     Each plan includes a set number of employees (50 for Starter, 150 for Professional, Unlimited for Enterprise). 
-                    If you exceed your plan limit, additional employees are billed at <strong className="text-blue-700">$50/employee/month for Starter</strong>, 
-                    <strong className="text-blue-700"> $40/employee/month for Professional</strong>, and 
-                    <strong className="text-blue-700"> $30/employee/month for Enterprise</strong>.
+                    If you exceed your plan limit, additional employees are billed at <strong className="text-blue-700 dark:text-blue-400">$50/employee/month for Starter</strong>, 
+                    <strong className="text-blue-700 dark:text-blue-400"> $40/employee/month for Professional</strong>, and 
+                    <strong className="text-blue-700 dark:text-blue-400"> $30/employee/month for Enterprise</strong>.
                     This ensures you only pay for what you use while scaling efficiently.
                   </p>
                 </div>
@@ -329,41 +329,41 @@ export default function Pricing() {
             </div>
 
             {/* AI Features & Credit Usage */}
-            <div className="mt-4 p-6 bg-purple-50 border-2 border-purple-200 rounded-xl">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-900">AI Automation Credit Costs</h3>
-                  <p className="text-sm text-gray-700">
-                    All AI automations use credits from your monthly allocation. <strong className="text-purple-700">No surprise charges</strong> - you control your spending by purchasing additional credits only when needed.
+            <div className="mt-4 p-4 sm:p-6 bg-purple-50 dark:bg-purple-950/30 border-2 border-purple-200 dark:border-purple-800 rounded-xl">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 shrink-0 mt-0.5" />
+                <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
+                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100">AI Automation Credit Costs</h3>
+                  <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                    All AI automations use credits from your monthly allocation. <strong className="text-purple-700 dark:text-purple-400">No surprise charges</strong> - you control your spending by purchasing additional credits only when needed.
                   </p>
-                  <div className="grid sm:grid-cols-2 gap-3 pt-2">
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Scheduling</div>
-                      <div className="text-xs text-gray-600">25 credits ($2.50) per schedule generation</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-2">
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Scheduling</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">25 credits ($2.50) per schedule generation</div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Invoice Generation</div>
-                      <div className="text-xs text-gray-600">15 credits ($1.50) per invoice</div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Invoice Generation</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">15 credits ($1.50) per invoice</div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Payroll Processing</div>
-                      <div className="text-xs text-gray-600">15 credits ($1.50) per payroll run</div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Payroll Processing</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">15 credits ($1.50) per payroll run</div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Chat (HelpOS/QueryOS)</div>
-                      <div className="text-xs text-gray-600">5 credits ($0.50) per conversation</div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Chat (HelpOS/QueryOS)</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">5 credits ($0.50) per conversation</div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">AI Analytics Reports</div>
-                      <div className="text-xs text-gray-600">12 credits ($1.20) per report</div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Analytics Reports</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">12 credits ($1.20) per report</div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-purple-700">Additional Credits</div>
-                      <div className="text-xs text-gray-600">100 credits = $10 (buy anytime)</div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">Additional Credits</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">100 credits = $10 (buy anytime)</div>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 pt-2 border-t border-purple-200">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-purple-200 dark:border-purple-700 break-words">
                     <strong>Example:</strong> Professional plan (2,000 credits = $200/mo included) running 20 schedules (500 credits), 40 invoices (600 credits), 8 payroll runs (120 credits) = 1,220 credits used. Still have 780 credits remaining. No overages.
                   </p>
                 </div>
@@ -374,13 +374,13 @@ export default function Pricing() {
       </section>
 
       {/* FAQ */}
-      <section className="py-16 px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
-        <div className="container mx-auto max-w-3xl space-y-8">
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">Frequently Asked Questions</h2>
+      <section className="py-8 sm:py-16 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+        <div className="container mx-auto max-w-3xl space-y-4 sm:space-y-8">
+          <div className="text-center space-y-2 px-2">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">Frequently Asked Questions</h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {[
               {
                 q: "Why is CoAIleague priced so much higher than other workforce management tools?",
@@ -417,12 +417,12 @@ export default function Pricing() {
             ].map((faq) => (
               <div
                 key={faq.q}
-                className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all"
+                className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-6 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all"
               >
-                <h3 className="font-semibold mb-2 text-gray-900">
+                <h3 className="font-semibold mb-2 text-sm sm:text-base text-gray-900 dark:text-gray-100">
                   {faq.q}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-words">
                   {faq.a}
                 </p>
               </div>
