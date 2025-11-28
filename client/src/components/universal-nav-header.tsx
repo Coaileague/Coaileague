@@ -111,21 +111,15 @@ export function UniversalNavHeader() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-[300px] overflow-y-auto bg-slate-900 border-slate-700">
-              {/* Header */}
+              {/* Header - Using CoAIleagueLogo Component */}
               <div className="p-5 border-b border-slate-700/50">
-                <Link href="/dashboard" onClick={handleNavigate} data-testid="link-dashboard-logo" className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
-                    <span className="text-white font-black text-sm">CO</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-lg font-black text-white tracking-tight">
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Co</span>
-                      <span className="text-white">AI</span>
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">league</span>
-                      <span className="text-[10px] text-slate-400 ml-0.5">™</span>
-                    </span>
-                    <p className="text-[11px] text-slate-400 tracking-wide">Autonomous Management</p>
-                  </div>
+                <Link href="/dashboard" onClick={handleNavigate} data-testid="link-dashboard-logo" className="flex items-center">
+                  <CoAIleagueLogo 
+                    width={180} 
+                    height={50} 
+                    showTagline={true} 
+                    showWordmark={true}
+                  />
                 </Link>
               </div>
 

@@ -1,6 +1,6 @@
 /**
  * Universal Header - Consistent navigation for ALL pages (public + workspace)
- * Shows appropriate nav based on authentication state and RBAC
+ * Shows appropriate nav based on variant prop (not auth state for public pages)
  */
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { LOGOUT_CONFIG } from "@/config/logout";
-import { MOBILE_CONFIG } from "@/config/mobileConfig";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -21,12 +21,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Determine if user is authenticated
-  const isAuthenticated = !!user;
-  
-  // Check if we're on a public page - hide logout if so
-  const isPublicPage = MOBILE_CONFIG.publicPages.includes(location as any);
   
   // Safe scroll function for SPA navigation
   const scrollToFeatures = () => {
@@ -48,20 +42,16 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
 
   const handleLogout = async () => {
     try {
-      // IMMEDIATELY clear the auth cache BEFORE redirect so component re-renders as unauthenticated
       LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
         queryClient.setQueryData([key], null);
       });
-      // Invalidate all queries to ensure cached data is cleared
       await queryClient.invalidateQueries();
       
-      // Call logout API in the background (fire and forget)
       fetch(LOGOUT_CONFIG.endpoint, { 
         method: LOGOUT_CONFIG.method, 
         credentials: "include" 
       }).catch(err => console.error("Logout API call failed:", err));
       
-      // Redirect immediately after clearing cache - don't wait for API
       if (LOGOUT_CONFIG.fullPageReload) {
         window.location.href = LOGOUT_CONFIG.redirectPath;
       } else {
@@ -69,11 +59,19 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
       }
     } catch (error) {
       console.error("Logout failed:", error);
-      // Still clear cache and redirect even if clearing fails
       LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
         queryClient.setQueryData([key], null);
       });
       setLocation(LOGOUT_CONFIG.redirectPath);
+    }
+  };
+
+  // Handle logo click - PUBLIC variant always goes to homepage
+  const handleLogoClick = () => {
+    if (variant === "public") {
+      setLocation("/");
+    } else {
+      setLocation("/dashboard");
     }
   };
   
@@ -81,41 +79,34 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-3 sm:px-6">
         <div className="flex h-16 sm:h-20 items-center justify-between gap-2">
-          {/* Logo - Always visible */}
+          {/* Logo - Uses the provided CoAIleagueLogo component */}
           <button 
-            onClick={() => setLocation(isAuthenticated ? "/dashboard" : "/")}
+            onClick={handleLogoClick}
             className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
-            aria-label={isAuthenticated ? "Go to dashboard" : "Go to homepage"}
+            aria-label={variant === "public" ? "Go to homepage" : "Go to dashboard"}
             data-testid="button-logo-home"
           >
-            {/* Desktop: Show full logo with wordmark */}
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg">
-                <span className="text-white font-black text-sm">CO</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-black text-lg text-foreground tracking-tight">
-                  <span className="text-cyan-600 dark:text-cyan-400">Co</span>
-                  <span>AI</span>
-                  <span className="text-cyan-600 dark:text-cyan-400">league</span>
-                  <span className="text-xs align-super">™</span>
-                </span>
-              </div>
+            {/* Desktop: Full logo with wordmark */}
+            <div className="hidden sm:block">
+              <CoAIleagueLogo 
+                width={200} 
+                height={50} 
+                showTagline={false} 
+                showWordmark={true}
+              />
             </div>
-            {/* Mobile: Show icon + brand name */}
-            <div className="flex sm:hidden items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-xs">CO</span>
-              </div>
-              <span className="font-bold text-sm text-foreground">
-                <span className="text-cyan-600 dark:text-cyan-400">Co</span>AI<span className="text-cyan-600 dark:text-cyan-400">league</span>
-              </span>
+            {/* Mobile: Icon only */}
+            <div className="block sm:hidden">
+              <CoAIleagueLogo 
+                width={40} 
+                height={40} 
+                onlyIcon={true}
+              />
             </div>
           </button>
 
-          {/* Navigation - Changes based on auth state */}
-          {!isAuthenticated ? (
-            // PUBLIC NAVIGATION
+          {/* PUBLIC NAVIGATION - Always show when variant is "public" */}
+          {variant === "public" ? (
             <>
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center gap-4 lg:gap-6">
@@ -140,24 +131,38 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 >
                   Contact
                 </button>
-                <Button
-                  variant="ghost"
-                  className="min-h-[44px] px-4"
-                  onClick={() => setLocation("/login")}
-                  data-testid="button-login"
-                >
-                  Login
-                </Button>
-                <Button
-                  className="min-h-[44px] px-6"
-                  onClick={() => setLocation("/register")}
-                  data-testid="button-get-started"
-                >
-                  Start Free Trial
-                </Button>
+                
+                {/* Show Login/Register if not authenticated, Dashboard link if authenticated */}
+                {!user ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className="min-h-[44px] px-4"
+                      onClick={() => setLocation("/login")}
+                      data-testid="button-login"
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      className="min-h-[44px] px-6"
+                      onClick={() => setLocation("/register")}
+                      data-testid="button-get-started"
+                    >
+                      Start Free Trial
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    className="min-h-[44px] px-6"
+                    onClick={() => setLocation("/dashboard")}
+                    data-testid="button-go-dashboard"
+                  >
+                    Go to Dashboard
+                  </Button>
+                )}
               </div>
 
-              {/* Mobile Menu - Collapsible Sheet */}
+              {/* Mobile Menu */}
               <div className="flex md:hidden items-center gap-2 shrink-0">
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
@@ -203,47 +208,61 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                         Contact
                       </Button>
                       <div className="border-t my-2" />
-                      <Button
-                        variant="outline"
-                        className="justify-center"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/login");
-                        }}
-                        data-testid="mobile-button-login"
-                      >
-                        Login
-                      </Button>
-                      <Button
-                        className="justify-center"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/register");
-                        }}
-                        data-testid="mobile-button-register"
-                      >
-                        Start Free Trial
-                      </Button>
+                      
+                      {!user ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            className="justify-center"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setLocation("/login");
+                            }}
+                            data-testid="mobile-button-login"
+                          >
+                            Login
+                          </Button>
+                          <Button
+                            className="justify-center"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setLocation("/register");
+                            }}
+                            data-testid="mobile-button-register"
+                          >
+                            Start Free Trial
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          className="justify-center"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            setLocation("/dashboard");
+                          }}
+                          data-testid="mobile-button-dashboard"
+                        >
+                          Go to Dashboard
+                        </Button>
+                      )}
                     </nav>
                   </SheetContent>
                 </Sheet>
               </div>
             </>
           ) : (
-            // WORKSPACE NAVIGATION - Only show logout if NOT on public page
-            !isPublicPage && (
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  data-testid="button-logout"
-                  className="text-foreground/80 hover:text-foreground"
-                >
-                  Logout
-                </Button>
-              </div>
-            )
+            // WORKSPACE NAVIGATION
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                data-testid="button-logout"
+                className="text-foreground/80 hover:text-foreground"
+              >
+                Logout
+              </Button>
+            </div>
           )}
         </div>
       </div>
