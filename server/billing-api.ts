@@ -13,6 +13,7 @@ import {
   workspaceAddons,
   subscriptionPayments,
   insertBillingAddonSchema,
+  orgRewards,
 } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { isAuthenticated } from './replitAuth';
@@ -640,6 +641,7 @@ billingRouter.post('/account/reactivate', async (req, res) => {
 
 /**
  * Create Stripe checkout session for subscription upgrade
+ * Automatically applies onboarding discount if available
  */
 billingRouter.post('/create-checkout-session', async (req, res) => {
   try {
@@ -648,13 +650,14 @@ billingRouter.post('/create-checkout-session', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { priceId, successUrl, cancelUrl } = z.object({
+    const { priceId, successUrl, cancelUrl, applyOnboardingDiscount } = z.object({
       priceId: z.string(),
       successUrl: z.string(),
       cancelUrl: z.string(),
+      applyOnboardingDiscount: z.boolean().optional().default(true),
     }).parse(req.body);
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: any = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -669,7 +672,20 @@ billingRouter.post('/create-checkout-session', async (req, res) => {
         workspaceId,
         userId: req.user!.id,
       },
-    });
+    };
+
+    if (applyOnboardingDiscount) {
+      const reward = await db.query.orgRewards.findFirst({
+        where: eq(orgRewards.workspaceId, workspaceId),
+      });
+
+      if (reward?.status === 'unlocked' && reward.stripeCouponId) {
+        sessionConfig.discounts = [{ coupon: reward.stripeCouponId }];
+        console.log(`[Billing] Applying onboarding discount coupon ${reward.stripeCouponId} to checkout`);
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     res.json({ sessionId: session.id });
   } catch (error: any) {
