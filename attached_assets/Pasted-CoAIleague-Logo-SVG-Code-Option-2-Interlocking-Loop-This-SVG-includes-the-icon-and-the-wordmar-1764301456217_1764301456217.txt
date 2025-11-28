@@ -1,0 +1,152 @@
+CoAIleague™ Logo (SVG Code - Option 2: Interlocking Loop)
+This SVG includes the icon and the wordmark. You can use them together or separately.
+
+HTML
+
+<svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle2 logoDesc2">
+  <title id="logoTitle2">CoAIleague™ Interlocking Loop Logo</title>
+  <desc id="logoDesc2">Abstract icon of interlocking C and A shapes forming a continuous loop, next to the wordmark "CoAIleague™ Autonomous Management Solutions".</desc>
+
+  <style>
+    /* Define CSS Variables for Easy Theming */
+    :root {
+      --coailleague-color-start: #14B8A6; /* Bright Teal */
+      --coailleague-color-mid: #0E7490;    /* Darker Teal */
+      --coailleague-color-end: #3B82F6;    /* Bright Blue */
+      --wordmark-color-dark: #334155;     /* Dark Grey for main text */
+      --wordmark-color-light: #64748B;    /* Lighter Grey for sub-text */
+    }
+
+    /* Gradient definition using CSS variables */
+    #iconGradient stop:nth-child(1) { stop-color: var(--coailleague-color-start); }
+    #iconGradient stop:nth-child(2) { stop-color: var(--coailleague-color-mid); }
+    #iconGradient stop:nth-child(3) { stop-color: var(--coailleague-color-end); }
+
+    /* Wordmark styling using CSS variables */
+    #wordmarkCo, #wordmarkLeague { fill: var(--coailleague-color-mid); } /* Using mid-teal for 'Co' and 'league' */
+    #wordmarkAI { fill: var(--wordmark-color-dark); }
+    #wordmarkTM { fill: var(--wordmark-color-dark); }
+    #wordmarkTagline { fill: var(--wordmark-color-light); }
+
+    /* Optional: Hover effect for interactive elements */
+    .coailleague-icon-path:hover {
+      opacity: 0.9; /* Slightly dim on hover */
+      transition: opacity 0.2s ease-in-out;
+    }
+  </style>
+
+  <g id="CoAIleague_Icon_Option2">
+    <path class="coailleague-icon-path" d="M54.5165 44.5029C54.8105 45.4217 55.4851 46.2573 56.4172 46.5165C57.3493 46.7758 58.3375 46.4385 59.0433 45.7196C62.0006 42.6616 64.9184 39.5638 67.8209 36.4674L77.0543 26.6025C76.7118 26.8378 76.3654 27.0682 76.0153 27.2937C73.4975 28.9318 70.9782 30.5694 68.4554 32.1969C67.4361 32.8647 66.7454 33.7279 66.4526 34.8091C66.1598 35.8904 66.2737 37.0181 66.776 38.0051C67.0945 38.627 67.5587 39.176 68.1408 39.6382C68.9669 40.2929 69.9079 40.7188 70.9254 40.8906C71.9429 41.0624 72.981 40.9754 73.9619 40.6358C74.9428 40.2961 75.8396 39.7107 76.5912 38.9248C76.9926 38.4913 77.3486 37.9961 77.6534 37.4475C78.4116 36.1042 78.7844 34.5822 78.7513 33.0567C78.7181 31.5312 78.279 30.0468 77.4816 28.717C76.9856 27.8724 76.3658 27.129 75.6417 26.5057C74.3414 25.3217 72.8228 24.3643 71.1895 23.6826C69.5562 23.0009 67.8209 22.5975 66.0287 22.4862C64.2365 22.3749 62.4042 22.5574 60.6277 22.9996C58.8512 23.4418 57.1478 24.1374 55.5786 25.0683C53.5186 26.2796 51.6441 27.8016 49.9882 29.5768L39.8805 40.7303C40.1809 40.9084 40.4795 41.0854 40.7761 41.2612C43.3243 42.8252 45.867 44.386 48.4046 45.9439C49.4002 46.5516 50.0462 47.3756 50.3168 48.334C50.5874 49.2925 50.4578 50.3013 49.9482 51.2407C49.6384 51.8105 49.2081 52.3082 48.6705 52.6974C47.9351 53.2505 47.0988 53.5855 46.1963 53.7126C45.2938 53.8396 44.3647 53.7547 43.4776 53.4616C42.5905 53.1684 41.7767 52.678 41.0772 52.0298C40.6698 51.6496 40.3117 51.2016 40.0101 50.6922C39.2608 49.4452 38.8929 48.0163 38.9329 46.5815C38.9729 45.1467 39.4208 43.7523 40.2452 42.5312C40.7431 41.7891 41.3662 41.1444 42.0911 40.6127C43.3768 39.6991 44.8697 39.0069 46.4716 38.572C48.0734 38.1371 49.7369 37.9625 51.4011 38.0583C53.0653 38.1541 54.7088 38.5197 56.2625 39.1332C57.9255 39.7909 59.4891 40.6865 60.9169 41.7942C62.4822 43.0189 63.8997 44.4719 65.1226 46.1118L60.0315 51.8596C61.4552 50.3951 62.724 48.7495 63.8118 46.9749C64.2981 46.1601 64.6713 45.3093 64.9142 44.4309C65.1571 43.5525 65.2676 42.6481 65.242 41.7408C65.2164 40.8335 65.0549 39.932 64.7668 39.0536C64.4787 38.1752 64.0673 37.3323 63.5413 36.5492C62.9099 35.5908 62.1121 34.7208 61.1895 33.9786C60.2668 33.2364 59.2393 32.6288 58.1408 32.1706C57.0423 31.7123 55.8856 31.4087 54.7067 31.2699C53.5278 31.1311 52.3392 31.159 51.1571 31.3533L40.7761 41.2612L40.0101 50.6922C40.0101 50.6922 40.0094 50.7001 40.0086 50.7081L39.0984 51.8159L38.2818 52.873C37.5229 53.9482 36.4257 54.7674 35.1557 55.2494C33.8857 55.7314 32.4862 55.8453 31.0963 55.5861C29.7064 55.3269 28.3756 54.7011 27.2081 53.7661C26.0406 52.8311 25.0805 51.6111 24.3976 50.1983C23.5932 48.5134 23.2033 46.6811 23.2505 44.8437C23.2977 43.0063 23.7818 41.1984 24.6644 39.5315C25.5471 37.8646 26.7904 36.3867 28.3052 35.2014C29.82 34.016 31.5794 33.1517 33.4356 32.6631L33.918 32.5358L39.9575 30.0718L39.8805 40.7303L38.9329 46.5815L38.2818 52.873C38.2818 52.873 38.2818 52.873 38.2818 52.873L39.8805 40.7303L49.9882 29.5768C49.9882 29.5768 49.9882 29.5768 49.9882 29.5768L55.5786 25.0683C55.5786 25.0683 55.5786 25.0683 55.5786 25.0683L60.9169 41.7942C60.9169 41.7942 60.9169 41.7942 60.9169 41.7942L65.1226 46.1118C65.1226 46.1118 65.1226 46.1118 65.1226 46.1118L67.8209 36.4674L77.0543 26.6025L76.5912 38.9248L73.9619 40.6358L70.9254 40.8906L68.1408 39.6382L66.776 38.0051C66.776 38.0051 66.776 38.0051 66.776 38.0051L64.9142 44.4309C64.9142 44.4309 64.9142 44.4309 64.9142 44.4309L59.0433 45.7196C59.0433 45.7196 59.0433 45.7196 59.0433 45.7196L54.5165 44.5029Z" fill="url(#iconGradient)"/>
+  </g>
+
+  <defs>
+    <linearGradient id="iconGradient" x1="23" y1="38" x2="79" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--coailleague-color-start)"/>
+      <stop offset="0.5" stop-color="var(--coailleague-color-mid)"/>
+      <stop offset="1" stop-color="var(--coailleague-color-end)"/>
+    </linearGradient>
+  </defs>
+
+  <g id="CoAIleague_Wordmark_Option2">
+    <text x="90" y="32" font-family="Arial, sans-serif" font-weight="bold" font-size="24">
+      <tspan id="wordmarkCo" fill="var(--coailleague-color-mid)">Co</tspan>
+      <tspan id="wordmarkAI" fill="var(--wordmark-color-dark)">AI</tspan>
+      <tspan id="wordmarkLeague" fill="var(--coailleague-color-mid)">league</tspan>
+      <tspan id="wordmarkTM" font-size="14" dy="-0.5em" fill="var(--wordmark-color-dark)">™</tspan>
+    </text>
+    <text x="90" y="52" font-family="Arial, sans-serif" font-size="12" id="wordmarkTagline" fill="var(--wordmark-color-light)">
+      Autonomous Management Solutions
+    </text>
+  </g>
+</svg>
+How to Use This Dynamic SVG Code:
+Embed Directly into HTML (Recommended): Paste the entire <svg>...</svg> block directly into your HTML wherever you want the logo to appear (e.g., in your header, sidebar, footer, or forms).
+
+HTML
+
+<header>
+  <a href="/">
+    <svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle2 logoDesc2">
+      </svg>
+  </a>
+  </header>
+For Online Forms: You can embed the SVG directly into your form's HTML. Since it's code, it will scale perfectly regardless of the form's size or device.
+
+HTML
+
+<form action="/submit-data" method="POST">
+  <div class="form-header-logo">
+    <svg width="180" height="60" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      </svg>
+  </div>
+  </form>
+Notice I've reduced width and height in the form example for a smaller display, while viewBox remains the same to maintain aspect ratio and crispness.
+
+How to Edit for Seasons/Awareness (Dynamic Theming):
+The real power here is the <style> block and CSS variables within the SVG.
+
+Method 1: Edit Directly in the SVG (for quick, one-off changes):
+
+Simply change the hex codes for --coailleague-color-start, --coailleague-color-mid, --coailleague-color-end, --wordmark-color-dark, and --wordmark-color-light inside the <style> tags within the SVG itself.
+
+Example (Spring/Fresh Green):
+
+CSS
+
+--coailleague-color-start: #6EC06E; /* Lighter Green */
+--coailleague-color-mid: #3CB371;    /* Medium Green */
+--coailleague-color-end: #2E8B57;    /* Darker Green */
+Example (Awareness - Blue for Diabetes/Autism):
+
+CSS
+
+--coailleague-color-start: #87CEEB; /* Sky Blue */
+--coailleague-color-mid: #4682B4;    /* Steel Blue */
+--coailleague-color-end: #1E90FF;    /* Dodger Blue */
+Method 2: Override with External CSS (for platform-wide theming):
+
+If you embed the SVG directly in your HTML, you can override these CSS variables from your main style.css file or a specific theme stylesheet.
+
+In your style.css (or a theme file):
+
+CSS
+
+/* Default theme */
+:root {
+  --coailleague-color-start: #14B8A6; /* Bright Teal */
+  --coailleague-color-mid: #0E7490;    /* Darker Teal */
+  --coailleague-color-end: #3B82F6;    /* Bright Blue */
+  /* ... other default colors ... */
+}
+
+/* Seasonal/Awareness Theme (e.g., for a "spring" class on the body) */
+body.spring-theme svg { /* Target SVGs directly within a themed container */
+  --coailleague-color-start: #6EC06E;
+  --coailleague-color-mid: #3CB371;
+  --coailleague-color-end: #2E8B57;
+}
+
+/* Or for a specific logo element */
+#header-logo svg {
+  --coailleague-color-start: #FFD700; /* Gold for a "festive" logo */
+  --coailleague-color-mid: #DAA520;
+  --coailleague-color-end: #B8860B;
+}
+Method 3: Change with JavaScript (for dynamic, interactive changes):
+
+You can use JavaScript to modify the CSS variables or direct SVG attributes.
+
+JavaScript
+
+function changeLogoColors(startColor, midColor, endColor) {
+  const svgElement = document.getElementById('CoAIleague_Logo_Main'); // Give your outer SVG an ID
+  if (svgElement) {
+    svgElement.style.setProperty('--coailleague-color-start', startColor);
+    svgElement.style.setProperty('--coailleague-color-mid', midColor);
+    svgElement.style.setProperty('--coailleague-color-end', endColor);
+  }
+}
+
+// Example usage:
+// changeLogoColors('#FF6347', '#FF4500', '#CD5C5C'); // Tomato red for a warning/urgent theme
+This approach gives you maximum flexibility to manage and adapt your CoAIleague™ branding across your platform.

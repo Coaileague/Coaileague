@@ -29,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
@@ -259,8 +260,17 @@ function AppContent() {
       <ProtectedRoute>
         <CommandPalette />
         <div className="flex flex-col h-screen w-full bg-background">
-          {/* Universal Navigation Header - MOBILE ONLY */}
-          {!isHelpDesk && <UniversalNavHeader />}
+          {/* Mobile Header with Logo */}
+          {!isHelpDesk && (
+            <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <a href="/" data-testid="link-logo-mobile" className="flex-shrink-0">
+                  <CoAIleagueLogo width={140} height={46} showTagline={false} className="h-11 w-auto" />
+                </a>
+                <NotificationsCenter />
+              </div>
+            </div>
+          )}
           
           {/* Main content area - with bottom nav padding */}
           <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide min-h-0 w-full max-w-full pb-20">
@@ -429,10 +439,12 @@ function AppContent() {
           {!isHelpDesk && !isMobile && (
             <>
               <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-3">
                     <SidebarTrigger data-testid="button-sidebar-toggle" className="text-muted-foreground" />
-                    <WorkspaceSwitcher />
+                    <a href="/" data-testid="link-logo-desktop" className="flex-shrink-0">
+                      <CoAIleagueLogo width={220} height={70} showTagline={false} className="h-9 w-auto" />
+                    </a>
                   </div>
                   <div className="flex items-center gap-2">
                     <NotificationsCenter />
