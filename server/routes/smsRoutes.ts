@@ -36,18 +36,42 @@ smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_adm
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
-    const { to, message, type } = req.body;
+    const { to, message, type, employeeId } = req.body;
     const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
 
-    if (!to || !message) {
-      return res.status(400).json({ error: 'Phone number and message are required' });
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    if (message.length > 1600) {
+      return res.status(400).json({ error: 'Message too long (max 1600 characters)' });
+    }
+
+    let targetPhone = to;
+    if (employeeId && !to) {
+      const result = await sendSMSToEmployee(employeeId, message, type || 'notification', workspaceId);
+      return res.json(result);
+    }
+
+    if (!targetPhone) {
+      return res.status(400).json({ error: 'Phone number or employee ID is required' });
+    }
+
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(targetPhone.replace(/\s/g, ''))) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
     }
 
     const result = await sendSMS({
-      to,
+      to: targetPhone,
       body: message,
       type: type || 'manual',
-      workspaceId: user?.currentWorkspaceId,
+      workspaceId,
       userId: user?.id,
     });
 
@@ -64,13 +88,24 @@ smsRouter.post('/send-to-employee', requireAuth, requireManager, async (req: Aut
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
     const { employeeId, message, type } = req.body;
 
     if (!employeeId || !message) {
       return res.status(400).json({ error: 'Employee ID and message are required' });
     }
 
-    const result = await sendSMSToEmployee(employeeId, message, type || 'notification');
+    if (message.length > 1600) {
+      return res.status(400).json({ error: 'Message too long (max 1600 characters)' });
+    }
+
+    const result = await sendSMSToEmployee(employeeId, message, type || 'notification', workspaceId);
 
     res.json(result);
   } catch (error: any) {
@@ -85,13 +120,20 @@ smsRouter.post('/shift-reminder', requireAuth, requireManager, async (req: Authe
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
     const { employeeId, shiftDate, shiftTime, location } = req.body;
 
     if (!employeeId || !shiftDate || !shiftTime) {
       return res.status(400).json({ error: 'Employee ID, shift date, and time are required' });
     }
 
-    const result = await sendShiftReminder(employeeId, shiftDate, shiftTime, location);
+    const result = await sendShiftReminder(employeeId, shiftDate, shiftTime, location, workspaceId);
 
     res.json(result);
   } catch (error: any) {
@@ -106,13 +148,20 @@ smsRouter.post('/schedule-change', requireAuth, requireManager, async (req: Auth
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
     const { employeeId, changeType, shiftDetails } = req.body;
 
     if (!employeeId || !changeType || !shiftDetails) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const result = await sendScheduleChangeNotification(employeeId, changeType, shiftDetails);
+    const result = await sendScheduleChangeNotification(employeeId, changeType, shiftDetails, workspaceId);
 
     res.json(result);
   } catch (error: any) {

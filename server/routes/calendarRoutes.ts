@@ -36,13 +36,31 @@ calendarRouter.get('/schedule.ics', requireAuth, async (req: AuthenticatedReques
 
     const user = req.user;
     const workspaceId = user?.currentWorkspaceId;
-    if (!workspaceId) {
+    const userId = user?.id;
+    if (!workspaceId || !userId) {
       return res.status(400).json({ error: 'No workspace selected' });
     }
 
-    const employeeId = req.query.employeeId as string | undefined;
+    const requestedEmployeeId = req.query.employeeId as string | undefined;
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+    const userEmployee = await getEmployeeId(userId, workspaceId);
+    
+    const userRecord = await db.query.employees.findFirst({
+      where: and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)),
+    });
+    const hasManagerRole = userRecord?.workspaceRole && ['org_owner', 'org_admin', 'manager'].includes(userRecord.workspaceRole);
+    
+    let employeeId = requestedEmployeeId;
+    
+    if (!requestedEmployeeId) {
+      if (!hasManagerRole) {
+        employeeId = userEmployee || undefined;
+      }
+    } else if (requestedEmployeeId !== userEmployee && !hasManagerRole) {
+      return res.status(403).json({ error: 'Not authorized to view this schedule' });
+    }
 
     const icsContent = await exportScheduleToICS(workspaceId, employeeId, startDate, endDate);
 

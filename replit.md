@@ -19,7 +19,16 @@ Key capabilities include:
 - Ask before making major changes
 - I prefer detailed explanations
 
-### Latest Updates (Session - PRODUCTION COMPLETE)
+### Latest Updates (Current Session)
+- ✅ **SMS Notifications** - Twilio integration for shift reminders, schedule changes, invoice reminders (smsService.ts, smsRoutes.ts)
+- ✅ **Calendar Export** - ICS export for schedules and timesheets, subscription URLs (calendarService.ts, calendarRoutes.ts)
+- ✅ **What's New API** - Dynamic platform updates feed with CRUD operations (whatsNewService.ts, whatsNewRoutes.ts)
+- ✅ **Timesheet Reports** - Full report generation with CSV export, compliance checks, weekly/monthly views (timesheetReportService.ts, timesheetReportRoutes.ts)
+- ✅ **Invoice from Timesheets** - Generate client invoices from approved time entries (timesheetInvoiceService.ts, timesheetInvoiceRoutes.ts)
+- ✅ **Advanced Scheduling** - Recurring shift templates, shift swap requests, week copying (advancedSchedulingService.ts, advancedSchedulingRoutes.ts)
+- ✅ **Compliance Config** - Centralized labor law thresholds in platformConfig.ts (COMPLIANCE section)
+
+### Previous Session Updates
 - ✅ **Feature Flags System** - 36 production toggles in `platformConfig.ts` (includes gamification)
 - ✅ **Billing API** - 38 complete endpoints (usage, credits, invoices, subscriptions, addons)
 - ✅ **Stripe Webhooks** - Full lifecycle handling (subscription, invoice, charge events)

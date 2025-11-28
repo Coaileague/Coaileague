@@ -79,6 +79,9 @@ import emailRouter from "./routes/emails";
 import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
+import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
+import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
+import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -1702,6 +1705,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register What's New routes (Platform updates feed)
   app.use("/api/whats-new", whatsNewRouter);
+
+  // Register Timesheet Report routes (reports, CSV export, compliance)
+  app.use("/api/timesheet-reports", timesheetReportRouter);
+
+  // Register Timesheet Invoice routes (generate invoices from approved time entries)
+  app.use("/api/timesheet-invoices", timesheetInvoiceRouter);
+
+  // Register Advanced Scheduling routes (recurring shifts, shift swapping)
+  app.use("/api/scheduling", advancedSchedulingRouter);
   // Register AI Communications Chat Upload routes (file uploads with security, workroom attachments)
   const chatUploadsRouter = (await import('./routes/chat-uploads')).default;
   app.use('/api/chat/upload', chatUploadsRouter);

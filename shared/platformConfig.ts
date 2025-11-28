@@ -32,6 +32,33 @@ export const WORKSPACE = {
 } as const;
 
 // ============================================================================
+// COMPLIANCE & LABOR LAW CONFIGURATION
+// ============================================================================
+export const COMPLIANCE = {
+  overtime: {
+    dailyThresholdHours: 8,        // Hours before overtime kicks in
+    weeklyThresholdHours: 40,      // Weekly overtime threshold
+    overtimeMultiplier: 1.5,       // Time-and-a-half
+    doubleTimeMultiplier: 2.0,     // Double time after 12 hours
+  },
+  breaks: {
+    minBreakAfterHours: 6,         // Require break after 6 hours
+    minBreakDuration: 30,          // Minimum 30-minute break
+    mealBreakDuration: 30,         // Standard meal break
+    restBreakDuration: 15,         // Standard rest break
+  },
+  shifts: {
+    maxDailyHours: 12,             // Maximum hours per day
+    minRestBetweenShifts: 8,       // Minimum rest between shifts
+    maxConsecutiveDays: 6,         // Max consecutive work days
+  },
+  scheduling: {
+    minAdvanceNoticeHours: 24,     // Minimum notice for schedule changes
+    maxWeeklyHours: 60,            // Maximum weekly hours allowed
+  },
+} as const;
+
+// ============================================================================
 // RESPONSIVE & MOBILE CONFIGURATION
 // ============================================================================
 export const RESPONSIVE = {

@@ -101,13 +101,19 @@ export async function sendSMSToUser(userId: string, body: string, type: string =
   }
 }
 
-export async function sendSMSToEmployee(employeeId: string, body: string, type: string = 'notification'): Promise<SMSResult> {
+export async function sendSMSToEmployee(employeeId: string, body: string, type: string = 'notification', workspaceId?: string): Promise<SMSResult> {
   try {
     const employee = await db.query.employees.findFirst({
-      where: eq(employees.id, employeeId),
+      where: workspaceId 
+        ? and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId))
+        : eq(employees.id, employeeId),
     });
 
-    if (!employee?.phone) {
+    if (!employee) {
+      return { success: false, error: 'Employee not found' };
+    }
+
+    if (!employee.phone) {
       return { success: false, error: 'Employee has no phone number' };
     }
 
@@ -126,19 +132,21 @@ export async function sendShiftReminder(
   employeeId: string,
   shiftDate: string,
   shiftTime: string,
-  location?: string
+  location?: string,
+  workspaceId?: string
 ): Promise<SMSResult> {
   const message = location
     ? `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime} at ${location}. Reply STOP to unsubscribe.`
     : `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime}. Reply STOP to unsubscribe.`;
   
-  return sendSMSToEmployee(employeeId, message, 'shift_reminder');
+  return sendSMSToEmployee(employeeId, message, 'shift_reminder', workspaceId);
 }
 
 export async function sendScheduleChangeNotification(
   employeeId: string,
   changeType: 'added' | 'removed' | 'modified',
-  shiftDetails: string
+  shiftDetails: string,
+  workspaceId?: string
 ): Promise<SMSResult> {
   const messages = {
     added: `CoAIleague: New shift assigned - ${shiftDetails}. Check your schedule for details.`,
@@ -146,7 +154,7 @@ export async function sendScheduleChangeNotification(
     modified: `CoAIleague: Schedule update - ${shiftDetails}. Check your schedule for details.`,
   };
   
-  return sendSMSToEmployee(employeeId, messages[changeType], 'schedule_change');
+  return sendSMSToEmployee(employeeId, messages[changeType], 'schedule_change', workspaceId);
 }
 
 export async function sendApprovalNotification(

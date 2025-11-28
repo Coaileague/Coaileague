@@ -1,0 +1,329 @@
+Gotcha — you’re basically trying to:
+
+Explain to Replit what you’re building (and that you’re using Gemini for AI automation + guardrails), and
+
+Define a universal onboarding / trial + billing + invite page that’s RBAC-aware for orgs, leaders, support, and you.
+
+
+I’ll give you something you can paste directly into Replit (as a spec or README) plus a clear breakdown of the universal page + roles.
+
+
+---
+
+1. Clean “Description for Replit” (you can paste this as-is)
+
+> Project Overview
+This project is an automation platform that uses Google Gemini as the primary AI engine for:
+
+Workflow automation
+
+Guard rails and safety guidelines
+
+Tool use orchestration
+
+Dynamic content generation (emails, onboarding flows, etc.)
+
+
+Core Use Case
+We have a Sales/Marketing onboarding pipeline for organizations. The pipeline:
+
+1. Invites new organizations to sign up.
+
+
+2. Helps migrate their info and configure a new workspace for their org.
+
+
+3. Gets them “out-of-the-box ready” with minimal setup; end users can start using automation quickly.
+
+
+
+AI-Generated Marketing & Emails
+
+The platform uses Gemini to generate HTML marketing emails and campaigns.
+
+AI can design unique content per org, including multiple variants for A/B testing.
+
+Emails are sent automatically as part of the onboarding / invite flow.
+
+
+Trial & Billing Model
+
+Organizations are invited to a 14-day free trial.
+
+During the 14 days, they can try any tier or automation feature.
+
+Credits used during the trial are tracked, but not billed immediately.
+
+At the end of the trial, if the org chooses a paid tier and activates a subscription (monthly or yearly), then:
+
+They can pay by credit card or, if available, bank ACH.
+
+Credits consumed during the trial are deducted from their new tier’s balance.
+
+This makes the trial fair: whatever they “spent” in credits during the trial simply comes out of their first paid credit allocation rather than being lost.
+
+
+
+RBAC & Universal Dashboard Page
+
+We need a single universal page in the workspace that is shown based on RBAC (Role-Based Access Control).
+
+This page should surface all the important onboarding and billing info depending on the user’s role (org leader, standard user, support staff, or my own admin role).
+
+This page will live inside the org’s workspace and control access to: onboarding status, trial status, credits usage, billing, and invites.
+
+
+
+
+
+---
+
+2. RBAC Design for the “Universal Page”
+
+Let’s define some roles and what the universal page shows for each.
+
+Roles
+
+Owner / Org Leader (ORG_OWNER)
+The main decision-maker; can see everything for their organization.
+
+Billing Admin (BILLING_ADMIN)
+Can manage payment methods, subscriptions, and invoices.
+
+Support / Internal Admin (You) (PLATFORM_SUPPORT)
+You + your support team; can see cross-org details for troubleshooting.
+
+Org Member / End User (ORG_USER)
+Regular user in the workspace; minimal access.
+
+Invited but not yet activated (INVITED_USER)
+Someone who got an invite but hasn’t finished onboarding.
+
+
+Universal Page Sections
+
+All on one route, e.g. /org/overview or /workspace/hub.
+
+1. Header & Org Summary
+
+Shown to: Everyone inside the org (ORG_OWNER, ORG_USER, BILLING_ADMIN, PLATFORM_SUPPORT).
+
+Content:
+
+Org name, logo
+
+Trial status: Active / Expired / Not started
+
+Tier: Trial - Any Tier, Starter, Pro, etc.
+
+Days left in trial (if applicable)
+
+
+
+2. Trial & Credits Panel
+
+Shown to:
+
+Full details: ORG_OWNER, BILLING_ADMIN, PLATFORM_SUPPORT
+
+Read-only summary: ORG_USER
+
+
+Content:
+
+Trial start / end date (14 days)
+
+Credits used during trial (e.g., 1,240 / Unlimited trial pool)
+
+Explanation: “Credits used now will be deducted from your first paid balance if you continue.”
+
+CTA buttons (for owner/admin only):
+
+“Choose a Plan”
+
+“Activate Subscription Now”
+
+“View Usage Details”
+
+
+
+
+3. Plan Selection & Billing Panel
+
+Shown to: ORG_OWNER, BILLING_ADMIN, PLATFORM_SUPPORT (read-only)
+
+Content:
+
+Plan options (tiers) with:
+
+Monthly vs Yearly billing toggle
+
+Included credits / features
+
+
+Payment method:
+
+Add / update Credit Card
+
+Add / update ACH (Bank) if enabled
+
+
+“Credits used in trial will reduce your initial balance by X.”
+
+
+
+4. Org Onboarding Checklist
+
+Shown to: Everyone in org; owner/admin can modify.
+
+Items might be:
+
+✅ Org profile completed
+
+✅ Users invited
+
+✅ Initial automations configured
+
+✅ Marketing emails tested
+
+
+Gemini can also suggest “Next best steps” based on usage.
+
+
+5. User & Invitations Panel
+
+Shown to: ORG_OWNER, BILLING_ADMIN, PLATFORM_SUPPORT
+
+Content:
+
+List of current users with roles
+
+Pending invitations with status (sent, opened, completed)
+
+Button to:
+
+“Invite New Org Member”
+
+“Resend Invite”
+
+
+
+
+ORG_USER only sees their own role and maybe team structure, not billing stuff.
+
+6. AI Automation & Activity Feed
+
+Shown to: All, but detail level depends on role.
+
+Content:
+
+Recent automations run
+
+AI-generated email campaigns sent
+
+Credits consumed per automation
+
+For ORG_OWNER/BILLING_ADMIN/PLATFORM_SUPPORT: ability to drill down into logs (for guard rails & debugging).
+
+
+
+
+---
+
+3. Trial & Credits Logic (you can use this as dev notes)
+
+Basics:
+
+trial_days = 14
+
+trial_start set on org’s first activation.
+
+trial_end = trial_start + 14 days
+
+credits_used_during_trial tracked in a separate bucket.
+
+
+When trial ends OR user activates early:
+
+1. User selects a tier: Starter, Pro, etc.
+
+
+2. Each tier has monthly_credit_allocation (or yearly).
+
+
+3. On first billing cycle:
+
+allocated_credits = tier.monthly_credit_allocation
+
+available_credits = allocated_credits - credits_used_during_trial
+
+If credits_used_during_trial > allocated_credits, system can:
+
+Either allow a negative starting balance and require purchase of additional credits, or
+
+Force them into a higher tier / additional pack before completing checkout (your choice).
+
+
+
+
+
+You could model this in pseudo-code as:
+
+availableCredits = planMonthlyCredits - trialCreditsUsed;
+if (availableCredits < 0) {
+  // handle overage: prompt user to buy extra credits or auto-add an add-on pack
+}
+
+
+---
+
+4. Simple RBAC Check Pattern (for your backend/frontend)
+
+Pseudo-code you can reuse:
+
+function canViewBilling(userRole) {
+  return ['ORG_OWNER', 'BILLING_ADMIN', 'PLATFORM_SUPPORT'].includes(userRole);
+}
+
+function canManageUsers(userRole) {
+  return ['ORG_OWNER', 'PLATFORM_SUPPORT'].includes(userRole);
+}
+
+function canViewTrialDetails(userRole) {
+  return ['ORG_OWNER', 'BILLING_ADMIN', 'PLATFORM_SUPPORT'].includes(userRole);
+}
+
+And in the UI:
+
+{canViewBilling(currentUser.role) && (
+  <BillingPanel ... />
+)}
+
+
+---
+
+5. How to phrase your “ask” to Replit (if you need help from them)
+
+If you’re going to ask Replit’s AI or a human for help, you can say something like:
+
+> “I’m building an automation platform with Gemini as the AI engine for workflows and guard rails.
+I need:
+
+A universal RBAC-based org dashboard page (trial status, credits, billing, users)
+
+A 14-day trial flow where credits used during trial are tracked and then deducted from the first paid tier’s credit balance
+
+AI-generated HTML marketing emails with variants.
+Please help me design the routes, database models, and components for this.”
+
+
+
+
+
+---
+
+If you’d like, next step I can:
+
+Turn this into a schema (tables/collections for Orgs, Users, Roles, Subscriptions, Credits, Invites), or
+
+Draft the universal page UI layout in React (or another framework you’re using).
