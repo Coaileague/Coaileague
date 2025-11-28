@@ -31,6 +31,7 @@ import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
 import { gamificationRouter } from "./gamification-api"; // Employee Engagement & Recognition System
+import schedulerRouter from "./routes/schedulerRoutes"; // CoAIleague Autonomous Scheduler API
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { auditContextMiddleware } from "./middleware/audit";
@@ -1671,6 +1672,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Gamification & Employee Engagement System
   app.use('/api/gamification', gamificationRouter);
 
+
+  // Register CoAIleague Autonomous Scheduler API
+  app.use('/api/scheduler', schedulerRouter);
   // Register Unified AI Brain System (cross-org learning, job execution, global patterns)
   app.use('/api/ai-brain', aiBrainRouter);
 

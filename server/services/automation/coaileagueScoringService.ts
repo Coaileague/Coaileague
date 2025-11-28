@@ -35,6 +35,24 @@ import {
 import { eq, and, sql, desc } from "drizzle-orm";
 
 // ============================================================================
+// CUSTOM ERRORS (for typed error handling in routes)
+// ============================================================================
+
+export class SchedulerNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SchedulerNotFoundError';
+  }
+}
+
+export class SchedulerAccessDeniedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SchedulerAccessDeniedError';
+  }
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -165,21 +183,30 @@ export class CoAIleagueScoringService {
   }
 
   /**
-   * Get or create employee profile
+   * Get or create employee profile (workspace-scoped for tenant isolation)
+   * @throws SchedulerNotFoundError if employee not found in workspace
+   * @throws SchedulerAccessDeniedError if workspace mismatch
    */
   async getOrCreateProfile(workspaceId: string, employeeId: string): Promise<CoaileagueEmployeeProfile> {
+    // Always filter by BOTH workspaceId AND employeeId for tenant isolation
     let profile = await db.query.coaileagueEmployeeProfiles.findFirst({
-      where: eq(coaileagueEmployeeProfiles.employeeId, employeeId),
+      where: and(
+        eq(coaileagueEmployeeProfiles.workspaceId, workspaceId),
+        eq(coaileagueEmployeeProfiles.employeeId, employeeId)
+      ),
     });
 
     if (!profile) {
-      // Get employee details
+      // Verify employee belongs to this workspace before creating profile
       const employee = await db.query.employees.findFirst({
-        where: eq(employees.id, employeeId),
+        where: and(
+          eq(employees.id, employeeId),
+          eq(employees.workspaceId, workspaceId)
+        ),
       });
 
       if (!employee) {
-        throw new Error(`Employee ${employeeId} not found`);
+        throw new SchedulerNotFoundError(`Employee not found in workspace`);
       }
 
       [profile] = await db.insert(coaileagueEmployeeProfiles).values({
@@ -195,6 +222,11 @@ export class CoAIleagueScoringService {
         isInOrgPool: true,
         isInGlobalPool: false,
       }).returning();
+    }
+
+    // Final validation: ensure returned profile belongs to requested workspace
+    if (profile.workspaceId !== workspaceId) {
+      throw new SchedulerAccessDeniedError(`Access denied`);
     }
 
     return profile;
@@ -230,7 +262,7 @@ export class CoAIleagueScoringService {
       // Recalculate scores
       const newScores = this.recalculateScores(profile, metricUpdates, pointsChange);
       
-      // Update profile in database
+      // Update profile in database - include workspaceId in WHERE for defense-in-depth
       await db.update(coaileagueEmployeeProfiles)
         .set({
           ...metricUpdates,
@@ -242,7 +274,10 @@ export class CoAIleagueScoringService {
           lastScoreUpdate: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(coaileagueEmployeeProfiles.id, profile.id));
+        .where(and(
+          eq(coaileagueEmployeeProfiles.id, profile.id),
+          eq(coaileagueEmployeeProfiles.workspaceId, workspaceId)
+        ));
       
       // Log the event
       const [eventLog] = await db.insert(employeeEventLog).values({
@@ -456,7 +491,7 @@ export class CoAIleagueScoringService {
   }
 
   /**
-   * Create a periodic score snapshot for historical tracking
+   * Create a periodic score snapshot for historical tracking (workspace-scoped)
    */
   async createSnapshot(
     workspaceId: string,
@@ -467,9 +502,10 @@ export class CoAIleagueScoringService {
   ): Promise<void> {
     const profile = await this.getOrCreateProfile(workspaceId, employeeId);
     
-    // Count events during this period
+    // Count events during this period - always filter by workspaceId for tenant isolation
     const eventsInPeriod = await db.query.employeeEventLog.findMany({
       where: and(
+        eq(employeeEventLog.workspaceId, workspaceId),
         eq(employeeEventLog.employeeId, employeeId),
         sql`created_at >= ${periodStart}`,
         sql`created_at <= ${periodEnd}`
@@ -519,14 +555,17 @@ export class CoAIleagueScoringService {
   }
 
   /**
-   * Update day-of-week reliability patterns
+   * Update day-of-week reliability patterns (workspace-scoped)
    */
   async updateDayOfWeekReliability(workspaceId: string, employeeId: string): Promise<void> {
     const profile = await this.getOrCreateProfile(workspaceId, employeeId);
     
-    // Get all events for this employee
+    // Get all events for this employee - always filter by workspaceId for tenant isolation
     const allEvents = await db.query.employeeEventLog.findMany({
-      where: eq(employeeEventLog.employeeId, employeeId),
+      where: and(
+        eq(employeeEventLog.workspaceId, workspaceId),
+        eq(employeeEventLog.employeeId, employeeId)
+      ),
       orderBy: desc(employeeEventLog.createdAt),
     });
 
@@ -560,6 +599,7 @@ export class CoAIleagueScoringService {
       return (completed / total).toFixed(4);
     };
 
+    // Update reliability with workspace scope for defense-in-depth
     await db.update(coaileagueEmployeeProfiles)
       .set({
         sundayReliability: calculateReliability(0),
@@ -571,13 +611,17 @@ export class CoAIleagueScoringService {
         saturdayReliability: calculateReliability(6),
         updatedAt: new Date(),
       })
-      .where(eq(coaileagueEmployeeProfiles.id, profile.id));
+      .where(and(
+        eq(coaileagueEmployeeProfiles.id, profile.id),
+        eq(coaileagueEmployeeProfiles.workspaceId, workspaceId)
+      ));
   }
 
   /**
-   * Update pool membership for an employee
+   * Update pool membership for an employee (workspace-scoped)
    */
   async updatePoolMembership(
+    workspaceId: string,
     employeeId: string,
     options: {
       isInOrgPool?: boolean;
@@ -599,18 +643,23 @@ export class CoAIleagueScoringService {
       updateData.globalPoolCategories = options.globalPoolCategories;
     }
 
+    // Always filter by both workspaceId and employeeId for tenant isolation
     await db.update(coaileagueEmployeeProfiles)
       .set(updateData)
-      .where(eq(coaileagueEmployeeProfiles.employeeId, employeeId));
+      .where(and(
+        eq(coaileagueEmployeeProfiles.workspaceId, workspaceId),
+        eq(coaileagueEmployeeProfiles.employeeId, employeeId)
+      ));
   }
 
   /**
-   * Detect reliability trend (improving, stable, declining)
+   * Detect reliability trend (improving, stable, declining) - workspace-scoped
    */
-  async detectReliabilityTrend(employeeId: string): Promise<'improving' | 'stable' | 'declining'> {
-    // Get last 4 weekly snapshots
+  async detectReliabilityTrend(workspaceId: string, employeeId: string): Promise<'improving' | 'stable' | 'declining'> {
+    // Get last 4 weekly snapshots - always filter by workspaceId for tenant isolation
     const snapshots = await db.query.employeeScoreSnapshots.findMany({
       where: and(
+        eq(employeeScoreSnapshots.workspaceId, workspaceId),
         eq(employeeScoreSnapshots.employeeId, employeeId),
         eq(employeeScoreSnapshots.periodType, 'weekly')
       ),
