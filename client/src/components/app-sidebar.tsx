@@ -211,17 +211,16 @@ export function AppSidebar() {
           )}
         </div>
         
-        {state !== 'collapsed' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="w-full mt-3 text-slate-400 hover:text-white hover:bg-slate-800 justify-start"
-            data-testid="button-logout"
-          >
-            Sign Out
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size={state === 'collapsed' ? 'icon' : 'sm'}
+          onClick={handleLogout}
+          className={`w-full mt-3 text-slate-400 hover:text-white hover:bg-slate-800 ${state !== 'collapsed' ? 'justify-start' : 'justify-center'}`}
+          data-testid="button-logout-footer"
+          title="Sign Out"
+        >
+          {state === 'collapsed' ? 'X' : 'Sign Out'}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );

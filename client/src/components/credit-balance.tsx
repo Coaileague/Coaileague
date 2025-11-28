@@ -80,12 +80,15 @@ export function CreditBalanceCard({ onBuyCredits }: { onBuyCredits?: () => void 
     );
   }
 
-  const usagePercent = balance.monthlyAllocation > 0 
-    ? ((balance.monthlyAllocation - balance.currentBalance) / balance.monthlyAllocation) * 100 
-    : 0;
+  // Check if user has unlimited credits (monthlyAllocation is very high or -1)
+  const isUnlimited = balance.monthlyAllocation === -1 || balance.monthlyAllocation > 999999;
   
-  const isLow = balance.currentBalance < balance.monthlyAllocation * 0.2; // Less than 20%
-  const isCritical = balance.currentBalance === 0;
+  const usagePercent = isUnlimited ? 0 : (balance.monthlyAllocation > 0 
+    ? ((balance.monthlyAllocation - balance.currentBalance) / balance.monthlyAllocation) * 100 
+    : 0);
+  
+  const isLow = isUnlimited ? false : (balance.currentBalance < balance.monthlyAllocation * 0.2); // Less than 20%
+  const isCritical = isUnlimited ? false : (balance.currentBalance === 0);
 
   const daysUntilReset = balance.nextResetAt 
     ? Math.ceil((new Date(balance.nextResetAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -112,18 +115,26 @@ export function CreditBalanceCard({ onBuyCredits }: { onBuyCredits?: () => void 
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <span className="text-sm text-muted-foreground">Current Balance</span>
-            <div className="flex items-baseline gap-1">
-              <span className={`text-3xl font-bold ${isCritical ? 'text-destructive' : isLow ? 'text-orange-600' : 'text-foreground'}`} data-testid="text-current-balance">
-                {balance.currentBalance.toLocaleString()}
-              </span>
-              <span className="text-sm text-muted-foreground">/ {balance.monthlyAllocation.toLocaleString()}</span>
-            </div>
+            {isUnlimited ? (
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-green-600" data-testid="text-current-balance">
+                  Unlimited
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-1">
+                <span className={`text-3xl font-bold ${isCritical ? 'text-destructive' : isLow ? 'text-orange-600' : 'text-foreground'}`} data-testid="text-current-balance">
+                  {balance.currentBalance.toLocaleString()}
+                </span>
+                <span className="text-sm text-muted-foreground">/ {balance.monthlyAllocation.toLocaleString()}</span>
+              </div>
+            )}
           </div>
           
-          <Progress value={100 - usagePercent} className="h-2" data-testid="progress-credit-usage" />
+          {!isUnlimited && <Progress value={100 - usagePercent} className="h-2" data-testid="progress-credit-usage" />}
           
           <p className="text-xs text-muted-foreground">
-            {balance.currentBalance} credits remaining this month
+            {isUnlimited ? 'Unlimited credits - automations never pause' : `${balance.currentBalance} credits remaining this month`}
           </p>
         </div>
 
