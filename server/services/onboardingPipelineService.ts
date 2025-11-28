@@ -505,7 +505,7 @@ export class OnboardingPipelineService {
             workspaceId,
             rewardId: reward.id,
           },
-        });
+        } as any);
 
         stripePromoCodeId = promotionCode.id;
         promoCode = promotionCode.code;

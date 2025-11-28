@@ -79,6 +79,7 @@ import emailRouter from "./routes/emails";
 import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
+import { onboardingRouter } from "./routes/onboardingRoutes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
 import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
@@ -1705,6 +1706,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register What's New routes (Platform updates feed)
   app.use("/api/whats-new", whatsNewRouter);
+
+  // Register Onboarding Pipeline routes (tasks, progress, rewards)
+  app.use("/api/onboarding", onboardingRouter);
 
   // Register Timesheet Report routes (reports, CSV export, compliance)
   app.use("/api/timesheet-reports", timesheetReportRouter);
