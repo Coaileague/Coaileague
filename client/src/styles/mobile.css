@@ -1,131 +1,536 @@
 /* ========================================================================
-   MOBILE-FIRST COMPACT DESIGN SYSTEM
+   MOBILE-FIRST RESPONSIVE DESIGN SYSTEM
+   Comprehensive mobile-first CSS with touch optimization
    ======================================================================== */
 
-/* Fluid Typography - scales smoothly from phone to tablet */
+/* ============================================================
+   CSS Custom Properties for Responsive Design
+   ============================================================ */
 :root {
-  --t-1: clamp(10px, 2.2vw, 12px);   /* Extra compact on phones */
-  --t0: clamp(12px, 2.6vw, 14px);    /* Compact body text */
-  --t1: clamp(13px, 3.2vw, 16px);    /* Slightly smaller base */
-  --t2: clamp(15px, 4vw, 18px);      /* Compact headings */
-  --t3: clamp(17px, 4.8vw, 20px);    /* Larger headings */
-}
-
-.text-xs { font-size: var(--t-1); }
-.text-sm { font-size: var(--t0); }
-.text-base { font-size: var(--t1); }
-.text-lg { font-size: var(--t2); }
-.text-xl { font-size: var(--t3); }
-
-/* COMPACT MOBILE SPACING - Much smaller for phone users */
-@media (max-width: 767px) {
-  /* Override large padding/gaps with compact versions */
-  .mobile-compact-p { padding: 0.75rem !important; }      /* 12px instead of 24px */
-  .mobile-compact-px { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
-  .mobile-compact-py { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+  /* Viewport-aware height (accounts for mobile browser chrome) */
+  --viewport-height: 100vh;
+  --screen-width: 100vw;
+  --keyboard-visible: 0;
   
-  .mobile-compact-gap { gap: 0.75rem !important; }        /* 12px gap */
-  .mobile-compact-gap-sm { gap: 0.5rem !important; }      /* 8px gap */
-  .mobile-compact-gap-xs { gap: 0.375rem !important; }    /* 6px gap */
+  /* Bottom navigation height */
+  --bottom-nav-height: 68px;
   
-  /* Compact section spacing */
-  .mobile-section { padding: 1rem !important; }           /* 16px sections */
-  .mobile-section-tight { padding: 0.75rem !important; }  /* 12px tight sections */
+  /* Safe area insets (for notched devices) */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  
+  /* Touch targets (WCAG 2.5.5: 44px minimum) */
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
+  --touch-target-large: 56px;
+  
+  /* Fluid Typography - scales smoothly from phone to tablet */
+  --text-xs: clamp(10px, 2.2vw, 12px);
+  --text-sm: clamp(12px, 2.6vw, 14px);
+  --text-base: clamp(14px, 3vw, 16px);
+  --text-lg: clamp(16px, 3.5vw, 18px);
+  --text-xl: clamp(18px, 4vw, 20px);
+  --text-2xl: clamp(20px, 4.5vw, 24px);
+  --text-3xl: clamp(24px, 5vw, 30px);
+  
+  /* Fluid Spacing */
+  --space-1: clamp(4px, 1vw, 4px);
+  --space-2: clamp(6px, 1.5vw, 8px);
+  --space-3: clamp(10px, 2vw, 12px);
+  --space-4: clamp(14px, 3vw, 16px);
+  --space-5: clamp(18px, 4vw, 20px);
+  --space-6: clamp(22px, 5vw, 24px);
 }
 
-/* Safe-area + bottom nav spacing for notched devices */
-:root {
-  --bottom-nav-h: 64px;
+/* ============================================================
+   Safe Area Utilities
+   ============================================================ */
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+.pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+.p-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
+/* Bottom nav aware spacing */
 .has-bottom-nav {
-  padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
-.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-.pt-safe { padding-top: env(safe-area-inset-top); }
-.pl-safe { padding-left: env(safe-area-inset-left); }
-.pr-safe { padding-right: env(safe-area-inset-right); }
-
-/* Touch targets - minimum 44px for accessibility */
+/* ============================================================
+   Touch Target Utilities
+   ============================================================ */
 .tap {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.card {
-  min-height: 92px;
-  line-height: 1.2;
+.tap-comfortable {
+  min-height: var(--touch-target-comfortable);
+  min-width: var(--touch-target-comfortable);
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Compact Grid System for Mobile */
+.tap-large {
+  min-height: var(--touch-target-large);
+  min-width: var(--touch-target-large);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   Mobile-First Responsive Breakpoints
+   ============================================================ */
+
+/* Small phones (< 480px) */
+@media (max-width: 479px) {
+  .mobile-xs-hidden { display: none !important; }
+  .mobile-xs-block { display: block !important; }
+  .mobile-xs-flex { display: flex !important; }
+  
+  /* Extra compact spacing */
+  .mobile-xs-p-2 { padding: 0.5rem !important; }
+  .mobile-xs-p-3 { padding: 0.75rem !important; }
+  .mobile-xs-gap-2 { gap: 0.5rem !important; }
+  .mobile-xs-text-sm { font-size: 0.875rem !important; }
+}
+
+/* Mobile (< 768px) */
 @media (max-width: 767px) {
-  /* Override default grid columns to show more items */
-  .mobile-grid-2 { 
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important; 
-    gap: 0.5rem !important;
-  }
+  .mobile-hidden { display: none !important; }
+  .mobile-block { display: block !important; }
+  .mobile-flex { display: flex !important; }
+  .mobile-grid { display: grid !important; }
   
-  .mobile-grid-3 { 
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 0.5rem !important;
-  }
+  /* Compact spacing for mobile */
+  .mobile-p-3 { padding: 0.75rem !important; }
+  .mobile-p-4 { padding: 1rem !important; }
+  .mobile-px-3 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .mobile-py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
   
-  .mobile-grid-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 0.375rem !important;
-  }
+  .mobile-gap-2 { gap: 0.5rem !important; }
+  .mobile-gap-3 { gap: 0.75rem !important; }
+  .mobile-gap-4 { gap: 1rem !important; }
   
-  /* Compact cards on mobile */
+  .mobile-text-sm { font-size: 0.875rem !important; }
+  .mobile-text-base { font-size: 1rem !important; }
+  .mobile-text-lg { font-size: 1.125rem !important; }
+  .mobile-text-xl { font-size: 1.25rem !important; }
+  
+  /* Grid columns */
+  .mobile-cols-1 { grid-template-columns: 1fr !important; }
+  .mobile-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  
+  /* Full width on mobile */
+  .mobile-w-full { width: 100% !important; }
+  
+  /* Stack flex on mobile */
+  .mobile-flex-col { flex-direction: column !important; }
+  
+  /* Compact cards */
   .mobile-card-compact {
     padding: 0.75rem !important;
     gap: 0.5rem !important;
   }
+}
+
+/* Tablet (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-hidden { display: none !important; }
+  .tablet-block { display: block !important; }
+  .tablet-flex { display: flex !important; }
+  .tablet-grid { display: grid !important; }
   
-  .mobile-card-tight {
-    padding: 0.5rem !important;
-    gap: 0.375rem !important;
-  }
+  .tablet-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .tablet-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  
+  .tablet-p-4 { padding: 1rem !important; }
+  .tablet-p-6 { padding: 1.5rem !important; }
+  .tablet-gap-4 { gap: 1rem !important; }
 }
 
-/* Tablet grids - responsive columns */
-@media (min-width: 640px) {
-  .grid-auto-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* Desktop (>= 1024px) */
+@media (min-width: 1024px) {
+  .desktop-hidden { display: none !important; }
+  .desktop-block { display: block !important; }
+  .desktop-flex { display: flex !important; }
+  .desktop-grid { display: grid !important; }
+  
+  .desktop-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .desktop-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
 }
 
+/* ============================================================
+   Fluid Typography Classes
+   ============================================================ */
+.fluid-text-xs { font-size: var(--text-xs); }
+.fluid-text-sm { font-size: var(--text-sm); }
+.fluid-text-base { font-size: var(--text-base); }
+.fluid-text-lg { font-size: var(--text-lg); }
+.fluid-text-xl { font-size: var(--text-xl); }
+.fluid-text-2xl { font-size: var(--text-2xl); }
+.fluid-text-3xl { font-size: var(--text-3xl); }
+
+/* ============================================================
+   Fluid Spacing Classes
+   ============================================================ */
+.fluid-p-1 { padding: var(--space-1); }
+.fluid-p-2 { padding: var(--space-2); }
+.fluid-p-3 { padding: var(--space-3); }
+.fluid-p-4 { padding: var(--space-4); }
+.fluid-p-5 { padding: var(--space-5); }
+.fluid-p-6 { padding: var(--space-6); }
+
+.fluid-gap-1 { gap: var(--space-1); }
+.fluid-gap-2 { gap: var(--space-2); }
+.fluid-gap-3 { gap: var(--space-3); }
+.fluid-gap-4 { gap: var(--space-4); }
+.fluid-gap-5 { gap: var(--space-5); }
+.fluid-gap-6 { gap: var(--space-6); }
+
+.fluid-padding {
+  padding: var(--space-3);
+}
 @media (min-width: 768px) {
-  .grid-auto-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .fluid-padding { padding: var(--space-4); }
+}
+@media (min-width: 1024px) {
+  .fluid-padding { padding: var(--space-6); }
+}
+
+.fluid-gap {
+  gap: var(--space-3);
+}
+@media (min-width: 768px) {
+  .fluid-gap { gap: var(--space-4); }
+}
+@media (min-width: 1024px) {
+  .fluid-gap { gap: var(--space-6); }
+}
+
+/* ============================================================
+   Compact Layout Utilities
+   ============================================================ */
+.compact-padding {
+  padding: 0.75rem;
+}
+@media (min-width: 768px) {
+  .compact-padding { padding: 1rem; }
+}
+@media (min-width: 1024px) {
+  .compact-padding { padding: 1.5rem; }
+}
+
+.compact-gap {
+  gap: 0.5rem;
+}
+@media (min-width: 768px) {
+  .compact-gap { gap: 0.75rem; }
+}
+@media (min-width: 1024px) {
+  .compact-gap { gap: 1rem; }
+}
+
+/* ============================================================
+   Responsive Grid System
+   ============================================================ */
+.responsive-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
 }
 
-/* Keyboard friendly 100vh on iOS PWA */
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Auto-fit grid for cards */
+.auto-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+@media (max-width: 639px) {
+  .auto-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Mobile Scroll Behavior
+   ============================================================ */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-snap-y {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================
+   iOS Safari Height Fix
+   ============================================================ */
 @supports (-webkit-touch-callout: none) {
   .vh-screen {
     height: -webkit-fill-available;
   }
-}
-
-/* Reduced motion accessibility */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  
+  .min-vh-screen {
+    min-height: -webkit-fill-available;
   }
 }
 
-/* Mobile chat input - prevent keyboard overlap */
-.chat-input-sticky {
+/* Dynamic viewport height (accounts for browser UI) */
+.dvh-screen {
+  height: 100dvh;
+}
+
+.min-dvh-screen {
+  min-height: 100dvh;
+}
+
+/* ============================================================
+   Keyboard Visibility Handling
+   ============================================================ */
+.hide-when-keyboard {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+@media (max-height: 500px) {
+  .hide-when-keyboard {
+    opacity: 0;
+    transform: translateY(100%);
+    pointer-events: none;
+  }
+}
+
+/* ============================================================
+   Mobile Input Styles
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Larger touch targets for inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    min-height: 44px;
+    padding: 0.75rem;
+  }
+  
+  /* Larger buttons on mobile */
+  button:not([class*="size-icon"]) {
+    min-height: 44px;
+  }
+}
+
+/* ============================================================
+   Accessibility: Reduced Motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Mobile Card Styles
+   ============================================================ */
+.mobile-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .mobile-card {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-card {
+    padding: 1.25rem;
+  }
+}
+
+/* ============================================================
+   Sticky Elements with Safe Areas
+   ============================================================ */
+.sticky-top-safe {
+  position: sticky;
+  top: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  z-index: 40;
+}
+
+.sticky-bottom-safe {
   position: sticky;
   bottom: 0;
-  background: var(--background);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 40;
+}
+
+.fixed-bottom-safe {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 50;
 }
 
-/* Smooth scrolling for message lists */
-.smooth-scroll {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+/* ============================================================
+   Chat Input - Mobile Keyboard Aware
+   ============================================================ */
+.chat-input-sticky {
+  position: sticky;
+  bottom: 0;
+  background: hsl(var(--background));
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================================
+   Pull to Refresh Indicator
+   ============================================================ */
+.pull-to-refresh {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* ============================================================
+   Mobile Table Responsiveness
+   ============================================================ */
+@media (max-width: 767px) {
+  .mobile-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-table-scroll table {
+    min-width: 600px;
+  }
+  
+  /* Stack table cells on very small screens */
+  .mobile-table-stack tr {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid hsl(var(--border));
+    padding: 0.75rem;
+  }
+  
+  .mobile-table-stack td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border: none;
+  }
+  
+  .mobile-table-stack td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+}
+
+/* ============================================================
+   Mobile Action Sheet Styles
+   ============================================================ */
+.mobile-action-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: hsl(var(--background));
+  border-radius: 1rem 1rem 0 0;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+/* ============================================================
+   Mobile FAB (Floating Action Button)
+   ============================================================ */
+.mobile-fab {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-height) + 1rem + env(safe-area-inset-bottom, 0px));
+  right: 1rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 45;
+}
+
+/* ============================================================
+   Dark Mode Mobile Adjustments
+   ============================================================ */
+@media (max-width: 767px) {
+  .dark .mobile-card {
+    box-shadow: none;
+  }
 }

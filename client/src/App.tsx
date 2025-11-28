@@ -27,6 +27,7 @@ import { ServiceHealthProvider } from "@/contexts/ServiceHealthContext";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -252,17 +253,17 @@ function AppContent() {
     "--sidebar-width-icon": "3.5rem", // 56px collapsed (matches old peek rail)
   };
 
-  // Render mobile layout (NO Sidebar component - only UniversalNavHeader)
+  // Render mobile layout (NO Sidebar component - only UniversalNavHeader + BottomNav)
   if (isMobile) {
     return (
       <ProtectedRoute>
         <CommandPalette />
-        <div className="flex flex-col h-screen w-full">
+        <div className="flex flex-col h-screen w-full bg-background">
           {/* Universal Navigation Header - MOBILE ONLY */}
           {!isHelpDesk && <UniversalNavHeader />}
           
-          {/* Main content area */}
-          <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
+          {/* Main content area - with bottom nav padding */}
+          <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide min-h-0 w-full max-w-full pb-20">
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/login">
@@ -409,6 +410,9 @@ function AppContent() {
               <Route component={NotFound} />
             </Switch>
           </main>
+          
+          {/* Mobile Bottom Navigation - Fixed at bottom */}
+          {!isHelpDesk && <MobileBottomNav />}
         </div>
         <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
       </ProtectedRoute>
