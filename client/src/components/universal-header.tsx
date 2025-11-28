@@ -7,11 +7,20 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { LOGOUT_CONFIG } from "@/config/logout";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { performLogout } from "@/lib/logoutHandler";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -41,29 +50,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   };
 
   const handleLogout = async () => {
-    try {
-      LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
-        queryClient.setQueryData([key], null);
-      });
-      await queryClient.invalidateQueries();
-      
-      fetch(LOGOUT_CONFIG.endpoint, { 
-        method: LOGOUT_CONFIG.method, 
-        credentials: "include" 
-      }).catch(err => console.error("Logout API call failed:", err));
-      
-      if (LOGOUT_CONFIG.fullPageReload) {
-        window.location.href = LOGOUT_CONFIG.redirectPath;
-      } else {
-        setLocation(LOGOUT_CONFIG.redirectPath);
-      }
-    } catch (error) {
-      console.error("Logout failed:", error);
-      LOGOUT_CONFIG.cacheKeysToClear.forEach(key => {
-        queryClient.setQueryData([key], null);
-      });
-      setLocation(LOGOUT_CONFIG.redirectPath);
-    }
+    await performLogout();
   };
 
   // Handle logo click - PUBLIC variant always goes to homepage
@@ -73,6 +60,11 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
     } else {
       setLocation("/dashboard");
     }
+  };
+
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    if (!firstName && !lastName) return "U";
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
   
   return (
@@ -152,13 +144,40 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    className="min-h-[44px] px-6"
-                    onClick={() => setLocation("/dashboard")}
-                    data-testid="button-go-dashboard"
-                  >
-                    Go to Dashboard
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 px-2 h-9"
+                        data-testid="button-user-menu"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs font-bold">
+                            {getInitials(user?.firstName, user?.lastName)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        onClick={() => setLocation("/dashboard")}
+                        data-testid="menu-go-dashboard"
+                      >
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>Go to Dashboard</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={handleLogout}
+                        data-testid="menu-logout"
+                        className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
 
@@ -234,16 +253,32 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                           </Button>
                         </>
                       ) : (
-                        <Button
-                          className="justify-center"
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            setLocation("/dashboard");
-                          }}
-                          data-testid="mobile-button-dashboard"
-                        >
-                          Go to Dashboard
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            className="justify-center w-full"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setLocation("/dashboard");
+                            }}
+                            data-testid="mobile-button-dashboard"
+                          >
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            Go to Dashboard
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            className="justify-center w-full"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              handleLogout();
+                            }}
+                            data-testid="mobile-button-logout"
+                          >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Sign Out
+                          </Button>
+                        </>
                       )}
                     </nav>
                   </SheetContent>
