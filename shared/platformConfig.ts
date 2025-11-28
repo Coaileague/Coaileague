@@ -297,6 +297,37 @@ export const FEATURES = {
   enableGPS: true,
   enableGamification: true,  // Employee engagement & recognition
   
+  // Time Tracking & Timesheets
+  enableTimeTracking: true,
+  enableTimesheetReports: true,
+  enableTimesheetExport: true,
+  enableDragDropTimesheets: true,
+  
+  // Communication Features
+  enableSMSNotifications: true,  // Twilio SMS integration
+  enableEmailNotifications: true,
+  enablePushNotifications: false,  // PWA push - future
+  
+  // Calendar Integration
+  enableCalendarExport: true,  // ICS export
+  enableGoogleCalendar: true,  // Google Calendar sync
+  enableCalendarImport: true,
+  
+  // Advanced Scheduling
+  enableRecurringShifts: true,
+  enableShiftSwapping: true,
+  enableAvailabilityRequests: true,
+  enableOpenShifts: true,
+  
+  // Client Billing
+  enableClientBilling: true,
+  enableInvoiceFromTimeEntries: true,
+  enableAutomatedReminders: true,
+  
+  // Platform Features
+  enableWhatsNew: true,  // Dynamic What's New feed
+  enableRealTimeUpdates: true,
+  
   // Enterprise Features
   enableMFA: false,
   enableAdvancedAnalytics: true,
