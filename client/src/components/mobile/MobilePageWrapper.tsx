@@ -9,38 +9,44 @@
  * - Smooth scroll behavior
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+const TABLET_BREAKPOINT = 1024;
+
+function useIsTablet() {
+  const [isTablet, setIsTablet] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      return width >= 768 && width < TABLET_BREAKPOINT;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsTablet(width >= 768 && width < TABLET_BREAKPOINT);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isTablet;
+}
 
 interface MobilePageWrapperProps {
   children: ReactNode;
-  
-  /** Page title for accessibility */
   title?: string;
-  
-  /** Show bottom navigation spacing */
   hasBottomNav?: boolean;
-  
-  /** Custom className for the wrapper */
   className?: string;
-  
-  /** Custom className for the content container */
   contentClassName?: string;
-  
-  /** Use full height (100vh) layout */
   fullHeight?: boolean;
-  
-  /** Disable scroll */
   noScroll?: boolean;
-  
-  /** Max width constraint */
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '6xl' | '7xl' | 'full';
-  
-  /** Center content horizontally */
   centered?: boolean;
-  
-  /** Test ID for automated testing */
   'data-testid'?: string;
 }
 
@@ -68,12 +74,39 @@ export function MobilePageWrapper({
   centered = false,
   'data-testid': testId,
 }: MobilePageWrapperProps) {
-  const { isMobile, isTablet, keyboardVisible, safeAreaBottom } = useMobile();
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   
-  // Calculate bottom padding for navigation
-  const bottomPadding = hasBottomNav && isMobile && !keyboardVisible 
-    ? 'pb-20' // 80px for bottom nav
-    : 'pb-4';
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'visualViewport' in window && window.visualViewport) {
+      const vv = window.visualViewport;
+      
+      const handleViewportChange = () => {
+        const heightDiff = window.innerHeight - vv.height;
+        setKeyboardVisible(heightDiff > 150);
+      };
+      
+      vv.addEventListener('resize', handleViewportChange);
+      return () => vv.removeEventListener('resize', handleViewportChange);
+    }
+  }, []);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && CSS.supports('padding-bottom: env(safe-area-inset-bottom)')) {
+      const testEl = document.createElement('div');
+      testEl.style.paddingBottom = 'env(safe-area-inset-bottom)';
+      document.body.appendChild(testEl);
+      const computed = getComputedStyle(testEl);
+      setSafeAreaBottom(parseInt(computed.paddingBottom) || 0);
+      document.body.removeChild(testEl);
+    }
+  }, []);
+  
+  const showBottomNavSpace = hasBottomNav && isMobile && !keyboardVisible;
+  const bottomNavHeight = 68;
+  const totalBottomPadding = showBottomNavSpace ? bottomNavHeight + safeAreaBottom : 16;
   
   return (
     <div
@@ -93,18 +126,11 @@ export function MobilePageWrapper({
           'w-full',
           maxWidthClasses[maxWidth],
           centered && 'mx-auto',
-          // Responsive padding
           isMobile ? 'px-3 py-3' : isTablet ? 'px-4 py-4' : 'px-6 py-5',
-          bottomPadding,
-          // Safe area for notched devices
           isMobile && 'pt-safe',
           contentClassName
         )}
-        style={{
-          paddingBottom: safeAreaBottom > 0 && hasBottomNav 
-            ? `calc(5rem + ${safeAreaBottom}px)` 
-            : undefined
-        }}
+        style={{ paddingBottom: `${totalBottomPadding}px` }}
       >
         {children}
       </div>
@@ -112,9 +138,6 @@ export function MobilePageWrapper({
   );
 }
 
-/**
- * MobileSection - Consistent section spacing for mobile
- */
 interface MobileSectionProps {
   children: ReactNode;
   title?: string;
@@ -130,7 +153,8 @@ export function MobileSection({
   className,
   'data-testid': testId,
 }: MobileSectionProps) {
-  const { isMobile, isTablet } = useMobile();
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
   
   return (
     <section
@@ -165,9 +189,6 @@ export function MobileSection({
   );
 }
 
-/**
- * ResponsiveGrid - Grid that adapts to screen size
- */
 interface ResponsiveGridProps {
   children: ReactNode;
   className?: string;
@@ -215,9 +236,6 @@ export function ResponsiveGrid({
   );
 }
 
-/**
- * ResponsiveStack - Vertical stack with responsive spacing
- */
 interface ResponsiveStackProps {
   children: ReactNode;
   className?: string;
@@ -245,9 +263,6 @@ export function ResponsiveStack({
   );
 }
 
-/**
- * MobileCard - Touch-friendly card component
- */
 interface MobileCardProps {
   children: ReactNode;
   className?: string;
@@ -263,7 +278,7 @@ export function MobileCard({
   interactive = false,
   'data-testid': testId,
 }: MobileCardProps) {
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   
   const Component = onClick || interactive ? 'button' : 'div';
   
@@ -272,9 +287,11 @@ export function MobileCard({
       className={cn(
         'w-full rounded-lg border border-border bg-card text-card-foreground',
         isMobile ? 'p-3' : 'p-4',
-        (onClick || interactive) && 'tap hover-elevate active-elevate-2 cursor-pointer text-left',
+        (onClick || interactive) && 'hover-elevate active-elevate-2 cursor-pointer text-left',
+        (onClick || interactive) && 'min-h-[44px]',
         className
       )}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
       onClick={onClick}
       data-testid={testId}
     >
