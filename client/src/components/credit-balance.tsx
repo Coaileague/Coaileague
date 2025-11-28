@@ -34,7 +34,7 @@ interface CreditUsageBreakdown {
 export function CreditBalanceCard({ onBuyCredits }: { onBuyCredits?: () => void }) {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const { user } = useAuth();
-  const { data: accessData } = useQuery({
+  const { data: accessData } = useQuery<{ workspaceId?: string }>({
     queryKey: ['/api/workspace/access'],
   });
   
