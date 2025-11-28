@@ -25,6 +25,7 @@ import {
 } from '@shared/schema';
 import { isFeatureEnabled, PLATFORM, ONBOARDING } from '@shared/platformConfig';
 import Stripe from 'stripe';
+import { geminiClient } from './ai-brain/providers/geminiClient';
 
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' })
@@ -102,117 +103,81 @@ const DEFAULT_ONBOARDING_TASKS: Omit<InsertOrgOnboardingTask, 'workspaceId'>[] =
     category: 'billing',
     points: 25,
     displayOrder: 4,
-    validationRule: 'payment_method_configured',
-    systemEvent: 'billing.payment_method.added',
+    validationRule: 'billing_configured',
+    systemEvent: 'billing.configured',
     requiredForReward: true,
   },
   {
     title: 'Invite a team member',
-    description: 'Add another user to help manage your workforce.',
+    description: 'Add another admin or manager to help run your workforce.',
     category: 'engagement',
-    points: 20,
+    points: 15,
     displayOrder: 5,
-    targetProgress: 1,
-    progressUnit: 'users',
-    validationRule: 'workspace_user_count >= 2',
-    systemEvent: 'workspace.member.invited',
+    validationRule: 'team_member_invited',
+    systemEvent: 'user.invited',
     requiredForReward: false,
   },
   {
-    title: 'Explore the analytics dashboard',
-    description: 'View your workforce analytics to understand key metrics.',
+    title: 'Explore the AI scheduling assistant',
+    description: 'Try the AI-powered auto-scheduling feature to optimize your workforce.',
     category: 'engagement',
     points: 10,
     displayOrder: 6,
-    validationRule: 'analytics_viewed',
-    systemEvent: 'analytics.dashboard.viewed',
+    validationRule: 'ai_scheduler_used',
+    systemEvent: 'ai.scheduler.used',
     requiredForReward: false,
   },
 ];
 
-export class OnboardingPipelineService {
-  
+class OnboardingPipelineService {
   /**
    * Initialize onboarding for a new workspace
-   * Creates default tasks and the 10% discount reward
    */
   async initializeOnboarding(workspaceId: string): Promise<OnboardingProgress> {
-    if (!isFeatureEnabled('enableOnboardingPipeline')) {
-      throw new Error('Onboarding pipeline feature is not enabled');
-    }
-
-    const workspace = await db.query.workspaces.findFirst({
-      where: eq(workspaces.id, workspaceId),
-    });
-
-    if (!workspace) {
-      throw new Error(`Workspace not found: ${workspaceId}`);
-    }
-
     const existingTasks = await db.query.orgOnboardingTasks.findMany({
       where: eq(orgOnboardingTasks.workspaceId, workspaceId),
     });
 
-    if (existingTasks.length > 0) {
-      return this.getProgress(workspaceId);
+    if (existingTasks.length === 0) {
+      const tasksToInsert = DEFAULT_ONBOARDING_TASKS.map(task => ({
+        ...task,
+        workspaceId,
+        status: 'not_started' as const,
+      }));
+
+      await db.insert(orgOnboardingTasks).values(tasksToInsert);
+      
+      if (isFeatureEnabled('enableAiBrain')) {
+        await this.generateDynamicTasks(workspaceId);
+      }
     }
-
-    const tasksToCreate: InsertOrgOnboardingTask[] = DEFAULT_ONBOARDING_TASKS.map(task => ({
-      ...task,
-      workspaceId,
-      createdBy: 'system' as const,
-    }));
-
-    await db.insert(orgOnboardingTasks).values(tasksToCreate);
-
-    const rewardData: InsertOrgReward = {
-      workspaceId,
-      type: 'onboarding_discount_10',
-      title: '10% Off Your First Month',
-      description: 'Complete all required onboarding tasks to unlock a 10% discount on your first subscription payment.',
-      discountPercent: '10.00',
-      status: 'locked',
-      unlockCondition: 'all_required_tasks_completed',
-    };
-
-    await db.insert(orgRewards).values(rewardData);
-
-    await db.update(workspaces)
-      .set({
-        pipelineStatus: 'invited',
-        invitedAt: new Date(),
-        pipelineStatusUpdatedAt: new Date(),
-        onboardingCompletionPercent: 0,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, workspaceId));
 
     return this.getProgress(workspaceId);
   }
 
   /**
-   * Get full onboarding progress for a workspace
+   * Get complete onboarding progress for a workspace
    */
   async getProgress(workspaceId: string): Promise<OnboardingProgress> {
-    const [workspace, tasks, rewards] = await Promise.all([
-      db.query.workspaces.findFirst({
-        where: eq(workspaces.id, workspaceId),
-      }),
-      db.query.orgOnboardingTasks.findMany({
-        where: eq(orgOnboardingTasks.workspaceId, workspaceId),
-        orderBy: [orgOnboardingTasks.displayOrder],
-      }),
-      db.query.orgRewards.findMany({
-        where: and(
-          eq(orgRewards.workspaceId, workspaceId),
-          eq(orgRewards.type, 'onboarding_discount_10')
-        ),
-      }),
-    ]);
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+    });
 
     if (!workspace) {
-      throw new Error(`Workspace not found: ${workspaceId}`);
+      throw new Error('Workspace not found');
     }
+
+    const tasks = await db.query.orgOnboardingTasks.findMany({
+      where: eq(orgOnboardingTasks.workspaceId, workspaceId),
+      orderBy: [orgOnboardingTasks.displayOrder],
+    });
+
+    const reward = await db.query.orgRewards.findFirst({
+      where: and(
+        eq(orgRewards.workspaceId, workspaceId),
+        eq(orgRewards.type, 'onboarding_discount_10')
+      ),
+    });
 
     const completedTasks = tasks.filter(t => t.status === 'completed').length;
     const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
@@ -220,20 +185,16 @@ export class OnboardingPipelineService {
     const earnedPoints = tasks
       .filter(t => t.status === 'completed')
       .reduce((sum, t) => sum + (t.points || 0), 0);
-    
-    const completionPercent = tasks.length > 0 
-      ? Math.round((completedTasks / tasks.length) * 100) 
-      : 0;
 
-    const reward = rewards[0] || null;
-    const isRewardUnlocked = reward?.status === 'unlocked' || reward?.status === 'applied';
+    const requiredTasks = tasks.filter(t => t.requiredForReward);
+    const requiredCompleted = requiredTasks.filter(t => t.status === 'completed').length;
+    const isRewardUnlocked = requiredTasks.length > 0 && requiredCompleted === requiredTasks.length;
 
     let daysUntilTrialExpires: number | null = null;
     if (workspace.trialEndsAt) {
       const now = new Date();
       const trialEnd = new Date(workspace.trialEndsAt);
-      const diffTime = trialEnd.getTime() - now.getTime();
-      daysUntilTrialExpires = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      daysUntilTrialExpires = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     }
 
     return {
@@ -244,22 +205,18 @@ export class OnboardingPipelineService {
       inProgressTasks,
       totalPoints,
       earnedPoints,
-      completionPercent,
+      completionPercent: tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0,
       tasks,
-      reward,
+      reward: reward || null,
       isRewardUnlocked,
       daysUntilTrialExpires,
     };
   }
 
   /**
-   * Mark a task as completed
+   * Complete an onboarding task
    */
-  async completeTask(
-    workspaceId: string, 
-    taskId: string, 
-    completedBy?: string
-  ): Promise<OnboardingProgress> {
+  async completeTask(workspaceId: string, taskId: string, completedBy?: string): Promise<OnboardingProgress> {
     const task = await db.query.orgOnboardingTasks.findFirst({
       where: and(
         eq(orgOnboardingTasks.id, taskId),
@@ -268,7 +225,7 @@ export class OnboardingPipelineService {
     });
 
     if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
+      throw new Error('Task not found');
     }
 
     if (task.status === 'completed') {
@@ -279,27 +236,25 @@ export class OnboardingPipelineService {
       .set({
         status: 'completed',
         completedAt: new Date(),
-        completedBy,
+        completedBy: completedBy || null,
         currentProgress: task.targetProgress || 1,
         updatedAt: new Date(),
       })
       .where(eq(orgOnboardingTasks.id, taskId));
 
-    await this.updateWorkspaceProgress(workspaceId);
-    
-    await this.checkAndUnlockReward(workspaceId);
+    const progress = await this.getProgress(workspaceId);
 
-    return this.getProgress(workspaceId);
+    if (progress.isRewardUnlocked) {
+      await this.unlockReward(workspaceId);
+    }
+
+    return progress;
   }
 
   /**
-   * Update task progress (for multi-step tasks)
+   * Update task progress
    */
-  async updateTaskProgress(
-    workspaceId: string,
-    taskId: string,
-    progress: number
-  ): Promise<OrgOnboardingTask> {
+  async updateTaskProgress(workspaceId: string, taskId: string, progressAmount: number): Promise<OrgOnboardingTask> {
     const task = await db.query.orgOnboardingTasks.findFirst({
       where: and(
         eq(orgOnboardingTasks.id, taskId),
@@ -308,267 +263,58 @@ export class OnboardingPipelineService {
     });
 
     if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
+      throw new Error('Task not found');
     }
 
-    const newStatus = progress >= (task.targetProgress || 1) 
-      ? 'completed' as const
-      : 'in_progress' as const;
+    const newProgress = Math.min((task.currentProgress || 0) + progressAmount, task.targetProgress || 1);
+    const isComplete = task.targetProgress && newProgress >= task.targetProgress;
 
     const [updated] = await db.update(orgOnboardingTasks)
       .set({
-        currentProgress: progress,
-        status: newStatus,
-        completedAt: newStatus === 'completed' ? new Date() : null,
+        status: isComplete ? 'completed' : 'in_progress',
+        currentProgress: newProgress,
+        completedAt: isComplete ? new Date() : null,
         updatedAt: new Date(),
       })
       .where(eq(orgOnboardingTasks.id, taskId))
       .returning();
 
-    if (newStatus === 'completed') {
-      await this.updateWorkspaceProgress(workspaceId);
-      await this.checkAndUnlockReward(workspaceId);
+    if (isComplete) {
+      const progress = await this.getProgress(workspaceId);
+      if (progress.isRewardUnlocked) {
+        await this.unlockReward(workspaceId);
+      }
     }
 
     return updated;
   }
 
   /**
-   * Check system event and auto-complete relevant tasks
-   */
-  async processSystemEvent(
-    workspaceId: string,
-    eventType: string,
-    eventData?: Record<string, any>
-  ): Promise<void> {
-    const tasks = await db.query.orgOnboardingTasks.findMany({
-      where: and(
-        eq(orgOnboardingTasks.workspaceId, workspaceId),
-        eq(orgOnboardingTasks.systemEvent, eventType),
-      ),
-    });
-
-    for (const task of tasks) {
-      if (task.status !== 'completed') {
-        const shouldComplete = await this.evaluateValidationRule(
-          workspaceId, 
-          task.validationRule || '',
-          eventData
-        );
-        
-        if (shouldComplete) {
-          await this.completeTask(workspaceId, task.id);
-        }
-      }
-    }
-  }
-
-  /**
-   * Evaluate a validation rule to check if a task should be completed
-   */
-  private async evaluateValidationRule(
-    workspaceId: string,
-    rule: string,
-    eventData?: Record<string, any>
-  ): Promise<boolean> {
-    if (!rule) return true;
-
-    const counts = await this.getWorkspaceCounts(workspaceId);
-
-    switch (rule) {
-      case 'company_profile_complete':
-        const workspace = await db.query.workspaces.findFirst({
-          where: eq(workspaces.id, workspaceId),
-        });
-        return !!(workspace?.companyName && workspace?.address);
-
-      case 'employee_count >= 1':
-        return counts.employees >= 1;
-
-      case 'shift_count >= 1':
-        return counts.shifts >= 1;
-
-      case 'payment_method_configured':
-        const ws = await db.query.workspaces.findFirst({
-          where: eq(workspaces.id, workspaceId),
-        });
-        return !!(ws?.stripeCustomerId);
-
-      case 'workspace_user_count >= 2':
-        return counts.users >= 2;
-
-      case 'analytics_viewed':
-        return eventData?.['viewed'] === true;
-
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Get workspace counts for validation
-   */
-  private async getWorkspaceCounts(workspaceId: string): Promise<{
-    employees: number;
-    shifts: number;
-    users: number;
-  }> {
-    const [employeeResult, shiftResult, userResult] = await Promise.all([
-      db.execute(sql`SELECT COUNT(*) as count FROM employees WHERE workspace_id = ${workspaceId}`),
-      db.execute(sql`SELECT COUNT(*) as count FROM shifts WHERE workspace_id = ${workspaceId}`),
-      db.execute(sql`SELECT COUNT(*) as count FROM workspace_members WHERE workspace_id = ${workspaceId}`),
-    ]);
-
-    return {
-      employees: parseInt(employeeResult.rows[0]?.count as string || '0'),
-      shifts: parseInt(shiftResult.rows[0]?.count as string || '0'),
-      users: parseInt(userResult.rows[0]?.count as string || '0'),
-    };
-  }
-
-  /**
-   * Update workspace onboarding progress
-   */
-  private async updateWorkspaceProgress(workspaceId: string): Promise<void> {
-    const tasks = await db.query.orgOnboardingTasks.findMany({
-      where: eq(orgOnboardingTasks.workspaceId, workspaceId),
-    });
-
-    const completedTasks = tasks.filter(t => t.status === 'completed').length;
-    const completionPercent = tasks.length > 0 
-      ? Math.round((completedTasks / tasks.length) * 100) 
-      : 0;
-    
-    const earnedPoints = tasks
-      .filter(t => t.status === 'completed')
-      .reduce((sum, t) => sum + (t.points || 0), 0);
-
-    await db.update(workspaces)
-      .set({
-        onboardingCompletionPercent: completionPercent,
-        totalOnboardingPoints: earnedPoints,
-        onboardingCompletedAt: completionPercent === 100 ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, workspaceId));
-  }
-
-  /**
-   * Check if all required tasks are complete and unlock the reward
-   */
-  private async checkAndUnlockReward(workspaceId: string): Promise<void> {
-    const tasks = await db.query.orgOnboardingTasks.findMany({
-      where: and(
-        eq(orgOnboardingTasks.workspaceId, workspaceId),
-        eq(orgOnboardingTasks.requiredForReward, true)
-      ),
-    });
-
-    const allRequiredComplete = tasks.every(t => t.status === 'completed');
-
-    if (!allRequiredComplete) return;
-
-    const reward = await db.query.orgRewards.findFirst({
-      where: and(
-        eq(orgRewards.workspaceId, workspaceId),
-        eq(orgRewards.type, 'onboarding_discount_10'),
-        eq(orgRewards.status, 'locked')
-      ),
-    });
-
-    if (!reward) return;
-
-    let stripeCouponId: string | undefined;
-    let stripePromoCodeId: string | undefined;
-    let promoCode: string | undefined;
-
-    if (stripe) {
-      try {
-        const coupon = await stripe.coupons.create({
-          percent_off: 10,
-          duration: 'once',
-          name: `Onboarding Discount - ${workspaceId}`,
-          metadata: {
-            workspaceId,
-            rewardId: reward.id,
-            type: 'onboarding_discount_10',
-          },
-        });
-        
-        stripeCouponId = coupon.id;
-
-        const promotionCode = await stripe.promotionCodes.create({
-          coupon: coupon.id,
-          code: `WELCOME10-${workspaceId.substring(0, 8).toUpperCase()}`,
-          max_redemptions: 1,
-          metadata: {
-            workspaceId,
-            rewardId: reward.id,
-          },
-        } as any);
-
-        stripePromoCodeId = promotionCode.id;
-        promoCode = promotionCode.code;
-      } catch (error) {
-        console.error('Failed to create Stripe coupon:', error);
-      }
-    }
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
-
-    await db.update(orgRewards)
-      .set({
-        status: 'unlocked',
-        unlockedAt: new Date(),
-        stripeCouponId,
-        stripePromotionCodeId: stripePromoCodeId,
-        promoCode,
-        expiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(orgRewards.id, reward.id));
-
-    console.log(`[OnboardingPipeline] Reward unlocked for workspace ${workspaceId}`);
-  }
-
-  /**
    * Update pipeline status
    */
-  async updatePipelineStatus(
-    workspaceId: string,
-    newStatus: PipelineStatus,
-    reason?: string
-  ): Promise<Workspace> {
-    const updateData: Partial<typeof workspaces.$inferInsert> = {
-      pipelineStatus: newStatus,
+  async updatePipelineStatus(workspaceId: string, status: PipelineStatus, reason?: string): Promise<Workspace> {
+    const updates: any = {
+      pipelineStatus: status,
       pipelineStatusUpdatedAt: new Date(),
       updatedAt: new Date(),
     };
 
-    switch (newStatus) {
-      case 'email_opened':
-        updateData.inviteEmailOpenedAt = new Date();
-        break;
-      case 'trial_started':
-        updateData.trialStartedAt = new Date();
-        const trialDays = ONBOARDING?.TRIAL?.DAYS || 14;
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + trialDays);
-        updateData.trialEndsAt = trialEnd;
-        updateData.trialDays = trialDays;
-        break;
-      case 'accepted':
-        updateData.acceptedAt = new Date();
-        break;
-      case 'rejected':
-        updateData.rejectedAt = new Date();
-        updateData.rejectionReason = reason;
-        break;
+    if (status === 'trial_started') {
+      const trialDays = ONBOARDING.DEFAULT_TRIAL_DAYS;
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+      
+      updates.trialStartedAt = now;
+      updates.trialEndsAt = trialEnd;
+      updates.trialDays = trialDays;
+    }
+
+    if (status === 'accepted') {
+      updates.acceptedAt = new Date();
     }
 
     const [updated] = await db.update(workspaces)
-      .set(updateData)
+      .set(updates)
       .where(eq(workspaces.id, workspaceId))
       .returning();
 
@@ -576,7 +322,68 @@ export class OnboardingPipelineService {
   }
 
   /**
-   * Apply the reward discount at checkout
+   * Unlock the 10% discount reward
+   */
+  private async unlockReward(workspaceId: string): Promise<OrgReward> {
+    const existing = await db.query.orgRewards.findFirst({
+      where: and(
+        eq(orgRewards.workspaceId, workspaceId),
+        eq(orgRewards.type, 'onboarding_discount_10')
+      ),
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    let stripePromotionCode: string | null = null;
+    let stripeCouponId: string | null = null;
+
+    if (stripe && isFeatureEnabled('enableStripeIntegration')) {
+      try {
+        const coupon = await stripe.coupons.create({
+          percent_off: 10,
+          duration: 'once',
+          name: `Welcome Discount - ${workspaceId}`,
+          metadata: { workspaceId },
+        });
+
+        stripeCouponId = coupon.id;
+
+        const promoCode = await (stripe.promotionCodes.create as any)({
+          coupon: coupon.id,
+          code: `WELCOME10-${workspaceId.substring(0, 8).toUpperCase()}`,
+          metadata: { workspaceId },
+        });
+
+        stripePromotionCode = promoCode.code;
+        console.log(`[Onboarding] Created Stripe promo code: ${stripePromotionCode}`);
+      } catch (error: any) {
+        console.error('[Onboarding] Failed to create Stripe coupon:', error.message);
+      }
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + ONBOARDING.REWARD_EXPIRY_DAYS);
+
+    const [reward] = await db.insert(orgRewards).values({
+      workspaceId,
+      type: 'onboarding_discount_10',
+      title: 'Welcome Discount: 10% Off',
+      description: 'Complete all onboarding tasks to unlock 10% off your first invoice!',
+      discountPercent: 10,
+      status: 'unlocked',
+      unlockedAt: new Date(),
+      expiresAt,
+      stripePromotionCode,
+      stripeCouponId,
+    }).returning();
+
+    return reward;
+  }
+
+  /**
+   * Apply a reward
    */
   async applyReward(workspaceId: string, invoiceId?: string): Promise<OrgReward> {
     const reward = await db.query.orgRewards.findFirst({
@@ -678,6 +485,168 @@ export class OnboardingPipelineService {
       .returning();
 
     return updated;
+  }
+
+  /**
+   * AI Brain - Generate dynamic onboarding tasks based on org profile
+   * Uses Gemini to analyze the organization and create personalized tasks
+   */
+  async generateDynamicTasks(workspaceId: string): Promise<OrgOnboardingTask[]> {
+    if (!geminiClient.isAvailable()) {
+      console.log('[Onboarding] AI Brain not available, using default tasks');
+      return [];
+    }
+
+    try {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, workspaceId),
+      });
+
+      if (!workspace) {
+        throw new Error('Workspace not found');
+      }
+
+      const existingTasks = await this.getTasks(workspaceId);
+      const existingTitles = existingTasks.map(t => t.title.toLowerCase());
+
+      const systemPrompt = `You are an AI assistant specialized in workforce management onboarding. 
+Your task is to generate personalized onboarding tasks for a new organization.
+
+Guidelines:
+- Generate 3-5 additional tasks tailored to the organization's profile
+- Each task should be actionable and specific
+- Focus on tasks that help the organization get the most value from the platform
+- Consider the industry, company size, and any configuration already in place
+- Do NOT duplicate these existing tasks: ${existingTitles.join(', ')}
+
+Respond with a JSON array of tasks. Each task must have:
+- title: Brief, action-oriented title (max 60 chars)
+- description: Clear explanation of what to do and why (max 200 chars)
+- category: One of 'setup', 'configuration', 'engagement', 'billing'
+- points: Number between 10-30 based on task difficulty
+- requiredForReward: Boolean - true for essential tasks, false for optional`;
+
+      const userMessage = `Organization Profile:
+- Name: ${workspace.name || 'New Organization'}
+- Industry: ${workspace.industry || 'Not specified'}
+- Company Size: ${workspace.companySize || 'Unknown'}
+- Timezone: ${workspace.timezone || 'UTC'}
+- Current Features: Multi-tenant workforce management with scheduling, time tracking, and payroll
+- Trial Status: ${workspace.pipelineStatus || 'invited'}
+
+Generate personalized onboarding tasks for this organization.`;
+
+      const response = await geminiClient.generate({
+        workspaceId,
+        featureKey: 'onboarding_task_generation',
+        systemPrompt,
+        userMessage,
+        temperature: 0.7,
+        maxTokens: 1024,
+      });
+
+      let aiTasks: any[] = [];
+      try {
+        const jsonMatch = response.text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          aiTasks = JSON.parse(jsonMatch[0]);
+        }
+      } catch (parseError) {
+        console.error('[Onboarding] Failed to parse AI response:', parseError);
+        return [];
+      }
+
+      const insertedTasks: OrgOnboardingTask[] = [];
+      const baseOrder = existingTasks.length + 1;
+
+      for (let i = 0; i < Math.min(aiTasks.length, 5); i++) {
+        const aiTask = aiTasks[i];
+        
+        if (!aiTask.title || !aiTask.description || !aiTask.category) {
+          continue;
+        }
+
+        const titleLower = aiTask.title.toLowerCase();
+        if (existingTitles.some(t => t.includes(titleLower) || titleLower.includes(t))) {
+          continue;
+        }
+
+        const validCategories = ['setup', 'configuration', 'engagement', 'billing'];
+        const category = validCategories.includes(aiTask.category) ? aiTask.category : 'engagement';
+
+        const [inserted] = await db.insert(orgOnboardingTasks).values({
+          workspaceId,
+          title: aiTask.title.substring(0, 100),
+          description: aiTask.description.substring(0, 500),
+          category: category as TaskCategory,
+          points: Math.min(30, Math.max(10, aiTask.points || 15)),
+          displayOrder: baseOrder + i,
+          requiredForReward: aiTask.requiredForReward || false,
+          status: 'not_started',
+          isAiGenerated: true,
+        }).returning();
+
+        insertedTasks.push(inserted);
+      }
+
+      console.log(`[Onboarding] AI Brain generated ${insertedTasks.length} personalized tasks for workspace ${workspaceId}`);
+      return insertedTasks;
+
+    } catch (error: any) {
+      console.error('[Onboarding] AI Brain task generation failed:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Process system events that may auto-complete onboarding tasks
+   */
+  async processSystemEvent(workspaceId: string, eventType: string, eventData?: any): Promise<void> {
+    const tasks = await db.query.orgOnboardingTasks.findMany({
+      where: and(
+        eq(orgOnboardingTasks.workspaceId, workspaceId),
+        eq(orgOnboardingTasks.systemEvent, eventType),
+        eq(orgOnboardingTasks.status, 'not_started')
+      ),
+    });
+
+    for (const task of tasks) {
+      if (task.validationRule && !this.validateRule(task.validationRule, eventData)) {
+        continue;
+      }
+      await this.completeTask(workspaceId, task.id);
+      console.log(`[Onboarding] Auto-completed task "${task.title}" from event ${eventType}`);
+    }
+  }
+
+  private validateRule(rule: string, data?: any): boolean {
+    if (!rule || !data) return true;
+
+    const match = rule.match(/(\w+)\s*(>=|<=|==|>|<)\s*(\d+)/);
+    if (match) {
+      const [, field, operator, value] = match;
+      const fieldValue = data[field] ?? 0;
+      const numValue = parseInt(value);
+
+      switch (operator) {
+        case '>=':
+          return fieldValue >= numValue;
+        case '<=':
+          return fieldValue <= numValue;
+        case '>':
+          return fieldValue > numValue;
+        case '<':
+          return fieldValue < numValue;
+        case '==':
+          return fieldValue === numValue;
+      }
+    }
+
+    if (typeof data[rule] === 'boolean') {
+      return data[rule];
+    }
+
+    return true;
   }
 }
 

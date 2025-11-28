@@ -249,6 +249,21 @@ onboardingRouter.post('/rewards/:rewardId/apply', ensureOnboardingEnabled, requi
   }
 });
 
+onboardingRouter.post('/ai-tasks/generate', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
+  try {
+    const tasks = await onboardingPipelineService.generateDynamicTasks(req.workspaceId);
+    
+    res.json({
+      success: true,
+      message: `Generated ${tasks.length} personalized tasks`,
+      tasks,
+    });
+  } catch (error: any) {
+    console.error('[Onboarding] Error generating AI tasks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const systemEventSchema = z.object({
   eventType: z.string(),
   eventData: z.record(z.any()).optional(),
