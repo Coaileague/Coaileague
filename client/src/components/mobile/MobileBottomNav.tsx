@@ -3,7 +3,7 @@
  * 
  * Features:
  * - Fixed position with safe area support
- * - Touch-optimized tap targets (48px minimum)
+ * - Touch-optimized tap targets (52px minimum - exceeds WCAG 44px requirement)
  * - Active state indication
  * - Smooth transitions
  * - Haptic feedback ready
@@ -12,10 +12,10 @@
 
 import { Home, Calendar, Clock, MessageSquare, Menu, LayoutDashboard, Users } from "lucide-react";
 import { useLocation } from "wouter";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState, useEffect } from "react";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
 interface NavItemProps {
@@ -30,7 +30,6 @@ function NavItem({ icon: Icon, label, href, isActive, onClick }: NavItemProps) {
   const [, setLocation] = useLocation();
   
   const handleClick = () => {
-    // Trigger haptic feedback if available
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
     }
@@ -42,12 +41,14 @@ function NavItem({ icon: Icon, label, href, isActive, onClick }: NavItemProps) {
     <button
       onClick={handleClick}
       className={cn(
-        "flex flex-col items-center justify-center py-2 px-2 rounded-lg transition-all",
-        "min-h-[52px] min-w-[56px] tap",
+        "flex flex-col items-center justify-center rounded-lg transition-all",
+        "min-h-[52px] min-w-[56px] py-2 px-2",
+        "-webkit-tap-highlight-color: transparent",
         isActive 
           ? "text-primary bg-primary/10" 
           : "text-muted-foreground hover-elevate active-elevate-2"
       )}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
       data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
@@ -75,15 +76,28 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   const [location, setLocation] = useLocation();
-  const { isMobile, keyboardVisible, safeAreaBottom } = useMobile();
+  const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
-  // Don't render on desktop or when keyboard is visible
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'visualViewport' in window && window.visualViewport) {
+      const vv = window.visualViewport;
+      
+      const handleViewportChange = () => {
+        const heightDiff = window.innerHeight - vv.height;
+        setKeyboardVisible(heightDiff > 150);
+      };
+      
+      vv.addEventListener('resize', handleViewportChange);
+      return () => vv.removeEventListener('resize', handleViewportChange);
+    }
+  }, []);
+  
   if (!isMobile || keyboardVisible) {
     return null;
   }
   
-  // Core navigation items - most essential features
   const navItems = [
     { icon: Home, label: "Home", href: "/dashboard" },
     { icon: Calendar, label: "Schedule", href: "/schedule" },
@@ -91,7 +105,6 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     { icon: MessageSquare, label: "Chat", href: "/chat" },
   ];
   
-  // Check if current path matches nav item
   const isActive = (href: string) => {
     if (href === '/dashboard') {
       return location === '/' || location === '/dashboard';
@@ -107,7 +120,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
         "border-t border-border shadow-lg"
       )}
       style={{
-        paddingBottom: safeAreaBottom > 0 ? `${safeAreaBottom}px` : 'env(safe-area-inset-bottom, 0px)'
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
       }}
       role="navigation"
       aria-label="Main navigation"
@@ -125,17 +138,17 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
           />
         ))}
         
-        {/* More menu button */}
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <button
               className={cn(
-                "flex flex-col items-center justify-center py-2 px-2 rounded-lg transition-all",
-                "min-h-[52px] min-w-[56px] tap",
+                "flex flex-col items-center justify-center rounded-lg transition-all",
+                "min-h-[52px] min-w-[56px] py-2 px-2",
                 menuOpen
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover-elevate active-elevate-2"
               )}
+              style={{ WebkitTapHighlightColor: 'transparent' }}
               data-testid="nav-more"
               aria-label="More options"
             >
@@ -144,10 +157,10 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] overflow-y-auto">
+            <SheetTitle className="sr-only">Quick Access Menu</SheetTitle>
             <div className="p-4 space-y-4">
               <h3 className="font-semibold text-lg mb-4">Quick Access</h3>
               
-              {/* Additional navigation options */}
               <div className="grid grid-cols-3 gap-3">
                 <QuickNavButton 
                   icon={Users} 
@@ -213,9 +226,10 @@ function QuickNavButton({ icon: Icon, label, onNavigate }: QuickNavButtonProps) 
       onClick={onNavigate}
       className={cn(
         "flex flex-col items-center justify-center p-3 rounded-lg",
-        "bg-muted/50 hover-elevate active-elevate-2 tap",
+        "bg-muted/50 hover-elevate active-elevate-2",
         "min-h-[72px]"
       )}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
     >
       <Icon className="w-6 h-6 text-primary mb-1" />
       <span className="text-xs font-medium text-center">{label}</span>
