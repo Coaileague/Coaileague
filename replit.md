@@ -20,6 +20,14 @@ Key capabilities include:
 - I prefer detailed explanations
 
 ### Latest Updates (Current Session)
+- ✅ **Sales/Onboarding Pipeline** - Complete gamified onboarding system with:
+  - Pipeline stages: INVITED → EMAIL_OPENED → TRIAL_STARTED → TRIAL_ACTIVE → ACCEPTED
+  - Gamified onboarding tasks with points and progress tracking
+  - AI Brain integration (Gemini) for dynamic task generation based on org profile
+  - 10% discount reward auto-unlocked on task completion
+  - Stripe coupon/promo code creation and auto-application at checkout
+  - 12 API endpoints at /api/onboarding/* (onboardingPipelineService.ts, onboardingRoutes.ts)
+  - Frontend UI with progress visualization, task completion, and reward display (onboarding.tsx)
 - ✅ **SMS Notifications** - Twilio integration for shift reminders, schedule changes, invoice reminders (smsService.ts, smsRoutes.ts)
 - ✅ **Calendar Export** - ICS export for schedules and timesheets, subscription URLs (calendarService.ts, calendarRoutes.ts)
 - ✅ **What's New API** - Dynamic platform updates feed with CRUD operations (whatsNewService.ts, whatsNewRoutes.ts)
