@@ -355,6 +355,11 @@ export const FEATURES = {
   enableWhatsNew: true,  // Dynamic What's New feed
   enableRealTimeUpdates: true,
   
+  // Sales/Onboarding Pipeline
+  enableOnboardingPipeline: true,  // Gamified onboarding with rewards
+  enableTrialPipeline: true,       // Trial tracking and expiry
+  enableOnboardingRewards: true,   // 10% discount for task completion
+  
   // Enterprise Features
   enableMFA: false,
   enableAdvancedAnalytics: true,
@@ -372,6 +377,35 @@ export const AI = {
   schedulingConfidenceThreshold: 0.8,
   sentimentThreshold: 0.3,
   documentExtractionConfidence: 0.85,
+} as const;
+
+// ============================================================================
+// ONBOARDING PIPELINE CONFIGURATION
+// ============================================================================
+export const ONBOARDING = {
+  TRIAL: {
+    DAYS: 14,               // Default trial length
+    WARNING_DAYS: [3, 1],   // Days before expiry to send warnings
+    CREDITS: 100,           // AI credits included in trial
+  },
+  REWARD: {
+    DISCOUNT_PERCENT: 10,   // 10% off first month
+    EXPIRY_DAYS: 30,        // Reward expires after 30 days
+  },
+  TASKS: {
+    MIN_POINTS: 5,          // Minimum points per task
+    MAX_POINTS: 50,         // Maximum points per task
+  },
+  PIPELINE_STAGES: [
+    'invited',
+    'email_opened', 
+    'trial_started',
+    'trial_active',
+    'trial_expired',
+    'accepted',
+    'rejected',
+    'churned',
+  ] as const,
 } as const;
 
 // ============================================================================
