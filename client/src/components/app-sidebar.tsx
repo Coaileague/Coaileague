@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, GraduationCap, Search, HelpCircle, MessageSquare, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,15 +20,9 @@ import { selectSidebarFamilies } from "@/lib/osModules";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Button } from "@/components/ui/button";
-import { PlanBadge } from "@/components/plan-badge";
-import { WhatsNewBadge } from "@/components/whats-new-badge";
-import { HelpDropdown } from "@/components/help-dropdown";
-import { FeedbackWidget } from "@/components/feedback-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { performLogout } from "@/lib/logoutHandler";
-import { navConfig } from "@/config/navigationConfig";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -36,24 +30,20 @@ export function AppSidebar() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
   const transition = useTransition();
   const { state } = useSidebar();
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const isMobile = useIsMobile();
   
-  // CRITICAL: Prevent rendering on mobile - UniversalNavHeader handles mobile navigation
   if (isMobile) {
     return null;
   }
 
-  // Get sidebar families with RBAC filtering
   const families = isLoading 
     ? [] 
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
 
-  // Track expanded sections - Initialize platform as open, others closed
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     families.forEach(family => {
-      initial[family.id] = family.id === 'platform'; // Only platform expanded by default
+      initial[family.id] = family.id === 'platform';
     });
     return initial;
   });
@@ -76,47 +66,54 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar variant="floating" collapsible="offcanvas" className="bg-sidebar border-r border-sidebar-border shadow-lg">
-      {/* Header */}
-      <SidebarHeader className="p-6 border-b border-border">
-        <Link href="/dashboard" className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
+    <Sidebar 
+      variant="floating" 
+      collapsible="offcanvas" 
+      className="bg-slate-900 border-r border-slate-700/50"
+    >
+      {/* Header - Polished Logo */}
+      <SidebarHeader className="p-5 border-b border-slate-700/50">
+        <Link href="/dashboard" className="flex items-center gap-3" data-testid="link-dashboard-logo">
           {state === 'collapsed' ? (
-            <div className="w-12 h-12 flex items-center justify-center">
-              <CoAIleagueAFLogo variant="icon" size="md" animated={false} />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+              <span className="text-white font-black text-sm">CO</span>
             </div>
           ) : (
             <>
-              <div className="w-12 h-12 shrink-0">
-                <CoAIleagueAFLogo variant="icon" size="md" animated={false} />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
+                <span className="text-white font-black text-sm">CO</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold leading-tight">
-                  <span className="text-sidebar-foreground">AUTO </span>
-                  <span className="text-primary">FORCE</span>
-                  <span className="text-xs text-sidebar-foreground/70 ml-1">™</span>
-                </h1>
-                <p className="text-xs text-sidebar-foreground/70">Workforce Management</p>
+              <div className="flex flex-col">
+                <div className="flex items-baseline">
+                  <span className="text-lg font-black text-white tracking-tight">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Co</span>
+                    <span className="text-white">AI</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">league</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 ml-0.5">™</span>
+                </div>
+                <p className="text-[11px] text-slate-400 tracking-wide">Autonomous Management Solutions</p>
               </div>
             </>
           )}
         </Link>
       </SidebarHeader>
 
-      {/* Navigation */}
-      <SidebarContent className="p-4 space-y-2">
+      {/* Navigation - Clean Sections */}
+      <SidebarContent className="px-3 py-4 space-y-1 overflow-y-auto">
         {families.map((family) => (
-          <SidebarGroup key={family.id}>
+          <SidebarGroup key={family.id} className="mb-2">
             {/* Section Header */}
             <SidebarGroupLabel asChild>
               <button
                 onClick={() => toggleSection(family.id)}
-                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-sidebar-foreground hover:text-sidebar-foreground transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-300 transition-colors"
                 data-testid={`toggle-section-${family.id}`}
               >
-                <span className="tracking-wider">{family.label}</span>
+                <span>{family.label}</span>
                 {expandedSections[family.id] ? 
-                  <ChevronDown size={14} /> : 
-                  <ChevronRight size={14} />
+                  <ChevronDown size={12} className="text-slate-500" /> : 
+                  <ChevronRight size={12} className="text-slate-500" />
                 }
               </button>
             </SidebarGroupLabel>
@@ -124,7 +121,7 @@ export function AppSidebar() {
             {/* Section Items */}
             {expandedSections[family.id] && (
               <SidebarGroupContent>
-                <SidebarMenu className="mt-1 space-y-1">
+                <SidebarMenu className="mt-1 space-y-0.5">
                   {family.routes.map((route) => {
                     const Icon = route.icon;
                     const isActive = location === route.href;
@@ -133,34 +130,28 @@ export function AppSidebar() {
                         <SidebarMenuButton asChild isActive={isActive}>
                           <Link 
                             href={route.href}
-                            className="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-all duration-200 hover:translate-x-1"
+                            className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+                              isActive 
+                                ? 'bg-slate-800 text-white' 
+                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                            }`}
                             data-testid={`link-${route.id}`}
                           >
-                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-                              isActive 
-                                ? 'bg-primary/10' 
-                                : 'bg-sidebar-accent group-hover:bg-primary/5'
-                            }`}>
-                              <Icon size={18} className={`transition-colors ${
-                                isActive 
-                                  ? 'text-primary' 
-                                  : 'text-sidebar-foreground group-hover:text-primary'
-                              }`} />
-                            </div>
-                            <span className={`flex-1 text-sm font-medium transition-colors ${
-                              isActive 
-                                ? 'text-sidebar-foreground' 
-                                : 'text-sidebar-foreground/90 group-hover:text-sidebar-foreground'
-                            }`}>
+                            <Icon size={18} className={`shrink-0 ${
+                              isActive ? 'text-cyan-400' : 'text-slate-400 group-hover:text-cyan-400'
+                            }`} />
+                            <span className="flex-1 text-sm font-medium truncate">
                               {route.label}
                             </span>
                             {route.badge && (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                                 route.badge === 'Root' 
-                                  ? 'bg-destructive/20 text-destructive border border-destructive/30' 
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
                                   : route.badge === 'Enterprise' 
-                                  ? 'bg-primary/20 text-primary border border-primary/30'
-                                  : 'bg-primary/20 text-primary border border-primary/30'
+                                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                  : route.badge === 'QA'
+                                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                  : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
                               }`}>
                                 {route.badge}
                               </span>
@@ -175,21 +166,18 @@ export function AppSidebar() {
                   {family.locked.map((route) => {
                     const Icon = route.icon;
                     return (
-                      <SidebarMenuItem key={`locked-${route.id}`}>
-                        <div 
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-50 cursor-not-allowed"
-                          data-testid={`link-locked-${route.id}`}
-                        >
-                          <div className="w-9 h-9 bg-sidebar-accent rounded-lg flex items-center justify-center">
-                            <Icon size={18} className="text-sidebar-foreground/70" />
+                      <SidebarMenuItem key={route.id}>
+                        <SidebarMenuButton disabled>
+                          <div className="flex items-center gap-3 px-3 py-2 opacity-50 cursor-not-allowed">
+                            <Icon size={18} className="text-slate-500 shrink-0" />
+                            <span className="flex-1 text-sm font-medium text-slate-500 truncate">
+                              {route.label}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-700/50 text-slate-500 border border-slate-600/30">
+                              {route.badge}
+                            </span>
                           </div>
-                          <span className="flex-1 text-sm text-sidebar-foreground/70 font-medium">
-                            {route.label}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted/50 text-muted-foreground border border-border">
-                            {route.badge || 'Locked'}
-                          </span>
-                        </div>
+                        </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
                   })}
@@ -198,167 +186,48 @@ export function AppSidebar() {
             )}
           </SidebarGroup>
         ))}
+
+        {/* More Button */}
+        <div className="pt-2 border-t border-slate-700/50">
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors">
+            <MoreHorizontal size={18} />
+            <span className="text-sm font-medium">More</span>
+          </button>
+        </div>
       </SidebarContent>
 
-      {/* Footer: Tools & User Profile */}
-      <SidebarFooter className="p-4 border-t border-border space-y-3">
-        {/* Quick Tools Section */}
-        {state !== 'collapsed' && (
-          <div className="space-y-2">
-            {/* Plan Badge */}
-            <div className="px-2">
-              <PlanBadge />
-            </div>
-
-            {/* Tool Buttons - Grid Layout */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Tutorial */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if ((window as any).setShowOnboarding) {
-                    (window as any).setShowOnboarding(true);
-                  }
-                }}
-                className="justify-start gap-2 h-9"
-                data-testid="button-sidebar-tutorial"
-              >
-                <GraduationCap className="h-4 w-4" />
-                <span className="text-xs">Tutorial</span>
-              </Button>
-
-              {/* Search */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if ((window as any).openCommandPalette) {
-                    (window as any).openCommandPalette();
-                  } else {
-                    const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
-                    document.dispatchEvent(event);
-                  }
-                }}
-                className="justify-start gap-2 h-9"
-                data-testid="button-sidebar-search"
-              >
-                <Search className="h-4 w-4" />
-                <span className="text-xs">Search</span>
-              </Button>
-            </div>
-
-            {/* Help, Feedback & What's New - Grid Layout */}
-            <div className="grid grid-cols-2 gap-2">
-              <HelpDropdown />
-              <FeedbackWidget />
-            </div>
-            <div className="w-full">
-              <WhatsNewBadge />
-            </div>
-          </div>
-        )}
-
-        {/* Collapsed State - Icon Only Buttons */}
-        {state === 'collapsed' && (
-          <div className="flex flex-col items-center gap-2">
-            {/* Tutorial Icon */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if ((window as any).setShowOnboarding) {
-                  (window as any).setShowOnboarding(true);
-                }
-              }}
-              className="w-10 h-10"
-              data-testid="button-sidebar-tutorial-collapsed"
-            >
-              <GraduationCap className="h-4 w-4" />
-            </Button>
-            
-            {/* Search Icon */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if ((window as any).openCommandPalette) {
-                  (window as any).openCommandPalette();
-                }
-              }}
-              className="w-10 h-10"
-              data-testid="button-sidebar-search-collapsed"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-
-            {/* Help Icon */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => window.open('https://docs.coaileague.com', '_blank')}
-              className="w-10 h-10"
-              data-testid="button-sidebar-help-collapsed"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-
-            {/* Feedback Icon */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                window.location.href = navConfig.misc.feedback;
-              }}
-              className="w-10 h-10"
-              data-testid="button-sidebar-feedback-collapsed"
-            >
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-
-            {/* What's New Icon with Badge */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                window.location.href = navConfig.misc.whatsNew;
-              }}
-              className="w-10 h-10 relative"
-              data-testid="button-sidebar-whatsnew-collapsed"
-            >
-              <Sparkles className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* User Profile */}
-        <div 
-          onClick={handleLogout}
-          className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors cursor-pointer group"
-          data-testid="button-logout"
-        >
-          <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500">
-            <AvatarImage src={user?.profileImageUrl || undefined} className="object-cover rounded-lg" />
-            <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold">
+      {/* Footer - User Profile */}
+      <SidebarFooter className="p-4 border-t border-slate-700/50">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 border-2 border-slate-600">
+            <AvatarImage src={undefined} alt={user?.firstName || "User"} />
+            <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-sm font-bold">
               {getInitials(user?.firstName, user?.lastName)}
             </AvatarFallback>
           </Avatar>
           {state !== 'collapsed' && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-sidebar-foreground truncate" data-testid="text-user-name">
-                  {user?.firstName || user?.lastName 
-                    ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
-                    : "User"}
-                </p>
-                <p className="text-xs text-sidebar-foreground/70 truncate" data-testid="text-user-email">
-                  {user?.email || ""}
-                </p>
-              </div>
-              <ChevronRight size={16} className="text-sidebar-foreground group-hover:text-sidebar-foreground transition-colors" />
-            </>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-slate-400 truncate">
+                {user?.email}
+              </p>
+            </div>
           )}
         </div>
+        
+        {state !== 'collapsed' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="w-full mt-3 text-slate-400 hover:text-white hover:bg-slate-800 justify-start"
+            data-testid="button-logout"
+          >
+            Sign Out
+          </Button>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

@@ -41,12 +41,12 @@ function NavItem({ icon: Icon, label, href, isActive, onClick }: NavItemProps) {
     <button
       onClick={handleClick}
       className={cn(
-        "flex flex-col items-center justify-center rounded-lg transition-all",
-        "min-h-[52px] min-w-[56px] py-2 px-2",
+        "flex flex-col items-center justify-center rounded-xl transition-all duration-200",
+        "min-h-[52px] min-w-[56px] py-2 px-3",
         "-webkit-tap-highlight-color: transparent",
         isActive 
-          ? "text-primary bg-primary/10" 
-          : "text-muted-foreground hover-elevate active-elevate-2"
+          ? "text-cyan-400 bg-slate-800" 
+          : "text-slate-400 hover:text-white hover:bg-slate-800/50"
       )}
       style={{ WebkitTapHighlightColor: 'transparent' }}
       data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -61,8 +61,8 @@ function NavItem({ icon: Icon, label, href, isActive, onClick }: NavItemProps) {
         strokeWidth={isActive ? 2.5 : 2} 
       />
       <span className={cn(
-        "text-[10px] font-medium mt-0.5 leading-tight",
-        isActive && "font-semibold"
+        "text-[10px] font-medium mt-1 leading-tight",
+        isActive ? "font-semibold text-white" : ""
       )}>
         {label}
       </span>
@@ -116,8 +116,8 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     <nav 
       className={cn(
         "fixed bottom-0 inset-x-0 z-50",
-        "bg-background/98 backdrop-blur-md",
-        "border-t border-border shadow-lg"
+        "bg-slate-900/98 backdrop-blur-xl",
+        "border-t border-slate-700/50 shadow-2xl"
       )}
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 0px)'
@@ -126,7 +126,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
       aria-label="Main navigation"
       data-testid="mobile-bottom-nav"
     >
-      <div className="mx-auto max-w-screen-sm flex justify-around items-center py-1 px-2">
+      <div className="mx-auto max-w-screen-sm flex justify-around items-center py-2 px-2">
         {navItems.map((item) => (
           <NavItem
             key={item.href}
@@ -142,24 +142,24 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
           <SheetTrigger asChild>
             <button
               className={cn(
-                "flex flex-col items-center justify-center rounded-lg transition-all",
-                "min-h-[52px] min-w-[56px] py-2 px-2",
+                "flex flex-col items-center justify-center rounded-xl transition-all duration-200",
+                "min-h-[52px] min-w-[56px] py-2 px-3",
                 menuOpen
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover-elevate active-elevate-2"
+                  ? "text-cyan-400 bg-slate-800"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
               )}
               style={{ WebkitTapHighlightColor: 'transparent' }}
               data-testid="nav-more"
               aria-label="More options"
             >
               <Menu className="w-5 h-5" strokeWidth={2} />
-              <span className="text-[10px] font-medium mt-0.5 leading-tight">More</span>
+              <span className="text-[10px] font-medium mt-1 leading-tight">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] overflow-y-auto">
+          <SheetContent side="bottom" className="rounded-t-3xl max-h-[70vh] overflow-y-auto bg-slate-900 border-slate-700">
             <SheetTitle className="sr-only">Quick Access Menu</SheetTitle>
-            <div className="p-4 space-y-4">
-              <h3 className="font-semibold text-lg mb-4">Quick Access</h3>
+            <div className="p-5 space-y-4">
+              <h3 className="font-bold text-lg text-white mb-4">Quick Access</h3>
               
               <div className="grid grid-cols-3 gap-3">
                 <QuickNavButton 
@@ -182,26 +182,26 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
                 />
               </div>
               
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t border-slate-700">
                 <Button 
-                  variant="outline" 
-                  className="w-full h-12 justify-start gap-3"
+                  variant="ghost"
+                  className="w-full h-12 justify-start gap-3 text-slate-300 hover:text-white hover:bg-slate-800"
                   onClick={() => { setLocation('/profile'); setMenuOpen(false); }}
                   data-testid="nav-profile"
                 >
-                  <Users className="w-5 h-5" />
+                  <Users className="w-5 h-5 text-cyan-400" />
                   My Profile
                 </Button>
               </div>
               
-              <div className="pt-2">
+              <div className="pt-1">
                 <Button 
-                  variant="outline" 
-                  className="w-full h-12 justify-start gap-3"
+                  variant="ghost"
+                  className="w-full h-12 justify-start gap-3 text-slate-300 hover:text-white hover:bg-slate-800"
                   onClick={() => { setLocation('/settings'); setMenuOpen(false); }}
                   data-testid="nav-settings"
                 >
-                  <Menu className="w-5 h-5" />
+                  <Menu className="w-5 h-5 text-cyan-400" />
                   Settings
                 </Button>
               </div>
@@ -225,14 +225,14 @@ function QuickNavButton({ icon: Icon, label, onNavigate }: QuickNavButtonProps) 
     <button
       onClick={onNavigate}
       className={cn(
-        "flex flex-col items-center justify-center p-3 rounded-lg",
-        "bg-muted/50 hover-elevate active-elevate-2",
-        "min-h-[72px]"
+        "flex flex-col items-center justify-center p-3 rounded-xl",
+        "bg-slate-800 hover:bg-slate-700 transition-colors",
+        "min-h-[72px] border border-slate-700/50"
       )}
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      <Icon className="w-6 h-6 text-primary mb-1" />
-      <span className="text-xs font-medium text-center">{label}</span>
+      <Icon className="w-6 h-6 text-cyan-400 mb-1.5" />
+      <span className="text-xs font-medium text-center text-slate-300">{label}</span>
     </button>
   );
 }

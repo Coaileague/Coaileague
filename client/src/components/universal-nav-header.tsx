@@ -7,7 +7,6 @@
 import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
@@ -95,7 +94,7 @@ export function UniversalNavHeader() {
   };
 
   return (
-    <div className="sticky top-0 z-40 border-b bg-gradient-to-r from-primary via-primary/95 to-primary/90 text-white shadow-md">
+    <div className="sticky top-0 z-40 border-b border-slate-700/50 bg-slate-900 text-white shadow-lg">
       <div className="flex items-center justify-between px-3 py-3 gap-2">
         {/* Left: Hamburger Menu + Role Badge */}
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -104,18 +103,29 @@ export function UniversalNavHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 text-white hover:bg-white/20 flex-shrink-0"
+                className="h-10 w-10 text-white hover:bg-slate-800 flex-shrink-0"
                 data-testid="button-hamburger-menu"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-[300px] overflow-y-auto">
+            <SheetContent side="left" className="p-0 w-[300px] overflow-y-auto bg-slate-900 border-slate-700">
               {/* Header */}
-              <div className="p-4 border-b border-border bg-sidebar">
-                <Link href="/dashboard" onClick={handleNavigate} data-testid="link-dashboard-logo">
-                  <CoAIleagueLogo width={180} height={60} showTagline={false} className="h-12 w-auto" />
+              <div className="p-5 border-b border-slate-700/50">
+                <Link href="/dashboard" onClick={handleNavigate} data-testid="link-dashboard-logo" className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
+                    <span className="text-white font-black text-sm">CO</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-black text-white tracking-tight">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Co</span>
+                      <span className="text-white">AI</span>
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">league</span>
+                      <span className="text-[10px] text-slate-400 ml-0.5">™</span>
+                    </span>
+                    <p className="text-[11px] text-slate-400 tracking-wide">Autonomous Management</p>
+                  </div>
                 </Link>
               </div>
 
@@ -144,25 +154,25 @@ export function UniversalNavHeader() {
               )}
 
               {/* Navigation Menu */}
-              <div className="p-4 space-y-2">
+              <div className="px-3 py-4 space-y-1">
                 {families.map((family) => (
-                  <div key={family.id} className="space-y-1">
+                  <div key={family.id} className="mb-2">
                     {/* Section Header */}
                     <button
                       onClick={() => toggleSection(family.id)}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-sidebar-foreground hover:text-sidebar-foreground transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-300 transition-colors"
                       data-testid={`toggle-section-${family.id}`}
                     >
-                      <span className="tracking-wider">{family.label}</span>
+                      <span>{family.label}</span>
                       {expandedSections[family.id] ? 
-                        <ChevronDown size={14} /> : 
-                        <ChevronRight size={14} />
+                        <ChevronDown size={12} className="text-slate-500" /> : 
+                        <ChevronRight size={12} className="text-slate-500" />
                       }
                     </button>
 
                     {/* Section Items */}
                     {expandedSections[family.id] && (
-                      <div className="mt-1 space-y-1">
+                      <div className="mt-1 space-y-0.5">
                         {family.routes.map((route) => {
                           const Icon = route.icon;
                           const isActive = location === route.href;
@@ -171,34 +181,26 @@ export function UniversalNavHeader() {
                               key={route.id}
                               href={route.href}
                               onClick={handleNavigate}
-                              className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-all duration-200 ${
-                                isActive ? 'bg-sidebar-accent' : ''
+                              className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+                                isActive 
+                                  ? 'bg-slate-800 text-white' 
+                                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                               }`}
                               data-testid={`link-${route.id}`}
                             >
-                              <div className={`w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center transition-colors ${
-                                isActive 
-                                  ? 'bg-primary/10' 
-                                  : 'bg-sidebar-accent group-hover:bg-primary/5'
-                              }`}>
-                                <Icon size={18} className={`transition-colors ${
-                                  isActive 
-                                    ? 'text-primary' 
-                                    : 'text-sidebar-foreground group-hover:text-primary'
-                                }`} />
-                              </div>
-                              <span className={`flex-1 min-w-0 text-sm font-medium transition-colors break-words ${
-                                isActive 
-                                  ? 'text-sidebar-foreground' 
-                                  : 'text-sidebar-foreground/90 group-hover:text-sidebar-foreground'
-                              }`}>
+                              <Icon size={18} className={`shrink-0 ${
+                                isActive ? 'text-cyan-400' : 'text-slate-400 group-hover:text-cyan-400'
+                              }`} />
+                              <span className="flex-1 min-w-0 text-sm font-medium break-words">
                                 {route.label}
                               </span>
                               {route.badge && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                                   route.badge === 'Root' 
-                                    ? 'bg-destructive/20 text-destructive border border-destructive/30' 
-                                    : 'bg-primary/20 text-primary border border-primary/30'
+                                    ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                    : route.badge === 'Enterprise' 
+                                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                    : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
                                 }`}>
                                   {route.badge}
                                 </span>
@@ -214,7 +216,7 @@ export function UniversalNavHeader() {
 
               {/* Quick Tools Section - Only show when authenticated */}
               {user && !isLoading && (
-                <div className="p-4 border-t border-border space-y-3">
+                <div className="p-4 border-t border-slate-700/50 space-y-3">
                   {/* Plan Badge */}
                   <PlanBadge />
 
@@ -229,10 +231,10 @@ export function UniversalNavHeader() {
                         }
                         setSidebarOpen(false);
                       }}
-                      className="justify-start gap-2 h-9"
+                      className="justify-start gap-2 h-9 text-slate-300 hover:text-white hover:bg-slate-800"
                       data-testid="button-mobile-tutorial"
                     >
-                      <GraduationCap className="h-4 w-4" />
+                      <GraduationCap className="h-4 w-4 text-cyan-400" />
                       <span className="text-xs">Tutorial</span>
                     </Button>
 
@@ -248,10 +250,10 @@ export function UniversalNavHeader() {
                         }
                         setSidebarOpen(false);
                       }}
-                      className="justify-start gap-2 h-9"
+                      className="justify-start gap-2 h-9 text-slate-300 hover:text-white hover:bg-slate-800"
                       data-testid="button-mobile-search"
                     >
-                      <Search className="h-4 w-4" />
+                      <Search className="h-4 w-4 text-cyan-400" />
                       <span className="text-xs">Search</span>
                     </Button>
                   </div>
@@ -269,25 +271,23 @@ export function UniversalNavHeader() {
                 </div>
               )}
 
-              <Separator className="bg-border" />
-
               {/* Footer: User Profile + Settings + Sign Out */}
-              <div className="p-4 space-y-2">
+              <div className="p-4 border-t border-slate-700/50 space-y-2">
                 {/* User Info Display */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent">
-                  <Avatar className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800">
+                  <Avatar className="w-10 h-10 rounded-lg border-2 border-slate-600">
                     <AvatarImage src={user?.profileImageUrl || undefined} className="object-cover rounded-lg" />
-                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold">
+                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-bold">
                       {getInitials(user?.firstName, user?.lastName)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                    <p className="text-sm font-semibold text-white truncate">
                       {user?.firstName || user?.lastName 
                         ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
                         : "User"}
                     </p>
-                    <p className="text-xs text-sidebar-foreground/70 truncate">
+                    <p className="text-xs text-slate-400 truncate">
                       {user?.email || ""}
                     </p>
                   </div>
@@ -301,7 +301,7 @@ export function UniversalNavHeader() {
                 >
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent"
+                    className="w-full justify-start gap-3 text-slate-300 hover:text-white hover:bg-slate-800"
                   >
                     Settings
                   </Button>
@@ -310,7 +310,7 @@ export function UniversalNavHeader() {
                 {/* Sign Out Button */}
                 <Button
                   variant="ghost"
-                  className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10"
+                  className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                   onClick={handleLogout}
                   data-testid="button-logout-hamburger"
                 >
@@ -322,13 +322,13 @@ export function UniversalNavHeader() {
 
           {/* Role Badge */}
           <div className="hidden sm:flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold">{getRoleDisplay()[0]}</span>
+            <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+              <span className="text-xs font-bold text-cyan-400">{getRoleDisplay()[0]}</span>
             </div>
             <div>
-              <p className="text-sm font-semibold leading-tight">{getRoleDisplay()}</p>
+              <p className="text-sm font-semibold leading-tight text-white">{getRoleDisplay()}</p>
               {subscriptionTier && (
-                <p className="text-xs opacity-90 capitalize">{subscriptionTier}</p>
+                <p className="text-xs text-slate-400 capitalize">{subscriptionTier}</p>
               )}
             </div>
           </div>
@@ -337,8 +337,12 @@ export function UniversalNavHeader() {
         {/* Center: CoAIleague Branding */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-2">
           <div className="flex items-baseline gap-1">
-            <span className="hidden sm:inline text-base font-bold whitespace-nowrap">CoAIleague</span>
-            <span className="sm:hidden text-lg font-bold">AF</span>
+            <span className="hidden sm:inline text-base font-bold whitespace-nowrap">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Co</span>
+              <span className="text-white">AI</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">league</span>
+            </span>
+            <span className="sm:hidden text-lg font-bold text-cyan-400">CO</span>
             <span className="text-[8px] sm:text-[10px] font-bold align-super">™</span>
           </div>
         </div>
