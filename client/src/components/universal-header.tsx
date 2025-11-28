@@ -3,7 +3,7 @@
  * Shows appropriate nav based on authentication state and RBAC
  */
 
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -91,11 +91,11 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
           >
             {/* Desktop: Show full logo */}
             <div className="hidden sm:block">
-              <CoAIleagueAFLogo variant="full" size="md" />
+              <CoAIleagueLogo width={220} height={70} showTagline={false} className="h-9 w-auto" />
             </div>
             {/* Mobile: Show smaller logo */}
             <div className="block sm:hidden">
-              <CoAIleagueAFLogo variant="icon" size="sm" />
+              <CoAIleagueLogo width={100} height={40} showTagline={false} onlyIcon={false} className="h-8 w-auto" />
             </div>
           </button>
 

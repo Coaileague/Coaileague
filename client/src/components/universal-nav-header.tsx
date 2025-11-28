@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { selectCondensedMobileFamilies, getDesktopOnlyRoutes } from "@/lib/osModules";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
@@ -113,19 +113,9 @@ export function UniversalNavHeader() {
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-[300px] overflow-y-auto">
               {/* Header */}
-              <div className="p-6 border-b border-border bg-sidebar">
-                <Link href="/dashboard" onClick={handleNavigate} className="flex items-center gap-3 mb-2" data-testid="link-dashboard-logo">
-                  <div className="w-12 h-12 shrink-0">
-                    <CoAIleagueAFLogo variant="icon" size="md" animated={false} />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold leading-tight">
-                      <span className="text-sidebar-foreground">AUTO </span>
-                      <span className="text-primary">FORCE</span>
-                      <span className="text-xs text-sidebar-foreground/70 ml-1">™</span>
-                    </h1>
-                    <p className="text-xs text-sidebar-foreground/70">Workforce Management</p>
-                  </div>
+              <div className="p-4 border-b border-border bg-sidebar">
+                <Link href="/dashboard" onClick={handleNavigate} data-testid="link-dashboard-logo">
+                  <CoAIleagueLogo width={180} height={60} showTagline={false} className="h-12 w-auto" />
                 </Link>
               </div>
 
