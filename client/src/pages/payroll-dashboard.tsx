@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, DollarSign, CheckCircle, Clock, Play, Users } from "lucide-react";
 import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 interface PayrollRun {
   id: string;
@@ -185,6 +186,15 @@ export default function PayrollDashboard() {
 
   return (
     <WorkspaceLayout maxWidth="7xl">
+      <div className="text-center space-y-4 mb-8 p-6 border-b">
+        <CoAIleagueLogo 
+          width={200} 
+          height={50} 
+          showTagline={true}
+          showWordmark={true}
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">

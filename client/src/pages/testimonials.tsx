@@ -98,7 +98,7 @@ export default function Testimonials() {
               Experience Elite Support
             </h2>
             <p className="mb-6 text-blue-100">
-              Join thousands of satisfied customers who trust WorkforceOS for their business needs
+              Join thousands of satisfied customers who trust CoAIleague™ for their business needs
             </p>
             <button className="px-8 py-3 bg-white text-blue-900 font-semibold rounded-lg hover:bg-blue-50 transition-colors">
               Get Started Today

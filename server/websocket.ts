@@ -1300,7 +1300,7 @@ export function setupWebSocket(server: Server) {
               switch (parsedCommand.command) {
                 case 'intro': {
                   // AI bot introduces staff to customer with role and identity
-                  const introMessage = `📢 ${staffDisplayName} (${staffRoleName}) is now ready to assist you!\n\nℹ️ To help you better, please share:\n• Your full name\n• Organization/Company name\n• Brief description of how we can help\n\n💬 Our support team is here to help with any questions about WorkforceOS!`;
+                  const introMessage = `📢 ${staffDisplayName} (${staffRoleName}) is now ready to assist you!\n\nℹ️ To help you better, please share:\n• Your full name\n• Organization/Company name\n• Brief description of how we can help\n\n💬 Our support team is here to help with any questions about CoAIleague™!`;
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
@@ -2137,7 +2137,7 @@ export function setupWebSocket(server: Server) {
                           messages: [
                             {
                               role: 'system',
-                              content: `You are a helpful HR assistant for WorkforceOS. Answer employee questions about company policies, procedures, and benefits using the provided knowledge base. Be concise, friendly, and accurate. If you don't know the answer, say so and suggest contacting HR.`
+                              content: `You are a helpful HR assistant for CoAIleague™. Answer employee questions about company policies, procedures, and benefits using the provided knowledge base. Be concise, friendly, and accurate. If you don't know the answer, say so and suggest contacting HR.`
                             },
                             {
                               role: 'user',
@@ -4079,7 +4079,7 @@ export function setupWebSocket(server: Server) {
       { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Michael - Technical issue detected. David Kim is our mobile specialist but currently busy. Sarah will assist.' },
       { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi Michael! What device and OS version are you using?' },
       { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'iPhone 14, iOS 17.2' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Try clearing the app cache: Settings > Apps > WorkforceOS > Clear Cache. If that does not work, uninstall and reinstall the app. Your data is saved in the cloud.' },
+      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Try clearing the app cache: Settings > Apps > CoAIleague > Clear Cache. If that does not work, uninstall and reinstall the app. Your data is saved in the cloud.' },
       { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'Clearing cache fixed it! Thanks!' },
       
       // Scenario 7: Upgrade question
@@ -4089,7 +4089,7 @@ export function setupWebSocket(server: Server) {
       { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Just emailed you the comparison guide. Let me know if you have questions!' },
       
       // Scenario 8: Integration question
-      { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Can WorkforceOS integrate with QuickBooks for payroll?' },
+      { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Can CoAIleague™ integrate with QuickBooks for payroll?' },
       { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Christopher - Integration inquiry. Mike Chen is our integration expert.' },
       { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'Yes! We have a direct QuickBooks integration. Go to Settings > Integrations > QuickBooks and follow the OAuth connection flow. Takes about 2 minutes.' },
       { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Excellent! I will set that up now.' },

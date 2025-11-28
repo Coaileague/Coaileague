@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiPost } from "@/lib/apiClient";
@@ -82,7 +82,7 @@ export default function CustomRegister() {
       <div className="w-full max-w-2xl space-y-8">
         {/* Logo and Branding */}
         <div className="flex flex-col items-center gap-4">
-          <CoAIleagueAFLogo variant="full" size="lg" />
+          <CoAIleagueLogo width={200} height={50} showTagline={false} />
         </div>
 
         {/* Register Card */}

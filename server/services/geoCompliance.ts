@@ -239,7 +239,7 @@ export class GeoComplianceService {
       changesAfter,
       fieldChanges,
       ipAddress,
-      userAgent: 'WorkforceOS API', // Can be enhanced to capture actual user agent
+      userAgent: 'CoAIleague™ API', // Can be enhanced to capture actual user agent
     });
   }
 

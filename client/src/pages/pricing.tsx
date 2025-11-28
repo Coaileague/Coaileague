@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UniversalHeader } from "@/components/universal-header";
+import { Footer } from "@/components/footer";
 import { Check, X, TrendingUp, Sparkles } from "lucide-react";
 
 interface PricingTier {
@@ -431,29 +432,7 @@ export default function Pricing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-foreground/70">
-              <span className="text-xs sm:text-sm">© 2025 CoAIleague by Drill Consulting 360. Enterprise-grade workforce automation.</span>
-            </div>
-            <div className="flex gap-4 sm:gap-6 text-xs text-gray-600">
-              <a href="/support" className="hover:text-blue-600 transition-colors" data-testid="link-support">
-                Support Center
-              </a>
-              <a href="/contact" className="hover:text-blue-600 transition-colors" data-testid="link-contact">
-                Contact Us
-              </a>
-              <a href="#" className="hover:text-blue-600 transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="hover:text-blue-600 transition-colors">
-                Terms
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="light" />
     </div>
   );
 }

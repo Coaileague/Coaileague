@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { deductionTypesConfig, payrollMessages } from "@/config/payrollConfig";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 const deductionSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -115,6 +116,15 @@ export default function PayrollDeductionsPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <div className="text-center space-y-4 mb-8 p-6 border-b">
+        <CoAIleagueLogo 
+          width={200} 
+          height={50} 
+          showTagline={true}
+          showWordmark={true}
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{payrollMessages.deductions.title}</h1>

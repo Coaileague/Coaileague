@@ -451,6 +451,28 @@ export function getBrandGradient(): string {
 }
 
 // ============================================================================
+// AI BOT CONFIGURATION
+// ============================================================================
+export const BOT_CONFIG = {
+  name: "CoAIleague AI",
+  trademark: "™",
+  description: "Autonomous workforce management AI assistant",
+  greeting: "Welcome to CoAIleague™ Support. I'm here to help with any questions about workforce management, scheduling, payroll, and more.",
+  systemPrompt: "You are CoAIleague™ AI, an elite autonomous workforce management platform assistant. You provide expert guidance on employee management, scheduling, payroll, analytics, and compliance. Be professional, helpful, and accurate in all responses.",
+  features: [
+    "Employee management guidance",
+    "Shift scheduling assistance",
+    "Payroll inquiries",
+    "Analytics interpretation",
+    "Compliance support",
+    "Technical troubleshooting",
+  ],
+  rbacEnabled: true, // AI responses respect RBAC roles
+  dataSync: true,    // Bot data syncs across mobile/desktop
+  contextAware: true, // Bot understands workspace context
+} as const;
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 export type Role = typeof ROLES[keyof typeof ROLES];

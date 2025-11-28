@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { CheckCircle2, AlertCircle, FileText, CreditCard, Clock, Building2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 interface InvoicePaymentStatus {
   invoiceId: string;
@@ -301,9 +302,13 @@ export default function PayInvoice() {
     <div className="min-h-screen bg-background py-8 px-4" data-testid="page-pay-invoice">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* CoAIleague Branding */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-foreground">CoAIleague</h1>
-          <p className="text-sm text-gray-700 dark:text-gray-400">Autonomous Workforce Management Solutions</p>
+        <div className="text-center space-y-4">
+          <CoAIleagueLogo 
+            width={240} 
+            height={60} 
+            showTagline={true}
+            showWordmark={true}
+          />
         </div>
 
         {/* Invoice Details Card */}

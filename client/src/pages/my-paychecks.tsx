@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Receipt, DollarSign, TrendingUp } from "lucide-react";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 interface Paycheck {
   id: string;
@@ -44,6 +45,15 @@ export default function MyPaychecks() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
+      <div className="text-center space-y-4 mb-8 p-6 border-b">
+        <CoAIleagueLogo 
+          width={200} 
+          height={50} 
+          showTagline={true}
+          showWordmark={true}
+        />
+      </div>
+
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Receipt className="h-8 w-8" />

@@ -7153,7 +7153,7 @@ export const integrationMarketplace = pgTable("integration_marketplace", {
   bidirectionalSync: boolean("bidirectional_sync").default(false),
 
   // Marketplace metadata
-  isCertified: boolean("is_certified").default(false), // Official WorkforceOS certification
+  isCertified: boolean("is_certified").default(false), // Official CoAIleague™ certification
   isDeveloperSubmitted: boolean("is_developer_submitted").default(false),
   installCount: integer("install_count").default(0),
   rating: decimal("rating", { precision: 3, scale: 2 }), // 0.00 - 5.00

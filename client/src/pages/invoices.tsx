@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/select";
 import type { Invoice, Client, TimeEntry } from "@shared/schema";
 import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -452,6 +453,15 @@ export default function Invoices() {
   return (
     <WorkspaceLayout maxWidth="7xl">
       <div className="w-full">
+        <div className="text-center space-y-4 mb-8 p-6 border-b">
+          <CoAIleagueLogo 
+            width={200} 
+            height={50} 
+            showTagline={true}
+            showWordmark={true}
+          />
+        </div>
+
         <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>

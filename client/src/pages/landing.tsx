@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UniversalHeader } from "@/components/universal-header";
+import { Footer } from "@/components/footer";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { DashboardPreview } from "@/components/dashboard-preview";
 import { TimeTrackingPreview } from "@/components/time-tracking-preview";
@@ -719,45 +720,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-muted/30 py-12">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-semibold mb-3">Product</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><button onClick={() => setLocation("/pricing")}>Pricing</button></li>
-                <li><button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Features</button></li>
-                <li><button onClick={() => window.location.href = "/api/demo-login"}>Demo</button></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Company</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><button onClick={() => setLocation("/contact")}>Contact</button></li>
-                <li><button onClick={() => setLocation("/support")}>Support</button></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Legal</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Privacy Policy</li>
-                <li>Terms of Service</li>
-                <li>Security</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Get Started</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><button onClick={() => setLocation("/login")}>Login</button></li>
-                <li><button onClick={() => setLocation("/register")}>Sign Up</button></li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>© 2025 CoAIleague. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="light" />
     </div>
   );
 }

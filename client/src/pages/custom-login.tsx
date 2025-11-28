@@ -12,6 +12,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -122,25 +123,10 @@ export default function CustomLogin() {
           <div className="container mx-auto px-6 py-5 flex items-center justify-between">
             <button 
               onClick={() => setLocation("/")}
-              className="flex items-center gap-3 hover-elevate"
+              className="hover-elevate transition-all"
               data-testid="button-logo-login"
             >
-              <div 
-                className="rounded-lg inline-flex items-center justify-center text-white font-bold"
-                style={{
-                  width: THEME.pages.login.header.logoSize,
-                  height: THEME.pages.login.header.logoSize,
-                  fontSize: THEME.pages.login.header.logoFontSize,
-                  background: THEME.pages.login.header.logoGradient,
-                  boxShadow: THEME.pages.login.header.logoShadow
-                }}
-              >
-                AF
-              </div>
-              <div>
-                <div className="font-semibold" style={{ color: THEME.colors.text.primary }}>COAILEAGUE</div>
-                <div className="text-xs" style={{ color: THEME.colors.text.placeholder }}>Workforce Intelligence</div>
-              </div>
+              <CoAIleagueLogo width={150} height={40} showTagline={false} />
             </button>
             <button
               onClick={() => setLocation("/")}

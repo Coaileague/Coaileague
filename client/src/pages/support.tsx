@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Footer } from "@/components/footer";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Input } from "@/components/ui/input";
 import {
@@ -444,27 +445,7 @@ export default function Support() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-slate-50">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-              <CoAIleagueAFLogo size="sm" variant="icon" />
-              <span className="whitespace-nowrap">© 2025 CoAIleague</span>
-            </div>
-            <div className="flex gap-3 sm:gap-6 text-xs text-gray-500 flex-wrap">
-              <a href="/contact" className="hover:text-gray-900 whitespace-nowrap" data-testid="link-contact">
-                Contact Us
-              </a>
-              <a href="/privacy" className="hover:text-gray-900 whitespace-nowrap" data-testid="link-privacy">
-                Privacy
-              </a>
-              <a href="/terms" className="hover:text-gray-900 whitespace-nowrap" data-testid="link-terms">
-                Terms
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="light" />
     </div>
   );
 }

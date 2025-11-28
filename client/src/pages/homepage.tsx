@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { UniversalHeader } from '@/components/universal-header';
+import { Footer } from '@/components/footer';
 
 export default function Homepage() {
   // Hide the pre-React loading screen on public pages
@@ -371,52 +372,7 @@ export default function Homepage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <Cpu className="w-5 h-5 text-white" />
-                </div>
-                <div className="font-bold text-lg">
-                  <span className="text-white">AUTO</span>
-                  <span className="text-blue-400">FORCE</span>
-                  <span className="text-xs align-super text-gray-400">™</span>
-                </div>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Autonomous Workforce Management powered by advanced AI
-              </p>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#features" className="hover:text-white transition-colors" data-testid="footer-link-features">Features</a></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors" data-testid="footer-link-pricing">Pricing</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition-colors" data-testid="footer-link-contact">Contact</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link href="/support" className="hover:text-white transition-colors" data-testid="footer-link-support">Support</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition-colors" data-testid="footer-link-contact-us">Contact Us</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link href="/privacy" className="hover:text-white transition-colors" data-testid="footer-link-privacy">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition-colors" data-testid="footer-link-terms">Terms of Service</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2025 CoAIleague. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="dark" />
     </div>
   );
 }

@@ -73,7 +73,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
                 {step === 1 ? "Remove User from Chat?" : "Select Reason for Removal"}
               </DialogTitle>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                WorkforceOS Support • Moderation Action
+                CoAIleague™ Support • Moderation Action
               </p>
             </div>
           </div>
@@ -254,7 +254,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
                 {step === 1 ? "Silence User?" : "Select Reason"}
               </DialogTitle>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                WorkforceOS Support • Moderation Action
+                CoAIleague™ Support • Moderation Action
               </p>
             </div>
           </div>

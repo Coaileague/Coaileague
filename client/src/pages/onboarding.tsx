@@ -2,6 +2,7 @@ import { useParams } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { CoAIleagueLogo } from '@/components/coailleague-logo';
 
 export default function OnboardingPage() {
   const { token } = useParams();
@@ -10,6 +11,9 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <div className="p-8 text-center">
+          <div className="flex justify-center mb-6">
+            <CoAIleagueLogo width={200} height={50} showTagline={false} />
+          </div>
           <h1 className="text-2xl font-bold mb-2">Welcome to CoAIleague</h1>
           <p className="text-muted-foreground mb-6">
             Complete your onboarding to get started with our platform.

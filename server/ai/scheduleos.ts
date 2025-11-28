@@ -1,7 +1,7 @@
 /**
  * AI Scheduling™ - INTELLIGENT AUTO-SCHEDULING ENGINE
  * 
- * Integrates with ALL WorkforceOS™ systems for comprehensive scheduling:
+ * Integrates with ALL CoAIleague™ systems for comprehensive scheduling:
  * - TalentOS™: Performance scores, attendance rates, composite scores
  * - ClockOS™: Tardiness, no-call-no-show, time entry violations
  * - Billing Platform: Automatic client billing from scheduled hours

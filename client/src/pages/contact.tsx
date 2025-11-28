@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UniversalHeader } from "@/components/universal-header";
+import { Footer } from "@/components/footer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -125,11 +126,11 @@ export default function Contact() {
               </p>
               <div className="space-y-1 pt-2">
                 <a
-                  href="mailto:support@getdc360.com"
+                  href="mailto:support@coaileague.com"
                   className="text-sm font-mono text-blue-600 hover:underline block"
                   data-testid="link-email-support"
                 >
-                  support@getdc360.com
+                  support@coaileague.com
                 </a>
                 <p className="text-xs text-gray-500">
                   Response time: &lt;24 hours
@@ -501,11 +502,11 @@ export default function Contact() {
                 <div className="pt-2 space-y-1">
                   <p className="text-xs font-semibold text-gray-900">General Inquiries:</p>
                   <a
-                    href="mailto:info@getdc360.com"
+                    href="mailto:support@coaileague.com"
                     className="text-sm font-mono text-blue-600 hover:underline block"
                     data-testid="link-email-info"
                   >
-                    info@getdc360.com
+                    support@coaileague.com
                   </a>
                 </div>
               </div>
@@ -523,7 +524,7 @@ export default function Contact() {
               </p>
               <Button
                 className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md"
-                onClick={() => window.location.href = "mailto:info@getdc360.com"}
+                onClick={() => window.location.href = "mailto:support@coaileague.com"}
                 data-testid="button-enterprise-contact"
               >
                 Contact Us
@@ -534,29 +535,7 @@ export default function Contact() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-slate-50">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-foreground/70">
-              <span>© 2025 CoAIleague. Elite-grade workforce automation.</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <ReenableChatButton />
-              <div className="flex gap-6 text-xs text-gray-500">
-                <a href="/support" className="hover:text-gray-900" data-testid="link-support">
-                  Support Center
-                </a>
-                <a href="#" className="hover:text-gray-900">
-                  Privacy
-                </a>
-                <a href="#" className="hover:text-gray-900">
-                  Terms
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="light" />
     </div>
   );
 }

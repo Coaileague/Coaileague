@@ -100,7 +100,7 @@ export const emailTemplates = {
         </div>
         <p>Please make sure you're available for this shift.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from ShiftSync.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -125,7 +125,7 @@ export const emailTemplates = {
         </div>
         <p>Please prepare to clock in on time.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from ShiftSync.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -193,7 +193,7 @@ export const emailTemplates = {
           If you have already submitted payment, please disregard this notice. If you have questions about this invoice, please contact us immediately.
         </p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated reminder from CoAIleague Billing.
+          This is an automated reminder from CoAIleague™.
         </p>
       </div>
     `
@@ -216,7 +216,7 @@ export const emailTemplates = {
         </div>
         <p>If you have any questions, please don't hesitate to reach out to your manager.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from ShiftSync.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -252,7 +252,7 @@ export const emailTemplates = {
         </div>
         <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
           If you did not expect this invitation, please ignore this email.<br>
-          This is an automated message from WorkforceOS.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -279,7 +279,7 @@ export const emailTemplates = {
         </div>
         <p>Enjoy your time off!</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -430,7 +430,7 @@ export const emailTemplates = {
         </div>
         <p>Please prepare for the review and be ready to discuss your accomplishments, challenges, and goals.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -455,7 +455,7 @@ export const emailTemplates = {
         </div>
         <p>You will receive additional documentation about your benefits coverage shortly.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -488,7 +488,7 @@ export const emailTemplates = {
         </div>
         <p>If you have any questions, please contact HR at <a href="mailto:${data.hrContactEmail}">${data.hrContactEmail}</a></p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS.
+          This is an automated message from CoAIleague™.
         </p>
       </div>
     `
@@ -538,7 +538,7 @@ export const emailTemplates = {
           </p>
           
           <p style="color: #6b7280; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-            This is an automated report delivery from WorkforceOS.
+            This is an automated report delivery from CoAIleague™.
           </p>
         </div>
       </div>
@@ -568,7 +568,7 @@ export const emailTemplates = {
         </div>
         <p>If you have questions about this action, please contact platform support.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS Support.
+          This is an automated message from CoAIleague™ Support.
         </p>
       </div>
     `
@@ -598,7 +598,7 @@ export const emailTemplates = {
         </div>
         <p>If you have questions about this action, please contact platform support.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS Support.
+          This is an automated message from CoAIleague™ Support.
         </p>
       </div>
     `
@@ -624,7 +624,7 @@ export const emailTemplates = {
         </div>
         <p>This action was taken to ensure rating integrity and prevent spam or abuse.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS Support.
+          This is an automated message from CoAIleague™ Support.
         </p>
       </div>
     `
@@ -652,7 +652,7 @@ export const emailTemplates = {
         </div>
         <p>Your record has been updated to reflect this change.</p>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          This is an automated message from WorkforceOS Support.
+          This is an automated message from CoAIleague™ Support.
         </p>
       </div>
     `

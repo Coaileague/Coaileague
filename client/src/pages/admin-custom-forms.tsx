@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import type { CustomForm } from "@shared/schema";
 
 interface FormField {
@@ -197,6 +198,9 @@ export default function AdminCustomForms() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
+              <div className="flex justify-center mb-6">
+                <CoAIleagueLogo width={200} height={50} showTagline={false} />
+              </div>
               <DialogTitle>
                 {editingForm ? "Edit Form" : "Create New Form"}
               </DialogTitle>

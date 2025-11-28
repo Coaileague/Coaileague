@@ -23,7 +23,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export function ThemeProvider({
   children,
   defaultTheme = "light",
-  storageKey = "shiftsync-theme",
+  storageKey = "coaileague-theme",
   ...props
 }: ThemeProviderProps) {
   // FORCE LIGHT MODE - Ignore localStorage and system preferences

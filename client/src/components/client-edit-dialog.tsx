@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Building2 } from "lucide-react";
+import { CoAIleagueLogo } from "./coailleague-logo";
 
 interface Client {
   id: string;
@@ -76,7 +77,10 @@ export function ClientEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <div className="flex justify-center mb-6">
+            <CoAIleagueLogo width={180} height={45} showTagline={false} />
+          </div>
+          <DialogTitle className="flex items-center justify-center gap-2">
             <Building2 className="w-5 h-5" />
             Edit Client
           </DialogTitle>

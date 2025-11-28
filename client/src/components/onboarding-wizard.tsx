@@ -8,6 +8,7 @@ import { ArrowRight, ArrowLeft, X, CheckCircle2, Sparkles, MessageSquare, Calend
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 interface OnboardingStep {
   id: string;
@@ -315,6 +316,9 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
+          <div className="flex justify-center mb-6">
+            <CoAIleagueLogo width={200} height={50} showTagline={false} />
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">

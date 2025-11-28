@@ -119,7 +119,7 @@ export function TermsDialog({ open, onAccept, onDecline, userName }: TermsDialog
             <section>
               <h3 className="font-bold text-base text-white mb-2">4. COMPREHENSIVE LIMITATION OF LIABILITY</h3>
               <p className="mb-2 font-semibold">
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT COAILEAGUE™, DRILL CONSULTING 360, AND ALL OF OUR:
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AGREE THAT COAILEAGUE™ AND ALL OF OUR:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-2">
                 <li>Staff members and support representatives</li>

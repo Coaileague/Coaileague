@@ -27,6 +27,7 @@ import { Card } from "@/components/ui/card";
 import { ESignature } from "./ESignature";
 import { DocumentUpload } from "./DocumentUpload";
 import { Loader2 } from "lucide-react";
+import { CoAIleagueLogo } from "./coailleague-logo";
 
 export interface FormField {
   id: string;
@@ -331,6 +332,11 @@ export function CustomFormRenderer({
   return (
     <Card className="p-6">
       <div className="space-y-6">
+        {/* Logo Header */}
+        <div className="flex justify-center pb-4">
+          <CoAIleagueLogo width={200} height={50} showTagline={false} />
+        </div>
+        
         {/* Form Header */}
         <div>
           <h2 className="text-2xl font-bold text-foreground" data-testid="text-form-title">

@@ -516,7 +516,7 @@ export default function Settings() {
                         {selectedCategory === 'construction' && "Construction forms: Safety Checklists, On-Job Training (OJT), Equipment Inspection Logs"}
                         {selectedCategory === 'cleaning' && "Cleaning forms: Inspection Checklists, Supply Inventory Logs"}
                         {selectedCategory === 'retail' && "Retail forms: Opening/Closing Shift Reports, Inventory Logs"}
-                        {selectedCategory === 'custom' && "Custom forms configured by WorkforceOS support team"}
+                        {selectedCategory === 'custom' && "Custom forms configured by CoAIleague™ support team"}
                       </p>
                       <Button 
                         size="sm" 

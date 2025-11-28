@@ -7,7 +7,7 @@ export function DemoBanner() {
   const { user } = useAuth();
   
   // Only show banner for demo user
-  if (!user || user.email !== "demo@shiftsync.app") {
+  if (!user || user.email !== "demo@coaileague.com") {
     return null;
   }
 
@@ -17,9 +17,9 @@ export function DemoBanner() {
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <span className="font-medium text-sm">Demo Mode</span>
+            <span className="font-medium text-sm">CoAIleague Demo Mode</span>
             <span className="text-xs text-muted-foreground">
-              You're exploring a fully interactive demo. Data resets every 24 hours.
+              You're exploring a fully interactive CoAIleague demo. Data resets every 24 hours.
             </span>
           </div>
         </div>

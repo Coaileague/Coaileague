@@ -42,7 +42,7 @@ export async function generateGreeting(userName: string, isGuest: boolean): Prom
     return `👋 Welcome to HelpDesk, ${userName}! I'm HelpOS™, your AI assistant. I can help answer questions while you wait for our team. You have ${FREE_GUEST_LIMIT} free AI responses to try out our service!`;
   }
   
-  return `👋 Welcome back to HelpDesk, ${userName}! I'm HelpOS™, your AI assistant, ready to help with any questions about WorkforceOS.`;
+  return `👋 Welcome back to HelpDesk, ${userName}! I'm HelpOS™, your AI assistant, ready to help with any questions about CoAIleague™.`;
 }
 
 /**
@@ -81,7 +81,7 @@ export async function getAiResponse(
   
   if (!isSubscriber && usageCount >= FREE_GUEST_LIMIT) {
     return {
-      message: `🎯 You've used all ${FREE_GUEST_LIMIT} free AI responses! Want unlimited AI support? Subscribe to WorkforceOS or contact our team directly - a human will assist you shortly!`,
+      message: `🎯 You've used all ${FREE_GUEST_LIMIT} free AI responses! Want unlimited AI support? Subscribe to CoAIleague™ or contact our team directly - a human will assist you shortly!`,
       usageCount,
       limitReached: true
     };
@@ -94,7 +94,7 @@ export async function getAiResponse(
       messages: [
         {
           role: "system",
-          content: `You are HelpOS™, the high-tech AI assistant for WorkforceOS - an elite workforce management platform. You're super knowledgeable, professional, and helpful.
+          content: `You are HelpOS™, the high-tech AI assistant for CoAIleague™ - an elite autonomous workforce management platform. You're super knowledgeable, professional, and helpful.
 
 🎯 YOUR PERSONALITY:
 - High-tech and modern
@@ -213,7 +213,7 @@ export function shouldBotRespond(message: string): boolean {
   const triggers = [
     'help', 'question', 'what is', 'how do', 'can you',
     'tell me', 'explain', 'pricing', 'features', 'cost',
-    'workforceos', 'workforce', 'schedule', 'payroll', 'time tracking'
+    'coaileague', 'workforce', 'schedule', 'payroll', 'time tracking'
   ];
   
   return triggers.some(trigger => lowerMessage.includes(trigger));
@@ -235,7 +235,7 @@ export async function generateQueueWelcome(
 
 🎯 You're next in line! A support agent will assist you momentarily.
 
-While you wait, feel free to ask me any questions about WorkforceOS. Stay in the chat to keep your position!`;
+While you wait, feel free to ask me any questions about CoAIleague™. Stay in the chat to keep your position!`;
   }
 
   return `👋 Welcome ${userName}! I'm HelpOS™, your AI support assistant. (Ticket: ${ticketNumber})
@@ -245,7 +245,7 @@ While you wait, feel free to ask me any questions about WorkforceOS. Stay in the
 • ${waitingCount} customer${waitingCount === 1 ? '' : 's'} currently waiting
 • Estimated wait: ~${estimatedWaitMinutes} minutes
 
-While you wait, ask me anything about WorkforceOS! Stay in the chat to keep your position.`;
+While you wait, ask me anything about CoAIleague™! Stay in the chat to keep your position.`;
 }
 
 /**

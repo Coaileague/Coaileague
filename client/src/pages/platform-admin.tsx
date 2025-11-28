@@ -81,7 +81,7 @@ export default function PlatformAdmin() {
   
   // Platform settings state
   const [platformSettings, setPlatformSettings] = useState({
-    platformName: "WorkforceOS",
+    platformName: "CoAIleague™",
     maintenanceMode: false,
     newWorkspaceRegistration: true,
     emailNotifications: true,

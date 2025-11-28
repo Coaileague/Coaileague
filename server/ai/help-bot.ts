@@ -26,11 +26,11 @@ export class HelpBotService {
    * Generate greeting message when user first joins chat
    */
   static async generateGreeting(context: HelpBotContext): Promise<string> {
-    const prompt = `You are help_bot, a friendly AI assistant for WorkforceOS Support Chat. 
+    const prompt = `You are help_bot, a friendly AI assistant for CoAIleague™ Support Chat. 
 A new user has just joined the chat. Their name is ${context.customerName || 'Guest'}.
 
 Generate a warm, professional greeting that:
-1. Welcomes them to WorkforceOS support
+1. Welcomes them to CoAIleague™ support
 2. Explains you're an AI assistant here to help while they wait for a support agent
 3. Mentions they are currently silenced (cannot send messages) until a support agent grants them voice
 4. Asks them to briefly describe their issue so you can help prepare for the agent
@@ -65,10 +65,10 @@ Be friendly, professional, and helpful. Do NOT use any emojis.`;
       }
 
       return completion.choices[0]?.message?.content || 
-        "Welcome to WorkforceOS Support! I'm help_bot, your AI assistant. You're currently silenced until a support agent joins. Once they grant you voice, we can chat! What brings you here today?";
+        "Welcome to CoAIleague™ Support! I'm help_bot, your AI assistant. You're currently silenced until a support agent joins. Once they grant you voice, we can chat! What brings you here today?";
     } catch (error) {
       console.error("Help bot greeting error:", error);
-      return "Welcome to WorkforceOS Support! I'm help_bot, here to assist you. A support agent will be with you shortly.";
+      return "Welcome to CoAIleague™ Support! I'm help_bot, here to assist you. A support agent will be with you shortly.";
     }
   }
 
@@ -76,10 +76,10 @@ Be friendly, professional, and helpful. Do NOT use any emojis.`;
    * Generate AI response to user question/concern
    */
   static async generateResponse(userMessage: string, context: HelpBotContext): Promise<string> {
-    const systemPrompt = `You are help_bot, an AI assistant for WorkforceOS - a workforce management platform.
+    const systemPrompt = `You are help_bot, an AI assistant for CoAIleague™ - an elite autonomous workforce management platform.
 
 Your role:
-- Provide helpful information about WorkforceOS features (scheduling, time tracking, invoicing, HR management)
+- Provide helpful information about CoAIleague™ features (scheduling, time tracking, invoicing, HR management)
 - Answer common questions professionally and concisely
 - If you don't know something, be honest and say a support agent will help
 - Keep responses brief (2-3 sentences unless more detail is needed)
@@ -87,7 +87,7 @@ Your role:
 - Never make promises about features or pricing
 - If technical issues arise, always defer to human support agents
 
-WorkforceOS Features:
+CoAIleague™ Features:
 - Employee scheduling and shift management
 - Time tracking with clock in/out
 - Automated invoice generation

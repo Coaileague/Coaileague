@@ -17,6 +17,7 @@ import { Trash2, Plus, AlertTriangle, CheckCircle, AlertCircle, Scale } from "lu
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { garnishmentTypesConfig, priorityConfig, payrollMessages } from "@/config/payrollConfig";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 const garnishmentSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -117,6 +118,15 @@ export default function PayrollGarnishmentsPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <div className="text-center space-y-4 mb-8 p-6 border-b">
+        <CoAIleagueLogo 
+          width={200} 
+          height={50} 
+          showTagline={true}
+          showWordmark={true}
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{payrollMessages.garnishments.title}</h1>

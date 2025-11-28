@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 export default function AICommunicationsOnboarding() {
   const { user } = useAuth();
@@ -88,14 +89,19 @@ export default function AICommunicationsOnboarding() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
-          <MessageSquare className="w-8 h-8 text-primary" />
-          AI Communications Setup
-        </h1>
-        <p className="text-muted-foreground">
-          Set up your organization's communication channels in just 4 steps
-        </p>
+      <div className="mb-8 flex flex-col items-center">
+        <div className="mb-6">
+          <CoAIleagueLogo width={200} height={50} showTagline={false} />
+        </div>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold flex items-center justify-center gap-3 mb-2">
+            <MessageSquare className="w-8 h-8 text-primary" />
+            AI Communications Setup
+          </h1>
+          <p className="text-muted-foreground">
+            Set up your organization's communication channels in just 4 steps
+          </p>
+        </div>
       </div>
 
       {/* Progress Bar */}

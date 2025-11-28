@@ -1,11 +1,12 @@
 import { UniversalHeader } from "@/components/universal-header";
+import { Footer } from "@/components/footer";
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <UniversalHeader variant="public" />
       
-      <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
         <div className="prose prose-slate dark:prose-invert max-w-none">
           <h1 className="text-4xl font-bold mb-2">Terms of Service</h1>
           <p className="text-muted-foreground mb-8">Last Updated: November 13, 2025</p>
@@ -201,11 +202,12 @@ export default function TermsOfService() {
 
           <div className="mt-12 pt-8 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              CoAIleague and its AI Brain technology are trademarks of [Your Company Name].
+              CoAIleague™ and its AI Brain technology are registered trademarks of CoAIleague.
             </p>
           </div>
         </div>
       </div>
+      <Footer variant="light" />
     </div>
   );
 }

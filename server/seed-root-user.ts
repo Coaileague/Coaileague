@@ -39,7 +39,7 @@ export async function seedRootUser() {
       id: OPS_WORKSPACE_ID,
       name: 'Operations',
       ownerId: ROOT_USER_ID,
-      companyName: 'WorkforceOS Operations',
+      companyName: 'CoAIleague Operations',
       subscriptionTier: 'enterprise',
       subscriptionStatus: 'active',
       maxEmployees: 99999,

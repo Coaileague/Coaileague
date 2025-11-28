@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 export default function CreateOrg() {
   const [orgName, setOrgName] = useState("");
@@ -50,6 +51,9 @@ export default function CreateOrg() {
 
       <Card className="mt-6">
         <CardHeader>
+          <div className="flex justify-center mb-6">
+            <CoAIleagueLogo width={200} height={50} showTagline={false} />
+          </div>
           <CardTitle>Organization Details</CardTitle>
           <CardDescription>
             Provide information about your new organization
