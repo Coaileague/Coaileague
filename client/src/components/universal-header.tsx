@@ -3,7 +3,6 @@
  * Shows appropriate nav based on authentication state and RBAC
  */
 
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -89,13 +88,28 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
             aria-label={isAuthenticated ? "Go to dashboard" : "Go to homepage"}
             data-testid="button-logo-home"
           >
-            {/* Desktop: Show full logo */}
-            <div className="hidden sm:block">
-              <CoAIleagueLogo width={220} height={70} showTagline={false} className="h-9 w-auto" />
+            {/* Desktop: Show full logo with wordmark */}
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg">
+                <span className="text-white font-black text-sm">CO</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-lg text-foreground tracking-tight">
+                  <span className="text-cyan-600 dark:text-cyan-400">Co</span>
+                  <span>AI</span>
+                  <span className="text-cyan-600 dark:text-cyan-400">league</span>
+                  <span className="text-xs align-super">™</span>
+                </span>
+              </div>
             </div>
-            {/* Mobile: Show smaller logo */}
-            <div className="block sm:hidden">
-              <CoAIleagueLogo width={100} height={40} showTagline={false} onlyIcon={false} className="h-8 w-auto" />
+            {/* Mobile: Show icon + brand name */}
+            <div className="flex sm:hidden items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-md">
+                <span className="text-white font-bold text-xs">CO</span>
+              </div>
+              <span className="font-bold text-sm text-foreground">
+                <span className="text-cyan-600 dark:text-cyan-400">Co</span>AI<span className="text-cyan-600 dark:text-cyan-400">league</span>
+              </span>
             </div>
           </button>
 
