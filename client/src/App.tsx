@@ -45,7 +45,7 @@ import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
 import DailySchedule from "@/pages/daily-schedule";
 import ScheduleMobileFirst from "@/pages/schedule-mobile-first";
-import SalesDashboard from "@/pages/sales/dashboard";
+import WorkspaceSales from "@/pages/workspace-sales";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
 import Clients from "@/pages/clients";
@@ -75,7 +75,7 @@ import HRReviews from "@/pages/hr-reviews";
 import HRPTO from "@/pages/hr-pto";
 import HRTerminations from "@/pages/hr-terminations";
 import HelpDesk from "@/pages/HelpDesk";
-import SalesPortal from "@/pages/sales-portal";
+// import SalesPortal from "@/pages/sales-portal";
 import LogoShowcase from "@/pages/logo-showcase";
 import Chatrooms from "@/pages/chatrooms";
 import PayrollDashboard from "@/pages/payroll-dashboard";
@@ -289,7 +289,7 @@ function AppContent() {
               <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
               <Route path="/daily-schedule" component={DailySchedule} />
               <Route path="/workflow-approvals" component={WorkflowApprovals} />
-              <Route path="/sales" component={SalesDashboard} />
+              <Route path="/sales" component={WorkspaceSales} />
               <Route path="/time-tracking" component={TimeTracking} />
               <Route path="/employees" component={Employees} />
               <Route path="/role-management" component={RoleManagement} />
@@ -391,7 +391,7 @@ function AppContent() {
               <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
               <Route path="/platform/users" component={PlatformUsers} />
               <Route path="/company-reports" component={CompanyReports} />
-              <Route path="/platform/sales" component={SalesPortal} />
+              <Route path="/platform/sales" component={WorkspaceSales} />
               <Route path="/employee/portal" component={EmployeePortal} />
               <Route path="/auditor/portal" component={AuditorPortal} />
               <Route path="/client/portal" component={ClientPortal} />
@@ -490,7 +490,7 @@ function AppContent() {
                 <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/daily-schedule" component={DailySchedule} />
                 <Route path="/workflow-approvals" component={WorkflowApprovals} />
-                <Route path="/sales" component={SalesDashboard} />
+                <Route path="/sales" component={WorkspaceSales} />
                 <Route path="/time-tracking" component={TimeTracking} />
                 <Route path="/employees" component={Employees} />
                 <Route path="/role-management" component={RoleManagement} />
@@ -586,7 +586,7 @@ function AppContent() {
                 <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
                 <Route path="/platform/users" component={PlatformUsers} />
                 <Route path="/company-reports" component={CompanyReports} />
-                <Route path="/platform/sales" component={SalesPortal} />
+                <Route path="/platform/sales" component={WorkspaceSales} />
                 <Route path="/employee/portal" component={EmployeePortal} />
                 <Route path="/auditor/portal" component={AuditorPortal} />
                 <Route path="/client/portal" component={ClientPortal} />

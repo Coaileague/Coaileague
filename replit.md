@@ -137,3 +137,33 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - Add dynamic email templates synced from config
 - Email automation triggers for sales pipeline
 - Customer portal with config-driven features
+
+### Workspace Sales Page - UNIFIED (Turn 11)
+**Date:** November 29, 2025
+
+**Consolidation Complete:**
+- ✅ Merged 3 duplicate sales pages into ONE: `workspace-sales.tsx`
+  - `sales/dashboard.tsx` (351 lines) - Org invitations
+  - `sales-portal.tsx` (548 lines) - Email templates/leads
+  - `sales-dashboard.tsx` (405 lines) - Proposals & tracking
+- ✅ Both routes now use unified page:
+  - `/sales` → `WorkspaceSales`
+  - `/platform/sales` → `WorkspaceSales`
+- ✅ Features consolidated:
+  - Send trial invitations to organizations
+  - Create and send custom proposals
+  - Track onboarding progress
+  - Monitor pipeline value and deals
+  - Real-time metrics dashboard
+
+**Page Structure:**
+- Metrics dashboard (active invites, onboarded, proposals, pipeline value)
+- Two-tab interface:
+  - Invitations tab: Send invites + track active/completed
+  - Proposals tab: Create proposals + monitor sent deals
+- Configuration-driven (uses shared schemas)
+
+**Old Files (can be archived):**
+- `client/src/pages/sales-dashboard.tsx` → No longer used
+- `client/src/pages/sales-portal.tsx` → No longer used  
+- `client/src/pages/sales/dashboard.tsx` → No longer used
