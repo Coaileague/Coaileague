@@ -13347,3 +13347,188 @@ export const insertPipelineMetricsSchema = createInsertSchema(pipelineMetrics).o
 
 export type InsertPipelineMetrics = z.infer<typeof insertPipelineMetricsSchema>;
 export type PipelineMetrics = typeof pipelineMetrics.$inferSelect;
+
+// ============================================================================
+// HELPAI ORCHESTRATION SYSTEM - PHASES 2-5
+// ============================================================================
+// HelpAI Registry - Master registry of all available APIs and capabilities
+export const helpaiRegistry = pgTable("helpai_registry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // API Metadata
+  apiName: varchar("api_name").notNull(), // e.g., 'HR_LOOKUP', 'PAYROLL_QUERY'
+  apiVersion: varchar("api_version").notNull(), // e.g., '1.0.0'
+  apiEndpoint: varchar("api_endpoint").notNull(), // Base URL
+  apiCategory: varchar("api_category").notNull(), // 'hr', 'payroll', 'scheduling', 'compliance'
+  
+  // API Documentation & Schema
+  description: text("description"),
+  requestSchema: jsonb("request_schema"), // JSON Schema for request payload
+  responseSchema: jsonb("response_schema"), // JSON Schema for response
+  requiredScopes: text("required_scopes").array(), // OAuth scopes needed
+  
+  // Availability & Status
+  isActive: boolean("is_active").default(true),
+  isPublic: boolean("is_public").default(false), // Whether all orgs can access it
+  
+  // Rate Limiting
+  rateLimitPerMinute: integer("rate_limit_per_minute").default(60),
+  rateLimitPerDay: integer("rate_limit_per_day").default(10000),
+  
+  // Metadata
+  tags: text("tags").array(), // For filtering/categorization
+  metadata: jsonb("metadata"), // Additional config
+  
+  // Admin fields
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  updatedBy: varchar("updated_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("helpai_registry_api_idx").on(table.apiName),
+  index("helpai_registry_category_idx").on(table.apiCategory),
+  index("helpai_registry_active_idx").on(table.isActive),
+]);
+
+export const insertHelpaiRegistrySchema = createInsertSchema(helpaiRegistry).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHelpaiRegistry = z.infer<typeof insertHelpaiRegistrySchema>;
+export type HelpaiRegistry = typeof helpaiRegistry.$inferSelect;
+
+// HelpAI Integrations - Per-org integration configuration
+export const helpaiIntegrations = pgTable("helpai_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relationship
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  registryId: varchar("registry_id").notNull().references(() => helpaiRegistry.id, { onDelete: 'cascade' }),
+  
+  // Integration Settings
+  isEnabled: boolean("is_enabled").default(true),
+  customEndpoint: varchar("custom_endpoint"), // Override default endpoint
+  customConfig: jsonb("custom_config"), // Org-specific configuration
+  
+  // Sync Settings
+  autoSyncEnabled: boolean("auto_sync_enabled").default(false),
+  syncIntervalMinutes: integer("sync_interval_minutes").default(60),
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: varchar("last_sync_status"), // 'success', 'error', 'pending'
+  
+  // Usage Tracking
+  totalRequests: integer("total_requests").default(0),
+  totalSuccessfulRequests: integer("total_successful_requests").default(0),
+  totalFailedRequests: integer("total_failed_requests").default(0),
+  
+  // Admin fields
+  configuredBy: varchar("configured_by").notNull().references(() => users.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("helpai_integrations_workspace_idx").on(table.workspaceId),
+  index("helpai_integrations_registry_idx").on(table.registryId),
+  index("helpai_integrations_enabled_idx").on(table.isEnabled),
+]);
+
+export const insertHelpaiIntegrationSchema = createInsertSchema(helpaiIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHelpaiIntegration = z.infer<typeof insertHelpaiIntegrationSchema>;
+export type HelpaiIntegration = typeof helpaiIntegrations.$inferSelect;
+
+// HelpAI Credentials - Encrypted API credentials per org
+export const helpaiCredentials = pgTable("helpai_credentials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relationship
+  integrationId: varchar("integration_id").notNull().references(() => helpaiIntegrations.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Encrypted Credentials
+  credentialType: varchar("credential_type").notNull(), // 'api_key', 'oauth2', 'bearer', 'basic_auth'
+  encryptedValue: text("encrypted_value").notNull(), // AES-256-GCM encrypted
+  encryptionKeyId: varchar("encryption_key_id").notNull(), // Reference to encryption key
+  
+  // Metadata
+  credentialName: varchar("credential_name"), // For display/reference
+  expiresAt: timestamp("expires_at"), // For OAuth tokens
+  isRevoked: boolean("is_revoked").default(false),
+  
+  // Audit Trail
+  createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: 'set null' }),
+  revokedBy: varchar("revoked_by").references(() => users.id, { onDelete: 'set null' }),
+  revokedAt: timestamp("revoked_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("helpai_credentials_integration_idx").on(table.integrationId),
+  index("helpai_credentials_workspace_idx").on(table.workspaceId),
+  index("helpai_credentials_revoked_idx").on(table.isRevoked),
+]);
+
+export const insertHelpaiCredentialSchema = createInsertSchema(helpaiCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHelpaiCredential = z.infer<typeof insertHelpaiCredentialSchema>;
+export type HelpaiCredential = typeof helpaiCredentials.$inferSelect;
+
+// HelpAI Audit Log - Comprehensive audit trail for all HelpAI operations
+export const helpaiAuditLog = pgTable("helpai_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Context
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  integrationId: varchar("integration_id").references(() => helpaiIntegrations.id, { onDelete: 'set null' }),
+  
+  // Action Details
+  action: varchar("action").notNull(), // 'api_call', 'config_update', 'credential_create', 'credential_revoke'
+  apiName: varchar("api_name"),
+  status: varchar("status").notNull(), // 'success', 'error', 'pending'
+  
+  // Request/Response Data
+  requestPayload: jsonb("request_payload"), // Full request (sanitized if needed)
+  responseStatus: integer("response_status"), // HTTP status
+  responseMessage: text("response_message"), // Error or success message
+  
+  // Performance Metrics
+  durationMs: integer("duration_ms"), // How long the API call took
+  tokensUsed: integer("tokens_used"), // AI tokens if applicable
+  
+  // Security & Compliance
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  requestId: varchar("request_id"), // For tracing
+  actionHash: varchar("action_hash"), // SHA-256 hash for AI action verification
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional contextual info
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("helpai_audit_workspace_idx").on(table.workspaceId),
+  index("helpai_audit_action_idx").on(table.action),
+  index("helpai_audit_status_idx").on(table.status),
+  index("helpai_audit_created_idx").on(table.createdAt),
+  index("helpai_audit_user_idx").on(table.userId),
+]);
+
+export const insertHelpaiAuditLogSchema = createInsertSchema(helpaiAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertHelpaiAuditLog = z.infer<typeof insertHelpaiAuditLogSchema>;
+export type HelpaiAuditLog = typeof helpaiAuditLog.$inferSelect;

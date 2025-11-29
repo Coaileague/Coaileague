@@ -565,8 +565,63 @@ export const BOT_CONFIG = {
 } as const;
 
 // ============================================================================
+// HELPAI ORCHESTRATION SYSTEM CONFIGURATION (PHASES 2-5)
+// ============================================================================
+export const HELPAI = {
+  // Feature Flags
+  enabled: true,
+  registryEnabled: true,
+  integrationEnabled: true,
+  auditLogEnabled: true,
+  
+  // API Registry Defaults
+  registry: {
+    defaultRateLimitPerMinute: 60,
+    defaultRateLimitPerDay: 10000,
+    categories: ['hr', 'payroll', 'scheduling', 'compliance', 'benefits', 'time_tracking'] as const,
+  },
+  
+  // Integration Settings
+  integration: {
+    defaultSyncIntervalMinutes: 60,
+    maxSyncIntervalMinutes: 1440, // 24 hours
+    minSyncIntervalMinutes: 5,
+    credentialEncryption: 'aes-256-gcm' as const,
+  },
+  
+  // Audit Log Configuration
+  audit: {
+    retentionDays: 365, // Keep audit logs for 1 year
+    maxEntriesPerQuery: 10000,
+    hashAlgorithm: 'sha256' as const,
+    enableIntegrityVerification: true,
+  },
+  
+  // Credential Management
+  credentials: {
+    supportedTypes: ['api_key', 'oauth2', 'bearer', 'basic_auth'] as const,
+    expiryWarningDays: 7,
+  },
+  
+  // Per-Organization Limits
+  limits: {
+    maxIntegrationsPerOrg: 50,
+    maxCredentialsPerIntegration: 3,
+    maxAuditLogsPerDay: 100000,
+  },
+  
+  // Performance
+  performance: {
+    cacheTTLSeconds: 300, // Cache registry for 5 minutes
+    maxConcurrentRequests: 10,
+  },
+} as const;
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 export type Role = typeof ROLES[keyof typeof ROLES];
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 export type Feature = keyof typeof FEATURES;
+export type HelpAICredentialType = typeof HELPAI.credentials.supportedTypes[number];
+export type HelpAICategory = typeof HELPAI.registry.categories[number];

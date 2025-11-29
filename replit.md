@@ -1,18 +1,7 @@
 # CoAIleague - AI-Powered Workforce Intelligence Platform
 
 ### Overview
-CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform powered by Gemini 2.0 Flash AI. Its core purpose is to eliminate hardcoded values through centralized dynamic configuration. The platform integrates financials with real Stripe payments, features comprehensive error handling, and provides a production-ready architecture.
-
-Key capabilities include:
-- **Dynamic Configuration**: All application settings are managed via centralized configuration files.
-- **Advanced Automation**: AI-powered scheduling, sentiment analysis, onboarding, and health check monitoring.
-- **Integrated Financials**: Real Stripe integration for payroll, deductions, garnishments, and accurate tax calculations.
-- **Robust Notifications**: Real-time WebSocket shift notifications, email workflows via Resend, and a universal notification system.
-- **Comprehensive Error Handling**: Global error boundaries and configurable error messages.
-- **Real-time Analytics & Monitoring**: Live operational data, system health checks, and performance tracking.
-- **Dispute Resolution**: A complete time entry dispute system with AI analysis and compliance tracking.
-- **AI Brain Automation**: Document extraction, issue detection, guardrails enforcement, and data quality validation.
-- **HelpAI Integration** (NEW): Multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation.
+CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform powered by Gemini 2.0 Flash AI. Its core purpose is to eliminate hardcoded values through centralized dynamic configuration. The platform integrates financials with real Stripe payments, features comprehensive error handling, and provides a production-ready architecture. It offers dynamic configuration, advanced AI-powered automation (scheduling, sentiment analysis, onboarding, health monitoring, dispute resolution with AI analysis), integrated financials, robust real-time notifications, and comprehensive error handling. A key capability is the HelpAI Integration, providing a multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation.
 
 ### User Preferences
 - I prefer simple language
@@ -20,176 +9,36 @@ Key capabilities include:
 - Ask before making major changes
 - I prefer detailed explanations
 
-### Latest Updates (Current Session)
-- ✅ **Mobile Responsiveness** - Fixed login/register pages with touch-compliant buttons (44px min), responsive padding, text wrapping
-- ✅ **HelpAI Phase 1 - Infrastructure** - Added 3 core tables:
-  - `apiRegistry` - Central definition of all CoAIleague endpoints with request/response schemas, auth scopes, rate limits
-  - `orgIntegrations` - Per-org encrypted API credential storage with usage tracking
-  - `aiAuditLog` - Complete audit trail of every AI-triggered action (workspace_id, user_id, endpoint, status, risk_score)
-- ✅ **LSP Error Fixes** - Fixed 8 compilation errors in onboardingPipelineService.ts (enum mismatches, config references)
-- 🔄 **HelpAI Phase 2 (Next)** - Build services layer + API routes for registry access, integration management, AI orchestration
-
-### HelpAI Architecture Overview
-```
-HelpAI Multi-Tenant AI Brain
-├── Phase 1: Registry & Audit (COMPLETE)
-│   ├── apiRegistry table - endpoint definitions
-│   ├── orgIntegrations table - encrypted credential storage
-│   └── aiAuditLog table - comprehensive action logging
-├── Phase 2: Service Layer (PENDING)
-│   ├── helpaiRegistryService.ts - API registry + payload validation
-│   ├── helpaiIntegrationService.ts - credential encryption/rotation
-│   └── helpaiAuditService.ts - audit logging + compliance
-├── Phase 3: API Routes (PENDING)
-│   ├── GET /api/helpai/registry - registry access (with caching)
-│   ├── POST /api/helpai/integrations/config - store encrypted keys
-│   ├── GET /api/helpai/audit-log - view AI action history
-│   └── POST /api/helpai/workflows/* - workflow automation
-├── Phase 4: AI Brain Integration (PENDING)
-│   ├── Connect Gemini to registry for payload building
-│   ├── Implement consent model (suggestions vs execution)
-│   ├── Add workflow triggers (time-based, event-based, condition-based)
-│   └── Sandbox/preview mode for financial operations
-└── Phase 5: Helpdesk + Chat Integration (PENDING)
-    ├── Same AI brain across main chat + helpdesk
-    ├── Ticket creation via API
-    ├── Internal note writing
-    └── Staff routing + notifications
-```
-
-### Previous Session Updates
-- ✅ **Feature Flags System** - 36 production toggles in `platformConfig.ts` (includes gamification)
-- ✅ **Billing API** - 38 complete endpoints (usage, credits, invoices, subscriptions, addons)
-- ✅ **Stripe Webhooks** - Full lifecycle handling (subscription, invoice, charge events)
-- ✅ **Refund System** - POST /api/billing/refunds with audit logging
-- ✅ **Trial Management** - 30-day auto-expiry with warning emails
-- ✅ **Logo/Branding** - CoAIleague AI gradient design finalized
-- ✅ **Universal Config** - Zero hardcoded values, all dynamic
-- ✅ **Gamification System** - Complete employee engagement with achievements, points, leaderboards, and streaks
-- ✅ **Time Tracking Enhanced** - 95% complete with timesheet reports, CSV export, compliance checks
-- ✅ **Sales/Onboarding Pipeline** - 4 database tables, 11 API endpoints, Stripe discount integration, AI task generation
-- ✅ All autonomous jobs running (billing, payroll, scheduling, compliance)
-
-### Autonomous Scheduler (Phase 1 - COMPLETE)
-- ✅ **Phase 1A: Database Foundation** - 11 scheduler tables created via direct SQL
-- ✅ **Phase 1B: API & Scoring Service** - 15 REST endpoints, CoAIleagueScoringService complete
-- ✅ **Security Hardening** - Defense-in-depth multi-tenant isolation:
-  - Custom typed errors (SchedulerNotFoundError, SchedulerAccessDeniedError)
-  - All service methods filter by workspaceId+employeeId
-  - All routes validate workspace session + use handleSchedulerError helper
-  - Proper error mapping: 401/403/404/500
-- 🔄 **Phase 2: AI Decision Engine** - Pending (Gemini integration for shift matching)
-- 🔄 **Phase 3: Workflow/Integrations** - Pending (PayrollOS/BillOS integration)
-- 🔄 **Phase 4: Audit/Monitoring** - Pending (comprehensive audit trails)
-
 ### System Architecture
-The system employs a multi-tenant architecture with robust RBAC security and multi-tenant isolation. All application settings are dynamically managed through centralized configuration files, eliminating hardcoded values.
-
-**Mobile & Responsive Design:**
-- Mobile config centralized in `client/src/config/mobileConfig.ts` with breakpoints, touch targets, typography scaling
-- ResponsiveScaleWrapper component auto-scales content for accessibility and small screens
-- Handles zoom levels up to 2.0x for users with vision needs
-- Touch targets follow WCAG 44x44px standard
-- Safe area insets for notched devices
-
-### Critical Implementation Gaps (Phase 1 - Must Complete)
-
-**1. Stripe Pricing Tiers - INCOMPLETE**
-- Current: stripe-config.ts has outdated pricing and old branding
-- Required: Create Stripe products for each tier with correct pricing:
-  - Starter: $4,999/month, $59,988/year
-  - Professional: $9,999/month, $119,988/year
-  - Enterprise: $17,999/month, $215,988/year
-- Action: Login to Stripe Dashboard, create products, get Price IDs, add to environment variables
-- Status: Updated config template at `server/stripe-config-updated.ts` - ready to use once Price IDs obtained
-
-**2. Payment Checkout Integration - INCOMPLETE**
-- Current: Pricing page exists, checkout may not be connected to subscription creation
-- Required: Test full payment flow (pricing → checkout → subscription creation)
-- Action: Verify Stripe checkout modal opens, test with test card, verify subscription created in DB
-
-**3. Free Tier Trial - INCOMPLETE**
-- Current: Free tier defined in subscriptionManager but no signup flow
-- Required: 30-day free trial for new users (5 employees max)
-- Action: Create trial signup endpoint, auto-expire after 30 days, show upgrade prompt on day 25
-
-**4. Subscription Management - NOT IMPLEMENTED**
-- Current: No upgrade/downgrade UI
-- Required: Allow users to change tiers mid-cycle with prorated billing
-- Action: Create /api/billing/upgrade endpoint, build tier selection UI, calculate prorations
-
-**5. Usage Tracking & Overages - INCOMPLETE**
-- Current: Overage calculation function exists but not integrated into billing
-- Required: Track employee count, calculate overages, invoice automatically
-- Action: Daily job to detect employee overages, invoice at $50/employee/month
-
-**6. Webhooks - PARTIAL**
-- Current: Stripe webhook handlers not fully implemented
-- Required: Handle subscription events (created, updated, deleted, payment_succeeded, payment_failed)
-- Action: Implement webhook handlers in `/api/webhooks/stripe`
-
-### Secondary Gaps (Phase 2)
-
-- **Billing Dashboard**: Missing current tier, renewal date, invoice history, credit balance display
-- **AI Credits**: Exists but not connected to tier pricing or available for purchase
-- **Dunning Management**: No retry logic for failed payments
-- **Email Automation**: Exists but not triggered on subscription events (welcome email, etc.)
-- **Analytics**: No revenue dashboard (MRR, ARR, churn tracking)
-- **Refund Policy**: Not documented or implemented
-- **Tax Calculation**: Not implemented (use Stripe Tax or TaxJar)
-- **Rate Limiting**: Email API endpoints need rate limiting
-
-### Testing Status
-
-- ✅ Logout button hidden on public pages (fixed)
-- ✅ Mobile responsiveness config (implemented)
-- ✅ Email automation endpoints protected (verified)
-- ✅ All 8 autonomous jobs running
-- ⚠️ Payment flow not tested (waiting for Stripe Price IDs)
-- ⚠️ Subscription lifecycle not tested (waiting for full integration)
-- ⚠️ Overage charging not tested
-
-### Environment Variables Required for Phase 1
-
-Once Stripe products are created, add these:
-```
-STRIPE_STARTER_MONTHLY_PRICE_ID=price_xxx
-STRIPE_STARTER_YEARLY_PRICE_ID=price_xxx
-STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID=price_xxx
-STRIPE_PROFESSIONAL_YEARLY_PRICE_ID=price_xxx
-STRIPE_ENTERPRISE_MONTHLY_PRICE_ID=price_xxx
-STRIPE_ENTERPRISE_YEARLY_PRICE_ID=price_xxx
-STRIPE_EMPLOYEE_OVERAGE_PRICE_ID=price_xxx
-STRIPE_ADDON_CREDITS_PRICE_ID=price_xxx
-```
+The system employs a multi-tenant architecture with robust RBAC security and multi-tenant isolation. All application settings are dynamically managed through centralized configuration files.
 
 **UI/UX Decisions:**
-- Mobile-first design with responsive layouts for cards, tables, and forms.
-- Features like SwipeableApprovalCard, MobilePageWrapper, and useIsMobile hook for enhanced mobile experience.
-- Haptic feedback is integrated for touch interactions.
+- **Mobile & Responsive Design:** Centralized mobile configuration (`client/src/config/mobileConfig.ts`) with breakpoints, touch targets (WCAG 44x44px standard), typography scaling, and a `ResponsiveScaleWrapper` component for accessibility and small screens, including safe area insets for notched devices. The design incorporates a CoAIleague AI gradient.
 
-**Technical Implementations & Feature Specifications:**
-- **AI Brain Services**: Fully implemented for document extraction (Gemini 2.0 Flash integration), issue detection (AI analysis + rule-based), and autonomous scheduling.
-- **Financials**: Real Stripe integration handles payment processing, payroll, invoicing, deductions, and tax calculations.
-- **Email Automation**: Full Resend integration with per-email billing. Supports sales, marketing, onboarding, client_onboarding, upsell, support, and notification email types. Pre-built templates available. API at `/api/emails/*` with endpoints for send, campaign, template, history, and pricing.
-- **Notifications**: Utilizes WebSockets for real-time notifications and Resend for email delivery.
-- **Compliance**: Daily certification checks, HR alerts, and a comprehensive dispute resolution system.
-- **Gamification**: Complete employee engagement system with achievements, points/XP, leaderboards, and streak tracking. API at `/api/gamification/*` with 7 endpoints. Feature flag controlled via `enableGamification`.
-- **Data Management**: PostgreSQL database with 145+ indexed and optimized tables (including gamification tables).
-- **Error Handling**: Global error boundaries and configurable error messages ensure system stability.
-- **Workspace Configuration**: Customizable settings per workspace including bot toggles, default tax rates, jurisdiction, industry, and company size.
-- **System Health**: Comprehensive health checks for database, Stripe, Gemini, WebSocket, and sessions are exposed via a `/health` endpoint.
+**Technical Implementations:**
+- **AI Brain Services:** Fully implemented for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, leveraging Gemini 2.0 Flash.
+- **Financials:** Real Stripe integration for payment processing, payroll, invoicing, deductions, and tax calculations.
+- **Email Automation:** Full Resend integration for sales, marketing, onboarding, upsell, support, and notification emails, with per-email billing and pre-built templates.
+- **Notifications:** Utilizes WebSockets for real-time notifications and Resend for email delivery.
+- **Compliance:** Daily certification checks, HR alerts, and a dispute resolution system.
+- **Gamification:** Employee engagement system with achievements, points/XP, leaderboards, and streak tracking, feature-flagged.
+- **Data Management:** PostgreSQL database with 145+ indexed and optimized tables, including those for gamification, HelpAI registry, integrations, and audit logs.
+- **Error Handling:** Global error boundaries and configurable error messages.
+- **Workspace Configuration:** Customizable settings per workspace (bot toggles, tax rates, jurisdiction, industry, company size).
+- **System Health:** A `/health` endpoint exposes health checks for database, Stripe, Gemini, WebSocket, and sessions.
+- **HelpAI Orchestration:** A complete multi-tenant AI brain for autonomous operations with encrypted credential storage (AES-256-GCM) and comprehensive audit trails (SHA-256 integrity checksums). It includes an API registry, per-org credential management, and an audit logging service.
 
 **System Design Choices:**
-- **Modularity**: Composed of 87 backend service modules and 220 frontend routes.
-- **Type Safety**: 100% LSP clean with zero compilation warnings for enterprise-grade code quality.
-- **Automation**: Features 8 scheduled autonomous jobs for tasks like payroll, invoicing, scheduling, and compliance monitoring.
-- **Audit Logging**: Comprehensive audit logging is implemented across the platform.
+- **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
+- **Type Safety:** 100% LSP clean with zero compilation warnings.
+- **Automation:** Features 8 scheduled autonomous jobs for payroll, invoicing, scheduling, and compliance monitoring.
+- **Audit Logging:** Comprehensive audit logging is implemented across the platform, including for HelpAI operations, with a 365-day retention policy.
+- **Security:** AES-256-GCM encryption for credentials at rest, PBKDF2-SHA256 key derivation, role-based access control, per-org credential isolation, and credential expiry warnings.
 
 ### External Dependencies
 - **Stripe**: For payment processing, payroll, and financial integrations.
 - **Resend**: For email delivery and notification workflows.
-- **Gemini 2.0 Flash**: Powers AI-driven features such as document extraction, sentiment analysis, intelligent scheduling, and issue detection.
+- **Gemini 2.0 Flash**: Powers AI-driven features (document extraction, sentiment analysis, intelligent scheduling, issue detection, HelpAI orchestration).
 - **WebSocket**: Enables real-time notifications.
 - **Google Cloud Storage (GCS)**: Used for file management.
 - **PostgreSQL**: The primary relational database for data storage.

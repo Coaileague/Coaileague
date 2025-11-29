@@ -79,6 +79,7 @@ import SalesPortal from "@/pages/sales-portal";
 import LogoShowcase from "@/pages/logo-showcase";
 import Chatrooms from "@/pages/chatrooms";
 import PayrollDashboard from "@/pages/payroll-dashboard";
+import HelpAIOrchestration from "@/pages/helpai-orchestration";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
 import EngagementDashboard from "@/pages/engagement-dashboard";
@@ -404,6 +405,7 @@ function AppContent() {
               <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
               <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
               <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery and bulk join */}
+              <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
               
               {/* Redirect legacy chat routes to unified /chat */}
               <Route path="/support/chat"><Redirect to="/chat" /></Route>
