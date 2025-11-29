@@ -1,222 +1,46 @@
 # CoAIleague - AI-Powered Workforce Intelligence Platform
 
-### Overview
-CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform powered by Gemini 2.0 Flash AI. Its core purpose is to eliminate hardcoded values through centralized dynamic configuration. The platform integrates financials with real Stripe payments, features comprehensive error handling, and provides a production-ready architecture. It offers dynamic configuration, advanced AI-powered automation (scheduling, sentiment analysis, onboarding, health monitoring, dispute resolution with AI analysis), integrated financials, robust real-time notifications, and comprehensive error handling. A key capability is the HelpAI Integration, providing a multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation.
+## Overview
+CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. Its core purpose is to eliminate hardcoded values through centralized dynamic configuration, integrating financials with real Stripe payments. The platform features dynamic configuration, advanced AI-powered automation (scheduling, sentiment analysis, onboarding, health monitoring, dispute resolution), integrated financials, robust real-time notifications, and comprehensive error handling. It includes a HelpAI Integration, providing a multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation. The project aims to deliver a production-ready solution with strong market potential for efficient workforce management.
 
-### User Preferences
+## User Preferences
 - I prefer simple language
 - I want iterative development
 - Ask before making major changes
 - I prefer detailed explanations
 
-### System Architecture
-The system employs a multi-tenant architecture with robust RBAC security and multi-tenant isolation. All application settings are dynamically managed through centralized configuration files.
+## System Architecture
+The system employs a multi-tenant architecture with robust RBAC security and multi-tenant isolation, managing all application settings dynamically through centralized configuration files.
 
 **UI/UX Decisions:**
-- **Mobile & Responsive Design:** Centralized mobile configuration with breakpoints, WCAG-compliant touch targets, typography scaling, and a `ResponsiveScaleWrapper` component for accessibility. The design incorporates a CoAIleague AI gradient.
+- **Mobile & Responsive Design:** Centralized mobile configuration with breakpoints, WCAG-compliant touch targets, typography scaling, and a `ResponsiveScaleWrapper` component for accessibility, featuring a CoAIleague AI gradient.
 
 **Technical Implementations:**
-- **AI Brain Services:** Fully implemented for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, leveraging Gemini 2.0 Flash.
+- **AI Brain Services:** Fully implemented for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, leveraging Gemini 2.0 Flash. Includes advanced FAQ knowledge governance, intelligent learning with deduplication, and gap detection systems.
 - **Financials:** Real Stripe integration for payment processing, payroll, invoicing, deductions, and tax calculations.
-- **Email Automation:** Full Resend integration for various email types with per-email billing and pre-built templates.
+- **Email Automation:** Full Resend integration with per-email billing and pre-built templates.
 - **Notifications:** Utilizes WebSockets for real-time notifications and Resend for email delivery.
 - **Compliance:** Daily certification checks, HR alerts, and a dispute resolution system.
 - **Gamification:** Employee engagement system with achievements, points/XP, leaderboards, and streak tracking (feature-flagged).
 - **Data Management:** PostgreSQL database with 145+ indexed and optimized tables.
 - **Error Handling:** Global error boundaries and configurable error messages.
 - **Workspace Configuration:** Customizable settings per workspace (bot toggles, tax rates, jurisdiction, industry, company size).
-- **System Health:** A `/health` endpoint exposes health checks for database, Stripe, Gemini, WebSocket, and sessions.
-- **HelpAI Orchestration:** A complete multi-tenant AI brain for autonomous operations with encrypted credential storage (AES-256-GCM) and comprehensive audit trails (SHA-256 integrity checksums), including an API registry and per-org credential management.
-- **Session Management:** Explicit session saves ensure persistence across application restarts, with PostgreSQL-backed session storage.
+- **System Health:** A `/health` endpoint for database, Stripe, Gemini, WebSocket, and session health checks.
+- **HelpAI Orchestration:** Multi-tenant AI brain for autonomous operations with encrypted credential storage (AES-256-GCM), SHA-256 integrity checksums, API registry, and per-org credential management.
+- **Session Management:** Explicit session saves with PostgreSQL-backed session storage.
 
 **System Design Choices:**
 - **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
 - **Type Safety:** 100% LSP clean with zero compilation warnings.
 - **Automation:** Features 10 scheduled autonomous jobs for payroll, invoicing, scheduling, compliance, trial expiry warnings, and email automation.
-- **Audit Logging:** Comprehensive audit logging is implemented across the platform, including for HelpAI operations, with a 365-day retention policy.
-- **Security:** AES-256-GCM encryption for credentials at rest, PBKDF2-SHA256 key derivation, role-based access control, per-org credential isolation, and credential expiry warnings.
-- **Unified Pages:** Consolidated multiple sales pages into a single `workspace-sales.tsx` and marketing/pricing pages into `universal-marketing.tsx`, both driven by centralized configuration.
+- **Audit Logging:** Comprehensive audit logging with 365-day retention policy.
+- **Security:** AES-256-GCM encryption, PBKDF2-SHA256 key derivation, RBAC, per-org credential isolation, and credential expiry warnings.
+- **Unified Pages:** Consolidated sales pages into `workspace-sales.tsx` and marketing/pricing pages into `universal-marketing.tsx`, driven by centralized configuration.
 
-### External Dependencies
-- **Stripe**: For payment processing, payroll, and financial integrations.
-- **Resend**: For email delivery and notification workflows.
-- **Gemini 2.0 Flash**: Powers AI-driven features (document extraction, sentiment analysis, intelligent scheduling, HelpAI orchestration).
-- **WebSocket**: Enables real-time notifications.
-- **Google Cloud Storage (GCS)**: Used for file management.
-- **PostgreSQL**: The primary relational database for data storage.
-### Turn 14: AI Brain Service Enhancement - Business Insights & Learning System
-**Date:** November 29, 2025
-
-**Comprehensive AI Brain Service Updates:**
-
-**1. ✅ NEW AI SKILLS ADDED TO SCHEMA**
-   - **File:** shared/schema.ts (aiBrainSkillEnum)
-   - `business_insight`: Sales, finance, operations, automation, growth insights
-   - `platform_recommendation`: Self-selling AI for platform features
-   - `faq_update`: FAQ learning and persistence system
-
-**2. ✅ AI BRAIN SERVICE COMPLETELY REWRITTEN**
-   - **File:** server/services/ai-brain/aiBrainService.ts
-   - Proper TypeScript typing with interfaces for all skill inputs
-   - New skill handlers:
-     - `executeBusinessInsight()`: Generates actionable business insights
-     - `executePlatformRecommendation()`: AI-powered self-selling
-     - `executeFAQUpdate()`: Create/update FAQs with learning
-   - FAQ learning system:
-     - `searchFAQs()`: Keyword-based FAQ search with scoring
-     - `learnFromInteraction()`: Persists successful interactions as new FAQs
-   - Fixed helposFaqs field mappings (isPublished, tags as array)
-
-**3. ✅ AI BRAIN API ROUTES ENHANCED**
-   - **File:** server/ai-brain-routes.ts
-   - Fixed import: `isAuthenticated` (not requireAuth)
-   - New endpoints:
-     - `POST /api/ai-brain/business-insight`: Generate business insights
-     - `POST /api/ai-brain/recommend`: Get platform recommendations
-     - `POST /api/ai-brain/chat`: AI chat support (HelpOS)
-     - `GET /api/ai-brain/faqs`: Retrieve FAQs
-     - `POST /api/ai-brain/faqs`: Create new FAQs
-     - `POST /api/ai-brain/faqs/:id/helpful`: Mark FAQ as helpful
-     - `GET /api/ai-brain/global-patterns`: Cross-org learning patterns
-
-**AI Brain Business Insight Types:**
-- `sales`: Revenue optimization, opportunity identification
-- `finance`: Cash flow, billing efficiency, financial planning
-- `operations`: Workforce productivity, scheduling optimization
-- `automation`: AI feature utilization, workflow improvements
-- `growth`: Customer acquisition, retention strategies
-
-**Technical Implementation:**
-- Proper TypeScript interfaces for all job inputs
-- Gemini 2.0 Flash integration for all AI skills
-- FAQ persistence with category, tags, and helpfulness tracking
-- Business context gathering from database for insights
-- Cross-org pattern learning via aiGlobalPatterns table
-
-**Current System Status:**
-- ✅ AI Brain: 6 skills (helpos_support, scheduleos_generation, intelligenceos_prediction, business_insight, platform_recommendation, faq_update)
-- ✅ FAQ Learning: Active with auto-persistence
-- ✅ Business Insights: Sales, finance, operations, automation, growth
-- ✅ LSP: Zero errors
-- ✅ App: Running on port 5000
-
----
-
-### Turn 13: UI/UX Polish - Hero Logo, Mobile Chatroom Navigation, Redundant Logo Cleanup
-**Date:** November 29, 2025
-
-**Three Critical UX Issues Fixed:**
-
-**1. ✅ HOMEPAGE HERO REPLACED WITH POLISHED LOGO DESIGN**
-   - **File:** client/src/pages/universal-marketing.tsx (lines 85-104)
-   - **Issue:** Hardcoded SchedulePreview component was generic, not branded
-   - **Fix:** Replaced with polished "CA" logo badge + CoAlleague branding
-   - **Features:**
-     - Square aspect ratio on mobile (better mobile UX)
-     - Video-like aspect on desktop
-     - Gradient blue background (matches CoAlleague branding)
-     - Centered logo with company name + tagline
-     - "Mobile Optimized" badge
-   - **Result:** Professional, mobile-first hero section
-
-**2. ✅ REMOVED REDUNDANT ICON-LETTER LOGOS IN MOBILE CHAT**
-   - **File:** client/src/components/mobile-chat-layout.tsx (line 105)
-   - **Issue:** Two duplicate "co" icon logos showing (one in header, one in bot messages)
-   - **Fix:** Removed redundant logo from bot message display
-   - **Result:** Cleaner, less cluttered mobile chat interface
-
-**3. ✅ FIXED MOBILE CHATROOM NAVIGATION - USERS CAN NOW EASILY EXIT**
-   - **File:** client/src/components/mobile-chat-layout.tsx (lines 150-179)
-   - **Issue:** Users trapped in mobile chatroom with no way to leave/logout/return to workspace
-   - **Fix:** Added two navigation buttons to mobile header:
-     - **Back Button (ChevronLeft)**: Navigate back or exit chat
-     - **Home Button (Home)**: Quick return to homepage
-   - **Header Layout:** Clean three-column layout
-     - Left: Back button
-     - Center: "Support Chat" title
-     - Right: Home button
-   - **Data Attributes:** Added testid="button-chatroom-exit" and testid="button-home" for testing
-   - **Result:** Mobile users now have clear, easy exit paths
-   - **Integration:** Added onExit handler in HelpDesk.tsx (line 1163)
-
-**Mobile Chatroom UX Before → After:**
-- ❌ Before: No exit buttons, users stuck in chat
-- ✅ After: Two clear navigation options (back/home) in accessible header
-
-**Homepage Hero UX Before → After:**
-- ❌ Before: Generic scheduling preview component
-- ✅ After: Branded "CA" logo with gradient, mobile-optimized
-
-**Technical Implementation:**
-- Added imports: ChevronLeft, Home from lucide-react, useLocation from wouter
-- Updated MobileChatLayoutProps interface with optional onExit callback
-- Mobile header now uses proper button sizing and hover states
-- All buttons have proper data-testid attributes for testing
-
-**Current System Status:**
-- ✅ Homepage hero: Branded, mobile-optimized
-- ✅ Mobile chat: Clean interface with clear exit paths
-- ✅ Icon redundancy: Cleaned up (one logo removed)
-- ✅ Build: Successful
-- ✅ App: Running on port 5000
-
-**Files Modified:**
-1. client/src/pages/universal-marketing.tsx - Hero section redesign
-2. client/src/components/mobile-chat-layout.tsx - Navigation cleanup + exit buttons
-3. client/src/pages/HelpDesk.tsx - Added onExit handler
-
-## Identified Gaps Analysis
-
-### ✅ False Positives (Already Implemented)
-- **amountPaid field**: Present in invoices schema (line 2159)
-- **Break tracking**: Full schema with breakTypeEnum and timeEntryBreaks table
-- **Database persistence**: Complete with PostgreSQL-backed sessions
-- **Autonomous scheduler**: 10 jobs running (billing, payroll, scheduling, etc.)
-
-### 🔴 Real Gaps (Minor TODOs)
-1. **Break query optimization** (time-tracking.tsx)
-   - Current: Breaks in shifts, just need dedicated query
-   - Priority: LOW (currently works as-is)
-
-2. **Priority filtering UI** (HelpDesk.tsx)
-   - Current: Queue system works, missing UI sort by priority
-   - Priority: MEDIUM (nice-to-have)
-
-3. **Telemetry integration** (automationMetrics.ts)
-   - Current: Uses estimates, could wire to actual processing times
-   - Priority: LOW (estimates accurate)
-
-4. **External monitoring** (monitoring.ts)
-   - Current: Health checks work locally
-   - Priority: LOW (local monitoring sufficient)
-
-5. **Date filtering** (storage.ts)
-   - Current: CRUD works, missing date range filters
-   - Priority: VERY LOW
-
-### 🟡 External Setup Required (Not Code Gaps)
-1. **QuickBooks OAuth**: User must create OAuth app and provide CLIENT_ID/SECRET
-2. **Gusto OAuth**: User must create OAuth app and provide CLIENT_ID/SECRET  
-3. **Stripe Price IDs**: User must create Prices in Stripe dashboard for:
-   - STRIPE_STARTER_MONTHLY_PRICE_ID
-   - STRIPE_STARTER_YEARLY_PRICE_ID
-   - STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID
-   - STRIPE_PROFESSIONAL_YEARLY_PRICE_ID
-   - STRIPE_ENTERPRISE_MONTHLY_PRICE_ID
-   - STRIPE_ENTERPRISE_YEARLY_PRICE_ID
-   - STRIPE_EMPLOYEE_OVERAGE_PRICE_ID
-   - STRIPE_ADDON_CREDITS_PRICE_ID
-
-### 📊 Production Readiness
-- **Core Features**: 100% implemented and tested
-- **Blocking Issues**: NONE
-- **Mobile UX**: ✅ Fixed (hero design, exit buttons, logo cleanup)
-- **Database**: ✅ PostgreSQL persistence confirmed
-- **Scheduler**: ✅ 10 autonomous jobs running
-- **Ready to Deploy**: YES ✅
-
-### Next Steps for User
-1. (Optional) Set up external OAuth apps if integration desired
-2. (Optional) Create Stripe Price IDs for subscription handling
-3. (Optional) Implement remaining TODOs for enhanced functionality
-4. Deploy app to production using Replit's publish feature
+## External Dependencies
+- **Stripe**: Payment processing, payroll, and financial integrations.
+- **Resend**: Email delivery and notification workflows.
+- **Gemini 2.0 Flash**: AI-driven features (document extraction, sentiment analysis, intelligent scheduling, HelpAI orchestration, business insights, FAQ learning).
+- **WebSocket**: Real-time notifications.
+- **Google Cloud Storage (GCS)**: File management.
+- **PostgreSQL**: Primary relational database.
