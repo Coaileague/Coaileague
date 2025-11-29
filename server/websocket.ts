@@ -771,11 +771,11 @@ export function setupWebSocket(server: Server) {
 
                 // Add simulation/test users (for testing features)
                 if (payload.conversationId === MAIN_ROOM_ID) {
-                  // HelpOS AI Bot - Always first in list (check if removed)
-                  if (!removedSimulatedUsers.has('helpos-ai-bot')) {
+                  // HelpAI Bot - Always first in list (check if removed)
+                  if (!removedSimulatedUsers.has('helpai-bot')) {
                     onlineUsers.push({
-                      id: 'helpos-ai-bot',
-                      name: 'HelpOS',
+                      id: 'helpai-bot',
+                      name: 'HelpAI',
                       role: 'bot',
                       status: 'online',
                       userType: 'staff'
@@ -1023,7 +1023,7 @@ export function setupWebSocket(server: Server) {
               });
             }
 
-            // HELPDESK ANNOUNCEMENTS: System + HelpOS™ (only if user is joining for the first time)
+            // HELPDESK ANNOUNCEMENTS: System + HelpAI (only if user is joining for the first time)
             if (isMainRoom && !userAlreadyInRoom) {
               try {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
@@ -1056,7 +1056,7 @@ export function setupWebSocket(server: Server) {
                   });
                 }
 
-                // 2. HELPOS™ announcement (AI Bot): Only for customers (not staff)
+                // 2. HelpAI announcement (AI Bot): Only for customers (not staff)
                 if (!isStaff) {
                   // AUTO-VOICE for public HelpDesk room: Give guests immediate ability to send messages
                   if (isMainRoom) {
@@ -1074,7 +1074,7 @@ export function setupWebSocket(server: Server) {
                   
                   if (!existingTicket && ws.workspaceId) {
                     // NO TICKET: Provide welcome message with instructions
-                    welcomeMessage = "👋 Welcome to CoAIleague Support! I'm HelpOS, your AI assistant.\n\nHow can I help you today? Please describe your question or issue, and I'll do my best to assist you.";
+                    welcomeMessage = "Welcome to CoAIleague Support! I'm HelpAI, your AI assistant.\n\nHow can I help you today? Please describe your question or issue, and I'll do my best to assist you.";
                     ticketNumber = `INTAKE-${Date.now().toString().slice(-6)}`; // Temp ID until real ticket created
                   } else {
                     // HAS TICKET: Use existing ticket or create temp one
@@ -1107,7 +1107,7 @@ export function setupWebSocket(server: Server) {
                     id: `temp-${Date.now()}`,
                     conversationId: conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: welcomeMessage,
                     messageType: 'text',
@@ -1121,11 +1121,11 @@ export function setupWebSocket(server: Server) {
                     readAt: null,
                   };
 
-                  // Send PRIVATE HelpOS welcome DM (only to this user, ephemeral)
+                  // Send PRIVATE HelpAI welcome DM (only to this user, ephemeral)
                   const privateWelcome = JSON.stringify({
                     type: 'private_message',
                     message: botMessage,
-                    from: 'HelpOS™',
+                    from: 'HelpAI',
                   });
                   if (ws.readyState === WebSocket.OPEN) {
                     ws.send(privateWelcome);
@@ -1164,7 +1164,7 @@ export function setupWebSocket(server: Server) {
               }
             }
 
-            // HelpOS greets everyone who joins (only send to the joining user, not the entire room, and only if first time joining)
+            // HelpAI greets everyone who joins (only send to the joining user, not the entire room, and only if first time joining)
             if (isMainRoom && !userAlreadyInRoom) {
               try {
                 // Determine greeting based on user type
@@ -1183,8 +1183,8 @@ export function setupWebSocket(server: Server) {
                     id: `welcome-${Date.now()}`,
                     createdAt: new Date(),
                     conversationId: conversationId,
-                    senderId: 'helpos-ai-bot',
-                    senderName: 'HelpOS™',
+                    senderId: 'helpai-bot',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: greeting,
                     messageType: 'text',
@@ -1197,7 +1197,7 @@ export function setupWebSocket(server: Server) {
                   ws.send(welcomePayload);
                 }
               } catch (greetError) {
-                console.error('HelpOS greeting failed:', greetError);
+                console.error('HelpAI greeting failed:', greetError);
               }
             }
 
@@ -1305,7 +1305,7 @@ export function setupWebSocket(server: Server) {
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: introMessage,
                     messageType: 'text',
@@ -1335,7 +1335,7 @@ export function setupWebSocket(server: Server) {
                   const authMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: `🔐 Authentication Request\n\nPlease authenticate user: ${username}\n\nThe user will receive instructions to verify their identity. This may include:\n• Confirming email address\n• Answering security questions\n• Providing account details\n\nWaiting for user verification...`,
                     messageType: 'text',
@@ -1414,7 +1414,7 @@ export function setupWebSocket(server: Server) {
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: verifyMsg,
                     messageType: 'text',
@@ -1673,7 +1673,7 @@ export function setupWebSocket(server: Server) {
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: statusMsg,
                     messageType: 'text',
@@ -1703,7 +1703,7 @@ export function setupWebSocket(server: Server) {
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: queueMsg,
                     messageType: 'text',
@@ -1866,7 +1866,7 @@ export function setupWebSocket(server: Server) {
                   const muteMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: userConnected
                       ? `🔇 User Muted\n\n${targetUsername} has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`
@@ -2441,7 +2441,7 @@ export function setupWebSocket(server: Server) {
                   const aiMessage = await storage.createChatMessage({
                     conversationId: ws.conversationId,
                     senderId: 'ai-bot',
-                    senderName: 'HelpOS™',
+                    senderName: 'HelpAI',
                     senderType: 'bot',
                     message: aiResponse.message,
                     messageType: 'text',
@@ -2727,7 +2727,7 @@ export function setupWebSocket(server: Server) {
                 'sim-user-8': 'Christopher Lee',
                 'sim-user-9': 'Amanda White',
                 'sim-user-10': 'Daniel Martinez',
-                'sim-bot-helpos': 'HelpOS™ AI',
+                'sim-bot-helpai': 'HelpAI',
                 'sim-staff-1': 'Sarah Martinez',
                 'sim-staff-2': 'Mike Chen',
                 'sim-staff-3': 'Emily Taylor',
@@ -2803,11 +2803,11 @@ export function setupWebSocket(server: Server) {
             const simulatedUsers: any[] = [];
             
             if (payload.conversationId === 'main-chatroom-workforceos' || ws.conversationId === 'main-chatroom-workforceos') {
-              // HelpOS AI Bot
-              if (!removedSimulatedUsers.has('sim-bot-helpos')) {
+              // HelpAI Bot
+              if (!removedSimulatedUsers.has('sim-bot-helpai')) {
                 simulatedUsers.push({
-                  id: 'sim-bot-helpos',
-                  name: 'HelpOS™ AI',
+                  id: 'sim-bot-helpai',
+                  name: 'HelpAI',
                   role: 'bot',
                   status: 'online',
                   userType: 'staff'
@@ -4042,7 +4042,7 @@ export function setupWebSocket(server: Server) {
     const scenarios = [
       // Scenario 1: Password reset help
       { sender: 'sim-user-1', name: 'Jennifer Lopez', type: 'customer', message: 'Hi, I forgot my password and the reset email never came through. Can someone help?' },
-      { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Jennifer - I see you need password reset help. Sarah Martinez is our password specialist. Alerting her now.' },
+      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Jennifer - I see you need password reset help. Sarah Martinez is our password specialist. Alerting her now.' },
       { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi Jennifer! I can help with that. Can you confirm the email address on your account?' },
       { sender: 'sim-user-1', name: 'Jennifer Lopez', type: 'customer', message: 'Yes, it is jennifer.lopez@company.com' },
       { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Perfect! I just resent the password reset link. Please check your spam folder as well. It should arrive in 2-3 minutes.' },
@@ -4050,7 +4050,7 @@ export function setupWebSocket(server: Server) {
       
       // Scenario 2: Billing question
       { sender: 'sim-user-2', name: 'Robert Johnson', type: 'customer', message: 'I have a question about my invoice. I was charged twice this month.' },
-      { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Robert - Billing issue detected. Mike Chen handles billing inquiries. Routing your request now.' },
+      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Robert - Billing issue detected. Mike Chen handles billing inquiries. Routing your request now.' },
       { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'Hi Robert, I am looking at your account now. Can you provide your invoice number?' },
       { sender: 'sim-user-2', name: 'Robert Johnson', type: 'customer', message: 'Invoice #INV-2024-1234 and #INV-2024-1235' },
       { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'I see the duplicate charge. This was a processing error on our end. I am issuing a full refund for the duplicate charge right now. You should see it in 3-5 business days.' },
@@ -4058,7 +4058,7 @@ export function setupWebSocket(server: Server) {
       
       // Scenario 3: Account locked
       { sender: 'sim-user-3', name: 'Maria Garcia', type: 'customer', message: 'My account is locked after too many failed login attempts. How do I unlock it?' },
-      { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Maria - Account security issue. Emily Taylor specializes in account access. Connecting you now.' },
+      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Maria - Account security issue. Emily Taylor specializes in account access. Connecting you now.' },
       { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Hi Maria! I can unlock your account. For security, can you verify the last 4 digits of your phone number?' },
       { sender: 'sim-user-3', name: 'Maria Garcia', type: 'customer', message: '4567' },
       { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Perfect! Your account is now unlocked. I also reset your password for security. Check your email for the new temporary password.' },
@@ -4076,7 +4076,7 @@ export function setupWebSocket(server: Server) {
       
       // Scenario 6: Technical issue
       { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'The mobile app keeps crashing when I try to clock in. Is this a known issue?' },
-      { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Michael - Technical issue detected. David Kim is our mobile specialist but currently busy. Sarah will assist.' },
+      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Michael - Technical issue detected. David Kim is our mobile specialist but currently busy. Sarah will assist.' },
       { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi Michael! What device and OS version are you using?' },
       { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'iPhone 14, iOS 17.2' },
       { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Try clearing the app cache: Settings > Apps > CoAIleague > Clear Cache. If that does not work, uninstall and reinstall the app. Your data is saved in the cloud.' },
@@ -4090,7 +4090,7 @@ export function setupWebSocket(server: Server) {
       
       // Scenario 8: Integration question
       { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Can CoAIleague™ integrate with QuickBooks for payroll?' },
-      { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Christopher - Integration inquiry. Mike Chen is our integration expert.' },
+      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Christopher - Integration inquiry. Mike Chen is our integration expert.' },
       { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'Yes! We have a direct QuickBooks integration. Go to Settings > Integrations > QuickBooks and follow the OAuth connection flow. Takes about 2 minutes.' },
       { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Excellent! I will set that up now.' },
       
@@ -4106,8 +4106,8 @@ export function setupWebSocket(server: Server) {
       { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Hi Daniel! As an Owner, go to Settings > Audit Logs. You can filter by date range, user, and action type, then export to PDF or CSV.' },
       { sender: 'sim-user-10', name: 'Daniel Martinez', type: 'customer', message: 'Perfect! Found everything I need. Your platform is very thorough!' },
       
-      // HelpOS provides stats
-      { sender: 'helpos-ai-bot', name: 'HelpOS', type: 'bot', message: 'Support stats: 10 issues resolved today. Average response time: 2 minutes. Customer satisfaction: 98%. Great work team!' },
+      // HelpAI provides stats
+      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Support stats: 10 issues resolved today. Average response time: 2 minutes. Customer satisfaction: 98%. Great work team!' },
     ];
 
     // Send messages with realistic timing

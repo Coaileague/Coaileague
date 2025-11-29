@@ -29,7 +29,7 @@ const tutorialSlides: TutorialSlide[] = [
       { symbol: "👑 Crown + WF Logo", meaning: "Platform Staff (Root Admin) - Highest authority" },
       { symbol: "⚡ Lightning + WF Logo", meaning: "Deputy Admin - Senior support staff" },
       { symbol: "🛡️ Shield + WF Logo", meaning: "Support Staff - Here to help you" },
-      { symbol: "🤖 Robot Icon", meaning: "HelpOS™ AI Assistant - Automated help" },
+      { symbol: "🤖 Robot Icon", meaning: "HelpAI AI Assistant - Automated help" },
       { symbol: "👤 User Icon", meaning: "Regular User/Customer - That's you!" },
     ]
   },
@@ -52,7 +52,7 @@ const tutorialSlides: TutorialSlide[] = [
       { symbol: "/queue", meaning: "Check your position in line" },
       { symbol: "/help", meaning: "View all available commands" },
       { symbol: "🔔 Banner", meaning: "Watch the top banner for updates" },
-      { symbol: "✨ HelpOS", meaning: "Our AI can answer quick questions" },
+      { symbol: "✨ HelpAI", meaning: "Our AI can answer quick questions" },
     ]
   },
   {

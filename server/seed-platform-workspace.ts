@@ -1,4 +1,4 @@
-// Seed script to create CoAIleague Platform workspace for anonymous HelpOS users
+// Seed script to create CoAIleague Platform workspace for anonymous HelpAI users
 import { db } from './db';
 import { users, workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -8,7 +8,7 @@ export const ROOT_USER_ID = 'root-user-00000000';
 export const PLATFORM_NAME = 'CoAIleague';
 
 export async function seedPlatformWorkspace() {
-  console.log(`Creating ${PLATFORM_NAME} Platform workspace for anonymous HelpOS users...`);
+  console.log(`Creating ${PLATFORM_NAME} Platform workspace for anonymous HelpAI users...`);
 
   // Ensure root user exists (CRITICAL: Throw if missing to fail-fast)
   const rootUser = await db.select().from(users).where(eq(users.id, ROOT_USER_ID)).limit(1);

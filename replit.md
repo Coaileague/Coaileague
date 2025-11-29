@@ -44,3 +44,11 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **WebSocket**: Real-time notifications.
 - **Google Cloud Storage (GCS)**: File management.
 - **PostgreSQL**: Primary relational database.
+
+## Recent Changes
+- **HelpOS to HelpAI Renaming (Nov 2025):** Completed full renaming of all user-facing "HelpOS" references to "HelpAI" across the codebase including:
+  - Backend services: helpos-ai.ts (HelpAIService class), helposService/index.ts (HelpAIServiceImpl), aiBrainService.ts, alertManager.ts, aiBot.ts, geminiQABot.ts
+  - Frontend components: mobile-chat-layout.tsx, chat-tutorial-slides.tsx, support-mobile-menu.tsx, floating-support-chat.tsx, chat-announcement-banner.tsx
+  - Routes and configurations: routes.ts, websocket.ts, chatServer.ts, platformConfig.ts
+  - Log messages updated to use [HelpAI] prefix for consistency
+  - Note: File names (helpos-*.ts) and database column names (enable_helpos_bot) retained for backward compatibility

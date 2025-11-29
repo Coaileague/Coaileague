@@ -298,7 +298,7 @@ export function useChatroomWebSocket(
               break;
 
             case 'private_message':
-              // Handle private DMs (e.g., HelpOS welcome messages)
+              // Handle private DMs (e.g., HelpAI welcome messages)
               if (data.message && typeof data.message !== 'string') {
                 // Filter by conversationId to prevent message bleed (use ref for sync access)
                 if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
@@ -577,7 +577,7 @@ export function useChatroomWebSocket(
               break;
 
             case 'escalation_redirect':
-              // HelpOS bot escalated - redirect user to main HelpDesk where staff can help
+              // HelpAI bot escalated - redirect user to main HelpDesk where staff can help
               console.log('🔄 Bot escalation - redirecting to main HelpDesk');
               if (data.message) {
                 toast({

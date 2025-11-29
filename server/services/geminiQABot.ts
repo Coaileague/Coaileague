@@ -60,7 +60,7 @@ export async function getAiResponse(
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
     // Build system prompt
-    const systemPrompt = `You are HelpOS™, an AI assistant for CoAIleague - an AI-powered workforce management platform.
+    const systemPrompt = `You are HelpAI, an AI assistant for CoAIleague - an AI-powered workforce management platform.
 
 YOUR ROLE:
 - Answer questions about CoAIleague features (scheduling, payroll, billing, employees, compliance)

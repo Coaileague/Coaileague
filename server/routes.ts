@@ -28,7 +28,7 @@ import authRoutes from "./authRoutes"; // Custom auth routes
 import { billingRouter } from "./billing-api"; // Billing API routes
 import { aiBrainRouter } from "./ai-brain-routes"; // Unified AI Brain System
 import { helpaiRouter } from "./helpai-routes"; // HelpAI Orchestration System (Phases 2-5)
-import { registerFaqRoutes } from "./faq-routes"; // HelpOS FAQ routes
+import { registerFaqRoutes } from "./faq-routes"; // HelpAI FAQ routes
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
 import { gamificationRouter } from "./gamification-api"; // Employee Engagement & Recognition System
@@ -120,7 +120,7 @@ import { calculatePtoAccrual, getAllPtoBalances, runWeeklyPtoAccrual, deductPtoH
 import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from './services/performanceReviewReminders';
 import { getEmployeesDueForSurveys, getSurveyDistributionSummary, getEmployeePendingSurveys, calculateSurveyResponseRate } from './services/pulseSurveyAutomation';
 import { queueManager } from './services/helpOsQueue';
-import { HelpOSAI } from './helpos-ai';
+import { HelpAIService } from './helpos-ai';
 import { helposService } from './services/helposService';
 import {
   generateMfaSecret,
@@ -275,7 +275,7 @@ import {
   insertExpenseSchema,
   insertExpenseCategorySchema,
   insertExpenseReceiptSchema,
-  // HelpOS™ - Support Queue Management
+  // HelpAI - Support Queue Management
   helpOsQueue,
   // Feature Updates System
   featureUpdates,
@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // STARTUP: SEED ROOT USER AND PLATFORM WORKSPACE
   // ============================================================================
-  // CRITICAL: These resources MUST exist for anonymous HelpOS to function
+  // CRITICAL: These resources MUST exist for anonymous HelpAI to function
   // Let errors bubble up to fail fast rather than continue without platform workspace
   const { seedRootUser } = await import("./seed-root-user");
   await seedRootUser();
@@ -1041,7 +1041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HELPOS™ AI SUPPORT SYSTEM
   // ============================================================================
 
-  // HelpOS™ escalation endpoint - Guest info capture and conversation creation
+  // HelpAI escalation endpoint - Guest info capture and conversation creation
   app.post('/api/support/escalate', chatMessageLimiter, async (req, res) => {
     try {
       const { conversationId, guestName, guestEmail, issue, sessionId } = req.body;
@@ -1056,7 +1056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store guest token in database or session (for now, we'll just return it)
       // In production, you'd want to store this in a table with expiration
       
-      console.log('[HelpOS] Guest escalation:', {
+      console.log('[HelpAI] Guest escalation:', {
         conversationId,
         guestName,
         guestEmail,
@@ -1071,7 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true
       });
     } catch (error) {
-      console.error('[HelpOS] Escalation error:', error);
+      console.error('[HelpAI] Escalation error:', error);
       res.status(500).json({ 
         error: 'Failed to complete escalation',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -1147,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // HelpOS™ bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
+  // HelpAI bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
   app.post('/api/support/helpos-chat', chatMessageLimiter, async (req, res) => {
     try {
       const authReq = req as any; // Need 'any' to access both session and user
@@ -1216,7 +1216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingSession) {
           // Session exists - verify it belongs to this user
           if (existingSession.userId !== userId) {
-            console.error('[HelpOS] Session hijacking attempt:', {
+            console.error('[HelpAI] Session hijacking attempt:', {
               sessionId,
               expectedUserId: userId,
               actualUserId: existingSession.userId,
@@ -1243,7 +1243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage,
       });
 
-      console.log('[HelpOS] Response from bubbleAgent:', {
+      console.log('[HelpAI] Response from bubbleAgent:', {
         shouldEscalate: response.shouldEscalate,
         escalationReason: response.escalationReason,
         messagePreview: (typeof response.message === 'string') ? response.message.substring(0, 100) : 'N/A'
@@ -1251,7 +1251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Handle escalation to live helpdesk
       if (response.shouldEscalate && response.escalationReason) {
-        console.log('[HelpOS] ✅ ESCALATING TO LIVE CHAT:', {
+        console.log('[HelpAI] ✅ ESCALATING TO LIVE CHAT:', {
           reason: response.escalationReason,
           userId,
           userName,
@@ -1263,14 +1263,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (workspaceId === PLATFORM_WORKSPACE_ID) {
           let existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
           if (!existingWorkspace) {
-            console.log('[HelpOS] Platform workspace missing - acquiring lock for runtime seeding...');
+            console.log('[HelpAI] Platform workspace missing - acquiring lock for runtime seeding...');
             try {
               await platformWorkspaceSeedLock.acquire();
               
               // Re-check after acquiring lock (another request may have seeded it)
               existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
               if (!existingWorkspace) {
-                console.log('[HelpOS] Seeding platform workspace (runtime fallback)');
+                console.log('[HelpAI] Seeding platform workspace (runtime fallback)');
                 const { seedRootUser } = await import('./seed-root-user');
                 const { seedPlatformWorkspace } = await import('./seed-platform-workspace');
                 await seedRootUser();
@@ -1281,9 +1281,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (!existingWorkspace) {
                   throw new Error('CRITICAL: Platform workspace seeding failed - workspace still missing after seed attempt');
                 }
-                console.log('[HelpOS] ✅ Platform workspace seeded successfully');
+                console.log('[HelpAI] ✅ Platform workspace seeded successfully');
               } else {
-                console.log('[HelpOS] Platform workspace was created by concurrent request');
+                console.log('[HelpAI] Platform workspace was created by concurrent request');
               }
             } finally {
               platformWorkspaceSeedLock.release();
@@ -1293,7 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // For anonymous users, create a basic conversation record so WebSocket can join
         if (!isAuthenticated) {
-          console.log('[HelpOS] Anonymous escalation - creating conversation for WebSocket join');
+          console.log('[HelpAI] Anonymous escalation - creating conversation for WebSocket join');
           
           const ticketNumber = `GUEST-${Date.now()}`;
           const conversation = await storage.createChatConversation({
@@ -1301,7 +1301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             customerId: null, // Anonymous users don't have user records - FK allows null
             customerName: userName || 'Guest',
             customerEmail: userEmail || 'guest@anonymous',
-            subject: `HelpOS™ Escalation - ${response.escalationReason}`,
+            subject: `HelpAI Escalation - ${response.escalationReason}`,
             status: 'active',
             priority: 'normal',
           });
@@ -1342,7 +1342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         });
 
-        console.log('[HelpOS] ✅ Escalation complete, returning to client:', {
+        console.log('[HelpAI] ✅ Escalation complete, returning to client:', {
           escalated: true,
           ticketNumber: escalationData.ticketNumber,
           conversationId: escalationData.conversationId
@@ -1356,15 +1356,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('[HelpOS] No escalation needed, returning normal response');
+      console.log('[HelpAI] No escalation needed, returning normal response');
       res.json(response);
     } catch (error: any) {
-      console.error('HelpOS™ chat error:', error);
-      res.status(500).json({ message: error.message || 'Failed to process HelpOS™ chat' });
+      console.error('HelpAI chat error:', error);
+      res.status(500).json({ message: error.message || 'Failed to process HelpAI chat' });
     }
   });
 
-  // HelpOS™ staff copilot - AI suggestions for support agents
+  // HelpAI staff copilot - AI suggestions for support agents
   app.post('/api/support/helpos-copilot', requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1386,7 +1386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ suggestion });
     } catch (error: any) {
-      console.error('HelpOS™ copilot error:', error);
+      console.error('HelpAI copilot error:', error);
       res.status(500).json({ message: error.message || 'Failed to generate suggestion' });
     }
   });
@@ -1730,7 +1730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const chatRoomsRouter = (await import('./routes/chat-rooms')).default;
   app.use('/api/chat/rooms', chatRoomsRouter);
 
-  // Register HelpOS FAQ routes (AI-powered FAQ system with semantic search)
+  // Register HelpAI FAQ routes (AI-powered FAQ system with semantic search)
   registerFaqRoutes(app);
 
   // ============================================================================
@@ -2212,7 +2212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { seedRootUser } = await import("./seed-root-user");
       await seedRootUser();
       
-      // Seed Platform workspace for anonymous HelpOS users
+      // Seed Platform workspace for anonymous HelpAI users
       const { seedPlatformWorkspace } = await import("./seed-platform-workspace");
       await seedPlatformWorkspace();
       
@@ -17304,7 +17304,7 @@ Summary:`;
     }
   });
 
-  // Toggle HelpOS AI on/off - Staff only
+  // Toggle HelpAI on/off - Staff only
   app.post('/api/helpdesk/ai/toggle', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { enabled, workspaceId } = req.body;
@@ -17332,21 +17332,21 @@ Summary:`;
       }
       
       // Toggle AI for the specified workspace
-      const helposAI = new HelpOSAI(workspaceId);
+      const helposAI = new HelpAIService(workspaceId);
       const newState = helposAI.toggleAI(enabled);
       
       res.json({ 
         enabled: newState, 
-        message: `HelpOS AI ${newState ? 'enabled' : 'disabled'} successfully for workspace ${workspace.name}`,
+        message: `HelpAI ${newState ? 'enabled' : 'disabled'} successfully for workspace ${workspace.name}`,
         workspaceId
       });
     } catch (error) {
-      console.error("Error toggling HelpOS AI:", error);
+      console.error("Error toggling HelpAI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
     }
   });
 
-  // Get HelpOS AI status - Staff only
+  // Get HelpAI status - Staff only
   app.get('/api/helpdesk/ai/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -17370,7 +17370,7 @@ Summary:`;
       }
       
       // Get AI status for the specified workspace
-      const helposAI = new HelpOSAI(workspaceId);
+      const helposAI = new HelpAIService(workspaceId);
       const isEnabled = helposAI.isEnabled();
       
       res.json({ 
@@ -17379,7 +17379,7 @@ Summary:`;
         workspaceName: workspace.name
       });
     } catch (error) {
-      console.error("Error fetching HelpOS AI status:", error);
+      console.error("Error fetching HelpAI status:", error);
       res.status(500).json({ message: "Failed to fetch AI status" });
     }
   });
@@ -27213,7 +27213,7 @@ app.get("/api/helpos/settings", requireAuth, readLimiter, async (req: Authentica
 
     res.json({ success: true, data: settings });
   } catch (error: any) {
-    console.error('Error fetching HelpOS settings:', error);
+    console.error('Error fetching HelpAI settings:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -27227,7 +27227,7 @@ app.post("/api/helpos/settings", requireAuth, requireManager, mutationLimiter, a
 
     res.json({ success: true, data: settings });
   } catch (error: any) {
-    console.error('Error updating HelpOS settings:', error);
+    console.error('Error updating HelpAI settings:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -27243,10 +27243,10 @@ app.post("/api/helpos/toggle/:enabled", requireAuth, requireManager, mutationLim
     res.json({ 
       success: true, 
       data: settings,
-      message: `HelpOS bot ${isEnabled ? 'enabled' : 'disabled'}`,
+      message: `HelpAI bot ${isEnabled ? 'enabled' : 'disabled'}`,
     });
   } catch (error: any) {
-    console.error('Error toggling HelpOS bot:', error);
+    console.error('Error toggling HelpAI bot:', error);
     res.status(500).json({ error: error.message });
   }
 });

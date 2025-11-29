@@ -182,7 +182,7 @@ export function startIntakeFlow(
   
   activeBotConversations.set(conversationId, conversation);
   
-  return "👋 Welcome to CoAIleague Support! I'm HelpOS, your AI assistant.\n\nI'll help create a support ticket for you. First, can you briefly describe what you need help with? (Just a short summary)";
+  return "Welcome to CoAIleague Support! I'm HelpAI, your AI assistant.\n\nI'll help create a support ticket for you. First, can you briefly describe what you need help with? (Just a short summary)";
 }
 
 /**
@@ -223,7 +223,7 @@ async function searchFaqsForBot(
           queryLength: query.length,
         }
       });
-      console.log(`💰 HelpOS FAQ Search - Embedding generated (${tokensUsed} tokens) - Billed to workspace: ${workspaceId}`);
+      console.log(`[HelpAI] FAQ Search - Embedding generated (${tokensUsed} tokens) - Billed to workspace: ${workspaceId}`);
     }
     
     const queryEmbedding = embeddingResponse.data[0].embedding;
@@ -259,7 +259,7 @@ async function searchFaqsForBot(
  * Generate bot greeting message
  */
 export function generateGreeting(): string {
-  return "Hello! I'm the HelpOS assistant. I'll do my best to help you right away. If I can't resolve your issue, I'll connect you with our support team. What can I help you with?";
+  return "Hello! I'm HelpAI, your AI assistant. I'll do my best to help you right away. If I can't resolve your issue, I'll connect you with our support team. What can I help you with?";
 }
 
 /**
@@ -589,9 +589,9 @@ export async function closeBotTicketSuccess(
     .set({
       status: 'closed',
       resolution: conversationSummary,
-      resolutionSummary: `Resolved by HelpOS bot - user confirmed satisfaction`,
+      resolutionSummary: `Resolved by HelpAI bot - user confirmed satisfaction`,
       closedAt: new Date(),
-      closedBy: 'helpos-bot',
+      closedBy: 'helpai-bot',
     })
     .where(eq(supportTickets.id, ticketId));
   

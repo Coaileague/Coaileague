@@ -2,7 +2,7 @@
  * ALERT MANAGER - Proactive Alert Management
  * 
  * Handles alert creation, deduplication, lifecycle management,
- * and delivery to HelpOS and other channels
+ * and delivery to HelpAI and other channels
  */
 
 import { db } from '../../db';
@@ -111,7 +111,7 @@ export class AlertManager {
   }
 
   /**
-   * Dispatch alert to channel (HelpOS, email, SMS)
+   * Dispatch alert to channel (HelpAI, email, SMS)
    */
   async dispatchAlert(alertId: string, channel: 'helpos' | 'email' | 'sms'): Promise<void> {
     const [alert] = await db

@@ -1,5 +1,5 @@
 /**
- * HelpOS™ Queue Reminder Job
+ * HelpAI Queue Reminder Job
  * Runs every 5 minutes to send queue position reminders
  */
 
@@ -10,7 +10,7 @@ import { storage } from '../storage';
 const REMINDER_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function startQueueReminderJob(broadcastToConversation: (conversationId: string, message: any) => void) {
-  console.log('Starting HelpOS™ queue reminder job (5-min intervals)');
+  console.log('Starting HelpAI queue reminder job (5-min intervals)');
 
   setInterval(async () => {
     try {
@@ -45,7 +45,7 @@ export function startQueueReminderJob(broadcastToConversation: (conversationId: 
           const message = await storage.createChatMessage({
             conversationId: entry.conversationId,
             senderId: 'ai-bot',
-            senderName: 'HelpOS™',
+            senderName: 'HelpAI',
             senderType: 'bot',
             message: reminderMessage,
             messageType: 'text',

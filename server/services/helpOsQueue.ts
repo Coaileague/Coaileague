@@ -1,5 +1,5 @@
 /**
- * HelpOS™ AI-Powered Queue Management System
+ * HelpAI Queue Management System
  * Manages support queue with smart prioritization and automated announcements
  */
 

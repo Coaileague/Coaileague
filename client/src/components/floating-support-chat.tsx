@@ -258,7 +258,7 @@ export function FloatingSupportChat() {
     setState(prev => ({ ...prev, isOpen: false }));
   };
   
-  // Send message to HelpOS AI
+  // Send message to HelpAI
   const handleSend = async () => {
     if (inputValue.trim() === '') return;
     
@@ -288,7 +288,7 @@ export function FloatingSupportChat() {
         })
       });
       
-      if (!response.ok) throw new Error('HelpOS API Error');
+      if (!response.ok) throw new Error('HelpAI API Error');
       
       const data = await response.json();
       setIsTyping(false);

@@ -400,7 +400,7 @@ export const CHAT_SERVER_CONFIG = {
     ticketIdKey: 'support_ticket_id',
 
     // Escalation data storage key
-    escalationDataKey: 'helpos_escalation',
+    escalationDataKey: 'helpai_escalation',
   },
 };
 

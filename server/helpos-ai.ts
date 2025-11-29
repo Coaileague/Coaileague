@@ -1,5 +1,5 @@
 /**
- * HelpOS™ AI Intelligence Service
+ * HelpAI Intelligence Service
  * Client-pays-all model - AI costs are tracked and billed to the customer
  * Can be toggled on/off by support staff
  */
@@ -13,7 +13,7 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
 });
 
-export interface HelpOSAIConfig {
+export interface HelpAIConfig {
   enabled: boolean;
   model: 'gpt-3.5-turbo' | 'gpt-4o-mini'; // Using cost-effective models
   maxTokens: number;
@@ -21,7 +21,7 @@ export interface HelpOSAIConfig {
 }
 
 // Default configuration - using most cost-effective model
-const defaultConfig: HelpOSAIConfig = {
+const defaultConfig: HelpAIConfig = {
   enabled: false, // Disabled by default - staff must enable
   model: 'gpt-3.5-turbo', // Cheapest model for basic chat support
   maxTokens: 500, // Keep responses concise to minimize costs
@@ -31,11 +31,11 @@ const defaultConfig: HelpOSAIConfig = {
 // In-memory storage for AI toggle state (per workspace)
 const aiEnabledMap = new Map<string, boolean>();
 
-export class HelpOSAI {
-  private config: HelpOSAIConfig;
+export class HelpAIService {
+  private config: HelpAIConfig;
   private workspaceId: string;
 
-  constructor(workspaceId: string = 'default', config: Partial<HelpOSAIConfig> = {}) {
+  constructor(workspaceId: string = 'default', config: Partial<HelpAIConfig> = {}) {
     this.workspaceId = workspaceId;
     this.config = {
       ...defaultConfig,
@@ -50,7 +50,7 @@ export class HelpOSAI {
   toggleAI(enabled: boolean): boolean {
     this.config.enabled = enabled;
     aiEnabledMap.set(this.workspaceId, enabled);
-    console.log(`🤖 HelpOS AI ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${this.workspaceId}`);
+    console.log(`[HelpAI] ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${this.workspaceId}`);
     return this.config.enabled;
   }
 
@@ -71,7 +71,7 @@ export class HelpOSAI {
     }
 
     try {
-      const prompt = `You are HelpOS™, a friendly AI support assistant for CoAIleague.
+      const prompt = `You are HelpAI, a friendly AI support assistant for CoAIleague.
 
 User just joined: ${userName} (${userType})
 ${context ? `Context: ${context}` : ''}
@@ -109,12 +109,12 @@ Return ONLY the greeting text, no extra formatting.`;
             userType,
           }
         });
-        console.log(`💰 HelpOS AI - Greeting generated (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+        console.log(`[HelpAI] Greeting generated (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
       }
 
       return greeting || null;
     } catch (error) {
-      console.error('HelpOS AI greeting failed:', error);
+      console.error('[HelpAI] Greeting failed:', error);
       return null; // Fallback to default greeting on error
     }
   }
@@ -133,7 +133,7 @@ Return ONLY the greeting text, no extra formatting.`;
     }
 
     try {
-      const systemPrompt = `You are HelpOS™, an AI assistant helping support staff respond to customers.
+      const systemPrompt = `You are HelpAI, an AI assistant helping support staff respond to customers.
 
 ${userContext ? `Customer Context: ${userContext}` : ''}
 
@@ -178,12 +178,12 @@ Return ONLY the suggested response text.`;
             messageLength: userMessage.length,
           }
         });
-        console.log(`💰 HelpOS AI - Response suggested (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+        console.log(`[HelpAI] Response suggested (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
       }
 
       return response || null;
     } catch (error) {
-      console.error('HelpOS AI response suggestion failed:', error);
+      console.error('[HelpAI] Response suggestion failed:', error);
       return null;
     }
   }
@@ -238,12 +238,12 @@ Low: general question, feature request`;
             urgency: result.urgency,
           }
         });
-        console.log(`💰 HelpOS AI - Urgency analyzed (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+        console.log(`[HelpAI] Urgency analyzed (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
       }
 
       return result.urgency ? result : null;
     } catch (error) {
-      console.error('HelpOS AI urgency analysis failed:', error);
+      console.error('[HelpAI] Urgency analysis failed:', error);
       return null;
     }
   }
@@ -261,4 +261,4 @@ Low: general question, feature request`;
 }
 
 // Export singleton instance for main workspace
-export const mainHelpOSAI = new HelpOSAI('main');
+export const mainHelpAI = new HelpAIService('main');

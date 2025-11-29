@@ -357,7 +357,7 @@ export default function Pricing() {
                       <div className="text-xs text-gray-600 dark:text-gray-400">15 credits ($1.50) per payroll run</div>
                     </div>
                     <div className="space-y-0.5 sm:space-y-1">
-                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Chat (HelpOS/QueryOS)</div>
+                      <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">AI Chat (HelpAI/QueryOS)</div>
                       <div className="text-xs text-gray-600 dark:text-gray-400">5 credits ($0.50) per conversation</div>
                     </div>
                     <div className="space-y-0.5 sm:space-y-1">

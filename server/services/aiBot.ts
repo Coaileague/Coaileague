@@ -1,4 +1,4 @@
-// AI Bot service for HelpOS - greets and assists customers until human help arrives
+// AI Bot service for HelpAI - greets and assists customers until human help arrives
 // CRITICAL: Client-pays-all model - All AI usage is tracked and billed via UsageMeteringService
 import OpenAI from "openai";
 import { storage } from '../storage';
@@ -39,10 +39,10 @@ interface AiBotResponse {
  */
 export async function generateGreeting(userName: string, isGuest: boolean): Promise<string> {
   if (isGuest) {
-    return `👋 Welcome to HelpDesk, ${userName}! I'm HelpOS™, your AI assistant. I can help answer questions while you wait for our team. You have ${FREE_GUEST_LIMIT} free AI responses to try out our service!`;
+    return `👋 Welcome to HelpDesk, ${userName}! I'm HelpAI, your AI assistant. I can help answer questions while you wait for our team. You have ${FREE_GUEST_LIMIT} free AI responses to try out our service!`;
   }
   
-  return `👋 Welcome back to HelpDesk, ${userName}! I'm HelpOS™, your AI assistant, ready to help with any questions about CoAIleague™.`;
+  return `👋 Welcome back to HelpDesk, ${userName}! I'm HelpAI, your AI assistant, ready to help with any questions about CoAIleague™.`;
 }
 
 /**
@@ -94,7 +94,7 @@ export async function getAiResponse(
       messages: [
         {
           role: "system",
-          content: `You are HelpOS™, the high-tech AI assistant for CoAIleague™ - an elite autonomous workforce management platform. You're super knowledgeable, professional, and helpful.
+          content: `You are HelpAI, the high-tech AI assistant for CoAIleague™ - an elite autonomous workforce management platform. You're super knowledgeable, professional, and helpful.
 
 🎯 YOUR PERSONALITY:
 - High-tech and modern
@@ -111,7 +111,7 @@ export async function getAiResponse(
 5. ReportOS™ - Report templates, submissions, approvals
 6. AnalyticsOS™ - Real-time dashboards, business insights
 7. AI Payroll™ - 99% automated payroll, tax calculations
-8. HelpOS™ - That's YOU! Live support + AI assistance
+8. HelpAI - That's YOU! Live support + AI assistance
 
 👥 USER ROLES:
 - Owner: Full system access, can approve payroll
@@ -165,7 +165,7 @@ If unsure, direct to human support team.`
         isSubscriber,
       }
     });
-    console.log(`💰 HelpOS AI - Question answered (${totalTokens} tokens) - Billed to workspace: ${workspaceId}`);
+    console.log(`💰 HelpAI - Question answered (${totalTokens} tokens) - Billed to workspace: ${workspaceId}`);
     
     // Increment usage count for free guests
     if (!isSubscriber) {
@@ -221,7 +221,7 @@ export function shouldBotRespond(message: string): boolean {
 
 /**
  * Generate queue welcome message with position and instructions
- * HelpOS™ announces queue position when user joins
+ * HelpAI announces queue position when user joins
  */
 export async function generateQueueWelcome(
   userName: string,
@@ -231,14 +231,14 @@ export async function generateQueueWelcome(
   waitingCount: number
 ): Promise<string> {
   if (queuePosition === 1) {
-    return `👋 Welcome ${userName}! I'm HelpOS™, your AI support assistant.
+    return `👋 Welcome ${userName}! I'm HelpAI, your AI support assistant.
 
 🎯 You're next in line! A support agent will assist you momentarily.
 
 While you wait, feel free to ask me any questions about CoAIleague™. Stay in the chat to keep your position!`;
   }
 
-  return `👋 Welcome ${userName}! I'm HelpOS™, your AI support assistant. (Ticket: ${ticketNumber})
+  return `👋 Welcome ${userName}! I'm HelpAI, your AI support assistant. (Ticket: ${ticketNumber})
 
 📊 Queue Status:
 • You are #${queuePosition} in line
@@ -250,7 +250,7 @@ While you wait, ask me anything about CoAIleague™! Stay in the chat to keep yo
 
 /**
  * Generate periodic queue reminder (every 5 minutes)
- * HelpOS™ sends these automatically
+ * HelpAI sends these automatically
  */
 export async function generateQueueReminder(
   userName: string,
@@ -258,10 +258,10 @@ export async function generateQueueReminder(
   estimatedWaitMinutes: number
 ): Promise<string> {
   if (queuePosition === 1) {
-    return `⏰ HelpOS™ Update: ${userName}, you're still next in line! A support agent will be with you very soon. 🙏`;
+    return `⏰ HelpAI Update: ${userName}, you're still next in line! A support agent will be with you very soon. 🙏`;
   }
 
-  return `⏰ HelpOS™ Queue Update: ${userName}, you are #${queuePosition} in line (Est. wait: ~${estimatedWaitMinutes} min). Thank you for your patience! 🙏`;
+  return `⏰ HelpAI Queue Update: ${userName}, you are #${queuePosition} in line (Est. wait: ~${estimatedWaitMinutes} min). Thank you for your patience! 🙏`;
 }
 
 /**

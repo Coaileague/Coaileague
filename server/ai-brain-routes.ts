@@ -297,7 +297,7 @@ aiBrainRouter.post('/recommend', isAuthenticated, async (req: Request, res: Resp
 });
 
 /**
- * POST /api/ai-brain/chat - AI Chat support (HelpOS)
+ * POST /api/ai-brain/chat - AI Chat support (HelpAI)
  */
 aiBrainRouter.post('/chat', isAuthenticated, async (req: Request, res: Response) => {
   try {

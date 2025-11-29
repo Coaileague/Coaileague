@@ -401,7 +401,7 @@ export interface IStorage {
   getActiveSupportTicket(userId: string, workspaceId: string): Promise<SupportTicket | undefined>;
   updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
   
-  // HelpOS™ AI Support System
+  // HelpAI AI Support System
   createHelposSession(session: InsertHelposAiSession): Promise<HelposAiSession>;
   getHelposSession(id: string, workspaceId: string): Promise<HelposAiSession | undefined>;
   getHelposSessionsByUser(userId: string, workspaceId: string): Promise<HelposAiSession[]>;

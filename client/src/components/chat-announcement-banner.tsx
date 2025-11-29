@@ -214,7 +214,7 @@ export function ChatAnnouncementBanner({
       },
       {
         id: '4',
-        text: 'AI-Powered Support - Instant answers with Gemini 2.0 HelpOS™',
+        text: 'AI-Powered Support - Instant answers with Gemini 2.0 HelpAI',
         type: 'promo',
         link: '/features',
         icon: 'zap'

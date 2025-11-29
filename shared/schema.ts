@@ -226,7 +226,7 @@ export const workspaces = pgTable("workspaces", {
   // GAP FIXES - CONFIGURABLE SETTINGS (Gap #6, #7, #8)
   // ============================================================================
   
-  // HelpOS Bot Configuration (Gap #7)
+  // HelpAI Bot Configuration (Gap #7)
   enableHelpOSBot: boolean("enable_helpos_bot").default(true), // Allow disabling bot per workspace
   
   // Client Tax Rate Configuration (Gap #8)
@@ -4454,7 +4454,7 @@ export const faqStatusEnum = pgEnum('faq_status', [
   'deprecated'        // Replaced by newer FAQ
 ]);
 
-// HelpOS FAQ Knowledge Base - FAQ articles for AI-powered bot assistance
+// HelpAI FAQ Knowledge Base - FAQ articles for AI-powered bot assistance
 export const helposFaqs = pgTable("helpos_faqs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -5368,7 +5368,7 @@ export const insertTermsAcknowledgmentSchema = createInsertSchema(termsAcknowled
 export type InsertTermsAcknowledgment = z.infer<typeof insertTermsAcknowledgmentSchema>;
 export type TermsAcknowledgment = typeof termsAcknowledgments.$inferSelect;
 
-// HelpOS Queue Management - AI-powered support queue
+// HelpAI Queue Management - AI-powered support queue
 export const helpOsQueue = pgTable("help_os_queue", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
 
@@ -9287,7 +9287,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'timesheet_rejected',  // Timesheet rejected
   'payroll_processed',   // Payroll processed
   'mention',             // User mentioned in chat/comment
-  'support_escalation',  // HelpOS bot escalated ticket to human support
+  'support_escalation',  // HelpAI bot escalated ticket to human support
   'system',              // System notification
   'welcome_org',         // Welcome message for new organization
   'welcome_employee',    // Welcome message for new employee
@@ -10908,7 +10908,7 @@ export type AnalyticsStats = z.infer<typeof analyticsStatsSchema>;
 // HELPOS™ AI SUPPORT SYSTEM
 // ============================================================================
 
-// HelpOS™ AI chat sessions - Track AI-powered support conversations
+// HelpAI AI chat sessions - Track AI-powered support conversations
 export const helposAiSessions = pgTable("helpos_ai_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -10954,7 +10954,7 @@ export const insertHelposAiSessionSchema = createInsertSchema(helposAiSessions).
 export type InsertHelposAiSession = z.infer<typeof insertHelposAiSessionSchema>;
 export type HelposAiSession = typeof helposAiSessions.$inferSelect;
 
-// HelpOS™ AI transcript entries - Audit trail for AI conversations (1-year retention)
+// HelpAI AI transcript entries - Audit trail for AI conversations (1-year retention)
 export const helposAiTranscriptEntries = pgTable("helpos_ai_transcript_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: varchar("session_id").notNull().references(() => helposAiSessions.id, { onDelete: 'cascade' }),

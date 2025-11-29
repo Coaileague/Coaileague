@@ -105,7 +105,7 @@ export function MobileChatLayout({
       return (
         <div key={msg.id} className="py-2 px-3 bg-blue-500/10 rounded-lg">
           <div className="flex items-center gap-1.5 mb-1">
-            <StaffNameDisplay name={msg.senderName || 'HelpOS™'} className="text-xs font-bold text-blue-400" />
+            <StaffNameDisplay name={msg.senderName || 'HelpAI'} className="text-xs font-bold text-blue-400" />
           </div>
           <div className="text-sm whitespace-pre-wrap">{msg.message}</div>
         </div>

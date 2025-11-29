@@ -37,7 +37,7 @@ export const CREDIT_COSTS = {
   'ai_payroll_verification': 5,   // Verify payroll calculations
   
   // AI Communications
-  'ai_chat_query': 5,             // HelpOS or QueryOS chat message
+  'ai_chat_query': 5,             // HelpAI or QueryOS chat message
   'ai_email_generation': 8,       // Generate email content
   
   // AI Analytics

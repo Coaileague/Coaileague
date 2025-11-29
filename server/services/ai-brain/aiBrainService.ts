@@ -40,7 +40,7 @@ import { geminiClient } from './providers/geminiClient';
 import crypto from 'crypto';
 
 // Define typed input interfaces for each skill
-interface HelpOSInput {
+interface HelpAIInput {
   message: string;
   conversationHistory?: Array<{ role: 'user' | 'model'; content: string }>;
   userId?: string;
@@ -158,7 +158,7 @@ export class AIBrainService {
 
     switch (job.skill) {
       case 'helpos_support':
-        const helpResult = await this.executeHelpOSSupport(job, input as HelpOSInput);
+        const helpResult = await this.executeHelpAISupport(job, input as HelpAIInput);
         output = helpResult.output;
         tokensUsed = helpResult.tokensUsed;
         confidenceScore = 0.95;
@@ -236,9 +236,9 @@ export class AIBrainService {
   }
 
   /**
-   * HelpOS Support - Customer support AI with FAQ learning
+   * HelpAI Support - Customer support AI with FAQ learning
    */
-  private async executeHelpOSSupport(job: AiBrainJob, input: HelpOSInput): Promise<{ output: any; tokensUsed: number }> {
+  private async executeHelpAISupport(job: AiBrainJob, input: HelpAIInput): Promise<{ output: any; tokensUsed: number }> {
     const { message, conversationHistory, shouldLearn } = input;
 
     // Search for relevant FAQs first

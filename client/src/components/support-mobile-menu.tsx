@@ -150,7 +150,7 @@ export function SupportMobileMenu({ onExecuteCommand }: SupportMobileMenuProps =
                 Support Staff Menu
               </SheetTitle>
               <SheetDescription>
-                Mobile command center for HelpOS™
+                Mobile command center for HelpAI
               </SheetDescription>
             </SheetHeader>
 
@@ -298,7 +298,7 @@ export function SupportMobileMenu({ onExecuteCommand }: SupportMobileMenuProps =
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 mt-0.5 text-blue-500" />
                 <div className="flex-1 text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground mb-1">HelpOS™ AI Queue</p>
+                  <p className="font-medium text-foreground mb-1">HelpAI AI Queue</p>
                   <p>Users are automatically queued by priority: subscription tier, wait time, special needs, and owner status. Click any user above to help them.</p>
                 </div>
               </div>

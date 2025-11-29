@@ -1,5 +1,5 @@
 /**
- * HelpOS™ - Unified AI Support System
+ * HelpAI - Unified AI Support System
  * Dual-persona architecture: bubbleAgent (customer-facing) and staffCopilot (agent assistance)
  * Powered by Gemini 2.0 Flash for cost-effective, intelligent support
  * With AI Guard Rails: Rate limiting, audit logging, fallback mechanisms
@@ -42,12 +42,12 @@ class GeminiProvider implements AIProvider {
       organizationId: 'platform',
       requestId: crypto.randomUUID(),
       timestamp: new Date(),
-      operation: 'helpos_chat'
+      operation: 'helpai_chat'
     };
 
     // Guard Rails: Validate last message
     const lastMessage = messages[messages.length - 1];
-    const validation = aiGuardRails.validateRequest(lastMessage.content, requestContext, 'helpos_chat');
+    const validation = aiGuardRails.validateRequest(lastMessage.content, requestContext, 'helpai_chat');
     if (!validation.isValid) {
       return {
         content: 'I encountered an issue processing your message. Please try again with a shorter message.',
@@ -125,9 +125,9 @@ class GeminiProvider implements AIProvider {
           completionTokens: usage?.candidatesTokenCount,
         }
       });
-      console.log(`💎 HelpOS™ Gemini - ${totalTokens} tokens - Workspace: ${options.workspaceId}`);
+      console.log(`💎 HelpAI Gemini - ${totalTokens} tokens - Workspace: ${options.workspaceId}`);
     } else if (isAnonymousWorkspace) {
-      console.log(`💎 HelpOS™ Gemini - ${totalTokens} tokens - Anonymous User (not billed)`);
+      console.log(`💎 HelpAI Gemini - ${totalTokens} tokens - Anonymous User (not billed)`);
     }
 
     // Guard Rails: Audit log
@@ -226,7 +226,7 @@ const CRITICAL_KEYWORDS = [
 // CORE SERVICE
 // ============================================================================
 
-class HelpOSService {
+class HelpAIServiceImpl {
   private provider: AIProvider;
 
   constructor() {
@@ -264,7 +264,7 @@ class HelpOSService {
     const messages = [
       {
         role: 'system',
-        content: 'You are HelpOS™, CoAIleague\'s AI support assistant. Generate a brief 2-3 sentence summary of this support conversation and recommend specific actionable steps for the human agent. Format as markdown with **Summary:** and **Recommended Actions:** sections.'
+        content: 'You are HelpAI, CoAIleague\'s AI support assistant. Generate a brief 2-3 sentence summary of this support conversation and recommend specific actionable steps for the human agent. Format as markdown with **Summary:** and **Recommended Actions:** sections.'
       },
       {
         role: 'user',
@@ -419,7 +419,7 @@ class HelpOSService {
     }
 
     // Build AI chat messages
-    const systemPrompt = `You are HelpOS™, the AI-powered support assistant for CoAIleague - a comprehensive workforce management platform for emergency services and service industries.
+    const systemPrompt = `You are HelpAI, the AI-powered support assistant for CoAIleague - a comprehensive workforce management platform for emergency services and service industries.
 
 **Your Role:**
 - Provide helpful, professional support for CoAIleague users
@@ -521,7 +521,7 @@ Be helpful, empathetic, and solution-oriented.`;
       type: 'support',
       employeeId: userId,
       requestedBy: `${userName} (${userEmail})`,
-      subject: `HelpOS™ Escalation - ${escalationReason}`,
+      subject: `HelpAI Escalation - ${escalationReason}`,
       description: `**Escalation Reason:** ${escalationReason}\n\n**AI Summary:**\n${aiSummary}\n\n**Full Conversation:**\n${conversationContext}`,
       priority: escalationReason === 'critical_keyword' ? 'urgent' : 'normal',
       status: 'open',
@@ -557,7 +557,7 @@ Be helpful, empathetic, and solution-oriented.`;
   }): Promise<string | null> {
     const { workspaceId, userMessage, chatHistory, userContext } = params;
 
-    const systemPrompt = `You are HelpOS™, an AI assistant helping support staff respond to customers.
+    const systemPrompt = `You are HelpAI, an AI assistant helping support staff respond to customers.
 
 ${userContext ? `Customer Context: ${userContext}` : ''}
 
@@ -595,4 +595,4 @@ Return ONLY the suggested response text.`;
 }
 
 // Export singleton instance
-export const helposService = new HelpOSService();
+export const helposService = new HelpAIServiceImpl();
