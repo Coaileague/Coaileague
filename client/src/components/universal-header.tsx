@@ -81,18 +81,28 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
             {/* Desktop: Full logo with wordmark */}
             <div className="hidden sm:block">
               <CoAIleagueLogo 
-                width={200} 
-                height={50} 
+                width={220} 
+                height={55} 
                 showTagline={false} 
                 showWordmark={true}
               />
             </div>
-            {/* Mobile: Icon only */}
+            {/* Tablet: Medium logo */}
+            <div className="hidden sm:block md:hidden">
+              <CoAIleagueLogo 
+                width={160} 
+                height={40} 
+                showTagline={false} 
+                showWordmark={true}
+              />
+            </div>
+            {/* Mobile: Larger icon for visibility */}
             <div className="block sm:hidden">
               <CoAIleagueLogo 
-                width={40} 
-                height={40} 
+                width={48} 
+                height={48} 
                 onlyIcon={true}
+                className="flex-shrink-0"
               />
             </div>
           </button>

@@ -55,29 +55,30 @@ export default function Homepage() {
       <UniversalHeader variant="public" />
 
       {/* Hero Section - Enhanced */}
-      <section className="pt-12 sm:pt-24 pb-12 sm:pb-20 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden mobile-compact-p mobile-text-scale">
+      <section className="pt-8 sm:pt-16 md:pt-24 pb-8 sm:pb-16 md:pb-20 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden">
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
+        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 hidden md:block">
           <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-40 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10 px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center mobile-cols-1 mobile-gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-12 items-center mobile-cols-1 mobile-gap-3">
             {/* Left Column - Content */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-md">
-                <Cpu className="w-4 h-4" />
-                CoAIleague AI Brain — Autonomous Workforce Intelligence
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-6 shadow-md">
+                <Cpu className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">CoAIleague AI Brain — Autonomous Workforce Intelligence</span>
+                <span className="sm:hidden">CoAIleague AI</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight break-words">
+              <h1 className="text-xl sm:text-2xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 leading-tight break-words">
                 Replace $100K+ in
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">
-                  Administrative Salaries
+                  Admin Costs
                 </span>
               </h1>
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-700 mb-6 leading-relaxed">
+              <p className="text-xs sm:text-sm md:text-lg lg:text-xl text-gray-700 mb-4 sm:mb-6 leading-relaxed">
                 Let <strong className="text-gray-900">CoAIleague AI Brain</strong> autonomously handle your scheduling, payroll processing, and client invoicing. 
                 <strong className="text-blue-600"> Save hundreds of thousands annually</strong> on HR and admin staff.
               </p>

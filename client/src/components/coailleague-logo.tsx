@@ -13,6 +13,7 @@ interface CoAIleagueLogoProps {
 /**
  * CoAIleague Logo - Professional interlocking loop design
  * Teal/Cyan gradient brand colors with polished typography
+ * Auto-scales to container on mobile
  */
 export function CoAIleagueLogo({
   width = 200,
@@ -23,6 +24,9 @@ export function CoAIleagueLogo({
   onlyIcon = false,
   variant = "auto",
 }: CoAIleagueLogoProps) {
+  // Auto-scale logo dimensions for better mobile visibility
+  const scaledWidth = typeof width === 'number' ? Math.max(width, 40) : width;
+  const scaledHeight = typeof height === 'number' ? Math.max(height, 40) : height;
   // Check if dark mode - for auto variant
   const isDark = variant === "dark" || 
     (variant === "auto" && typeof document !== 'undefined' && 
@@ -42,12 +46,12 @@ export function CoAIleagueLogo({
   if (onlyIcon) {
     return (
       <svg
-        width={width}
-        height={height}
+        width={scaledWidth}
+        height={scaledHeight}
         viewBox="0 0 60 60"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={cn("transition-transform duration-200", className)}
+        className={cn("transition-transform duration-200 max-w-full h-auto", className)}
       >
         <defs>
           <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -74,12 +78,12 @@ export function CoAIleagueLogo({
 
   return (
     <svg
-      width={width}
-      height={height}
+      width={scaledWidth}
+      height={scaledHeight}
       viewBox="0 0 200 50"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("transition-transform duration-200", className)}
+      className={cn("transition-transform duration-200 max-w-full h-auto", className)}
     >
       <defs>
         <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
