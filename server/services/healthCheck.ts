@@ -172,7 +172,7 @@ export async function checkDatabase(): Promise<ServiceHealth> {
 }
 
 // WebSocket Chat Server health check
-// Now uses actual connection count from wsCounter
+// Server is operational if it's running and accepting connections (0 connections is valid when idle)
 export async function checkChatWebSocket(): Promise<ServiceHealth> {
   const cached = getCached('chat_websocket');
   if (cached) return cached;
@@ -182,12 +182,15 @@ export async function checkChatWebSocket(): Promise<ServiceHealth> {
     const activeConnections = wsCounter.getActiveConnectionCount();
     const stats = wsCounter.getStatistics();
     
-    const status: ServiceStatus = activeConnections > 0 ? 'operational' : 'degraded';
+    // WebSocket server is operational as long as it's running (0 connections is normal when idle)
+    const status: ServiceStatus = 'operational';
     const result: ServiceHealth = {
       service: 'chat_websocket',
       status,
       isCritical: true,
-      message: `Chat WebSocket server active (${activeConnections} active connections, avg duration: ${stats.averageConnectionDuration}ms)`,
+      message: activeConnections > 0 
+        ? `Chat WebSocket server active (${activeConnections} connections, avg duration: ${stats.averageConnectionDuration}ms)`
+        : 'Chat WebSocket server ready (awaiting connections)',
       lastChecked: new Date().toISOString(),
       metadata: {
         activeConnections,

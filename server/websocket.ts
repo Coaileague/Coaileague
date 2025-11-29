@@ -279,6 +279,12 @@ type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPay
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to CoAIleague HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
 
+// Main HelpDesk room identifier (consistent across all handlers)
+const MAIN_ROOM_ID = 'helpdesk';
+
+// Permanently banned users tracking (in-memory)
+const bannedUsers = new Set<string>();
+
 // GLOBAL CONNECTION TRACKING for Platform Stats
 const globalConnections = {
   allUsers: new Map<string, WebSocketClient>(), // userId -> WebSocket
@@ -566,8 +572,6 @@ export function setupWebSocket(server: Server) {
 
         switch (payload.type) {
           case 'join_conversation': {
-            const MAIN_ROOM_ID = 'helpdesk'; // Support room slug
-            
             // Check if this is a support room slug instead of conversation ID
             let conversationId = payload.conversationId;
             let isMainRoom = false; // Track if this is the main helpdesk room
@@ -2253,7 +2257,6 @@ export function setupWebSocket(server: Server) {
             }
 
             // GEMINI Q&A BOT: Intelligent responses using Gemini 2.0 Flash
-            const MAIN_ROOM_ID = 'helpdesk';
             const { shouldBotRespond, getAiResponse } = await import('./services/geminiQABot');
             
             if (ws.conversationId === MAIN_ROOM_ID && shouldBotRespond(payload.message)) {
@@ -3271,7 +3274,7 @@ export function setupWebSocket(server: Server) {
             }
 
             // Add to permanently banned users list (in-memory tracking)
-            removedSimulatedUsers.add(payload.targetUserId);
+            bannedUsers.add(payload.targetUserId);
 
             // Broadcast ban announcement to room
             const reason = payload.reason ? ` (Reason: ${payload.reason})` : '';
@@ -3733,8 +3736,7 @@ export function setupWebSocket(server: Server) {
         console.log(`🔌 Removed client from notifications for user ${ws.userId} in workspace ${ws.workspaceId}`);
       }
       
-      // Send leave announcement for main chatroom
-      const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+      // Send leave announcement for main helpdesk room
       if (ws.conversationId === MAIN_ROOM_ID && ws.userId) {
         try {
           // Get user display info for leave announcement
