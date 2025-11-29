@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmployee } from "@/hooks/useEmployee";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Users, Lock, Globe, Plus, Search, Loader2, Check } from "lucide-react";
+import { MessageCircle, Users, Lock, Globe, Plus, Search, Loader2, Check, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +20,7 @@ interface ChatRoom {
   type?: 'support' | 'work' | 'meeting' | 'org';
   participantsCount?: number;
   roomType?: string;
+  workspaceId?: string;
   
   // Legacy format (backward compatibility)
   id?: string;
@@ -33,6 +35,11 @@ interface ChatRoom {
   lastMessageAt?: string;
   createdAt?: string;
   autoCloseAt?: string;
+}
+
+interface ChatRoomsResponse {
+  rooms: ChatRoom[];
+  [key: string]: any;
 }
 
 // Helper to normalize room data between old and new formats
@@ -58,14 +65,19 @@ const normalizeRoom = (room: any): ChatRoom => {
 
 export default function Chatrooms() {
   const { user } = useAuth();
+  const { employee } = useEmployee();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState<'all' | 'available' | 'joined'>('all');
 
+  // Check if user has support role (can see platform-wide rooms)
+  const isSupportRole = user?.platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'].includes(user.platformRole);
+  const userWorkspaceId = employee?.workspaceId;
+
   // Fetch all chatrooms
-  const { data: roomsData, isLoading, error } = useQuery({
+  const { data: roomsData, isLoading, error } = useQuery<ChatRoomsResponse>({
     queryKey: ['/api/chat/rooms'],
     staleTime: 30000,
   });
@@ -103,6 +115,13 @@ export default function Chatrooms() {
     let normalized = roomsData.rooms.map(normalizeRoom);
     let filtered = normalized;
 
+    // RBAC: Filter by workspace if user is not support role
+    if (!isSupportRole && userWorkspaceId) {
+      filtered = filtered.filter((r: ChatRoom) => 
+        r.workspaceId === userWorkspaceId || !r.workspaceId
+      );
+    }
+
     // Apply type filter
     if (filterType === 'joined') {
       filtered = filtered.filter((r: ChatRoom) => r.isParticipant);
@@ -121,9 +140,10 @@ export default function Chatrooms() {
     }
 
     return filtered;
-  }, [roomsData?.rooms, filterType, searchQuery]);
+  }, [roomsData?.rooms, filterType, searchQuery, isSupportRole, userWorkspaceId]);
 
-  const handleSelectRoom = (roomId: string) => {
+  const handleSelectRoom = (roomId: string | undefined) => {
+    if (!roomId) return;
     const newSelected = new Set(selectedRooms);
     if (newSelected.has(roomId)) {
       newSelected.delete(roomId);
@@ -215,12 +235,28 @@ export default function Chatrooms() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Organization Chatrooms</h1>
-          <p className="text-muted-foreground">
-            Discover and join team conversations, automation channels, and work schedule discussions
-          </p>
+        {/* Header with Back Button */}
+        <div className="mb-8 flex items-center gap-3">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setLocation("/")}
+            data-testid="button-back-to-home"
+            className="shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              {isSupportRole ? 'All Organization Chatrooms' : 'Chatrooms'}
+            </h1>
+            <p className="text-muted-foreground">
+              {isSupportRole 
+                ? 'View active chatrooms platform-wide: support, work, meeting, and organization channels'
+                : 'Discover and join team conversations, automation channels, and work schedule discussions'
+              }
+            </p>
+          </div>
         </div>
 
         {/* Controls */}
@@ -261,7 +297,7 @@ export default function Chatrooms() {
                 onClick={() => setFilterType('joined')}
                 data-testid="button-filter-joined"
               >
-                My Rooms ({roomsData?.rooms?.filter((r: ChatRoom) => r.isParticipant).length || 0})
+                My Rooms ({(roomsData?.rooms || []).filter((r: ChatRoom) => r.isParticipant).length || 0})
               </Button>
             </div>
 
@@ -343,16 +379,16 @@ export default function Chatrooms() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredRooms.map((room: ChatRoom) => (
                   <Card
-                    key={room.id}
+                    key={room.id || room.roomId}
                     className={`cursor-pointer transition-all hover-elevate ${
-                      selectedRooms.has(room.id) ? 'ring-2 ring-primary' : ''
+                      room.id && selectedRooms.has(room.id) ? 'ring-2 ring-primary' : ''
                     }`}
                     onClick={() => {
                       if (!room.isParticipant) {
                         handleSelectRoom(room.id);
                       }
                     }}
-                    data-testid={`card-room-${room.id}`}
+                    data-testid={`card-room-${room.id || room.roomId}`}
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between gap-3">
@@ -406,10 +442,10 @@ export default function Chatrooms() {
                               onClick={() => {
                                 handleSelectRoom(room.id);
                               }}
-                              data-testid={`button-select-room-${room.id}`}
+                              data-testid={`button-select-room-${room.id || room.roomId}`}
                               className="shrink-0"
                             >
-                              {selectedRooms.has(room.id) ? 'Selected' : 'Select'}
+                              {room.id && selectedRooms.has(room.id) ? 'Selected' : 'Select'}
                             </Button>
                           )}
                         </div>
@@ -427,7 +463,7 @@ export default function Chatrooms() {
 
             {/* Results Summary */}
             <div className="mt-6 text-center text-sm text-muted-foreground">
-              Showing {filteredRooms.length} of {roomsData?.rooms?.length || 0} room{roomsData?.rooms?.length !== 1 ? 's' : ''}
+              Showing {filteredRooms.length} of {(roomsData?.rooms || []).length || 0} room{(roomsData?.rooms || []).length !== 1 ? 's' : ''} {!isSupportRole && userWorkspaceId && '(organization only)'}
             </div>
           </>
         )}

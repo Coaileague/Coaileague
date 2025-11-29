@@ -344,9 +344,9 @@ export function FloatingSupportChat() {
           left: `${state.position.x}px`,
           top: `${state.position.y}px`,
           zIndex: CHAT_BUBBLE_CONFIG.zIndex,
-          touchAction: CHAT_BUBBLE_CONFIG.touchAction,
+          touchAction: CHAT_BUBBLE_CONFIG.touchAction as any,
           cursor: isDraggingRef.current ? 'grabbing' : 'grab',
-          userSelect: CHAT_BUBBLE_CONFIG.userSelect
+          userSelect: CHAT_BUBBLE_CONFIG.userSelect as any
         }}
         className={`flex items-center gap-2 bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} px-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingY} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover-elevate active-elevate-2`}
         onClick={handleClickWithDragCheck}
@@ -368,9 +368,9 @@ export function FloatingSupportChat() {
           left: `${state.position.x}px`,
           top: `${state.position.y}px`,
           zIndex: CHAT_BUBBLE_CONFIG.zIndex,
-          touchAction: CHAT_BUBBLE_CONFIG.touchAction,
+          touchAction: CHAT_BUBBLE_CONFIG.touchAction as any,
           cursor: isDraggingRef.current ? 'grabbing' : 'grab',
-          userSelect: CHAT_BUBBLE_CONFIG.userSelect
+          userSelect: CHAT_BUBBLE_CONFIG.userSelect as any
         }}
         onMouseDown={handlePointerDown}
         onClick={handleClickWithDragCheck}
