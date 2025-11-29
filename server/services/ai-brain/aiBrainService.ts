@@ -19,6 +19,8 @@ import {
   aiSolutionLibrary,
   aiFeedbackLoops,
   helposFaqs,
+  faqVersions,
+  faqGapEvents,
   externalIdentifiers,
   workspaces,
   shifts,
@@ -27,10 +29,13 @@ import {
   payrollRuns,
   employees,
   timeEntries,
+  supportTickets,
   type AiBrainJob,
   type InsertAiFeedbackLoop,
+  type HelposFaq,
+  type FaqGapEvent,
 } from '@shared/schema';
-import { eq, and, desc, sql, gte, lte, count } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, count, or, ilike, isNull } from 'drizzle-orm';
 import { geminiClient } from './providers/geminiClient';
 import crypto from 'crypto';
 
@@ -325,38 +330,444 @@ IMPORTANT GUIDELINES:
   }
 
   /**
-   * Learn from successful interactions - Create or update FAQs
+   * Enhanced FAQ Learning System with Deduplication, Provenance, and Version Control
    */
-  private async learnFromInteraction(workspaceId: string | undefined, question: string, answer: string): Promise<void> {
+  private async learnFromInteraction(
+    workspaceId: string | undefined, 
+    question: string, 
+    answer: string,
+    options?: {
+      sourceType?: 'ai_learned' | 'ticket_resolution' | 'feature_update' | 'gap_detection';
+      sourceId?: string;
+      sourceContext?: Record<string, any>;
+      confidence?: number;
+      userId?: string;
+    }
+  ): Promise<{ action: 'created' | 'updated' | 'skipped'; faqId?: string }> {
     try {
-      // Check if a similar FAQ already exists
-      const existingFaqs = await this.searchFAQs(question, workspaceId);
+      const { 
+        sourceType = 'ai_learned', 
+        sourceId, 
+        sourceContext,
+        confidence = 80,
+        userId
+      } = options || {};
+
+      // 1. Generate similarity hash for deduplication
+      const normalizedQuestion = this.normalizeText(question);
+      const similarityHash = crypto.createHash('sha256').update(normalizedQuestion).digest('hex').substring(0, 16);
       
-      if (existingFaqs.length > 0 && existingFaqs[0].score > 3) {
-        // Update helpfulness score of matching FAQ
-        await db.update(helposFaqs)
-          .set({
-            helpfulCount: sql`COALESCE(${helposFaqs.helpfulCount}, 0) + 1`
-          })
-          .where(eq(helposFaqs.id, existingFaqs[0].id));
+      // 2. Check for duplicate/similar FAQs with enhanced matching
+      const existingFaqs = await this.searchFAQsAdvanced(question);
+      
+      if (existingFaqs.length > 0 && existingFaqs[0].similarityScore > 0.85) {
+        const existingFaq = existingFaqs[0];
         
-        console.log(`📚 [AI Brain] Updated FAQ helpfulness: ${existingFaqs[0].id}`);
-      } else {
-        // Create new FAQ entry for learning (global FAQs)
-        await db.insert(helposFaqs).values({
-          question: question.substring(0, 500),
-          answer: answer.substring(0, 2000),
-          category: 'ai_learned',
-          isPublished: true,
-          helpfulCount: 1,
-          tags: ['ai-generated', 'auto-learned']
-        });
-        
-        console.log(`🆕 [AI Brain] Created new FAQ from successful interaction`);
+        // 3. Decide: Update existing FAQ or skip
+        if (answer.length > (existingFaq.answer?.length || 0) * 1.2 || confidence > (existingFaq.confidenceScore || 0)) {
+          // Save version history before updating
+          await this.saveVersionHistory(existingFaq, 'updated', 'Better answer from AI learning', userId);
+          
+          // Update existing FAQ with better answer
+          await db.update(helposFaqs)
+            .set({
+              answer: answer.substring(0, 2000),
+              version: sql`COALESCE(${helposFaqs.version}, 1) + 1`,
+              updatedAt: new Date(),
+              updatedBy: userId || null,
+              matchCount: sql`COALESCE(${helposFaqs.matchCount}, 0) + 1`,
+              confidenceScore: Math.max(confidence, existingFaq.confidenceScore || 0),
+              sourceType: sourceType,
+              sourceId: sourceId || existingFaq.sourceId,
+              sourceContext: { 
+                ...(existingFaq.sourceContext as Record<string, any> || {}), 
+                lastUpdate: new Date().toISOString(),
+                ...(sourceContext || {})
+              },
+              changeReason: `Updated with ${confidence}% confident answer from ${sourceType}`
+            })
+            .where(eq(helposFaqs.id, existingFaq.id));
+          
+          console.log(`📝 [AI Brain] Updated FAQ ${existingFaq.id} with better answer (v${(existingFaq.version || 1) + 1})`);
+          return { action: 'updated', faqId: existingFaq.id };
+        } else {
+          // Just increment match count for good existing FAQ
+          await db.update(helposFaqs)
+            .set({
+              matchCount: sql`COALESCE(${helposFaqs.matchCount}, 0) + 1`,
+              resolvedCount: sql`COALESCE(${helposFaqs.resolvedCount}, 0) + 1`,
+              helpfulCount: sql`COALESCE(${helposFaqs.helpfulCount}, 0) + 1`
+            })
+            .where(eq(helposFaqs.id, existingFaq.id));
+          
+          console.log(`📚 [AI Brain] FAQ ${existingFaq.id} matched - incremented counters`);
+          return { action: 'skipped', faqId: existingFaq.id };
+        }
       }
+
+      // 4. Create new FAQ with full provenance
+      const autoPublish = confidence >= 90 && sourceType !== 'ai_learned';
+      const status = autoPublish ? 'published' : 'draft';
+      
+      const [newFaq] = await db.insert(helposFaqs).values({
+        question: question.substring(0, 500),
+        answer: answer.substring(0, 2000),
+        category: this.categorizeQuestion(question),
+        tags: this.extractTags(question, answer),
+        searchKeywords: normalizedQuestion,
+        
+        // Provenance
+        sourceType: sourceType,
+        sourceId: sourceId || null,
+        sourceContext: {
+          originalQuestion: question,
+          learningTimestamp: new Date().toISOString(),
+          ...(sourceContext || {})
+        },
+        
+        // Quality
+        status: status,
+        confidenceScore: confidence,
+        isPublished: autoPublish,
+        publishedAt: autoPublish ? new Date() : null,
+        
+        // Version control
+        version: 1,
+        
+        // Metrics
+        matchCount: 1,
+        helpfulCount: 0
+      }).returning();
+      
+      // Save initial version
+      await this.saveVersionHistory(newFaq, 'created', `Auto-created from ${sourceType}`, userId);
+      
+      console.log(`🆕 [AI Brain] Created new FAQ ${newFaq.id} from ${sourceType} (status: ${status})`);
+      return { action: 'created', faqId: newFaq.id };
     } catch (error) {
       console.error('[AI Brain] Learning error:', error);
+      return { action: 'skipped' };
     }
+  }
+
+  /**
+   * Save FAQ version to history for audit trail
+   */
+  private async saveVersionHistory(
+    faq: Partial<HelposFaq>,
+    changeType: 'created' | 'updated' | 'corrected' | 'merged' | 'archived',
+    changeReason: string,
+    changedBy?: string | null
+  ): Promise<void> {
+    try {
+      await db.insert(faqVersions).values({
+        faqId: faq.id!,
+        version: faq.version || 1,
+        question: faq.question || '',
+        answer: faq.answer || '',
+        category: faq.category || 'general',
+        tags: faq.tags || [],
+        changedBy: changedBy || null,
+        changedByAi: !changedBy,
+        changeType,
+        changeReason,
+        sourceType: faq.sourceType as any,
+        sourceId: faq.sourceId
+      });
+    } catch (error) {
+      console.error('[AI Brain] Version history save error:', error);
+    }
+  }
+
+  /**
+   * Record a gap event when AI couldn't answer well
+   */
+  async recordGapEvent(
+    question: string,
+    options: {
+      sourceType: 'chat_unanswered' | 'low_confidence' | 'ticket_common' | 'feedback_negative';
+      sourceId?: string;
+      suggestedAnswer?: string;
+      confidence?: number;
+      context?: Record<string, any>;
+    }
+  ): Promise<string | null> {
+    try {
+      const similarityHash = crypto.createHash('sha256')
+        .update(this.normalizeText(question))
+        .digest('hex').substring(0, 16);
+      
+      // Check for existing similar gap
+      const existingGaps = await db.select()
+        .from(faqGapEvents)
+        .where(eq(faqGapEvents.similarityHash, similarityHash))
+        .limit(1);
+      
+      if (existingGaps.length > 0) {
+        // Increment occurrence count
+        await db.update(faqGapEvents)
+          .set({
+            occurrenceCount: sql`COALESCE(${faqGapEvents.occurrenceCount}, 1) + 1`,
+            lastOccurredAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(faqGapEvents.id, existingGaps[0].id));
+        
+        console.log(`📊 [AI Brain] Gap event ${existingGaps[0].id} occurred again (count: ${(existingGaps[0].occurrenceCount || 1) + 1})`);
+        return existingGaps[0].id;
+      }
+      
+      // Create new gap event
+      const [gap] = await db.insert(faqGapEvents).values({
+        question: question.substring(0, 500),
+        sourceType: options.sourceType,
+        sourceId: options.sourceId || null,
+        suggestedAnswer: options.suggestedAnswer?.substring(0, 2000) || null,
+        suggestedCategory: this.categorizeQuestion(question),
+        confidenceScore: options.confidence || null,
+        context: options.context || null,
+        status: 'open',
+        similarityHash,
+        occurrenceCount: 1,
+        lastOccurredAt: new Date()
+      }).returning();
+      
+      console.log(`🕳️ [AI Brain] Recorded new gap event: ${gap.id}`);
+      return gap.id;
+    } catch (error) {
+      console.error('[AI Brain] Gap event recording error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Learn from resolved support ticket
+   */
+  async learnFromTicket(ticketId: string): Promise<void> {
+    try {
+      const [ticket] = await db.select()
+        .from(supportTickets)
+        .where(eq(supportTickets.id, ticketId))
+        .limit(1);
+      
+      if (!ticket || ticket.status !== 'resolved') {
+        return;
+      }
+      
+      // Extract learnable content from ticket
+      const question = ticket.subject || ticket.description?.substring(0, 200);
+      const answer = ticket.resolution || ticket.platformNotes;
+      
+      if (!question || !answer) {
+        return;
+      }
+      
+      await this.learnFromInteraction(undefined, question, answer, {
+        sourceType: 'ticket_resolution',
+        sourceId: ticketId,
+        sourceContext: {
+          ticketType: ticket.type,
+          ticketPriority: ticket.priority,
+          resolvedAt: ticket.resolvedAt,
+          ticketId
+        },
+        confidence: 95 // High confidence for human-resolved tickets
+      });
+      
+      // Check if this resolves any gaps
+      await this.resolveGapsFromTicket(question, ticketId);
+      
+      console.log(`🎫 [AI Brain] Learned from ticket resolution: ${ticketId}`);
+    } catch (error) {
+      console.error('[AI Brain] Ticket learning error:', error);
+    }
+  }
+
+  /**
+   * Resolve gap events that match a newly resolved question
+   */
+  private async resolveGapsFromTicket(question: string, ticketId: string): Promise<void> {
+    try {
+      const similarityHash = crypto.createHash('sha256')
+        .update(this.normalizeText(question))
+        .digest('hex').substring(0, 16);
+      
+      await db.update(faqGapEvents)
+        .set({
+          status: 'faq_created',
+          resolvedAt: new Date(),
+          resolutionNotes: `Resolved by ticket ${ticketId}`,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(faqGapEvents.status, 'open'),
+          eq(faqGapEvents.similarityHash, similarityHash)
+        ));
+    } catch (error) {
+      console.error('[AI Brain] Gap resolution error:', error);
+    }
+  }
+
+  /**
+   * Detect and flag stale FAQs that may need updates
+   */
+  async detectStaleFaqs(): Promise<HelposFaq[]> {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Find FAQs that are:
+      // 1. Not verified recently
+      // 2. Have high escalation rates
+      // 3. Have expired
+      const staleFaqs = await db.select()
+        .from(helposFaqs)
+        .where(and(
+          eq(helposFaqs.isPublished, true),
+          or(
+            // Not verified in 30 days
+            and(
+              sql`${helposFaqs.lastVerifiedAt} IS NULL`,
+              sql`${helposFaqs.createdAt} < ${thirtyDaysAgo}`
+            ),
+            lte(helposFaqs.lastVerifiedAt, thirtyDaysAgo),
+            // High escalation rate (>20% of matches resulted in escalation)
+            sql`COALESCE(${helposFaqs.escalatedCount}, 0) > COALESCE(${helposFaqs.matchCount}, 1) * 0.2`,
+            // Expired
+            and(
+              sql`${helposFaqs.expiresAt} IS NOT NULL`,
+              lte(helposFaqs.expiresAt, new Date())
+            )
+          )
+        ))
+        .limit(50);
+      
+      // Mark as needing review
+      for (const faq of staleFaqs) {
+        await db.update(helposFaqs)
+          .set({ 
+            status: 'needs_review',
+            updatedAt: new Date()
+          })
+          .where(eq(helposFaqs.id, faq.id));
+      }
+      
+      console.log(`🔍 [AI Brain] Detected ${staleFaqs.length} stale FAQs needing review`);
+      return staleFaqs;
+    } catch (error) {
+      console.error('[AI Brain] Stale FAQ detection error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get top gap patterns for FAQ creation suggestions
+   */
+  async getTopGaps(limit: number = 10): Promise<FaqGapEvent[]> {
+    try {
+      const gaps = await db.select()
+        .from(faqGapEvents)
+        .where(eq(faqGapEvents.status, 'open'))
+        .orderBy(desc(faqGapEvents.occurrenceCount))
+        .limit(limit);
+      
+      return gaps;
+    } catch (error) {
+      console.error('[AI Brain] Get top gaps error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Advanced FAQ search with similarity scoring
+   */
+  private async searchFAQsAdvanced(query: string): Promise<Array<HelposFaq & { similarityScore: number }>> {
+    try {
+      const faqs = await db.select()
+        .from(helposFaqs)
+        .where(eq(helposFaqs.isPublished, true))
+        .limit(50);
+      
+      const queryLower = query.toLowerCase();
+      const queryWords = new Set(queryLower.split(/\s+/).filter(w => w.length > 2));
+      const normalizedQuery = this.normalizeText(query);
+      
+      const scored = faqs.map(faq => {
+        const questionLower = (faq.question || '').toLowerCase();
+        const questionWordsArr = questionLower.split(/\s+/).filter(w => w.length > 2);
+        const questionWords = new Set(questionWordsArr);
+        
+        // Jaccard similarity for word overlap
+        const queryWordsArr = Array.from(queryWords);
+        const intersectionArr = queryWordsArr.filter(x => questionWords.has(x));
+        const unionArr = Array.from(new Set([...queryWordsArr, ...questionWordsArr]));
+        const jaccardScore = unionArr.length > 0 ? intersectionArr.length / unionArr.length : 0;
+        
+        // Exact substring matching bonus
+        const exactBonus = questionLower.includes(normalizedQuery) ? 0.3 : 0;
+        
+        // Calculate final similarity score (0-1)
+        const similarityScore = Math.min(jaccardScore + exactBonus, 1);
+        
+        return { ...faq, similarityScore };
+      }).filter(f => f.similarityScore > 0.1)
+        .sort((a, b) => b.similarityScore - a.similarityScore);
+      
+      return scored.slice(0, 10);
+    } catch (error) {
+      console.error('[AI Brain] Advanced FAQ search error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Normalize text for comparison
+   */
+  private normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Categorize question based on keywords
+   */
+  private categorizeQuestion(question: string): string {
+    const q = question.toLowerCase();
+    if (q.includes('price') || q.includes('cost') || q.includes('pay') || q.includes('bill') || q.includes('invoice')) return 'billing';
+    if (q.includes('login') || q.includes('password') || q.includes('account') || q.includes('sign')) return 'account';
+    if (q.includes('schedule') || q.includes('shift') || q.includes('time') || q.includes('calendar')) return 'scheduling';
+    if (q.includes('employee') || q.includes('staff') || q.includes('team') || q.includes('worker')) return 'workforce';
+    if (q.includes('report') || q.includes('analytics') || q.includes('data')) return 'reporting';
+    if (q.includes('how') || q.includes('what') || q.includes('tutorial')) return 'features';
+    if (q.includes('error') || q.includes('bug') || q.includes('issue') || q.includes('problem')) return 'technical';
+    return 'general';
+  }
+
+  /**
+   * Extract relevant tags from question and answer
+   */
+  private extractTags(question: string, answer: string): string[] {
+    const combined = `${question} ${answer}`.toLowerCase();
+    const tags = new Set<string>();
+    
+    // Feature-based tags
+    if (combined.includes('schedule')) tags.add('scheduling');
+    if (combined.includes('payroll')) tags.add('payroll');
+    if (combined.includes('invoice')) tags.add('invoicing');
+    if (combined.includes('employee')) tags.add('employees');
+    if (combined.includes('client')) tags.add('clients');
+    if (combined.includes('report')) tags.add('reports');
+    if (combined.includes('ai') || combined.includes('automat')) tags.add('ai-features');
+    if (combined.includes('mobile')) tags.add('mobile');
+    if (combined.includes('integrat')) tags.add('integrations');
+    
+    // Source tag
+    tags.add('auto-learned');
+    
+    return Array.from(tags).slice(0, 10);
   }
 
   /**
@@ -487,12 +898,17 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
       });
 
       if (requiresApproval) {
+        // Include week dates in aiResponse since scheduleProposals doesn't have separate date columns
+        const aiResponseWithDates = {
+          ...scheduleResult,
+          weekStartDate: weekStart.toISOString(),
+          weekEndDate: weekEnd.toISOString()
+        };
+        
         await db.insert(scheduleProposals).values({
           workspaceId,
           createdBy: userId,
-          weekStartDate: weekStart,
-          weekEndDate: weekEnd,
-          aiResponse: scheduleResult,
+          aiResponse: aiResponseWithDates,
           confidence: confidencePercent,
           status: 'pending',
         });
@@ -509,7 +925,7 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
               clientId: assignment.clientId || null,
               startTime: new Date(assignment.startTime),
               endTime: new Date(assignment.endTime),
-              status: 'confirmed',
+              status: 'scheduled', // Valid status from shiftStatusEnum
               aiGenerated: true,
               aiConfidenceScore: String(assignment.confidence || confidence),
               title: assignment.position || 'AI Scheduled Shift',

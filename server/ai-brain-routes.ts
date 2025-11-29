@@ -324,22 +324,15 @@ aiBrainRouter.post('/chat', isAuthenticated, async (req: Request, res: Response)
 });
 
 /**
- * GET /api/ai-brain/faqs - Get FAQs for workspace
+ * GET /api/ai-brain/faqs - Get FAQs (global knowledge base)
  */
 aiBrainRouter.get('/faqs', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.user?.currentWorkspaceId;
-    
-    const conditions = [eq(helposFaqs.isActive, true)];
-    if (workspaceId) {
-      conditions.push(eq(helposFaqs.workspaceId, workspaceId));
-    }
-    
+    // FAQs are global (not workspace-scoped)
     const faqs = await db
       .select()
       .from(helposFaqs)
-      .where(and(...conditions))
+      .where(eq(helposFaqs.isPublished, true))
       .orderBy(desc(helposFaqs.helpfulCount))
       .limit(50);
     
@@ -461,7 +454,7 @@ aiBrainRouter.post('/checkpoints/:id/resume', isAuthenticated, async (req: Reque
       .limit(1);
 
     const creditsNeeded = (checkpoint as any).creditsRequired || 0;
-    const currentBalance = credits?.currentCredits || 0;
+    const currentBalance = credits?.currentBalance || 0;
 
     if (currentBalance < creditsNeeded) {
       return res.status(400).json({ 
@@ -518,5 +511,316 @@ aiBrainRouter.get('/global-patterns', isAuthenticated, async (req: Request, res:
   } catch (error: any) {
     console.error('Error getting global patterns:', error);
     res.status(500).json({ error: 'Failed to get global patterns' });
+  }
+});
+
+// ============================================================================
+// FAQ GOVERNANCE ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/ai-brain/gaps - Get top FAQ gap events (unanswered questions)
+ */
+aiBrainRouter.get('/gaps', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const gaps = await aiBrainService.getTopGaps(limit);
+    
+    res.json({
+      gaps,
+      total: gaps.length,
+      message: 'These are questions that users asked but we couldn\'t answer well'
+    });
+  } catch (error: any) {
+    console.error('Error getting FAQ gaps:', error);
+    res.status(500).json({ error: 'Failed to get FAQ gaps' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/gaps/:id/resolve - Resolve a gap by creating/updating FAQ
+ */
+aiBrainRouter.post('/gaps/:id/resolve', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const { id } = req.params;
+    const { answer, category } = req.body;
+    
+    if (!answer) {
+      return res.status(400).json({ error: 'Answer is required' });
+    }
+    
+    // Get the gap event
+    const [gap] = await db
+      .select()
+      .from(require('@shared/schema').faqGapEvents)
+      .where(eq(require('@shared/schema').faqGapEvents.id, id))
+      .limit(1);
+    
+    if (!gap) {
+      return res.status(404).json({ error: 'Gap event not found' });
+    }
+    
+    // Create FAQ from gap
+    const [newFaq] = await db.insert(helposFaqs).values({
+      question: gap.question,
+      answer: answer.substring(0, 2000),
+      category: category || gap.suggestedCategory || 'general',
+      sourceType: 'gap_detection',
+      sourceId: id,
+      sourceContext: { 
+        gapEventId: id, 
+        occurrenceCount: gap.occurrenceCount,
+        resolvedBy: userId 
+      },
+      status: 'published',
+      isPublished: true,
+      confidenceScore: 100,
+      version: 1
+    }).returning();
+    
+    // Mark gap as resolved
+    await db.update(require('@shared/schema').faqGapEvents)
+      .set({
+        status: 'faq_created',
+        resolvedFaqId: newFaq.id,
+        resolvedAt: new Date(),
+        resolvedBy: userId || null,
+        resolutionNotes: `FAQ ${newFaq.id} created`,
+        updatedAt: new Date()
+      })
+      .where(eq(require('@shared/schema').faqGapEvents.id, id));
+    
+    res.json({ 
+      success: true, 
+      faq: newFaq, 
+      message: `FAQ created from gap that occurred ${gap.occurrenceCount} times`
+    });
+  } catch (error: any) {
+    console.error('Error resolving gap:', error);
+    res.status(500).json({ error: 'Failed to resolve gap' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/faqs/stale - Get stale FAQs that need review
+ */
+aiBrainRouter.get('/faqs/stale', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const staleFaqs = await aiBrainService.detectStaleFaqs();
+    
+    res.json({
+      faqs: staleFaqs,
+      total: staleFaqs.length,
+      message: 'These FAQs may be outdated and need review'
+    });
+  } catch (error: any) {
+    console.error('Error getting stale FAQs:', error);
+    res.status(500).json({ error: 'Failed to get stale FAQs' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/faqs/:id/verify - Mark an FAQ as verified/reviewed
+ */
+aiBrainRouter.post('/faqs/:id/verify', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const { id } = req.params;
+    const { notes, status } = req.body;
+    
+    await db.update(helposFaqs)
+      .set({
+        lastVerifiedAt: new Date(),
+        lastVerifiedBy: userId || null,
+        verificationNotes: notes || null,
+        status: status || 'published',
+        updatedAt: new Date()
+      })
+      .where(eq(helposFaqs.id, id));
+    
+    res.json({ 
+      success: true, 
+      message: 'FAQ verified successfully' 
+    });
+  } catch (error: any) {
+    console.error('Error verifying FAQ:', error);
+    res.status(500).json({ error: 'Failed to verify FAQ' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/faqs/:id/versions - Get version history for an FAQ
+ */
+aiBrainRouter.get('/faqs/:id/versions', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const versions = await db
+      .select()
+      .from(require('@shared/schema').faqVersions)
+      .where(eq(require('@shared/schema').faqVersions.faqId, id))
+      .orderBy(desc(require('@shared/schema').faqVersions.version));
+    
+    res.json({ versions });
+  } catch (error: any) {
+    console.error('Error getting FAQ versions:', error);
+    res.status(500).json({ error: 'Failed to get FAQ versions' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/faqs/:id/update - Update an FAQ with version control
+ */
+aiBrainRouter.post('/faqs/:id/update', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const { id } = req.params;
+    const { answer, question, category, changeReason } = req.body;
+    
+    // Get current FAQ
+    const [currentFaq] = await db
+      .select()
+      .from(helposFaqs)
+      .where(eq(helposFaqs.id, id))
+      .limit(1);
+    
+    if (!currentFaq) {
+      return res.status(404).json({ error: 'FAQ not found' });
+    }
+    
+    // Save version history
+    await db.insert(require('@shared/schema').faqVersions).values({
+      faqId: id,
+      version: currentFaq.version || 1,
+      question: currentFaq.question,
+      answer: currentFaq.answer,
+      category: currentFaq.category,
+      tags: currentFaq.tags || [],
+      changedBy: userId || null,
+      changedByAi: false,
+      changeType: 'updated',
+      changeReason: changeReason || 'Manual update',
+      sourceType: currentFaq.sourceType as any,
+      sourceId: currentFaq.sourceId
+    });
+    
+    // Update FAQ
+    const [updatedFaq] = await db.update(helposFaqs)
+      .set({
+        question: question || currentFaq.question,
+        answer: answer || currentFaq.answer,
+        category: category || currentFaq.category,
+        version: sql`COALESCE(${helposFaqs.version}, 1) + 1`,
+        changeReason: changeReason || null,
+        updatedAt: new Date(),
+        updatedBy: userId || null,
+        status: 'published',
+        lastVerifiedAt: new Date(),
+        lastVerifiedBy: userId || null
+      })
+      .where(eq(helposFaqs.id, id))
+      .returning();
+    
+    res.json({ 
+      success: true, 
+      faq: updatedFaq,
+      message: `FAQ updated to version ${updatedFaq.version}`
+    });
+  } catch (error: any) {
+    console.error('Error updating FAQ:', error);
+    res.status(500).json({ error: 'Failed to update FAQ' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/tickets/:id/learn - Learn from a resolved ticket
+ */
+aiBrainRouter.post('/tickets/:id/learn', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    await aiBrainService.learnFromTicket(id);
+    
+    res.json({ 
+      success: true, 
+      message: 'Successfully learned from ticket resolution' 
+    });
+  } catch (error: any) {
+    console.error('Error learning from ticket:', error);
+    res.status(500).json({ error: 'Failed to learn from ticket' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/gaps/record - Record a gap event (for low-confidence AI responses)
+ */
+aiBrainRouter.post('/gaps/record', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { question, sourceType, sourceId, suggestedAnswer, confidence, context } = req.body;
+    
+    if (!question || !sourceType) {
+      return res.status(400).json({ error: 'question and sourceType are required' });
+    }
+    
+    const gapId = await aiBrainService.recordGapEvent(question, {
+      sourceType,
+      sourceId,
+      suggestedAnswer,
+      confidence,
+      context
+    });
+    
+    res.json({ 
+      success: true, 
+      gapId,
+      message: 'Gap event recorded for future FAQ creation' 
+    });
+  } catch (error: any) {
+    console.error('Error recording gap:', error);
+    res.status(500).json({ error: 'Failed to record gap event' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/learning/stats - Get FAQ learning statistics
+ */
+aiBrainRouter.get('/learning/stats', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    // Get FAQ stats
+    const faqStats = await db.select({
+      total: sql<number>`COUNT(*)`,
+      published: sql<number>`COUNT(*) FILTER (WHERE ${helposFaqs.isPublished} = true)`,
+      aiLearned: sql<number>`COUNT(*) FILTER (WHERE ${helposFaqs.sourceType} = 'ai_learned')`,
+      ticketResolution: sql<number>`COUNT(*) FILTER (WHERE ${helposFaqs.sourceType} = 'ticket_resolution')`,
+      needsReview: sql<number>`COUNT(*) FILTER (WHERE ${helposFaqs.status} = 'needs_review')`,
+      avgConfidence: sql<number>`AVG(${helposFaqs.confidenceScore})`,
+      totalMatches: sql<number>`SUM(${helposFaqs.matchCount})`,
+      totalResolutions: sql<number>`SUM(${helposFaqs.resolvedCount})`
+    }).from(helposFaqs);
+    
+    // Get gap stats
+    const gapStats = await db.select({
+      openGaps: sql<number>`COUNT(*) FILTER (WHERE ${require('@shared/schema').faqGapEvents.status} = 'open')`,
+      resolvedGaps: sql<number>`COUNT(*) FILTER (WHERE ${require('@shared/schema').faqGapEvents.status} != 'open')`,
+      totalOccurrences: sql<number>`SUM(${require('@shared/schema').faqGapEvents.occurrenceCount})`
+    }).from(require('@shared/schema').faqGapEvents);
+    
+    res.json({
+      faqs: faqStats[0] || {},
+      gaps: gapStats[0] || {},
+      health: {
+        coverageScore: faqStats[0]?.totalMatches > 0 
+          ? Math.min(100, (faqStats[0].totalResolutions / faqStats[0].totalMatches) * 100) 
+          : 0,
+        learningActive: true
+      }
+    });
+  } catch (error: any) {
+    console.error('Error getting learning stats:', error);
+    res.status(500).json({ error: 'Failed to get learning stats' });
   }
 });
