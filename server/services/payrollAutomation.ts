@@ -479,6 +479,105 @@ export class PayrollAutomationEngine {
   }
 
   /**
+   * Calculate FLSA-compliant weighted average overtime for multi-rate employees
+   * 
+   * When an employee works at multiple pay rates within the same workweek,
+   * FLSA requires overtime to be calculated using a weighted average of all rates.
+   * 
+   * Formula:
+   * 1. Calculate total straight-time earnings (sum of hours × rate for each job)
+   * 2. Calculate total hours worked
+   * 3. Weighted average rate = Total Straight-Time Earnings / Total Hours
+   * 4. OT Premium = (Weighted Average Rate × 0.5) × OT Hours (the "half-time" method)
+   *    OR Regular OT = Weighted Average Rate × 1.5 × OT Hours
+   * 
+   * @param rateHours - Array of {rate, hours} for each different pay rate worked
+   * @param weeklyThreshold - Weekly overtime threshold (default 40)
+   * @returns FLSA-compliant pay breakdown with weighted average OT
+   */
+  static calculateFLSAWeightedAverageOvertime(
+    rateHours: Array<{ rate: number; hours: number }>,
+    weeklyThreshold: number = 40
+  ): {
+    totalHours: number;
+    regularHours: number;
+    overtimeHours: number;
+    straightTimePay: number;
+    weightedAverageRate: number;
+    overtimePremium: number;
+    totalPay: number;
+    rateBreakdown: Array<{ rate: number; hours: number; pay: number }>;
+  } {
+    // Calculate totals across all rates
+    const totalHours = rateHours.reduce((sum, rh) => sum + rh.hours, 0);
+    const straightTimePay = rateHours.reduce((sum, rh) => sum + (rh.rate * rh.hours), 0);
+    
+    // Calculate weighted average rate
+    const weightedAverageRate = totalHours > 0 ? straightTimePay / totalHours : 0;
+    
+    // Determine regular and overtime hours
+    const regularHours = Math.min(totalHours, weeklyThreshold);
+    const overtimeHours = Math.max(0, totalHours - weeklyThreshold);
+    
+    // Calculate overtime premium using "half-time" method
+    // This is the FLSA-approved method: pay straight time for all hours,
+    // then add 0.5x the weighted average rate for each OT hour
+    const overtimePremium = overtimeHours * (weightedAverageRate * 0.5);
+    
+    // Total pay = straight time pay + OT premium
+    const totalPay = straightTimePay + overtimePremium;
+    
+    // Build rate breakdown for audit trail
+    const rateBreakdown = rateHours.map(rh => ({
+      rate: rh.rate,
+      hours: rh.hours,
+      pay: rh.rate * rh.hours,
+    }));
+    
+    console.log(`[AI Payroll™] FLSA Weighted Average OT: ${totalHours} hrs across ${rateHours.length} rates, ` +
+      `WAR=$${weightedAverageRate.toFixed(2)}/hr, OT Premium=$${overtimePremium.toFixed(2)}`);
+    
+    return {
+      totalHours: parseFloat(totalHours.toFixed(2)),
+      regularHours: parseFloat(regularHours.toFixed(2)),
+      overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+      straightTimePay: parseFloat(straightTimePay.toFixed(2)),
+      weightedAverageRate: parseFloat(weightedAverageRate.toFixed(2)),
+      overtimePremium: parseFloat(overtimePremium.toFixed(2)),
+      totalPay: parseFloat(totalPay.toFixed(2)),
+      rateBreakdown,
+    };
+  }
+
+  /**
+   * Detect if an employee has multiple pay rates in their time entries
+   * Returns true if employee worked at more than one distinct rate
+   */
+  static hasMultiplePayRates(entries: Array<{ payRate: number }>): boolean {
+    const uniqueRates = new Set(entries.map(e => e.payRate));
+    return uniqueRates.size > 1;
+  }
+
+  /**
+   * Aggregate hours by pay rate for FLSA weighted average calculation
+   */
+  static aggregateHoursByRate(
+    entries: Array<{ payRate: number; totalHours: number }>
+  ): Array<{ rate: number; hours: number }> {
+    const rateMap = new Map<number, number>();
+    
+    for (const entry of entries) {
+      const currentHours = rateMap.get(entry.payRate) || 0;
+      rateMap.set(entry.payRate, currentHours + entry.totalHours);
+    }
+    
+    return Array.from(rateMap.entries()).map(([rate, hours]) => ({
+      rate,
+      hours,
+    }));
+  }
+
+  /**
    * Calculate local/city withholding tax - EMPLOYEE TAX
    * Some cities and localities require income tax withholding
    * 
