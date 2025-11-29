@@ -239,7 +239,7 @@ export default function HRBenefits() {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                       <FormField
                         control={form.control}
                         name="employeeContribution"
@@ -307,8 +307,8 @@ export default function HRBenefits() {
             </Dialog>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card data-testid="card-enrolled">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-cols-1">
+            <Card data-testid="card-enrolled" className="mobile-compact-p">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Enrolled Employees</CardTitle>
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
@@ -319,7 +319,7 @@ export default function HRBenefits() {
               </CardContent>
             </Card>
 
-            <Card data-testid="card-employer-cost">
+            <Card data-testid="card-employer-cost" className="mobile-compact-p">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Employer Cost</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -332,7 +332,7 @@ export default function HRBenefits() {
               </CardContent>
             </Card>
 
-            <Card data-testid="card-employee-cost">
+            <Card data-testid="card-employee-cost" className="mobile-compact-p">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Employee Cost</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -362,10 +362,10 @@ export default function HRBenefits() {
                   {benefits.map((benefit) => (
                     <div 
                       key={benefit.id} 
-                      className="flex items-center justify-between gap-4 p-4 rounded-lg border bg-card hover-elevate"
+                      className="flex items-center justify-between gap-4 p-4 rounded-lg border bg-card hover-elevate mobile-flex-col mobile-p-3"
                       data-testid={`benefit-${benefit.id}`}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 mobile-w-full">
                         <div className="p-2 rounded-lg bg-primary/10">
                           {getBenefitIcon(benefit.benefitType)}
                         </div>
@@ -376,8 +376,8 @@ export default function HRBenefits() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
+                      <div className="flex items-center gap-4 mobile-w-full mobile-flex-col">
+                        <div className="text-right mobile-text-sm">
                           <div className="text-sm font-medium">
                             Employer: ${benefit.employerContribution.toFixed(2)}
                           </div>

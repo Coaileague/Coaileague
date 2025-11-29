@@ -117,20 +117,20 @@ export default function Analytics() {
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Branded Header with Logo */}
         <div className="mb-8">
-          <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-3xl p-6 sm:p-8">
-            <div className="flex flex-wrap items-center gap-4">
+          <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-3xl p-6 sm:p-8 mobile-compact-p">
+            <div className="flex flex-wrap items-center gap-4 mobile-flex-col mobile-gap-3">
               <div className="transform hover:scale-105 transition-transform duration-300">
                 <CoAIleagueAFLogo size="lg" variant="icon" />
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[200px] mobile-text-scale">
                 <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-1" data-testid="heading-analytics">
                   Analytics Dashboard
                 </h2>
                 <p className="text-gray-600 text-sm sm:text-base">
-                  📊 Track your business performance and usage metrics
+                  Track your business performance and usage metrics
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mobile-w-full mobile-justify-between">
                 <Button
                   variant="outline"
                   size="sm"
@@ -157,9 +157,9 @@ export default function Analytics() {
         </div>
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mobile-cols-1 mobile-gap-3">
           {/* Total Revenue */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-primary/10 to-blue-500/5 border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20" data-testid="card-revenue">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-primary/10 to-blue-500/5 border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 mobile-compact-p" data-testid="card-revenue">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-muted/20 rounded-xl group-hover:scale-110 transition-transform">
                 <DollarSign className="w-6 h-6 text-primary" />
@@ -174,7 +174,7 @@ export default function Analytics() {
           </div>
 
           {/* Hours Worked */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-hours">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 mobile-compact-p" data-testid="card-hours">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6 text-blue-400" />
@@ -189,7 +189,7 @@ export default function Analytics() {
           </div>
 
           {/* Active Employees */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-active-employees">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 mobile-compact-p" data-testid="card-active-employees">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
                 <UserCheck className="w-6 h-6 text-blue-700 dark:text-blue-400 animate-pulse" />
@@ -204,7 +204,7 @@ export default function Analytics() {
           </div>
 
           {/* Active Clients */}
-          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20" data-testid="card-active-clients">
+          <div className="group backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 mobile-compact-p" data-testid="card-active-clients">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
                 <Users className="w-6 h-6 text-blue-700 dark:text-blue-400" />
@@ -220,9 +220,9 @@ export default function Analytics() {
         </div>
 
         {/* Detailed Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mobile-cols-1 mobile-gap-4">
           {/* Workspace Usage */}
-          <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-2xl overflow-hidden" data-testid="card-usage">
+          <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-2xl overflow-hidden mobile-card-tight" data-testid="card-usage">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -281,7 +281,7 @@ export default function Analytics() {
           </div>
 
           {/* Invoice Statistics */}
-          <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-2xl overflow-hidden" data-testid="card-invoice-stats">
+          <div className="backdrop-blur-xl bg-white/80 border border-gray-200 rounded-2xl overflow-hidden mobile-card-tight" data-testid="card-invoice-stats">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />

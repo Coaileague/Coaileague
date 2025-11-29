@@ -314,7 +314,7 @@ export default function Employees() {
 
   const pageContent = (
     <div className="space-y-4 sm:space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mobile-flex-col">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-employees-title">
                 Employees
@@ -535,7 +535,7 @@ export default function Employees() {
                   <p className="text-sm text-orange-800 dark:text-orange-200 mt-1">
                     These employees completed onboarding but need pay rates set before they can be activated for work. Click "Approve & Set Pay Rate" to review and activate them.
                   </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3 mobile-gap-2">
                     {pendingApprovals.map(emp => (
                       <Badge key={emp.id} variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
                         {emp.firstName} {emp.lastName}
@@ -549,9 +549,9 @@ export default function Employees() {
         )}
 
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
+              <Card key={i} className="mobile-card-tight">
                 <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
                   <Skeleton className="h-12 w-12 rounded-full" />
                   <div className="flex-1 space-y-2">
@@ -586,10 +586,10 @@ export default function Employees() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
             {filteredEmployees.map((employee) => {
               const employeeCard = (
-              <Card key={employee.id} className="hover-elevate" data-testid={`card-employee-${employee.id}`}>
+              <Card key={employee.id} className="hover-elevate mobile-card-tight" data-testid={`card-employee-${employee.id}`}>
                 <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
                   <Avatar className="h-12 w-12">
                     <AvatarFallback style={{ backgroundColor: employee.color || '#3b82f6' }}>

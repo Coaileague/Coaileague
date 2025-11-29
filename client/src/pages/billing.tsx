@@ -356,9 +356,9 @@ export default function Billing() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mobile-cols-1 mobile-gap-4">
             {/* Current Plan */}
-            <Card>
+            <Card className="mobile-card-tight">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Crown className="h-4 w-4 text-primary" />
@@ -389,7 +389,7 @@ export default function Billing() {
             </Card>
 
             {/* Employee Usage */}
-            <Card>
+            <Card className="mobile-card-tight">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
@@ -418,7 +418,7 @@ export default function Billing() {
             </Card>
 
             {/* Account Balance */}
-            <Card>
+            <Card className="mobile-card-tight">
               <CardHeader>
                 <CardTitle className="text-sm font-medium">AI Token Balance</CardTitle>
               </CardHeader>
@@ -433,7 +433,7 @@ export default function Billing() {
             </Card>
 
             {/* Next Invoice */}
-            <Card>
+            <Card className="mobile-card-tight">
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Next Invoice</CardTitle>
               </CardHeader>
@@ -462,9 +462,9 @@ export default function Billing() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : Array.isArray(activeAddons) && activeAddons.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
                   {activeAddons.map((addon: any) => (
-                    <div key={addon.id} className="flex items-center gap-3 p-3 rounded-md border" data-testid={`addon-active-${addon.id}`}>
+                    <div key={addon.id} className="flex items-center gap-3 p-3 rounded-md border mobile-compact-p" data-testid={`addon-active-${addon.id}`}>
                       <Zap className="h-5 w-5 text-primary" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{addon.name}</div>
@@ -510,7 +510,7 @@ export default function Billing() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-3 mobile-cols-1">
                   <div>
                     <p className="text-sm text-muted-foreground">AI Credits</p>
                     <p className="text-lg font-semibold">
@@ -574,7 +574,7 @@ export default function Billing() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : pricingData?.tiers ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mobile-cols-1 mobile-gap-4">
               {pricingData.tiers.map((tier) => {
                 const currentTier = (subscriptionDetails?.tier || workspace?.subscriptionTier || 'free').toLowerCase();
                 const isCurrent = tier.id.toLowerCase() === currentTier;
@@ -695,10 +695,10 @@ export default function Billing() {
                   {invoices.map((invoice: any) => (
                     <div 
                       key={invoice.id} 
-                      className="flex items-center justify-between p-4 rounded-md border hover-elevate"
+                      className="flex items-center justify-between p-4 rounded-md border hover-elevate mobile-flex-col mobile-gap-3"
                       data-testid={`invoice-${invoice.id}`}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 mobile-w-full">
                         <div className="p-2 rounded-md bg-muted">
                           <FileText className="h-5 w-5 text-muted-foreground" />
                         </div>
@@ -714,7 +714,7 @@ export default function Billing() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 mobile-w-full mobile-justify-between">
                         <div className="text-right">
                           <div className="font-bold">${invoice.totalAmount.toFixed(2)}</div>
                           <Badge variant={invoice.status === "paid" ? "default" : invoice.status === "pending" ? "secondary" : "destructive"}>
@@ -754,8 +754,8 @@ export default function Billing() {
               ) : (
                 <div className="space-y-6">
                   {/* Usage Summary */}
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="p-4 rounded-md border">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mobile-cols-1">
+                    <div className="p-4 rounded-md border mobile-compact-p">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Brain className="h-4 w-4" />
                         AI Records™
@@ -763,7 +763,7 @@ export default function Billing() {
                       <div className="text-2xl font-bold">{(usageData as any)?.recordOSTokens?.toLocaleString() || "0"}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
-                    <div className="p-4 rounded-md border">
+                    <div className="p-4 rounded-md border mobile-compact-p">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <TrendingUp className="h-4 w-4" />
                         AI Analytics™
@@ -771,7 +771,7 @@ export default function Billing() {
                       <div className="text-2xl font-bold">{(usageData as any)?.insightOSTokens?.toLocaleString() || "0"}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
-                    <div className="p-4 rounded-md border">
+                    <div className="p-4 rounded-md border mobile-compact-p">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Calendar className="h-4 w-4" />
                         AI Scheduling™
@@ -779,7 +779,7 @@ export default function Billing() {
                       <div className="text-2xl font-bold">{(usageData as any)?.scheduleOSTokens?.toLocaleString() || "0"}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
-                    <div className="p-4 rounded-md border">
+                    <div className="p-4 rounded-md border mobile-compact-p">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Zap className="h-4 w-4" />
                         Total
@@ -817,7 +817,7 @@ export default function Billing() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : Array.isArray(addons) && addons.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
                   {addons.map((addon: any) => {
                     const isActive = Array.isArray(activeAddons) && activeAddons.some((a: any) => a.addonId === addon.id);
                     return (

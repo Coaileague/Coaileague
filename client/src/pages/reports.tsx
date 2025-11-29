@@ -586,8 +586,8 @@ export default function ReportsPage() {
           </div>
         </div>
         {/* Mobile-optimized Header Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-          <Card className="mobile-card-enter">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mobile-cols-1">
+          <Card className="mobile-card-enter mobile-card-tight">
             <CardHeader className="flex flex-row items-center justify-between gap-1 sm:gap-2 space-y-0 pb-1.5 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium truncate">Active Templates</CardTitle>
               <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
@@ -600,7 +600,7 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          <Card className="mobile-card-enter">
+          <Card className="mobile-card-enter mobile-card-tight">
             <CardHeader className="flex flex-row items-center justify-between gap-1 sm:gap-2 space-y-0 pb-1.5 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium truncate">Pending Review</CardTitle>
               <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 flex-shrink-0" />
@@ -613,7 +613,7 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          <Card className="mobile-card-enter">
+          <Card className="mobile-card-enter mobile-card-tight">
             <CardHeader className="flex flex-row items-center justify-between gap-1 sm:gap-2 space-y-0 pb-1.5 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium truncate">Approved</CardTitle>
               <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
@@ -626,7 +626,7 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          <Card className="mobile-card-enter">
+          <Card className="mobile-card-enter mobile-card-tight">
             <CardHeader className="flex flex-row items-center justify-between gap-1 sm:gap-2 space-y-0 pb-1.5 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium truncate">Total Reports</CardTitle>
               <ClipboardCheck className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
@@ -690,7 +690,7 @@ export default function ReportsPage() {
                     {templates.map((template) => (
                       <div
                         key={template.id}
-                        className="flex items-start justify-between p-4 border rounded-md hover-elevate"
+                        className="flex items-start justify-between p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
                         data-testid={`template-${template.id}`}
                       >
                         <div className="flex-1 space-y-1">
@@ -774,7 +774,7 @@ export default function ReportsPage() {
                     {submissions.map((submission) => (
                       <div
                         key={submission.id}
-                        className="flex items-start justify-between p-4 border rounded-md hover-elevate"
+                        className="flex items-start justify-between p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
                         data-testid={`submission-${submission.id}`}
                       >
                         <div className="flex-1 space-y-1">
@@ -856,7 +856,7 @@ export default function ReportsPage() {
                     {pendingReports.map((submission) => (
                       <div
                         key={submission.id}
-                        className="flex items-start justify-between p-4 border rounded-md hover-elevate"
+                        className="flex items-start justify-between p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
                         data-testid={`pending-${submission.id}`}
                       >
                         <div className="flex-1 space-y-1">
@@ -904,8 +904,8 @@ export default function ReportsPage() {
             </DialogHeader>
             {reviewSubmission && (
               <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-md">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="p-4 bg-muted rounded-md mobile-compact-p">
+                  <div className="grid grid-cols-2 gap-2 text-sm mobile-cols-1">
                     <div>
                       <span className="font-medium">Report Number:</span> {reviewSubmission.reportNumber}
                     </div>

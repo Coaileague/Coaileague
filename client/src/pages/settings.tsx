@@ -392,8 +392,8 @@ export default function Settings() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
+          <CardContent className="space-y-6 mobile-compact-p">
+            <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
               <div className="space-y-2">
                 <Label htmlFor="workspaceName">Workspace Name</Label>
                 <Input 
@@ -415,7 +415,7 @@ export default function Settings() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
               <div className="space-y-2">
                 <Label htmlFor="taxId">Tax ID / EIN</Label>
                 <Input 
@@ -546,7 +546,7 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-sm font-medium">Current Plan</span>
@@ -570,7 +570,7 @@ export default function Settings() {
             <Separator />
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Platform Fee Settings</h3>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
                 <div className="space-y-2">
                   <Label htmlFor="platformFee">Platform Fee (%)</Label>
                   <Input 
@@ -621,8 +621,8 @@ export default function Settings() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="space-y-4 mobile-compact-p">
+            <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
               <div>
                 <p className="text-sm font-medium">Invoice Reminders</p>
                 <p className="text-xs text-muted-foreground">
@@ -642,7 +642,7 @@ export default function Settings() {
               </Button>
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
               <div>
                 <p className="text-sm font-medium">Shift Notifications</p>
                 <p className="text-xs text-muted-foreground">
@@ -675,8 +675,8 @@ export default function Settings() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="space-y-4 mobile-compact-p">
+            <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
               <div>
                 <p className="text-sm font-medium">Two-Factor Authentication</p>
                 <p className="text-xs text-muted-foreground">
@@ -709,10 +709,10 @@ export default function Settings() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-8">
+          <CardContent className="space-y-8 mobile-compact-p">
             {/* Smart Billing Automation */}
             <div className="space-y-4" aria-busy={updateInvoicingMutation.isPending}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
                 <div>
                   <h3 className="text-sm font-semibold">Smart Billing Automation</h3>
                   <p className="text-xs text-muted-foreground">Automatically generate invoices from approved time entries</p>
@@ -774,7 +774,7 @@ export default function Settings() {
             
             {/* Auto Payroll Automation */}
             <div className="space-y-4" aria-busy={updatePayrollMutation.isPending}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
                 <div>
                   <h3 className="text-sm font-semibold">Auto Payroll Automation</h3>
                   <p className="text-xs text-muted-foreground">Automatically process payroll on pay period dates</p>
@@ -835,7 +835,7 @@ export default function Settings() {
             
             {/* AI Scheduling Automation */}
             <div className="space-y-4" aria-busy={updateSchedulingMutation.isPending}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
                 <div>
                   <h3 className="text-sm font-semibold">AI Scheduling Automation</h3>
                   <p className="text-xs text-muted-foreground">Automatically generate employee schedules in advance</p>

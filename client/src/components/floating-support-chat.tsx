@@ -79,20 +79,47 @@ export function FloatingSupportChat() {
     isOpen: false
   });
   
+  // Calculate initial position based on screen size (mobile vs desktop)
+  const getInitialPosition = () => {
+    const isMobileScreen = window.innerWidth < 640;
+    const config = CHAT_BUBBLE_CONFIG.positioning;
+    
+    if (isMobileScreen) {
+      // Mobile: position at bottom-right, well below header
+      return {
+        x: Math.max(0, window.innerWidth - config.mobileInitialOffsetX - CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill),
+        y: Math.max(config.topBoundary, window.innerHeight - config.mobileInitialOffsetY)
+      };
+    } else {
+      // Desktop: original positioning
+      return {
+        x: Math.max(0, window.innerWidth - config.initialOffsetX),
+        y: Math.max(config.topBoundary, window.innerHeight - config.initialOffsetY)
+      };
+    }
+  };
+
   // Hydrate from localStorage on mount (browser only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('chat-bubble-state');
+      const topBoundary = CHAT_BUBBLE_CONFIG.positioning.topBoundary;
+      
       if (saved) {
         try {
-          setState(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          // Enforce top boundary to prevent header overlap
+          setState({
+            ...parsed,
+            position: {
+              x: Math.max(0, parsed.position.x),
+              y: Math.max(topBoundary, parsed.position.y)
+            }
+          });
         } catch {
           // Fallback: set position based on viewport
           setState({
-            position: { 
-              x: Math.max(0, window.innerWidth - CHAT_BUBBLE_CONFIG.positioning.initialOffsetX), 
-              y: Math.max(0, window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.initialOffsetY) 
-            },
+            position: getInitialPosition(),
             isMinimized: true,
             isOpen: false
           });
@@ -100,10 +127,7 @@ export function FloatingSupportChat() {
       } else {
         // First time: set position based on viewport
         setState({
-          position: { 
-            x: Math.max(0, window.innerWidth - CHAT_BUBBLE_CONFIG.positioning.initialOffsetX), 
-            y: Math.max(0, window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.initialOffsetY) 
-          },
+          position: getInitialPosition(),
           isMinimized: true,
           isOpen: false
         });
@@ -150,11 +174,12 @@ export function FloatingSupportChat() {
       
       const maxX = window.innerWidth - elementWidth;
       const maxY = window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.maxHeight;
+      const minY = CHAT_BUBBLE_CONFIG.positioning.topBoundary; // Prevent header overlap
       setState(prev => ({
         ...prev,
         position: {
           x: Math.max(0, Math.min(prev.position.x, maxX)),
-          y: Math.max(0, Math.min(prev.position.y, maxY))
+          y: Math.max(minY, Math.min(prev.position.y, maxY))
         }
       }));
     };
@@ -179,8 +204,9 @@ export function FloatingSupportChat() {
       }
       
       const maxX = window.innerWidth - elementWidth;
+      const minY = CHAT_BUBBLE_CONFIG.positioning.topBoundary; // Prevent header overlap
       const newX = Math.max(0, Math.min(e.clientX - dragStartRef.current.x, maxX));
-      const newY = Math.max(0, Math.min(e.clientY - dragStartRef.current.y, window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.bottomBoundary));
+      const newY = Math.max(minY, Math.min(e.clientY - dragStartRef.current.y, window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.bottomBoundary));
       
       setState(prev => ({
         ...prev,
