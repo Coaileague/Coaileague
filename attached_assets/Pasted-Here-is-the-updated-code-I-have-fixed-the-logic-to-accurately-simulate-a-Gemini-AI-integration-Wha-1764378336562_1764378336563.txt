@@ -1,0 +1,508 @@
+Here is the updated code. I have fixed the logic to accurately simulate a Gemini AI integration.
+What I changed to make this "Gemini-Ready" (Mock Mode):
+ * Created a MockGeminiService: I separated the AI logic into a dedicated service object. This structure mirrors exactly how you would call the real Google GenAI SDK later.
+ * Dynamic Intelligence: Instead of random numbers, the "AI" now actually reads the lead data (Budget, Industry) to generate a realistic Score and Analysis (e.g., if the budget is low, it gives a lower score and flags a risk).
+ * Chat Context Awareness: The Chatbot now "knows" which lead you have selected and answers specific questions about them.
+ * Logic Enforcement: I connected the LogicRules so that a low score actually triggers an "Auto-Reject" recommendation.
+You can copy and run this directly.
+import React, { useState, useEffect, useRef } from 'react';
+
+// --- MOCK GEMINI SERVICE ---
+// In production, this would be replaced by the @google/generative-ai SDK
+const MockGeminiService = {
+  analyzeLead: async (lead) => {
+    // Simulating network delay for realism
+    await new Promise(r => setTimeout(r, 2000));
+
+    // LOGIC: Deterministic "Smart" Mocking based on lead data
+    // This simulates Gemini analyzing the text content
+    let baseScore = 75;
+    const risks = [];
+    const strengths = [];
+    
+    // 1. Budget Analysis
+    if (lead.budget === '<$100K') {
+      baseScore -= 20;
+      risks.push('Budget below typical enterprise threshold');
+    } else if (lead.budget === '$1M+') {
+      baseScore += 10;
+      strengths.push('Strong financial backing');
+    }
+
+    // 2. Timeline Analysis
+    if (lead.timeline === 'Immediate') {
+      baseScore += 5;
+      risks.push('Aggressive timeline requires immediate resource allocation');
+    }
+
+    // 3. Technical Analysis (Keyword matching)
+    const techStack = (lead.aiStack || '').toLowerCase();
+    if (techStack.includes('tensorflow') || techStack.includes('pytorch')) {
+      strengths.push('Modern tech stack (PyTorch/TF)');
+    } else if (techStack === '') {
+      risks.push('No existing AI infrastructure defined');
+    }
+
+    // 4. Industry Fit
+    if (['Healthcare AI', 'Financial Services'].includes(lead.industry)) {
+      strengths.push(`High-value ${lead.industry} use case`);
+    }
+
+    // Clamp score 0-100
+    const finalScore = Math.min(Math.max(baseScore + Math.floor(Math.random() * 10 - 5), 10), 99);
+
+    return {
+      score: finalScore,
+      analysis: {
+        summary: `Analyzed ${lead.orgName} using Gemini 2.5 Flash context window. The proposed use case regarding ${lead.useCase.substring(0, 30)}... shows ${finalScore > 70 ? 'strong' : 'moderate'} promise.`,
+        strengths: strengths.length > 0 ? strengths : ['Standard application'],
+        risks: risks.length > 0 ? risks : ['None identified'],
+        recommendedAction: finalScore < 50 ? 'reject' : finalScore > 80 ? 'onboarding' : 'human_review'
+      }
+    };
+  },
+
+  chat: async (input, context) => {
+    await new Promise(r => setTimeout(r, 1200));
+    const lowerInput = input.toLowerCase();
+    
+    // Simulating Gemini's ability to read the context (the selected lead)
+    if (context?.selectedLead) {
+      const l = context.selectedLead;
+      if (lowerInput.includes('risk') || lowerInput.includes('concern')) {
+        return `**Gemini Analysis:**\nBased on the profile for **${l.orgName}**, the primary risks are:\n${l.analysis?.risks.map(r => `* ${r}`).join('\n') || '* No specific risks flagged yet.'}`;
+      }
+      if (lowerInput.includes('email') || lowerInput.includes('draft')) {
+        return `**Draft Outreach for ${l.contact}:**\n\n"Hi ${l.contact.split(' ')[0]},\n\nI reviewed your RFP for ${l.orgName} regarding ${l.useCase}. Given your timeline of ${l.timeline}, we should discuss how our platform fits your needs...\n\n[Gemini: Draft saved to drafts folder]"`;
+      }
+    }
+
+    // General Pipeline queries
+    if (lowerInput.includes('status') || lowerInput.includes('summary')) {
+      return `**Pipeline Report:**\nCurrently tracking **${context.totalLeads}** active RFPs.\n\n* **Attention Needed:** ${context.needsReviewCount} leads waiting in Human Review.\n* **High Priority:** ${context.highValueCount} leads with budget >$1M.`;
+    }
+
+    return `**Gemini:** I can help you analyze **${context?.selectedLead?.orgName || 'your pipeline'}**. Try asking about risks, drafting emails, or prioritizing leads.`;
+  }
+};
+
+// --- CONFIGURATION ---
+
+const LogicRules = [
+  { id: 'autoQualify', name: 'Auto-Qualify', desc: 'Score ≥80 → Advance', color: '#22c55e' },
+  { id: 'autoReject', name: 'Auto-Reject', desc: 'Score <50 → Reject', color: '#ef4444' },
+  { id: 'escalate', name: 'Escalate', desc: '50-79 → Human Review', color: '#f59e0b' },
+  { id: 'fastTrack', name: 'Fast-Track', desc: 'Member referral → Priority', color: '#6366f1' }
+];
+
+const Stages = [
+  { id: 'new', label: 'New', icon: '📥', color: '#6366f1' },
+  { id: 'ai_review', label: 'AI Review', icon: '🧠', color: '#8b5cf6' },
+  { id: 'human_review', label: 'Human Review', icon: '👤', color: '#f59e0b' },
+  { id: 'outreach', label: 'Outreach', icon: '📧', color: '#10b981' },
+  { id: 'negotiation', label: 'Negotiation', icon: '🤝', color: '#3b82f6' },
+  { id: 'rejected', label: 'Rejected', icon: '✕', color: '#ef4444' }, // Added Rejected Stage
+  { id: 'onboarding', label: 'Onboarding', icon: '🚀', color: '#22c55e' }
+];
+
+const initialLeads = [
+  {
+    id: 1, orgName: 'NovaTech Solutions', industry: 'Healthcare AI',
+    contact: 'Sarah Chen', email: 'sarah@novatech.ai', phone: '+1 555-0123',
+    size: '500-1000', budget: '$500K-1M', timeline: 'Q1 2026',
+    useCase: 'Medical imaging diagnostics', aiStack: 'TensorFlow, PyTorch', 
+    referral: true, stage: 'ai_review', score: 87,
+    analysis: { summary: 'Strong healthcare AI candidate.', strengths: ['Market presence', 'Technical expertise'], risks: [] }
+  },
+  {
+    id: 4, orgName: 'DataStream Corp', industry: 'Enterprise Software',
+    contact: 'James Liu', email: 'jliu@datastream.io', phone: '+1 555-1234',
+    size: '100-500', budget: '<$100K', timeline: 'Q1 2026',
+    useCase: 'Simple document storage', aiStack: '', 
+    referral: false, stage: 'new', score: null, analysis: null
+  }
+];
+
+export default function CoAIleagueRFP() {
+  const [leads, setLeads] = useState(initialLeads);
+  const [selected, setSelected] = useState(null);
+  const [view, setView] = useState('pipeline');
+  const [showModal, setShowModal] = useState(false);
+  const [showAI, setShowAI] = useState(false);
+  const [aiChat, setAiChat] = useState([]);
+  const [aiInput, setAiInput] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [search, setSearch] = useState('');
+  
+  // Auto-scroll for chat
+  const chatEndRef = useRef(null);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [aiChat]);
+
+  const runAIAnalysis = async (lead) => {
+    setProcessing(true);
+    
+    // CALL MOCK GEMINI
+    const result = await MockGeminiService.analyzeLead(lead);
+    
+    // Apply Logic Rules automatically based on Gemini's result
+    let nextStage = 'human_review'; // Default
+    if (result.analysis.recommendedAction === 'reject') nextStage = 'rejected';
+    if (result.analysis.recommendedAction === 'onboarding') nextStage = 'onboarding'; // Or negotiation
+    if (lead.referral) nextStage = 'human_review'; // Always review referrals manually
+
+    const updatedLead = { 
+      ...lead, 
+      score: result.score, 
+      analysis: result.analysis, 
+      stage: nextStage 
+    };
+
+    setLeads(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+    if (selected && selected.id === lead.id) setSelected(updatedLead);
+    setProcessing(false);
+  };
+
+  const handleAIChat = async () => {
+    if (!aiInput.trim()) return;
+    const userMsg = { role: 'user', text: aiInput };
+    setAiChat(prev => [...prev, userMsg]);
+    setAiInput('');
+    setProcessing(true);
+
+    // Context for Gemini
+    const context = {
+      selectedLead: selected,
+      totalLeads: leads.length,
+      needsReviewCount: leads.filter(l => l.stage === 'human_review').length,
+      highValueCount: leads.filter(l => l.budget === '$1M+').length
+    };
+    
+    // CALL MOCK GEMINI
+    const response = await MockGeminiService.chat(userMsg.text, context);
+    
+    setAiChat(prev => [...prev, { role: 'ai', text: response }]);
+    setProcessing(false);
+  };
+
+  const addLead = (data) => {
+    const newLead = { ...data, id: Date.now(), stage: 'new', score: null, analysis: null };
+    setLeads(prev => [newLead, ...prev]);
+    setShowModal(false);
+  };
+
+  const filtered = leads.filter(l => !search || l.orgName.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div style={styles.app}>
+      {/* Header */}
+      <header style={styles.header}>
+        <div style={styles.logoSection}>
+          <span style={styles.logoIcon}>◈</span>
+          <div style={{display:'flex', flexDirection:'column'}}>
+            <span style={styles.logoText}>CoAIleague</span>
+            <span style={{fontSize: 10, color: '#64748b'}}>Powered by Gemini 2.5</span>
+          </div>
+        </div>
+        
+        <div style={styles.searchBox}>
+          <span style={{color:'#64748b'}}>⌕</span>
+          <input 
+            type="text" placeholder="Search pipeline..." 
+            value={search} onChange={e => setSearch(e.target.value)}
+            style={styles.searchInput}
+          />
+        </div>
+
+        <div style={styles.headerActions}>
+          <button style={{...styles.btn, ...styles.btnSecondary, ...(showAI ? styles.btnActive : {})}} onClick={() => setShowAI(!showAI)}>
+            ✨ Gemini AI
+          </button>
+          <button style={{...styles.btn, ...styles.btnPrimary}} onClick={() => setShowModal(true)}>
+            + New RFP
+          </button>
+        </div>
+      </header>
+
+      {/* Main Layout */}
+      <div style={styles.mainLayout}>
+        {/* Sidebar */}
+        <aside style={styles.sidebar}>
+          <div style={styles.navSection}>
+            <div style={styles.navTitle}>System Rules</div>
+            {LogicRules.map(r => (
+              <div key={r.id} style={styles.ruleCard}>
+                <div style={{...styles.ruleDot, backgroundColor: r.color}} />
+                <div>
+                  <div style={{fontWeight: 500, color: '#e2e8f0', fontSize: 13}}>{r.name}</div>
+                  <div style={{color: '#64748b', fontSize: 11}}>{r.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div style={styles.navSection}>
+            <div style={styles.navTitle}>Analytics</div>
+            <div style={styles.miniStat}>
+              <span>Pipeline Value</span>
+              <span style={{color:'#fff'}}>$4.2M</span>
+            </div>
+            <div style={styles.miniStat}>
+              <span>Conversion</span>
+              <span style={{color:'#22c55e'}}>24%</span>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Board */}
+        <main style={styles.mainContent}>
+          <div style={styles.pipelineBoard}>
+            {Stages.map(stage => (
+              <div key={stage.id} style={styles.pipelineCol}>
+                <div style={styles.colHeader}>
+                  <span style={{color: stage.color}}>{stage.icon}</span>
+                  <span style={styles.colTitle}>{stage.label}</span>
+                  <span style={{...styles.colCount, color: stage.color, background: `${stage.color}20`}}>
+                    {filtered.filter(l => l.stage === stage.id).length}
+                  </span>
+                </div>
+                <div style={styles.colContent}>
+                  {filtered.filter(l => l.stage === stage.id).map(lead => (
+                    <div 
+                      key={lead.id} 
+                      style={{
+                        ...styles.leadCard, 
+                        ...(selected?.id === lead.id ? styles.leadCardSelected : {}),
+                        borderLeft: lead.score ? `3px solid ${lead.score < 50 ? '#ef4444' : lead.score > 80 ? '#22c55e' : '#f59e0b'}` : '3px solid transparent'
+                      }}
+                      onClick={() => setSelected(lead)}
+                    >
+                      <div style={styles.leadHeader}>
+                        <span style={styles.leadName}>{lead.orgName}</span>
+                      </div>
+                      <div style={styles.leadIndustry}>{lead.industry}</div>
+                      <div style={styles.leadMeta}>
+                        <span>{lead.budget}</span>
+                        {lead.score && <span style={{marginLeft:'auto', fontWeight:'bold', color: lead.score < 50 ? '#ef4444' : '#22c55e'}}>{lead.score}%</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+
+        {/* Details & AI Panel */}
+        {(selected || showAI) && (
+          <aside style={styles.detailPanel}>
+            {showAI ? (
+              // AI INTERFACE
+              <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
+                 <div style={styles.aiHeader}>
+                  <h3 style={styles.aiTitle}>✨ Gemini Brain</h3>
+                  <button style={styles.closeBtn} onClick={() => setShowAI(false)}>✕</button>
+                </div>
+                <div style={styles.aiChat}>
+                  {aiChat.length === 0 && (
+                    <div style={styles.aiWelcome}>
+                      <div style={styles.aiWelcomeIcon}>◈</div>
+                      <p style={styles.aiWelcomeText}>Connected to Gemini 2.5 Flash.</p>
+                      {selected ? (
+                        <button style={styles.aiSuggestion} onClick={() => setAiInput(`What are the risks for ${selected.orgName}?`)}>
+                          Analyze risks for {selected.orgName}
+                        </button>
+                      ) : (
+                        <button style={styles.aiSuggestion} onClick={() => setAiInput('Show pipeline summary')}>
+                          Show pipeline summary
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {aiChat.map((msg, i) => (
+                    <div key={i} style={{...styles.aiMessage, ...(msg.role === 'user' ? styles.aiMessageUser : styles.aiMessageAi)}}>
+                      {processing && i === aiChat.length - 1 && msg.role === 'ai' ? 'Thinking...' : msg.text}
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+                <div style={styles.aiInputArea}>
+                  <input
+                    style={styles.aiInput} placeholder="Ask Gemini..."
+                    value={aiInput} onChange={e => setAiInput(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && handleAIChat()}
+                    disabled={processing}
+                  />
+                  <button style={styles.aiSend} onClick={handleAIChat} disabled={processing}>
+                    {processing ? '...' : '➤'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // DETAILS INTERFACE
+              <>
+                <div style={styles.detailHeader}>
+                  <h2 style={styles.detailTitle}>{selected.orgName}</h2>
+                  <button style={styles.closeBtn} onClick={() => setSelected(null)}>✕</button>
+                </div>
+
+                {!selected.score ? (
+                   <div style={styles.emptyState}>
+                     <p>No AI Analysis yet.</p>
+                     <button 
+                       style={{...styles.actionBtn, ...styles.actionBtnPrimary, opacity: processing ? 0.7 : 1}}
+                       onClick={() => runAIAnalysis(selected)}
+                       disabled={processing}
+                     >
+                       {processing ? '✨ Gemini Analyzing...' : '✨ Run Gemini Analysis'}
+                     </button>
+                   </div>
+                ) : (
+                  <>
+                    <div style={styles.scoreDisplay}>
+                      <div style={{...styles.scoreCircle, borderColor: selected.score < 50 ? '#ef4444' : selected.score > 80 ? '#22c55e' : '#f59e0b'}}>
+                        <span style={{...styles.scoreValue, color: selected.score < 50 ? '#ef4444' : selected.score > 80 ? '#22c55e' : '#f59e0b'}}>{selected.score}</span>
+                        <span style={styles.scoreLabel}>Score</span>
+                      </div>
+                      <div style={{flex:1}}>
+                         <div style={styles.scoreLabel}>Recommended Action</div>
+                         <div style={{fontWeight:600, color:'#e2e8f0', textTransform:'capitalize'}}>
+                           {selected.analysis?.recommendedAction?.replace('_', ' ') || 'Review'}
+                         </div>
+                      </div>
+                    </div>
+
+                    <div style={styles.detailSection}>
+                      <h4 style={styles.sectionTitle}>Gemini Summary</h4>
+                      <p style={styles.analysisText}>{selected.analysis.summary}</p>
+                      
+                      <h4 style={{...styles.sectionTitle, marginTop: 15}}>Risks Identified</h4>
+                      {selected.analysis.risks.map((r, i) => (
+                        <div key={i} style={styles.riskItem}>⚠ {r}</div>
+                      ))}
+                    </div>
+
+                    <button 
+                      style={{...styles.actionBtn, ...styles.actionBtnSecondary}}
+                      onClick={() => { setShowAI(true); setAiInput(`Draft an email to ${selected.contact}`); }}
+                    >
+                      Draft Response with AI
+                    </button>
+                  </>
+                )}
+
+                <div style={styles.detailSection}>
+                  <h4 style={styles.sectionTitle}>Lead Data</h4>
+                  <div style={styles.detailRow}><span style={styles.detailLabel}>Contact</span><span>{selected.contact}</span></div>
+                  <div style={styles.detailRow}><span style={styles.detailLabel}>Budget</span><span>{selected.budget}</span></div>
+                  <div style={styles.detailRow}><span style={styles.detailLabel}>Stack</span><span>{selected.aiStack || 'N/A'}</span></div>
+                </div>
+              </>
+            )}
+          </aside>
+        )}
+      </div>
+
+      {/* New RFP Modal */}
+      {showModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3>New RFP Submission</h3>
+            <NewRFPForm onSubmit={addLead} onCancel={() => setShowModal(false)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Sub-component for Form
+function NewRFPForm({ onSubmit, onCancel }) {
+  const [form, setForm] = useState({
+    orgName: '', industry: 'Healthcare AI', contact: '', email: '', 
+    budget: '$100K-250K', timeline: 'Q3 2026', useCase: '', aiStack: '', referral: false
+  });
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} style={{display:'flex', flexDirection:'column', gap: 12}}>
+      <input style={styles.formInput} placeholder="Org Name" value={form.orgName} onChange={e => setForm({...form, orgName: e.target.value})} required />
+      <select style={styles.formSelect} value={form.budget} onChange={e => setForm({...form, budget: e.target.value})}>
+        <option value="<$100K">Budget: &lt;$100K (Triggers Low Score)</option>
+        <option value="$100K-250K">Budget: $100K-250K</option>
+        <option value="$1M+">Budget: $1M+ (Triggers High Score)</option>
+      </select>
+      <input style={styles.formInput} placeholder="AI Use Case" value={form.useCase} onChange={e => setForm({...form, useCase: e.target.value})} required />
+      <div style={{display:'flex', justifyContent:'flex-end', gap:10, marginTop:10}}>
+        <button type="button" onClick={onCancel} style={{...styles.btn, ...styles.btnSecondary}}>Cancel</button>
+        <button type="submit" style={{...styles.btn, ...styles.btnPrimary}}>Save Lead</button>
+      </div>
+    </form>
+  );
+}
+
+// STYLES
+const styles = {
+  app: { fontFamily: 'Inter, system-ui, sans-serif', height: '100vh', background: '#0f172a', color: '#e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: '#1e293b', borderBottom: '1px solid #334155' },
+  logoSection: { display: 'flex', alignItems: 'center', gap: 10 },
+  logoIcon: { fontSize: 24, color: '#6366f1' },
+  logoText: { fontSize: 18, fontWeight: 700, background: 'linear-gradient(to right, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  searchBox: { background: '#334155', padding: '6px 12px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, width: 300 },
+  searchInput: { background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%' },
+  headerActions: { display: 'flex', gap: 10 },
+  btn: { padding: '8px 16px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: 13, transition: '0.2s' },
+  btnPrimary: { background: '#6366f1', color: 'white' },
+  btnSecondary: { background: '#334155', color: '#e2e8f0', border: '1px solid #475569' },
+  btnActive: { background: '#4338ca', borderColor: '#6366f1', color: 'white' },
+  mainLayout: { display: 'flex', flex: 1, overflow: 'hidden' },
+  sidebar: { width: 220, background: '#1e293b', borderRight: '1px solid #334155', padding: 16, display: 'flex', flexDirection: 'column', gap: 20 },
+  navTitle: { fontSize: 11, textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, marginBottom: 8 },
+  ruleCard: { background: '#33415550', padding: 8, borderRadius: 6, marginBottom: 6, display: 'flex', gap: 8, alignItems: 'center' },
+  ruleDot: { width: 6, height: 6, borderRadius: '50%' },
+  miniStat: { display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#94a3b8', marginBottom: 6 },
+  mainContent: { flex: 1, overflowX: 'auto', padding: 20, background: '#0f172a' },
+  pipelineBoard: { display: 'flex', gap: 16, height: '100%' },
+  pipelineCol: { minWidth: 260, width: 260, display: 'flex', flexDirection: 'column', background: '#1e293b50', borderRadius: 8, border: '1px solid #334155' },
+  colHeader: { padding: 12, borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 },
+  colCount: { marginLeft: 'auto', padding: '2px 8px', borderRadius: 10, fontSize: 11 },
+  colContent: { padding: 8, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 },
+  leadCard: { background: '#334155', padding: 12, borderRadius: 6, cursor: 'pointer', border: '1px solid #475569', transition: '0.2s' },
+  leadCardSelected: { borderColor: '#6366f1', boxShadow: '0 0 0 2px #6366f140' },
+  leadName: { fontWeight: 600, fontSize: 14, color: '#f8fafc' },
+  leadIndustry: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
+  leadMeta: { marginTop: 8, fontSize: 11, color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' },
+  detailPanel: { width: 400, background: '#1e293b', borderLeft: '1px solid #334155', display: 'flex', flexDirection: 'column', overflowY: 'auto' },
+  detailHeader: { padding: 20, borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  detailTitle: { margin: 0, fontSize: 18 },
+  closeBtn: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 18 },
+  scoreDisplay: { padding: 20, display: 'flex', gap: 20, alignItems: 'center', background: '#33415550' },
+  scoreCircle: { width: 70, height: 70, borderRadius: '50%', border: '4px solid', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
+  scoreValue: { fontSize: 24, fontWeight: 700 },
+  scoreLabel: { fontSize: 10, textTransform: 'uppercase', color: '#94a3b8' },
+  detailSection: { padding: 20, borderBottom: '1px solid #33415530' },
+  sectionTitle: { fontSize: 12, textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, marginBottom: 10, marginTop: 0 },
+  detailRow: { display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, borderBottom: '1px solid #ffffff10' },
+  detailLabel: { color: '#94a3b8' },
+  riskItem: { color: '#fca5a5', fontSize: 13, marginTop: 4, background: '#7f1d1d30', padding: '4px 8px', borderRadius: 4 },
+  analysisText: { fontSize: 14, lineHeight: 1.5, color: '#e2e8f0', margin: 0 },
+  actionBtn: { width: '100%', padding: 12, borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, marginTop: 10 },
+  actionBtnPrimary: { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white' },
+  actionBtnSecondary: { background: '#334155', color: '#e2e8f0', border: '1px solid #475569' },
+  aiHeader: { padding: 16, borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a' },
+  aiTitle: { margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 },
+  aiChat: { flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: '#0f172a' },
+  aiWelcome: { textAlign: 'center', marginTop: 40, opacity: 0.7 },
+  aiWelcomeIcon: { fontSize: 40, color: '#6366f1', marginBottom: 10 },
+  aiSuggestion: { display: 'block', margin: '10px auto', padding: '8px 16px', borderRadius: 20, background: '#334155', border: '1px solid #475569', color: '#e2e8f0', cursor: 'pointer', fontSize: 12 },
+  aiMessage: { padding: '10px 14px', borderRadius: 10, maxWidth: '85%', fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-line' },
+  aiMessageUser: { alignSelf: 'flex-end', background: '#6366f1', color: 'white' },
+  aiMessageAi: { alignSelf: 'flex-start', background: '#334155', color: '#e2e8f0' },
+  aiInputArea: { padding: 16, borderTop: '1px solid #334155', display: 'flex', gap: 10, background: '#1e293b' },
+  aiInput: { flex: 1, background: '#0f172a', border: '1px solid #475569', borderRadius: 6, padding: '10px', color: 'white', outline: 'none' },
+  aiSend: { background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, width: 40, cursor: 'pointer' },
+  modalOverlay: { position: 'fixed', inset: 0, background: '#00000080', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  modal: { background: '#1e293b', padding: 24, borderRadius: 12, width: 400, border: '1px solid #475569' },
+  formInput: { width: '100%', padding: 10, marginBottom: 10, background: '#0f172a', border: '1px solid #475569', borderRadius: 6, color: 'white', boxSizing: 'border-box' },
+  formSelect: { width: '100%', padding: 10, marginBottom: 10, background: '#0f172a', border: '1px solid #475569', borderRadius: 6, color: 'white' },
+  emptyState: { textAlign: 'center', padding: 40, color: '#94a3b8' }
+};
+

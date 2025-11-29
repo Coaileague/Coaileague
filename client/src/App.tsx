@@ -31,11 +31,11 @@ import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
+// import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
 import CustomLogin from "@/pages/custom-login";
 import CustomRegister from "@/pages/custom-register";
-import Pricing from "@/pages/pricing";
+import UniversalMarketing from "@/pages/universal-marketing";
 import Contact from "@/pages/contact";
 import Support from "@/pages/support";
 import TermsOfService from "@/pages/terms-of-service";
@@ -217,7 +217,7 @@ function AppContent() {
         <Route path="/" component={Homepage} />
         <Route path="/login" component={CustomLogin} />
         <Route path="/register" component={CustomRegister} />
-        <Route path="/pricing" component={Pricing} />
+        <Route path="/pricing" component={UniversalMarketing} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
@@ -397,7 +397,7 @@ function AppContent() {
               <Route path="/client/portal" component={ClientPortal} />
               <Route path="/settings" component={Settings} />
               <Route path="/employee/profile" component={EmployeeProfile} />
-              <Route path="/pricing" component={Pricing} />
+              <Route path="/pricing" component={UniversalMarketing} />
               <Route path="/contact" component={Contact} />
               <Route path="/terms" component={TermsOfService} />
               <Route path="/privacy" component={PrivacyPolicy} />
@@ -592,7 +592,7 @@ function AppContent() {
                 <Route path="/client/portal" component={ClientPortal} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/employee/profile" component={EmployeeProfile} />
-                <Route path="/pricing" component={Pricing} />
+                <Route path="/pricing" component={UniversalMarketing} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />

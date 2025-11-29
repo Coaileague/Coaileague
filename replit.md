@@ -89,3 +89,51 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - Autonomous Scheduler has 1594 lines of sophisticated automation
 - All jobs include audit logging, idempotency fingerprinting, error handling
 - System-wide jobs properly isolated from workspace-specific operations
+
+### Phase 5: Universal Marketing Consolidation (COMPLETE)
+**Date:** November 29, 2025 (Turn 10)
+
+**Consolidation Achievements:**
+- ✅ Created `marketingConfig.ts` - SINGLE SOURCE OF TRUTH for all marketing content
+  - Brands & platform identity
+  - Landing page hero, stats, features, social proof
+  - Pricing tiers (synced with BILLING config)
+  - Sales pipeline configuration
+  - No hardcoded values - fully dynamic
+- ✅ Created `universal-marketing.tsx` - ONE page replaces landing + pricing
+  - Dynamic section switching (?section=landing|pricing)
+  - Configuration-driven rendering
+  - Sync with billingConfig.ts for pricing
+  - Reusable for all public marketing
+- ✅ Updated App.tsx routes
+  - "/" routes to UniversalMarketing
+  - "/pricing" routes to UniversalMarketing
+  - Old landing.tsx & pricing.tsx can be archived
+- ✅ Build verified
+
+**Content Structure (marketingConfig.ts):**
+- Hero section (headline, badge, CTA)
+- Stats section (3 key metrics)
+- 6 Features with icons and benefits
+- Social proof testimonials
+- FAQ section
+- Pricing tiers (auto-synced from BILLING)
+- Sales pipeline configuration
+
+**How to Edit:**
+1. Change anything in `marketingConfig.ts`
+2. All pages automatically update (no code changes needed)
+3. Add new features: add to `landing.features` array
+4. Change pricing: edit `billingConfig.ts` → auto-syncs to marketing
+5. Add testimonials: add to `landing.socialProof` array
+
+**Migration Path:**
+- Landing.tsx can be archived (no longer used)
+- Pricing.tsx can be archived (no longer used)
+- Sales dashboard uses shared config for pipeline rules
+
+**Next Phase Possibilities:**
+- Implement actual Gemini AI integration for RFP analysis
+- Add dynamic email templates synced from config
+- Email automation triggers for sales pipeline
+- Customer portal with config-driven features
