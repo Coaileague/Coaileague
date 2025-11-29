@@ -1715,8 +1715,8 @@ export function setupWebSocket(server: Server) {
                     senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: userConnected
-                      ? `🔇 User Muted\n\n${targetUsername} has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`
-                      : `⚠️ Mute Command Executed\n\nAttempted to mute ${targetUsername} for ${duration} minutes.\n\n⚠️ *Note: User not currently connected or is a simulated/test user. Command worked but had no active target.*`,
+                      ? `User Muted: ${targetUsername} has been muted for ${duration} minutes. They can still read messages but cannot send messages during this time.`
+                      : `Mute command executed for ${targetUsername} (${duration} min). Note: User is not currently connected to this room.`,
                     messageType: 'text',
                   });
                   
@@ -1827,8 +1827,8 @@ export function setupWebSocket(server: Server) {
                     senderName: 'Server',
                     senderType: 'system',
                     message: staffConnected
-                      ? `✅ ${staffDisplayName} (${staffRoleName}) transferred ticket to ${targetStaff}`
-                      : `⚠️ ${staffDisplayName} (${staffRoleName}) attempted transfer to ${targetStaff} (staff member not currently online or is simulated/test user)`,
+                      ? `${staffDisplayName} (${staffRoleName}) transferred ticket to ${targetStaff}`
+                      : `Transfer requested to ${targetStaff} by ${staffDisplayName}. Note: Target staff member is not currently online.`,
                     messageType: 'text',
                     isSystemMessage: true,
                   });
@@ -3828,153 +3828,8 @@ export function setupWebSocket(server: Server) {
     });
   });
 
-  // REALISTIC CHAT SIMULATION: Generate realistic conversation flow
-  const MAIN_ROOM_ID = 'main-chatroom-workforceos';
-  let simulationRunning = false;
-  
-  async function startChatSimulation() {
-    if (simulationRunning) return;
-    simulationRunning = true;
-    
-    const clients = conversationClients.get(MAIN_ROOM_ID);
-    if (!clients || clients.size === 0) {
-      simulationRunning = false;
-      return;
-    }
-
-    // Realistic conversation scenarios
-    const scenarios = [
-      // Scenario 1: Password reset help
-      { sender: 'sim-user-1', name: 'Jennifer Lopez', type: 'customer', message: 'Hi, I forgot my password and the reset email never came through. Can someone help?' },
-      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Jennifer - I see you need password reset help. Sarah Martinez is our password specialist. Alerting her now.' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi Jennifer! I can help with that. Can you confirm the email address on your account?' },
-      { sender: 'sim-user-1', name: 'Jennifer Lopez', type: 'customer', message: 'Yes, it is jennifer.lopez@company.com' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Perfect! I just resent the password reset link. Please check your spam folder as well. It should arrive in 2-3 minutes.' },
-      { sender: 'sim-user-1', name: 'Jennifer Lopez', type: 'customer', message: 'Got it! Thank you so much for the quick help!' },
-      
-      // Scenario 2: Billing question
-      { sender: 'sim-user-2', name: 'Robert Johnson', type: 'customer', message: 'I have a question about my invoice. I was charged twice this month.' },
-      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Robert - Billing issue detected. Mike Chen handles billing inquiries. Routing your request now.' },
-      { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'Hi Robert, I am looking at your account now. Can you provide your invoice number?' },
-      { sender: 'sim-user-2', name: 'Robert Johnson', type: 'customer', message: 'Invoice #INV-2024-1234 and #INV-2024-1235' },
-      { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'I see the duplicate charge. This was a processing error on our end. I am issuing a full refund for the duplicate charge right now. You should see it in 3-5 business days.' },
-      { sender: 'sim-user-2', name: 'Robert Johnson', type: 'customer', message: 'That is great! Thank you for resolving this so quickly.' },
-      
-      // Scenario 3: Account locked
-      { sender: 'sim-user-3', name: 'Maria Garcia', type: 'customer', message: 'My account is locked after too many failed login attempts. How do I unlock it?' },
-      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Maria - Account security issue. Emily Taylor specializes in account access. Connecting you now.' },
-      { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Hi Maria! I can unlock your account. For security, can you verify the last 4 digits of your phone number?' },
-      { sender: 'sim-user-3', name: 'Maria Garcia', type: 'customer', message: '4567' },
-      { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Perfect! Your account is now unlocked. I also reset your password for security. Check your email for the new temporary password.' },
-      { sender: 'sim-user-3', name: 'Maria Garcia', type: 'customer', message: 'Thank you! I can log in now!' },
-      
-      // Scenario 4: Schedule question
-      { sender: 'sim-user-4', name: 'James Wilson', type: 'customer', message: 'I need help with AI Scheduling. How do I assign shifts to multiple employees at once?' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi James! You can use the drag-and-drop feature. Just hold Shift and click multiple employees, then drag a shift template onto the selection.' },
-      { sender: 'sim-user-4', name: 'James Wilson', type: 'customer', message: 'Oh wow, that is so much easier! Thank you!' },
-      
-      // Scenario 5: Feature request
-      { sender: 'sim-user-5', name: 'Linda Brown', type: 'customer', message: 'Is there a way to export timesheet data to Excel? I need it for my accountant.' },
-      { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'Yes! Go to TrackOS > Reports > Export. You can choose Excel, CSV, or PDF format.' },
-      { sender: 'sim-user-5', name: 'Linda Brown', type: 'customer', message: 'Perfect! Found it. This is exactly what I needed.' },
-      
-      // Scenario 6: Technical issue
-      { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'The mobile app keeps crashing when I try to clock in. Is this a known issue?' },
-      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Michael - Technical issue detected. David Kim is our mobile specialist but currently busy. Sarah will assist.' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi Michael! What device and OS version are you using?' },
-      { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'iPhone 14, iOS 17.2' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Try clearing the app cache: Settings > Apps > CoAIleague > Clear Cache. If that does not work, uninstall and reinstall the app. Your data is saved in the cloud.' },
-      { sender: 'sim-user-6', name: 'Michael Davis', type: 'customer', message: 'Clearing cache fixed it! Thanks!' },
-      
-      // Scenario 7: Upgrade question
-      { sender: 'sim-user-7', name: 'Patricia Miller', type: 'customer', message: 'What is the difference between Professional and Enterprise plans?' },
-      { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Great question! Enterprise includes AI auto-scheduling, advanced analytics, and priority support. Professional has all core features like time tracking and invoicing. Would you like me to send you a detailed comparison?' },
-      { sender: 'sim-user-7', name: 'Patricia Miller', type: 'customer', message: 'Yes please! That would be helpful.' },
-      { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Just emailed you the comparison guide. Let me know if you have questions!' },
-      
-      // Scenario 8: Integration question
-      { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Can CoAIleague™ integrate with QuickBooks for payroll?' },
-      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Christopher - Integration inquiry. Mike Chen is our integration expert.' },
-      { sender: 'sim-staff-2', name: 'Mike Chen', type: 'support', message: 'Yes! We have a direct QuickBooks integration. Go to Settings > Integrations > QuickBooks and follow the OAuth connection flow. Takes about 2 minutes.' },
-      { sender: 'sim-user-8', name: 'Christopher Lee', type: 'customer', message: 'Excellent! I will set that up now.' },
-      
-      // Scenario 9: Report question
-      { sender: 'sim-user-9', name: 'Sarah Anderson', type: 'customer', message: 'How do I create custom reports in ReportOS?' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Hi Sarah! Go to ReportOS > Templates > Create New. You can add custom fields, set required fields, and even require photo uploads.' },
-      { sender: 'sim-user-9', name: 'Sarah Anderson', type: 'customer', message: 'Can I require employees to submit daily reports?' },
-      { sender: 'sim-staff-1', name: 'Sarah Martinez', type: 'support', message: 'Absolutely! In the template settings, enable "Mandatory Daily Submission" and set the deadline time. Employees will get automated reminders.' },
-      { sender: 'sim-user-9', name: 'Sarah Anderson', type: 'customer', message: 'This is fantastic! Thank you!' },
-      
-      // Scenario 10: Compliance question
-      { sender: 'sim-user-10', name: 'Daniel Martinez', type: 'customer', message: 'I need to pull audit logs for a compliance review. Where can I find those?' },
-      { sender: 'sim-staff-3', name: 'Emily Taylor', type: 'support', message: 'Hi Daniel! As an Owner, go to Settings > Audit Logs. You can filter by date range, user, and action type, then export to PDF or CSV.' },
-      { sender: 'sim-user-10', name: 'Daniel Martinez', type: 'customer', message: 'Perfect! Found everything I need. Your platform is very thorough!' },
-      
-      // HelpAI provides stats
-      { sender: 'helpai-bot', name: 'HelpAI', type: 'bot', message: 'Support stats: 10 issues resolved today. Average response time: 2 minutes. Customer satisfaction: 98%. Great work team!' },
-    ];
-
-    // Send messages with realistic timing
-    let messageIndex = 0;
-    const sendNextMessage = async () => {
-      if (messageIndex >= scenarios.length) {
-        console.log('Chat simulation completed');
-        simulationRunning = false;
-        return;
-      }
-
-      const scenario = scenarios[messageIndex];
-      messageIndex++;
-
-      try {
-        // Create and broadcast message
-        const chatMessage = await storage.createChatMessage({
-          conversationId: MAIN_ROOM_ID,
-          senderId: scenario.sender,
-          senderName: scenario.name,
-          senderType: scenario.type as 'customer' | 'support' | 'system' | 'bot',
-          message: scenario.message,
-          messageType: 'text',
-        });
-
-        // Broadcast to all connected clients
-        const clients = conversationClients.get(MAIN_ROOM_ID);
-        if (clients) {
-          const payload = JSON.stringify({
-            type: 'new_message',
-            message: chatMessage,
-          });
-          clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(payload);
-            }
-          });
-        }
-
-        // Realistic delay between messages (3-8 seconds)
-        const delay = Math.random() * 5000 + 3000;
-        setTimeout(sendNextMessage, delay);
-      } catch (error) {
-        console.error('Simulation message error:', error);
-        setTimeout(sendNextMessage, 1000);
-      }
-    };
-
-    // Start sending messages
-    setTimeout(sendNextMessage, 5000); // Start after 5 seconds
-  }
-
-  // Start simulation when first user joins the main room
-  // DISABLED: Simulation was causing FK constraint violations with non-existent users
-  // setInterval(() => {
-  //   const clients = conversationClients.get(MAIN_ROOM_ID);
-  //   if (clients && clients.size > 0 && !simulationRunning) {
-  //     startChatSimulation();
-  //   }
-  // }, 10000); // Check every 10 seconds
-
-  // Add handler for shift updates subscription (before closing the listener)
-  // This is already handled in the ws.on('message') switch statement above
+  // NOTE: Chat simulation removed - system uses only live data from database with real users
+  // All user data now comes from storage.getUserDisplayInfo() for consistency
 
   console.log('WebSocket server initialized on /ws/chat');
   
