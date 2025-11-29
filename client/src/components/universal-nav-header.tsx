@@ -4,7 +4,7 @@
  * Matches Fortune 500 professional aesthetic with CoAIleague branding
  */
 
-import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle } from "lucide-react";
+import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle, Calendar, Clock, MessageSquare, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
@@ -24,6 +24,7 @@ import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { PlanBadge } from "@/components/plan-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { performLogout } from "@/lib/logoutHandler";
+import { Badge } from "@/components/ui/badge";
 
 export function UniversalNavHeader() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -341,9 +342,64 @@ export function UniversalNavHeader() {
           </div>
         </div>
 
-        {/* Right: User Initials + Notifications */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* User Initials Display (no dropdown - settings/sign-out in hamburger menu) */}
+        {/* Center-Right: Quick Menu Tabs (Desktop) */}
+        <div className="hidden md:flex items-center gap-1 flex-shrink-0">
+          <Link href="/schedule">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`gap-1.5 text-xs ${location.startsWith('/schedule') ? 'text-cyan-400 bg-white/10' : 'text-slate-300 hover:text-white'}`}
+              data-testid="button-header-schedule"
+            >
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">Schedule</span>
+            </Button>
+          </Link>
+          <Link href="/time-tracking">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`gap-1.5 text-xs ${location.startsWith('/time') ? 'text-cyan-400 bg-white/10' : 'text-slate-300 hover:text-white'}`}
+              data-testid="button-header-time"
+            >
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Time</span>
+            </Button>
+          </Link>
+          <Link href="/chat">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`gap-1.5 text-xs ${location.startsWith('/chat') ? 'text-cyan-400 bg-white/10' : 'text-slate-300 hover:text-white'}`}
+              data-testid="button-header-chat"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Chat</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* Right: What's New + User Initials + Notifications */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* What's New Badge - Mobile */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-white hover:bg-white/20 relative"
+              onClick={() => {
+                if ((window as any).openWhatsNew) {
+                  (window as any).openWhatsNew();
+                }
+              }}
+              data-testid="button-whats-new-mobile"
+              title="What's New"
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* User Initials Display */}
           <div 
             className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"
             data-testid="display-user-initials"

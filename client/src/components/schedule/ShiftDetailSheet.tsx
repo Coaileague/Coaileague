@@ -1,6 +1,6 @@
 /**
- * ShiftDetailSheet - Tappable shift popup showing full details with actions
- * Mobile-first bottom sheet for viewing shift details
+ * ShiftDetailSheet - Compact shift details popup
+ * Polished professional design matching Sling-style UI
  */
 
 import { format } from 'date-fns';
@@ -9,28 +9,26 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
   DrawerFooter,
   DrawerClose,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import {
   Clock,
   MapPin,
   User,
   Building2,
-  Calendar,
   Edit2,
   Trash2,
   UserPlus,
-  CheckCircle2,
-  AlertCircle,
   Timer,
   DollarSign,
+  FileText,
+  X,
 } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo-mark';
 import type { Shift, Employee, Client } from '@shared/schema';
 
 interface ShiftDetailSheetProps {
@@ -65,27 +63,26 @@ export function ShiftDetailSheet({
   const isPast = end < new Date();
   const isToday = format(start, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
-  const getStatusBadge = () => {
+  const getStatusConfig = () => {
     if (shift.status === 'completed') {
-      return <Badge className="bg-green-600">Completed</Badge>;
-    }
-    if (shift.status === 'scheduled') {
-      return <Badge className="bg-blue-600">Scheduled</Badge>;
-    }
-    if (shift.status === 'draft') {
-      return <Badge variant="secondary">Pending Approval</Badge>;
+      return { label: 'Completed', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' };
     }
     if (shift.status === 'in_progress') {
-      return <Badge className="bg-amber-600">In Progress</Badge>;
+      return { label: 'In Progress', className: 'bg-amber-500/15 text-amber-600 border-amber-500/30' };
     }
-    if (isPast) {
-      return <Badge variant="outline">Past</Badge>;
+    if (shift.status === 'draft') {
+      return { label: 'Pending', className: 'bg-slate-500/15 text-slate-600 border-slate-500/30' };
     }
     if (isToday) {
-      return <Badge className="bg-amber-600">Today</Badge>;
+      return { label: 'Today', className: 'bg-blue-500/15 text-blue-600 border-blue-500/30' };
     }
-    return <Badge variant="outline">Scheduled</Badge>;
+    if (isPast) {
+      return { label: 'Past', className: 'bg-slate-500/15 text-slate-500 border-slate-500/30' };
+    }
+    return { label: 'Scheduled', className: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30' };
   };
+
+  const statusConfig = getStatusConfig();
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -93,189 +90,173 @@ export function ShiftDetailSheet({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh]">
-        <DrawerHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <DrawerTitle className="text-xl font-bold">
-              {shift.title || 'Shift Details'}
-            </DrawerTitle>
-            {getStatusBadge()}
-          </div>
-          <DrawerDescription className="text-left">
-            {format(start, 'EEEE, MMMM d, yyyy')}
-          </DrawerDescription>
-        </DrawerHeader>
-
-        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-          {/* Time Info - Prominent */}
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Clock className="w-5 h-5 text-primary" />
-              <span className="text-2xl font-bold">
-                {format(start, 'h:mm a')} - {format(end, 'h:mm a')}
-              </span>
+      <DrawerContent className="max-h-[80vh] focus:outline-none">
+        <div className="mx-auto w-full max-w-md">
+          <DrawerHeader className="pb-2 pt-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <LogoMark size="xs" />
+                <div>
+                  <DrawerTitle className="text-base font-semibold">
+                    {shift.title || 'Shift Details'}
+                  </DrawerTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {format(start, 'EEE, MMM d')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={`text-xs ${statusConfig.className}`}>
+                  {statusConfig.label}
+                </Badge>
+                <DrawerClose asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DrawerClose>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground ml-8">
-              <Timer className="w-4 h-4" />
-              <span className="text-sm">{hours.toFixed(1)} hours</span>
-            </div>
-          </div>
+          </DrawerHeader>
 
-          <Separator />
-
-          {/* Employee Info */}
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 flex items-center justify-center">
-              <User className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-muted-foreground">Assigned To</div>
-              {isOpenShift ? (
+          <div className="px-4 pb-3 space-y-3">
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="border-amber-500 text-amber-600">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-lg font-bold">
+                    {format(start, 'h:mm a')} - {format(end, 'h:mm a')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                  <Timer className="w-3.5 h-3.5" />
+                  <span>{hours.toFixed(1)}h</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-muted/50 rounded-lg p-2.5">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="text-xs">Assigned To</span>
+                </div>
+                {isOpenShift ? (
+                  <Badge variant="outline" className="border-amber-500/50 text-amber-600 text-xs">
                     Open Shift
                   </Badge>
-                  <span className="text-sm text-muted-foreground">Unassigned</span>
-                </div>
-              ) : employee ? (
-                <div className="flex items-center gap-2">
-                  <Avatar className="w-6 h-6">
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                      {getInitials(`${employee.firstName} ${employee.lastName}`)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">
-                    {employee.firstName} {employee.lastName}
-                  </span>
-                  {employee.role && (
-                    <Badge variant="secondary" className="text-xs">
-                      {employee.role}
-                    </Badge>
-                  )}
-                </div>
-              ) : (
-                <span className="text-muted-foreground">Unknown</span>
-              )}
-            </div>
-          </div>
-
-          {/* Client/Location */}
-          {client && (
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">Client / Location</div>
-                <div className="font-medium">{client.companyName || `${client.firstName} ${client.lastName}`}</div>
-                {client.address && (
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {client.address}
+                ) : employee ? (
+                  <div className="flex items-center gap-1.5">
+                    <Avatar className="w-5 h-5">
+                      <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">
+                        {getInitials(`${employee.firstName} ${employee.lastName}`)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium truncate">
+                      {employee.firstName} {employee.lastName}
+                    </span>
                   </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Unassigned</span>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Pay Info (if visible) */}
-          {shift.hourlyRateOverride && (
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">Pay Rate</div>
-                <div className="font-medium">${shift.hourlyRateOverride}/hr</div>
-                <div className="text-sm text-green-600">
-                  Est. ${(parseFloat(shift.hourlyRateOverride) * hours).toFixed(2)} total
+              {client && (
+                <div className="bg-muted/50 rounded-lg p-2.5">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span className="text-xs">Client</span>
+                  </div>
+                  <span className="text-sm font-medium truncate block">
+                    {client.companyName || `${client.firstName} ${client.lastName}`}
+                  </span>
                 </div>
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Description/Notes */}
-          {shift.description && (
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-muted-foreground" />
+            {(shift.location || client?.address) && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{shift.location || client?.address}</span>
               </div>
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">Notes</div>
-                <div className="text-sm whitespace-pre-wrap">{shift.description}</div>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Status History (if scheduled) */}
-          {shift.status === 'scheduled' && (
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">Status</div>
-                <div className="text-sm text-green-600 font-medium">
-                  Scheduled and approved
+            {shift.hourlyRateOverride && (
+              <div className="flex items-center justify-between bg-emerald-500/10 rounded-lg p-2.5">
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <span className="text-sm font-medium">${shift.hourlyRateOverride}/hr</span>
                 </div>
+                <span className="text-sm text-emerald-600 font-medium">
+                  ~${(parseFloat(shift.hourlyRateOverride) * hours).toFixed(2)}
+                </span>
               </div>
-            </div>
-          )}
+            )}
+
+            {shift.description && (
+              <div className="bg-muted/30 rounded-lg p-2.5">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="text-xs">Notes</span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{shift.description}</p>
+              </div>
+            )}
+          </div>
+
+          <DrawerFooter className="flex-row gap-2 pt-2 pb-4 px-4 border-t">
+            {isOpenShift && onClaimShift && (
+              <Button
+                className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => {
+                  onClaimShift(shift);
+                  onOpenChange(false);
+                }}
+                data-testid="button-claim-shift"
+              >
+                <UserPlus className="w-4 h-4 mr-1.5" />
+                Claim
+              </Button>
+            )}
+
+            {canEdit && onEdit && (
+              <Button
+                variant="outline"
+                className="flex-1 h-9"
+                onClick={() => {
+                  onEdit(shift);
+                  onOpenChange(false);
+                }}
+                data-testid="button-edit-shift"
+              >
+                <Edit2 className="w-4 h-4 mr-1.5" />
+                Edit
+              </Button>
+            )}
+
+            {canEdit && onDelete && (
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => {
+                  onDelete(shift);
+                  onOpenChange(false);
+                }}
+                data-testid="button-delete-shift"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+
+            {!canEdit && !isOpenShift && (
+              <DrawerClose asChild>
+                <Button variant="outline" className="flex-1 h-9">
+                  Close
+                </Button>
+              </DrawerClose>
+            )}
+          </DrawerFooter>
         </div>
-
-        <DrawerFooter className="flex-row gap-2 pt-2 border-t">
-          {/* Open shift - show claim button */}
-          {isOpenShift && onClaimShift && (
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              onClick={() => {
-                onClaimShift(shift);
-                onOpenChange(false);
-              }}
-              data-testid="button-claim-shift"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Claim Shift
-            </Button>
-          )}
-
-          {/* Edit button - managers only */}
-          {canEdit && onEdit && (
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                onEdit(shift);
-                onOpenChange(false);
-              }}
-              data-testid="button-edit-shift"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-          )}
-
-          {/* Delete button - managers only */}
-          {canEdit && onDelete && (
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={() => {
-                onDelete(shift);
-                onOpenChange(false);
-              }}
-              data-testid="button-delete-shift"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-
-          <DrawerClose asChild>
-            <Button variant="ghost" className={canEdit ? '' : 'flex-1'}>
-              Close
-            </Button>
-          </DrawerClose>
-        </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );

@@ -1,6 +1,6 @@
 /**
- * ShiftBottomSheet - Bottom sheet for creating/editing shifts
- * Mobile-first with shadcn Drawer component
+ * ShiftBottomSheet - Compact professional shift creation/editing
+ * Sling-inspired design with tight spacing and polished UI
  */
 
 import { useState, useEffect } from 'react';
@@ -12,7 +12,6 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
-  DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
@@ -28,6 +27,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -35,16 +37,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock, User, Briefcase, MapPin, FileText, Sparkles, X } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo-mark';
 import type { Employee, Client, Shift } from '@shared/schema';
 
 const shiftFormSchema = z.object({
-  employeeId: z.string().optional(), // Optional for open shifts
-  title: z.string().min(1, "Title/Position required"),
+  employeeId: z.string().optional(),
+  title: z.string().min(1, "Position required"),
   clientId: z.string().min(1, "Client required"),
+  location: z.string().optional(),
   startTime: z.string().min(1, "Start time required"),
   endTime: z.string().min(1, "End time required"),
-  description: z.string().optional(),
+  notes: z.string().optional(),
+  isOpenShift: z.boolean().default(false),
 });
 
 type ShiftFormData = z.infer<typeof shiftFormSchema>;
@@ -72,45 +77,66 @@ export function ShiftBottomSheet({
   onSubmit,
   isSubmitting,
 }: ShiftBottomSheetProps) {
+  const [isOpenShift, setIsOpenShift] = useState(false);
+  
   const form = useForm<ShiftFormData>({
     resolver: zodResolver(shiftFormSchema),
     defaultValues: {
       employeeId: selectedEmployee?.id || '',
       title: '',
       clientId: '',
+      location: '',
       startTime: '09:00',
       endTime: '17:00',
-      description: '',
+      notes: '',
+      isOpenShift: false,
     },
   });
 
-  // Reset form when editing shift or selected employee changes
   useEffect(() => {
     if (editingShift) {
       const start = new Date(editingShift.startTime);
       const end = new Date(editingShift.endTime);
+      const isOpen = !editingShift.employeeId;
+      setIsOpenShift(isOpen);
       form.reset({
         employeeId: editingShift.employeeId || '',
         title: editingShift.title || '',
         clientId: editingShift.clientId || '',
+        location: editingShift.location || '',
         startTime: format(start, 'HH:mm'),
         endTime: format(end, 'HH:mm'),
-        description: editingShift.description || '',
+        notes: editingShift.description || '',
+        isOpenShift: isOpen,
       });
     } else if (selectedEmployee) {
+      setIsOpenShift(false);
       form.reset({
         employeeId: selectedEmployee.id,
         title: selectedEmployee.role || '',
         clientId: '',
+        location: '',
         startTime: '09:00',
         endTime: '17:00',
-        description: '',
+        notes: '',
+        isOpenShift: false,
+      });
+    } else {
+      setIsOpenShift(false);
+      form.reset({
+        employeeId: '',
+        title: '',
+        clientId: '',
+        location: '',
+        startTime: '09:00',
+        endTime: '17:00',
+        notes: '',
+        isOpenShift: false,
       });
     }
-  }, [editingShift, selectedEmployee, form]);
+  }, [editingShift, selectedEmployee, form, open]);
 
   const handleSubmit = async (data: ShiftFormData) => {
-    // Combine date with time
     const [startHours, startMinutes] = data.startTime.split(':');
     const [endHours, endMinutes] = data.endTime.split(':');
     
@@ -120,14 +146,15 @@ export function ShiftBottomSheet({
     const endTime = new Date(selectedDate);
     endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
     
-    // If end time is before start time, assume next day
     if (endTime < startTime) {
       endTime.setDate(endTime.getDate() + 1);
     }
 
     await onSubmit({
       ...data,
-      employeeId: data.employeeId === 'unassigned' ? null : data.employeeId,
+      employeeId: isOpenShift ? null : (data.employeeId || null),
+      description: data.notes,
+      location: data.location,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       status: 'scheduled',
@@ -136,95 +163,178 @@ export function ShiftBottomSheet({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent data-testid="shift-bottom-sheet">
-        <div className="mx-auto w-full max-w-2xl">
-          <DrawerHeader>
-            <DrawerTitle>
-              {editingShift ? 'Edit Shift' : 'Create New Shift'}
-            </DrawerTitle>
-            <DrawerDescription>
-              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-            </DrawerDescription>
+      <DrawerContent 
+        className="max-h-[85vh] focus:outline-none"
+        data-testid="shift-bottom-sheet"
+      >
+        <div className="mx-auto w-full max-w-md">
+          <DrawerHeader className="pb-2 pt-4 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <LogoMark size="sm" />
+                <div>
+                  <DrawerTitle className="text-base font-semibold">
+                    {editingShift ? 'Edit Shift' : 'New Shift'}
+                  </DrawerTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {format(selectedDate, 'EEE, MMM d')}
+                  </p>
+                </div>
+              </div>
+              <DrawerClose asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </div>
           </DrawerHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="px-4 space-y-4">
-              <FormField
-                control={form.control}
-                name="employeeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Employee</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="px-4 pb-4 space-y-3">
+              
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <Label htmlFor="open-shift" className="text-sm font-medium cursor-pointer">
+                    Open Shift
+                  </Label>
+                  <span className="text-xs text-muted-foreground">(AI fills)</span>
+                </div>
+                <Switch
+                  id="open-shift"
+                  checked={isOpenShift}
+                  onCheckedChange={(checked) => {
+                    setIsOpenShift(checked);
+                    if (checked) {
+                      form.setValue('employeeId', '');
+                    }
+                  }}
+                  data-testid="switch-open-shift"
+                />
+              </div>
+
+              {!isOpenShift && (
+                <FormField
+                  control={form.control}
+                  name="employeeId"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                        <User className="h-3 w-3" />
+                        Employee
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 text-sm" data-testid="select-employee">
+                            <SelectValue placeholder="Select employee" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.isArray(employees) && employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id} className="text-sm">
+                              {emp.firstName} {emp.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                        <Briefcase className="h-3 w-3" />
+                        Position <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <SelectTrigger data-testid="select-employee">
-                          <SelectValue placeholder="Select employee" />
-                        </SelectTrigger>
+                        <Input 
+                          {...field} 
+                          placeholder="Role" 
+                          className="h-9 text-sm"
+                          data-testid="input-title" 
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Open Shift (Unassigned)</SelectItem>
-                        {Array.isArray(employees) && employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.firstName} {emp.lastName} - {emp.role}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-medium">
+                        Client
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 text-sm" data-testid="select-client">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.isArray(clients) && clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id} className="text-sm">
+                              {client.companyName || `${client.firstName} ${client.lastName}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
-                name="title"
+                name="location"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title / Position</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3" />
+                      Location
+                    </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Paramedic - Station 3" data-testid="input-title" />
+                      <Input 
+                        {...field} 
+                        placeholder="Area/Site" 
+                        className="h-9 text-sm"
+                        data-testid="input-location" 
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="clientId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-client">
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Array.isArray(clients) && clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.companyName || `${client.firstName} ${client.lastName}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="startTime"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        Start
+                      </FormLabel>
                       <FormControl>
-                        <Input type="time" {...field} data-testid="input-start-time" />
+                        <Input 
+                          type="time" 
+                          {...field} 
+                          className="h-9 text-sm"
+                          data-testid="input-start-time" 
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
@@ -233,12 +343,19 @@ export function ShiftBottomSheet({
                   control={form.control}
                   name="endTime"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-medium">
+                        End
+                      </FormLabel>
                       <FormControl>
-                        <Input type="time" {...field} data-testid="input-end-time" />
+                        <Input 
+                          type="time" 
+                          {...field} 
+                          className="h-9 text-sm"
+                          data-testid="input-end-time" 
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
@@ -246,28 +363,42 @@ export function ShiftBottomSheet({
 
               <FormField
                 control={form.control}
-                name="description"
+                name="notes"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                      <FileText className="h-3 w-3" />
+                      Notes
+                    </FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Additional information..." rows={3} data-testid="input-description" />
+                      <Textarea 
+                        {...field} 
+                        placeholder="Additional details..." 
+                        rows={2} 
+                        className="text-sm resize-none min-h-[60px]"
+                        data-testid="input-notes" 
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
 
-              <DrawerFooter className="px-0 pt-4">
-                <div className="flex gap-3">
+              <DrawerFooter className="px-0 pt-3 pb-0">
+                <div className="flex gap-2">
                   <DrawerClose asChild>
-                    <Button variant="outline" className="flex-1" type="button" data-testid="button-cancel-shift">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 h-10" 
+                      type="button" 
+                      data-testid="button-cancel-shift"
+                    >
                       Cancel
                     </Button>
                   </DrawerClose>
                   <Button
                     type="submit"
-                    className="flex-1 bg-primary"
+                    className="flex-1 h-10"
                     disabled={isSubmitting}
                     data-testid="button-save-shift"
                   >
@@ -277,7 +408,7 @@ export function ShiftBottomSheet({
                         Saving...
                       </>
                     ) : (
-                      editingShift ? 'Update Shift' : 'Create Shift'
+                      editingShift ? 'Update' : 'Create Shift'
                     )}
                   </Button>
                 </div>
