@@ -4,7 +4,38 @@
  * Modify values here to customize all chat behavior - ZERO hardcoded values
  */
 
+import { HELPAI } from '@shared/platformConfig';
+
 export const CHAT_SERVER_CONFIG = {
+  // ===== HELPAI BOT CONFIGURATION =====
+  helpai: {
+    name: HELPAI.name,
+    fullName: HELPAI.fullName,
+    userId: 'helpai-bot',
+    greetings: {
+      default: HELPAI.greetings.default,
+      returning: HELPAI.greetings.returning,
+      guest: HELPAI.greetings.guest,
+      afterHours: HELPAI.greetings.afterHours,
+    },
+    messages: {
+      ticketCreated: (displayName: string, ticketNumber: string, position: number, waitTime: number, waitingCount: number) =>
+        `Welcome ${displayName}! Your ticket ${ticketNumber} has been created.\n\nYou're #${position} in queue with an estimated wait time of ${waitTime} minutes. ${waitingCount} users are currently waiting. A support staff member will assist you shortly.`,
+      ticketCreatedSimple: (displayName: string, ticketNumber: string) =>
+        `Welcome ${displayName}! Your ticket is ${ticketNumber}.`,
+      escalationComplete: (ticketNumber: string, userName: string) =>
+        `Great news! Your support request has been escalated. Ticket #${ticketNumber} has been created for ${userName}. A human support agent will be with you shortly.`,
+      staffJoined: (staffName: string, staffRoleName: string) =>
+        `${staffName} (${staffRoleName}) has joined the chat and is ready to help you.`,
+      agentAssigned: (ticketNumber: string) =>
+        `An agent is now helping you!\n\nTicket #${ticketNumber} has been assigned. Your chat is no longer read-only.`,
+      queueUpdate: (userName: string, position: number, waitTime: number) =>
+        `Queue Update: ${userName}, you are #${position} in line (Est. wait: ~${waitTime} min). Thank you for your patience!`,
+      ticketClosed: (reason: string) =>
+        `This ticket has been closed. Reason: ${reason}`,
+    },
+  },
+
   // ===== ROOM CONFIGURATION =====
   rooms: {
     // Main support room (must match support_rooms.slug in database)

@@ -8,6 +8,7 @@ import type { ChatMessage } from '@shared/schema';
 import { trackConnection, trackDisconnection, checkMessageRateLimit } from './middleware/wsRateLimiter';
 import { randomUUID } from 'crypto';
 import { sanitizeChatMessage, sanitizePlainText } from './lib/sanitization';
+import { CHAT_SERVER_CONFIG } from './config/chatServer';
 
 /**
  * Helper function to create system messages with all required ChatMessage fields
@@ -769,171 +770,18 @@ export function setupWebSocket(server: Server) {
               if (clients) {
                 const onlineUsers = [];
 
-                // Add simulation/test users (for testing features)
+                // Add HelpAI Bot from config (always first in list for main room)
                 if (payload.conversationId === MAIN_ROOM_ID) {
-                  // HelpAI Bot - Always first in list (check if removed)
-                  if (!removedSimulatedUsers.has('helpai-bot')) {
-                    onlineUsers.push({
-                      id: 'helpai-bot',
-                      name: 'HelpAI',
-                      role: 'bot',
-                      status: 'online',
-                      userType: 'staff'
-                    });
-                  }
-                  
-                  // Support Staff Team (check if removed)
-                  if (!removedSimulatedUsers.has('sim-staff-1')) {
-                    onlineUsers.push({
-                      id: 'sim-staff-1',
-                      name: 'Deputy Sarah',
-                      role: 'deputy_admin',
-                      status: 'online',
-                      userType: 'staff'
-                    });
-                  }
-                  if (!removedSimulatedUsers.has('sim-staff-2')) {
-                    onlineUsers.push({
-                      id: 'sim-staff-2',
-                      name: 'SysOp Mike',
-                      role: 'sysop',
-                      status: 'online',
-                      userType: 'staff'
-                    });
-                  }
-                  if (!removedSimulatedUsers.has('sim-staff-3')) {
-                    onlineUsers.push({
-                      id: 'sim-staff-3',
-                      name: 'Assistant Emily',
-                      role: 'deputy_assistant',
-                      status: 'online',
-                      userType: 'staff'
-                    });
-                  }
-                  if (!removedSimulatedUsers.has('sim-staff-4')) {
-                    onlineUsers.push({
-                      id: 'sim-staff-4',
-                      name: 'SysOp David',
-                      role: 'sysop',
-                      status: 'busy',
-                      userType: 'staff'
-                    });
-                  }
-                  
-                  // 10 Users with Different Issues (check if removed)
-                  
-                  // User 1 - Password Reset Issue
-                  if (!removedSimulatedUsers.has('sim-user-1')) {
-                    onlineUsers.push({
-                      id: 'sim-user-1',
-                      name: 'Jennifer Lopez',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'org_user'
-                    });
-                  }
-                  
-                  // User 2 - Billing Question
-                  if (!removedSimulatedUsers.has('sim-user-2')) {
-                    onlineUsers.push({
-                      id: 'sim-user-2',
-                      name: 'Robert Johnson',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'subscriber'
-                    });
-                  }
-                  
-                  // User 3 - Account Locked
-                  if (!removedSimulatedUsers.has('sim-user-3')) {
-                    onlineUsers.push({
-                      id: 'sim-user-3',
-                      name: 'Maria Garcia',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'org_user'
-                    });
-                  }
-                  
-                  // User 4 - Schedule/Shift Help
-                  if (!removedSimulatedUsers.has('sim-user-4')) {
-                    onlineUsers.push({
-                      id: 'sim-user-4',
-                      name: 'James Wilson',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'org_user'
-                    });
-                  }
-                  
-                  // User 5 - Payroll Question
-                  if (!removedSimulatedUsers.has('sim-user-5')) {
-                    onlineUsers.push({
-                      id: 'sim-user-5',
-                      name: 'Lisa Anderson',
-                      role: 'guest',
-                      status: 'away',
-                      userType: 'subscriber'
-                    });
-                  }
-                  
-                  // User 6 - Feature Request
-                  if (!removedSimulatedUsers.has('sim-user-6')) {
-                    onlineUsers.push({
-                      id: 'sim-user-6',
-                      name: 'Michael Brown',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'subscriber'
-                    });
-                  }
-                  
-                  // User 7 - Bug Report
-                  if (!removedSimulatedUsers.has('sim-user-7')) {
-                    onlineUsers.push({
-                      id: 'sim-user-7',
-                      name: 'Patricia Davis',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'org_user'
-                    });
-                  }
-                  
-                  // User 8 - Invoice Issue
-                  if (!removedSimulatedUsers.has('sim-user-8')) {
-                    onlineUsers.push({
-                      id: 'sim-user-8',
-                      name: 'Christopher Lee',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'subscriber'
-                    });
-                  }
-                  
-                  // User 9 - Onboarding Help
-                  if (!removedSimulatedUsers.has('sim-user-9')) {
-                    onlineUsers.push({
-                      id: 'sim-user-9',
-                      name: 'Amanda White',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'guest'
-                    });
-                  }
-                  
-                  // User 10 - Time Tracking Question
-                  if (!removedSimulatedUsers.has('sim-user-10')) {
-                    onlineUsers.push({
-                      id: 'sim-user-10',
-                      name: 'Daniel Martinez',
-                      role: 'guest',
-                      status: 'online',
-                      userType: 'org_user'
-                    });
-                  }
+                  onlineUsers.push({
+                    id: CHAT_SERVER_CONFIG.helpai.userId,
+                    name: CHAT_SERVER_CONFIG.helpai.name,
+                    role: 'bot',
+                    status: 'online',
+                    userType: 'staff'
+                  });
                 }
 
-                // Add real users - fetch fresh display info for sync consistency
+                // Add real users from database - fetch fresh display info for sync consistency
                 const clientArray = Array.from(clients);
                 for (const client of clientArray) {
                   if (client.userId && client.readyState === WebSocket.OPEN) {
@@ -1062,7 +910,7 @@ export function setupWebSocket(server: Server) {
                   if (isMainRoom) {
                     if (ws.readyState === WebSocket.OPEN) {
                       ws.send(JSON.stringify({ type: 'voice_granted' }));
-                      console.log(`🎤 Auto-granted voice to ${displayName} in public HelpDesk`);
+                      console.log(`[HelpAI] Auto-granted voice to ${displayName} in public HelpDesk`);
                     }
                   }
 
@@ -1073,8 +921,8 @@ export function setupWebSocket(server: Server) {
                   let ticketNumber: string;
                   
                   if (!existingTicket && ws.workspaceId) {
-                    // NO TICKET: Provide welcome message with instructions
-                    welcomeMessage = "Welcome to CoAIleague Support! I'm HelpAI, your AI assistant.\n\nHow can I help you today? Please describe your question or issue, and I'll do my best to assist you.";
+                    // NO TICKET: Use default greeting from config
+                    welcomeMessage = CHAT_SERVER_CONFIG.helpai.greetings.default;
                     ticketNumber = `INTAKE-${Date.now().toString().slice(-6)}`; // Temp ID until real ticket created
                   } else {
                     // HAS TICKET: Use existing ticket or create temp one
@@ -1095,10 +943,10 @@ export function setupWebSocket(server: Server) {
                       const queueStatus = await queueManager.getQueueStatus();
                       const position = updatedEntry.queuePosition || 1;
                       const waitTime = updatedEntry.estimatedWaitMinutes || 5;
-                      welcomeMessage = `👋 Welcome ${displayName}! Your ticket ${ticketNumber} has been created.\n\nYou're #${position} in queue with an estimated wait time of ${waitTime} minutes. ${queueStatus.waitingCount} users are currently waiting. A support staff member will assist you shortly.`;
+                      welcomeMessage = CHAT_SERVER_CONFIG.helpai.messages.ticketCreated(displayName, ticketNumber, position, waitTime, queueStatus.waitingCount);
                       await queueManager.markWelcomeSent(queueEntry.id);
                     } else {
-                      welcomeMessage = `Welcome ${displayName}! Your ticket is ${ticketNumber}.`;
+                      welcomeMessage = CHAT_SERVER_CONFIG.helpai.messages.ticketCreatedSimple(displayName, ticketNumber);
                     }
                   }
                   
@@ -1106,8 +954,8 @@ export function setupWebSocket(server: Server) {
                   const botMessage = {
                     id: `temp-${Date.now()}`,
                     conversationId: conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: welcomeMessage,
                     messageType: 'text',
@@ -1125,7 +973,7 @@ export function setupWebSocket(server: Server) {
                   const privateWelcome = JSON.stringify({
                     type: 'private_message',
                     message: botMessage,
-                    from: 'HelpAI',
+                    from: CHAT_SERVER_CONFIG.helpai.name,
                   });
                   if (ws.readyState === WebSocket.OPEN) {
                     ws.send(privateWelcome);
@@ -1167,13 +1015,14 @@ export function setupWebSocket(server: Server) {
             // HelpAI greets everyone who joins (only send to the joining user, not the entire room, and only if first time joining)
             if (isMainRoom && !userAlreadyInRoom) {
               try {
-                // Determine greeting based on user type
-                // displayName already includes title for staff (e.g., "Admin Brigido")
+                // Determine greeting based on user type - use config greetings
                 let greeting = '';
                 if (isStaff) {
-                  greeting = `Welcome back, ${displayName}! Support chat is active. Right-click users for quick actions.`;
+                  // Staff returning greeting
+                  greeting = CHAT_SERVER_CONFIG.helpai.greetings.returning.replace('I\'m HelpAI, ready to assist you.', `Support chat is active. Right-click users for quick actions, ${displayName}!`);
                 } else {
-                  greeting = `Welcome to CoAIleague Support! You can send messages right away. A support agent will assist you shortly. Feel free to describe your issue or ask any questions.`;
+                  // Guest/user greeting
+                  greeting = CHAT_SERVER_CONFIG.helpai.greetings.default;
                 }
 
                 // Send welcome message ONLY to the joining user (not saved to DB)
@@ -1183,8 +1032,8 @@ export function setupWebSocket(server: Server) {
                     id: `welcome-${Date.now()}`,
                     createdAt: new Date(),
                     conversationId: conversationId,
-                    senderId: 'helpai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: greeting,
                     messageType: 'text',
@@ -1197,7 +1046,7 @@ export function setupWebSocket(server: Server) {
                   ws.send(welcomePayload);
                 }
               } catch (greetError) {
-                console.error('HelpAI greeting failed:', greetError);
+                console.error('[HelpAI] Greeting failed:', greetError);
               }
             }
 
