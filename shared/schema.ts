@@ -9268,6 +9268,65 @@ export type InsertOrganizationRoomOnboarding = z.infer<typeof insertOrganization
 export type OrganizationRoomOnboarding = typeof organizationRoomOnboarding.$inferSelect;
 
 // ============================================================================
+// PLATFORM UPDATES - WHAT'S NEW FEED
+// ============================================================================
+
+// Platform update category enum
+export const platformUpdateCategoryEnum = pgEnum('platform_update_category', [
+  'feature',       // New feature release
+  'improvement',   // Enhancement to existing feature
+  'bugfix',        // Bug fix
+  'security',      // Security patch
+  'announcement',  // Platform announcement
+]);
+
+// Platform Updates table - What's New feed (global and workspace-scoped)
+export const platformUpdates = pgTable("platform_updates", {
+  id: varchar("id").primaryKey(), // Deterministic ID: type-title-timestamp
+  
+  // Content
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  category: platformUpdateCategoryEnum("category").notNull(),
+  
+  // Version and priority
+  version: varchar("version", { length: 50 }),
+  priority: integer("priority"), // Lower = higher priority (1 = top)
+  badge: varchar("badge", { length: 50 }), // e.g., "NEW", "BETA"
+  
+  // Status
+  isNew: boolean("is_new").default(true),
+  
+  // Links
+  learnMoreUrl: varchar("learn_more_url", { length: 500 }),
+  
+  // Optional scoping
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // null = global
+  createdBy: varchar("created_by").references(() => users.id), // Who published
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  // Timestamps
+  date: timestamp("date").notNull().defaultNow(), // Original release date
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  categoryIdx: index("platform_updates_category_idx").on(table.category),
+  priorityIdx: index("platform_updates_priority_idx").on(table.isNew, table.priority, table.createdAt),
+  workspaceIdx: index("platform_updates_workspace_idx").on(table.workspaceId),
+  dateIdx: index("platform_updates_date_idx").on(table.date),
+}));
+
+export const insertPlatformUpdateSchema = createInsertSchema(platformUpdates).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPlatformUpdate = z.infer<typeof insertPlatformUpdateSchema>;
+export type PlatformUpdate = typeof platformUpdates.$inferSelect;
+
+// ============================================================================
 // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
 // ============================================================================
 
