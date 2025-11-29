@@ -635,7 +635,8 @@ export default function UniversalSchedule() {
                       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => {
                         try {
                           const response = await apiRequest('GET', '/api/shifts/pending');
-                          setPendingShifts(response.data || []);
+                          const data = await response.json();
+                          setPendingShifts(data || []);
                           setShowApproveDialog(true);
                         } catch (error: any) {
                           toast({ description: error.message, variant: "destructive" });
@@ -694,7 +695,8 @@ export default function UniversalSchedule() {
                       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => {
                         try {
                           const response = await apiRequest('GET', '/api/workflows/active');
-                          setActiveWorkflows(response.data || []);
+                          const data = await response.json();
+                          setActiveWorkflows(data || []);
                           setShowWorkflowsDialog(true);
                         } catch (error: any) {
                           toast({ description: error.message, variant: "destructive" });
