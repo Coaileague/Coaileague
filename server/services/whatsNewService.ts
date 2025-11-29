@@ -1,10 +1,14 @@
 /**
  * What's New Service - Dynamic Platform Updates Feed
- * Provides API for platform announcements, features, and updates
+ * Queries updates from the platformUpdates database table
+ * Includes RBAC filtering and user view tracking
+ * Connected to the Platform Event Bus for real-time updates
  */
 
 import { db } from '../db';
+import { platformUpdates as platformUpdatesTable, userPlatformUpdateViews } from '@shared/schema';
 import { isFeatureEnabled, PLATFORM } from '@shared/platformConfig';
+import { desc, eq, sql, and, gte, or, isNull, notInArray } from 'drizzle-orm';
 
 export interface PlatformUpdate {
   id: string;
@@ -17,9 +21,21 @@ export interface PlatformUpdate {
   learnMoreUrl?: string;
   isNew?: boolean;
   priority?: number;
+  visibility?: string;
+  hasViewed?: boolean;
 }
 
-const platformUpdates: PlatformUpdate[] = [
+// Role hierarchy for RBAC filtering (lower index = higher access)
+const ROLE_HIERARCHY: Record<string, number> = {
+  'platform_staff': 0,   // Highest access
+  'admin': 1,
+  'manager': 2,
+  'supervisor': 3,
+  'staff': 4,
+  'all': 5,              // Everyone
+};
+
+const STATIC_SEED_UPDATES: PlatformUpdate[] = [
   {
     id: 'sms-notifications-2025-11-28',
     title: 'SMS Notifications',
@@ -125,77 +141,330 @@ const platformUpdates: PlatformUpdate[] = [
   },
 ];
 
-export function getUpdates(options?: {
+/**
+ * Check if user role has access to visibility level
+ */
+function hasVisibilityAccess(userRole: string, visibility: string): boolean {
+  const userLevel = ROLE_HIERARCHY[userRole] ?? ROLE_HIERARCHY['staff'];
+  const requiredLevel = ROLE_HIERARCHY[visibility] ?? ROLE_HIERARCHY['all'];
+  return userLevel <= requiredLevel;
+}
+
+/**
+ * Seed the database with static updates (idempotent - won't duplicate)
+ */
+export async function seedPlatformUpdates(): Promise<void> {
+  try {
+    for (const update of STATIC_SEED_UPDATES) {
+      const existing = await db.query.platformUpdates.findFirst({
+        where: eq(platformUpdatesTable.id, update.id),
+      });
+      
+      if (!existing) {
+        await db.insert(platformUpdatesTable).values({
+          id: update.id,
+          title: update.title,
+          description: update.description,
+          category: update.category,
+          badge: update.badge,
+          version: update.version,
+          isNew: update.isNew ?? false,
+          priority: update.priority,
+          learnMoreUrl: update.learnMoreUrl,
+          visibility: 'all',
+          date: new Date(update.date),
+        });
+        console.log(`[WhatsNew] Seeded update: ${update.title}`);
+      }
+    }
+    console.log('[WhatsNew] Platform updates seeding complete');
+  } catch (error) {
+    console.error('[WhatsNew] Failed to seed updates:', error);
+  }
+}
+
+/**
+ * Get updates from the database with RBAC filtering and viewed status
+ */
+export async function getUpdates(options?: {
   limit?: number;
   category?: string;
   includeAll?: boolean;
-}): PlatformUpdate[] {
+  userId?: string;
+  userRole?: string;
+  workspaceId?: string;
+}): Promise<PlatformUpdate[]> {
   if (!isFeatureEnabled('enableWhatsNew')) {
     return [];
   }
 
-  let updates = [...platformUpdates];
+  try {
+    const userRole = options?.userRole || 'staff';
+    
+    // Get all updates
+    const conditions = [];
+    if (options?.category) {
+      conditions.push(eq(platformUpdatesTable.category, options.category as any));
+    }
 
-  if (options?.category) {
-    updates = updates.filter(u => u.category === options.category);
+    const dbUpdates = await db.query.platformUpdates.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      orderBy: [
+        sql`COALESCE(${platformUpdatesTable.priority}, 999) ASC`,
+        desc(platformUpdatesTable.date),
+      ],
+      limit: options?.includeAll ? undefined : (options?.limit || 50),
+    });
+
+    // Get user's viewed updates if userId provided
+    let viewedUpdateIds: Set<string> = new Set();
+    if (options?.userId) {
+      const viewedUpdates = await db.query.userPlatformUpdateViews.findMany({
+        where: eq(userPlatformUpdateViews.userId, options.userId),
+        columns: { updateId: true },
+      });
+      viewedUpdateIds = new Set(viewedUpdates.map(v => v.updateId));
+    }
+
+    // Filter by RBAC and add viewed status
+    return dbUpdates
+      .filter(u => {
+        const visibility = u.visibility || 'all';
+        return hasVisibilityAccess(userRole, visibility);
+      })
+      .map(u => ({
+        id: u.id,
+        title: u.title,
+        description: u.description,
+        date: u.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        category: u.category,
+        badge: u.badge || undefined,
+        version: u.version || undefined,
+        learnMoreUrl: u.learnMoreUrl || undefined,
+        isNew: u.isNew ?? undefined,
+        priority: u.priority ?? undefined,
+        visibility: u.visibility || 'all',
+        hasViewed: viewedUpdateIds.has(u.id),
+      }));
+  } catch (error) {
+    console.error('[WhatsNew] Database query failed, falling back to static:', error);
+    let updates = [...STATIC_SEED_UPDATES];
+    
+    if (options?.category) {
+      updates = updates.filter(u => u.category === options.category);
+    }
+    
+    updates.sort((a, b) => {
+      const aPriority = a.priority ?? 999;
+      const bPriority = b.priority ?? 999;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+    
+    if (options?.limit && !options?.includeAll) {
+      updates = updates.slice(0, options.limit);
+    }
+    
+    return updates;
   }
+}
 
-  updates.sort((a, b) => {
-    if (a.priority && b.priority) return a.priority - b.priority;
-    if (a.priority) return -1;
-    if (b.priority) return 1;
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
-
-  if (options?.limit && !options?.includeAll) {
-    updates = updates.slice(0, options.limit);
+/**
+ * Mark an update as viewed by a user (persistent)
+ */
+export async function markUpdateViewed(userId: string, updateId: string, viewSource: string = 'feed'): Promise<boolean> {
+  try {
+    await db.insert(userPlatformUpdateViews).values({
+      userId,
+      updateId,
+      viewSource,
+    }).onConflictDoNothing();
+    
+    console.log(`[WhatsNew] User ${userId} viewed update ${updateId}`);
+    return true;
+  } catch (error) {
+    console.error('[WhatsNew] Failed to mark update as viewed:', error);
+    return false;
   }
-
-  return updates;
 }
 
-export function getLatestUpdates(count: number = 5): PlatformUpdate[] {
-  return getUpdates({ limit: count });
+/**
+ * Get unviewed updates count for a user
+ */
+export async function getUnviewedCount(userId: string, userRole: string = 'staff'): Promise<number> {
+  try {
+    const viewedUpdates = await db.query.userPlatformUpdateViews.findMany({
+      where: eq(userPlatformUpdateViews.userId, userId),
+      columns: { updateId: true },
+    });
+    const viewedIds = viewedUpdates.map(v => v.updateId);
+    
+    const allUpdates = await db.query.platformUpdates.findMany({
+      where: viewedIds.length > 0 
+        ? notInArray(platformUpdatesTable.id, viewedIds) 
+        : undefined,
+    });
+    
+    // Filter by RBAC
+    return allUpdates.filter(u => hasVisibilityAccess(userRole, u.visibility || 'all')).length;
+  } catch (error) {
+    console.error('[WhatsNew] Failed to get unviewed count:', error);
+    return 0;
+  }
 }
 
-export function getNewFeatures(): PlatformUpdate[] {
-  return platformUpdates.filter(u => u.isNew === true);
+export async function getLatestUpdates(count: number = 5, userId?: string, userRole?: string): Promise<PlatformUpdate[]> {
+  return getUpdates({ limit: count, userId, userRole });
 }
 
-export function getUpdateById(id: string): PlatformUpdate | undefined {
-  return platformUpdates.find(u => u.id === id);
+export async function getNewFeatures(userId?: string, userRole?: string): Promise<PlatformUpdate[]> {
+  try {
+    const updates = await db.query.platformUpdates.findMany({
+      where: eq(platformUpdatesTable.isNew, true),
+      orderBy: [sql`COALESCE(${platformUpdatesTable.priority}, 999) ASC`, desc(platformUpdatesTable.date)],
+    });
+    
+    // Get viewed status
+    let viewedUpdateIds: Set<string> = new Set();
+    if (userId) {
+      const viewedUpdates = await db.query.userPlatformUpdateViews.findMany({
+        where: eq(userPlatformUpdateViews.userId, userId),
+        columns: { updateId: true },
+      });
+      viewedUpdateIds = new Set(viewedUpdates.map(v => v.updateId));
+    }
+    
+    return updates
+      .filter(u => hasVisibilityAccess(userRole || 'staff', u.visibility || 'all'))
+      .map(u => ({
+        id: u.id,
+        title: u.title,
+        description: u.description,
+        date: u.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        category: u.category,
+        badge: u.badge || undefined,
+        version: u.version || undefined,
+        learnMoreUrl: u.learnMoreUrl || undefined,
+        isNew: true,
+        priority: u.priority ?? undefined,
+        visibility: u.visibility || 'all',
+        hasViewed: viewedUpdateIds.has(u.id),
+      }));
+  } catch (error) {
+    console.error('[WhatsNew] Failed to get new features:', error);
+    return STATIC_SEED_UPDATES.filter(u => u.isNew === true);
+  }
 }
 
-export function getUpdatesByCategory(category: PlatformUpdate['category']): PlatformUpdate[] {
-  return getUpdates({ category });
+export async function getUpdateById(id: string, userId?: string): Promise<PlatformUpdate | undefined> {
+  try {
+    const update = await db.query.platformUpdates.findFirst({
+      where: eq(platformUpdatesTable.id, id),
+    });
+    
+    if (!update) return undefined;
+    
+    // Check if user has viewed
+    let hasViewed = false;
+    if (userId) {
+      const view = await db.query.userPlatformUpdateViews.findFirst({
+        where: and(
+          eq(userPlatformUpdateViews.userId, userId),
+          eq(userPlatformUpdateViews.updateId, id)
+        ),
+      });
+      hasViewed = !!view;
+    }
+    
+    return {
+      id: update.id,
+      title: update.title,
+      description: update.description,
+      date: update.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+      category: update.category,
+      badge: update.badge || undefined,
+      version: update.version || undefined,
+      learnMoreUrl: update.learnMoreUrl || undefined,
+      isNew: update.isNew ?? undefined,
+      priority: update.priority ?? undefined,
+      visibility: update.visibility || 'all',
+      hasViewed,
+    };
+  } catch (error) {
+    console.error('[WhatsNew] Failed to get update by ID:', error);
+    return STATIC_SEED_UPDATES.find(u => u.id === id);
+  }
 }
 
-export function getUpdateStats() {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  
-  const recentUpdates = platformUpdates.filter(
-    u => new Date(u.date) >= thirtyDaysAgo
-  );
-
-  return {
-    total: platformUpdates.length,
-    recentCount: recentUpdates.length,
-    newFeatures: platformUpdates.filter(u => u.isNew).length,
-    byCategory: {
-      feature: platformUpdates.filter(u => u.category === 'feature').length,
-      improvement: platformUpdates.filter(u => u.category === 'improvement').length,
-      bugfix: platformUpdates.filter(u => u.category === 'bugfix').length,
-      security: platformUpdates.filter(u => u.category === 'security').length,
-      announcement: platformUpdates.filter(u => u.category === 'announcement').length,
-    },
-    latestVersion: PLATFORM.version,
-  };
+export async function getUpdatesByCategory(category: PlatformUpdate['category'], userId?: string, userRole?: string): Promise<PlatformUpdate[]> {
+  return getUpdates({ category, userId, userRole });
 }
 
-export function addUpdate(update: Omit<PlatformUpdate, 'id'>): PlatformUpdate {
+export async function getUpdateStats(userRole: string = 'staff') {
+  try {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    const allUpdates = await db.query.platformUpdates.findMany();
+    
+    // Filter by RBAC
+    const visibleUpdates = allUpdates.filter(u => hasVisibilityAccess(userRole, u.visibility || 'all'));
+    const recentUpdates = visibleUpdates.filter(u => u.date && new Date(u.date) >= thirtyDaysAgo);
+    
+    return {
+      total: visibleUpdates.length,
+      recentCount: recentUpdates.length,
+      newFeatures: visibleUpdates.filter(u => u.isNew).length,
+      byCategory: {
+        feature: visibleUpdates.filter(u => u.category === 'feature').length,
+        improvement: visibleUpdates.filter(u => u.category === 'improvement').length,
+        bugfix: visibleUpdates.filter(u => u.category === 'bugfix').length,
+        security: visibleUpdates.filter(u => u.category === 'security').length,
+        announcement: visibleUpdates.filter(u => u.category === 'announcement').length,
+      },
+      latestVersion: PLATFORM.version,
+    };
+  } catch (error) {
+    console.error('[WhatsNew] Failed to get stats:', error);
+    return {
+      total: STATIC_SEED_UPDATES.length,
+      recentCount: STATIC_SEED_UPDATES.filter(u => 
+        new Date(u.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ).length,
+      newFeatures: STATIC_SEED_UPDATES.filter(u => u.isNew).length,
+      byCategory: {
+        feature: STATIC_SEED_UPDATES.filter(u => u.category === 'feature').length,
+        improvement: STATIC_SEED_UPDATES.filter(u => u.category === 'improvement').length,
+        bugfix: STATIC_SEED_UPDATES.filter(u => u.category === 'bugfix').length,
+        security: STATIC_SEED_UPDATES.filter(u => u.category === 'security').length,
+        announcement: STATIC_SEED_UPDATES.filter(u => u.category === 'announcement').length,
+      },
+      latestVersion: PLATFORM.version,
+    };
+  }
+}
+
+export async function addUpdate(update: Omit<PlatformUpdate, 'id'> & { visibility?: string }): Promise<PlatformUpdate> {
   const id = `${update.title.toLowerCase().replace(/\s+/g, '-')}-${update.date}`;
-  const newUpdate = { ...update, id };
-  platformUpdates.unshift(newUpdate);
-  return newUpdate;
+  
+  try {
+    await db.insert(platformUpdatesTable).values({
+      id,
+      title: update.title,
+      description: update.description,
+      category: update.category,
+      badge: update.badge,
+      version: update.version,
+      isNew: update.isNew ?? true,
+      priority: update.priority,
+      learnMoreUrl: update.learnMoreUrl,
+      visibility: (update.visibility as any) || 'all',
+      date: new Date(update.date),
+    });
+    
+    return { ...update, id };
+  } catch (error) {
+    console.error('[WhatsNew] Failed to add update:', error);
+    throw error;
+  }
 }

@@ -9280,6 +9280,16 @@ export const platformUpdateCategoryEnum = pgEnum('platform_update_category', [
   'announcement',  // Platform announcement
 ]);
 
+// Minimum role required to view update (RBAC visibility)
+export const updateVisibilityEnum = pgEnum('update_visibility', [
+  'all',           // Everyone can see (default)
+  'staff',         // Staff and above
+  'supervisor',    // Supervisors and above
+  'manager',       // Managers and above
+  'admin',         // Admins and owners only
+  'platform_staff' // Platform staff only (root, deputy, sysop)
+]);
+
 // Platform Updates table - What's New feed (global and workspace-scoped)
 export const platformUpdates = pgTable("platform_updates", {
   id: varchar("id").primaryKey(), // Deterministic ID: type-title-timestamp
@@ -9300,6 +9310,9 @@ export const platformUpdates = pgTable("platform_updates", {
   // Links
   learnMoreUrl: varchar("learn_more_url", { length: 500 }),
   
+  // RBAC visibility control
+  visibility: updateVisibilityEnum("visibility").default('all'), // Who can see this update
+  
   // Optional scoping
   workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // null = global
   createdBy: varchar("created_by").references(() => users.id), // Who published
@@ -9316,6 +9329,7 @@ export const platformUpdates = pgTable("platform_updates", {
   priorityIdx: index("platform_updates_priority_idx").on(table.isNew, table.priority, table.createdAt),
   workspaceIdx: index("platform_updates_workspace_idx").on(table.workspaceId),
   dateIdx: index("platform_updates_date_idx").on(table.date),
+  visibilityIdx: index("platform_updates_visibility_idx").on(table.visibility),
 }));
 
 export const insertPlatformUpdateSchema = createInsertSchema(platformUpdates).omit({
@@ -9325,6 +9339,31 @@ export const insertPlatformUpdateSchema = createInsertSchema(platformUpdates).om
 
 export type InsertPlatformUpdate = z.infer<typeof insertPlatformUpdateSchema>;
 export type PlatformUpdate = typeof platformUpdates.$inferSelect;
+
+// Track which users have viewed which platform updates (persistent read receipts)
+export const userPlatformUpdateViews = pgTable("user_platform_update_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  updateId: varchar("update_id").notNull().references(() => platformUpdates.id, { onDelete: 'cascade' }),
+  
+  // When the user viewed this update
+  viewedAt: timestamp("viewed_at").defaultNow(),
+  
+  // How the user viewed it (modal, notification, feed)
+  viewSource: varchar("view_source", { length: 50 }).default('feed'),
+}, (table) => ({
+  userUpdateIdx: uniqueIndex("user_platform_update_views_user_update_idx").on(table.userId, table.updateId),
+  userIdx: index("user_platform_update_views_user_idx").on(table.userId),
+  updateIdx: index("user_platform_update_views_update_idx").on(table.updateId),
+}));
+
+export const insertUserPlatformUpdateViewSchema = createInsertSchema(userPlatformUpdateViews).omit({
+  id: true,
+  viewedAt: true,
+});
+
+export type InsertUserPlatformUpdateView = z.infer<typeof insertUserPlatformUpdateViewSchema>;
+export type UserPlatformUpdateView = typeof userPlatformUpdateViews.$inferSelect;
 
 // ============================================================================
 // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS

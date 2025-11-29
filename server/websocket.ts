@@ -4009,5 +4009,50 @@ export function setupWebSocket(server: Server) {
         }
       });
     },
+    // Platform-wide broadcast for What's New and announcements
+    broadcastPlatformUpdate: (update: {
+      type: 'platform_update' | 'whats_new' | 'announcement';
+      category: 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
+      title: string;
+      description: string;
+      version?: string;
+      priority?: number;
+      learnMoreUrl?: string;
+      metadata?: any;
+    }) => {
+      const payload = JSON.stringify({
+        type: 'platform_update',
+        update: {
+          ...update,
+          isNew: true,
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log(`[WebSocket] Broadcasting platform update: ${update.title}`);
+
+      // Broadcast to all chat clients (all conversations)
+      let clientCount = 0;
+      conversationClients.forEach((clients, conversationId) => {
+        clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(payload);
+            clientCount++;
+          }
+        });
+      });
+
+      // Also broadcast to notification clients
+      notificationClients.forEach((userClients, workspaceId) => {
+        userClients.forEach((client, userId) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(payload);
+            clientCount++;
+          }
+        });
+      });
+
+      console.log(`[WebSocket] Platform update sent to ${clientCount} clients`);
+    },
   };
 }

@@ -402,7 +402,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // - Dual authentication paths: Ticket + email OR Work ID + email
   // - Session-based validation for all WebSocket connections
   // - Platform staff role verification for administrative controls
-  const { broadcastShiftUpdate, broadcastNotification } = setupWebSocket(server);
+  const { broadcastShiftUpdate, broadcastNotification, broadcastPlatformUpdate } = setupWebSocket(server);
+  
+  // Wire platform event bus to WebSocket for real-time updates
+  const { platformEventBus } = await import("./services/platformEventBus");
+  platformEventBus.setWebSocketHandler((event) => {
+    broadcastPlatformUpdate({
+      type: "platform_update",
+      category: event.category,
+      title: event.title,
+      description: event.description,
+      version: event.version,
+      priority: event.priority,
+      learnMoreUrl: event.learnMoreUrl,
+      metadata: event.metadata,
+    });
+  });
+  console.log("[Server] Platform Event Bus connected to WebSocket");
   
   // Setup custom auth (portable, session-based)
   setupCustomAuth(app);
