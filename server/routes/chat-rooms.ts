@@ -6,8 +6,11 @@ import {
   roomEvents,
   shifts,
   users,
+  supportRooms,
+  organizationChatRooms,
+  organizationRoomMembers,
 } from "@shared/schema";
-import { eq, and, or, sql, inArray } from "drizzle-orm";
+import { eq, and, or, sql, inArray, count } from "drizzle-orm";
 import { AuthenticatedRequest } from "../rbac";
 import rateLimit from "express-rate-limit";
 
@@ -263,8 +266,9 @@ router.post(
 );
 
 // ============================================================================
-// LIST ROOMS - GET /api/chat/rooms
+// LIST ROOMS - GET /api/chat/rooms (Enhanced with all room types)
 // ============================================================================
+// Returns: { roomId, name, slug, type, participantsCount, lastMessageAt, status }
 router.get(
   "/",
   async (req, res) => {
@@ -277,47 +281,198 @@ router.get(
         return res.status(403).json({ error: "No workspace context" });
       }
 
-      // Get all rooms user is an ACTIVE participant in OR public/workspace-visible rooms
-      const userRooms = await db
-        .select({
-          conversation: chatConversations,
-          participant: chatParticipants,
-        })
-        .from(chatConversations)
-        .leftJoin(
-          chatParticipants,
-          and(
-            eq(chatConversations.id, chatParticipants.conversationId),
-            eq(chatParticipants.participantId, userId),
-            eq(chatParticipants.isActive, true) // CRITICAL: Only active participants
+      const rooms: any[] = [];
+
+      // ========================================================================
+      // 1. SUPPORT ROOMS (type: 'support')
+      // ========================================================================
+      try {
+        const supportRoomsList = await db
+          .select({
+            id: supportRooms.id,
+            slug: supportRooms.slug,
+            name: supportRooms.name,
+            status: supportRooms.status,
+            conversationId: supportRooms.conversationId,
+            lastMessageAt: chatConversations.lastMessageAt,
+          })
+          .from(supportRooms)
+          .leftJoin(
+            chatConversations,
+            eq(supportRooms.conversationId, chatConversations.id)
           )
-        )
-        .where(
-          and(
-            eq(chatConversations.workspaceId, workspaceId),
-            eq(chatConversations.status, 'active'),
+          .where(
             or(
-              // User is an active participant
-              and(
-                eq(chatParticipants.participantId, userId),
-                eq(chatParticipants.isActive, true)
-              ),
-              // Room is public or workspace-visible
-              inArray(chatConversations.visibility, ['public', 'workspace'])
+              eq(supportRooms.workspaceId, workspaceId),
+              eq(supportRooms.workspaceId, null) // Platform-wide support rooms
+            )
+          );
+
+        for (const room of supportRoomsList) {
+          // Count participants from associated conversation
+          let participantsCount = 0;
+          if (room.conversationId) {
+            const [countResult] = await db
+              .select({ count: count() })
+              .from(chatParticipants)
+              .where(
+                and(
+                  eq(chatParticipants.conversationId, room.conversationId),
+                  eq(chatParticipants.isActive, true)
+                )
+              );
+            participantsCount = countResult?.count || 0;
+          }
+
+          rooms.push({
+            roomId: room.id,
+            name: room.name,
+            slug: room.slug,
+            type: 'support',
+            participantsCount,
+            lastMessageAt: room.lastMessageAt,
+            status: room.status,
+            roomType: 'support_room',
+          });
+        }
+      } catch (error) {
+        console.error("[GET /api/chat/rooms] Error fetching support rooms:", error);
+      }
+
+      // ========================================================================
+      // 2. ORGANIZATION CHAT ROOMS (type: 'org')
+      // ========================================================================
+      try {
+        const orgRooms = await db
+          .select({
+            id: organizationChatRooms.id,
+            roomSlug: organizationChatRooms.roomSlug,
+            roomName: organizationChatRooms.roomName,
+            status: organizationChatRooms.status,
+            conversationId: organizationChatRooms.conversationId,
+            lastMessageAt: chatConversations.lastMessageAt,
+          })
+          .from(organizationChatRooms)
+          .leftJoin(
+            chatConversations,
+            eq(organizationChatRooms.conversationId, chatConversations.id)
+          )
+          .where(eq(organizationChatRooms.workspaceId, workspaceId));
+
+        for (const room of orgRooms) {
+          // Count participants from organization room members
+          const [countResult] = await db
+            .select({ count: count() })
+            .from(organizationRoomMembers)
+            .where(eq(organizationRoomMembers.roomId, room.id));
+          const participantsCount = countResult?.count || 0;
+
+          rooms.push({
+            roomId: room.id,
+            name: room.roomName,
+            slug: room.roomSlug,
+            type: 'org',
+            participantsCount,
+            lastMessageAt: room.lastMessageAt,
+            status: room.status,
+            roomType: 'organization_room',
+          });
+        }
+      } catch (error) {
+        console.error("[GET /api/chat/rooms] Error fetching org rooms:", error);
+      }
+
+      // ========================================================================
+      // 3. GENERAL CHAT CONVERSATIONS (work, meeting rooms)
+      // ========================================================================
+      try {
+        const generalRooms = await db
+          .select({
+            conversation: chatConversations,
+            participant: chatParticipants,
+          })
+          .from(chatConversations)
+          .leftJoin(
+            chatParticipants,
+            and(
+              eq(chatConversations.id, chatParticipants.conversationId),
+              eq(chatParticipants.participantId, userId),
+              eq(chatParticipants.isActive, true)
             )
           )
-        );
+          .where(
+            and(
+              eq(chatConversations.workspaceId, workspaceId),
+              eq(chatConversations.status, 'active'),
+              // Exclude shift chats and support chats
+              inArray(chatConversations.conversationType, ['open_chat', 'dm_user']),
+              or(
+                // User is an active participant
+                and(
+                  eq(chatParticipants.participantId, userId),
+                  eq(chatParticipants.isActive, true)
+                ),
+                // Room is public or workspace-visible
+                inArray(chatConversations.visibility, ['public', 'workspace'])
+              )
+            )
+          );
 
-      res.json({ 
-        success: true, 
-        rooms: userRooms.map((r: any) => ({
-          ...r.conversation,
-          isParticipant: !!r.participant,
-          participantRole: r.participant?.participantRole || null,
-        }))
+        for (const item of generalRooms) {
+          const conv = item.conversation;
+          // Count participants from chat participants
+          const [countResult] = await db
+            .select({ count: count() })
+            .from(chatParticipants)
+            .where(
+              and(
+                eq(chatParticipants.conversationId, conv.id),
+                eq(chatParticipants.isActive, true)
+              )
+            );
+          const participantsCount = countResult?.count || 0;
+
+          // Determine room type (work vs meeting)
+          // If subject contains "meeting", "team", or explicit markers, type is 'meeting'
+          let roomType = 'work';
+          if (
+            conv.subject &&
+            /meeting|stand.?up|team|sync|huddle/i.test(conv.subject)
+          ) {
+            roomType = 'meeting';
+          }
+
+          rooms.push({
+            roomId: conv.id,
+            name: conv.subject || 'Untitled',
+            slug: conv.id.toLowerCase().slice(0, 20), // Use ID prefix as slug for general rooms
+            type: roomType,
+            participantsCount,
+            lastMessageAt: conv.lastMessageAt,
+            status: conv.status,
+            roomType: 'conversation',
+            isParticipant: !!item.participant,
+            participantRole: item.participant?.participantRole || null,
+          });
+        }
+      } catch (error) {
+        console.error("[GET /api/chat/rooms] Error fetching general rooms:", error);
+      }
+
+      // Sort by last message time (most recent first)
+      rooms.sort((a, b) => {
+        const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      res.json({
+        success: true,
+        rooms,
+        totalRooms: rooms.length,
       });
     } catch (error: any) {
-      console.error("Error listing rooms:", error);
+      console.error("[GET /api/chat/rooms] Error listing rooms:", error);
       res.status(500).json({ error: "Failed to list rooms" });
     }
   }

@@ -638,8 +638,6 @@ export function setupWebSocket(server: Server) {
                     subject: supportRoom.name,
                     conversationType: 'open_chat',
                     workspaceId: supportRoom.workspaceId || 'coaileague-platform-workspace',
-                    participants: [],
-                    isActive: true,
                   });
                   
                   // Link conversation to support room
@@ -697,7 +695,7 @@ export function setupWebSocket(server: Server) {
 
               // Determine user type and set initial status
               platformRole = await storage.getUserPlatformRole(payload.userId).catch(() => null);
-              isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
+              isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
               
               if (isStaff) {
                 userType = 'staff';
@@ -1390,15 +1388,15 @@ export function setupWebSocket(server: Server) {
                   if (!rateLimit.allowed) {
                     await storage.logPasswordResetAttempt({
                       requestedBy: userId,
-                      requestedByWorkspaceId: workspaceId || null,
-                      targetUserId: null,
+                      requestedByWorkspaceId: workspaceId || undefined,
+                      targetUserId: undefined,
                       targetEmail: email,
-                      targetWorkspaceId: null,
+                      targetWorkspaceId: undefined,
                       success: false,
                       outcomeCode: 'rate_limited',
                       reason: `Rate limit exceeded (blocked by ${rateLimit.blockedBy})`,
-                      ipAddress: ws.ipAddress || null,
-                      userAgent: ws.userAgent || null,
+                      ipAddress: ws.ipAddress || undefined,
+                      userAgent: ws.userAgent || undefined,
                     });
                     
                     const resetMsg = `❌ Rate Limit Exceeded\n\nToo many password reset attempts.\n\nBlocked by: ${rateLimit.blockedBy}\nLimit: 5 attempts per hour\n\nPlease try again later.`;
@@ -1418,15 +1416,15 @@ export function setupWebSocket(server: Server) {
                       // User not found - BLOCK action and log as security event
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || null,
-                        targetUserId: null,
+                        requestedByWorkspaceId: workspaceId || undefined,
+                        targetUserId: undefined,
                         targetEmail: email,
-                        targetWorkspaceId: null,
+                        targetWorkspaceId: undefined,
                         success: false,
                         outcomeCode: 'not_found',
                         reason: 'User not found - action blocked for security',
-                        ipAddress: ws.ipAddress || null,
-                        userAgent: ws.userAgent || null,
+                        ipAddress: ws.ipAddress || undefined,
+                        userAgent: ws.userAgent || undefined,
                       });
                       
                       // SECURITY: Generic message (don't reveal if email exists)
@@ -1447,15 +1445,15 @@ export function setupWebSocket(server: Server) {
                       // Cross-workspace attempt - LOG AND BLOCK
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || null,
+                        requestedByWorkspaceId: workspaceId || undefined,
                         targetUserId: user.id,
                         targetEmail: email,
-                        targetWorkspaceId: targetWorkspaceId || null,
+                        targetWorkspaceId: targetWorkspaceId || undefined,
                         success: false,
                         outcomeCode: 'error',
                         reason: 'Cross-workspace reset blocked',
-                        ipAddress: ws.ipAddress || null,
-                        userAgent: ws.userAgent || null,
+                        ipAddress: ws.ipAddress || undefined,
+                        userAgent: ws.userAgent || undefined,
                       });
                       
                       resetMsg = `❌ Cross-Workspace Access Denied\n\nYou cannot reset passwords for users in other workspaces.\n\nTarget workspace: ${targetWorkspaceId || 'platform'}\nYour workspace: ${workspaceId || 'platform'}`;
@@ -1474,15 +1472,15 @@ export function setupWebSocket(server: Server) {
                       // Success - log with IP/session context
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || null,
+                        requestedByWorkspaceId: workspaceId || undefined,
                         targetUserId: user.id,
                         targetEmail: email,
-                        targetWorkspaceId: user.currentWorkspaceId || null,
+                        targetWorkspaceId: user.currentWorkspaceId || undefined,
                         success: true,
                         outcomeCode: 'sent',
                         reason: 'Reset email sent',
-                        ipAddress: ws.ipAddress || null,
-                        userAgent: ws.userAgent || null,
+                        ipAddress: ws.ipAddress || undefined,
+                        userAgent: ws.userAgent || undefined,
                       });
                       
                       // Redact email for privacy
@@ -1497,15 +1495,15 @@ export function setupWebSocket(server: Server) {
                       
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || null,
+                        requestedByWorkspaceId: workspaceId || undefined,
                         targetUserId: user.id,
                         targetEmail: email,
-                        targetWorkspaceId: user.currentWorkspaceId || null,
+                        targetWorkspaceId: user.currentWorkspaceId || undefined,
                         success: false,
                         outcomeCode: 'email_failed',
                         reason: `Email send failed: ${(emailError as Error).message}`,
-                        ipAddress: ws.ipAddress || null,
-                        userAgent: ws.userAgent || null,
+                        ipAddress: ws.ipAddress || undefined,
+                        userAgent: ws.userAgent || undefined,
                       });
                       
                       resetMsg = `❌ Password Reset Failed\n\nFailed to send password reset email.\n\nReason: ${(emailError as Error).message}\n\nPlease try again or contact system administrator.`;
@@ -1652,7 +1650,9 @@ export function setupWebSocket(server: Server) {
                     clients.forEach((client) => {
                       // Match by userId OR by display name
                       if (client.userId === targetUsername || client.userName === targetUsername) {
-                        targetUserId = client.userId;
+                        if (client.userId) {
+                          targetUserId = client.userId;
+                        }
                         targetUserDisplayName = client.userName || targetUsername;
                       }
                     });

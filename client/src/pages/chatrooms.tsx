@@ -12,17 +12,49 @@ import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 interface ChatRoom {
-  id: string;
-  subject: string;
-  conversationType: 'open_chat' | 'shift_chat' | 'dm_user' | 'dm_support' | 'dm_bot';
-  visibility: 'workspace' | 'public' | 'private';
+  // New unified format
+  roomId?: string;
+  name?: string;
+  slug?: string;
+  type?: 'support' | 'work' | 'meeting' | 'org';
+  participantsCount?: number;
+  roomType?: string;
+  
+  // Legacy format (backward compatibility)
+  id?: string;
+  subject?: string;
+  conversationType?: 'open_chat' | 'shift_chat' | 'dm_user' | 'dm_support' | 'dm_bot';
+  visibility?: 'workspace' | 'public' | 'private';
+  
+  // Common fields
   status: string;
-  isParticipant: boolean;
+  isParticipant?: boolean;
   participantRole?: string;
   lastMessageAt?: string;
-  createdAt: string;
+  createdAt?: string;
   autoCloseAt?: string;
 }
+
+// Helper to normalize room data between old and new formats
+const normalizeRoom = (room: any): ChatRoom => {
+  return {
+    roomId: room.roomId || room.id,
+    id: room.roomId || room.id,
+    name: room.name || room.subject,
+    subject: room.name || room.subject,
+    slug: room.slug,
+    type: room.type || (room.conversationType === 'shift_chat' ? 'work' : room.conversationType),
+    conversationType: room.conversationType,
+    participantsCount: room.participantsCount,
+    status: room.status,
+    isParticipant: room.isParticipant,
+    participantRole: room.participantRole,
+    lastMessageAt: room.lastMessageAt,
+    createdAt: room.createdAt,
+    autoCloseAt: room.autoCloseAt,
+    visibility: room.visibility,
+  };
+};
 
 export default function Chatrooms() {
   const { user } = useAuth();
@@ -67,7 +99,9 @@ export default function Chatrooms() {
   const filteredRooms = useMemo(() => {
     if (!roomsData?.rooms) return [];
 
-    let filtered = roomsData.rooms;
+    // Normalize all rooms to use new format
+    let normalized = roomsData.rooms.map(normalizeRoom);
+    let filtered = normalized;
 
     // Apply type filter
     if (filterType === 'joined') {
@@ -79,9 +113,11 @@ export default function Chatrooms() {
     // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((r: ChatRoom) =>
-        r.subject.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((r: ChatRoom) => {
+        const nameOrSubject = (r.name || r.subject || '').toLowerCase();
+        const roomSlug = (r.slug || '').toLowerCase();
+        return nameOrSubject.includes(query) || roomSlug.includes(query);
+      });
     }
 
     return filtered;
@@ -108,8 +144,24 @@ export default function Chatrooms() {
     joinRoomsMutation.mutate(Array.from(selectedRooms));
   };
 
-  const getIconForType = (type: string) => {
-    switch (type) {
+  const getIconForType = (type?: string, conversationType?: string) => {
+    // Handle new format (type field)
+    if (type) {
+      switch (type) {
+        case 'support':
+          return <MessageCircle className="h-4 w-4" />;
+        case 'work':
+          return <Users className="h-4 w-4" />;
+        case 'meeting':
+          return <Users className="h-4 w-4" />;
+        case 'org':
+          return <Users className="h-4 w-4" />;
+        default:
+          return <MessageCircle className="h-4 w-4" />;
+      }
+    }
+    // Handle legacy format (conversationType field)
+    switch (conversationType) {
       case 'shift_chat':
         return <Users className="h-4 w-4" />;
       case 'dm_support':
@@ -121,7 +173,7 @@ export default function Chatrooms() {
     }
   };
 
-  const getVisibilityIcon = (visibility: string) => {
+  const getVisibilityIcon = (visibility?: string) => {
     return visibility === 'private' ? (
       <Lock className="h-3 w-3" />
     ) : (
@@ -129,8 +181,24 @@ export default function Chatrooms() {
     );
   };
 
-  const getRoomLabel = (type: string) => {
-    switch (type) {
+  const getRoomLabel = (type?: string, conversationType?: string) => {
+    // Handle new format (type field)
+    if (type) {
+      switch (type) {
+        case 'support':
+          return 'Support';
+        case 'work':
+          return 'Work';
+        case 'meeting':
+          return 'Meeting';
+        case 'org':
+          return 'Organization';
+        default:
+          return 'Chat';
+      }
+    }
+    // Handle legacy format (conversationType field)
+    switch (conversationType) {
       case 'shift_chat':
         return 'Shift';
       case 'dm_support':
@@ -290,14 +358,16 @@ export default function Chatrooms() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 flex-1 min-w-0">
                           <div className="text-primary mt-1 shrink-0">
-                            {getIconForType(room.conversationType)}
+                            {getIconForType(room.type, room.conversationType)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-base line-clamp-2">
-                              {room.subject}
+                            <CardTitle className="text-base line-clamp-2" data-testid={`text-room-name-${room.id}`}>
+                              {room.name || room.subject}
                             </CardTitle>
                             <CardDescription className="mt-1 text-xs">
-                              Created {formatDistanceToNow(new Date(room.createdAt), { addSuffix: true })}
+                              {room.createdAt 
+                                ? `Created ${formatDistanceToNow(new Date(room.createdAt), { addSuffix: true })}`
+                                : 'Room'}
                             </CardDescription>
                           </div>
                         </div>
@@ -310,35 +380,45 @@ export default function Chatrooms() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {getRoomLabel(room.conversationType)}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs flex items-center gap-1">
-                            {getVisibilityIcon(room.visibility)}
-                            {room.visibility}
-                          </Badge>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs" data-testid={`badge-type-${room.id}`}>
+                              {getRoomLabel(room.type, room.conversationType)}
+                            </Badge>
+                            {room.participantsCount !== undefined && (
+                              <Badge variant="outline" className="text-xs flex items-center gap-1" data-testid={`badge-participants-${room.id}`}>
+                                <Users className="h-3 w-3" />
+                                {room.participantsCount}
+                              </Badge>
+                            )}
+                            {room.visibility && (
+                              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                {getVisibilityIcon(room.visibility)}
+                                {room.visibility}
+                              </Badge>
+                            )}
+                          </div>
+                          {!room.isParticipant && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                handleSelectRoom(room.id);
+                              }}
+                              data-testid={`button-select-room-${room.id}`}
+                              className="shrink-0"
+                            >
+                              {selectedRooms.has(room.id) ? 'Selected' : 'Select'}
+                            </Button>
+                          )}
                         </div>
-                        {!room.isParticipant && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              handleSelectRoom(room.id);
-                            }}
-                            data-testid={`button-select-room-${room.id}`}
-                            className="shrink-0"
-                          >
-                            {selectedRooms.has(room.id) ? 'Selected' : 'Select'}
-                          </Button>
+                        {room.lastMessageAt && (
+                          <p className="text-xs text-muted-foreground">
+                            Last activity {formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })}
+                          </p>
                         )}
                       </div>
-                      {room.lastMessageAt && (
-                        <p className="text-xs text-muted-foreground mt-3">
-                          Last activity {formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })}
-                        </p>
-                      )}
                     </CardContent>
                   </Card>
                 ))}

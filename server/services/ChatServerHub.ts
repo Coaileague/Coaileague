@@ -675,7 +675,7 @@ class ChatServerHubClass {
     const skillLabel = params.skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     await platformEventBus.publish({
-      type: isApprovalNeeded ? 'ai_approval_request' : 'ai_brain_action',
+      type: isApprovalNeeded ? 'ai_escalation' : 'ai_brain_action',
       category: 'feature',
       title: isApprovalNeeded 
         ? `AI Action Requires Approval: ${skillLabel}` 
