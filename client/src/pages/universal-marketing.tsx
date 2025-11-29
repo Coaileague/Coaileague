@@ -40,7 +40,7 @@ export default function UniversalMarketing() {
       {section === 'landing' && (
         <>
           {/* Hero */}
-          <section className="pt-16 md:pt-24 pb-8 md:pb-16 px-3 sm:px-4 md:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+          <section className="pt-16 md:pt-24 pb-8 md:pb-16 px-3 sm:px-4 md:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 mobile-compact-p mobile-text-scale">
             <div className="container mx-auto max-w-7xl">
               <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-12">
                 <Badge className="bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 border-blue-200 shadow-md dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700 inline-block">
@@ -58,7 +58,7 @@ export default function UniversalMarketing() {
                   {MARKETING.landing.hero.subheadline}
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4 mobile-flex-col mobile-gap-3">
                   <Button size="lg" className="w-full sm:w-auto" onClick={() => setLocation('/register?tier=free')}>
                     {MARKETING.landing.hero.cta.primary}
                   </Button>
@@ -67,7 +67,7 @@ export default function UniversalMarketing() {
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-3 sm:gap-6 justify-center pt-4 text-xs sm:text-sm text-muted-foreground">
+                <div className="flex flex-wrap gap-3 sm:gap-6 justify-center pt-4 text-xs sm:text-sm text-muted-foreground mobile-flex-col mobile-gap-2">
                   {MARKETING.landing.hero.trustSignals.map((signal) => (
                     <div key={signal.text} className="flex items-center gap-2">
                       {signal.icon === 'Shield' && <Shield className="h-4 w-4 text-primary" />}
@@ -105,7 +105,7 @@ export default function UniversalMarketing() {
           {/* Stats */}
           <section className="border-b py-8 md:py-12">
             <div className="container mx-auto max-w-4xl px-3 sm:px-4 md:px-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 text-center mobile-cols-1 mobile-gap-4">
                 {MARKETING.landing.stats.map((stat) => (
                   <div key={stat.label} className="space-y-2">
                     <div className="text-3xl md:text-4xl font-bold text-primary">{stat.number}</div>
@@ -118,10 +118,10 @@ export default function UniversalMarketing() {
           </section>
 
           {/* Features Grid */}
-          <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6">
+          <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 mobile-compact-p">
             <div className="container mx-auto max-w-7xl">
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">AI-Powered Capabilities</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mobile-cols-1 mobile-gap-4">
                 {MARKETING.landing.features.map((feature) => (
                   <Card key={feature.title} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
@@ -145,10 +145,10 @@ export default function UniversalMarketing() {
           </section>
 
           {/* Social Proof */}
-          <section className="py-12 md:py-16 bg-gray-50 dark:bg-gray-900/50 px-3 sm:px-4 md:px-6">
+          <section className="py-12 md:py-16 bg-gray-50 dark:bg-gray-900/50 px-3 sm:px-4 md:px-6 mobile-compact-p">
             <div className="container mx-auto max-w-7xl">
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">Trusted by Industry Leaders</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-cols-1 mobile-gap-4">
                 {MARKETING.landing.socialProof.map((testimonial) => (
                   <Card key={testimonial.name}>
                     <CardHeader>
@@ -170,7 +170,7 @@ export default function UniversalMarketing() {
           </section>
 
           {/* CTA */}
-          <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 text-center">
+          <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 text-center mobile-compact-p">
             <div className="container mx-auto max-w-2xl">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Transform Your Workforce?</h2>
               <p className="text-muted-foreground mb-6">Start your 30-day free trial today. No credit card required.</p>
@@ -184,7 +184,7 @@ export default function UniversalMarketing() {
 
       {/* PRICING SECTION */}
       {section === 'pricing' && (
-        <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6">
+        <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 mobile-compact-p">
           <div className="container mx-auto max-w-7xl">
             <div className="text-center mb-12">
               <Badge className="inline-block mb-4">{MARKETING.pricing.badge}</Badge>
@@ -192,7 +192,7 @@ export default function UniversalMarketing() {
               <p className="text-muted-foreground max-w-2xl mx-auto">{MARKETING.pricing.subheadline}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mobile-cols-1 mobile-gap-4">
               {MARKETING.pricing.getTiers().map((tier) => (
                 <Card
                   key={tier.id}

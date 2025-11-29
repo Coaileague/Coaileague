@@ -55,7 +55,7 @@ export default function Homepage() {
       <UniversalHeader variant="public" />
 
       {/* Hero Section - Enhanced */}
-      <section className="pt-12 sm:pt-24 pb-12 sm:pb-20 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden">
+      <section className="pt-12 sm:pt-24 pb-12 sm:pb-20 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden mobile-compact-p mobile-text-scale">
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
           <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500 rounded-full blur-3xl"></div>
@@ -63,7 +63,7 @@ export default function Homepage() {
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10 px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center mobile-cols-1 mobile-gap-4">
             {/* Left Column - Content */}
             <div>
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-md">
@@ -102,7 +102,7 @@ export default function Homepage() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mb-6 sm:mb-8 mobile-flex-col mobile-gap-3">
                 <Link href="/pricing" className="px-4 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center sm:justify-start gap-2 text-sm sm:text-base min-h-[44px]" data-testid="button-calculate-savings">
                   Calculate Savings
                   <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5 shrink-0" />
@@ -114,7 +114,7 @@ export default function Homepage() {
               </div>
 
               {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-gray-200 mobile-flex-col mobile-gap-3">
                 <div className="flex items-center gap-2">
                   <Cpu className="w-5 h-5 text-gray-600" />
                   <span className="text-sm text-gray-700"><strong>CoAIleague AI Brain</strong> Powered</span>
@@ -238,7 +238,7 @@ export default function Homepage() {
       </section>
 
       {/* Autonomous Features - Enhanced */}
-      <section id="features" className="py-20 px-6 bg-white">
+      <section id="features" className="py-20 px-6 bg-white mobile-compact-p">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 shadow-md">
@@ -256,7 +256,7 @@ export default function Homepage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="grid md:grid-cols-3 gap-8 mb-16 mobile-cols-1 mobile-gap-4">
             {autonomousFeatures.map((feature, idx) => (
               <div key={idx} className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 hover:shadow-2xl transition-all relative overflow-hidden">
                 {/* Decorative gradient */}
@@ -348,7 +348,7 @@ export default function Homepage() {
                 These three AI systems replace 3-5 full-time employees
               </p>
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/30">
-                <div className="grid md:grid-cols-3 gap-6 mb-6">
+                <div className="grid md:grid-cols-3 gap-6 mb-6 mobile-cols-1 mobile-gap-3">
                   <div>
                     <div className="text-5xl font-bold mb-2">$155K+</div>
                     <div className="text-blue-100">Eliminated Salaries</div>
