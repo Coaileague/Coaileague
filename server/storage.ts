@@ -71,6 +71,7 @@ import {
   organizationRoomMembers,
   organizationRoomOnboarding,
   notifications,
+  userNotificationPreferences,
   auditEvents,
   idRegistry,
   writeAheadLog,
@@ -78,6 +79,8 @@ import {
   proposals,
   salesActivities,
   passwordResetAuditLog,
+  aiResponses,
+  aiSuggestions,
   type User,
   type OrgInvitation,
   type InsertOrgInvitation,
@@ -193,12 +196,18 @@ import {
   type InsertPolicyAcknowledgment,
   type Notification,
   type InsertNotification,
+  type UserNotificationPreferences,
+  type InsertUserNotificationPreferences,
   type AuditEvent,
   type InsertAuditEvent,
   type IdRegistry,
   type InsertIdRegistry,
   type WriteAheadLog,
   type InsertWriteAheadLog,
+  type AiResponse,
+  type InsertAiResponse,
+  type AiSuggestion,
+  type InsertAiSuggestion,
 } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
@@ -400,6 +409,7 @@ export interface IStorage {
   getSupportTickets(workspaceId: string): Promise<SupportTicket[]>;
   getActiveSupportTicket(userId: string, workspaceId: string): Promise<SupportTicket | undefined>;
   updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
+  deleteSupportTicket(id: string): Promise<boolean>;
   
   // HelpAI AI Support System
   createHelposSession(session: InsertHelposAiSession): Promise<HelposAiSession>;
@@ -503,6 +513,8 @@ export interface IStorage {
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
+  updateChatMessage(id: string, conversationId: string, data: { message: string }): Promise<ChatMessage | undefined>;
+  deleteChatMessage(id: string, conversationId: string): Promise<boolean>;
   
   // HelpDesk Room operations (Professional Support Chat)
   createSupportRoom(room: InsertSupportRoom): Promise<SupportRoom>;
@@ -745,6 +757,32 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number>;
   deleteNotification(id: string, userId: string): Promise<boolean>;
   deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number>;
+  
+  // Notification Preferences - User notification settings
+  getNotificationPreferences(userId: string, workspaceId: string): Promise<UserNotificationPreferences | undefined>;
+  createOrUpdateNotificationPreferences(userId: string, workspaceId: string, data: Partial<InsertUserNotificationPreferences>): Promise<UserNotificationPreferences>;
+
+  // ========================================================================
+  // AI RESPONSES - TRACK AND LEARN FROM AI INTERACTIONS
+  // ========================================================================
+  createAiResponse(response: InsertAiResponse): Promise<AiResponse>;
+  getAiResponse(id: string): Promise<AiResponse | undefined>;
+  getAiResponsesByWorkspace(workspaceId: string, filters?: { sourceType?: string; feature?: string; limit?: number; offset?: number }): Promise<AiResponse[]>;
+  getAiResponsesBySource(workspaceId: string, sourceType: string, sourceId: string): Promise<AiResponse[]>;
+  updateAiResponse(id: string, data: Partial<InsertAiResponse>): Promise<AiResponse | undefined>;
+  rateAiResponse(id: string, rating: number, feedback?: string): Promise<AiResponse | undefined>;
+
+  // ========================================================================
+  // AI SUGGESTIONS - UNIFIED AI-POWERED SUGGESTIONS
+  // ========================================================================
+  createAiSuggestion(suggestion: InsertAiSuggestion): Promise<AiSuggestion>;
+  getAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
+  getAiSuggestionsByWorkspace(workspaceId: string, filters?: { status?: string; priority?: string; type?: string; limit?: number; offset?: number }): Promise<AiSuggestion[]>;
+  getActiveSuggestions(workspaceId: string): Promise<AiSuggestion[]>;
+  updateAiSuggestion(id: string, data: Partial<InsertAiSuggestion>): Promise<AiSuggestion | undefined>;
+  acceptAiSuggestion(id: string, userId: string): Promise<AiSuggestion | undefined>;
+  rejectAiSuggestion(id: string, userId: string, reason?: string): Promise<AiSuggestion | undefined>;
+  implementAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2046,6 +2084,14 @@ export class DatabaseStorage implements IStorage {
     
     return updated;
   }
+
+  async deleteSupportTicket(id: string): Promise<boolean> {
+    const result = await db
+      .delete(supportTickets)
+      .where(eq(supportTickets.id, id));
+    
+    return (result.rowCount || 0) > 0;
+  }
   
   // ============================================================================
   // HELPOS™ AI SUPPORT SYSTEM
@@ -3021,6 +3067,38 @@ export class DatabaseStorage implements IStorage {
           sql`${chatMessages.senderId} != ${userId}` // Only mark messages from other users as read
         )
       );
+  }
+
+  async updateChatMessage(id: string, conversationId: string, data: { message: string }): Promise<ChatMessage | undefined> {
+    const [updated] = await db
+      .update(chatMessages)
+      .set({
+        message: data.message,
+        isEdited: true,
+        editedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(chatMessages.id, id),
+          eq(chatMessages.conversationId, conversationId)
+        )
+      )
+      .returning();
+    
+    return updated;
+  }
+
+  async deleteChatMessage(id: string, conversationId: string): Promise<boolean> {
+    const result = await db
+      .delete(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.id, id),
+          eq(chatMessages.conversationId, conversationId)
+        )
+      );
+    
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getClosedConversationsForReview(): Promise<ChatConversation[]> {
@@ -6051,6 +6129,245 @@ export class DatabaseStorage implements IStorage {
         sql`${notifications.createdAt} < ${cutoffDate}`
       ));
     return result.rowCount || 0;
+  }
+
+  async getNotificationPreferences(userId: string, workspaceId: string): Promise<UserNotificationPreferences | undefined> {
+    const [prefs] = await db
+      .select()
+      .from(userNotificationPreferences)
+      .where(and(
+        eq(userNotificationPreferences.userId, userId),
+        eq(userNotificationPreferences.workspaceId, workspaceId)
+      ));
+    return prefs;
+  }
+
+  async createOrUpdateNotificationPreferences(
+    userId: string,
+    workspaceId: string,
+    data: Partial<InsertUserNotificationPreferences>
+  ): Promise<UserNotificationPreferences> {
+    const [prefs] = await db
+      .insert(userNotificationPreferences)
+      .values({
+        userId,
+        workspaceId,
+        ...data,
+      } as InsertUserNotificationPreferences)
+      .onConflictDoUpdate({
+        target: [userNotificationPreferences.userId],
+        set: {
+          ...data,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return prefs;
+  }
+
+  // ============================================================================
+  // AI RESPONSES METHODS
+  // ============================================================================
+
+  async createAiResponse(response: InsertAiResponse): Promise<AiResponse> {
+    const [result] = await db
+      .insert(aiResponses)
+      .values(response)
+      .returning();
+    return result;
+  }
+
+  async getAiResponse(id: string): Promise<AiResponse | undefined> {
+    const [response] = await db
+      .select()
+      .from(aiResponses)
+      .where(eq(aiResponses.id, id));
+    return response;
+  }
+
+  async getAiResponsesByWorkspace(
+    workspaceId: string,
+    filters?: { sourceType?: string; feature?: string; limit?: number; offset?: number }
+  ): Promise<AiResponse[]> {
+    let query = db
+      .select()
+      .from(aiResponses)
+      .where(eq(aiResponses.workspaceId, workspaceId));
+
+    if (filters?.sourceType) {
+      query = query.where(eq(aiResponses.sourceType, filters.sourceType));
+    }
+    if (filters?.feature) {
+      query = query.where(eq(aiResponses.feature, filters.feature));
+    }
+
+    query = query.orderBy(desc(aiResponses.createdAt));
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
+    }
+
+    return await query;
+  }
+
+  async getAiResponsesBySource(
+    workspaceId: string,
+    sourceType: string,
+    sourceId: string
+  ): Promise<AiResponse[]> {
+    return await db
+      .select()
+      .from(aiResponses)
+      .where(and(
+        eq(aiResponses.workspaceId, workspaceId),
+        eq(aiResponses.sourceType, sourceType),
+        eq(aiResponses.sourceId, sourceId)
+      ))
+      .orderBy(desc(aiResponses.createdAt));
+  }
+
+  async updateAiResponse(id: string, data: Partial<InsertAiResponse>): Promise<AiResponse | undefined> {
+    const [response] = await db
+      .update(aiResponses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(aiResponses.id, id))
+      .returning();
+    return response;
+  }
+
+  async rateAiResponse(id: string, rating: number, feedback?: string): Promise<AiResponse | undefined> {
+    const [response] = await db
+      .update(aiResponses)
+      .set({
+        userRating: rating,
+        userFeedback: feedback,
+        wasHelpful: rating >= 4,
+        ratedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(aiResponses.id, id))
+      .returning();
+    return response;
+  }
+
+  // ============================================================================
+  // AI SUGGESTIONS METHODS
+  // ============================================================================
+
+  async createAiSuggestion(suggestion: InsertAiSuggestion): Promise<AiSuggestion> {
+    const [result] = await db
+      .insert(aiSuggestions)
+      .values(suggestion)
+      .returning();
+    return result;
+  }
+
+  async getAiSuggestion(id: string): Promise<AiSuggestion | undefined> {
+    const [suggestion] = await db
+      .select()
+      .from(aiSuggestions)
+      .where(eq(aiSuggestions.id, id));
+    return suggestion;
+  }
+
+  async getAiSuggestionsByWorkspace(
+    workspaceId: string,
+    filters?: { status?: string; priority?: string; type?: string; limit?: number; offset?: number }
+  ): Promise<AiSuggestion[]> {
+    let query = db
+      .select()
+      .from(aiSuggestions)
+      .where(eq(aiSuggestions.workspaceId, workspaceId));
+
+    if (filters?.status) {
+      query = query.where(eq(aiSuggestions.status, filters.status));
+    }
+    if (filters?.priority) {
+      query = query.where(eq(aiSuggestions.priority, filters.priority));
+    }
+    if (filters?.type) {
+      query = query.where(eq(aiSuggestions.suggestionType, filters.type));
+    }
+
+    query = query.orderBy(desc(aiSuggestions.createdAt));
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
+    }
+
+    return await query;
+  }
+
+  async getActiveSuggestions(workspaceId: string): Promise<AiSuggestion[]> {
+    return await db
+      .select()
+      .from(aiSuggestions)
+      .where(and(
+        eq(aiSuggestions.workspaceId, workspaceId),
+        eq(aiSuggestions.status, 'pending'),
+        or(
+          isNull(aiSuggestions.expiresAt),
+          sql`${aiSuggestions.expiresAt} > now()`
+        )
+      ))
+      .orderBy(desc(aiSuggestions.priority), desc(aiSuggestions.createdAt));
+  }
+
+  async updateAiSuggestion(id: string, data: Partial<InsertAiSuggestion>): Promise<AiSuggestion | undefined> {
+    const [suggestion] = await db
+      .update(aiSuggestions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(aiSuggestions.id, id))
+      .returning();
+    return suggestion;
+  }
+
+  async acceptAiSuggestion(id: string, userId: string): Promise<AiSuggestion | undefined> {
+    const [suggestion] = await db
+      .update(aiSuggestions)
+      .set({
+        status: 'accepted',
+        acceptedBy: userId,
+        acceptedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(aiSuggestions.id, id))
+      .returning();
+    return suggestion;
+  }
+
+  async rejectAiSuggestion(id: string, userId: string, reason?: string): Promise<AiSuggestion | undefined> {
+    const [suggestion] = await db
+      .update(aiSuggestions)
+      .set({
+        status: 'rejected',
+        rejectedBy: userId,
+        rejectionReason: reason,
+        rejectedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(aiSuggestions.id, id))
+      .returning();
+    return suggestion;
+  }
+
+  async implementAiSuggestion(id: string): Promise<AiSuggestion | undefined> {
+    const [suggestion] = await db
+      .update(aiSuggestions)
+      .set({
+        status: 'implemented',
+        implementedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(aiSuggestions.id, id))
+      .returning();
+    return suggestion;
   }
 }
 

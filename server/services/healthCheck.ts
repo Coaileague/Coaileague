@@ -475,6 +475,149 @@ export async function getServiceHealth(service: string): Promise<ServiceHealth |
 }
 
 /**
+ * Gateway Health Check - Comprehensive platform readiness monitoring
+ * 
+ * Returns:
+ * - Gateway operational status
+ * - Connected systems health (Database, Gemini, Resend)
+ * - Active room count and participant statistics
+ * - Event processing stats
+ * - Gateway version
+ * 
+ * Used for monitoring platform readiness and system integration status
+ */
+export interface GatewayHealthResponse {
+  gateway: {
+    status: ServiceStatus;
+    isInitialized: boolean;
+    version: string;
+    lastChecked: string;
+  };
+  systems: {
+    database: ServiceHealth;
+    gemini: ServiceHealth;
+    email: ServiceHealth;
+    websocket: ServiceHealth;
+  };
+  rooms: {
+    totalCount: number;
+    byType: {
+      support: number;
+      work: number;
+      meeting: number;
+      org: number;
+    };
+    totalParticipants: number;
+  };
+  eventProcessing: {
+    activeConnections: number;
+    averageConnectionDuration: number;
+    averageMessageCount: number;
+  };
+  platformReadiness: 'ready' | 'degraded' | 'critical';
+  timestamp: string;
+}
+
+export async function getGatewayHealth(): Promise<GatewayHealthResponse> {
+  try {
+    // Import ChatServerHub dynamically to avoid circular imports
+    const { getChatServerHubStats } = await import('./ChatServerHub');
+    
+    // Perform all health checks in parallel
+    const [dbHealth, geminiHealth, emailHealth, wsHealth] = await Promise.all([
+      checkDatabase(),
+      checkGeminiAI(),
+      checkEmail(),
+      checkChatWebSocket(),
+    ]);
+
+    // Get gateway stats
+    const gatewayStats = getChatServerHubStats();
+    
+    // Get WebSocket connection stats
+    const wsStats = wsCounter.getStatistics();
+
+    // Determine gateway status based on critical services
+    const criticalServices = [dbHealth, geminiHealth, wsHealth];
+    const hasCriticalDown = criticalServices.some(s => s.status === 'down');
+    const hasCriticalDegraded = criticalServices.some(s => s.status === 'degraded');
+    
+    const gatewayStatus: ServiceStatus = hasCriticalDown ? 'down' : hasCriticalDegraded ? 'degraded' : 'operational';
+    const platformReadiness: 'ready' | 'degraded' | 'critical' = 
+      hasCriticalDown ? 'critical' : 
+      hasCriticalDegraded ? 'degraded' : 
+      'ready';
+
+    return {
+      gateway: {
+        status: gatewayStatus,
+        isInitialized: gatewayStats.isInitialized,
+        version: gatewayStats.version,
+        lastChecked: new Date().toISOString(),
+      },
+      systems: {
+        database: dbHealth,
+        gemini: geminiHealth,
+        email: emailHealth,
+        websocket: wsHealth,
+      },
+      rooms: {
+        totalCount: gatewayStats.totalRooms,
+        byType: {
+          support: gatewayStats.roomsByType['support'] || 0,
+          work: gatewayStats.roomsByType['work'] || 0,
+          meeting: gatewayStats.roomsByType['meeting'] || 0,
+          org: gatewayStats.roomsByType['org'] || 0,
+        },
+        totalParticipants: gatewayStats.totalParticipants,
+      },
+      eventProcessing: {
+        activeConnections: wsStats.totalConnections,
+        averageConnectionDuration: wsStats.averageConnectionDuration,
+        averageMessageCount: wsStats.averageMessageCount,
+      },
+      platformReadiness,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('[HealthCheck] Error computing gateway health:', error);
+    
+    // Return degraded response if we can't compute full health
+    return {
+      gateway: {
+        status: 'degraded',
+        isInitialized: false,
+        version: 'unknown',
+        lastChecked: new Date().toISOString(),
+      },
+      systems: {
+        database: { service: 'database', status: 'down', isCritical: true, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        gemini: { service: 'gemini_ai', status: 'down', isCritical: true, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        email: { service: 'email', status: 'down', isCritical: false, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        websocket: { service: 'chat_websocket', status: 'down', isCritical: true, message: 'Health check failed', lastChecked: new Date().toISOString() },
+      },
+      rooms: {
+        totalCount: 0,
+        byType: {
+          support: 0,
+          work: 0,
+          meeting: 0,
+          org: 0,
+        },
+        totalParticipants: 0,
+      },
+      eventProcessing: {
+        activeConnections: 0,
+        averageConnectionDuration: 0,
+        averageMessageCount: 0,
+      },
+      platformReadiness: 'critical',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
  * Get active WebSocket connection count
  * Exported for use in analytics and health checks
  */

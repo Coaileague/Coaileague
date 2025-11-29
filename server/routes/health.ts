@@ -7,7 +7,7 @@ import { z } from 'zod';
 import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import { getHealthSummary, getServiceHealth } from '../services/healthCheck';
+import { getHealthSummary, getServiceHealth, getGatewayHealth } from '../services/healthCheck';
 import { storage } from '../storage';
 import type { ServiceIncidentReportPayload } from '../../shared/healthTypes';
 import { objectStorageClient } from '../objectStorage';
@@ -68,6 +68,40 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
   // HEALTH CHECK ROUTER (/api/health/*)
   // ============================================================================
   const healthRouter = express.Router();
+
+  // Get ChatServerHub gateway health check
+  // GET /api/health/gateway
+  // Returns comprehensive gateway status, connected systems health, active rooms, event processing stats
+  healthRouter.get('/gateway', async (req: Request, res: Response) => {
+    try {
+      const gatewayHealth = await getGatewayHealth();
+      res.json(gatewayHealth);
+    } catch (error: any) {
+      console.error('Error fetching gateway health:', error);
+      res.status(500).json({
+        gateway: {
+          status: 'down',
+          isInitialized: false,
+          version: 'unknown',
+          lastChecked: new Date().toISOString(),
+        },
+        systems: {},
+        rooms: {
+          totalCount: 0,
+          byType: { support: 0, work: 0, meeting: 0, org: 0 },
+          totalParticipants: 0,
+        },
+        eventProcessing: {
+          activeConnections: 0,
+          averageConnectionDuration: 0,
+          averageMessageCount: 0,
+        },
+        platformReadiness: 'critical' as const,
+        timestamp: new Date().toISOString(),
+        error: 'Failed to fetch gateway health',
+      });
+    }
+  });
 
   // Get overall health summary (all services)
   // GET /api/health/summary

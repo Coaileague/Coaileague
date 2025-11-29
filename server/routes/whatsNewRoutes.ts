@@ -3,7 +3,7 @@
  * RBAC-aware with persistent view tracking
  */
 
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { 
   getUpdates, 
   getLatestUpdates, 
@@ -16,14 +16,14 @@ import {
   seedPlatformUpdates,
 } from '../services/whatsNewService';
 import { isFeatureEnabled } from '@shared/platformConfig';
-import { AuthenticatedRequest } from '../rbac';
+import { type AuthenticatedRequest } from '../rbac';
 
 export const whatsNewRouter = Router();
 
 // Seed updates on startup
 seedPlatformUpdates().catch(console.error);
 
-whatsNewRouter.get('/', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
@@ -50,7 +50,7 @@ whatsNewRouter.get('/', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-whatsNewRouter.get('/latest', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/latest', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
@@ -71,7 +71,7 @@ whatsNewRouter.get('/latest', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-whatsNewRouter.get('/new-features', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/new-features', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
@@ -91,7 +91,7 @@ whatsNewRouter.get('/new-features', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-whatsNewRouter.get('/unviewed-count', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/unviewed-count', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ count: 0, enabled: false });
@@ -114,7 +114,7 @@ whatsNewRouter.get('/unviewed-count', async (req: AuthenticatedRequest, res) => 
   }
 });
 
-whatsNewRouter.get('/stats', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ enabled: false });
@@ -132,7 +132,7 @@ whatsNewRouter.get('/stats', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-whatsNewRouter.get('/category/:category', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/category/:category', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
@@ -155,7 +155,7 @@ whatsNewRouter.get('/category/:category', async (req: AuthenticatedRequest, res)
   }
 });
 
-whatsNewRouter.post('/:id/viewed', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.post('/:id/viewed', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -176,7 +176,7 @@ whatsNewRouter.post('/:id/viewed', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-whatsNewRouter.get('/:id', async (req: AuthenticatedRequest, res) => {
+whatsNewRouter.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.status(404).json({ error: 'Updates not enabled' });

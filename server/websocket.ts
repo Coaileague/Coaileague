@@ -2277,6 +2277,42 @@ export function setupWebSocket(server: Server) {
               messageType: 'text',
             });
 
+            // SENTIMENT ANALYSIS: Analyze message sentiment asynchronously (non-blocking)
+            (async () => {
+              try {
+                const { analyzeChatMessageSentiment, updateMessageSentiment } = await import('./services/chatSentimentService');
+                
+                const sentimentAnalysis = await analyzeChatMessageSentiment(sanitizedMessage, {
+                  senderType: payload.senderType,
+                  conversationContext: `User: ${displayName} in conversation ${ws.conversationId}`,
+                });
+                
+                // Update message with sentiment data
+                await updateMessageSentiment(savedMessage.id, sentimentAnalysis);
+                
+                // ALERT ROUTING: Emit alert event for support staff if negative/urgent
+                if (sentimentAnalysis.shouldEscalate) {
+                  console.log(`[ChatSentiment] Alert triggered for message ${savedMessage.id}: ${sentimentAnalysis.sentiment} (urgency: ${sentimentAnalysis.urgencyLevel})`);
+                  
+                  ChatServerHub.emitSentimentAlert({
+                    conversationId: ws.conversationId,
+                    workspaceId: ws.workspaceId,
+                    messageId: savedMessage.id,
+                    userId: ws.userId,
+                    userName: displayName,
+                    sentiment: sentimentAnalysis.sentiment,
+                    sentimentScore: sentimentAnalysis.sentimentScore,
+                    urgencyLevel: sentimentAnalysis.urgencyLevel,
+                    messagePreview: sanitizedMessage.substring(0, 150),
+                    summary: sentimentAnalysis.summary,
+                  }).catch(err => console.error('[ChatSentiment] Failed to emit alert:', err));
+                }
+              } catch (sentimentError) {
+                console.error('[ChatSentiment] Sentiment analysis failed (non-blocking):', sentimentError);
+                // Don't throw - sentiment analysis failure shouldn't break chat
+              }
+            })();
+
             // Enrich message with user's platform role for frontend display
             const userPlatformRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
             const enrichedMessage = {

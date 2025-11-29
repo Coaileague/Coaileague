@@ -3,13 +3,15 @@
 
 import type { Express } from 'express';
 import { db } from './db';
-import { helposFaqs, insertHelposFaqSchema } from '@shared/schema';
+import { helposFaqs, insertHelposFaqSchema, faqSearchHistory, insertFaqSearchHistorySchema } from '@shared/schema';
 import { requireAuth } from './auth';
 import { requirePlatformStaff, isPlatformStaff, type AuthenticatedRequest } from './rbac';
 import { readLimiter } from './middleware/rateLimiter';
-import { eq, desc, sql, like, or, and } from 'drizzle-orm';
+import { eq, desc, sql, like, or, and, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import OpenAI from 'openai';
+import { ChatServerHub } from './services/ChatServerHub';
+import { geminiClient } from './services/ai-brain/providers/geminiClient';
 
 // Lazy OpenAI client initialization - only create when needed
 let openaiClient: OpenAI | null = null;
@@ -521,6 +523,268 @@ app.post('/api/helpos/faqs/bulk-import', requireAuth, requirePlatformStaff, asyn
   } catch (error: any) {
     console.error('Error bulk importing FAQs:', error);
     res.status(500).json({ message: 'Failed to bulk import FAQs', error: error.message });
+  }
+});
+
+// ============================================================================
+// GEMINI-POWERED FAQ SEARCH WITH ANALYTICS & CHAT INTEGRATION
+// ============================================================================
+
+/**
+ * Search FAQs using Gemini semantic understanding
+ * GET /api/ai/faq/search?query=...&conversationId=...&limit=5&workspaceId=...
+ * 
+ * Returns:
+ * - Matching FAQs with confidence scores
+ * - Stores search history for analytics
+ * - Emits ai_suggestion events to chatroom if conversationId provided
+ */
+app.get('/api/ai/faq/search', readLimiter, requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { query, conversationId, limit = 5, workspaceId } = req.query;
+
+    // Validate required parameters
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({ 
+        message: 'Query parameter is required and must be a non-empty string' 
+      });
+    }
+
+    const searchLimit = Math.min(Number(limit) || 5, 20); // Cap at 20 results
+    const wsId = (workspaceId as string) || req.user?.currentWorkspaceId;
+    const convId = (conversationId as string) || undefined;
+
+    console.log(`🔍 [FAQ Search] Query: "${query}" - Limit: ${searchLimit}${convId ? ` - ConvId: ${convId}` : ''}`);
+
+    // Step 1: Get all published FAQs
+    const allFaqs = await db.select()
+      .from(helposFaqs)
+      .where(eq(helposFaqs.isPublished, true));
+
+    if (allFaqs.length === 0) {
+      // Store search history even with no results
+      await db.insert(faqSearchHistory).values({
+        query: query.trim(),
+        workspaceId: wsId || null,
+        userId: req.user?.id || null,
+        conversationId: convId || null,
+        matchedFaqIds: [],
+        matchCount: 0,
+        topConfidenceScore: 0,
+        averageConfidenceScore: 0,
+        searchMethod: 'semantic',
+        tokensUsed: 0,
+        suggestionEmitted: false,
+      });
+
+      return res.json({
+        query: query.trim(),
+        matchCount: 0,
+        results: [],
+        topConfidenceScore: 0,
+        averageConfidenceScore: 0,
+      });
+    }
+
+    // Step 2: Use Gemini to rank FAQs by relevance
+    // Build FAQ context for Gemini
+    const faqContext = allFaqs
+      .map((faq, idx) => `[${idx + 1}] Q: ${faq.question}\nA: ${faq.answer}`)
+      .join('\n\n');
+
+    const systemPrompt = `You are a FAQ relevance ranker for CoAIleague workforce management platform.
+Your task is to rank the provided FAQs by how well they answer the user's query.
+
+For each FAQ, provide:
+1. A relevance score from 0-100 (0 = not relevant, 100 = perfect match)
+2. An explanation of why it matches (or doesn't match)
+
+Return ONLY valid JSON in this format:
+{
+  "rankings": [
+    { "index": 1, "score": 95, "reason": "..." },
+    { "index": 2, "score": 60, "reason": "..." }
+  ]
+}
+
+Be strict about relevance. Only include FAQs with score >= 30.`;
+
+    const userMessage = `User Query: "${query.trim()}"
+
+Available FAQs:
+${faqContext}
+
+Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
+
+    let tokensCost = 0;
+    let rankings: Array<{ index: number; score: number; reason: string }> = [];
+
+    try {
+      const geminiResponse = await geminiClient.generate({
+        workspaceId: wsId,
+        userId: req.user?.id,
+        featureKey: 'faq_search',
+        systemPrompt,
+        userMessage,
+        temperature: 0.3,
+        maxTokens: 2048,
+      });
+
+      tokensCost = geminiResponse.tokensUsed;
+      
+      // Parse Gemini response
+      try {
+        const jsonMatch = geminiResponse.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          rankings = parsed.rankings || [];
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse Gemini rankings JSON, falling back to keyword matching');
+        rankings = [];
+      }
+    } catch (geminiError) {
+      console.warn('Gemini ranking failed, using fallback keyword matching:', geminiError);
+      // Fallback: keyword-based scoring
+      rankings = [];
+    }
+
+    // Step 3: Build results with confidence scores
+    const resultsWithScores = allFaqs.map((faq, faqIndex) => {
+      let confidenceScore = 0;
+
+      // Find score from Gemini rankings
+      const ranking = rankings.find(r => r.index === faqIndex + 1);
+      if (ranking && ranking.score >= 30) {
+        confidenceScore = ranking.score / 100; // Convert to 0-1 scale
+      } else if (!ranking) {
+        // Fallback: keyword matching
+        const queryLower = query.trim().toLowerCase();
+        const questionLower = faq.question.toLowerCase();
+        const answerLower = faq.answer.toLowerCase();
+        
+        if (questionLower.includes(queryLower)) {
+          confidenceScore = 0.9; // Strong match in question
+        } else if (answerLower.includes(queryLower)) {
+          confidenceScore = 0.7; // Match in answer
+        } else {
+          // Check for partial matches on words
+          const queryWords = queryLower.split(/\s+/);
+          const matchedWords = queryWords.filter(word => 
+            word.length > 2 && (questionLower.includes(word) || answerLower.includes(word))
+          );
+          confidenceScore = Math.min(0.6, matchedWords.length * 0.15);
+        }
+      }
+
+      return {
+        ...faq,
+        confidenceScore,
+        embeddingVector: undefined, // Don't send embeddings
+      };
+    });
+
+    // Step 4: Sort by confidence and limit results
+    const topResults = resultsWithScores
+      .filter(r => r.confidenceScore > 0)
+      .sort((a, b) => b.confidenceScore - a.confidenceScore)
+      .slice(0, searchLimit);
+
+    const matchedFaqIds = topResults.map(r => r.id);
+    const topConfidenceScore = topResults.length > 0 ? topResults[0].confidenceScore : 0;
+    const avgConfidenceScore = topResults.length > 0 
+      ? topResults.reduce((sum, r) => sum + r.confidenceScore, 0) / topResults.length
+      : 0;
+
+    // Step 5: Store search history for analytics
+    const [historyRecord] = await db.insert(faqSearchHistory).values({
+      query: query.trim(),
+      workspaceId: wsId || null,
+      userId: req.user?.id || null,
+      conversationId: convId || null,
+      matchedFaqIds,
+      matchCount: topResults.length,
+      topConfidenceScore,
+      averageConfidenceScore: avgConfidenceScore,
+      searchMethod: rankings.length > 0 ? 'semantic' : 'keyword',
+      tokensUsed: tokensCost,
+      suggestionEmitted: !!convId,
+      suggestionEmittedAt: convId ? new Date() : null,
+    }).returning();
+
+    // Step 6: Emit ai_suggestion event if conversationId provided
+    if (convId && topResults.length > 0) {
+      const topMatch = topResults[0];
+      const resultSummary = topResults.length === 1
+        ? topMatch.question
+        : `${topResults.length} matching FAQs found`;
+
+      try {
+        await ChatServerHub.emitAIAction({
+          conversationId: convId,
+          workspaceId: wsId,
+          actionType: 'suggestion',
+          title: 'FAQ Suggestions Found',
+          description: resultSummary,
+        });
+        
+        // Update record to mark event as emitted
+        await db.update(faqSearchHistory)
+          .set({ 
+            suggestionEmitted: true,
+            suggestionEmittedAt: new Date()
+          })
+          .where(eq(faqSearchHistory.id, historyRecord.id));
+
+        console.log(`✅ [FAQ Search] Emitted ai_suggestion event for conversation ${convId}`);
+      } catch (eventError) {
+        console.error('Failed to emit ai_suggestion event:', eventError);
+        // Continue anyway - search was still successful
+      }
+    }
+
+    // Update FAQ match and resolve metrics
+    if (topResults.length > 0) {
+      const topMatch = topResults[0];
+      await db.update(helposFaqs)
+        .set({ 
+          matchCount: sql`${helposFaqs.matchCount} + 1`,
+        })
+        .where(eq(helposFaqs.id, topMatch.id));
+    }
+
+    console.log(`✅ [FAQ Search] Found ${topResults.length} results (confidence: ${(topConfidenceScore * 100).toFixed(0)}%)`);
+
+    res.json({
+      query: query.trim(),
+      matchCount: topResults.length,
+      results: topResults.map(faq => ({
+        id: faq.id,
+        question: faq.question,
+        answer: faq.answer,
+        category: faq.category,
+        tags: faq.tags,
+        confidenceScore: Number((faq.confidenceScore * 100).toFixed(1)), // Return as 0-100
+        viewCount: faq.viewCount,
+        helpfulCount: faq.helpfulCount,
+      })),
+      topConfidenceScore: Number((topConfidenceScore * 100).toFixed(1)),
+      averageConfidenceScore: Number((avgConfidenceScore * 100).toFixed(1)),
+      searchMethod: rankings.length > 0 ? 'semantic' : 'keyword',
+      conversationId: convId,
+      searchHistoryId: historyRecord.id,
+      suggestion: {
+        emitted: !!convId && topResults.length > 0,
+        timestamp: convId && topResults.length > 0 ? new Date().toISOString() : null,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('Error searching FAQs:', error);
+    res.status(500).json({ 
+      message: 'Failed to search FAQs', 
+      error: error.message 
+    });
   }
 });
 

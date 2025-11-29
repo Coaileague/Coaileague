@@ -3,8 +3,9 @@
  * API orchestration endpoints for registry, integrations, and audit logging
  */
 
-import express, { Router, Request } from 'express';
-import { requireAuth, AuthenticatedRequest } from './auth';
+import express, { Router, Request, Response, NextFunction } from 'express';
+import { requireAuth } from './auth';
+import { type AuthenticatedRequest } from './rbac';
 import { helpaiRegistryService } from './services/helpai/helpaiRegistryService';
 import { helpaiIntegrationService } from './services/helpai/helpaiIntegrationService';
 import { helpaiAuditService } from './services/helpai/helpaiAuditService';
@@ -16,7 +17,7 @@ export const helpaiRouter: Router = express.Router();
 /**
  * Middleware: Verify user has access to HelpAI features
  */
-const requireHelpAIAccess = (req: AuthenticatedRequest, res: any, next: any) => {
+const requireHelpAIAccess = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const user = req.user;
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -45,7 +46,7 @@ const requireHelpAIAccess = (req: AuthenticatedRequest, res: any, next: any) => 
 helpaiRouter.get(
   '/registry',
   requireAuth,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { category, tag, active } = req.query;
 
@@ -74,7 +75,7 @@ helpaiRouter.get(
         durationMs: 0,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
-        requestId: req.id,
+        requestId: req.user?.id || 'unknown',
       });
 
       res.json({
@@ -94,7 +95,7 @@ helpaiRouter.get(
         responseMessage: error.message,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
-        requestId: req.id,
+        requestId: req.user?.id || 'unknown',
       });
 
       res.status(500).json({
@@ -112,7 +113,7 @@ helpaiRouter.get(
 helpaiRouter.get(
   '/registry/:apiName',
   requireAuth,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { apiName } = req.params;
 
@@ -142,7 +143,7 @@ helpaiRouter.post(
   '/integrations/config',
   requireAuth,
   requireHelpAIAccess,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const startTime = Date.now();
       const workspaceId = req.user?.currentWorkspaceId;
@@ -192,7 +193,7 @@ helpaiRouter.post(
         durationMs,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
-        requestId: req.id,
+        requestId: userId || 'unknown',
       });
 
       res.json({
@@ -212,7 +213,7 @@ helpaiRouter.post(
         requestPayload: req.body,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
-        requestId: req.id,
+        requestId: req.user?.id || 'unknown',
       });
 
       res.status(500).json({
@@ -230,7 +231,7 @@ helpaiRouter.post(
 helpaiRouter.get(
   '/integrations',
   requireAuth,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const workspaceId = req.user?.currentWorkspaceId;
       if (!workspaceId) {
@@ -264,7 +265,7 @@ helpaiRouter.get(
   '/audit-log',
   requireAuth,
   requireHelpAIAccess,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const workspaceId = req.user?.currentWorkspaceId;
       if (!workspaceId) {
@@ -315,7 +316,7 @@ helpaiRouter.get(
   '/audit-log/export',
   requireAuth,
   requireHelpAIAccess,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const workspaceId = req.user?.currentWorkspaceId;
       if (!workspaceId) {
@@ -354,7 +355,7 @@ helpaiRouter.get(
 helpaiRouter.get(
   '/stats',
   requireAuth,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const registryStats = await helpaiRegistryService.getRegistryStats();
       const workspaceId = req.user?.currentWorkspaceId;
@@ -386,7 +387,7 @@ helpaiRouter.post(
   '/audit-log/verify/:logId',
   requireAuth,
   requireHelpAIAccess,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { logId } = req.params;
 

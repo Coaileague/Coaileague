@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { requireAuth } from './auth';
 import { requireWorkspaceRole, type AuthenticatedRequest } from './rbac';
@@ -32,7 +32,7 @@ gamificationRouter.use(requireAuth);
 /**
  * GET /api/gamification/profile - Get current employee's gamification profile
  */
-gamificationRouter.get('/profile', async (req: AuthenticatedRequest, res) => {
+gamificationRouter.get('/profile', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -87,7 +87,7 @@ gamificationRouter.get('/profile', async (req: AuthenticatedRequest, res) => {
 /**
  * GET /api/gamification/achievements - Get all available achievements
  */
-gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res) => {
+gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -134,7 +134,7 @@ gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res) =
 /**
  * GET /api/gamification/leaderboard - Get workspace leaderboard
  */
-gamificationRouter.get('/leaderboard', async (req: AuthenticatedRequest, res) => {
+gamificationRouter.get('/leaderboard', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -171,7 +171,7 @@ gamificationRouter.get('/leaderboard', async (req: AuthenticatedRequest, res) =>
 /**
  * POST /api/gamification/achievements - Create a new achievement (admin only)
  */
-gamificationRouter.post('/achievements', requireWorkspaceRole(['org_owner', 'org_admin']), async (req: AuthenticatedRequest, res) => {
+gamificationRouter.post('/achievements', requireWorkspaceRole(['org_owner', 'org_admin']), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {
@@ -207,7 +207,7 @@ gamificationRouter.post('/achievements', requireWorkspaceRole(['org_owner', 'org
 /**
  * POST /api/gamification/award - Manually award points or achievement to employee
  */
-gamificationRouter.post('/award', requireWorkspaceRole(['org_owner', 'org_admin', 'department_manager']), async (req: AuthenticatedRequest, res) => {
+gamificationRouter.post('/award', requireWorkspaceRole(['org_owner', 'org_admin', 'department_manager']), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
     if (!user?.currentWorkspaceId) {

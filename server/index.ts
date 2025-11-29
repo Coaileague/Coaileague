@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connection pool
 import { monitoringService } from "./monitoring";
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
+import { initializeChatServerHub } from "./services/ChatServerHub";
 
 const app = express();
 app.use(express.json());
@@ -96,6 +97,15 @@ process.on('SIGTERM', () => {
     console.error('CRITICAL: Failed to register routes:', error);
     console.error('Application cannot start without platform workspace. Exiting...');
     process.exit(1);
+  }
+
+  // Initialize ChatServerHub Gateway after routes are registered
+  try {
+    await initializeChatServerHub();
+    console.log('[Server] ChatServerHub Gateway initialized successfully');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize ChatServerHub Gateway:', error);
+    // Log warning but continue - gateway initialization is not critical for server startup
   }
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

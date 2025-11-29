@@ -717,6 +717,145 @@ export const HELPAI = {
 } as const;
 
 // ============================================================================
+// CHAT SERVER HUB - UNIFIED GATEWAY CONFIGURATION
+// ============================================================================
+// Central hub connecting ALL chatroom types to AI Brain, Notifications, Tickets, and What's New
+export const CHAT_SERVER_HUB = {
+  // Gateway Identity
+  name: "ChatServerHub",
+  fullName: "Chat Server Unified Gateway",
+  description: "Central orchestration layer for all chat rooms across the platform",
+  version: "1.0.0", // Versioned with platform
+  
+  // Gateway Status
+  enabled: true,
+  heartbeatIntervalMs: 30000, // Check active rooms every 30s
+  
+  // Supported Room Types - ALL chat room types connect through this gateway
+  roomTypes: {
+    support: {
+      name: "Support Rooms",
+      description: "Customer support chatrooms with ticket tracking",
+      table: "support_rooms",
+      enabled: true,
+    },
+    work: {
+      name: "Work Rooms",
+      description: "Team collaboration and shift-based work chat",
+      table: "chat_conversations", // conversation_type: 'shift_chat' or 'open_chat'
+      enabled: true,
+    },
+    meeting: {
+      name: "Meeting Rooms",
+      description: "Meeting and event discussion rooms",
+      table: "chat_conversations", // conversation_type: 'open_chat' with meeting context
+      enabled: true,
+    },
+    org: {
+      name: "Organization Rooms",
+      description: "Company-wide communication and announcements",
+      table: "organization_chat_rooms",
+      enabled: true,
+    },
+  } as const,
+  
+  // Connected Systems
+  connectedSystems: {
+    airbrain: {
+      name: "AI Brain",
+      enabled: true,
+      purpose: "Intelligent responses and escalation detection",
+    },
+    notifications: {
+      name: "Notification System",
+      enabled: true,
+      purpose: "Push alerts and user notifications",
+    },
+    tickets: {
+      name: "Support Ticket System",
+      enabled: true,
+      purpose: "Issue tracking and lifecycle management",
+    },
+    whatsnew: {
+      name: "What's New Feed",
+      enabled: true,
+      purpose: "Platform-wide event announcements",
+    },
+    analytics: {
+      name: "Analytics Service",
+      enabled: true,
+      purpose: "Chat metrics and usage tracking",
+    },
+  } as const,
+  
+  // Gateway Endpoints
+  endpoints: {
+    // Room Management
+    rooms: "/api/chat/rooms",
+    roomStatus: "/api/chat/rooms/{roomId}/status",
+    activeRooms: "/api/chat/rooms/active",
+    roomMetrics: "/api/chat/rooms/{roomId}/metrics",
+    
+    // Gateway Health
+    health: "/api/chat/gateway/health",
+    status: "/api/chat/gateway/status",
+    
+    // Event Broadcasting
+    events: "/api/chat/events",
+    eventSubscribe: "/api/chat/events/subscribe",
+    
+    // Support Rooms (specific)
+    supportRooms: "/api/support/rooms",
+    supportRoomStatus: "/api/support/rooms/{roomId}/status",
+    
+    // Organization Rooms (specific)
+    orgRooms: "/api/org/rooms",
+    orgRoomStatus: "/api/org/rooms/{roomId}/status",
+  } as const,
+  
+  // Event Configuration
+  events: {
+    // Chat Events
+    messagePosted: "chat:message_posted",
+    messageEdited: "chat:message_edited",
+    messageDeleted: "chat:message_deleted",
+    userJoined: "chat:user_joined",
+    userLeft: "chat:user_left",
+    
+    // Ticket Events
+    ticketCreated: "ticket:created",
+    ticketAssigned: "ticket:assigned",
+    ticketEscalated: "ticket:escalated",
+    ticketResolved: "ticket:resolved",
+    
+    // AI Events
+    aiResponse: "ai:response",
+    aiEscalation: "ai:escalation",
+    aiSuggestion: "ai:suggestion",
+    
+    // Room Events
+    roomStatusChanged: "room:status_changed",
+    roomCreated: "room:created",
+    roomClosed: "room:closed",
+  } as const,
+  
+  // Rate Limiting
+  rateLimits: {
+    chatMessages: 30, // Per minute
+    eventPublishing: 100, // Per minute
+    roomCreation: 20, // Per minute
+  } as const,
+  
+  // Timeouts
+  timeouts: {
+    connectionTimeout: 5000, // 5 seconds
+    roomHeartbeat: 30000, // 30 seconds
+    eventProcessing: 10000, // 10 seconds
+    messageAck: 5000, // 5 seconds
+  } as const,
+} as const;
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 export type Role = typeof ROLES[keyof typeof ROLES];
@@ -724,3 +863,4 @@ export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 export type Feature = keyof typeof FEATURES;
 export type HelpAICredentialType = typeof HELPAI.credentials.supportedTypes[number];
 export type HelpAICategory = typeof HELPAI.registry.categories[number];
+export type ChatServerHubRoomType = keyof typeof CHAT_SERVER_HUB.roomTypes;

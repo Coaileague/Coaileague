@@ -1,19 +1,36 @@
 /**
- * ChatServerHub - Unified Event Orchestration Layer
+ * ChatServerHub - Unified Event Orchestration Layer & Gateway
  * 
- * Central hub connecting ALL helpdesk chatrooms to:
+ * Central hub connecting ALL room types to:
  * - AI Brain (intelligent responses)
  * - Notification System (push alerts)
  * - Ticket System (issue tracking)
  * - What's New (platform updates)
+ * - Analytics (usage metrics)
+ * 
+ * Room Types Supported:
+ * - Support Rooms: Customer support chatrooms
+ * - Work Rooms: Team collaboration & shift-based chat
+ * - Meeting Rooms: Meeting & event discussions
+ * - Organization Rooms: Company-wide communication
  * 
  * Every chat action emits events that automatically propagate to all connected systems.
  */
 
 import { platformEventBus, PlatformEvent, PlatformEventType, EventCategory, EventVisibility } from './platformEventBus';
 import { db } from '../db';
-import { notifications, supportTickets, chatMessages } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { 
+  notifications, 
+  supportTickets, 
+  chatMessages,
+  chatConversations,
+  chatParticipants,
+  supportRooms,
+  organizationChatRooms,
+} from '@shared/schema';
+import { eq, and, or, isNull, gte, count } from 'drizzle-orm';
+import { CHAT_SERVER_HUB } from '@shared/platformConfig';
+import { roomAnalyticsService } from './roomAnalyticsService';
 
 // ============================================================================
 // CHAT-SPECIFIC EVENT TYPES
@@ -37,9 +54,12 @@ export type ChatEventType =
   | 'ai_response'
   | 'ai_escalation'
   | 'ai_suggestion'
+  | 'ai_error'
+  | 'ai_timeout'
   | 'queue_update'
   | 'staff_joined'
-  | 'staff_left';
+  | 'staff_left'
+  | 'sentiment_alert';
 
 export interface ChatEventMetadata {
   conversationId: string;
@@ -54,6 +74,17 @@ export interface ChatEventMetadata {
   messageId?: string;
   severity?: 'low' | 'medium' | 'high' | 'critical';
   audience?: 'room' | 'workspace' | 'user' | 'staff' | 'all';
+  // AI Error/Timeout context
+  jobId?: string;
+  skill?: string;
+  errorMessage?: string;
+  errorStack?: string;
+  retryCount?: number;
+  maxRetries?: number;
+  canRetry?: boolean;
+  timeoutMs?: number;
+  executionTimeMs?: number;
+  confidenceScore?: number;
 }
 
 export interface ChatEvent {
@@ -83,12 +114,281 @@ type WebSocketBroadcaster = (event: {
 // CHAT SERVER HUB CLASS
 // ============================================================================
 
+// ============================================================================
+// ACTIVE ROOM TRACKING
+// ============================================================================
+
+export interface ActiveRoom {
+  id: string;
+  type: 'support' | 'work' | 'meeting' | 'org';
+  conversationId: string;
+  workspaceId: string;
+  subject: string;
+  participantCount: number;
+  status: string;
+  createdAt: Date;
+  lastActivity: Date;
+}
+
+// ============================================================================
+// CHAT SERVER HUB CLASS
+// ============================================================================
+
 class ChatServerHubClass {
   private wsBroadcaster: WebSocketBroadcaster | null = null;
   private eventSubscribers: Map<ChatEventType | '*', ((event: ChatEvent) => Promise<void>)[]> = new Map();
+  private activeRooms: Map<string, ActiveRoom> = new Map(); // Key: conversationId
+  private gatewayInitialized: boolean = false;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.subscribeToEventBus();
+    console.log(`[ChatServerHub] Initialized - Version ${CHAT_SERVER_HUB.version}`);
+  }
+
+  /**
+   * Initialize the gateway and load all active rooms
+   * Called once on application startup
+   */
+  async initializeGateway(): Promise<void> {
+    if (this.gatewayInitialized) {
+      console.log('[ChatServerHub] Gateway already initialized, skipping re-initialization');
+      return;
+    }
+
+    console.log(`[ChatServerHub] Initializing gateway v${CHAT_SERVER_HUB.version}...`);
+    
+    try {
+      // Load all active rooms from database
+      await this.loadAllActiveRooms();
+      
+      // Start heartbeat to track room activity
+      this.startHeartbeat();
+      
+      this.gatewayInitialized = true;
+      console.log(
+        `[ChatServerHub] Gateway initialized successfully - ` +
+        `${this.activeRooms.size} active rooms loaded`
+      );
+    } catch (error) {
+      console.error('[ChatServerHub] Failed to initialize gateway:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load all active conversations from all room types
+   */
+  private async loadAllActiveRooms(): Promise<void> {
+    this.activeRooms.clear();
+
+    try {
+      // Load Support Rooms
+      if (CHAT_SERVER_HUB.roomTypes.support.enabled) {
+        const supportRoomsList = await db
+          .select()
+          .from(supportRooms)
+          .where(eq(supportRooms.status, 'active'))
+          .limit(1000);
+
+        for (const room of supportRoomsList) {
+          if (room.conversationId) {
+            const participantCount = await this.getParticipantCount(room.conversationId);
+            this.activeRooms.set(room.conversationId, {
+              id: room.id,
+              type: 'support',
+              conversationId: room.conversationId,
+              workspaceId: room.workspaceId,
+              subject: room.name,
+              participantCount,
+              status: room.status,
+              createdAt: room.createdAt,
+              lastActivity: new Date(),
+            });
+          }
+        }
+        console.log(`[ChatServerHub] Loaded ${supportRoomsList.length} support rooms`);
+      }
+
+      // Load Organization Rooms
+      if (CHAT_SERVER_HUB.roomTypes.org.enabled) {
+        const orgRoomsList = await db
+          .select()
+          .from(organizationChatRooms)
+          .where(eq(organizationChatRooms.status, 'active'))
+          .limit(1000);
+
+        for (const room of orgRoomsList) {
+          if (room.conversationId) {
+            const participantCount = await this.getParticipantCount(room.conversationId);
+            this.activeRooms.set(room.conversationId, {
+              id: room.id,
+              type: 'org',
+              conversationId: room.conversationId,
+              workspaceId: room.workspaceId,
+              subject: room.name,
+              participantCount,
+              status: room.status,
+              createdAt: room.createdAt,
+              lastActivity: new Date(),
+            });
+          }
+        }
+        console.log(`[ChatServerHub] Loaded ${orgRoomsList.length} organization rooms`);
+      }
+
+      // Load Work & Meeting Rooms (conversation_type-based)
+      if (CHAT_SERVER_HUB.roomTypes.work.enabled || CHAT_SERVER_HUB.roomTypes.meeting.enabled) {
+        const conversations = await db
+          .select()
+          .from(chatConversations)
+          .where(
+            and(
+              eq(chatConversations.status, 'active'),
+              or(
+                eq(chatConversations.conversationType, 'shift_chat'),
+                eq(chatConversations.conversationType, 'open_chat')
+              )
+            )
+          )
+          .limit(2000);
+
+        for (const conv of conversations) {
+          const roomType = conv.conversationType === 'shift_chat' ? 'work' : 'meeting';
+          if (CHAT_SERVER_HUB.roomTypes[roomType].enabled) {
+            const participantCount = await this.getParticipantCount(conv.id);
+            this.activeRooms.set(conv.id, {
+              id: conv.id,
+              type: roomType,
+              conversationId: conv.id,
+              workspaceId: conv.workspaceId,
+              subject: conv.subject,
+              participantCount,
+              status: conv.status,
+              createdAt: conv.createdAt,
+              lastActivity: new Date(),
+            });
+          }
+        }
+        console.log(
+          `[ChatServerHub] Loaded work and meeting rooms - ` +
+          `Work: ${conversations.filter(c => c.conversationType === 'shift_chat').length}, ` +
+          `Meeting: ${conversations.filter(c => c.conversationType === 'open_chat').length}`
+        );
+      }
+    } catch (error) {
+      console.error('[ChatServerHub] Error loading active rooms:', error);
+    }
+  }
+
+  /**
+   * Get participant count for a conversation
+   */
+  private async getParticipantCount(conversationId: string): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: count() })
+        .from(chatParticipants)
+        .where(
+          and(
+            eq(chatParticipants.conversationId, conversationId),
+            eq(chatParticipants.isActive, true)
+          )
+        );
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error(`[ChatServerHub] Error getting participant count:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Start heartbeat to track room activity
+   */
+  private startHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
+    this.heartbeatInterval = setInterval(async () => {
+      try {
+        // Update participant counts for all active rooms
+        for (const room of this.activeRooms.values()) {
+          const count = await this.getParticipantCount(room.conversationId);
+          room.participantCount = count;
+          room.lastActivity = new Date();
+          
+          // Remove room if no participants and older than 5 minutes
+          if (count === 0 && Date.now() - room.lastActivity.getTime() > 5 * 60 * 1000) {
+            this.activeRooms.delete(room.conversationId);
+          }
+        }
+      } catch (error) {
+        console.error('[ChatServerHub] Heartbeat error:', error);
+      }
+    }, CHAT_SERVER_HUB.heartbeatIntervalMs);
+
+    console.log('[ChatServerHub] Heartbeat started');
+  }
+
+  /**
+   * Shutdown the gateway
+   */
+  async shutdownGateway(): Promise<void> {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    this.activeRooms.clear();
+    this.gatewayInitialized = false;
+    console.log('[ChatServerHub] Gateway shutdown complete');
+  }
+
+  /**
+   * Get all active rooms across all room types
+   */
+  getAllActiveRooms(): ActiveRoom[] {
+    return Array.from(this.activeRooms.values());
+  }
+
+  /**
+   * Get active rooms by type
+   */
+  getActiveRoomsByType(type: 'support' | 'work' | 'meeting' | 'org'): ActiveRoom[] {
+    return Array.from(this.activeRooms.values()).filter(room => room.type === type);
+  }
+
+  /**
+   * Get active rooms by workspace
+   */
+  getActiveRoomsByWorkspace(workspaceId: string): ActiveRoom[] {
+    return Array.from(this.activeRooms.values()).filter(room => room.workspaceId === workspaceId);
+  }
+
+  /**
+   * Get active rooms statistics
+   */
+  getGatewayStats(): {
+    totalRooms: number;
+    roomsByType: Record<string, number>;
+    totalParticipants: number;
+    isInitialized: boolean;
+    version: string;
+  } {
+    const stats = {
+      totalRooms: this.activeRooms.size,
+      roomsByType: {} as Record<string, number>,
+      totalParticipants: 0,
+      isInitialized: this.gatewayInitialized,
+      version: CHAT_SERVER_HUB.version,
+    };
+
+    for (const room of this.activeRooms.values()) {
+      stats.roomsByType[room.type] = (stats.roomsByType[room.type] || 0) + 1;
+      stats.totalParticipants += room.participantCount;
+    }
+
+    return stats;
   }
 
   /**
@@ -173,10 +473,68 @@ class ChatServerHubClass {
         this.broadcastChatEvent(event);
       }
 
+      // Track analytics for chat events
+      await this.trackAnalyticsEvent(event);
+
       await this.notifySubscribers(event);
 
     } catch (error) {
       console.error('[ChatServerHub] Error processing event:', error);
+    }
+  }
+
+  /**
+   * Track analytics metrics based on chat event type
+   */
+  private async trackAnalyticsEvent(event: ChatEvent): Promise<void> {
+    try {
+      const { conversationId, workspaceId } = event.metadata;
+      if (!conversationId || !workspaceId) return;
+
+      switch (event.type) {
+        case 'message_posted':
+          // Extract sentiment if available in metadata
+          const sentiment = (event.metadata as any).sentiment || 'neutral';
+          await roomAnalyticsService.trackMessagePosted(workspaceId, conversationId, sentiment);
+          break;
+
+        case 'user_joined_room':
+        case 'staff_joined':
+          await roomAnalyticsService.trackParticipantJoined(workspaceId, conversationId, event.metadata.userId || '');
+          break;
+
+        case 'user_left_room':
+        case 'staff_left':
+          await roomAnalyticsService.trackParticipantLeft(workspaceId, conversationId);
+          break;
+
+        case 'ticket_created':
+          await roomAnalyticsService.trackTicketCreated(workspaceId, conversationId);
+          break;
+
+        case 'ticket_resolved':
+          // Calculate resolution time in hours
+          const createdAt = (event.metadata as any).createdAt || new Date();
+          const resolvedAt = new Date();
+          const resolutionTimeHours = (resolvedAt.getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
+          await roomAnalyticsService.trackTicketResolved(workspaceId, conversationId, resolutionTimeHours);
+          break;
+
+        case 'ai_escalation':
+          await roomAnalyticsService.trackAiEscalation(workspaceId, conversationId);
+          break;
+
+        case 'ai_response':
+          await roomAnalyticsService.trackAiResponse(workspaceId, conversationId);
+          break;
+
+        default:
+          // Other event types don't require analytics tracking
+          break;
+      }
+    } catch (error) {
+      console.error('[ChatServerHub] Error tracking analytics:', error);
+      // Don't re-throw - analytics tracking shouldn't crash the event processing
     }
   }
 
@@ -301,6 +659,8 @@ class ChatServerHubClass {
         return 'ai_escalation';
       case 'ai_suggestion':
         return 'ai_suggestion';
+      case 'sentiment_alert':
+        return 'staff_action';
       default:
         return 'announcement';
     }
@@ -324,6 +684,8 @@ class ChatServerHubClass {
       case 'user_banned':
       case 'user_kicked':
         return 'security';
+      case 'sentiment_alert':
+        return 'announcement';
       default:
         return 'announcement';
     }
@@ -342,6 +704,7 @@ class ChatServerHubClass {
       'ticket_closed',
       'ai_escalation',
       'user_banned',
+      'sentiment_alert',
     ];
     return persistableTypes.includes(type);
   }
@@ -361,6 +724,7 @@ class ChatServerHubClass {
       'user_kicked',
       'user_banned',
       'staff_joined',
+      'sentiment_alert',
     ];
     return notifiableTypes.includes(type);
   }
@@ -385,6 +749,7 @@ class ChatServerHubClass {
       case 'user_banned':
         return 'system';
       case 'staff_joined':
+      case 'sentiment_alert':
         return 'support_escalation';
       default:
         return 'system';
@@ -488,6 +853,52 @@ class ChatServerHubClass {
       },
       visibility: 'all',
       shouldNotify: true,
+    });
+  }
+
+  /**
+   * Emit when a ticket is escalated to higher support tier
+   */
+  async emitTicketEscalated(params: {
+    conversationId: string;
+    workspaceId: string;
+    ticketId: string;
+    ticketNumber: string;
+    escalatedBy: string;
+    escalatedByName: string;
+    escalationReason: string;
+    escalationLevel: 'tier1' | 'tier2' | 'tier3' | 'management';
+    customerId: string;
+    customerName: string;
+  }): Promise<void> {
+    const levelLabel = {
+      'tier1': 'Tier 1 Support',
+      'tier2': 'Tier 2 Support',
+      'tier3': 'Tier 3 Support',
+      'management': 'Management'
+    }[params.escalationLevel];
+
+    await this.emit({
+      type: 'ticket_escalated',
+      title: `Ticket Escalated to ${levelLabel}: ${params.ticketNumber}`,
+      description: `${params.escalatedByName} escalated ticket ${params.ticketNumber} to ${levelLabel}. Reason: ${params.escalationReason}`,
+      metadata: {
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        userId: params.escalatedBy,
+        userName: params.escalatedByName,
+        targetUserId: params.customerId,
+        targetUserName: params.customerName,
+        ticketId: params.ticketId,
+        ticketNumber: params.ticketNumber,
+        escalationLevel: params.escalationLevel,
+        escalationReason: params.escalationReason,
+        audience: 'staff',
+        severity: 'high',
+      },
+      visibility: 'staff',
+      shouldNotify: true,
+      shouldPersistToWhatsNew: true,
     });
   }
 
@@ -696,6 +1107,190 @@ class ChatServerHubClass {
       visibility: isApprovalNeeded ? 'manager' : 'staff',
     });
   }
+
+  /**
+   * Emit when sentiment analysis detects negative or urgent sentiment
+   * Routes alert to support staff for escalation and monitoring
+   */
+  async emitSentimentAlert(params: {
+    conversationId: string;
+    workspaceId?: string;
+    messageId: string;
+    userId?: string;
+    userName: string;
+    sentiment: 'positive' | 'neutral' | 'negative' | 'urgent';
+    sentimentScore: number;
+    urgencyLevel: number;
+    messagePreview: string;
+    summary: string;
+  }): Promise<void> {
+    // Determine severity based on sentiment and urgency level
+    const severity = params.sentiment === 'urgent' ? 'critical' 
+                   : params.urgencyLevel >= 4 ? 'high'
+                   : params.urgencyLevel >= 3 ? 'high'
+                   : 'medium';
+
+    const sentimentLabel = params.sentiment.charAt(0).toUpperCase() + params.sentiment.slice(1);
+    
+    await this.emit({
+      type: 'sentiment_alert',
+      title: `${sentimentLabel} Sentiment Detected - Urgency Level ${params.urgencyLevel}`,
+      description: `${params.userName}: "${params.messagePreview}" | Score: ${params.sentimentScore} | ${params.summary}`,
+      metadata: {
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        messageId: params.messageId,
+        userId: params.userId,
+        userName: params.userName,
+        audience: 'staff',
+        severity: severity as 'low' | 'medium' | 'high' | 'critical',
+      },
+      visibility: 'staff',
+      shouldNotify: true,
+      shouldPersistToWhatsNew: params.sentiment === 'urgent',
+    });
+  }
+
+  /**
+   * Emit when AI job encounters an error
+   * Informs users in chatroom that AI processing failed
+   */
+  async emitAIError(params: {
+    conversationId: string;
+    workspaceId?: string;
+    jobId: string;
+    skill: string;
+    errorMessage: string;
+    errorStack?: string;
+    userId?: string;
+    userName?: string;
+    retryCount?: number;
+    maxRetries?: number;
+    canRetry?: boolean;
+    executionTimeMs?: number;
+  }): Promise<void> {
+    const skillLabel = params.skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const retryInfo = params.canRetry 
+      ? ` (Retry ${params.retryCount || 0}/${params.maxRetries || 3})`
+      : ' - No retries available';
+
+    await this.emit({
+      type: 'ai_error',
+      title: `AI ${skillLabel} Error${retryInfo}`,
+      description: params.errorMessage,
+      metadata: {
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        jobId: params.jobId,
+        skill: params.skill,
+        userId: params.userId,
+        userName: params.userName,
+        errorMessage: params.errorMessage,
+        errorStack: params.errorStack,
+        retryCount: params.retryCount || 0,
+        maxRetries: params.maxRetries || 3,
+        canRetry: params.canRetry ?? true,
+        executionTimeMs: params.executionTimeMs,
+        audience: 'user',
+        severity: params.canRetry ? 'medium' : 'high',
+      },
+      visibility: 'all',
+      shouldNotify: true,
+      shouldPersistToWhatsNew: !params.canRetry, // Only persist unrecoverable errors
+    });
+
+    // Also emit to platform event bus for monitoring
+    await platformEventBus.publish({
+      type: 'ai_error',
+      category: 'bugfix',
+      title: `AI Brain Error: ${skillLabel}`,
+      description: params.errorMessage,
+      workspaceId: params.workspaceId,
+      userId: params.userId,
+      metadata: {
+        conversationId: params.conversationId,
+        jobId: params.jobId,
+        skill: params.skill,
+        errorMessage: params.errorMessage,
+        errorStack: params.errorStack,
+        retryCount: params.retryCount || 0,
+        maxRetries: params.maxRetries || 3,
+        canRetry: params.canRetry ?? true,
+        executionTimeMs: params.executionTimeMs,
+      },
+      priority: params.canRetry ? 2 : 5,
+      visibility: 'manager',
+    });
+  }
+
+  /**
+   * Emit when AI job times out
+   * Informs users that AI processing took too long
+   */
+  async emitAITimeout(params: {
+    conversationId: string;
+    workspaceId?: string;
+    jobId: string;
+    skill: string;
+    timeoutMs: number;
+    executionTimeMs: number;
+    userId?: string;
+    userName?: string;
+    retryCount?: number;
+    maxRetries?: number;
+    canRetry?: boolean;
+  }): Promise<void> {
+    const skillLabel = params.skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const retryInfo = params.canRetry 
+      ? ` (Retry ${params.retryCount || 0}/${params.maxRetries || 3})`
+      : ' - No retries available';
+
+    await this.emit({
+      type: 'ai_timeout',
+      title: `AI ${skillLabel} Timeout${retryInfo}`,
+      description: `Request exceeded ${params.timeoutMs}ms limit after ${params.executionTimeMs}ms of processing`,
+      metadata: {
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        jobId: params.jobId,
+        skill: params.skill,
+        userId: params.userId,
+        userName: params.userName,
+        timeoutMs: params.timeoutMs,
+        executionTimeMs: params.executionTimeMs,
+        retryCount: params.retryCount || 0,
+        maxRetries: params.maxRetries || 3,
+        canRetry: params.canRetry ?? true,
+        audience: 'user',
+        severity: 'high',
+      },
+      visibility: 'all',
+      shouldNotify: true,
+      shouldPersistToWhatsNew: !params.canRetry, // Only persist unrecoverable timeouts
+    });
+
+    // Also emit to platform event bus for monitoring
+    await platformEventBus.publish({
+      type: 'ai_timeout',
+      category: 'bugfix',
+      title: `AI Brain Timeout: ${skillLabel}`,
+      description: `Request exceeded ${params.timeoutMs}ms limit after ${params.executionTimeMs}ms`,
+      workspaceId: params.workspaceId,
+      userId: params.userId,
+      metadata: {
+        conversationId: params.conversationId,
+        jobId: params.jobId,
+        skill: params.skill,
+        timeoutMs: params.timeoutMs,
+        executionTimeMs: params.executionTimeMs,
+        retryCount: params.retryCount || 0,
+        maxRetries: params.maxRetries || 3,
+        canRetry: params.canRetry ?? true,
+      },
+      priority: params.canRetry ? 2 : 5,
+      visibility: 'manager',
+    });
+  }
 }
 
 // Singleton instance
@@ -705,3 +1300,15 @@ export const ChatServerHub = new ChatServerHubClass();
 export const emitChatEvent = (event: ChatEvent) => ChatServerHub.emit(event);
 export const subscribeToChatEvents = (type: ChatEventType | '*', handler: (event: ChatEvent) => Promise<void>) => 
   ChatServerHub.subscribe(type, handler);
+
+// Export gateway initialization methods
+export const initializeChatServerHub = () => ChatServerHub.initializeGateway();
+export const shutdownChatServerHub = () => ChatServerHub.shutdownGateway();
+
+// Export room tracking methods
+export const getAllActiveChatRooms = () => ChatServerHub.getAllActiveRooms();
+export const getActiveChatRoomsByType = (type: 'support' | 'work' | 'meeting' | 'org') => 
+  ChatServerHub.getActiveRoomsByType(type);
+export const getActiveChatRoomsByWorkspace = (workspaceId: string) => 
+  ChatServerHub.getActiveRoomsByWorkspace(workspaceId);
+export const getChatServerHubStats = () => ChatServerHub.getGatewayStats();

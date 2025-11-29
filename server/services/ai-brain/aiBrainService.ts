@@ -88,6 +88,9 @@ export interface EnqueueJobRequest {
   skill: string;
   input: any;
   priority?: 'low' | 'normal' | 'high' | 'critical';
+  // Conversation context for proper chatroom routing
+  conversationId?: string;
+  sessionId?: string;
 }
 
 export interface JobResult {
@@ -104,7 +107,10 @@ export class AIBrainService {
    * Submit a job to the AI Brain - UNIVERSAL ENTRY POINT
    */
   async enqueueJob(request: EnqueueJobRequest): Promise<JobResult> {
-    console.log(`🧠 [AI Brain] New job: ${request.skill} for workspace ${request.workspaceId || 'global'}`);
+    const contextInfo = request.conversationId 
+      ? `conversation ${request.conversationId}` 
+      : `workspace ${request.workspaceId || 'global'}`;
+    console.log(`🧠 [AI Brain] New job: ${request.skill} for ${contextInfo}`);
 
     const [job] = await db.insert(aiBrainJobs).values({
       workspaceId: request.workspaceId || null,
@@ -112,7 +118,10 @@ export class AIBrainService {
       skill: request.skill as any,
       input: request.input,
       priority: request.priority || 'normal',
-      status: 'pending'
+      status: 'pending',
+      // Store conversation context for proper routing
+      conversationId: request.conversationId || null,
+      sessionId: request.sessionId || null,
     }).returning();
 
     try {
@@ -121,27 +130,65 @@ export class AIBrainService {
     } catch (error: any) {
       console.error(`❌ [AI Brain] Job ${job.id} failed:`, error);
       
+      const errorMessage = error.message || 'Unknown error occurred';
+      const errorStack = error.stack || '';
+      
       await db.update(aiBrainJobs)
         .set({
           status: 'failed',
-          error: error.message,
+          error: errorMessage,
           completedAt: new Date()
         })
         .where(eq(aiBrainJobs.id, job.id));
 
+      // Emit AI error event if job has a conversation context
+      if (job.conversationId) {
+        const isTimeout = error.code === 'ETIMEDOUT' || error.message?.includes('timeout');
+        
+        if (isTimeout) {
+          await ChatServerHub.emitAITimeout({
+            conversationId: job.conversationId,
+            workspaceId: job.workspaceId || undefined,
+            jobId: job.id,
+            skill: job.skill,
+            timeoutMs: 30000, // Default timeout
+            executionTimeMs: 30000, // Exceeded timeout
+            userId: job.userId || undefined,
+            retryCount: 0,
+            maxRetries: 3,
+            canRetry: true,
+          }).catch((err: Error) => console.error('[AI Brain] Failed to emit timeout event:', err));
+        } else {
+          await ChatServerHub.emitAIError({
+            conversationId: job.conversationId,
+            workspaceId: job.workspaceId || undefined,
+            jobId: job.id,
+            skill: job.skill,
+            errorMessage,
+            errorStack,
+            userId: job.userId || undefined,
+            retryCount: 0,
+            maxRetries: 3,
+            canRetry: true,
+          }).catch((err: Error) => console.error('[AI Brain] Failed to emit error event:', err));
+        }
+      }
+
       return {
         jobId: job.id,
         status: 'failed',
-        error: error.message
+        error: errorMessage
       };
     }
   }
 
   /**
    * Execute a job - Routes to appropriate skill handler
+   * Includes timeout detection for long-running jobs
    */
   private async executeJob(job: AiBrainJob): Promise<JobResult> {
     const startTime = Date.now();
+    const JOB_TIMEOUT_MS = 30000; // 30 second timeout for AI jobs
 
     await db.update(aiBrainJobs)
       .set({
@@ -157,51 +204,103 @@ export class AIBrainService {
     // Cast input to typed interface based on skill
     const input = job.input as any;
 
-    switch (job.skill) {
-      case 'helpos_support':
-        const helpResult = await this.executeHelpAISupport(job, input as HelpAIInput);
-        output = helpResult.output;
-        tokensUsed = helpResult.tokensUsed;
-        confidenceScore = 0.95;
-        break;
+    // Create a timeout promise that rejects after JOB_TIMEOUT_MS
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        const timeoutError = new Error(`Job execution timeout after ${JOB_TIMEOUT_MS}ms`);
+        (timeoutError as any).code = 'ETIMEDOUT';
+        (timeoutError as any).isTimeout = true;
+        reject(timeoutError);
+      }, JOB_TIMEOUT_MS);
+    });
 
-      case 'scheduleos_generation':
-        const scheduleResult = await this.executeScheduleGeneration(job, input as ScheduleOSInput);
-        output = scheduleResult.output;
-        tokensUsed = scheduleResult.tokensUsed;
-        confidenceScore = scheduleResult.confidence;
-        break;
+    try {
+      // Execute skill handler with timeout protection
+      const executionPromise = (async () => {
+        switch (job.skill) {
+          case 'helpos_support':
+            const helpResult = await this.executeHelpAISupport(job, input as HelpAIInput);
+            output = helpResult.output;
+            tokensUsed = helpResult.tokensUsed;
+            confidenceScore = 0.95;
+            break;
 
-      case 'intelligenceos_prediction':
-        const predictionResult = await this.executePrediction(job, input as PredictionInput);
-        output = predictionResult.output;
-        tokensUsed = predictionResult.tokensUsed;
-        confidenceScore = predictionResult.confidence;
-        break;
+          case 'scheduleos_generation':
+            const scheduleResult = await this.executeScheduleGeneration(job, input as ScheduleOSInput);
+            output = scheduleResult.output;
+            tokensUsed = scheduleResult.tokensUsed;
+            confidenceScore = scheduleResult.confidence;
+            break;
 
-      case 'business_insight':
-        const insightResult = await this.executeBusinessInsight(job, input as BusinessInsightInput);
-        output = insightResult.output;
-        tokensUsed = insightResult.tokensUsed;
-        confidenceScore = insightResult.confidence;
-        break;
+          case 'intelligenceos_prediction':
+            const predictionResult = await this.executePrediction(job, input as PredictionInput);
+            output = predictionResult.output;
+            tokensUsed = predictionResult.tokensUsed;
+            confidenceScore = predictionResult.confidence;
+            break;
 
-      case 'platform_recommendation':
-        const recResult = await this.executePlatformRecommendation(job, input as PlatformRecommendationInput);
-        output = recResult.output;
-        tokensUsed = recResult.tokensUsed;
-        confidenceScore = 0.9;
-        break;
+          case 'business_insight':
+            const insightResult = await this.executeBusinessInsight(job, input as BusinessInsightInput);
+            output = insightResult.output;
+            tokensUsed = insightResult.tokensUsed;
+            confidenceScore = insightResult.confidence;
+            break;
 
-      case 'faq_update':
-        const faqResult = await this.executeFAQUpdate(job, input as FAQUpdateInput);
-        output = faqResult.output;
-        tokensUsed = faqResult.tokensUsed;
-        confidenceScore = 0.95;
-        break;
+          case 'platform_recommendation':
+            const recResult = await this.executePlatformRecommendation(job, input as PlatformRecommendationInput);
+            output = recResult.output;
+            tokensUsed = recResult.tokensUsed;
+            confidenceScore = 0.9;
+            break;
 
-      default:
-        throw new Error(`Unknown skill: ${job.skill}`);
+          case 'faq_update':
+            const faqResult = await this.executeFAQUpdate(job, input as FAQUpdateInput);
+            output = faqResult.output;
+            tokensUsed = faqResult.tokensUsed;
+            confidenceScore = 0.95;
+            break;
+
+          default:
+            throw new Error(`Unknown skill: ${job.skill}`);
+        }
+      })();
+
+      // Race between execution and timeout
+      await Promise.race([executionPromise, timeoutPromise]);
+    } catch (error: any) {
+      // Check if this is a timeout error
+      if (error.code === 'ETIMEDOUT' || error.isTimeout) {
+        const executionTime = Date.now() - startTime;
+        
+        await db.update(aiBrainJobs)
+          .set({
+            status: 'timeout',
+            error: error.message,
+            executionTimeMs: executionTime,
+            completedAt: new Date()
+          })
+          .where(eq(aiBrainJobs.id, job.id));
+
+        // Emit timeout event to chatroom if conversation context exists
+        if (job.conversationId) {
+          await ChatServerHub.emitAITimeout({
+            conversationId: job.conversationId,
+            workspaceId: job.workspaceId || undefined,
+            jobId: job.id,
+            skill: job.skill,
+            timeoutMs: JOB_TIMEOUT_MS,
+            executionTimeMs: executionTime,
+            userId: job.userId || undefined,
+            retryCount: 0,
+            maxRetries: 3,
+            canRetry: true,
+          }).catch((err: Error) => console.error('[AI Brain] Failed to emit timeout event:', err));
+        }
+
+        console.log(`⏱️ [AI Brain] Job ${job.id} timed out after ${executionTime}ms`);
+        throw error;
+      }
+      throw error;
     }
 
     const requiresApproval = confidenceScore ? confidenceScore < 0.95 : false;
@@ -227,17 +326,35 @@ export class AIBrainService {
     
     console.log(`✅ [AI Brain] Job ${job.id} completed in ${executionTime}ms (confidence: ${confidenceScore?.toFixed(2)}) - ${orgInfo}`);
 
-    // UNIFIED EVENT SYSTEM: Emit AI Brain response event
-    ChatServerHub.emitAIBrainResponse({
-      jobId: job.id,
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
-      skill: job.skill,
-      status: finalStatus,
-      confidenceScore,
-      requiresApproval,
-      executionTimeMs: executionTime,
-    }).catch((err: Error) => console.error('[AI Brain] Failed to emit event:', err));
+    // UNIFIED EVENT SYSTEM: Route AI response to correct chatroom with conversation context
+    if (job.conversationId) {
+      // If conversation-specific, emit to the correct chatroom
+      const actionType = requiresApproval ? 'escalation' : 'response';
+      const skillLabel = job.skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
+      ChatServerHub.emitAIAction({
+        conversationId: job.conversationId,
+        workspaceId: job.workspaceId,
+        actionType,
+        title: `AI ${skillLabel}: ${finalStatus === 'requires_approval' ? 'Needs Review' : 'Complete'}`,
+        description: finalStatus === 'requires_approval'
+          ? `Low confidence (${((confidenceScore || 0) * 100).toFixed(0)}%) - human review recommended`
+          : `Completed in ${executionTime}ms with ${((confidenceScore || 1) * 100).toFixed(0)}% confidence`,
+        targetUserId: job.userId || undefined,
+      }).catch((err: Error) => console.error('[AI Brain] Failed to emit chatroom action:', err));
+    } else {
+      // For non-conversation jobs, emit to platform event bus
+      ChatServerHub.emitAIBrainResponse({
+        jobId: job.id,
+        workspaceId: job.workspaceId || undefined,
+        userId: job.userId || undefined,
+        skill: job.skill,
+        status: finalStatus,
+        confidenceScore,
+        requiresApproval,
+        executionTimeMs: executionTime,
+      }).catch((err: Error) => console.error('[AI Brain] Failed to emit event:', err));
+    }
 
     return {
       jobId: job.id,

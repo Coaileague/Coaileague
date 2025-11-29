@@ -103,7 +103,7 @@ export class GamificationService {
 
     // Get or create employee points record
     const empPoints = await this.getOrCreateEmployeePoints(workspaceId, employeeId);
-    const oldLevel = empPoints.currentLevel;
+    const oldLevel = empPoints.currentLevel || 1;
     const newTotal = (empPoints.totalPoints || 0) + points;
     const newLevel = this.calculateLevel(newTotal);
     const levelUp = newLevel > oldLevel;
@@ -303,28 +303,25 @@ export class GamificationService {
    * Get workspace leaderboard
    */
   async getLeaderboard(workspaceId: string, period: 'weekly' | 'monthly' | 'all_time' = 'all_time', limit: number = 10): Promise<any[]> {
-    let pointsColumn = employeePoints.totalPoints;
-    
-    if (period === 'weekly') {
-      pointsColumn = employeePoints.pointsThisWeek;
-    } else if (period === 'monthly') {
-      pointsColumn = employeePoints.pointsThisMonth;
-    }
-
     const leaderboard = await db.select({
       employeeId: employeePoints.employeeId,
-      points: pointsColumn,
+      points: period === 'weekly' ? employeePoints.pointsThisWeek : 
+              period === 'monthly' ? employeePoints.pointsThisMonth : 
+              employeePoints.totalPoints,
       level: employeePoints.currentLevel,
       streak: employeePoints.currentStreak,
       achievementsEarned: employeePoints.achievementsEarned,
       firstName: employees.firstName,
       lastName: employees.lastName,
-      profileImageUrl: employees.profileImageUrl,
     })
     .from(employeePoints)
     .innerJoin(employees, eq(employeePoints.employeeId, employees.id))
     .where(eq(employeePoints.workspaceId, workspaceId))
-    .orderBy(desc(pointsColumn))
+    .orderBy(desc(
+      period === 'weekly' ? employeePoints.pointsThisWeek : 
+      period === 'monthly' ? employeePoints.pointsThisMonth : 
+      employeePoints.totalPoints
+    ))
     .limit(limit);
 
     return leaderboard.map((entry, index) => ({

@@ -4597,6 +4597,53 @@ export const insertFaqGapEventSchema = createInsertSchema(faqGapEvents).omit({
 export type InsertFaqGapEvent = z.infer<typeof insertFaqGapEventSchema>;
 export type FaqGapEvent = typeof faqGapEvents.$inferSelect;
 
+// FAQ Search History - Track all FAQ searches for analytics and learning
+export const faqSearchHistory = pgTable("faq_search_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Search context
+  query: text("query").notNull(), // The search query/question
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  conversationId: varchar("conversation_id"), // For routing to correct chatroom
+  
+  // Results
+  matchedFaqIds: text("matched_faq_ids").array().default(sql`ARRAY[]::text[]`), // FAQs found
+  matchCount: integer("match_count").default(0), // How many FAQs matched
+  topConfidenceScore: doublePrecision("top_confidence_score"), // Best match confidence (0-1)
+  averageConfidenceScore: doublePrecision("average_confidence_score"), // Average of all matches
+  
+  // Search method
+  searchMethod: varchar("search_method").notNull(), // 'semantic', 'keyword', 'hybrid'
+  tokensUsed: integer("tokens_used").default(0), // For billing/analytics
+  
+  // Interaction
+  resultClicked: boolean("result_clicked").default(false), // Did user click a result?
+  resultClickedFaqId: varchar("result_clicked_faq_id").references(() => helposFaqs.id, { onDelete: 'set null' }),
+  resultClickedAt: timestamp("result_clicked_at"),
+  
+  userFeedback: varchar("user_feedback"), // 'helpful', 'not_helpful', null = no feedback
+  userFeedbackAt: timestamp("user_feedback_at"),
+  
+  // AI suggestion event
+  suggestionEmitted: boolean("suggestion_emitted").default(false), // Was ai_suggestion event emitted?
+  suggestionEmittedAt: timestamp("suggestion_emitted_at"),
+  
+  // Escalation tracking
+  escalatedToSupport: boolean("escalated_to_support").default(false),
+  escalatedAt: timestamp("escalated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFaqSearchHistorySchema = createInsertSchema(faqSearchHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFaqSearchHistory = z.infer<typeof insertFaqSearchHistorySchema>;
+export type FaqSearchHistory = typeof faqSearchHistory.$inferSelect;
+
 // ============================================================================
 // CUSTOM FORMS SYSTEM (Organization-Specific)
 // ============================================================================
@@ -4873,6 +4920,14 @@ export const chatMessages = pgTable("chat_messages", {
   isEdited: boolean("is_edited").default(false),
   editedAt: timestamp("edited_at"),
 
+  // Sentiment Analysis (AI-driven emotional/urgency detection)
+  sentiment: varchar("sentiment"), // 'positive', 'neutral', 'negative', 'urgent'
+  sentimentScore: decimal("sentiment_score", { precision: 5, scale: 2 }), // -100 to +100 (negative to positive)
+  sentimentConfidence: decimal("sentiment_confidence", { precision: 5, scale: 2 }), // 0-100 (confidence level)
+  urgencyLevel: integer("urgency_level"), // 1-5 (1=low, 5=critical)
+  shouldEscalate: boolean("should_escalate").default(false), // Flag for urgent/negative messages
+  sentimentAnalyzedAt: timestamp("sentiment_analyzed_at"), // When sentiment was analyzed
+
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   // Existing indexes
@@ -4885,6 +4940,10 @@ export const chatMessages = pgTable("chat_messages", {
   index("chat_messages_sender_idx").on(table.senderId), // User message history
   index("chat_messages_unread_idx").on(table.isRead, table.createdAt), // Unread message queries
   index("chat_messages_recipient_idx").on(table.recipientId), // DM recipient lookups
+  
+  // Sentiment analysis indexes
+  index("chat_messages_sentiment_idx").on(table.sentiment), // Query by sentiment
+  index("chat_messages_should_escalate_idx").on(table.shouldEscalate), // Query urgent messages
 ]);
 
 // Message Reactions - Slack/Discord-style emoji reactions
@@ -4984,6 +5043,13 @@ export type InsertChatMacro = z.infer<typeof insertChatMacroSchema>;
 export type ChatMacro = typeof chatMacros.$inferSelect;
 export type InsertTypingIndicator = z.infer<typeof insertTypingIndicatorSchema>;
 export type TypingIndicator = typeof typingIndicators.$inferSelect;
+
+// Chat Message Edit Schema - Validation for editing existing messages
+export const editChatMessageSchema = z.object({
+  message: z.string().min(1).max(10000), // Message content validation
+});
+
+export type EditChatMessage = z.infer<typeof editChatMessageSchema>;
 
 // ============================================================================
 // COMMOS™ WORKROOM UPGRADE - FILE UPLOADS, EVENTS, VOICE
@@ -9536,6 +9602,18 @@ export type UserNotificationPreferences = typeof userNotificationPreferences.$in
 export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSchema>;
 export type NotificationDigest = typeof notificationDigests.$inferSelect;
 
+// Update Notification Preferences Schema - Partial update for user preferences
+export const updateNotificationPreferencesSchema = z.object({
+  digestFrequency: z.enum(['realtime', '15min', '1hour', '4hours', 'daily', 'never']).optional(),
+  enableAiSummarization: z.boolean().optional(),
+  enabledTypes: z.array(z.string()).optional(),
+  preferEmail: z.boolean().optional(),
+  quietHoursStart: z.number().int().min(0).max(23).nullable().optional(),
+  quietHoursEnd: z.number().int().min(0).max(23).nullable().optional(),
+});
+
+export type UpdateNotificationPreferences = z.infer<typeof updateNotificationPreferencesSchema>;
+
 // ============================================================================
 // CHAT SYSTEM ENHANCEMENTS - Connection Tracking, Routing, CSAT
 // ============================================================================
@@ -11275,6 +11353,10 @@ export const aiBrainJobs = pgTable("ai_brain_jobs", {
   userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
   skill: aiBrainSkillEnum("skill").notNull(), // Which AI skill to use
   
+  // Conversation context - for proper room routing
+  conversationId: varchar("conversation_id"), // Chat conversation ID if chat-related
+  sessionId: varchar("session_id"), // Session ID for conversation continuity
+  
   // Job execution
   priority: aiBrainJobPriorityEnum("priority").notNull().default('normal'),
   status: aiBrainJobStatusEnum("status").notNull().default('pending'),
@@ -11310,6 +11392,8 @@ export const aiBrainJobs = pgTable("ai_brain_jobs", {
   index("ai_brain_jobs_skill_idx").on(table.skill),
   index("ai_brain_jobs_priority_idx").on(table.priority),
   index("ai_brain_jobs_created_idx").on(table.createdAt),
+  index("ai_brain_jobs_conversation_idx").on(table.conversationId),
+  index("ai_brain_jobs_session_idx").on(table.sessionId),
 ]);
 
 export const insertAiBrainJobSchema = createInsertSchema(aiBrainJobs).omit({
@@ -13759,3 +13843,236 @@ export const insertHelpaiAuditLogSchema = createInsertSchema(helpaiAuditLog).omi
 
 export type InsertHelpaiAuditLog = z.infer<typeof insertHelpaiAuditLogSchema>;
 export type HelpaiAuditLog = typeof helpaiAuditLog.$inferSelect;
+
+// ============================================================================
+// AI RESPONSE TRACKING SYSTEM - Phase 3: API Gaps
+// ============================================================================
+
+// AI Responses - Track all AI-generated responses for learning and improvement
+export const aiResponses = pgTable("ai_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+
+  // Source of the response
+  sourceType: varchar("source_type").notNull(), // 'chat', 'suggestion', 'automation', 'faq_match', 'schedule_ai'
+  sourceId: varchar("source_id"), // Reference ID (chatroom ID, automation job ID, etc.)
+
+  // Response metadata
+  model: varchar("model").notNull(), // 'gpt-4', 'gemini', 'claude', 'custom'
+  feature: varchar("feature").notNull(), // 'schedule_smart_ai', 'helpai_bot', 'dispute_resolver', 'payment_optimizer'
+
+  // Request/Response data
+  userQuery: text("user_query").notNull(), // User's original question/request
+  aiResponse: text("ai_response").notNull(), // AI's generated response
+  responseTokens: integer("response_tokens"), // Tokens used in response
+  totalTokens: integer("total_tokens"), // Total tokens for this interaction
+
+  // Quality metrics
+  confidenceScore: integer("confidence_score"), // 0-100 confidence in response
+  relevanceScore: integer("relevance_score"), // 0-100 relevance to query
+
+  // User feedback (for AI improvement)
+  userRating: integer("user_rating"), // 1-5 stars (null if not rated)
+  userFeedback: text("user_feedback"), // User's comments on the response
+  wasHelpful: boolean("was_helpful"), // Simplified: yes/no
+  ratedAt: timestamp("rated_at"), // When user provided feedback
+
+  // Improvement tracking
+  improvementSuggestions: text("improvement_suggestions"), // ML model suggestions for improvement
+  correctionProvided: text("correction_provided"), // If user corrected the AI
+  correctedAt: timestamp("corrected_at"),
+
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ai_responses_workspace_idx").on(table.workspaceId),
+  index("ai_responses_source_idx").on(table.sourceType, table.sourceId),
+  index("ai_responses_model_idx").on(table.model),
+  index("ai_responses_feature_idx").on(table.feature),
+  index("ai_responses_created_idx").on(table.createdAt),
+  index("ai_responses_rating_idx").on(table.userRating),
+]);
+
+export const insertAiResponseSchema = createInsertSchema(aiResponses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiResponse = z.infer<typeof insertAiResponseSchema>;
+export type AiResponse = typeof aiResponses.$inferSelect;
+
+// AI Suggestions - Unified suggestions from all AI systems
+export const aiSuggestions = pgTable("ai_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+
+  // Source and context
+  suggestionType: varchar("suggestion_type").notNull(), // 'schedule_optimization', 'cost_reduction', 'compliance_alert', 'employee_insight', 'payment_terms'
+  sourceSystem: varchar("source_system").notNull(), // 'schedule_ai', 'analytics_ai', 'compliance_monitor', 'helpai'
+  
+  // Target entity
+  targetType: varchar("target_type"), // 'shift', 'employee', 'client', 'invoice', 'organization'
+  targetId: varchar("target_id"), // ID of the entity being targeted
+
+  // Suggestion details
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  suggestedAction: text("suggested_action"), // Recommended action to take
+  estimatedImpact: text("estimated_impact"), // Expected positive outcome
+
+  // Priority and urgency
+  priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
+  confidenceScore: integer("confidence_score"), // 0-100 confidence
+  
+  // Metrics
+  potentialSavings: decimal("potential_savings", { precision: 10, scale: 2 }), // Money that could be saved
+  potentialRiskReduction: decimal("potential_risk_reduction", { precision: 5, scale: 2 }), // Risk reduction percentage
+  estimatedTimeToImplement: integer("estimated_time_to_implement"), // Minutes
+  
+  // Action tracking
+  status: varchar("status").default("pending"), // 'pending', 'accepted', 'rejected', 'implemented', 'archived'
+  acceptedBy: varchar("accepted_by").references(() => users.id, { onDelete: 'set null' }),
+  acceptedAt: timestamp("accepted_at"),
+  rejectionReason: text("rejection_reason"), // Why was it rejected
+  rejectedBy: varchar("rejected_by").references(() => users.id, { onDelete: 'set null' }),
+  rejectedAt: timestamp("rejected_at"),
+  implementedAt: timestamp("implemented_at"),
+
+  // Expiry (suggestions may become stale)
+  expiresAt: timestamp("expires_at"), // When suggestion is no longer valid
+
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ai_suggestions_workspace_idx").on(table.workspaceId),
+  index("ai_suggestions_type_idx").on(table.suggestionType),
+  index("ai_suggestions_status_idx").on(table.status),
+  index("ai_suggestions_priority_idx").on(table.priority),
+  index("ai_suggestions_created_idx").on(table.createdAt),
+  index("ai_suggestions_target_idx").on(table.targetType, table.targetId),
+]);
+
+export const insertAiSuggestionSchema = createInsertSchema(aiSuggestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiSuggestion = z.infer<typeof insertAiSuggestionSchema>;
+export type AiSuggestion = typeof aiSuggestions.$inferSelect;
+
+// ============================================================================
+// ROOM ANALYTICS SYSTEM - Chat Room Activity Tracking & Metrics
+// ============================================================================
+
+// Room Analytics - Current snapshot of metrics per room
+// Updated in real-time as events are emitted from ChatServerHub
+export const roomAnalytics = pgTable("room_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Room identification
+  roomType: varchar("room_type").notNull(), // 'support', 'work', 'meeting', 'org'
+  conversationId: varchar("conversation_id").notNull(), // Reference to chatConversations.id
+  roomName: varchar("room_name"), // Display name of the room
+  
+  // Message metrics
+  totalMessages: integer("total_messages").default(0), // Cumulative message count
+  messageCountToday: integer("message_count_today").default(0), // Messages posted today
+  messageCountThisWeek: integer("message_count_this_week").default(0), // Messages this week
+  
+  // Participant activity
+  totalParticipants: integer("total_participants").default(0), // Unique users who ever participated
+  activeParticipantsNow: integer("active_participants_now").default(0), // Currently in room
+  newParticipantsToday: integer("new_participants_today").default(0), // Joined today
+  
+  // Support metrics (for support rooms)
+  ticketsCreated: integer("tickets_created").default(0), // Total support tickets
+  ticketsResolved: integer("tickets_resolved").default(0), // Resolved tickets
+  avgResolutionTimeHours: doublePrecision("avg_resolution_time_hours"), // Average time to resolve
+  unresovledTickets: integer("unresolved_tickets").default(0), // Currently unresolved
+  
+  // AI metrics
+  aiEscalationCount: integer("ai_escalation_count").default(0), // Times AI escalated to human
+  aiEscalationRate: doublePrecision("ai_escalation_rate").default(0), // Percentage of interactions escalated
+  aiResponseCount: integer("ai_response_count").default(0), // Times AI provided response
+  
+  // Sentiment analysis
+  sentimentPositive: integer("sentiment_positive").default(0), // Positive sentiment messages
+  sentimentNeutral: integer("sentiment_neutral").default(0), // Neutral sentiment messages
+  sentimentNegative: integer("sentiment_negative").default(0), // Negative sentiment messages
+  averageSentimentScore: doublePrecision("average_sentiment_score"), // -1 to 1 scale
+  
+  // Room status
+  status: varchar("status").notNull(), // 'active', 'archived', 'closed'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("room_analytics_workspace_idx").on(table.workspaceId),
+  index("room_analytics_conversation_idx").on(table.conversationId),
+  index("room_analytics_type_idx").on(table.roomType),
+  index("room_analytics_status_idx").on(table.status),
+  index("room_analytics_updated_idx").on(table.updatedAt),
+  uniqueIndex("room_analytics_conversation_unique").on(table.conversationId, table.workspaceId),
+]);
+
+export const insertRoomAnalyticsSchema = createInsertSchema(roomAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRoomAnalytics = z.infer<typeof insertRoomAnalyticsSchema>;
+export type RoomAnalytics = typeof roomAnalytics.$inferSelect;
+
+// Room Analytics Time Series - Hourly and daily aggregated data
+// Allows querying historical trends and patterns
+export const roomAnalyticsTimeseries = pgTable("room_analytics_timeseries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  conversationId: varchar("conversation_id").notNull(),
+  
+  // Time period
+  period: varchar("period").notNull(), // 'hourly', 'daily'
+  periodStart: timestamp("period_start").notNull(), // Start of hour/day (UTC)
+  periodEnd: timestamp("period_end").notNull(), // End of hour/day (UTC)
+  
+  // Metrics for this period
+  messageCount: integer("message_count").default(0), // Messages in this period
+  participantCount: integer("participant_count").default(0), // Active participants
+  newParticipants: integer("new_participants").default(0), // Newly joined
+  
+  // Support metrics for this period
+  ticketsCreated: integer("tickets_created").default(0),
+  ticketsResolved: integer("tickets_resolved").default(0),
+  avgResolutionTimeHours: doublePrecision("avg_resolution_time_hours"),
+  
+  // AI metrics for this period
+  aiResponses: integer("ai_responses").default(0),
+  aiEscalations: integer("ai_escalations").default(0),
+  
+  // Sentiment for this period
+  sentimentPositive: integer("sentiment_positive").default(0),
+  sentimentNeutral: integer("sentiment_neutral").default(0),
+  sentimentNegative: integer("sentiment_negative").default(0),
+  averageSentimentScore: doublePrecision("average_sentiment_score"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("room_analytics_ts_workspace_idx").on(table.workspaceId),
+  index("room_analytics_ts_conversation_idx").on(table.conversationId),
+  index("room_analytics_ts_period_idx").on(table.period),
+  index("room_analytics_ts_period_start_idx").on(table.periodStart),
+  index("room_analytics_ts_conversation_period_idx").on(table.conversationId, table.period, table.periodStart),
+]);
+
+export const insertRoomAnalyticsTimeseriesSchema = createInsertSchema(roomAnalyticsTimeseries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRoomAnalyticsTimeseries = z.infer<typeof insertRoomAnalyticsTimeseriesSchema>;
+export type RoomAnalyticsTimeseries = typeof roomAnalyticsTimeseries.$inferSelect;

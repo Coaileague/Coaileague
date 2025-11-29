@@ -32,6 +32,8 @@ export type PlatformEventType =
   | 'ai_brain_action'
   | 'ai_escalation'
   | 'ai_suggestion'
+  | 'ai_error'
+  | 'ai_timeout'
   | 'system_maintenance'
   | 'queue_update'
   | 'staff_action';

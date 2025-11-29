@@ -298,11 +298,12 @@ aiBrainRouter.post('/recommend', isAuthenticated, async (req: Request, res: Resp
 
 /**
  * POST /api/ai-brain/chat - AI Chat support (HelpAI)
+ * Accepts conversationId for proper chatroom routing
  */
 aiBrainRouter.post('/chat', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const { message, conversationHistory, shouldLearn } = req.body;
+    const { message, conversationHistory, shouldLearn, conversationId, sessionId } = req.body;
     
     if (!message) {
       return res.status(400).json({ error: 'message is required' });
@@ -313,7 +314,10 @@ aiBrainRouter.post('/chat', isAuthenticated, async (req: Request, res: Response)
       userId: authReq.user?.id,
       skill: 'helpos_support',
       input: { message, conversationHistory, shouldLearn },
-      priority: 'high' // Chat is high priority
+      priority: 'high', // Chat is high priority
+      // Pass conversation context for proper room routing
+      conversationId,
+      sessionId,
     });
     
     res.json(result);

@@ -110,7 +110,6 @@ import { monitoringService } from "./services/monitoringService";
 import { processingMetricsService } from "./services/processingMetricsService";
 import { trainingRateService } from "./services/trainingRateService";
 import { analyticsDataService } from "./services/analyticsDataService";
-import { roomAnalyticsService } from "./services/roomAnalyticsService";
 import { documentExtractionService } from "./services/documentExtraction";
 import { notificationEngine } from "./services/universalNotificationEngine";
 import { issueDetectionService } from "./services/issueDetectionService";
@@ -14910,7 +14909,6 @@ Summary:`;
   // ============================================================================
 
   // ============================================================================
-  // ============================================================================
   // PHASE 3: CRITICAL API GAPS - Support Ticket & AI Response Management
   // ============================================================================
 
@@ -14927,16 +14925,16 @@ Summary:`;
         return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       }
 
-      // Get user to verify workspace access
-      const user = await storage.getUser(userId);
-      if (!user?.currentWorkspaceId) {
-        return res.status(403).json({ message: 'No workspace selected' });
-      }
-
       // Get the ticket
-      const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
+      const ticket = await storage.getSupportTicket(id);
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
+      }
+
+      // Get user to verify workspace access
+      const user = await storage.getUser(userId);
+      if (ticket.workspaceId !== user?.currentWorkspaceId) {
+        return res.status(403).json({ message: 'Access denied' });
       }
 
       // Update ticket status
@@ -14988,16 +14986,16 @@ Summary:`;
       const { id } = req.params;
       const userId = req.user!.id;
 
-      // Get user to verify workspace access
-      const user = await storage.getUser(userId);
-      if (!user?.currentWorkspaceId) {
-        return res.status(403).json({ message: 'No workspace selected' });
-      }
-
       // Get the ticket
-      const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
+      const ticket = await storage.getSupportTicket(id);
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
+      }
+
+      // Get user to verify workspace access
+      const user = await storage.getUser(userId);
+      if (ticket.workspaceId !== user?.currentWorkspaceId) {
+        return res.status(403).json({ message: 'Access denied' });
       }
 
       // Delete the ticket
@@ -15055,20 +15053,15 @@ Summary:`;
         return res.status(400).json({ message: 'Rating must be between 1 and 5' });
       }
 
-      // Get user to verify workspace access
-      const user = await storage.getUser(userId);
-      if (!user?.currentWorkspaceId) {
-        return res.status(403).json({ message: 'No workspace selected' });
-      }
-
       // Get the AI response
       const aiResponse = await storage.getAiResponse(id);
       if (!aiResponse) {
         return res.status(404).json({ message: 'AI response not found' });
       }
 
-      // Verify workspace access
-      if (aiResponse.workspaceId !== user.currentWorkspaceId) {
+      // Get user to verify workspace access
+      const user = await storage.getUser(userId);
+      if (aiResponse.workspaceId !== user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -15170,7 +15163,6 @@ Summary:`;
       res.status(500).json({ message: 'Failed to fetch AI suggestions' });
     }
   });
-
   // ADMIN SUPPORT ROUTES - Platform Administration
   // ============================================================================
 
@@ -28373,60 +28365,6 @@ app.post("/api/notifications/send-test", requireAuth, requireManager, mutationLi
   } catch (error: any) {
     console.error("Error sending test notification:", error);
     res.status(500).json({ error: error.message || "Notification send failed" });
-  }
-});
-
-  return server;
-
-/**
- * GET /api/analytics/rooms
- * Get analytics data for all rooms in a workspace
- * Query params:
- *   - roomType?: 'support' | 'work' | 'meeting' | 'org'
- *   - timeframe?: 'hourly' | 'daily' (default: daily)
- *   - days?: number (default: 7)
- */
-app.get("/api/analytics/rooms", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { roomType, timeframe = 'daily', days = '7' } = req.query;
-
-    // Validate query parameters
-    const validRoomTypes = ['support', 'work', 'meeting', 'org'];
-    const validTimeframes = ['hourly', 'daily'];
-
-    if (roomType && !validRoomTypes.includes(roomType as string)) {
-      return res.status(400).json({ error: 'Invalid roomType parameter' });
-    }
-
-    if (!validTimeframes.includes(timeframe as string)) {
-      return res.status(400).json({ error: 'Invalid timeframe parameter' });
-    }
-
-    const daysNum = Math.min(Math.max(1, parseInt(days as string) || 7), 90); // Clamp between 1-90 days
-
-    // Get analytics data
-    const analytics = await roomAnalyticsService.getAnalyticsData(
-      workspaceId,
-      (roomType as any) || undefined,
-      (timeframe as any) || 'daily',
-      daysNum
-    );
-
-    res.json({
-      success: true,
-      data: analytics,
-      metadata: {
-        workspaceId,
-        timeframe,
-        days: daysNum,
-        roomType: roomType || 'all',
-        generatedAt: new Date().toISOString(),
-      }
-    });
-  } catch (error: any) {
-    console.error("Error fetching room analytics:", error);
-    res.status(500).json({ error: error.message || "Failed to fetch analytics" });
   }
 });
 
