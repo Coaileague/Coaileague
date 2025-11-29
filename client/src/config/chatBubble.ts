@@ -11,9 +11,14 @@ export const CHAT_BUBBLE_CONFIG = {
     initialOffsetX: 420,  // Initial X offset from right
     initialOffsetY: 620,  // Initial Y offset from bottom
     
+    // Mobile-specific positioning (for screens < 640px)
+    mobileInitialOffsetX: 20,   // Fixed offset from right edge on mobile
+    mobileInitialOffsetY: 100,  // Fixed offset from bottom on mobile
+    
     // Drag boundary constraints
     maxHeight: 600, // Maximum Y position (chat bubble height)
     bottomBoundary: 100, // Minimum Y position to prevent going off bottom
+    topBoundary: 80, // Minimum Y position to prevent overlapping header (mobile-safe)
   },
 
   // Element widths in pixels for drag boundary calculations

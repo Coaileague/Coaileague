@@ -138,6 +138,31 @@
     padding: 0.75rem !important;
     gap: 0.5rem !important;
   }
+  
+  /* Extra compact padding */
+  .mobile-compact-p {
+    padding: 0.5rem !important;
+  }
+  
+  /* Tight card padding */
+  .mobile-card-tight {
+    padding: 0.5rem !important;
+  }
+  
+  /* Compact gap for small spaces */
+  .mobile-compact-gap-sm {
+    gap: 0.25rem !important;
+  }
+  
+  /* Grid column utilities */
+  .mobile-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .mobile-grid-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .mobile-grid-4 { grid-template-columns: repeat(4, 1fr) !important; }
+  
+  /* Flex alignment utilities */
+  .mobile-justify-between { justify-content: space-between !important; }
+  .mobile-justify-center { justify-content: center !important; }
+  .mobile-items-center { align-items: center !important; }
 }
 
 /* Tablet (768px - 1023px) */

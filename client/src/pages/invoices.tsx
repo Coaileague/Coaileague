@@ -463,7 +463,7 @@ export default function Invoices() {
         </div>
 
         <div className="space-y-4 sm:space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mobile-flex-col">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-invoices-title">
                 Invoices
@@ -473,7 +473,7 @@ export default function Invoices() {
               </p>
             </div>
           
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 mobile-flex-col">
             <Button 
               variant="outline" 
               onClick={() => autoGenerateMutation.mutate()}
@@ -505,7 +505,7 @@ export default function Invoices() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                     <div className="space-y-2">
                       <Label>Client *</Label>
                       <Select value={generateFormData.clientId} onValueChange={(value) => setGenerateFormData({ ...generateFormData, clientId: value, selectedTimeEntries: [] })}>
@@ -612,7 +612,7 @@ export default function Invoices() {
                 {invoicePreview && (
                   <div className="space-y-6 py-4">
                     {/* Client & Due Date Info */}
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-md">
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-md mobile-cols-1 mobile-compact-p">
                       <div>
                         <p className="text-sm text-muted-foreground">Client</p>
                         <p className="font-medium">{getClientName(generateFormData.clientId)}</p>
@@ -624,7 +624,7 @@ export default function Invoices() {
                     </div>
 
                     {/* Line Items Table */}
-                    <div className="border rounded-md">
+                    <div className="border rounded-md table-scroll-wrapper">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -703,8 +703,8 @@ export default function Invoices() {
                 {autoGenerateResults && (
                   <div className="space-y-6 py-4">
                     {/* Summary Stats */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <Card>
+                    <div className="grid grid-cols-2 gap-4 mobile-cols-1">
+                      <Card className="mobile-card-tight">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-muted/10 rounded-lg">
@@ -719,7 +719,7 @@ export default function Invoices() {
                       </Card>
                       
                       {autoGenerateResults.errors && autoGenerateResults.errors.length > 0 && (
-                        <Card>
+                        <Card className="mobile-card-tight">
                           <CardContent className="p-4">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-red-500/10 rounded-lg">
@@ -816,7 +816,7 @@ export default function Invoices() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                   <div className="space-y-2">
                     <Label htmlFor="client">Client *</Label>
                     <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
@@ -847,7 +847,7 @@ export default function Invoices() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                   <div className="space-y-2">
                     <Label htmlFor="subtotal">Subtotal *</Label>
                     <Input 
@@ -892,8 +892,8 @@ export default function Invoices() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mobile-cols-1">
+          <Card className="mobile-card-tight">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
@@ -904,7 +904,7 @@ export default function Invoices() {
               <div className="text-2xl font-bold" data-testid="stat-total">${totals.total.toFixed(2)}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="mobile-card-tight">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-600">Paid</CardTitle>
@@ -915,7 +915,7 @@ export default function Invoices() {
               <div className="text-2xl font-bold text-green-600" data-testid="stat-paid">${totals.paid.toFixed(2)}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="mobile-card-tight">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-600">Outstanding</CardTitle>
@@ -926,7 +926,7 @@ export default function Invoices() {
               <div className="text-2xl font-bold text-blue-600" data-testid="stat-outstanding">${totals.outstanding.toFixed(2)}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="mobile-card-tight">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-600">Overdue</CardTitle>
@@ -992,6 +992,7 @@ export default function Invoices() {
 
         {isLoading ? (
           <Card>
+            <div className="table-scroll-wrapper">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1016,6 +1017,7 @@ export default function Invoices() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         ) : filteredInvoices.length === 0 && !searchQuery ? (
           <Card data-testid="card-no-invoices">
@@ -1033,6 +1035,7 @@ export default function Invoices() {
           </Card>
         ) : (
           <Card>
+            <div className="table-scroll-wrapper">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1100,6 +1103,7 @@ export default function Invoices() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         )}
           </TabsContent>

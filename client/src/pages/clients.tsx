@@ -135,7 +135,7 @@ export default function Clients() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="space-y-4 sm:space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mobile-flex-col">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-clients-title">
                 Clients
@@ -160,7 +160,7 @@ export default function Clients() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
                     <Input 
@@ -194,7 +194,7 @@ export default function Clients() {
                     data-testid="input-client-company" 
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email *</Label>
                     <Input 
@@ -236,7 +236,7 @@ export default function Clients() {
                   </h3>
                   
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                       <div className="space-y-2">
                         <Label htmlFor="billableRate">Hourly Rate ($) *</Label>
                         <Input 

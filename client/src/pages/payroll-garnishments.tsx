@@ -127,10 +127,10 @@ export default function PayrollGarnishmentsPage() {
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{payrollMessages.garnishments.title}</h1>
-          <p className="text-muted-foreground mt-2">{payrollMessages.garnishments.description}</p>
+      <div className="flex items-center justify-between gap-4 mobile-flex-col">
+        <div className="mobile-w-full">
+          <h1 className="text-3xl font-bold tracking-tight mobile-text-xl">{payrollMessages.garnishments.title}</h1>
+          <p className="text-muted-foreground mt-2 mobile-text-sm">{payrollMessages.garnishments.description}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -330,12 +330,12 @@ export default function PayrollGarnishmentsPage() {
                 {sortedGarnishments.map((garnishment) => (
                   <div 
                     key={garnishment.id} 
-                    className="border rounded-lg p-4 hover:bg-muted/50 transition space-y-2"
+                    className="border rounded-lg p-4 hover:bg-muted/50 transition space-y-2 mobile-p-3"
                     data-testid={`card-garnishment-${garnishment.id}`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold flex items-center gap-2">
+                    <div className="flex items-start justify-between mobile-flex-col mobile-gap-2">
+                      <div className="flex-1 mobile-w-full">
+                        <p className="font-semibold flex items-center gap-2 mobile-text-sm">
                           {garnishmentTypes[garnishment.garnishmentType]}
                           {garnishment.priority <= 1 && (
                             <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -345,15 +345,15 @@ export default function PayrollGarnishmentsPage() {
                           <p className="text-sm text-muted-foreground">Case: {garnishment.caseNumber}</p>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="text-right mobile-w-full mobile-flex mobile-justify-between mobile-items-center">
                         <p className="text-lg font-bold">${parseFloat(garnishment.amount).toFixed(2)}</p>
                         <Badge variant={garnishment.priority <= 1 ? "destructive" : "secondary"}>
                           Priority {garnishment.priority}
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <p className="text-xs text-muted-foreground">{priorityConfig[garnishment.priority as keyof typeof priorityConfig]?.label || `Priority ${garnishment.priority}`}</p>
+                    <div className="flex items-center justify-between pt-2 border-t mobile-flex-col mobile-gap-2">
+                      <p className="text-xs text-muted-foreground mobile-w-full">{priorityConfig[garnishment.priority as keyof typeof priorityConfig]?.label || `Priority ${garnishment.priority}`}</p>
                       <Button
                         variant="ghost"
                         size="sm"

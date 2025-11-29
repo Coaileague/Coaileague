@@ -125,10 +125,10 @@ export default function PayrollDeductionsPage() {
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{payrollMessages.deductions.title}</h1>
-          <p className="text-muted-foreground mt-2">{payrollMessages.deductions.description}</p>
+      <div className="flex items-center justify-between gap-4 mobile-flex-col">
+        <div className="mobile-w-full">
+          <h1 className="text-3xl font-bold tracking-tight mobile-text-xl">{payrollMessages.deductions.title}</h1>
+          <p className="text-muted-foreground mt-2 mobile-text-sm">{payrollMessages.deductions.description}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -300,12 +300,12 @@ export default function PayrollDeductionsPage() {
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-2">
                     {deductions?.map((deduction) => (
-                      <div key={deduction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition" data-testid={`card-deduction-${deduction.id}`}>
-                        <div className="flex-1">
-                          <p className="font-medium">{deductionTypes[deduction.deductionType]}</p>
+                      <div key={deduction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition mobile-flex-col mobile-p-3 mobile-gap-2" data-testid={`card-deduction-${deduction.id}`}>
+                        <div className="flex-1 mobile-w-full">
+                          <p className="font-medium mobile-text-sm">{deductionTypes[deduction.deductionType]}</p>
                           <p className="text-sm text-muted-foreground">${parseFloat(deduction.amount).toFixed(2)}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mobile-w-full mobile-justify-between">
                           <Badge variant={deduction.isPreTax ? "default" : "secondary"}>
                             {deduction.isPreTax ? "Pre-Tax" : "Post-Tax"}
                           </Badge>
@@ -342,9 +342,9 @@ export default function PayrollDeductionsPage() {
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-2">
                     {deductions?.filter(d => d.isPreTax)?.map((deduction) => (
-                      <div key={deduction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition">
-                        <div className="flex-1">
-                          <p className="font-medium">{deductionTypes[deduction.deductionType]}</p>
+                      <div key={deduction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition mobile-flex-col mobile-p-3 mobile-gap-2">
+                        <div className="flex-1 mobile-w-full">
+                          <p className="font-medium mobile-text-sm">{deductionTypes[deduction.deductionType]}</p>
                           <p className="text-sm text-muted-foreground">${parseFloat(deduction.amount).toFixed(2)}</p>
                         </div>
                         <Button
@@ -378,9 +378,9 @@ export default function PayrollDeductionsPage() {
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-2">
                     {deductions?.filter(d => !d.isPreTax)?.map((deduction) => (
-                      <div key={deduction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition">
-                        <div className="flex-1">
-                          <p className="font-medium">{deductionTypes[deduction.deductionType]}</p>
+                      <div key={deduction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition mobile-flex-col mobile-p-3 mobile-gap-2">
+                        <div className="flex-1 mobile-w-full">
+                          <p className="font-medium mobile-text-sm">{deductionTypes[deduction.deductionType]}</p>
                           <p className="text-sm text-muted-foreground">${parseFloat(deduction.amount).toFixed(2)}</p>
                         </div>
                         <Button
