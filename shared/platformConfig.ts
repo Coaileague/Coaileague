@@ -565,10 +565,109 @@ export const BOT_CONFIG = {
 } as const;
 
 // ============================================================================
-// HELPAI ORCHESTRATION SYSTEM CONFIGURATION (PHASES 2-5)
+// HELPAI - UNIVERSAL AI ASSISTANT & ORCHESTRATION SYSTEM
 // ============================================================================
 export const HELPAI = {
-  // Feature Flags
+  // Bot Identity
+  name: "HelpAI",
+  fullName: "HelpAI Assistant",
+  description: "AI-powered support assistant for CoAIleague",
+  
+  // AI Model Configuration (uses Gemini via AI Brain)
+  model: {
+    provider: "gemini" as const,
+    modelId: "gemini-2.0-flash-exp",
+    maxTokens: 512,
+    temperature: 0.7,
+  },
+  
+  // Response Settings
+  responses: {
+    maxLength: 300,
+    conciseMode: true,
+    useMarkdown: true,
+  },
+  
+  // Bot Feature Flags
+  bot: {
+    enabled: true,
+    faqSearch: true,
+    ticketCreation: true,
+    urgencyDetection: true,
+    sentimentAnalysis: true,
+    learningEnabled: true,
+    autoEscalation: true,
+  },
+  
+  // Escalation Thresholds
+  escalation: {
+    lowConfidenceThreshold: 0.5,
+    maxBotTurns: 5,
+    frustrationSignalCount: 2,
+  },
+  
+  // Guest Limits
+  guestLimits: {
+    freeResponses: 3,
+    promptUpgrade: true,
+  },
+  
+  // Greeting Templates
+  greetings: {
+    default: "Hello! I'm HelpAI, your AI assistant. How can I help you today?",
+    returning: "Welcome back! I'm HelpAI, ready to assist you.",
+    guest: "Welcome! I'm HelpAI, your AI assistant. You have {remaining} free responses available.",
+    afterHours: "Hello! I'm HelpAI. Our support team is currently offline, but I'll do my best to help you.",
+  },
+  
+  // Knowledge Domains
+  domains: {
+    scheduling: ["schedule", "shift", "calendar", "time off", "availability"],
+    billing: ["invoice", "payment", "charge", "bill", "subscription", "price"],
+    payroll: ["payroll", "salary", "wage", "pay", "deduction", "tax"],
+    employees: ["employee", "staff", "team", "onboarding", "hire"],
+    technical: ["error", "bug", "issue", "problem", "not working", "broken"],
+    account: ["login", "password", "account", "access", "permission"],
+  },
+  
+  // Sentiment Signals
+  signals: {
+    satisfaction: [
+      "thanks", "thank you", "perfect", "solved", "done", "great", "awesome",
+      "got it", "understand", "clear", "helpful", "works", "fixed",
+      "appreciate", "good", "ok", "okay", "yes", "yep", "yeah"
+    ],
+    frustration: [
+      "human", "person", "agent", "representative", "staff",
+      "not working", "still broken", "doesn't work", "confused", "urgent",
+      "escalate", "manager", "speak to", "talk to",
+      "no", "nope", "wrong", "incorrect", "not helpful"
+    ],
+  },
+  
+  // Platform Knowledge for AI Context
+  platformKnowledge: {
+    products: [
+      { name: "TrackOS", description: "Time tracking and clock-in/out" },
+      { name: "ScheduleOS", description: "AI-powered scheduling" },
+      { name: "PayrollOS", description: "Automated payroll processing" },
+      { name: "BillOS", description: "Automated invoicing with Stripe" },
+      { name: "HireOS", description: "Employee onboarding workflows" },
+      { name: "ReportOS", description: "Report templates and submissions" },
+      { name: "AnalyticsOS", description: "Business insights dashboards" },
+      { name: "HelpAI", description: "AI-powered support assistant" },
+    ],
+    capabilities: [
+      "Answer platform questions",
+      "Create support tickets",
+      "Search FAQ knowledge base",
+      "Detect urgency and escalate",
+      "Guide users through features",
+      "Provide queue status updates",
+    ],
+  },
+  
+  // Orchestration Feature Flags
   enabled: true,
   registryEnabled: true,
   integrationEnabled: true,
@@ -584,14 +683,14 @@ export const HELPAI = {
   // Integration Settings
   integration: {
     defaultSyncIntervalMinutes: 60,
-    maxSyncIntervalMinutes: 1440, // 24 hours
+    maxSyncIntervalMinutes: 1440,
     minSyncIntervalMinutes: 5,
     credentialEncryption: 'aes-256-gcm' as const,
   },
   
   // Audit Log Configuration
   audit: {
-    retentionDays: 365, // Keep audit logs for 1 year
+    retentionDays: 365,
     maxEntriesPerQuery: 10000,
     hashAlgorithm: 'sha256' as const,
     enableIntegrityVerification: true,
@@ -612,7 +711,7 @@ export const HELPAI = {
   
   // Performance
   performance: {
-    cacheTTLSeconds: 300, // Cache registry for 5 minutes
+    cacheTTLSeconds: 300,
     maxConcurrentRequests: 10,
   },
 } as const;
