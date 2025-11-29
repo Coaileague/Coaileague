@@ -2,11 +2,14 @@
  * HelpDesk Event System
  * Standardized event contracts for chat ↔ ticket bridge
  * Based on retrofit plan: 7 key events for seamless support workflow
+ * 
+ * INTEGRATION: Connected to ChatServerHub for unified event-driven architecture
  */
 
 import { db } from "../db";
 import { chatConversations, chatMessages, auditLogs } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { ChatServerHub } from "./ChatServerHub";
 
 // Event Types
 export type HelpDeskEventType =
@@ -131,6 +134,128 @@ export class HelpDeskEventManager {
           console.error(`Error in event handler for ${event.type}:`, error);
         }
       });
+    }
+
+    // UNIFIED EVENT SYSTEM: Forward to ChatServerHub
+    this.forwardToChatServerHub(event).catch(err => 
+      console.error('[HelpDeskEvents] Failed to forward to ChatServerHub:', err)
+    );
+  }
+
+  /**
+   * Forward helpdesk events to ChatServerHub for unified event-driven architecture
+   * Maps to valid ChatEventType values defined in ChatServerHub
+   */
+  private async forwardToChatServerHub(event: HelpDeskEvent): Promise<void> {
+    const sessionId = 'sessionId' in event ? event.sessionId : undefined;
+    const ticketId = 'ticketId' in event ? event.ticketId : undefined;
+
+    // Only forward if we have a valid conversationId for routing
+    if (!sessionId) {
+      console.warn('[HelpDeskEvents] Missing sessionId, skipping ChatServerHub forward');
+      return;
+    }
+
+    // Valid ChatEventType values from ChatServerHub
+    type ChatEventType = 'ticket_created' | 'ticket_assigned' | 'ticket_escalated' | 'ticket_resolved' | 'ticket_closed' | 'staff_joined' | 'message_posted' | 'room_status_changed';
+
+    // Determine correct ChatEventType based on event details
+    let chatEventType: ChatEventType;
+    let title: string;
+
+    switch (event.type) {
+      case 'chat.session.started':
+        chatEventType = 'ticket_created';
+        title = 'Support Session Started';
+        break;
+      case 'chat.agent.assigned':
+        chatEventType = 'ticket_assigned';
+        title = 'Agent Assigned';
+        break;
+      case 'ticket.status.changed':
+        // Map based on actual status value
+        const statusEvent = event as TicketStatusChangedEvent;
+        if (statusEvent.status === 'resolved') {
+          chatEventType = 'ticket_resolved';
+          title = 'Ticket Resolved';
+        } else if (statusEvent.status === 'assigned') {
+          chatEventType = 'ticket_assigned';
+          title = 'Ticket Assigned';
+        } else if (statusEvent.status === 'escalated') {
+          chatEventType = 'ticket_escalated';
+          title = 'Ticket Escalated';
+        } else {
+          chatEventType = 'room_status_changed';
+          title = `Ticket Status: ${statusEvent.status}`;
+        }
+        break;
+      case 'ticket.note.created':
+        chatEventType = 'message_posted';
+        title = 'Note Added to Ticket';
+        break;
+      case 'ticket.escalated':
+        chatEventType = 'ticket_escalated';
+        title = 'Ticket Escalated';
+        break;
+      case 'ticket.artifact.requested':
+        chatEventType = 'message_posted';
+        title = 'Artifact Requested';
+        break;
+      case 'ticket.artifact.attached':
+        chatEventType = 'message_posted';
+        title = 'Artifact Attached';
+        break;
+      case 'chat.session.ended':
+        chatEventType = 'ticket_closed';
+        title = 'Session Ended';
+        break;
+      default:
+        chatEventType = 'room_status_changed';
+        title = 'Support Activity';
+    }
+
+    // Determine persistence/notification based on actual event significance
+    const shouldPersist = ['ticket_escalated', 'ticket_resolved'].includes(chatEventType);
+    const shouldNotify = ['ticket_escalated', 'ticket_assigned'].includes(chatEventType);
+
+    await ChatServerHub.emit({
+      type: chatEventType,
+      title,
+      description: this.getEventDescription(event),
+      metadata: {
+        conversationId: sessionId, // Required for room-scoped routing
+        ticketId,
+        workspaceId: 'orgId' in event ? event.orgId : undefined,
+        audience: 'staff',
+      },
+      shouldPersistToWhatsNew: shouldPersist,
+      shouldNotify: shouldNotify,
+    });
+  }
+
+  /**
+   * Get human-readable description for event
+   */
+  private getEventDescription(event: HelpDeskEvent): string {
+    switch (event.type) {
+      case 'chat.session.started':
+        return `New support session started${event.topic ? `: ${event.topic}` : ''}`;
+      case 'chat.agent.assigned':
+        return `${event.agentName} assigned to conversation`;
+      case 'ticket.status.changed':
+        return `Status changed to ${event.status}${event.reason ? ` - ${event.reason}` : ''}`;
+      case 'ticket.note.created':
+        return `${event.visibility === 'internal' ? 'Internal note' : 'Note'} added`;
+      case 'ticket.escalated':
+        return `Escalated to ${event.toQueue}: ${event.reason}`;
+      case 'ticket.artifact.requested':
+        return `${event.what} requested`;
+      case 'ticket.artifact.attached':
+        return `${event.fileName} attached`;
+      case 'chat.session.ended':
+        return `Session ended: ${event.reason}`;
+      default:
+        return 'Helpdesk event occurred';
     }
   }
 

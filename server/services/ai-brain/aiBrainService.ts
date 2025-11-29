@@ -37,6 +37,7 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, sql, gte, lte, count, or, ilike, isNull } from 'drizzle-orm';
 import { geminiClient } from './providers/geminiClient';
+import { ChatServerHub } from '../ChatServerHub';
 import crypto from 'crypto';
 
 // Define typed input interfaces for each skill
@@ -225,6 +226,18 @@ export class AIBrainService {
       : `workspace: ${job.workspaceId || 'global'}`;
     
     console.log(`✅ [AI Brain] Job ${job.id} completed in ${executionTime}ms (confidence: ${confidenceScore?.toFixed(2)}) - ${orgInfo}`);
+
+    // UNIFIED EVENT SYSTEM: Emit AI Brain response event
+    ChatServerHub.emitAIBrainResponse({
+      jobId: job.id,
+      workspaceId: job.workspaceId || undefined,
+      userId: job.userId || undefined,
+      skill: job.skill,
+      status: finalStatus,
+      confidenceScore,
+      requiresApproval,
+      executionTimeMs: executionTime,
+    }).catch((err: Error) => console.error('[AI Brain] Failed to emit event:', err));
 
     return {
       jobId: job.id,

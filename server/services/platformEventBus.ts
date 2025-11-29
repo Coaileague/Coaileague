@@ -20,10 +20,21 @@ export type PlatformEventType =
   | 'security_patch'
   | 'announcement'
   | 'ticket_created'
+  | 'ticket_assigned'
+  | 'ticket_escalated'
   | 'ticket_resolved'
+  | 'ticket_closed'
+  | 'chat_message'
+  | 'chat_user_joined'
+  | 'chat_user_left'
+  | 'chat_moderation'
   | 'automation_completed'
   | 'ai_brain_action'
-  | 'system_maintenance';
+  | 'ai_escalation'
+  | 'ai_suggestion'
+  | 'system_maintenance'
+  | 'queue_update'
+  | 'staff_action';
 
 export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
 
@@ -39,7 +50,17 @@ export interface PlatformEvent {
   version?: string;
   workspaceId?: string; // null = global/platform-wide, set = workspace-specific
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any> & {
+    conversationId?: string;
+    roomSlug?: string;
+    ticketId?: string;
+    ticketNumber?: string;
+    messageId?: string;
+    targetUserId?: string;
+    audience?: 'room' | 'workspace' | 'user' | 'staff' | 'all';
+    severity?: 'low' | 'medium' | 'high' | 'critical';
+    chatEventType?: string;
+  };
   priority?: number;
   isNew?: boolean;
   learnMoreUrl?: string;

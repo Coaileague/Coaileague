@@ -9,6 +9,7 @@ import { trackConnection, trackDisconnection, checkMessageRateLimit } from './mi
 import { randomUUID } from 'crypto';
 import { sanitizeChatMessage, sanitizePlainText } from './lib/sanitization';
 import { CHAT_SERVER_CONFIG } from './config/chatServer';
+import { ChatServerHub } from './services/ChatServerHub';
 
 /**
  * Helper function to create system messages with all required ChatMessage fields
@@ -531,6 +532,48 @@ export function setupWebSocket(server: Server) {
   
   // Track AI Dispatch™ connections by workspace ID
   const dispatchUpdateClients = new Map<string, Set<WebSocketClient>>();
+
+  // =========================================================================
+  // CHAT SERVER HUB INTEGRATION - Unified event broadcasting
+  // =========================================================================
+  ChatServerHub.setWebSocketBroadcaster((event) => {
+    const { type, conversationId, workspaceId, userId, payload } = event;
+    
+    if (conversationId) {
+      const clients = conversationClients.get(conversationId);
+      if (clients) {
+        const eventPayload = JSON.stringify({
+          type: 'platform_event',
+          conversationId,
+          payload,
+        });
+        clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            if (!userId || client.userId === userId) {
+              client.send(eventPayload);
+            }
+          }
+        });
+      }
+    } else if (workspaceId) {
+      const wsClients = notificationClients.get(workspaceId);
+      if (wsClients) {
+        const eventPayload = JSON.stringify({
+          type: 'platform_event',
+          workspaceId,
+          payload,
+        });
+        wsClients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            if (!userId || client.userId === userId) {
+              client.send(eventPayload);
+            }
+          }
+        });
+      }
+    }
+  });
+  console.log('[WebSocket] ChatServerHub broadcaster registered');
 
   wss.on('connection', async (ws: WebSocketClient, request: IncomingMessage) => {
     // Extract IP address and user agent from request
@@ -1058,6 +1101,23 @@ export function setupWebSocket(server: Server) {
               } else {
                 console.log(`${displayName} joined conversation ${payload.conversationId}`);
               }
+
+              // CHAT SERVER HUB: Emit user_joined event for unified event system
+              ChatServerHub.emit({
+                type: isStaff ? 'staff_joined' : 'user_joined_room',
+                title: isStaff ? 'Staff Joined' : 'User Joined',
+                description: `${displayName} joined the chat`,
+                metadata: {
+                  conversationId: conversationId,
+                  roomSlug: isMainRoom ? MAIN_ROOM_ID : undefined,
+                  workspaceId: ws.workspaceId,
+                  userId: payload.userId,
+                  userName: displayName,
+                  audience: 'room',
+                },
+                shouldPersistToWhatsNew: false,
+                shouldNotify: isStaff, // Only notify when staff joins
+              }).catch(err => console.error('[ChatServerHub] Failed to emit user_joined:', err));
             }
             break;
           }
@@ -2255,6 +2315,17 @@ export function setupWebSocket(server: Server) {
                 }
               });
             }
+
+            // CHAT SERVER HUB: Emit message_posted event for unified event system
+            ChatServerHub.emitMessagePosted({
+              conversationId: ws.conversationId,
+              roomSlug: ws.conversationId === MAIN_ROOM_ID ? MAIN_ROOM_ID : undefined,
+              workspaceId: ws.workspaceId,
+              userId: ws.userId,
+              userName: displayName,
+              messageId: savedMessage.id,
+              messagePreview: sanitizedMessage.substring(0, 100),
+            }).catch(err => console.error('[ChatServerHub] Failed to emit message_posted:', err));
 
             // GEMINI Q&A BOT: Intelligent responses using Gemini 2.0 Flash
             const { shouldBotRespond, getAiResponse } = await import('./services/geminiQABot');
