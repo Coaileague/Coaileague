@@ -7,7 +7,8 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send } from "lucide-react";
+import { Send, ChevronLeft, Home } from "lucide-react";
+import { useLocation } from "wouter";
 import { SupportCommandDrawer } from "./support-command-drawer";
 import { MobileUserActionSheet } from "./mobile-user-action-sheet";
 import { CoAIleagueLogo } from "./workforceos-logo";
@@ -32,6 +33,7 @@ interface MobileChatLayoutProps {
   onKickUser?: (userId: string, reason?: string) => void;
   onSilenceUser?: (userId: string, duration?: number, reason?: string) => void;
   onGiveVoice?: (userId: string) => void;
+  onExit?: () => void;
 }
 
 export function MobileChatLayout({
@@ -43,7 +45,9 @@ export function MobileChatLayout({
   onKickUser,
   onSilenceUser,
   onGiveVoice,
+  onExit,
 }: MobileChatLayoutProps) {
+  const [, setLocation] = useLocation();
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUser, setSelectedUser] = useState<{ username: string; userId: string; role: 'staff' | 'customer' | 'guest' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -101,12 +105,9 @@ export function MobileChatLayout({
       return (
         <div key={msg.id} className="py-2 px-3 bg-blue-500/10 rounded-lg">
           <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-3.5 h-3.5">
-              <CoAIleagueLogo />
-            </div>
             <StaffNameDisplay name={msg.senderName || 'HelpOS™'} className="text-xs font-bold text-blue-400" />
           </div>
-          <div className="text-sm whitespace-pre-wrap pl-5">{msg.message}</div>
+          <div className="text-sm whitespace-pre-wrap">{msg.message}</div>
         </div>
       );
     }
@@ -143,19 +144,35 @@ export function MobileChatLayout({
       />
 
       {/* Mobile Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b bg-gradient-to-r from-blue-900 to-slate-900 text-white">
-        <SupportCommandDrawer
-          onCommandSelect={onCommandExecute}
-          users={users}
-          isStaff={currentUser.isStaff}
-        />
+      <div className="flex items-center justify-between px-3 py-2.5 border-b bg-gradient-to-r from-blue-900 to-slate-900 text-white gap-2">
+        {/* Back Button */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-white hover:bg-white/20 h-9 w-9"
+          onClick={() => onExit ? onExit() : setLocation("/")}
+          data-testid="button-chatroom-exit"
+          title="Exit chat"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        
+        {/* Title */}
         <div className="flex items-center gap-2 flex-1 justify-center">
-          <div className="w-6 h-6">
-            <CoAIleagueLogo />
-          </div>
           <span className="text-sm font-bold">Support Chat</span>
         </div>
-        <div className="w-10" /> {/* Spacer for centering */}
+        
+        {/* Home Button */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-white hover:bg-white/20 h-9 w-9"
+          onClick={() => setLocation("/")}
+          data-testid="button-home"
+          title="Go home"
+        >
+          <Home className="h-5 w-5" />
+        </Button>
       </div>
 
       {/* Messages */}

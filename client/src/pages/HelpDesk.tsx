@@ -1157,6 +1157,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           sendMessage(`/voice ${userId}`, userName, 'system');
           toast({ title: "Voice Granted", description: `User can now speak` });
         }}
+        onExit={() => setLocation("/")}
       />
     );
   }

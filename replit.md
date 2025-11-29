@@ -44,3 +44,65 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **WebSocket**: Enables real-time notifications.
 - **Google Cloud Storage (GCS)**: Used for file management.
 - **PostgreSQL**: The primary relational database for data storage.
+### Turn 13: UI/UX Polish - Hero Logo, Mobile Chatroom Navigation, Redundant Logo Cleanup
+**Date:** November 29, 2025
+
+**Three Critical UX Issues Fixed:**
+
+**1. ✅ HOMEPAGE HERO REPLACED WITH POLISHED LOGO DESIGN**
+   - **File:** client/src/pages/universal-marketing.tsx (lines 85-104)
+   - **Issue:** Hardcoded SchedulePreview component was generic, not branded
+   - **Fix:** Replaced with polished "CA" logo badge + CoAlleague branding
+   - **Features:**
+     - Square aspect ratio on mobile (better mobile UX)
+     - Video-like aspect on desktop
+     - Gradient blue background (matches CoAlleague branding)
+     - Centered logo with company name + tagline
+     - "Mobile Optimized" badge
+   - **Result:** Professional, mobile-first hero section
+
+**2. ✅ REMOVED REDUNDANT ICON-LETTER LOGOS IN MOBILE CHAT**
+   - **File:** client/src/components/mobile-chat-layout.tsx (line 105)
+   - **Issue:** Two duplicate "co" icon logos showing (one in header, one in bot messages)
+   - **Fix:** Removed redundant logo from bot message display
+   - **Result:** Cleaner, less cluttered mobile chat interface
+
+**3. ✅ FIXED MOBILE CHATROOM NAVIGATION - USERS CAN NOW EASILY EXIT**
+   - **File:** client/src/components/mobile-chat-layout.tsx (lines 150-179)
+   - **Issue:** Users trapped in mobile chatroom with no way to leave/logout/return to workspace
+   - **Fix:** Added two navigation buttons to mobile header:
+     - **Back Button (ChevronLeft)**: Navigate back or exit chat
+     - **Home Button (Home)**: Quick return to homepage
+   - **Header Layout:** Clean three-column layout
+     - Left: Back button
+     - Center: "Support Chat" title
+     - Right: Home button
+   - **Data Attributes:** Added testid="button-chatroom-exit" and testid="button-home" for testing
+   - **Result:** Mobile users now have clear, easy exit paths
+   - **Integration:** Added onExit handler in HelpDesk.tsx (line 1163)
+
+**Mobile Chatroom UX Before → After:**
+- ❌ Before: No exit buttons, users stuck in chat
+- ✅ After: Two clear navigation options (back/home) in accessible header
+
+**Homepage Hero UX Before → After:**
+- ❌ Before: Generic scheduling preview component
+- ✅ After: Branded "CA" logo with gradient, mobile-optimized
+
+**Technical Implementation:**
+- Added imports: ChevronLeft, Home from lucide-react, useLocation from wouter
+- Updated MobileChatLayoutProps interface with optional onExit callback
+- Mobile header now uses proper button sizing and hover states
+- All buttons have proper data-testid attributes for testing
+
+**Current System Status:**
+- ✅ Homepage hero: Branded, mobile-optimized
+- ✅ Mobile chat: Clean interface with clear exit paths
+- ✅ Icon redundancy: Cleaned up (one logo removed)
+- ✅ Build: Successful
+- ✅ App: Running on port 5000
+
+**Files Modified:**
+1. client/src/pages/universal-marketing.tsx - Hero section redesign
+2. client/src/components/mobile-chat-layout.tsx - Navigation cleanup + exit buttons
+3. client/src/pages/HelpDesk.tsx - Added onExit handler
