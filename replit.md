@@ -46,6 +46,13 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **PostgreSQL**: Primary relational database.
 
 ## Recent Changes
+- **Chat Server Dynamic Configuration (Nov 2025):** Major cleanup to eliminate hardcoded values:
+  - Removed ALL simulated/fake users (14 staff/customer users deleted from websocket.ts)
+  - Removed entire chat simulation function and all `isSimulatedUser` references
+  - User display names now fetched dynamically from database via `storage.getUserDisplayInfo()` and `formatUserDisplayNameForChat()`
+  - HelpAI bot configuration centralized in `CHAT_SERVER_CONFIG` (name, userId, greetings, message templates)
+  - Cleaned up moderation command messages: removed emojis and "simulated/test user" language
+  - System now uses only real database users plus HelpAI bot from config
 - **HelpOS to HelpAI Renaming (Nov 2025):** Completed full renaming of all user-facing "HelpOS" references to "HelpAI" across the codebase including:
   - Backend services: helpos-ai.ts (HelpAIService class), helposService/index.ts (HelpAIServiceImpl), aiBrainService.ts, alertManager.ts, aiBot.ts, geminiQABot.ts
   - Frontend components: mobile-chat-layout.tsx, chat-tutorial-slides.tsx, support-mobile-menu.tsx, floating-support-chat.tsx, chat-announcement-banner.tsx
