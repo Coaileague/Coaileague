@@ -1,12 +1,12 @@
 /**
- * Mobile-First Schedule - Merged best features from both mobile schedules
- * Features: Week stats, day tabs, employee shift cards, AI generation FAB, manager tools, approvals, reports, view toggle
+ * Mobile-First Schedule - Complete redesign with proper popups and role-based views
+ * Features: Week stats, day tabs, employee shift cards, shift detail popup, AI FAB, manager tools
  */
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { startOfWeek, addDays, addWeeks, format } from 'date-fns';
+import { startOfWeek, addDays, addWeeks, format, isToday } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
@@ -14,17 +14,21 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useClientLookup } from '@/hooks/useClients';
 import { useEmployee } from '@/hooks/useEmployee';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Plus } from 'lucide-react';
-import { WeekHeader } from '@/components/schedule/WeekHeader';
-import { DayTabs } from '@/components/schedule/DayTabs';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Sparkles, Plus, ChevronLeft, ChevronRight, 
+  Calendar, Users, Clock, BarChart3, CheckCircle,
+  AlertCircle, CalendarDays
+} from 'lucide-react';
 import { EmployeeShiftCard } from '@/components/schedule/EmployeeShiftCard';
 import { ShiftBottomSheet } from '@/components/schedule/ShiftBottomSheet';
+import { ShiftDetailSheet } from '@/components/schedule/ShiftDetailSheet';
 import { ApprovalsDrawer } from '@/components/mobile/schedule/ApprovalsDrawer';
 import { ReportsSheet } from '@/components/mobile/schedule/ReportsSheet';
-import { ManagerToolbar } from '@/components/mobile/schedule/ManagerToolbar';
-import { ViewToggle } from '@/components/mobile/schedule/ViewToggle';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Shift, Employee } from '@shared/schema';
+import type { Shift, Employee, Client } from '@shared/schema';
 
 export default function ScheduleMobileFirst() {
   const { toast } = useToast();
@@ -33,13 +37,11 @@ export default function ScheduleMobileFirst() {
   const { workspaceRole } = useWorkspaceAccess();
   const { employee: currentEmployee } = useEmployee();
   
-  // Check if user is manager/supervisor for advanced features
   const isManagerOrSupervisor = useMemo(() => {
     if (!currentEmployee || !currentEmployee.workspaceRole) return false;
     return ['owner', 'admin', 'department_manager', 'supervisor', 'org_owner', 'org_admin', 'org_manager'].includes(currentEmployee.workspaceRole);
   }, [currentEmployee]);
   
-  // RBAC check - managers and admins can edit (use same logic as isManagerOrSupervisor)
   const canEdit = isManagerOrSupervisor;
 
   // State
@@ -51,6 +53,10 @@ export default function ScheduleMobileFirst() {
   const [viewMode, setViewMode] = useState<'my' | 'full'>('full');
   const [showApprovals, setShowApprovals] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  
+  // Shift detail popup state
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
   // Fetch weekly stats
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -78,13 +84,18 @@ export default function ScheduleMobileFirst() {
     queryKey: ['/api/employees'],
   });
 
-  // Fetch clients using authenticated lookup hook
+  // Fetch clients
   const { data: clients = [] } = useClientLookup();
 
-  // Calculate pending shifts for approvals
+  // Calculate pending shifts
   const pendingShifts = useMemo(() => {
     return shifts.filter(s => s.status === 'draft');
   }, [shifts]);
+
+  // Generate week days
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  }, [weekStart]);
 
   // Filter shifts for selected day
   const dayShifts = useMemo(() => {
@@ -94,15 +105,18 @@ export default function ScheduleMobileFirst() {
       return shiftDay === selectedDayStr;
     });
 
-    // Filter by view mode for managers/supervisors
-    if (isManagerOrSupervisor && viewMode === 'my') {
-      filteredShifts = filteredShifts.filter(s => s.employeeId === currentEmployee?.id);
+    // Only filter to "my" shifts when we have a valid employee ID
+    if (viewMode === 'my') {
+      if (!currentEmployee?.id) {
+        return []; // Return empty while loading employee data
+      }
+      filteredShifts = filteredShifts.filter(s => s.employeeId === currentEmployee.id);
     }
 
     return filteredShifts;
-  }, [shifts, selectedDate, viewMode, isManagerOrSupervisor, currentEmployee]);
+  }, [shifts, selectedDate, viewMode, currentEmployee]);
 
-  // Group shifts by employee (including open shifts)
+  // Group shifts by employee
   const { employeeShiftsMap, openShifts } = useMemo(() => {
     const map = new Map<string, Shift[]>();
     const open: Shift[] = [];
@@ -119,7 +133,7 @@ export default function ScheduleMobileFirst() {
     return { employeeShiftsMap: map, openShifts: open };
   }, [dayShifts]);
 
-  // Calculate weekly hours per employee
+  // Calculate weekly hours
   const weeklyHoursMap = useMemo(() => {
     const map = new Map<string, number>();
     shifts.forEach(shift => {
@@ -135,13 +149,16 @@ export default function ScheduleMobileFirst() {
 
   // Filter employees based on view mode
   const displayEmployees = useMemo(() => {
-    if (isManagerOrSupervisor && viewMode === 'my' && currentEmployee) {
+    if (viewMode === 'my') {
+      if (!currentEmployee?.id) {
+        return []; // Return empty while loading employee data
+      }
       return employees.filter(emp => emp.id === currentEmployee.id);
     }
     return employees;
-  }, [employees, viewMode, isManagerOrSupervisor, currentEmployee]);
+  }, [employees, viewMode, currentEmployee]);
 
-  // Create shift mutation
+  // Mutations
   const createShiftMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest('POST', '/api/shifts', data);
@@ -164,7 +181,6 @@ export default function ScheduleMobileFirst() {
     },
   });
 
-  // Delete shift mutation
   const deleteShiftMutation = useMutation({
     mutationFn: async (shiftId: string) => {
       const res = await apiRequest('DELETE', `/api/shifts/${shiftId}`);
@@ -188,6 +204,12 @@ export default function ScheduleMobileFirst() {
   const handlePreviousWeek = () => setWeekStart(prev => addWeeks(prev, -1));
   const handleNextWeek = () => setWeekStart(prev => addWeeks(prev, 1));
   
+  const handleViewShift = (shift: Shift) => {
+    // Simply update the shift - the sheet will re-render with new data
+    setSelectedShift(shift);
+    setDetailSheetOpen(true);
+  };
+  
   const handleAddShift = (employee: Employee) => {
     setSelectedEmployee(employee);
     setEditingShift(undefined);
@@ -209,109 +231,296 @@ export default function ScheduleMobileFirst() {
   const handleSubmitShift = async (data: any) => {
     await createShiftMutation.mutateAsync(data);
   };
+  
+  const handleClaimShift = async (shift: Shift) => {
+    if (!currentEmployee?.id) {
+      toast({ 
+        title: "Unable to claim shift", 
+        description: "Please wait for your profile to load",
+        variant: "destructive" 
+      });
+      return;
+    }
+    try {
+      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
+        employeeId: currentEmployee.id 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      setDetailSheetOpen(false);
+      toast({ title: "Shift claimed successfully" });
+    } catch (error) {
+      toast({ 
+        title: "Failed to claim shift", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  // Find employee and client for selected shift
+  const selectedShiftEmployee = selectedShift?.employeeId 
+    ? employees.find(e => e.id === selectedShift.employeeId)
+    : null;
+  const selectedShiftClient = selectedShift?.clientId
+    ? clients.find(c => c.id === selectedShift.clientId)
+    : null;
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header with Week Navigation and Stats */}
-      <WeekHeader
-        weekStart={weekStart}
-        onPreviousWeek={handlePreviousWeek}
-        onNextWeek={handleNextWeek}
-        stats={stats}
-        isLoadingStats={statsLoading}
-      />
-
-      {/* Day Selector Tabs */}
-      <DayTabs
-        weekStart={weekStart}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-      />
-
-      {/* View Toggle - Manager/Supervisor only */}
-      {isManagerOrSupervisor && (
-        <ViewToggle
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-      )}
-
-      {/* Manager Toolbar - Quick actions for managers */}
-      {isManagerOrSupervisor && (
-        <ManagerToolbar
-          pendingCount={pendingShifts.length}
-          onShowApprovals={() => setShowApprovals(true)}
-          onShowReports={() => setShowReports(true)}
-          onShowEmployees={() => setLocation('/employees')}
-        />
-      )}
-
-      {/* Employee Shift Cards - Scrollable */}
-      <ScrollArea className="flex-1">
-        <div className="px-4 py-4 space-y-3 pb-24">
-          {shiftsLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading shifts...</div>
-          ) : displayEmployees.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="text-4xl mb-3">👥</div>
-              <div>No employees found. Add employees to start scheduling.</div>
+      {/* Header with Week Navigation */}
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePreviousWeek}
+            className="h-9 w-9"
+            data-testid="button-prev-week"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          
+          <div className="text-center">
+            <div className="font-bold text-base sm:text-lg">
+              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
             </div>
+            <div className="text-xs text-muted-foreground">
+              Week of {format(weekStart, 'MMMM yyyy')}
+            </div>
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNextWeek}
+            className="h-9 w-9"
+            data-testid="button-next-week"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-card rounded-lg p-2 shadow-sm">
+            <div className="text-lg sm:text-xl font-bold text-primary">
+              {stats?.totalShifts || 0}
+            </div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground">Shifts</div>
+          </div>
+          <div className="bg-card rounded-lg p-2 shadow-sm">
+            <div className="text-lg sm:text-xl font-bold text-green-600">
+              {stats?.totalHours?.toFixed(0) || 0}
+            </div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground">Hours</div>
+          </div>
+          <div className="bg-card rounded-lg p-2 shadow-sm">
+            <div className="text-lg sm:text-xl font-bold text-amber-600">
+              {pendingShifts.length}
+            </div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground">Pending</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Day Selector */}
+      <div className="bg-card border-b overflow-x-auto px-2 py-2">
+        <div className="flex gap-1 min-w-max">
+          {weekDays.map((day) => {
+            const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+            const dayIsToday = isToday(day);
+            const dayShiftCount = shifts.filter(s => 
+              format(new Date(s.startTime), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+            ).length;
+            
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() => setSelectedDate(day)}
+                className={`flex flex-col items-center p-2 rounded-xl min-w-[52px] transition-all ${
+                  isSelected
+                    ? 'bg-primary text-primary-foreground shadow-lg scale-105'
+                    : dayIsToday
+                    ? 'bg-primary/20 text-primary'
+                    : 'hover:bg-muted'
+                }`}
+                data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
+              >
+                <span className="text-[10px] font-medium uppercase">
+                  {format(day, 'EEE')}
+                </span>
+                <span className="text-lg font-bold">{format(day, 'd')}</span>
+                {dayShiftCount > 0 && (
+                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                    isSelected ? 'bg-primary-foreground' : 'bg-primary'
+                  }`} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* View Toggle - My Schedule / Full Schedule */}
+      <div className="bg-card border-b px-3 py-2">
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'my' | 'full')}>
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="my" className="text-sm" data-testid="tab-my-schedule">
+              <CalendarDays className="w-4 h-4 mr-1.5" />
+              My Schedule
+            </TabsTrigger>
+            <TabsTrigger value="full" className="text-sm" data-testid="tab-full-schedule">
+              <Users className="w-4 h-4 mr-1.5" />
+              Full Schedule
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Manager Quick Actions */}
+      {isManagerOrSupervisor && (
+        <div className="bg-muted/50 border-b px-3 py-2">
+          <div className="flex gap-2 overflow-x-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowApprovals(true)}
+              className="flex-shrink-0 gap-1.5"
+              data-testid="button-approvals"
+            >
+              <Clock className="h-4 w-4 text-amber-600" />
+              Approvals
+              {pendingShifts.length > 0 && (
+                <Badge variant="destructive" className="ml-1 text-xs px-1.5">
+                  {pendingShifts.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowReports(true)}
+              className="flex-shrink-0 gap-1.5"
+              data-testid="button-reports"
+            >
+              <BarChart3 className="h-4 w-4 text-blue-600" />
+              Reports
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation('/employees')}
+              className="flex-shrink-0 gap-1.5"
+              data-testid="button-team"
+            >
+              <Users className="h-4 w-4 text-green-600" />
+              Team
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Shift Cards - Scrollable */}
+      <ScrollArea className="flex-1">
+        <div className="px-3 py-3 space-y-3 pb-28">
+          {shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+              <div>{shiftsLoading ? 'Loading shifts...' : 'Loading your schedule...'}</div>
+            </div>
+          ) : viewMode === 'my' && dayShifts.length === 0 ? (
+            <Card className="p-6">
+              <div className="text-center text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <div className="font-medium mb-1">No shifts scheduled</div>
+                <div className="text-sm">You have no shifts on {format(selectedDate, 'EEEE, MMM d')}</div>
+                {openShifts.length > 0 && (
+                  <div className="mt-4">
+                    <Badge variant="outline" className="text-amber-600 border-amber-500">
+                      {openShifts.length} open {openShifts.length === 1 ? 'shift' : 'shifts'} available
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="block mx-auto mt-2 text-primary"
+                      onClick={() => setViewMode('full')}
+                    >
+                      View Full Schedule
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ) : displayEmployees.length === 0 && openShifts.length === 0 ? (
+            <Card className="p-6">
+              <div className="text-center text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <div className="font-medium mb-1">No employees found</div>
+                <div className="text-sm">Add employees to start scheduling</div>
+              </div>
+            </Card>
           ) : (
             <>
-              {/* Open Shifts Section - Only show in full view */}
-              {viewMode === 'full' && openShifts.length > 0 && (
-                <EmployeeShiftCard
-                  key="open-shifts"
-                  employee={{
-                    id: 'open',
-                    workspaceId: employees[0]?.workspaceId || '',
-                    userId: null,
-                    employeeNumber: null,
-                    firstName: 'Open',
-                    lastName: 'Shifts',
-                    email: null,
-                    phone: null,
-                    address: null,
-                    city: null,
-                    state: null,
-                    zipCode: null,
-                    emergencyContactName: null,
-                    emergencyContactPhone: null,
-                    emergencyContactRelation: null,
-                    role: 'Unassigned',
-                    workspaceRole: 'staff',
-                    hourlyRate: null,
-                    color: '#f97316',
-                    onboardingStatus: 'not_started',
-                    isActive: true,
-                    availabilityNotes: null,
-                    performanceScore: null,
-                    rating: null,
-                    availabilityPercentage: null,
-                    overtimeHoursThisWeek: null,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  } as Employee}
-                  shifts={openShifts}
-                  weeklyHours={0}
-                  onEditShift={handleEditShift}
-                  onDeleteShift={handleDeleteShift}
-                  onAddShift={() => {
-                    setSelectedEmployee(undefined);
-                    setEditingShift(undefined);
-                    setSheetOpen(true);
-                  }}
-                  canEdit={canEdit}
-                />
+              {/* Open Shifts - Always show at top */}
+              {openShifts.length > 0 && (
+                <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">
+                        Open Shifts ({openShifts.length})
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {openShifts.map(shift => {
+                        const start = new Date(shift.startTime);
+                        const end = new Date(shift.endTime);
+                        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                        
+                        return (
+                          <div
+                            key={shift.id}
+                            onClick={() => handleViewShift(shift)}
+                            className="bg-white dark:bg-card rounded-lg p-3 border border-amber-200 dark:border-amber-800 cursor-pointer active:scale-[0.98] transition-transform"
+                            data-testid={`open-shift-${shift.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-bold text-base">
+                                  {format(start, 'h:mm a')} - {format(end, 'h:mm a')}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {shift.title || 'Unassigned'} | {hours.toFixed(1)} hrs
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="bg-amber-600 hover:bg-amber-700"
+                                disabled={!currentEmployee?.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClaimShift(shift);
+                                }}
+                                data-testid={`button-claim-${shift.id}`}
+                              >
+                                Claim
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
               
-              {/* Regular Employee Cards - Filtered by view mode */}
+              {/* Employee Cards */}
               {displayEmployees.map(employee => (
                 <EmployeeShiftCard
                   key={employee.id}
                   employee={employee}
                   shifts={employeeShiftsMap.get(employee.id) || []}
                   weeklyHours={weeklyHoursMap.get(employee.id) || 0}
+                  onViewShift={handleViewShift}
                   onEditShift={handleEditShift}
                   onDeleteShift={handleDeleteShift}
                   onAddShift={handleAddShift}
@@ -323,44 +532,59 @@ export default function ScheduleMobileFirst() {
         </div>
       </ScrollArea>
 
-      {/* FAB - AI Schedule Generation */}
+      {/* FABs */}
       {canEdit && (
-        <div className="fixed bottom-24 right-6 z-40">
-          <Button
-            size="icon"
-            className="h-16 w-16 rounded-full shadow-lg bg-gradient-to-br from-primary to-blue-600"
-            onClick={() => {
-              toast({
-                title: "AI Generation",
-                description: "AI schedule generation will be integrated here",
-              });
-            }}
-            data-testid="fab-ai-generate"
-          >
-            <Sparkles className="h-6 w-6" />
-          </Button>
-        </div>
+        <>
+          {/* AI Schedule Generation FAB */}
+          <div className="fixed bottom-24 right-4 z-40">
+            <Button
+              size="icon"
+              className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-purple-600 to-blue-600"
+              onClick={() => {
+                toast({
+                  title: "AI Generation",
+                  description: "AI schedule generation will be integrated here",
+                });
+              }}
+              data-testid="fab-ai-generate"
+            >
+              <Sparkles className="h-6 w-6" />
+            </Button>
+          </div>
+
+          {/* Add Shift FAB */}
+          <div className="fixed bottom-8 right-4 z-40">
+            <Button
+              size="icon"
+              className="h-14 w-14 rounded-full shadow-lg"
+              onClick={() => {
+                setSelectedEmployee(undefined);
+                setEditingShift(undefined);
+                setSheetOpen(true);
+              }}
+              data-testid="fab-add-shift"
+            >
+              <Plus className="h-6 w-6" />
+            </Button>
+          </div>
+        </>
       )}
 
-      {/* FAB - Manual Add Shift */}
-      {canEdit && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <Button
-            size="icon"
-            className="h-14 w-14 rounded-full shadow-lg"
-            onClick={() => {
-              setSelectedEmployee(undefined);
-              setEditingShift(undefined);
-              setSheetOpen(true);
-            }}
-            data-testid="fab-add-shift"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
+      {/* Shift Detail Sheet - Tap to view - keyed by shift ID for fresh render */}
+      <ShiftDetailSheet
+        key={selectedShift?.id || 'empty'}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+        shift={selectedShift}
+        employee={selectedShiftEmployee}
+        client={selectedShiftClient}
+        canEdit={canEdit}
+        onEdit={handleEditShift}
+        onDelete={handleDeleteShift}
+        onClaimShift={currentEmployee?.id ? handleClaimShift : undefined}
+      />
 
-      {/* Shift Creation/Edit Bottom Sheet */}
+      {/* Shift Creation/Edit Sheet */}
       <ShiftBottomSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
@@ -373,7 +597,7 @@ export default function ScheduleMobileFirst() {
         isSubmitting={createShiftMutation.isPending}
       />
 
-      {/* Approvals Drawer - Manager/Supervisor only */}
+      {/* Approvals Drawer */}
       {isManagerOrSupervisor && (
         <ApprovalsDrawer
           open={showApprovals}
@@ -383,7 +607,7 @@ export default function ScheduleMobileFirst() {
         />
       )}
 
-      {/* Reports Sheet - Manager/Supervisor only */}
+      {/* Reports Sheet */}
       {isManagerOrSupervisor && (
         <ReportsSheet
           open={showReports}
