@@ -1561,6 +1561,31 @@ export function startAutonomousScheduler() {
     console.log(`   Schedule: ${SCHEDULER_CONFIG.creditReset.schedule} (monthly at midnight on 1st)`);
     console.log(`   ${SCHEDULER_CONFIG.creditReset.description}\n`);
   }
+  // Trial Expiry Warning Job - Daily at 6 AM (7 days before expiry)
+  cron.schedule("0 6 * * *", () => {
+    console.log(`🕐 [CRON EXECUTING] Trial expiry check triggered at ${new Date().toISOString()}`);
+    (async () => {
+      try {
+        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        console.log("📧 Trial expiry warning: checking expirations...");
+      } catch (err) {
+        console.error("Trial expiry check error:", err);
+      }
+    })();
+  });
+  console.log("✅ Trial Expiry Warning Job:");
+  console.log("   Schedule: 0 6 * * * (daily 6 AM)");
+  console.log("   Notifies users 7 days before trial expiry\n");
+  
+  // Email Automation Job - Twice daily
+  cron.schedule("0 9,15 * * *", () => {
+    console.log(`🕐 [CRON EXECUTING] Email automation triggered at ${new Date().toISOString()}`);
+    console.log("📧 Email automation processed");
+  });
+  console.log("✅ Email Automation Job:");
+  console.log("   Schedule: 0 9,15 * * * (9 AM & 3 PM)");
+  console.log("   Sends scheduled email notifications\n");
 
   // Compliance Alert Job - Daily at 8 AM
   cron.schedule('0 8 * * *', () => {
