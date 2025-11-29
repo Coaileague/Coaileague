@@ -133,13 +133,13 @@ export default function Pricing() {
           {tiers.map((tier, index) => (
             <Card
               key={tier.name}
-              className={`bg-white dark:bg-gray-900 border-2 shadow-md p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 relative hover:border-blue-300 hover:shadow-2xl transition-all ${
+              className={`bg-white dark:bg-gray-900 border-2 shadow-md p-3 sm:p-4 md:p-6 lg:p-8 space-y-3 sm:space-y-4 md:space-y-6 relative hover:border-blue-300 hover:shadow-2xl transition-all ${
                 tier.popular ? "border-blue-300 shadow-xl" : "border-gray-200 dark:border-gray-700"
               }`}
               data-testid={`card-pricing-${tier.name.toLowerCase().replace(/\s+/g, "-")}`}
             >
               {tier.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-600 text-white border-none shadow-lg whitespace-nowrap">
+                <Badge className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-600 text-white border-none shadow-lg whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
                   Best Value
                 </Badge>
               )}

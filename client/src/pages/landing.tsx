@@ -268,7 +268,7 @@ export default function Landing() {
                   {/* REAL Time Tracking Interface */}
                   <TimeTrackingPreview />
                 </div>
-                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2">
+                <Badge className="absolute -bottom-2 sm:-bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2 text-xs sm:text-sm">
                   <CheckCircle2 className="h-3 w-3 mr-1 shrink-0" />
                   Live Product Preview
                 </Badge>
@@ -312,7 +312,7 @@ export default function Landing() {
                   {/* REAL Schedule Interface */}
                   <SchedulePreview />
                 </div>
-                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2">
+                <Badge className="absolute -bottom-2 sm:-bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2 text-xs sm:text-sm">
                   <Sparkles className="h-3 w-3 mr-1 shrink-0" />
                   Live Product Preview
                 </Badge>
@@ -355,7 +355,7 @@ export default function Landing() {
                   {/* REAL Analytics Dashboard */}
                   <DashboardPreview />
                 </div>
-                <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2">
+                <Badge className="absolute -bottom-2 sm:-bottom-3 left-1/2 -translate-x-1/2 shadow-lg whitespace-nowrap px-2 text-xs sm:text-sm">
                   <TrendingUp className="h-3 w-3 mr-1 shrink-0" />
                   Live Product Preview
                 </Badge>
