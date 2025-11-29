@@ -4434,6 +4434,26 @@ export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 
+// FAQ Source Type Enum - Where the FAQ originated from
+export const faqSourceTypeEnum = pgEnum('faq_source_type', [
+  'manual',           // Manually created by support staff
+  'ai_learned',       // Auto-created from successful AI interactions
+  'ticket_resolution', // Created from resolved support tickets
+  'feature_update',   // Created/updated due to feature changes
+  'gap_detection',    // Created to fill detected knowledge gap
+  'import'            // Imported from external source
+]);
+
+// FAQ Status Enum - Lifecycle status
+export const faqStatusEnum = pgEnum('faq_status', [
+  'draft',            // Not yet published
+  'published',        // Live and serving users
+  'needs_review',     // Flagged for review (stale, low confidence)
+  'needs_update',     // Flagged for update (feature changed, issues reported)
+  'archived',         // No longer active but kept for history
+  'deprecated'        // Replaced by newer FAQ
+]);
+
 // HelpOS FAQ Knowledge Base - FAQ articles for AI-powered bot assistance
 export const helposFaqs = pgTable("helpos_faqs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4458,6 +4478,33 @@ export const helposFaqs = pgTable("helpos_faqs", {
   publishedAt: timestamp("published_at").defaultNow(),
   updatedBy: varchar("updated_by").references(() => users.id),
   
+  // === NEW: Provenance & Learning Metadata ===
+  sourceType: faqSourceTypeEnum("source_type").default('manual'), // Where this FAQ came from
+  sourceId: varchar("source_id"), // Reference ID (ticket ID, AI job ID, etc.)
+  sourceContext: jsonb("source_context"), // Additional context (original question, resolution details)
+  
+  // === NEW: Verification & Quality ===
+  status: faqStatusEnum("status").default('published'), // Lifecycle status
+  confidenceScore: integer("confidence_score").default(100), // 0-100 confidence in accuracy
+  lastVerifiedAt: timestamp("last_verified_at"), // When last verified as accurate
+  lastVerifiedBy: varchar("last_verified_by").references(() => users.id),
+  verificationNotes: text("verification_notes"), // Notes from verification
+  
+  // === NEW: Version Control ===
+  version: integer("version").default(1), // Current version number
+  previousVersionId: varchar("previous_version_id"), // Link to previous version
+  changeReason: text("change_reason"), // Why this was updated
+  
+  // === NEW: Staleness Detection ===
+  relatedFeature: varchar("related_feature"), // Feature this FAQ relates to (for update detection)
+  expiresAt: timestamp("expires_at"), // Optional expiry for time-sensitive FAQs
+  autoUpdateEnabled: boolean("auto_update_enabled").default(false), // Allow AI to auto-update
+  
+  // === NEW: Learning Metrics ===
+  matchCount: integer("match_count").default(0), // How often this FAQ is matched to queries
+  resolvedCount: integer("resolved_count").default(0), // How often it resolved user issues
+  escalatedCount: integer("escalated_count").default(0), // How often users escalated after seeing this
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -4470,6 +4517,85 @@ export const insertHelposFaqSchema = createInsertSchema(helposFaqs).omit({
 
 export type InsertHelposFaq = z.infer<typeof insertHelposFaqSchema>;
 export type HelposFaq = typeof helposFaqs.$inferSelect;
+
+// FAQ Version History - Track all changes to FAQs for audit trail
+export const faqVersions = pgTable("faq_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  faqId: varchar("faq_id").notNull().references(() => helposFaqs.id, { onDelete: 'cascade' }),
+  
+  // Snapshot of FAQ content at this version
+  version: integer("version").notNull(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  category: varchar("category").notNull(),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  
+  // Change metadata
+  changedBy: varchar("changed_by").references(() => users.id),
+  changedByAi: boolean("changed_by_ai").default(false), // Was this an AI-initiated change?
+  changeType: varchar("change_type").notNull(), // 'created', 'updated', 'corrected', 'merged', 'archived'
+  changeReason: text("change_reason"),
+  changeDiff: jsonb("change_diff"), // JSON diff of what changed
+  
+  // Source tracking
+  sourceType: faqSourceTypeEnum("source_type"),
+  sourceId: varchar("source_id"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFaqVersionSchema = createInsertSchema(faqVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFaqVersion = z.infer<typeof insertFaqVersionSchema>;
+export type FaqVersion = typeof faqVersions.$inferSelect;
+
+// FAQ Gap Events - Track unanswered questions and knowledge gaps
+export const faqGapEvents = pgTable("faq_gap_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Gap detection source
+  sourceType: varchar("source_type").notNull(), // 'chat_unanswered', 'low_confidence', 'ticket_common', 'feedback_negative'
+  sourceId: varchar("source_id"), // Chat ID, ticket ID, feedback ID
+  
+  // The question/issue that wasn't answered well
+  question: text("question").notNull(),
+  context: jsonb("context"), // Additional context (user message, conversation history)
+  
+  // AI analysis
+  suggestedCategory: varchar("suggested_category"),
+  suggestedAnswer: text("suggested_answer"), // AI's attempted answer if any
+  confidenceScore: integer("confidence_score"), // How confident AI was (0-100)
+  
+  // Resolution tracking
+  status: varchar("status").default('open'), // 'open', 'faq_created', 'faq_updated', 'dismissed', 'duplicate'
+  resolvedFaqId: varchar("resolved_faq_id").references(() => helposFaqs.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolutionNotes: text("resolution_notes"),
+  
+  // Frequency tracking
+  occurrenceCount: integer("occurrence_count").default(1), // How many times this gap was detected
+  lastOccurredAt: timestamp("last_occurred_at").defaultNow(),
+  
+  // Clustering for similar gaps
+  clusterId: varchar("cluster_id"), // Group similar gaps together
+  similarityHash: varchar("similarity_hash"), // For deduplication
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFaqGapEventSchema = createInsertSchema(faqGapEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFaqGapEvent = z.infer<typeof insertFaqGapEventSchema>;
+export type FaqGapEvent = typeof faqGapEvents.$inferSelect;
 
 // ============================================================================
 // CUSTOM FORMS SYSTEM (Organization-Specific)
