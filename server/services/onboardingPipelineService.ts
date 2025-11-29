@@ -142,12 +142,12 @@ class OnboardingPipelineService {
       const tasksToInsert = DEFAULT_ONBOARDING_TASKS.map(task => ({
         ...task,
         workspaceId,
-        status: 'not_started' as const,
+        status: 'pending' as const,
       }));
 
       await db.insert(orgOnboardingTasks).values(tasksToInsert);
       
-      if (isFeatureEnabled('enableAiBrain')) {
+      if (isFeatureEnabled('enableAutonomousScheduling')) {
         await this.generateDynamicTasks(workspaceId);
       }
     }
@@ -300,7 +300,7 @@ class OnboardingPipelineService {
     };
 
     if (status === 'trial_started') {
-      const trialDays = ONBOARDING.DEFAULT_TRIAL_DAYS;
+      const trialDays = ONBOARDING.TRIAL.DAYS;
       const now = new Date();
       const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
       
@@ -339,7 +339,7 @@ class OnboardingPipelineService {
     let stripePromotionCode: string | null = null;
     let stripeCouponId: string | null = null;
 
-    if (stripe && isFeatureEnabled('enableStripeIntegration')) {
+    if (stripe && isFeatureEnabled('enableAutonomousBilling')) {
       try {
         const coupon = await stripe.coupons.create({
           percent_off: 10,
@@ -364,13 +364,11 @@ class OnboardingPipelineService {
     }
 
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + ONBOARDING.REWARD_EXPIRY_DAYS);
+    expiresAt.setDate(expiresAt.getDate() + ONBOARDING.REWARD.EXPIRY_DAYS);
 
     const [reward] = await db.insert(orgRewards).values({
       workspaceId,
       type: 'onboarding_discount_10',
-      title: 'Welcome Discount: 10% Off',
-      description: 'Complete all onboarding tasks to unlock 10% off your first invoice!',
       discountPercent: 10,
       status: 'unlocked',
       unlockedAt: new Date(),
@@ -582,8 +580,8 @@ Generate personalized onboarding tasks for this organization.`;
           points: Math.min(30, Math.max(10, aiTask.points || 15)),
           displayOrder: baseOrder + i,
           requiredForReward: aiTask.requiredForReward || false,
-          status: 'not_started',
-          isAiGenerated: true,
+          status: 'pending',
+          createdBy: 'ai',
         }).returning();
 
         insertedTasks.push(inserted);
@@ -606,7 +604,7 @@ Generate personalized onboarding tasks for this organization.`;
       where: and(
         eq(orgOnboardingTasks.workspaceId, workspaceId),
         eq(orgOnboardingTasks.systemEvent, eventType),
-        eq(orgOnboardingTasks.status, 'not_started')
+        eq(orgOnboardingTasks.status, 'pending')
       ),
     });
 

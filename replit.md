@@ -12,6 +12,7 @@ Key capabilities include:
 - **Real-time Analytics & Monitoring**: Live operational data, system health checks, and performance tracking.
 - **Dispute Resolution**: A complete time entry dispute system with AI analysis and compliance tracking.
 - **AI Brain Automation**: Document extraction, issue detection, guardrails enforcement, and data quality validation.
+- **HelpAI Integration** (NEW): Multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation.
 
 ### User Preferences
 - I prefer simple language
@@ -20,21 +21,41 @@ Key capabilities include:
 - I prefer detailed explanations
 
 ### Latest Updates (Current Session)
-- ✅ **Sales/Onboarding Pipeline** - Complete gamified onboarding system with:
-  - Pipeline stages: INVITED → EMAIL_OPENED → TRIAL_STARTED → TRIAL_ACTIVE → ACCEPTED
-  - Gamified onboarding tasks with points and progress tracking
-  - AI Brain integration (Gemini) for dynamic task generation based on org profile
-  - 10% discount reward auto-unlocked on task completion
-  - Stripe coupon/promo code creation and auto-application at checkout
-  - 12 API endpoints at /api/onboarding/* (onboardingPipelineService.ts, onboardingRoutes.ts)
-  - Frontend UI with progress visualization, task completion, and reward display (onboarding.tsx)
-- ✅ **SMS Notifications** - Twilio integration for shift reminders, schedule changes, invoice reminders (smsService.ts, smsRoutes.ts)
-- ✅ **Calendar Export** - ICS export for schedules and timesheets, subscription URLs (calendarService.ts, calendarRoutes.ts)
-- ✅ **What's New API** - Dynamic platform updates feed with CRUD operations (whatsNewService.ts, whatsNewRoutes.ts)
-- ✅ **Timesheet Reports** - Full report generation with CSV export, compliance checks, weekly/monthly views (timesheetReportService.ts, timesheetReportRoutes.ts)
-- ✅ **Invoice from Timesheets** - Generate client invoices from approved time entries (timesheetInvoiceService.ts, timesheetInvoiceRoutes.ts)
-- ✅ **Advanced Scheduling** - Recurring shift templates, shift swap requests, week copying (advancedSchedulingService.ts, advancedSchedulingRoutes.ts)
-- ✅ **Compliance Config** - Centralized labor law thresholds in platformConfig.ts (COMPLIANCE section)
+- ✅ **Mobile Responsiveness** - Fixed login/register pages with touch-compliant buttons (44px min), responsive padding, text wrapping
+- ✅ **HelpAI Phase 1 - Infrastructure** - Added 3 core tables:
+  - `apiRegistry` - Central definition of all CoAIleague endpoints with request/response schemas, auth scopes, rate limits
+  - `orgIntegrations` - Per-org encrypted API credential storage with usage tracking
+  - `aiAuditLog` - Complete audit trail of every AI-triggered action (workspace_id, user_id, endpoint, status, risk_score)
+- ✅ **LSP Error Fixes** - Fixed 8 compilation errors in onboardingPipelineService.ts (enum mismatches, config references)
+- 🔄 **HelpAI Phase 2 (Next)** - Build services layer + API routes for registry access, integration management, AI orchestration
+
+### HelpAI Architecture Overview
+```
+HelpAI Multi-Tenant AI Brain
+├── Phase 1: Registry & Audit (COMPLETE)
+│   ├── apiRegistry table - endpoint definitions
+│   ├── orgIntegrations table - encrypted credential storage
+│   └── aiAuditLog table - comprehensive action logging
+├── Phase 2: Service Layer (PENDING)
+│   ├── helpaiRegistryService.ts - API registry + payload validation
+│   ├── helpaiIntegrationService.ts - credential encryption/rotation
+│   └── helpaiAuditService.ts - audit logging + compliance
+├── Phase 3: API Routes (PENDING)
+│   ├── GET /api/helpai/registry - registry access (with caching)
+│   ├── POST /api/helpai/integrations/config - store encrypted keys
+│   ├── GET /api/helpai/audit-log - view AI action history
+│   └── POST /api/helpai/workflows/* - workflow automation
+├── Phase 4: AI Brain Integration (PENDING)
+│   ├── Connect Gemini to registry for payload building
+│   ├── Implement consent model (suggestions vs execution)
+│   ├── Add workflow triggers (time-based, event-based, condition-based)
+│   └── Sandbox/preview mode for financial operations
+└── Phase 5: Helpdesk + Chat Integration (PENDING)
+    ├── Same AI brain across main chat + helpdesk
+    ├── Ticket creation via API
+    ├── Internal note writing
+    └── Staff routing + notifications
+```
 
 ### Previous Session Updates
 - ✅ **Feature Flags System** - 36 production toggles in `platformConfig.ts` (includes gamification)
@@ -46,6 +67,7 @@ Key capabilities include:
 - ✅ **Universal Config** - Zero hardcoded values, all dynamic
 - ✅ **Gamification System** - Complete employee engagement with achievements, points, leaderboards, and streaks
 - ✅ **Time Tracking Enhanced** - 95% complete with timesheet reports, CSV export, compliance checks
+- ✅ **Sales/Onboarding Pipeline** - 4 database tables, 11 API endpoints, Stripe discount integration, AI task generation
 - ✅ All autonomous jobs running (billing, payroll, scheduling, compliance)
 
 ### Autonomous Scheduler (Phase 1 - COMPLETE)
