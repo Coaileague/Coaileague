@@ -525,9 +525,6 @@ export function setupWebSocket(server: Server) {
   
   // Track AI Dispatch™ connections by workspace ID
   const dispatchUpdateClients = new Map<string, Set<WebSocketClient>>();
-  
-  // Track removed simulated users (so they don't re-appear on reconnect)
-  const removedSimulatedUsers = new Set<string>();
 
   wss.on('connection', async (ws: WebSocketClient, request: IncomingMessage) => {
     // Extract IP address and user agent from request
@@ -1153,8 +1150,8 @@ export function setupWebSocket(server: Server) {
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: introMessage,
                     messageType: 'text',
@@ -1183,8 +1180,8 @@ export function setupWebSocket(server: Server) {
                   
                   const authMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: `🔐 Authentication Request\n\nPlease authenticate user: ${username}\n\nThe user will receive instructions to verify their identity. This may include:\n• Confirming email address\n• Answering security questions\n• Providing account details\n\nWaiting for user verification...`,
                     messageType: 'text',
@@ -1262,8 +1259,8 @@ export function setupWebSocket(server: Server) {
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: verifyMsg,
                     messageType: 'text',
@@ -1521,8 +1518,8 @@ export function setupWebSocket(server: Server) {
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: statusMsg,
                     messageType: 'text',
@@ -1551,8 +1548,8 @@ export function setupWebSocket(server: Server) {
                   
                   const botMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: queueMsg,
                     messageType: 'text',
@@ -1714,8 +1711,8 @@ export function setupWebSocket(server: Server) {
                   
                   const muteMsg = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: userConnected
                       ? `🔇 User Muted\n\n${targetUsername} has been muted for ${duration} minutes.\n\nThey can still read messages but cannot send messages during this time.`
@@ -2289,8 +2286,8 @@ export function setupWebSocket(server: Server) {
                   // Save AI response to database
                   const aiMessage = await storage.createChatMessage({
                     conversationId: ws.conversationId,
-                    senderId: 'ai-bot',
-                    senderName: 'HelpAI',
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: aiResponse.message,
                     messageType: 'text',
@@ -2519,13 +2516,12 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // Find the target user's connection
+            // Find the target user's connection (real users only - no simulated users)
             const clients = conversationClients.get(ws.conversationId);
             if (!clients) return;
 
             let targetClient: WebSocketClient | null = null;
             let targetUserName = 'User';
-            let isSimulatedUser = payload.targetUserId.startsWith('sim-user-');
 
             for (const client of Array.from(clients)) {
               if (client.userId === payload.targetUserId) {
@@ -2535,8 +2531,8 @@ export function setupWebSocket(server: Server) {
               }
             }
 
-            // If not found as a connected client but is a simulated user, handle removal
-            if (!targetClient && !isSimulatedUser) {
+            // User not found - provide helpful error message
+            if (!targetClient) {
               // Check if user exists in database to provide better error message
               let helpfulMessage = 'User not found in this room';
               try {
@@ -2563,25 +2559,22 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // For simulated users, find their name from the hardcoded list
-            if (isSimulatedUser && !targetClient) {
-              const simUserNames: Record<string, string> = {
-                'sim-user-1': 'Jennifer Lopez',
-                'sim-user-2': 'Robert Johnson',
-                'sim-user-3': 'Maria Garcia',
-                'sim-user-4': 'James Wilson',
-                'sim-user-5': 'Lisa Anderson',
-                'sim-user-6': 'Michael Brown',
-                'sim-user-7': 'Sarah Thompson',
-                'sim-user-8': 'Christopher Lee',
-                'sim-user-9': 'Amanda White',
-                'sim-user-10': 'Daniel Martinez',
-                'sim-bot-helpai': 'HelpAI',
-                'sim-staff-1': 'Sarah Martinez',
-                'sim-staff-2': 'Mike Chen',
-                'sim-staff-3': 'Emily Taylor',
-              };
-              targetUserName = simUserNames[payload.targetUserId] || 'Simulated User';
+            // Get target user name from database (no simulated users)
+            if (!targetClient && payload.targetUserId) {
+              try {
+                const targetInfo = await storage.getUserDisplayInfo(payload.targetUserId);
+                if (targetInfo) {
+                  targetUserName = formatUserDisplayName({
+                    firstName: targetInfo.firstName,
+                    lastName: targetInfo.lastName,
+                    email: targetInfo.email || undefined,
+                    platformRole: targetInfo.platformRole || undefined,
+                    workspaceRole: targetInfo.workspaceRole || undefined,
+                  });
+                }
+              } catch (err) {
+                console.error('Failed to get target user name:', err);
+              }
             }
 
             // Create kick message
@@ -2614,30 +2607,23 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            // Handle simulated user removal
-            if (isSimulatedUser) {
-              // Add to removed list so they don't appear in future broadcasts
-              removedSimulatedUsers.add(payload.targetUserId);
-              console.log(`✅ Simulated user ${targetUserName} (${payload.targetUserId}) removed by ${ws.userName}`);
-            } else {
-              // DISCONNECT the real user
-              if (targetClient && targetClient.readyState === WebSocket.OPEN) {
-                targetClient.send(JSON.stringify({
-                  type: 'kicked',
-                  reason: reason,
-                  message: `You have been removed from the chat for: ${reason}`,
-                }));
-                targetClient.close(1000, `Kicked: ${reason}`);
-              }
-
-              // Remove from clients list
-              if (targetClient) {
-                clients.delete(targetClient);
-              }
-              console.log(`✅ Real user ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
+            // DISCONNECT the real user (no simulated users - all users are real)
+            if (targetClient && targetClient.readyState === WebSocket.OPEN) {
+              targetClient.send(JSON.stringify({
+                type: 'kicked',
+                reason: reason,
+                message: `You have been removed from the chat for: ${reason}`,
+              }));
+              targetClient.close(1000, `Kicked: ${reason}`);
             }
 
-            // Broadcast updated user list after removal (includes real users + filtered simulated users)
+            // Remove from clients list
+            if (targetClient) {
+              clients.delete(targetClient);
+            }
+            console.log(`[HelpAI] User ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
+
+            // Broadcast updated user list with real users only (+ HelpAI bot from config)
             const realUsers = Array.from(clients)
               .filter(c => c.userId && c.userName)
               .map(c => ({
@@ -2648,46 +2634,16 @@ export function setupWebSocket(server: Server) {
                 userType: c.userType || 'guest',
               }));
 
-            // Recreate simulated users list and filter out removed ones
-            const simulatedUsers: any[] = [];
-            
-            if (payload.conversationId === 'main-chatroom-workforceos' || ws.conversationId === 'main-chatroom-workforceos') {
-              // HelpAI Bot
-              if (!removedSimulatedUsers.has('sim-bot-helpai')) {
-                simulatedUsers.push({
-                  id: 'sim-bot-helpai',
-                  name: 'HelpAI',
+            // Add HelpAI bot from config for main room
+            const allUsers = (ws.conversationId === MAIN_ROOM_ID) 
+              ? [{
+                  id: CHAT_SERVER_CONFIG.helpai.userId,
+                  name: CHAT_SERVER_CONFIG.helpai.name,
                   role: 'bot',
                   status: 'online',
                   userType: 'staff'
-                });
-              }
-              
-              // Add other simulated users if not removed
-              const simUsers = [
-                { id: 'sim-staff-1', name: 'Sarah Martinez', role: 'deputy_admin', userType: 'staff' },
-                { id: 'sim-staff-2', name: 'Mike Chen', role: 'sysop', userType: 'staff' },
-                { id: 'sim-staff-3', name: 'Emily Taylor', role: 'deputy_assistant', userType: 'staff' },
-                { id: 'sim-user-1', name: 'Jennifer Lopez', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-2', name: 'Robert Johnson', role: 'guest', userType: 'subscriber' },
-                { id: 'sim-user-3', name: 'Maria Garcia', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-4', name: 'James Wilson', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-5', name: 'Lisa Anderson', role: 'guest', userType: 'subscriber' },
-                { id: 'sim-user-6', name: 'Michael Brown', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-7', name: 'Sarah Thompson', role: 'guest', userType: 'subscriber' },
-                { id: 'sim-user-8', name: 'Christopher Lee', role: 'guest', userType: 'org_user' },
-                { id: 'sim-user-9', name: 'Amanda White', role: 'guest', userType: 'guest' },
-                { id: 'sim-user-10', name: 'Daniel Martinez', role: 'guest', userType: 'org_user' },
-              ];
-              
-              simUsers.forEach(user => {
-                if (!removedSimulatedUsers.has(user.id)) {
-                  simulatedUsers.push({ ...user, status: 'online' });
-                }
-              });
-            }
-
-            const allUsers = [...realUsers, ...simulatedUsers];
+                }, ...realUsers]
+              : realUsers;
 
             clients.forEach((client) => {
               if (client.readyState === WebSocket.OPEN) {
@@ -2733,7 +2689,6 @@ export function setupWebSocket(server: Server) {
                     targetUserId: payload.targetUserId,
                     reason: reason,
                   },
-                  isSimulatedUser: isSimulatedUser,
                 },
                 ipAddress: ws.ipAddress || null,
                 userAgent: ws.userAgent || null,
