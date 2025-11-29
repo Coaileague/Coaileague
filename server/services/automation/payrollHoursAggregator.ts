@@ -3,6 +3,7 @@ import { timeEntries, employees, workspaces, clients } from "@shared/schema";
 import { and, eq, gte, lte, isNull, sql } from "drizzle-orm";
 import { resolveRates, bucketHours, calculateAmount, roundHours } from "./rateResolver";
 import { isHolidayDate } from "./holidayDetector";
+import { PayrollAutomationEngine } from "../payrollAutomation";
 
 /**
  * Payroll Hours Aggregation Service
@@ -296,6 +297,44 @@ export async function aggregatePayrollHours(params: {
       employeeRegularPay += regularPay;
       employeeOvertimePay += overtimePay;
       employeeHolidayPay += holidayPay;
+    }
+
+    // FLSA Weighted Average Overtime: Check if employee worked at multiple rates
+    // If so, recalculate overtime using the weighted average method per FLSA requirements
+    const uniqueRates = new Set(employeePayroll.map(e => e.payRate));
+    
+    if (uniqueRates.size > 1 && employeeTotalOvertimeHours > 0) {
+      // Employee worked at multiple rates with overtime - use FLSA weighted average
+      console.log(`[PayrollHours] Employee ${employeeName} worked at ${uniqueRates.size} different rates with OT - using FLSA weighted average`);
+      
+      // Build rate/hours array for FLSA calculation
+      const rateHours = employeePayroll.map(e => ({
+        rate: e.payRate,
+        hours: e.totalHours
+      }));
+      
+      // Calculate FLSA-compliant weighted average overtime
+      const flsaResult = PayrollAutomationEngine.calculateFLSAWeightedAverageOvertime(
+        rateHours,
+        employeeTotalOvertimeHours
+      );
+      
+      // Recalculate overtime pay using FLSA weighted average (half-time premium)
+      const oldOvertimePay = employeeOvertimePay;
+      employeeOvertimePay = flsaResult.overtimePremium;
+      
+      // Also recalculate regular pay as straight-time pay
+      employeeRegularPay = flsaResult.straightTimePay;
+      
+      // Log the adjustment
+      const adjustment = employeeOvertimePay - oldOvertimePay;
+      if (Math.abs(adjustment) > 0.01) {
+        employeeWarnings.push(
+          `FLSA weighted average applied: OT adjusted by $${adjustment.toFixed(2)} ` +
+          `(weighted avg rate: $${flsaResult.weightedAverageRate.toFixed(2)}/hr)`
+        );
+        console.log(`[PayrollHours] FLSA adjustment for ${employeeName}: $${oldOvertimePay.toFixed(2)} -> $${employeeOvertimePay.toFixed(2)}`);
+      }
     }
 
     const grossPay = employeeRegularPay + employeeOvertimePay + employeeHolidayPay;
