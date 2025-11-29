@@ -288,13 +288,180 @@ export class PayrollAutomationEngine {
   }
   
   /**
-   * Calculate Medicare (1.45% no limit)
+   * Calculate Medicare tax including Additional Medicare Tax
+   * - Regular Medicare: 1.45% on all wages (no limit)
+   * - Additional Medicare Tax: 0.9% on wages over $200,000 (single) or $250,000 (married)
+   * 
+   * @param grossPay - Current period gross pay
+   * @param ytdWages - Year-to-date wages for threshold tracking (default 0)
+   * @param filingStatus - 'single', 'married', or 'head_of_household' (default 'single')
+   * @returns Total Medicare tax including Additional Medicare Tax if applicable
    */
-  static calculateMedicare(grossPay: number): number {
+  static calculateMedicare(
+    grossPay: number, 
+    ytdWages: number = 0,
+    filingStatus: string = 'single'
+  ): number {
     const MEDICARE_RATE = 0.0145;
-    return parseFloat((grossPay * MEDICARE_RATE).toFixed(2));
+    const ADDITIONAL_MEDICARE_RATE = 0.009; // 0.9% additional tax
+    
+    // Additional Medicare Tax thresholds by filing status
+    const thresholds: Record<string, number> = {
+      'single': 200000,
+      'head_of_household': 200000,
+      'married': 250000,
+      'married_filing_separately': 125000,
+    };
+    
+    const threshold = thresholds[filingStatus] || 200000;
+    
+    // Regular Medicare tax on all wages
+    let medicareTax = grossPay * MEDICARE_RATE;
+    
+    // Calculate Additional Medicare Tax on wages exceeding threshold
+    const totalWagesWithCurrent = ytdWages + grossPay;
+    
+    if (totalWagesWithCurrent > threshold) {
+      // Calculate how much of this period's pay is subject to additional tax
+      const amountOverThreshold = Math.max(0, totalWagesWithCurrent - threshold);
+      const priorAmountOverThreshold = Math.max(0, ytdWages - threshold);
+      const taxableThisPeriod = amountOverThreshold - priorAmountOverThreshold;
+      
+      if (taxableThisPeriod > 0) {
+        const additionalTax = taxableThisPeriod * ADDITIONAL_MEDICARE_RATE;
+        medicareTax += additionalTax;
+        console.log(`[AI Payroll™] Additional Medicare Tax: $${additionalTax.toFixed(2)} on $${taxableThisPeriod.toFixed(2)} exceeding $${threshold} threshold`);
+      }
+    }
+    
+    return parseFloat(medicareTax.toFixed(2));
   }
   
+  /**
+   * Calculate Federal Unemployment Tax (FUTA) - EMPLOYER TAX
+   * - 6.0% on first $7,000 of wages per employee per year
+   * - Most employers get a 5.4% credit for paying state unemployment taxes
+   * - Effective rate is typically 0.6% on first $7,000
+   * 
+   * @param grossPay - Current period gross pay
+   * @param ytdWages - Year-to-date wages for threshold tracking
+   * @param hasStateTaxCredit - Whether employer qualifies for state credit (default true)
+   * @returns FUTA tax amount (employer cost, not deducted from employee)
+   */
+  static calculateFUTA(
+    grossPay: number,
+    ytdWages: number = 0,
+    hasStateTaxCredit: boolean = true
+  ): number {
+    const FUTA_WAGE_BASE = 7000;
+    const FUTA_RATE = 0.06; // 6.0% base rate
+    const STATE_CREDIT = 0.054; // 5.4% credit for paying SUTA
+    
+    // Effective rate after state credit
+    const effectiveRate = hasStateTaxCredit ? (FUTA_RATE - STATE_CREDIT) : FUTA_RATE;
+    
+    // If YTD wages already exceed the wage base, no FUTA due
+    if (ytdWages >= FUTA_WAGE_BASE) {
+      return 0;
+    }
+    
+    // Calculate taxable wages for this period
+    const taxableWages = Math.min(grossPay, Math.max(0, FUTA_WAGE_BASE - ytdWages));
+    
+    return parseFloat((taxableWages * effectiveRate).toFixed(2));
+  }
+
+  /**
+   * Calculate State Unemployment Tax (SUTA) - EMPLOYER TAX
+   * Rates vary by state and employer experience rating
+   * 
+   * @param grossPay - Current period gross pay
+   * @param ytdWages - Year-to-date wages for threshold tracking
+   * @param state - State code for rate lookup
+   * @param experienceRate - Employer's experience-rated SUTA rate (default varies by state)
+   * @returns SUTA tax amount (employer cost, not deducted from employee)
+   */
+  static calculateSUTA(
+    grossPay: number,
+    ytdWages: number = 0,
+    state: string = 'CA',
+    experienceRate?: number
+  ): number {
+    // SUTA wage bases and new employer rates by state (2024)
+    const sutaConfig: Record<string, { wageBase: number; newEmployerRate: number; minRate: number; maxRate: number }> = {
+      'AL': { wageBase: 8000, newEmployerRate: 0.027, minRate: 0.006, maxRate: 0.068 },
+      'AK': { wageBase: 47100, newEmployerRate: 0.012, minRate: 0.01, maxRate: 0.054 },
+      'AZ': { wageBase: 8000, newEmployerRate: 0.02, minRate: 0.0008, maxRate: 0.077 },
+      'AR': { wageBase: 7000, newEmployerRate: 0.031, minRate: 0.01, maxRate: 0.12 },
+      'CA': { wageBase: 7000, newEmployerRate: 0.034, minRate: 0.015, maxRate: 0.068 },
+      'CO': { wageBase: 20400, newEmployerRate: 0.017, minRate: 0.0, maxRate: 0.058 },
+      'CT': { wageBase: 25000, newEmployerRate: 0.03, minRate: 0.01, maxRate: 0.069 },
+      'DE': { wageBase: 10500, newEmployerRate: 0.018, minRate: 0.001, maxRate: 0.08 },
+      'FL': { wageBase: 7000, newEmployerRate: 0.027, minRate: 0.001, maxRate: 0.054 },
+      'GA': { wageBase: 9500, newEmployerRate: 0.027, minRate: 0.005, maxRate: 0.054 },
+      'HI': { wageBase: 56700, newEmployerRate: 0.03, minRate: 0.0, maxRate: 0.054 },
+      'ID': { wageBase: 49900, newEmployerRate: 0.01, minRate: 0.002, maxRate: 0.052 },
+      'IL': { wageBase: 13271, newEmployerRate: 0.035, minRate: 0.006, maxRate: 0.067 },
+      'IN': { wageBase: 9500, newEmployerRate: 0.025, minRate: 0.005, maxRate: 0.075 },
+      'IA': { wageBase: 36100, newEmployerRate: 0.01, minRate: 0.0, maxRate: 0.07 },
+      'KS': { wageBase: 14000, newEmployerRate: 0.027, minRate: 0.001, maxRate: 0.075 },
+      'KY': { wageBase: 11400, newEmployerRate: 0.027, minRate: 0.003, maxRate: 0.09 },
+      'LA': { wageBase: 7700, newEmployerRate: 0.02, minRate: 0.001, maxRate: 0.06 },
+      'ME': { wageBase: 12000, newEmployerRate: 0.0238, minRate: 0.0005, maxRate: 0.054 },
+      'MD': { wageBase: 8500, newEmployerRate: 0.024, minRate: 0.003, maxRate: 0.075 },
+      'MA': { wageBase: 15000, newEmployerRate: 0.027, minRate: 0.006, maxRate: 0.083 },
+      'MI': { wageBase: 9500, newEmployerRate: 0.027, minRate: 0.001, maxRate: 0.1085 },
+      'MN': { wageBase: 40000, newEmployerRate: 0.01, minRate: 0.001, maxRate: 0.09 },
+      'MS': { wageBase: 14000, newEmployerRate: 0.01, minRate: 0.0, maxRate: 0.055 },
+      'MO': { wageBase: 10500, newEmployerRate: 0.027, minRate: 0.0, maxRate: 0.09 },
+      'MT': { wageBase: 40500, newEmployerRate: 0.013, minRate: 0.0, maxRate: 0.062 },
+      'NE': { wageBase: 9000, newEmployerRate: 0.02, minRate: 0.0, maxRate: 0.054 },
+      'NV': { wageBase: 40100, newEmployerRate: 0.0295, minRate: 0.0025, maxRate: 0.054 },
+      'NH': { wageBase: 14000, newEmployerRate: 0.027, minRate: 0.001, maxRate: 0.075 },
+      'NJ': { wageBase: 42300, newEmployerRate: 0.028, minRate: 0.005, maxRate: 0.0575 },
+      'NM': { wageBase: 30100, newEmployerRate: 0.01, minRate: 0.003, maxRate: 0.054 },
+      'NY': { wageBase: 12500, newEmployerRate: 0.035, minRate: 0.006, maxRate: 0.079 },
+      'NC': { wageBase: 29600, newEmployerRate: 0.01, minRate: 0.001, maxRate: 0.056 },
+      'ND': { wageBase: 40000, newEmployerRate: 0.0107, minRate: 0.0017, maxRate: 0.0954 },
+      'OH': { wageBase: 9000, newEmployerRate: 0.027, minRate: 0.003, maxRate: 0.09 },
+      'OK': { wageBase: 27000, newEmployerRate: 0.01, minRate: 0.001, maxRate: 0.055 },
+      'OR': { wageBase: 52800, newEmployerRate: 0.024, minRate: 0.007, maxRate: 0.054 },
+      'PA': { wageBase: 10000, newEmployerRate: 0.0307, minRate: 0.004, maxRate: 0.1017 },
+      'RI': { wageBase: 29200, newEmployerRate: 0.011, minRate: 0.009, maxRate: 0.095 },
+      'SC': { wageBase: 14000, newEmployerRate: 0.006, minRate: 0.0006, maxRate: 0.054 },
+      'SD': { wageBase: 15000, newEmployerRate: 0.01, minRate: 0.0, maxRate: 0.095 },
+      'TN': { wageBase: 7000, newEmployerRate: 0.027, minRate: 0.001, maxRate: 0.1 },
+      'TX': { wageBase: 9000, newEmployerRate: 0.027, minRate: 0.001, maxRate: 0.062 },
+      'UT': { wageBase: 44800, newEmployerRate: 0.011, minRate: 0.001, maxRate: 0.073 },
+      'VT': { wageBase: 16100, newEmployerRate: 0.01, minRate: 0.006, maxRate: 0.08 },
+      'VA': { wageBase: 8000, newEmployerRate: 0.0258, minRate: 0.001, maxRate: 0.065 },
+      'WA': { wageBase: 67600, newEmployerRate: 0.013, minRate: 0.0, maxRate: 0.054 },
+      'WV': { wageBase: 9000, newEmployerRate: 0.027, minRate: 0.015, maxRate: 0.085 },
+      'WI': { wageBase: 14000, newEmployerRate: 0.032, minRate: 0.0, maxRate: 0.108 },
+      'WY': { wageBase: 30900, newEmployerRate: 0.0092, minRate: 0.0015, maxRate: 0.081 },
+      'DC': { wageBase: 9000, newEmployerRate: 0.027, minRate: 0.014, maxRate: 0.07 },
+    };
+    
+    const stateCode = state.toUpperCase();
+    const config = sutaConfig[stateCode] || sutaConfig['CA'];
+    
+    // Use provided experience rate or default to new employer rate
+    const rate = experienceRate !== undefined ? experienceRate : config.newEmployerRate;
+    
+    // Clamp rate within state min/max bounds
+    const clampedRate = Math.max(config.minRate, Math.min(rate, config.maxRate));
+    
+    // If YTD wages already exceed the wage base, no SUTA due
+    if (ytdWages >= config.wageBase) {
+      return 0;
+    }
+    
+    // Calculate taxable wages for this period
+    const taxableWages = Math.min(grossPay, Math.max(0, config.wageBase - ytdWages));
+    
+    return parseFloat((taxableWages * clampedRate).toFixed(2));
+  }
+
   /**
    * Calculate overtime (1.5x after 40 hours per week)
    */
@@ -312,22 +479,141 @@ export class PayrollAutomationEngine {
   }
 
   /**
+   * Calculate local/city withholding tax - EMPLOYEE TAX
+   * Some cities and localities require income tax withholding
+   * 
+   * @param grossPay - Current period gross pay
+   * @param locality - City or locality code (e.g., 'NYC', 'PHL', 'DET')
+   * @param workLocation - Work location (for work-location-based localities)
+   * @param residenceLocation - Residence location (for residence-based localities)
+   * @returns Local tax withholding amount
+   */
+  static calculateLocalWithholding(
+    grossPay: number,
+    locality: string = '',
+    workLocation?: string,
+    residenceLocation?: string
+  ): number {
+    // Major local/city income tax jurisdictions and rates (2024)
+    const localTaxConfig: Record<string, { 
+      rate: number; 
+      type: 'resident' | 'worker' | 'both';
+      name: string;
+    }> = {
+      // New York City (applies to NYC residents only)
+      'NYC': { rate: 0.03876, type: 'resident', name: 'New York City' },
+      'YONKERS': { rate: 0.01535, type: 'resident', name: 'Yonkers' },
+      
+      // Pennsylvania localities (Philadelphia, Pittsburgh, etc.)
+      'PHL': { rate: 0.03828, type: 'both', name: 'Philadelphia' },
+      'PITTSBURGH': { rate: 0.03, type: 'both', name: 'Pittsburgh' },
+      'SCRANTON': { rate: 0.024, type: 'both', name: 'Scranton' },
+      'ALLENTOWN': { rate: 0.0175, type: 'both', name: 'Allentown' },
+      
+      // Ohio cities (many have local income tax)
+      'CLEVELAND': { rate: 0.025, type: 'worker', name: 'Cleveland' },
+      'COLUMBUS': { rate: 0.025, type: 'worker', name: 'Columbus' },
+      'CINCINNATI': { rate: 0.0212, type: 'worker', name: 'Cincinnati' },
+      'TOLEDO': { rate: 0.0225, type: 'worker', name: 'Toledo' },
+      'AKRON': { rate: 0.025, type: 'worker', name: 'Akron' },
+      'DAYTON': { rate: 0.025, type: 'worker', name: 'Dayton' },
+      
+      // Michigan cities
+      'DETROIT': { rate: 0.024, type: 'both', name: 'Detroit' },
+      'GRAND_RAPIDS': { rate: 0.015, type: 'both', name: 'Grand Rapids' },
+      'SAGINAW': { rate: 0.015, type: 'both', name: 'Saginaw' },
+      
+      // Indiana localities
+      'INDIANAPOLIS': { rate: 0.02, type: 'resident', name: 'Indianapolis' },
+      'FORT_WAYNE': { rate: 0.0155, type: 'resident', name: 'Fort Wayne' },
+      
+      // Kentucky cities
+      'LOUISVILLE': { rate: 0.0285, type: 'both', name: 'Louisville' },
+      'LEXINGTON': { rate: 0.025, type: 'both', name: 'Lexington' },
+      
+      // Missouri localities
+      'STLOUIS': { rate: 0.01, type: 'worker', name: 'St. Louis City' },
+      'KANSAS_CITY': { rate: 0.01, type: 'worker', name: 'Kansas City' },
+      
+      // Alabama localities
+      'BIRMINGHAM': { rate: 0.01, type: 'worker', name: 'Birmingham' },
+      
+      // Maryland localities (county taxes)
+      'BALTIMORE_CITY': { rate: 0.032, type: 'resident', name: 'Baltimore City' },
+      'MONTGOMERY_CO': { rate: 0.032, type: 'resident', name: 'Montgomery County' },
+      
+      // Delaware localities
+      'WILMINGTON': { rate: 0.0125, type: 'worker', name: 'Wilmington' },
+    };
+    
+    const localityCode = locality.toUpperCase().replace(/\s+/g, '_');
+    const config = localTaxConfig[localityCode];
+    
+    if (!config) {
+      return 0; // No local tax for unknown localities
+    }
+    
+    // Apply tax based on type
+    const effectiveLocality = workLocation?.toUpperCase().replace(/\s+/g, '_') || residenceLocation?.toUpperCase().replace(/\s+/g, '_') || localityCode;
+    
+    switch (config.type) {
+      case 'resident':
+        // Only applies if employee is a resident
+        if (residenceLocation?.toUpperCase().replace(/\s+/g, '_') === localityCode) {
+          return parseFloat((grossPay * config.rate).toFixed(2));
+        }
+        return 0;
+        
+      case 'worker':
+        // Applies to anyone working in the locality
+        if (workLocation?.toUpperCase().replace(/\s+/g, '_') === localityCode) {
+          return parseFloat((grossPay * config.rate).toFixed(2));
+        }
+        return 0;
+        
+      case 'both':
+        // Applies to both residents and workers
+        return parseFloat((grossPay * config.rate).toFixed(2));
+        
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Get list of supported local tax jurisdictions
+   */
+  static getLocalTaxJurisdictions(): Array<{ code: string; name: string; state: string; rate: number }> {
+    return [
+      { code: 'NYC', name: 'New York City', state: 'NY', rate: 0.03876 },
+      { code: 'PHL', name: 'Philadelphia', state: 'PA', rate: 0.03828 },
+      { code: 'CLEVELAND', name: 'Cleveland', state: 'OH', rate: 0.025 },
+      { code: 'DETROIT', name: 'Detroit', state: 'MI', rate: 0.024 },
+      { code: 'LOUISVILLE', name: 'Louisville', state: 'KY', rate: 0.0285 },
+      { code: 'COLUMBUS', name: 'Columbus', state: 'OH', rate: 0.025 },
+      { code: 'PITTSBURGH', name: 'Pittsburgh', state: 'PA', rate: 0.03 },
+      { code: 'STLOUIS', name: 'St. Louis City', state: 'MO', rate: 0.01 },
+      { code: 'BALTIMORE_CITY', name: 'Baltimore City', state: 'MD', rate: 0.032 },
+      { code: 'WILMINGTON', name: 'Wilmington', state: 'DE', rate: 0.0125 },
+    ];
+  }
+
+  /**
    * Calculate pre-tax deductions for an employee
    * Includes: 401k, health insurance, HSA, FSA, etc.
    * These reduce taxable income before federal/state/SS/Medicare calculations
    */
   static async getPreTaxDeductions(employeeId: string, payPeriodEnd: Date): Promise<number> {
-    // Query payrollDeductions table for active deductions
-    const deductions = await db
-      .select({ amount: sql<number>`CAST(${db.raw('amount')} AS FLOAT)` })
-      .from(db.raw('payroll_deductions'))
-      .where(
-        sql`employee_id = ${employeeId} 
+    // Query payrollDeductions table for active deductions using Drizzle query
+    const result = await db.execute(
+      sql`SELECT COALESCE(SUM(CAST(amount AS FLOAT)), 0) as total
+          FROM payroll_deductions
+          WHERE employee_id = ${employeeId}
             AND workspace_id IS NOT NULL
             AND (end_date IS NULL OR end_date >= ${payPeriodEnd})`
-      );
+    );
     
-    const total = deductions.reduce((sum, d) => sum + (d.amount || 0), 0);
+    const total = parseFloat(result.rows[0]?.total as string || '0');
     return parseFloat(total.toFixed(2));
   }
 
@@ -464,7 +750,8 @@ export class PayrollAutomationEngine {
       const federalTax = this.calculateFederalTax(grossPay, payPeriod.type);
       const stateTax = this.calculateStateTax(grossPay);
       const socialSecurity = this.calculateSocialSecurity(grossPay, ytdWages);
-      const medicare = this.calculateMedicare(grossPay);
+      // Pass YTD wages for Additional Medicare Tax threshold tracking
+      const medicare = this.calculateMedicare(grossPay, ytdWages);
       
       // Calculate net pay
       const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
@@ -478,10 +765,13 @@ export class PayrollAutomationEngine {
         holidayHours, // Include holiday hours for QC review
         hourlyRate,
         grossPay: parseFloat(grossPay.toFixed(2)),
+        preTaxDeductions: 0, // TODO: Fetch from employee deductions
+        taxableGrossPay: parseFloat(grossPay.toFixed(2)), // grossPay - preTaxDeductions
         federalTax,
         stateTax,
         socialSecurity,
         medicare,
+        postTaxDeductions: 0, // TODO: Fetch from employee deductions
         netPay: parseFloat(netPay.toFixed(2))
       });
       
