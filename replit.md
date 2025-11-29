@@ -44,6 +44,64 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **WebSocket**: Enables real-time notifications.
 - **Google Cloud Storage (GCS)**: Used for file management.
 - **PostgreSQL**: The primary relational database for data storage.
+### Turn 14: AI Brain Service Enhancement - Business Insights & Learning System
+**Date:** November 29, 2025
+
+**Comprehensive AI Brain Service Updates:**
+
+**1. ✅ NEW AI SKILLS ADDED TO SCHEMA**
+   - **File:** shared/schema.ts (aiBrainSkillEnum)
+   - `business_insight`: Sales, finance, operations, automation, growth insights
+   - `platform_recommendation`: Self-selling AI for platform features
+   - `faq_update`: FAQ learning and persistence system
+
+**2. ✅ AI BRAIN SERVICE COMPLETELY REWRITTEN**
+   - **File:** server/services/ai-brain/aiBrainService.ts
+   - Proper TypeScript typing with interfaces for all skill inputs
+   - New skill handlers:
+     - `executeBusinessInsight()`: Generates actionable business insights
+     - `executePlatformRecommendation()`: AI-powered self-selling
+     - `executeFAQUpdate()`: Create/update FAQs with learning
+   - FAQ learning system:
+     - `searchFAQs()`: Keyword-based FAQ search with scoring
+     - `learnFromInteraction()`: Persists successful interactions as new FAQs
+   - Fixed helposFaqs field mappings (isPublished, tags as array)
+
+**3. ✅ AI BRAIN API ROUTES ENHANCED**
+   - **File:** server/ai-brain-routes.ts
+   - Fixed import: `isAuthenticated` (not requireAuth)
+   - New endpoints:
+     - `POST /api/ai-brain/business-insight`: Generate business insights
+     - `POST /api/ai-brain/recommend`: Get platform recommendations
+     - `POST /api/ai-brain/chat`: AI chat support (HelpOS)
+     - `GET /api/ai-brain/faqs`: Retrieve FAQs
+     - `POST /api/ai-brain/faqs`: Create new FAQs
+     - `POST /api/ai-brain/faqs/:id/helpful`: Mark FAQ as helpful
+     - `GET /api/ai-brain/global-patterns`: Cross-org learning patterns
+
+**AI Brain Business Insight Types:**
+- `sales`: Revenue optimization, opportunity identification
+- `finance`: Cash flow, billing efficiency, financial planning
+- `operations`: Workforce productivity, scheduling optimization
+- `automation`: AI feature utilization, workflow improvements
+- `growth`: Customer acquisition, retention strategies
+
+**Technical Implementation:**
+- Proper TypeScript interfaces for all job inputs
+- Gemini 2.0 Flash integration for all AI skills
+- FAQ persistence with category, tags, and helpfulness tracking
+- Business context gathering from database for insights
+- Cross-org pattern learning via aiGlobalPatterns table
+
+**Current System Status:**
+- ✅ AI Brain: 6 skills (helpos_support, scheduleos_generation, intelligenceos_prediction, business_insight, platform_recommendation, faq_update)
+- ✅ FAQ Learning: Active with auto-persistence
+- ✅ Business Insights: Sales, finance, operations, automation, growth
+- ✅ LSP: Zero errors
+- ✅ App: Running on port 5000
+
+---
+
 ### Turn 13: UI/UX Polish - Hero Logo, Mobile Chatroom Navigation, Redundant Logo Cleanup
 **Date:** November 29, 2025
 

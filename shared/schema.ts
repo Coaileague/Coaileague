@@ -10978,7 +10978,10 @@ export const aiBrainSkillEnum = pgEnum('ai_brain_skill', [
   'helpos_support',           // Customer support chat
   'disputeos_resolution',     // Dispute resolution
   'talentos_scoring',         // Employee scoring
-  'marketingos_campaign'      // Marketing automation
+  'marketingos_campaign',     // Marketing automation
+  'business_insight',         // Business insights (sales, finance, operations, automation, growth)
+  'platform_recommendation',  // Platform feature recommendations (self-selling)
+  'faq_update'                // FAQ learning and updates
 ]);
 
 // Monitoring & Alerting Enums

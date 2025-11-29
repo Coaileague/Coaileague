@@ -1,10 +1,13 @@
 /**
- * UNIFIED AI BRAIN ORCHESTRATOR
+ * UNIFIED AI BRAIN ORCHESTRATOR - Enhanced with Business Insights & Learning
  * 
  * This is the ONE AI system for CoAIleague that:
  * - Learns from all organizations (cross-tenant intelligence)
  * - Provides unified intelligence across all features
  * - Manages all AI operations through one central service
+ * - Generates business insights (sales, finance, operations, automation)
+ * - Self-sells platform features based on user needs
+ * - Updates FAQs based on successful resolutions
  * - Fixes issues once for everyone
  */
 
@@ -15,25 +18,68 @@ import {
   aiGlobalPatterns,
   aiSolutionLibrary,
   aiFeedbackLoops,
-  aiSkillRegistry,
+  helposFaqs,
   externalIdentifiers,
   workspaces,
   shifts,
   scheduleProposals,
-  type InsertAiBrainJob,
+  invoices,
+  payrollRuns,
+  employees,
+  timeEntries,
   type AiBrainJob,
-  type InsertAiEventStream,
-  type InsertAiGlobalPattern,
   type InsertAiFeedbackLoop,
 } from '@shared/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, count } from 'drizzle-orm';
 import { geminiClient } from './providers/geminiClient';
 import crypto from 'crypto';
+
+// Define typed input interfaces for each skill
+interface HelpOSInput {
+  message: string;
+  conversationHistory?: Array<{ role: 'user' | 'model'; content: string }>;
+  userId?: string;
+  shouldLearn?: boolean;
+}
+
+interface ScheduleOSInput {
+  shifts: any[];
+  employees: any[];
+  constraints?: {
+    weekStart?: string;
+    weekEnd?: string;
+    [key: string]: any;
+  };
+}
+
+interface PredictionInput {
+  predictionType: string;
+  historicalData: any;
+}
+
+interface BusinessInsightInput {
+  insightType: 'sales' | 'finance' | 'operations' | 'automation' | 'growth';
+  timeframe?: 'weekly' | 'monthly' | 'quarterly';
+  focusArea?: string;
+}
+
+interface FAQUpdateInput {
+  question: string;
+  answer: string;
+  category?: string;
+  tags?: string[];
+}
+
+interface PlatformRecommendationInput {
+  userNeed: string;
+  currentPlan?: string;
+  currentUsage?: any;
+}
 
 export interface EnqueueJobRequest {
   workspaceId?: string;
   userId?: string;
-  skill: string; // e.g., 'scheduleos_generation', 'helpos_support'
+  skill: string;
   input: any;
   priority?: 'low' | 'normal' | 'high' | 'critical';
 }
@@ -54,7 +100,6 @@ export class AIBrainService {
   async enqueueJob(request: EnqueueJobRequest): Promise<JobResult> {
     console.log(`🧠 [AI Brain] New job: ${request.skill} for workspace ${request.workspaceId || 'global'}`);
 
-    // Create job record
     const [job] = await db.insert(aiBrainJobs).values({
       workspaceId: request.workspaceId || null,
       userId: request.userId || null,
@@ -64,14 +109,12 @@ export class AIBrainService {
       status: 'pending'
     }).returning();
 
-    // Execute job immediately (in-memory queue for now)
     try {
       const result = await this.executeJob(job);
       return result;
     } catch (error: any) {
       console.error(`❌ [AI Brain] Job ${job.id} failed:`, error);
       
-      // Update job as failed
       await db.update(aiBrainJobs)
         .set({
           status: 'failed',
@@ -94,7 +137,6 @@ export class AIBrainService {
   private async executeJob(job: AiBrainJob): Promise<JobResult> {
     const startTime = Date.now();
 
-    // Update status to running
     await db.update(aiBrainJobs)
       .set({
         status: 'running',
@@ -102,42 +144,63 @@ export class AIBrainService {
       })
       .where(eq(aiBrainJobs.id, job.id));
 
-    // Route to skill handler based on job.skill
     let output: any;
     let confidenceScore: number | undefined;
     let tokensUsed = 0;
 
+    // Cast input to typed interface based on skill
+    const input = job.input as any;
+
     switch (job.skill) {
       case 'helpos_support':
-        const helpResult = await this.executeHelpOSSupport(job);
+        const helpResult = await this.executeHelpOSSupport(job, input as HelpOSInput);
         output = helpResult.output;
         tokensUsed = helpResult.tokensUsed;
-        confidenceScore = 0.95; // HelpOS is high confidence
+        confidenceScore = 0.95;
         break;
 
       case 'scheduleos_generation':
-        const scheduleResult = await this.executeScheduleGeneration(job);
+        const scheduleResult = await this.executeScheduleGeneration(job, input as ScheduleOSInput);
         output = scheduleResult.output;
         tokensUsed = scheduleResult.tokensUsed;
         confidenceScore = scheduleResult.confidence;
         break;
 
       case 'intelligenceos_prediction':
-        const predictionResult = await this.executePrediction(job);
+        const predictionResult = await this.executePrediction(job, input as PredictionInput);
         output = predictionResult.output;
         tokensUsed = predictionResult.tokensUsed;
         confidenceScore = predictionResult.confidence;
+        break;
+
+      case 'business_insight':
+        const insightResult = await this.executeBusinessInsight(job, input as BusinessInsightInput);
+        output = insightResult.output;
+        tokensUsed = insightResult.tokensUsed;
+        confidenceScore = insightResult.confidence;
+        break;
+
+      case 'platform_recommendation':
+        const recResult = await this.executePlatformRecommendation(job, input as PlatformRecommendationInput);
+        output = recResult.output;
+        tokensUsed = recResult.tokensUsed;
+        confidenceScore = 0.9;
+        break;
+
+      case 'faq_update':
+        const faqResult = await this.executeFAQUpdate(job, input as FAQUpdateInput);
+        output = faqResult.output;
+        tokensUsed = faqResult.tokensUsed;
+        confidenceScore = 0.95;
         break;
 
       default:
         throw new Error(`Unknown skill: ${job.skill}`);
     }
 
-    // Determine if requires human approval (low confidence)
     const requiresApproval = confidenceScore ? confidenceScore < 0.95 : false;
     const finalStatus = requiresApproval ? 'requires_approval' : 'completed';
 
-    // Update job as completed
     const executionTime = Date.now() - startTime;
     await db.update(aiBrainJobs)
       .set({
@@ -151,7 +214,6 @@ export class AIBrainService {
       })
       .where(eq(aiBrainJobs.id, job.id));
 
-    // Enhanced logging with external IDs for better audit trails
     const logMetadata = output?._auditMetadata || {};
     const orgInfo = logMetadata.orgExternalId 
       ? `[${logMetadata.orgExternalId}] ${logMetadata.orgName || ''}` 
@@ -169,14 +231,20 @@ export class AIBrainService {
   }
 
   /**
-   * HelpOS Support - Customer support AI
+   * HelpOS Support - Customer support AI with FAQ learning
    */
-  private async executeHelpOSSupport(job: AiBrainJob): Promise<{ output: any; tokensUsed: number }> {
-    const { message, conversationHistory } = job.input;
+  private async executeHelpOSSupport(job: AiBrainJob, input: HelpOSInput): Promise<{ output: any; tokensUsed: number }> {
+    const { message, conversationHistory, shouldLearn } = input;
+
+    // Search for relevant FAQs first
+    const relevantFaqs = await this.searchFAQs(message, job.workspaceId || undefined);
 
     const systemPrompt = `You are CoAIleague AI Support Assistant, a helpful and knowledgeable assistant for the CoAIleague workforce management platform.
 
-You help users with:
+${relevantFaqs.length > 0 ? `RELEVANT FAQs (use these first if they match the user's question):
+${relevantFaqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
+
+` : ''}You help users with:
 - Time tracking and clock in/out issues
 - Schedule management and shift assignments
 - Billing, invoicing, and payroll questions
@@ -184,7 +252,12 @@ You help users with:
 - Compliance and policy questions
 - General platform navigation
 
-Be concise, professional, and helpful. If you don't know something specific to the platform, suggest contacting human support.`;
+IMPORTANT GUIDELINES:
+1. If an FAQ matches the question, use that answer (personalized)
+2. Be concise, professional, and helpful
+3. If you don't know something specific, suggest contacting human support
+4. When relevant, mention platform features that could help the user
+5. Always end with asking if there's anything else you can help with`;
 
     const response = await geminiClient.generate({
       workspaceId: job.workspaceId || undefined,
@@ -195,9 +268,15 @@ Be concise, professional, and helpful. If you don't know something specific to t
       conversationHistory
     });
 
+    // Learn from successful interactions
+    if (shouldLearn && response.text.length > 50 && !response.text.includes("I don't know")) {
+      await this.learnFromInteraction(job.workspaceId || undefined, message, response.text);
+    }
+
     return {
       output: {
         response: response.text,
+        suggestedFaqs: relevantFaqs.slice(0, 3),
         timestamp: new Date().toISOString()
       },
       tokensUsed: response.tokensUsed
@@ -205,14 +284,89 @@ Be concise, professional, and helpful. If you don't know something specific to t
   }
 
   /**
+   * Search FAQs for relevant answers
+   */
+  private async searchFAQs(query: string, workspaceId?: string): Promise<Array<{ id: string; question: string; answer: string; score: number }>> {
+    try {
+      // Query published FAQs (helposFaqs doesn't have workspaceId - it's global)
+      const faqs = await db
+        .select()
+        .from(helposFaqs)
+        .where(eq(helposFaqs.isPublished, true))
+        .limit(20);
+
+      // Simple keyword matching for now (could be enhanced with embeddings)
+      const queryLower = query.toLowerCase();
+      const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+
+      const scored = faqs.map(faq => {
+        const questionLower = faq.question.toLowerCase();
+        const answerLower = faq.answer.toLowerCase();
+        let score = 0;
+
+        for (const word of queryWords) {
+          if (questionLower.includes(word)) score += 2;
+          if (answerLower.includes(word)) score += 1;
+        }
+
+        return { ...faq, score };
+      }).filter(f => f.score > 0).sort((a, b) => b.score - a.score);
+
+      return scored.slice(0, 5).map(f => ({
+        id: f.id,
+        question: f.question,
+        answer: f.answer,
+        score: f.score
+      }));
+    } catch (error) {
+      console.error('[AI Brain] FAQ search error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Learn from successful interactions - Create or update FAQs
+   */
+  private async learnFromInteraction(workspaceId: string | undefined, question: string, answer: string): Promise<void> {
+    try {
+      // Check if a similar FAQ already exists
+      const existingFaqs = await this.searchFAQs(question, workspaceId);
+      
+      if (existingFaqs.length > 0 && existingFaqs[0].score > 3) {
+        // Update helpfulness score of matching FAQ
+        await db.update(helposFaqs)
+          .set({
+            helpfulCount: sql`COALESCE(${helposFaqs.helpfulCount}, 0) + 1`
+          })
+          .where(eq(helposFaqs.id, existingFaqs[0].id));
+        
+        console.log(`📚 [AI Brain] Updated FAQ helpfulness: ${existingFaqs[0].id}`);
+      } else {
+        // Create new FAQ entry for learning (global FAQs)
+        await db.insert(helposFaqs).values({
+          question: question.substring(0, 500),
+          answer: answer.substring(0, 2000),
+          category: 'ai_learned',
+          isPublished: true,
+          helpfulCount: 1,
+          tags: ['ai-generated', 'auto-learned']
+        });
+        
+        console.log(`🆕 [AI Brain] Created new FAQ from successful interaction`);
+      }
+    } catch (error) {
+      console.error('[AI Brain] Learning error:', error);
+    }
+  }
+
+  /**
    * AI Scheduling Generation - AI-powered scheduling
    */
-  private async executeScheduleGeneration(job: AiBrainJob): Promise<{ output: any; tokensUsed: number; confidence: number }> {
-    const { shifts, employees, constraints } = job.input;
+  private async executeScheduleGeneration(job: AiBrainJob, input: ScheduleOSInput): Promise<{ output: any; tokensUsed: number; confidence: number }> {
+    const { shifts: inputShifts, employees: inputEmployees, constraints } = input;
 
-    // Enrich employee data with external IDs for better audit trails
     const enrichedInput = await this.enrichWithExternalIds(
-      { shifts, employees, constraints },
+      { shifts: inputShifts, employees: inputEmployees, constraints },
       job.workspaceId || undefined
     );
 
@@ -228,12 +382,18 @@ Consider:
 
 Return a JSON object with:
 {
-  "assignments": [{"shiftId": "...", "employeeId": "...", "confidence": 0.95}],
+  "assignments": [{"shiftId": "...", "employeeId": "...", "confidence": 0.95, "startTime": "...", "endTime": "..."}],
   "confidence": 0.98,
   "reasoning": "Brief explanation of scheduling decisions"
 }`;
 
-    const userMessage = `Create schedule assignments for:\n\nShifts: ${JSON.stringify(enrichedInput.shifts, null, 2)}\n\nEmployees: ${JSON.stringify(enrichedInput.employees, null, 2)}\n\nConstraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
+    const userMessage = `Create schedule assignments for:
+
+Shifts: ${JSON.stringify(enrichedInput.shifts, null, 2)}
+
+Employees: ${JSON.stringify(enrichedInput.employees, null, 2)}
+
+Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
 
     const response = await geminiClient.generate({
       workspaceId: job.workspaceId || undefined,
@@ -241,13 +401,27 @@ Return a JSON object with:
       featureKey: 'scheduleos_generation',
       systemPrompt,
       userMessage,
-      temperature: 0.3 // Lower temperature for more deterministic scheduling
+      temperature: 0.3
     });
 
-    // Parse AI response
-    const result = JSON.parse(response.text);
+    let result;
+    try {
+      // Extract JSON from response (handle markdown code blocks)
+      let jsonText = response.text;
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1].trim();
+      }
+      result = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('[AI Brain] Failed to parse schedule response:', parseError);
+      result = {
+        assignments: [],
+        confidence: 0.5,
+        reasoning: 'Failed to generate valid schedule response'
+      };
+    }
 
-    // Include audit metadata with external IDs
     result._auditMetadata = {
       orgExternalId: enrichedInput._orgExternalId,
       orgName: enrichedInput._orgName,
@@ -255,14 +429,9 @@ Return a JSON object with:
       processedAt: new Date().toISOString()
     };
 
-    // AUTONOMOUS PERSISTENCE: Save schedules to database and queue low-confidence for approval
-    if (job.workspaceId && result.assignments) {
-      // Extract schedule window from input constraints
-      const scheduleWindow = constraints ? {
-        weekStart: constraints.weekStart,
-        weekEnd: constraints.weekEnd,
-      } : undefined;
-      await this.persistScheduleAssignments(job.workspaceId, result, job.id, scheduleWindow);
+    // Persist schedules if workspace provided
+    if (job.workspaceId && job.userId && result.assignments?.length > 0) {
+      await this.persistScheduleAssignments(job.workspaceId, job.userId, result, job.id, constraints);
     }
 
     return {
@@ -274,33 +443,38 @@ Return a JSON object with:
 
   /**
    * Persist AI-generated schedule assignments to database
-   * Auto-approve high confidence (>=0.95), queue low confidence for human review
    */
-  private async persistScheduleAssignments(workspaceId: string, scheduleResult: any, jobId: string, scheduleWindow?: { weekStart: string, weekEnd: string }): Promise<void> {
+  private async persistScheduleAssignments(
+    workspaceId: string, 
+    userId: string,
+    scheduleResult: any, 
+    jobId: string, 
+    constraints?: { weekStart?: string; weekEnd?: string }
+  ): Promise<void> {
     const confidence = scheduleResult.confidence || 0.9;
+    const confidencePercent = Math.round(confidence * 100);
     const requiresApproval = confidence < 0.95;
     
-    // Extract schedule window from assignments or use provided window
-    let weekStart = scheduleWindow?.weekStart ? new Date(scheduleWindow.weekStart) : new Date();
-    let weekEnd = scheduleWindow?.weekEnd ? new Date(scheduleWindow.weekEnd) : new Date();
+    let weekStart = constraints?.weekStart ? new Date(constraints.weekStart) : new Date();
+    let weekEnd = constraints?.weekEnd ? new Date(constraints.weekEnd) : new Date();
     
-    // If no window provided, derive from first assignment
-    if (!scheduleWindow && scheduleResult.assignments?.length > 0) {
+    if (!constraints && scheduleResult.assignments?.length > 0) {
       const firstAssignment = scheduleResult.assignments[0];
       if (firstAssignment.startTime) {
         weekStart = new Date(firstAssignment.startTime);
-        // Set weekEnd to 7 days later
         weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
       }
     }
     
     try {
-      // Log AI decision to event stream for audit trail
+      // Log AI decision to event stream
+      const fingerprint = crypto.createHash('md5').update(JSON.stringify(scheduleResult.assignments)).digest('hex');
+      
       await db.insert(aiEventStream).values({
-        workspaceId,
         eventType: 'schedule_generated',
         feature: 'scheduleos',
+        fingerprint,
         payload: {
           jobId,
           assignments: scheduleResult.assignments,
@@ -309,59 +483,54 @@ Return a JSON object with:
           requiresApproval,
           weekStart: weekStart.toISOString(),
           weekEnd: weekEnd.toISOString(),
-        },
-        metadata: {
-          model: 'gemini-2.0-flash-exp',
-          autoApproved: !requiresApproval,
-        },
-        fingerprint: crypto.createHash('md5').update(JSON.stringify(scheduleResult.assignments)).digest('hex'),
+        }
       });
 
       if (requiresApproval) {
-        // Low confidence - create proposal for human approval with actual schedule window
         await db.insert(scheduleProposals).values({
           workspaceId,
+          createdBy: userId,
           weekStartDate: weekStart,
           weekEndDate: weekEnd,
           aiResponse: scheduleResult,
-          confidence,
+          confidence: confidencePercent,
           status: 'pending',
         });
         
-        console.log(`📋 [AI Brain] Schedule queued for approval (confidence: ${(confidence * 100).toFixed(1)}%, period: ${weekStart.toISOString().split('T')[0]} to ${weekEnd.toISOString().split('T')[0]})`);
+        console.log(`📋 [AI Brain] Schedule queued for approval (confidence: ${(confidence * 100).toFixed(1)}%)`);
       } else {
-        // High confidence - auto-approve and persist shifts
         const createdShifts = [];
         
         for (const assignment of scheduleResult.assignments) {
-          const [shift] = await db.insert(shifts).values({
-            workspaceId,
-            employeeId: assignment.employeeId,
-            clientId: assignment.clientId || null,
-            startTime: new Date(assignment.startTime),
-            endTime: new Date(assignment.endTime),
-            status: 'confirmed',
-            aiGenerated: true,
-            aiConfidenceScore: String(assignment.confidence || confidence),
-            title: assignment.position || 'AI Scheduled Shift',
-          }).returning();
-          
-          createdShifts.push(shift);
+          if (assignment.startTime && assignment.endTime && assignment.employeeId) {
+            const [shift] = await db.insert(shifts).values({
+              workspaceId,
+              employeeId: assignment.employeeId,
+              clientId: assignment.clientId || null,
+              startTime: new Date(assignment.startTime),
+              endTime: new Date(assignment.endTime),
+              status: 'confirmed',
+              aiGenerated: true,
+              aiConfidenceScore: String(assignment.confidence || confidence),
+              title: assignment.position || 'AI Scheduled Shift',
+            }).returning();
+            
+            createdShifts.push(shift);
+          }
         }
         
         console.log(`✅ [AI Brain] Auto-approved ${createdShifts.length} shift(s) (confidence: ${(confidence * 100).toFixed(1)}%)`);
       }
     } catch (error: any) {
       console.error('[AI Brain] Failed to persist schedule:', error);
-      throw error;
     }
   }
 
   /**
    * IntelligenceOS Prediction - Predictive analytics
    */
-  private async executePrediction(job: AiBrainJob): Promise<{ output: any; tokensUsed: number; confidence: number }> {
-    const { predictionType, historicalData } = job.input;
+  private async executePrediction(job: AiBrainJob, input: PredictionInput): Promise<{ output: any; tokensUsed: number; confidence: number }> {
+    const { predictionType, historicalData } = input;
 
     const systemPrompt = `You are CoAIleague IntelligenceOS AI, an expert at predictive workforce analytics.
 
@@ -386,7 +555,22 @@ Return a JSON object with:
       temperature: 0.4
     });
 
-    const result = JSON.parse(response.text);
+    let result;
+    try {
+      let jsonText = response.text;
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1].trim();
+      }
+      result = JSON.parse(jsonText);
+    } catch {
+      result = {
+        prediction: { error: 'Failed to parse prediction' },
+        confidence: 0.5,
+        insights: [],
+        recommendations: []
+      };
+    }
 
     return {
       output: result,
@@ -396,13 +580,231 @@ Return a JSON object with:
   }
 
   /**
-   * Enrich employee/org data with human-readable external IDs (EMP-XXXX, ORG-XXXX)
-   * This makes AI audit logs more readable and debuggable
+   * NEW: Business Insight Generation - Sales, Finance, Operations, Automation, Growth
+   */
+  private async executeBusinessInsight(job: AiBrainJob, input: BusinessInsightInput): Promise<{ output: any; tokensUsed: number; confidence: number }> {
+    const { insightType, timeframe = 'monthly', focusArea } = input;
+
+    // Gather relevant data based on insight type
+    const contextData = await this.gatherBusinessContext(job.workspaceId || '', insightType, timeframe);
+
+    const systemPrompt = `You are CoAIleague Business Intelligence AI, an expert business analyst helping organizations grow.
+
+Your role is to provide actionable ${insightType} insights that help organizations:
+${insightType === 'sales' ? '- Increase revenue and close rates\n- Identify high-value opportunities\n- Optimize sales processes' : ''}
+${insightType === 'finance' ? '- Optimize cash flow and reduce costs\n- Identify billing inefficiencies\n- Improve financial planning' : ''}
+${insightType === 'operations' ? '- Improve workforce productivity\n- Reduce scheduling conflicts\n- Optimize resource allocation' : ''}
+${insightType === 'automation' ? '- Identify automation opportunities\n- Calculate time savings from AI features\n- Recommend workflow improvements' : ''}
+${insightType === 'growth' ? '- Identify growth opportunities\n- Optimize customer acquisition\n- Improve retention strategies' : ''}
+
+ALWAYS provide:
+1. Key metrics and trends with specific numbers
+2. 3-5 specific, actionable recommendations
+3. Estimated ROI or time savings for each recommendation
+4. Priority ranking (high/medium/low)
+5. When relevant, suggest CoAIleague platform features that can help
+
+Return a JSON object with:
+{
+  "summary": "Executive summary of findings",
+  "keyMetrics": [{"name": "...", "value": "...", "trend": "up/down/stable"}],
+  "insights": ["insight 1", "insight 2"],
+  "recommendations": [
+    {"action": "...", "impact": "high/medium/low", "estimatedROI": "$X/month or X hours saved", "platformFeature": "..."}
+  ],
+  "confidence": 0.9
+}`;
+
+    const userMessage = `Generate ${insightType} insights for timeframe: ${timeframe}
+${focusArea ? `Focus area: ${focusArea}` : ''}
+
+Business Context:
+${JSON.stringify(contextData, null, 2)}`;
+
+    const response = await geminiClient.generate({
+      workspaceId: job.workspaceId || undefined,
+      userId: job.userId || undefined,
+      featureKey: `business_insight_${insightType}`,
+      systemPrompt,
+      userMessage,
+      temperature: 0.5
+    });
+
+    let result;
+    try {
+      let jsonText = response.text;
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1].trim();
+      }
+      result = JSON.parse(jsonText);
+    } catch {
+      result = {
+        summary: response.text,
+        keyMetrics: [],
+        insights: [],
+        recommendations: [],
+        confidence: 0.7
+      };
+    }
+
+    return {
+      output: {
+        ...result,
+        insightType,
+        timeframe,
+        generatedAt: new Date().toISOString()
+      },
+      tokensUsed: response.tokensUsed,
+      confidence: result.confidence || 0.85
+    };
+  }
+
+  /**
+   * Gather business context data for insights
+   */
+  private async gatherBusinessContext(workspaceId: string, insightType: string, timeframe: string): Promise<any> {
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (timeframe) {
+      case 'weekly':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'quarterly':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      default: // monthly
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    const context: any = { timeframe, workspaceId };
+
+    try {
+      if (insightType === 'sales' || insightType === 'finance' || insightType === 'growth') {
+        const invoiceStats = await db
+          .select({
+            totalInvoices: count(),
+            totalAmount: sql<number>`COALESCE(SUM(CAST(${invoices.total} AS NUMERIC)), 0)`,
+            paidAmount: sql<number>`COALESCE(SUM(CAST(${invoices.amountPaid} AS NUMERIC)), 0)`
+          })
+          .from(invoices)
+          .where(and(
+            eq(invoices.workspaceId, workspaceId),
+            gte(invoices.createdAt, startDate)
+          ));
+        
+        context.invoices = invoiceStats[0] || { totalInvoices: 0, totalAmount: 0, paidAmount: 0 };
+      }
+
+      if (insightType === 'operations' || insightType === 'automation') {
+        const employeeCount = await db
+          .select({ count: count() })
+          .from(employees)
+          .where(eq(employees.workspaceId, workspaceId));
+        
+        const shiftCount = await db
+          .select({ 
+            total: count(),
+            aiGenerated: sql<number>`SUM(CASE WHEN ${shifts.aiGenerated} = true THEN 1 ELSE 0 END)`
+          })
+          .from(shifts)
+          .where(and(
+            eq(shifts.workspaceId, workspaceId),
+            gte(shifts.createdAt, startDate)
+          ));
+        
+        context.employees = employeeCount[0]?.count || 0;
+        context.shifts = shiftCount[0] || { total: 0, aiGenerated: 0 };
+      }
+
+      if (insightType === 'finance' || insightType === 'operations') {
+        const timeEntryStats = await db
+          .select({
+            totalEntries: count(),
+            totalHours: sql<number>`COALESCE(SUM(${timeEntries.totalHours}), 0)`
+          })
+          .from(timeEntries)
+          .where(and(
+            eq(timeEntries.workspaceId, workspaceId),
+            gte(timeEntries.createdAt, startDate)
+          ));
+        
+        context.timeEntries = timeEntryStats[0] || { totalEntries: 0, totalHours: 0 };
+      }
+    } catch (error) {
+      console.error('[AI Brain] Error gathering business context:', error);
+    }
+
+    return context;
+  }
+
+  /**
+   * NEW: Platform Recommendation - Self-selling AI
+   */
+  private async executePlatformRecommendation(job: AiBrainJob, input: PlatformRecommendationInput): Promise<{ output: any; tokensUsed: number }> {
+    const { userNeed, currentPlan, currentUsage } = input;
+
+    const response = await geminiClient.generatePlatformRecommendation({
+      workspaceId: job.workspaceId || '',
+      userId: job.userId || undefined,
+      userNeed,
+      currentPlan,
+      currentUsage
+    });
+
+    return {
+      output: {
+        recommendation: response.text,
+        timestamp: new Date().toISOString()
+      },
+      tokensUsed: response.tokensUsed
+    };
+  }
+
+  /**
+   * NEW: FAQ Update - Learn and persist new FAQs
+   */
+  private async executeFAQUpdate(job: AiBrainJob, input: FAQUpdateInput): Promise<{ output: any; tokensUsed: number }> {
+    const { question, answer, category = 'general', tags = [] } = input;
+
+    try {
+      const [newFaq] = await db.insert(helposFaqs).values({
+        question: question.substring(0, 500),
+        answer: answer.substring(0, 2000),
+        category,
+        tags: tags,
+        isPublished: true,
+        helpfulCount: 0
+      }).returning();
+
+      console.log(`📚 [AI Brain] Created new FAQ: ${newFaq.id}`);
+
+      return {
+        output: {
+          success: true,
+          faqId: newFaq.id,
+          message: 'FAQ created successfully'
+        },
+        tokensUsed: 0
+      };
+    } catch (error: any) {
+      return {
+        output: {
+          success: false,
+          error: error.message
+        },
+        tokensUsed: 0
+      };
+    }
+  }
+
+  /**
+   * Enrich employee/org data with human-readable external IDs
    */
   private async enrichWithExternalIds(data: any, workspaceId?: string): Promise<any> {
     if (!data) return data;
 
-    // Enrich workspace/org info
     if (workspaceId) {
       const [orgExtId] = await db
         .select({ externalId: externalIdentifiers.externalId })
@@ -419,7 +821,6 @@ Return a JSON object with:
         data._orgExternalId = orgExtId.externalId;
       }
 
-      // Also fetch org name for better context
       const [workspace] = await db
         .select({ name: workspaces.name })
         .from(workspaces)
@@ -431,7 +832,6 @@ Return a JSON object with:
       }
     }
 
-    // Enrich employee array if present
     if (Array.isArray(data.employees)) {
       for (const emp of data.employees) {
         if (emp.id) {
@@ -459,16 +859,16 @@ Return a JSON object with:
   /**
    * Record platform event for cross-org learning
    */
-  async recordEvent(event: Omit<InsertAiEventStream, 'fingerprint'> & { rawData?: any }): Promise<void> {
-    // Generate anonymized fingerprint for pattern matching
+  async recordEvent(event: { eventType: string; feature: string; payload: any; rawData?: any }): Promise<void> {
     const fingerprint = this.generateFingerprint(event.eventType, event.feature, event.rawData);
 
     await db.insert(aiEventStream).values({
-      ...event,
+      eventType: event.eventType,
+      feature: event.feature,
+      payload: event.payload,
       fingerprint
     });
 
-    // Check if this pattern exists globally
     await this.updateGlobalPatterns(fingerprint, event.eventType, event.feature);
   }
 
@@ -476,11 +876,9 @@ Return a JSON object with:
    * Generate anonymized fingerprint for cross-org pattern matching
    */
   private generateFingerprint(eventType: string, feature: string, rawData?: any): string {
-    // Create hash that doesn't expose tenant-specific data
     const normalized = {
       type: eventType,
       feature,
-      // Add anonymized features here (e.g., error codes, not actual data)
     };
     
     return crypto
@@ -494,7 +892,6 @@ Return a JSON object with:
    * Update global patterns - Learn from all organizations
    */
   private async updateGlobalPatterns(fingerprint: string, eventType: string, feature: string): Promise<void> {
-    // Check if pattern exists
     const [existing] = await db
       .select()
       .from(aiGlobalPatterns)
@@ -502,18 +899,17 @@ Return a JSON object with:
       .limit(1);
 
     if (existing) {
-      // Update occurrences
+      const currentOccurrences = existing.occurrences || 0;
       await db
         .update(aiGlobalPatterns)
         .set({
-          occurrences: sql`${aiGlobalPatterns.occurrences} + 1`,
+          occurrences: currentOccurrences + 1,
           lastSeenAt: new Date()
         })
         .where(eq(aiGlobalPatterns.id, existing.id));
 
-      console.log(`📊 [AI Brain] Pattern ${fingerprint} seen ${existing.occurrences + 1} times across orgs`);
+      console.log(`📊 [AI Brain] Pattern ${fingerprint} seen ${currentOccurrences + 1} times across orgs`);
     } else {
-      // Create new global pattern
       await db.insert(aiGlobalPatterns).values({
         patternType: eventType,
         fingerprint,
@@ -588,7 +984,6 @@ Return a JSON object with:
    * Get AI Brain health metrics
    */
   async getHealthMetrics(workspaceId?: string): Promise<any> {
-    // Get job statistics
     const conditions = workspaceId ? [eq(aiBrainJobs.workspaceId, workspaceId)] : [];
 
     const stats = await db
@@ -608,6 +1003,7 @@ Return a JSON object with:
       jobs: stats[0],
       globalPatterns: await this.getGlobalPatternsCount(),
       solutions: await this.getValidatedSolutionsCount(),
+      faqs: await this.getFAQsCount(workspaceId),
       lastUpdated: new Date().toISOString()
     };
   }
@@ -625,6 +1021,29 @@ Return a JSON object with:
       .from(aiSolutionLibrary)
       .where(eq(aiSolutionLibrary.validated, true));
     return result[0]?.count || 0;
+  }
+
+  private async getFAQsCount(workspaceId?: string): Promise<number> {
+    // Query global FAQs count (helposFaqs doesn't have workspaceId)
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(helposFaqs)
+      .where(eq(helposFaqs.isPublished, true));
+    return result[0]?.count || 0;
+  }
+
+  /**
+   * Get available AI Brain skills
+   */
+  getAvailableSkills(): string[] {
+    return [
+      'helpos_support',
+      'scheduleos_generation',
+      'intelligenceos_prediction',
+      'business_insight',
+      'platform_recommendation',
+      'faq_update'
+    ];
   }
 }
 
