@@ -465,20 +465,20 @@ export default function WorkspaceSales() {
                       <div key={proposal.id} className="border rounded-lg p-4 space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{proposal.title}</p>
-                            <p className="text-sm text-muted-foreground">{proposal.prospectName} ({proposal.prospectEmail})</p>
-                            <p className="text-xs text-muted-foreground">{proposal.prospectOrganization}</p>
+                            <p className="font-medium truncate">{proposal.proposalName}</p>
+                            <p className="text-sm text-muted-foreground">Version {proposal.version || 1}</p>
+                            <p className="text-xs text-muted-foreground">Deal: {proposal.dealId}</p>
                           </div>
                           <Badge variant={
-                            proposal.status === "accepted" ? "default" :
-                            proposal.status === "rejected" ? "destructive" :
+                            proposal.status === "won" ? "default" :
+                            proposal.status === "lost" ? "destructive" :
                             "secondary"
                           }>
                             {proposal.status}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>{proposal.suggestedTier} - ${proposal.estimatedValue}</span>
+                          <span>{proposal.submittedAt ? `Submitted: ${new Date(proposal.submittedAt).toLocaleDateString()}` : 'Draft'}</span>
                         </div>
                       </div>
                     ))
