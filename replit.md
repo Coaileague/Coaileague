@@ -47,6 +47,18 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **PostgreSQL**: Primary relational database.
 
 ## Recent Changes
+- **11-Feature Workforce Management Sprint (Nov 30, 2025):** Major expansion with production-ready capabilities:
+  - **Time Tracking**: Clock-in/out, timesheet reports, CSV/PDF exports, AI anomaly detection
+  - **Client Billing**: Invoice generation from tracked hours, PDF export, email sending via Resend
+  - **Advanced Scheduling**: Recurring shifts (patterns), shift swapping, one-click duplication
+  - **Employee Availability**: CRUD module, team view, availability exceptions, conflict detection
+  - **SMS Notifications**: Twilio integration, customizable shift reminders with preferences API
+  - **Calendar Sync**: iCal export/import, calendar subscriptions with tokens, Google Calendar stubs
+  - **Analytics Dashboard**: 6 metrics endpoints (time, revenue, scheduling, performance), AI insights
+  - **Heat Map Visualization**: 7x24 grid staffing intensity, AI staffing analysis and optimization
+  - **Break Compliance**: 50-state labor law configuration, auto-scheduling, compliance checking
+  - **AI Brain Platform Awareness**: 100+ features registry across 4 OS families, natural language feature discovery, diagnostic endpoints for support agents
+  - **Automation Jobs**: 11 scheduled jobs (billing, scheduling, payroll, reminders, compliance, email)
 - **Unified Config Registry Architecture (Nov 2025):** Created `shared/config/registry.ts` as single source of truth:
   - **Branding Config**: Platform identity, colors, gradients, logos, fonts
   - **Layout Config**: Breakpoints, touch targets, header/sidebar dimensions
