@@ -14,6 +14,7 @@ import { LOGOUT_CONFIG } from "@/config/logout";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { AnimatedNotificationBell } from "@/components/animated-notification-bell";
+import { WhatsNewBadge } from "@/components/whats-new-badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,6 +157,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   </>
                 ) : (
                   <>
+                    <WhatsNewBadge />
                     <AnimatedNotificationBell
                       hasNotifications={true}
                       onClick={() => setLocation("/dashboard")}
@@ -203,11 +205,14 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               {/* Mobile Menu */}
               <div className="flex md:hidden items-center gap-2 shrink-0">
                 {user && (
-                  <AnimatedNotificationBell
-                    hasNotifications={true}
-                    onClick={() => setLocation("/dashboard")}
-                    onClear={() => console.log("Notifications cleared")}
-                  />
+                  <>
+                    <WhatsNewBadge />
+                    <AnimatedNotificationBell
+                      hasNotifications={true}
+                      onClick={() => setLocation("/dashboard")}
+                      onClear={() => console.log("Notifications cleared")}
+                    />
+                  </>
                 )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>

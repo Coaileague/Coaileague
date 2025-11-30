@@ -115,41 +115,54 @@ export function WhatsNewBadge() {
     }
   };
 
+  const sparkles = [
+    { top: "-5px", right: "1px", delay: "0s" },
+    { top: "3px", right: "-5px", delay: "0.4s" },
+    { bottom: "-3px", right: "3px", delay: "0.8s" },
+    { top: "1px", left: "-4px", delay: "1.2s" },
+  ];
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button 
           variant="ghost" 
           size="icon"
-          className="relative h-9 w-9 hover:bg-white/10"
+          className="relative h-9 w-9"
           data-testid="button-whats-new"
           title="What's New"
         >
           <div className="relative inline-flex">
-            {/* Life Movement Overlay - Animated aura and particles */}
-            <div className="absolute inset-0 rounded-full animate-pulsing-halo opacity-75" style={{ width: '1em', height: '1em' }} />
-            <div className="absolute inset-0 animate-glow-aura" style={{ width: '1em', height: '1em', borderRadius: '50%' }} />
+            {/* Main sparkles icon with rainbow flash */}
+            <Sparkles className={`h-4 w-4 relative z-10 transition-all ${unviewedCount > 0 ? "animate-bell-flash-rainbow animate-bell-ring-continuous" : ""}`} />
             
-            {/* Orbiting particles around icon */}
-            <span className="absolute h-1 w-1 rounded-full bg-purple-400 animate-orbit-particle" style={{ top: '50%', left: '50%', marginTop: '-2px', marginLeft: '-2px' }} />
-            <span className="absolute h-1 w-1 rounded-full bg-pink-400 animate-orbit-particle" style={{ top: '50%', left: '50%', marginTop: '-2px', marginLeft: '-2px', animationDelay: '1s' }} />
+            {/* Twinkling stars around icon - only when unviewed updates exist */}
+            {unviewedCount > 0 && sparkles.map((sparkle, idx) => (
+              <div
+                key={idx}
+                className="absolute pointer-events-none sparkle-star animate-star-sparkle"
+                style={{
+                  top: sparkle.top,
+                  right: sparkle.right,
+                  bottom: sparkle.bottom,
+                  left: sparkle.left,
+                  animationDelay: sparkle.delay,
+                  color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
+                  filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
+                }}
+              />
+            ))}
             
-            {/* Main sparkles icon with energy pulse */}
-            <Sparkles className="h-4 w-4 animate-sparkles-combined animate-energy-pulse relative z-10" />
-            
+            {/* Badge showing unviewed count with rainbow effect */}
             {unviewedCount > 0 && (
-              <>
-                {/* Splat particles on badge */}
-                <span className="absolute -top-2 -right-2 h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-splat-1" />
-                <span className="absolute -top-2 -right-2 h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-splat-2" />
-                <span className="absolute -top-2 -right-2 h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-splat-3" />
-                <span className="absolute -top-2 -right-2 h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-splat-4" />
-                
-                {/* Main badge with ripple */}
-                <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center text-[10px] font-bold animate-badge-glow animate-ripple">
-                  {unviewedCount > 9 ? '9+' : unviewedCount}
-                </span>
-              </>
+              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-badge-pulse"
+                style={{
+                  background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
+                  animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
+                }}
+              >
+                {unviewedCount > 9 ? '9+' : unviewedCount}
+              </span>
             )}
           </div>
         </Button>
