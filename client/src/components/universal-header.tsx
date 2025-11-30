@@ -15,7 +15,6 @@ import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { AnimatedNotificationBell } from "@/components/animated-notification-bell";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
-import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,16 +33,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Fetch notification count from AI Brain (RBAC controlled on backend)
-  const { data: notificationData } = useQuery({
-    queryKey: ['/api/notifications/unread-count'],
-    enabled: !!user, // Only fetch if user is authenticated
-    staleTime: 30000,
-  });
-
-  const unreadNotifications = notificationData?.count || 0;
-  
-  // Show features for authenticated users (RBAC check happens on backend)
+  // RBAC-controlled: Only show notification features to authenticated users
   const showNotificationFeatures = !!user;
   
   // Safe scroll function for SPA navigation
@@ -174,11 +164,11 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                       <>
                         <WhatsNewBadge />
                         <AnimatedNotificationBell
-                          hasNotifications={unreadNotifications > 0}
+                          hasNotifications={true}
                           onClick={() => setLocation("/dashboard")}
                           className="mr-2"
                           onClear={() => {
-                            // Invalidate notification count when cleared
+                            // Notifications cleared
                           }}
                         />
                       </>
@@ -227,10 +217,10 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   <>
                     <WhatsNewBadge />
                     <AnimatedNotificationBell
-                      hasNotifications={unreadNotifications > 0}
+                      hasNotifications={true}
                       onClick={() => setLocation("/dashboard")}
                       onClear={() => {
-                        // Invalidate notification count when cleared
+                        // Notifications cleared
                       }}
                     />
                   </>
