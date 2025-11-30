@@ -3,6 +3,7 @@ import { Bell, X } from "lucide-react";
 
 interface AnimatedNotificationBellProps {
   hasNotifications?: boolean;
+  notificationCount?: number;
   onClear?: () => void;
   onClick?: () => void;
   className?: string;
@@ -10,6 +11,7 @@ interface AnimatedNotificationBellProps {
 
 export function AnimatedNotificationBell({
   hasNotifications = true,
+  notificationCount = 0,
   onClear,
   onClick,
   className = "",
@@ -31,10 +33,10 @@ export function AnimatedNotificationBell({
   };
 
   const sparkles = [
-    { top: "-6px", right: "2px", delay: "0s" },
-    { top: "4px", right: "-6px", delay: "0.4s" },
-    { bottom: "-4px", right: "4px", delay: "0.8s" },
-    { top: "2px", left: "-5px", delay: "1.2s" },
+    { top: "-6px", right: "0px", delay: "0s" },
+    { top: "2px", right: "-6px", delay: "0.3s" },
+    { bottom: "-5px", right: "2px", delay: "0.6s" },
+    { top: "0px", left: "-6px", delay: "0.9s" },
   ];
 
   return (
@@ -48,56 +50,58 @@ export function AnimatedNotificationBell({
       style={{ willChange: 'auto' }}
     >
       <div className="relative inline-flex items-center justify-center" style={{ width: '20px', height: '20px', willChange: 'transform' }}>
+        {/* Main bell icon with spinning color-cycling animation when notifications exist */}
         <div
           className={`absolute inset-0 flex items-center justify-center ${
-            showSparkles ? "animate-bell-ring-continuous animate-bell-flash-rainbow" : ""
+            showSparkles ? "animate-star-spin-colors" : ""
           }`}
-          style={{ willChange: 'transform', transformOrigin: 'center' }}
+          style={showSparkles ? { willChange: 'transform, filter' } : undefined}
         >
           <Bell className="h-5 w-5" />
         </div>
 
-        {showSparkles && (
+        {/* Rotating sparkling dots around icon - same pattern as WhatsNew badge */}
+        {showSparkles && sparkles.map((sparkle, idx) => (
           <div
-            className={`absolute -top-2 -right-2 h-2.5 w-2.5 rounded-full shadow-lg animate-badge-pulse ${
+            key={idx}
+            className={`absolute pointer-events-none sparkle-star animate-star-spin-colors ${
               fadeOut ? "opacity-0" : "opacity-100"
             } transition-opacity duration-300`}
             style={{
-              background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
-              backgroundSize: "200% 200%",
-              animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
-              willChange: 'box-shadow, opacity',
+              top: sparkle.top,
+              right: sparkle.right,
+              bottom: sparkle.bottom,
+              left: sparkle.left,
+              animationDelay: sparkle.delay,
+              willChange: 'transform, filter, color',
             }}
           />
+        ))}
+
+        {/* Number badge with glowing effect - shows notification count */}
+        {showSparkles && notificationCount > 0 && (
+          <span 
+            className={`absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-whatsnew-badge-glow ${
+              fadeOut ? "opacity-0" : "opacity-100"
+            } transition-opacity duration-300`}
+            style={{
+              background: "linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4)",
+            }}
+          >
+            {notificationCount > 9 ? '9+' : notificationCount}
+          </span>
         )}
 
-        {showSparkles &&
-          sparkles.map((sparkle, idx) => (
-            <div
-              key={idx}
-              className={`absolute pointer-events-none sparkle-star animate-star-sparkle ${
-                fadeOut ? "opacity-0" : ""
-              } transition-opacity duration-300`}
-              style={{
-                top: sparkle.top,
-                right: sparkle.right,
-                bottom: sparkle.bottom,
-                left: sparkle.left,
-                animationDelay: sparkle.delay,
-                color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
-                filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
-                willChange: 'transform, opacity',
-              }}
-            />
-          ))}
-
+        {/* Clear button on hover - hidden on mobile, visible on desktop */}
         {showSparkles && (
           <div
             onClick={(e) => {
               e.stopPropagation();
               handleClearNotifications();
             }}
-            className="absolute -bottom-1 -right-1 bg-destructive rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover-elevate cursor-pointer"
+            className={`absolute -bottom-1 -right-1 bg-destructive rounded-full p-0.5 transition-opacity duration-200 hover-elevate cursor-pointer ${
+              fadeOut ? "opacity-0" : "opacity-100"
+            } hidden sm:opacity-0 sm:group-hover:opacity-100 sm:flex items-center justify-center`}
             role="button"
             tabIndex={0}
             aria-label="Clear notifications"
