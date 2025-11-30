@@ -910,7 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(featureUpdates)
         .where(
           and(
-            eq(featureUpdates.status, 'active'),
+            eq(featureUpdates.status, 'published'),
             eq(featureUpdates.isMajor, true), // Only show major updates
             or(
               isNull(featureUpdates.releaseAt),
@@ -1016,7 +1016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(featureUpdates)
         .where(
           and(
-            eq(featureUpdates.status, 'active'),
+            eq(featureUpdates.status, 'published'),
             eq(featureUpdates.isMajor, true),
             or(
               isNull(featureUpdates.releaseAt),
