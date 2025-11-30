@@ -37,7 +37,7 @@ interface FeatureUpdate {
   title: string;
   description: string;
   category: 'new' | 'improvement' | 'fix' | 'security' | 'maintenance';
-  releaseDate: Date;
+  releaseDate: string;
   learnMoreUrl?: string;
 }
 
