@@ -130,10 +130,11 @@ export default function Settings() {
   });
 
   // Fetch labor law rules for jurisdiction selector
-  const { data: laborLawRules } = useQuery<any[]>({
+  const { data: laborLawRulesResponse } = useQuery<{ success: boolean; data: any[] }>({
     queryKey: ['/api/breaks/rules'],
     enabled: isAuthenticated,
   });
+  const laborLawRules = laborLawRulesResponse?.data || [];
 
   // Fetch current workspace jurisdiction rules
   const { data: workspaceBreakRules } = useQuery<any>({
@@ -1365,7 +1366,7 @@ export default function Settings() {
                         <span className="text-xs text-muted-foreground">Federal minimum standards</span>
                       </div>
                     </SelectItem>
-                    {laborLawRules?.filter((rule: any) => rule.jurisdiction !== 'US-FEDERAL').map((rule: any) => (
+                    {laborLawRules.filter((rule: any) => rule.jurisdiction !== 'US-FEDERAL').map((rule: any) => (
                       <SelectItem key={rule.jurisdiction} value={rule.jurisdiction}>
                         <div className="flex flex-col">
                           <span className="font-medium">{rule.jurisdictionName}</span>
@@ -1546,10 +1547,7 @@ function CalendarIntegrationCard() {
 
   const createSubscriptionMutation = useMutation({
     mutationFn: async (data: { name: string }) => {
-      return apiRequest('/api/calendar/subscriptions', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', '/api/calendar/subscriptions', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/calendar/subscriptions'] });
@@ -1569,9 +1567,7 @@ function CalendarIntegrationCard() {
 
   const deleteSubscriptionMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/calendar/subscriptions/${id}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/calendar/subscriptions/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/calendar/subscriptions'] });
@@ -1591,9 +1587,7 @@ function CalendarIntegrationCard() {
 
   const regenerateTokenMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/calendar/subscriptions/${id}/regenerate`, {
-        method: 'POST',
-      });
+      return apiRequest('POST', `/api/calendar/subscriptions/${id}/regenerate`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/calendar/subscriptions'] });
