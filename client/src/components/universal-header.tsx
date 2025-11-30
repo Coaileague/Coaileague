@@ -102,14 +102,17 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 showWordmark={true}
               />
             </div>
-            {/* Mobile: Larger icon for visibility */}
-            <div className="block sm:hidden">
+            {/* Mobile: Icon with text for visibility */}
+            <div className="flex sm:hidden items-center gap-2">
               <CoAIleagueLogo 
-                width={48} 
-                height={48} 
+                width={36} 
+                height={36} 
                 onlyIcon={true}
                 className="flex-shrink-0"
               />
+              <span className="font-bold text-base bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                CoAIleague
+              </span>
             </div>
           </button>
 

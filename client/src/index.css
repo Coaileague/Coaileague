@@ -356,7 +356,8 @@
   transform-origin: center;
 }
 
-.animate-badge-glow {
+.animate-star-spin-colors,
+  .animate-badge-glow {
   animation: badgeGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   will-change: box-shadow, opacity;
 }
@@ -472,6 +473,41 @@
 
 .animate-whatsnew-badge-glow {
   animation: whatsnewBadgeGlow 3s ease-in-out infinite;
+}
+
+/* Spinning color-cycling star animation for WhatsNewBadge */
+@keyframes starSpinColors {
+  0% {
+    transform: rotate(0deg);
+    color: #06b6d4;
+    filter: drop-shadow(0 0 4px #06b6d4);
+  }
+  25% {
+    transform: rotate(90deg);
+    color: #8b5cf6;
+    filter: drop-shadow(0 0 4px #8b5cf6);
+  }
+  50% {
+    transform: rotate(180deg);
+    color: #f472b6;
+    filter: drop-shadow(0 0 4px #f472b6);
+  }
+  75% {
+    transform: rotate(270deg);
+    color: #14b8a6;
+    filter: drop-shadow(0 0 4px #14b8a6);
+  }
+  100% {
+    transform: rotate(360deg);
+    color: #06b6d4;
+    filter: drop-shadow(0 0 4px #06b6d4);
+  }
+}
+
+.animate-star-spin-colors {
+  animation: starSpinColors 2.5s linear infinite;
+  will-change: transform, filter, color;
+  transform-origin: center;
 }
 
 /* ============================================================================
@@ -1044,6 +1080,7 @@
   .animate-splat-5,
   .animate-ripple,
   .animate-ripple-continuous,
+  .animate-star-spin-colors,
   .animate-badge-glow {
     animation: none !important;
   }

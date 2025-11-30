@@ -133,22 +133,24 @@ export function WhatsNewBadge() {
           title="What's New"
         >
           <div className="relative inline-flex">
-            {/* Main sparkles icon with cyan pulse animation */}
-            <Sparkles className={`h-4 w-4 relative z-10 transition-all ${unviewedCount > 0 ? "animate-cyan-pulse animate-sparkles-rotate" : ""}`} />
+            {/* Main sparkles icon with spinning color-cycling animation */}
+            <Sparkles 
+              className={`h-4 w-4 relative z-10 transition-all ${unviewedCount > 0 ? "animate-star-spin-colors" : ""}`} 
+              style={unviewedCount > 0 ? { willChange: 'transform, filter' } : undefined}
+            />
             
-            {/* Rotating sparkling dots around icon - cyan theme */}
+            {/* Rotating sparkling dots around icon - spinning color-cycling theme */}
             {unviewedCount > 0 && sparkles.map((sparkle, idx) => (
               <div
                 key={idx}
-                className="absolute pointer-events-none sparkle-star animate-sparkles-rotate"
+                className="absolute pointer-events-none sparkle-star animate-star-spin-colors"
                 style={{
                   top: sparkle.top,
                   right: sparkle.right,
                   bottom: sparkle.bottom,
                   left: sparkle.left,
                   animationDelay: sparkle.delay,
-                  color: ["#06b6d4", "#4ecdc4", "#0891b2", "#14b8a6"][idx],
-                  filter: `drop-shadow(0 0 4px ${["#06b6d4", "#4ecdc4", "#0891b2", "#14b8a6"][idx]})`,
+                  willChange: 'transform, filter, color',
                 }}
               />
             ))}
