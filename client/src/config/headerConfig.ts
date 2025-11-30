@@ -16,8 +16,8 @@ export const HEADER_CONFIG = {
 
 export const HEADER_SPACING = {
   desktopNavGap: "gap-6", // Space between nav items
-  mobileIconGap: "gap-0.5", // Tight spacing for mobile icons (notification bell, menu)
-  rightSideGap: "gap-2", // Space between buttons/icons on right side (auth area)
+  mobileIconGap: "gap-0", // Tight spacing for mobile icons (notification bell, menu)
+  rightSideGap: "gap-1", // Space between buttons/icons on right side (auth area)
   containerPadding: "px-3 sm:px-6",
 };
 

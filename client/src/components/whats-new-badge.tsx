@@ -128,7 +128,7 @@ export function WhatsNewBadge() {
         <Button 
           variant="ghost" 
           size="icon"
-          className="relative h-9 w-9"
+          className="relative h-10 w-10"
           data-testid="button-whats-new"
           title="What's New"
         >
