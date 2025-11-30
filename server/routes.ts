@@ -115,6 +115,7 @@ import { roomAnalyticsService } from "./services/roomAnalyticsService";
 import { documentExtractionService } from "./services/documentExtraction";
 import { notificationEngine } from "./services/universalNotificationEngine";
 import { issueDetectionService } from "./services/issueDetectionService";
+import { aiNotificationService } from "./services/aiNotificationService";
 import aiBrainConfig from "@shared/config/aiBrainGuardrails";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
@@ -441,6 +442,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // NOTIFICATIONS & FEATURE UPDATES
   // ============================================================================
+
+
+  // Combined notifications endpoint - returns notifications + maintenance alerts for universal popover
+  app.get('/api/notifications/combined', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      const member = await storage.getWorkspaceMemberByUserId(userId);
+      const workspaceId = workspace?.id || member?.workspaceId;
+      
+      if (!workspaceId) {
+        return res.json({
+          maintenanceAlerts: [],
+          notifications: [],
+          unreadCount: 0,
+        });
+      }
+      
+      // Get notifications
+      const notifications = await storage.getNotificationsByUser(userId, workspaceId);
+      const unreadCount = notifications.filter(n => !n.isRead).length;
+      
+      // Get active maintenance alerts
+      const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      
+      res.json({
+        maintenanceAlerts,
+        notifications: notifications.slice(0, 20),
+        unreadCount,
+      });
+    } catch (error) {
+      console.error('Error fetching combined notifications:', error);
+      res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+
+  // Acknowledge maintenance alert
+  app.post('/api/maintenance-alerts/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id: alertId } = req.params;
+      
+      const success = await aiNotificationService.acknowledgeMaintenanceAlert(alertId, userId);
+      
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ message: 'Failed to acknowledge alert' });
+      }
+    } catch (error) {
+      console.error('Error acknowledging maintenance alert:', error);
+      res.status(500).json({ message: 'Failed to acknowledge alert' });
+    }
+  });
 
   // Get user notifications
   app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res) => {
