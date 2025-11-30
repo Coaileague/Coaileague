@@ -36,6 +36,7 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **Audit Logging:** Comprehensive audit logging with 365-day retention policy.
 - **Security:** AES-256-GCM encryption, PBKDF2-SHA256 key derivation, RBAC, per-org credential isolation, and credential expiry warnings.
 - **Unified Pages:** Consolidated sales pages into `workspace-sales.tsx` and marketing/pricing pages into `universal-marketing.tsx`, driven by centralized configuration.
+- **Unified Config Registry:** Single source of truth at `shared/config/registry.ts` with Zod validation for branding, navigation, copy, services, and features. Edit once, update everywhere.
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
@@ -46,6 +47,15 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **PostgreSQL**: Primary relational database.
 
 ## Recent Changes
+- **Unified Config Registry Architecture (Nov 2025):** Created `shared/config/registry.ts` as single source of truth:
+  - **Branding Config**: Platform identity, colors, gradients, logos, fonts
+  - **Layout Config**: Breakpoints, touch targets, header/sidebar dimensions
+  - **Navigation Config**: Module families, routes, mobile/desktop hrefs, tier gates
+  - **Copy Config**: UI text, error messages, success messages
+  - **Services Config**: Internal/external service endpoints
+  - **Features Config**: Feature flags with tier-based enablement
+  - **Helper Functions**: `getModule()`, `getModulesForTier()`, `isFeatureEnabled()`, `getResponsiveHref()`
+  - **Zod Validation**: Runtime config validation with full TypeScript types
 - **Chat Server Dynamic Configuration (Nov 2025):** Major cleanup to eliminate hardcoded values:
   - Removed ALL simulated/fake users (14 staff/customer users deleted from websocket.ts)
   - Removed entire chat simulation function and all `isSimulatedUser` references
