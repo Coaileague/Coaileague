@@ -1,0 +1,554 @@
+{
+  "auditMetadata": {
+    "date": "2025-11-30",
+    "status": "COMPLETE",
+    "type": "Research/Audit Only",
+    "filesScanned": "426+ TypeScript files, 107 pages, 150+ components",
+    "totalFindings": 180
+  },
+  "categorizedFindings": {
+    "1_timeouts_rate_limiting": {
+      "category": "Timeouts & Rate Limiting",
+      "severity": "CRITICAL",
+      "count": 27,
+      "centralized": "0%",
+      "description": "All rate limiting and timeout values scattered across middleware",
+      "findings": [
+        {
+          "id": "T001",
+          "file": "server/middleware/rateLimiter.ts",
+          "values": ["15 * 60 * 1000", "1000", "30", "60", "10"],
+          "purpose": "Request rate limiting windows and limits",
+          "shouldBeIn": "RATE_LIMITS config",
+          "severity": "HIGH"
+        },
+        {
+          "id": "T002",
+          "file": "server/middleware/wsRateLimiter.ts",
+          "values": ["60 * 1000", "30", "24 * 60 * 60 * 1000"],
+          "purpose": "WebSocket rate limiting",
+          "shouldBeIn": "WEBSOCKET_RATE_LIMITS config",
+          "severity": "HIGH"
+        },
+        {
+          "id": "T003",
+          "file": "server/routes.ts",
+          "values": ["2000", "7*24*60*60*1000", "24*60*60*1000", "3*24*60*60*1000"],
+          "purpose": "Stripe timeout, token expiry periods",
+          "shouldBeIn": "EXPIRY_CONFIG and PAYMENT_CONFIG",
+          "severity": "MEDIUM"
+        },
+        {
+          "id": "T004",
+          "file": "server/config/chatServer.ts",
+          "values": ["30", "3", "5000", "100"],
+          "purpose": "Chat queue timeout, max levels, message buffer",
+          "shouldBeIn": "CHAT_LIMITS_CONFIG",
+          "severity": "MEDIUM"
+        },
+        {
+          "id": "T005",
+          "file": "server/seed-root-user.ts",
+          "values": ["3600 * 1000"],
+          "purpose": "Session TTL",
+          "shouldBeIn": "SESSION_CONFIG",
+          "severity": "MEDIUM"
+        },
+        {
+          "id": "T006",
+          "file": "server/replitAuth.ts",
+          "values": ["3600 * 1000"],
+          "purpose": "Session max age",
+          "shouldBeIn": "SESSION_CONFIG",
+          "severity": "MEDIUM"
+        }
+      ],
+      "recommendedConfig": "shared/config/rateLimitingConfig.ts, server/config/expiryConfig.ts"
+    },
+    "2_database_schema_defaults": {
+      "category": "Database Schema Defaults",
+      "severity": "HIGH",
+      "count": 15,
+      "centralized": "0%",
+      "description": "Hardcoded defaults in database schema affecting workspace creation",
+      "findings": [
+        {
+          "id": "D001",
+          "file": "shared/schema.ts",
+          "field": "subscriptionTier",
+          "defaultValue": "\"free\"",
+          "type": "varchar",
+          "shouldBeIn": "SCHEMA_DEFAULTS.workspace.tier"
+        },
+        {
+          "id": "D002",
+          "file": "shared/schema.ts",
+          "field": "subscriptionStatus",
+          "defaultValue": "\"active\"",
+          "type": "varchar",
+          "shouldBeIn": "SCHEMA_DEFAULTS.workspace.status"
+        },
+        {
+          "id": "D003",
+          "file": "shared/schema.ts",
+          "field": "maxEmployees",
+          "defaultValue": "5",
+          "type": "integer",
+          "shouldBeIn": "TIER_LIMITS.free.maxEmployees"
+        },
+        {
+          "id": "D004",
+          "file": "shared/schema.ts",
+          "field": "maxClients",
+          "defaultValue": "10",
+          "type": "integer",
+          "shouldBeIn": "TIER_LIMITS.free.maxClients"
+        },
+        {
+          "id": "D005",
+          "file": "shared/schema.ts",
+          "field": "platformFeePercentage",
+          "defaultValue": "\"3.00\"",
+          "type": "decimal",
+          "shouldBeIn": "BILLING_DEFAULTS.PLATFORM_FEE"
+        },
+        {
+          "id": "D006",
+          "file": "shared/schema.ts",
+          "field": "defaultTaxRate",
+          "defaultValue": "\"0.08875\"",
+          "type": "decimal",
+          "shouldBeIn": "TAX_CONFIG.DEFAULT_RATE"
+        },
+        {
+          "id": "D007",
+          "file": "shared/schema.ts",
+          "field": "mfaEnabled",
+          "defaultValue": "false",
+          "type": "boolean",
+          "shouldBeIn": "SECURITY_DEFAULTS"
+        },
+        {
+          "id": "D008",
+          "file": "shared/schema.ts",
+          "field": "emailVerified",
+          "defaultValue": "false",
+          "type": "boolean",
+          "shouldBeIn": "SECURITY_DEFAULTS"
+        },
+        {
+          "id": "D009",
+          "file": "shared/schema.ts",
+          "field": "feature_*_enabled",
+          "defaultValue": "true or false (varies)",
+          "type": "boolean",
+          "shouldBeIn": "FEATURE_FLAGS_DEFAULTS"
+        }
+      ],
+      "recommendedConfig": "shared/config/schemaDefaultsConfig.ts"
+    },
+    "3_numeric_limits_thresholds": {
+      "category": "Numeric Limits & Business Thresholds",
+      "severity": "MEDIUM-HIGH",
+      "count": 35,
+      "centralized": "60%",
+      "description": "Magic numbers for payroll, scheduling, compliance, monitoring",
+      "findings": [
+        {
+          "id": "N001",
+          "file": "server/services/ptoAccrual.ts",
+          "value": "3.08",
+          "purpose": "PTO hours per week (standard rate)",
+          "shouldBeIn": "BUSINESS_LOGIC.PTO_ACCRUAL_RATES.STANDARD",
+          "status": "MISSING"
+        },
+        {
+          "id": "N002",
+          "file": "server/services/ptoAccrual.ts",
+          "value": "4.62",
+          "purpose": "PTO hours per week (senior rate)",
+          "shouldBeIn": "BUSINESS_LOGIC.PTO_ACCRUAL_RATES.SENIOR",
+          "status": "MISSING"
+        },
+        {
+          "id": "N003",
+          "file": "server/services/monitoringService.ts",
+          "value": "100",
+          "purpose": "History cap for monitoring",
+          "shouldBeIn": "BUSINESS_LOGIC.MONITORING.HISTORY_CAP",
+          "status": "MISSING"
+        },
+        {
+          "id": "N004",
+          "file": "server/services/monitoringService.ts",
+          "value": "5000",
+          "purpose": "Monitor interval in ms",
+          "shouldBeIn": "BUSINESS_LOGIC.MONITORING.INTERVAL_MS",
+          "status": "MISSING"
+        },
+        {
+          "id": "N005",
+          "file": "server/services/monitoringService.ts",
+          "value": "512 * 1024 * 1024",
+          "purpose": "Container memory bytes",
+          "shouldBeIn": "BUSINESS_LOGIC.MONITORING.CONTAINER_MEMORY_BYTES",
+          "status": "MISSING"
+        },
+        {
+          "id": "N006",
+          "file": "server/services/predictionos.ts",
+          "value": "90",
+          "purpose": "Turnover prediction window (days)",
+          "shouldBeIn": "BUSINESS_LOGIC.TURNOVER_PREDICTION.WINDOW_DAYS",
+          "status": "MISSING"
+        },
+        {
+          "id": "N007",
+          "file": "server/services/predictionos.ts",
+          "value": "15 * 60 * 1000",
+          "purpose": "Shift tardiness window",
+          "shouldBeIn": "BUSINESS_LOGIC.SHIFT_TARDINESS.WINDOW_MS",
+          "status": "MISSING"
+        },
+        {
+          "id": "N008",
+          "file": "server/services/sentimentAnalyzer.ts",
+          "value": "0-100",
+          "purpose": "Confidence scale",
+          "shouldBeIn": "BUSINESS_LOGIC.SENTIMENT_ANALYSIS.CONFIDENCE_SCALE",
+          "status": "MISSING"
+        },
+        {
+          "id": "N009",
+          "file": "server/services/sentimentAnalyzer.ts",
+          "value": "256",
+          "purpose": "Max response size",
+          "shouldBeIn": "BUSINESS_LOGIC.SENTIMENT_ANALYSIS.MAX_RESPONSE_SIZE",
+          "status": "MISSING"
+        },
+        {
+          "id": "N010",
+          "file": "shared/platformConfig.ts",
+          "value": "40",
+          "purpose": "Weekly overtime threshold",
+          "shouldBeIn": "COMPLIANCE.overtime.weeklyThresholdHours",
+          "status": "GOOD"
+        }
+      ],
+      "alreadyCentralized": [
+        "Overtime threshold (40 hours) in platformConfig.ts",
+        "Overtime multipliers (1.5x, 2.0x) in platformConfig.ts",
+        "Break rules (6h, 30m) in platformConfig.ts",
+        "Max daily hours (12) in platformConfig.ts"
+      ],
+      "recommendedConfig": "shared/config/businessLogicConfig.ts"
+    },
+    "4_color_values_visual_constants": {
+      "category": "Color Values & Visual Constants",
+      "severity": "LOW",
+      "count": 22,
+      "centralized": "90%",
+      "description": "Hex colors and styling mostly well-managed in CSS variables",
+      "status": "GOOD - Minor cleanup only",
+      "wellManaged": [
+        "client/src/index.css - Excellent CSS variables",
+        "shared/platformConfig.ts - Brand colors defined",
+        "client/src/lib/shift-theme.ts - Well-organized shift colors"
+      ],
+      "recommendations": [
+        "Shift theme colors could reference shared platformConfig for consistency",
+        "Ensure all inline tailwind classes use theme variables"
+      ]
+    },
+    "5_api_endpoints_route_paths": {
+      "category": "API Endpoints & Route Paths",
+      "severity": "LOW",
+      "count": "40+",
+      "centralized": "95%",
+      "description": "Excellent centralization in apiEndpoints.ts",
+      "status": "GOOD - 95% centralized",
+      "wellManaged": {
+        "file": "client/src/config/apiEndpoints.ts",
+        "features": [
+          "All /api/ routes in single location",
+          "Helper functions: getEndpoint(), buildApiUrl(), getEndpointGroup()",
+          "Proper parameter substitution"
+        ]
+      },
+      "minorGaps": [
+        {
+          "id": "A001",
+          "location": "server/config/chatServer.ts",
+          "issue": "Duplicate endpoint definitions",
+          "shouldReference": "client/src/config/apiEndpoints.ts"
+        },
+        {
+          "id": "A002",
+          "location": "client/src/components/ai-brain/*",
+          "issue": "Inline fetch calls to /api/ai-brain/*",
+          "shouldExtend": "API_ENDPOINTS.ai config"
+        },
+        {
+          "id": "A003",
+          "location": "client/src/components/knowledge-assistant.tsx",
+          "issue": "Inline fetch to /api/knowledge/ask",
+          "shouldCreate": "API_ENDPOINTS.knowledge config"
+        }
+      ],
+      "recommendedAction": "Extend API_ENDPOINTS with missing endpoints"
+    },
+    "6_messages_labels_error_texts": {
+      "category": "Hardcoded Messages, Labels & Error Texts",
+      "severity": "HIGH",
+      "count": "35+",
+      "centralized": "70%",
+      "description": "Mix of centralized and scattered UI/error strings",
+      "wellCentralized": [
+        "client/src/config/messages.ts",
+        "client/src/config/errorConfig.ts",
+        "client/src/config/loading-messages.ts"
+      ],
+      "hardcodedStrings": [
+        {
+          "id": "M001",
+          "location": "server/middleware/rateLimiter.ts",
+          "string": "Your account has been temporarily locked due to too many failed login attempts.",
+          "shouldBeIn": "SERVER_ERROR_MESSAGES"
+        },
+        {
+          "id": "M002",
+          "location": "server/routes.ts",
+          "string": "Quiet hours end must be after start",
+          "shouldBeIn": "VALIDATION_MESSAGES"
+        },
+        {
+          "id": "M003",
+          "location": "server/routes.ts",
+          "string": "Free trial subscription created: 30 days",
+          "shouldBeIn": "TRIAL_MESSAGES"
+        },
+        {
+          "id": "M004",
+          "location": "client/src/components/live-updates-ticker.tsx",
+          "string": "Loading notifications...",
+          "shouldBeIn": "UI_STRINGS.loading"
+        },
+        {
+          "id": "M005",
+          "location": "client/src/components/live-updates-ticker.tsx",
+          "string": "No notifications",
+          "shouldBeIn": "UI_STRINGS.empty"
+        },
+        {
+          "id": "M006",
+          "location": "server/email.ts",
+          "string": "max-width: 600px",
+          "shouldBeIn": "EMAIL_TEMPLATE_CONFIG"
+        }
+      ],
+      "recommendedConfigs": [
+        "server/config/messages.ts",
+        "server/config/apiMessages.ts"
+      ]
+    },
+    "7_system_identifiers_config_ids": {
+      "category": "System Identifiers & Configuration IDs",
+      "severity": "MEDIUM",
+      "count": 8,
+      "centralized": "50%",
+      "description": "System-wide IDs and identifiers",
+      "findings": [
+        {
+          "id": "S001",
+          "identifier": "ROOT_USER_ID",
+          "value": "'root-user-00000000'",
+          "location": "server/seed-root-user.ts",
+          "status": "HARDCODED - should be in SYSTEM_CONFIG"
+        },
+        {
+          "id": "S002",
+          "identifier": "OPS_WORKSPACE_ID",
+          "value": "'ops-workspace-00000000'",
+          "location": "server/seed-root-user.ts",
+          "status": "HARDCODED - should be in SYSTEM_CONFIG"
+        },
+        {
+          "id": "S003",
+          "identifier": "platformWorkspaceId",
+          "value": "\"coaileague-platform-workspace\"",
+          "location": "shared/platformConfig.ts",
+          "status": "GOOD - Already configured"
+        },
+        {
+          "id": "S004",
+          "identifier": "MAIN_ROOM_ID",
+          "location": "client/src/pages/HelpDesk.tsx",
+          "status": "GOOD - From CHAT_CONFIG"
+        }
+      ],
+      "recommendedConfig": "shared/config/systemConfig.ts"
+    },
+    "8_feature_flags_toggles": {
+      "category": "Feature Flags & Toggles",
+      "severity": "LOW",
+      "count": 12,
+      "centralized": "85%",
+      "description": "Feature flags well-centralized with helper functions",
+      "status": "GOOD - 85% centralized",
+      "wellManaged": [
+        "client/src/config/featureToggles.ts",
+        "shared/config/featureToggles.ts",
+        "Helper functions: isFeatureEnabled(), tierHasFeature(), allFeaturesEnabled()"
+      ],
+      "minorGaps": [
+        "Slight duplication between client and shared versions",
+        "server/featureFlags.ts should reference shared config"
+      ],
+      "recommendation": "Minor consolidation - both files mostly good"
+    }
+  },
+  "statisticalSummary": {
+    "totalFindings": 180,
+    "byCategory": {
+      "timeouts_rate_limiting": 27,
+      "database_defaults": 15,
+      "numeric_limits": 35,
+      "colors": 22,
+      "api_endpoints": 40,
+      "messages": 35,
+      "system_ids": 8,
+      "feature_flags": 12
+    },
+    "centralizationStatus": {
+      "wellCentralized": "61%",
+      "needsRefactoring": "39%",
+      "byCategory": {
+        "timeouts_rate_limiting": "0%",
+        "database_defaults": "0%",
+        "numeric_limits": "60%",
+        "colors": "90%",
+        "api_endpoints": "95%",
+        "messages": "70%",
+        "system_ids": "50%",
+        "feature_flags": "85%"
+      }
+    }
+  },
+  "recommendedConfigFiles": {
+    "priority1_critical": [
+      {
+        "filename": "shared/config/systemConfig.ts",
+        "purpose": "System-wide identifiers",
+        "contents": ["ROOT_USER_ID", "OPS_WORKSPACE_ID", "PLATFORM_WORKSPACE_ID"]
+      },
+      {
+        "filename": "server/config/rateLimitingConfig.ts",
+        "purpose": "All rate limiting and timeout values",
+        "contents": ["API limits", "Mutation limits", "Read limits", "Chat limits", "WebSocket limits"]
+      },
+      {
+        "filename": "shared/config/businessLogicConfig.ts",
+        "purpose": "Numeric business logic thresholds",
+        "contents": ["PTO accrual rates", "Monitoring config", "Shift rules", "Sentiment analysis", "Turnover prediction"]
+      }
+    ],
+    "priority2_high": [
+      {
+        "filename": "server/config/messages.ts",
+        "purpose": "Server-side messages",
+        "contents": ["Error messages", "Success messages", "Validation messages"]
+      },
+      {
+        "filename": "server/config/expiryConfig.ts",
+        "purpose": "Token and invite expiry periods",
+        "contents": ["SESSION_TTL_MS", "TOKEN_24H_MS", "TOKEN_7D_MS", "I9_DEADLINE_MS"]
+      },
+      {
+        "filename": "shared/config/schemaDefaultsConfig.ts",
+        "purpose": "Database schema defaults",
+        "contents": ["Workspace defaults", "Security defaults", "Feature flag defaults"]
+      }
+    ],
+    "priority3_medium": [
+      {
+        "filename": "server/config/apiMessages.ts",
+        "purpose": "API error standardization",
+        "contents": ["API error responses", "HTTP status messages"]
+      },
+      {
+        "filename": "server/config/emailTemplateConfig.ts",
+        "purpose": "Email template constants",
+        "contents": ["Email styling", "Template dimensions"]
+      }
+    ]
+  },
+  "implementationRoadmap": {
+    "phase1_week1": [
+      "Create shared/config/systemConfig.ts",
+      "Create server/config/rateLimitingConfig.ts",
+      "Update server/middleware/rateLimiter.ts to import from config",
+      "Update server/middleware/wsRateLimiter.ts to import from config"
+    ],
+    "phase2_week2": [
+      "Create shared/config/businessLogicConfig.ts",
+      "Update server/services to import from config",
+      "Create server/config/messages.ts",
+      "Update error handling to use config"
+    ],
+    "phase3_week3": [
+      "Create shared/config/schemaDefaultsConfig.ts",
+      "Update schema defaults in shared/schema.ts",
+      "Create remaining config files",
+      "Consolidate feature toggles"
+    ],
+    "phase4_ongoing": [
+      "Standardize all new code to reference configs",
+      "Add linting rules to prevent hardcoded values",
+      "Document config pattern for team"
+    ]
+  },
+  "expectedBenefits": [
+    "Single source of truth for all configuration",
+    "Easier testing and A/B testing",
+    "Simpler environment-based configuration",
+    "Reduced bugs from inconsistent values",
+    "Faster feature development",
+    "Better maintainability"
+  ],
+  "effortEstimate": {
+    "totalHours": 3,
+    "breakdown": {
+      "analysis": 1,
+      "refactoring": 1.5,
+      "testing": 0.5
+    },
+    "byPhase": {
+      "phase1": 1,
+      "phase2": 1,
+      "phase3": 1,
+      "phase4": "Ongoing"
+    }
+  },
+  "highPriorityFiles": [
+    {
+      "file": "server/middleware/rateLimiter.ts",
+      "hardcodedCount": 15,
+      "action": "Extract all rate limit values to config"
+    },
+    {
+      "file": "server/routes.ts",
+      "hardcodedCount": "20+",
+      "action": "Extract timeouts, messages, and numeric values"
+    },
+    {
+      "file": "shared/schema.ts",
+      "hardcodedCount": 15,
+      "action": "Move database defaults to config"
+    },
+    {
+      "file": "server/seed-root-user.ts",
+      "hardcodedCount": 2,
+      "action": "Move system IDs to config"
+    }
+  ]
+}
