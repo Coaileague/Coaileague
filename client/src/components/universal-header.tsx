@@ -116,7 +116,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
           {variant === "public" ? (
             <>
               {/* Desktop Navigation */}
-              <div className="hidden md:flex items-center gap-4 lg:gap-6">
+              <div className="hidden md:flex items-center gap-4 lg:gap-6 flex-1">
                 <button
                   onClick={() => setLocation("/pricing")}
                   className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
@@ -140,74 +140,76 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 </button>
                 
                 {/* Show Login/Register if not authenticated, Dashboard link if authenticated */}
-                {!user ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      className="min-h-[44px] px-4"
-                      onClick={() => setLocation("/login")}
-                      data-testid="button-login"
-                    >
-                      Login
-                    </Button>
-                    <Button
-                      className="min-h-[44px] px-6"
-                      onClick={() => setLocation("/register")}
-                      data-testid="button-get-started"
-                    >
-                      Start Free Trial
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {showNotificationFeatures && (
-                      <div className="flex items-center gap-1">
-                        <WhatsNewBadge />
-                        <AnimatedNotificationBell
-                          hasNotifications={true}
-                          onClick={() => setLocation("/dashboard")}
-                          onClear={() => {
-                            // Notifications cleared
-                          }}
-                        />
-                      </div>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-2 px-2 h-9"
-                          data-testid="button-user-menu"
-                        >
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs font-bold">
-                              {getInitials(user?.firstName, user?.lastName)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem
-                          onClick={() => setLocation("/dashboard")}
-                          data-testid="menu-go-dashboard"
-                        >
-                          <LayoutDashboard className="mr-2 h-4 w-4" />
-                          <span>Go to Dashboard</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={handleLogout}
-                          data-testid="menu-logout"
-                          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
-                        >
-                          <LogOut className="mr-2 h-4 w-4" />
-                          <span>Sign Out</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                )}
+                <div className="ml-auto flex items-center gap-3">
+                  {!user ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className="min-h-[44px] px-4"
+                        onClick={() => setLocation("/login")}
+                        data-testid="button-login"
+                      >
+                        Login
+                      </Button>
+                      <Button
+                        className="min-h-[44px] px-6"
+                        onClick={() => setLocation("/register")}
+                        data-testid="button-get-started"
+                      >
+                        Start Free Trial
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {showNotificationFeatures && (
+                        <div className="flex items-center gap-1">
+                          <WhatsNewBadge />
+                          <AnimatedNotificationBell
+                            hasNotifications={true}
+                            onClick={() => setLocation("/dashboard")}
+                            onClear={() => {
+                              // Notifications cleared
+                            }}
+                          />
+                        </div>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-2 px-2 h-9"
+                            data-testid="button-user-menu"
+                          >
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs font-bold">
+                                {getInitials(user?.firstName, user?.lastName)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => setLocation("/dashboard")}
+                            data-testid="menu-go-dashboard"
+                          >
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            <span>Go to Dashboard</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={handleLogout}
+                            data-testid="menu-logout"
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                          >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Sign Out</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Mobile Menu */}
