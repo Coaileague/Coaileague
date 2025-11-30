@@ -45,25 +45,28 @@ export function AnimatedNotificationBell({
       } ${className}`}
       aria-label="Notifications"
       data-testid="button-notifications"
+      style={{ willChange: 'auto' }}
     >
-      <div className="relative">
+      <div className="relative inline-flex items-center justify-center" style={{ width: '20px', height: '20px', willChange: 'transform' }}>
         <div
-          className={`transition-all ${
+          className={`absolute inset-0 flex items-center justify-center ${
             showSparkles ? "animate-bell-ring-continuous animate-bell-flash-rainbow" : ""
           }`}
+          style={{ willChange: 'transform', transformOrigin: 'center' }}
         >
           <Bell className="h-5 w-5" />
         </div>
 
         {showSparkles && (
           <div
-            className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full shadow-lg animate-badge-pulse ${
+            className={`absolute -top-2 -right-2 h-2.5 w-2.5 rounded-full shadow-lg animate-badge-pulse ${
               fadeOut ? "opacity-0" : "opacity-100"
             } transition-opacity duration-300`}
             style={{
               background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
               backgroundSize: "200% 200%",
               animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
+              willChange: 'box-shadow, opacity',
             }}
           />
         )}
@@ -83,6 +86,7 @@ export function AnimatedNotificationBell({
                 animationDelay: sparkle.delay,
                 color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
                 filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
+                willChange: 'transform, opacity',
               }}
             />
           ))}

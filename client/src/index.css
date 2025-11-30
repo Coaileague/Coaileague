@@ -207,11 +207,11 @@
 @keyframes badgeGlow {
   0%, 100% {
     box-shadow: 0 0 8px rgba(168, 85, 247, 0.6), 0 0 12px rgba(236, 72, 153, 0.4);
-    transform: scale(1);
+    opacity: 1;
   }
   50% {
     box-shadow: 0 0 12px rgba(168, 85, 247, 0.8), 0 0 20px rgba(236, 72, 153, 0.6);
-    transform: scale(1.1);
+    opacity: 1;
   }
 }
 
@@ -226,22 +226,22 @@
 
 @keyframes bellRing {
   0%, 100% {
-    transform: rotate(0deg);
+    transform: rotate(0deg) scale(1);
   }
   10% {
-    transform: rotate(-15deg);
+    transform: rotate(-15deg) scale(1);
   }
   20% {
-    transform: rotate(15deg);
+    transform: rotate(15deg) scale(1);
   }
   30% {
-    transform: rotate(-15deg);
+    transform: rotate(-15deg) scale(1);
   }
   40% {
-    transform: rotate(15deg);
+    transform: rotate(15deg) scale(1);
   }
   50% {
-    transform: rotate(0deg);
+    transform: rotate(0deg) scale(1);
   }
 }
 
@@ -358,6 +358,7 @@
 
 .animate-badge-glow {
   animation: badgeGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: box-shadow, opacity;
 }
 
 .animate-badge-pulse {
@@ -366,10 +367,14 @@
 
 .animate-bell-ring {
   animation: bellRing 0.6s ease-in-out 3;
+  will-change: transform;
+  transform-origin: center;
 }
 
 .animate-bell-ring-continuous {
   animation: bellRing 0.8s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: center;
 }
 
 .animate-notification-pulse {
@@ -427,9 +432,9 @@
 }
 
 @keyframes sparklesRotate {
-  0% { transform: rotate(0deg) scale(1); opacity: 0.8; }
-  50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
-  100% { transform: rotate(360deg) scale(1); opacity: 0.8; }
+  0% { transform: rotate(0deg); opacity: 0.8; filter: drop-shadow(0 0 2px currentColor); }
+  50% { transform: rotate(180deg); opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+  100% { transform: rotate(360deg); opacity: 0.8; filter: drop-shadow(0 0 2px currentColor); }
 }
 
 @keyframes cyanPulse {
@@ -457,6 +462,8 @@
 
 .animate-sparkles-rotate {
   animation: sparklesRotate 2s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+  transform-origin: center;
 }
 
 .animate-cyan-pulse {
