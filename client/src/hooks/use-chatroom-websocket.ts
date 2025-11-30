@@ -41,6 +41,12 @@ function createSystemMessage(message: string, conversationId: string): ChatMessa
     readAt: null,
     isEdited: false,
     editedAt: null,
+    sentiment: null,
+    sentimentScore: null,
+    sentimentConfidence: null,
+    urgencyLevel: null,
+    urgencyReason: null,
+    sentimentAnalyzedAt: null,
   };
 }
 

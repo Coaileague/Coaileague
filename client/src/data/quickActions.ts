@@ -29,7 +29,7 @@ import {
   Grid3x3
 } from 'lucide-react';
 
-export type PlatformRole = 'root' | 'sysop' | 'deputy_admin' | 'deputy_assistant' | 'bot' | 'guest';
+export type PlatformRole = 'root_admin' | 'root' | 'sysop' | 'deputy_admin' | 'deputy_assistant' | 'bot' | 'guest' | 'support_manager' | 'support_agent' | 'none';
 export type WorkspaceRole = 'owner' | 'admin' | 'manager' | 'employee';
 export type DevicePlatform = 'mobile' | 'tablet' | 'desktop';
 
