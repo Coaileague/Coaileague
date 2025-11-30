@@ -15,6 +15,7 @@ import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { AnimatedNotificationBell } from "@/components/animated-notification-bell";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
+import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,18 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Fetch notification count from AI Brain (RBAC controlled on backend)
+  const { data: notificationData } = useQuery({
+    queryKey: ['/api/notifications/unread-count'],
+    enabled: !!user, // Only fetch if user is authenticated
+    staleTime: 30000,
+  });
+
+  const unreadNotifications = notificationData?.count || 0;
+  
+  // Show features for authenticated users (RBAC check happens on backend)
+  const showNotificationFeatures = !!user;
   
   // Safe scroll function for SPA navigation
   const scrollToFeatures = () => {
@@ -157,13 +170,19 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   </>
                 ) : (
                   <>
-                    <WhatsNewBadge />
-                    <AnimatedNotificationBell
-                      hasNotifications={true}
-                      onClick={() => setLocation("/dashboard")}
-                      className="mr-2"
-                      onClear={() => console.log("Notifications cleared")}
-                    />
+                    {showNotificationFeatures && (
+                      <>
+                        <WhatsNewBadge />
+                        <AnimatedNotificationBell
+                          hasNotifications={unreadNotifications > 0}
+                          onClick={() => setLocation("/dashboard")}
+                          className="mr-2"
+                          onClear={() => {
+                            // Invalidate notification count when cleared
+                          }}
+                        />
+                      </>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -204,13 +223,15 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
 
               {/* Mobile Menu */}
               <div className="flex md:hidden items-center gap-2 shrink-0">
-                {user && (
+                {showNotificationFeatures && (
                   <>
                     <WhatsNewBadge />
                     <AnimatedNotificationBell
-                      hasNotifications={true}
+                      hasNotifications={unreadNotifications > 0}
                       onClick={() => setLocation("/dashboard")}
-                      onClear={() => console.log("Notifications cleared")}
+                      onClear={() => {
+                        // Invalidate notification count when cleared
+                      }}
                     />
                   </>
                 )}
