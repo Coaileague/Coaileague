@@ -41,12 +41,8 @@ export default function WorkspaceSales() {
   const [inviteTier, setInviteTier] = useState("starter");
 
   // PROPOSAL FORM STATE
-  const [proposalTitle, setProposalTitle] = useState("");
-  const [proposalProspect, setProposalProspect] = useState("");
-  const [proposalEmail, setProposalEmail] = useState("");
-  const [proposalOrg, setProposalOrg] = useState("");
-  const [proposalTier, setProposalTier] = useState("starter");
-  const [proposalValue, setProposalValue] = useState("");
+  const [proposalName, setProposalName] = useState("");
+  const [selectedDealId, setSelectedDealId] = useState("");
 
   // QUERIES
   const { data: invitations = [], refetch: refetchInvitations, isLoading: invitationsLoading } = useQuery<OrgInvitation[]>({
@@ -87,22 +83,16 @@ export default function WorkspaceSales() {
 
   const createProposal = useMutation({
     mutationFn: async (data: {
-      title: string;
-      prospectEmail: string;
-      prospectName: string;
-      prospectOrganization: string;
-      suggestedTier: string;
-      estimatedValue: number;
+      proposalName: string;
+      dealId: string;
+      status?: string;
     }) => {
       return await apiRequest("/api/sales/proposals", "POST", data);
     },
     onSuccess: () => {
-      toast({ title: "Proposal Created", description: "Proposal ready to send." });
-      setProposalTitle("");
-      setProposalProspect("");
-      setProposalEmail("");
-      setProposalOrg("");
-      setProposalValue("");
+      toast({ title: "Proposal Created", description: "Proposal draft created and linked to deal." });
+      setProposalName("");
+      setSelectedDealId("");
       queryClient.invalidateQueries({ queryKey: ["/api/sales/proposals"] });
     },
     onError: (error: Error) => {
@@ -120,17 +110,14 @@ export default function WorkspaceSales() {
   };
 
   const handleCreateProposal = () => {
-    if (!proposalEmail || !proposalOrg || !proposalTier) {
-      toast({ title: "Missing Info", description: "Email, org, and tier required", variant: "destructive" });
+    if (!proposalName || !selectedDealId) {
+      toast({ title: "Missing Info", description: "Proposal name and deal selection required", variant: "destructive" });
       return;
     }
     createProposal.mutate({
-      title: proposalTitle || `${proposalOrg} Proposal`,
-      prospectEmail: proposalEmail,
-      prospectName: proposalProspect,
-      prospectOrganization: proposalOrg,
-      suggestedTier: proposalTier,
-      estimatedValue: parseInt(proposalValue) || 0,
+      proposalName,
+      dealId: selectedDealId,
+      status: "draft",
     });
   };
 
@@ -360,83 +347,46 @@ export default function WorkspaceSales() {
               <Card className="lg:col-span-1">
                 <CardHeader>
                   <CardTitle className="text-base">Create Proposal</CardTitle>
-                  <CardDescription>Send custom business proposal</CardDescription>
+                  <CardDescription>Create a proposal linked to an existing deal</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="proposal-title">Proposal Title</Label>
-                    <Input
-                      id="proposal-title"
-                      placeholder="e.g., Enterprise Implementation"
-                      value={proposalTitle}
-                      onChange={(e) => setProposalTitle(e.target.value)}
-                      data-testid="input-proposal-title"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="proposal-email">Prospect Email *</Label>
-                    <Input
-                      id="proposal-email"
-                      type="email"
-                      placeholder="prospect@company.com"
-                      value={proposalEmail}
-                      onChange={(e) => setProposalEmail(e.target.value)}
-                      data-testid="input-proposal-email"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="proposal-name">Prospect Name</Label>
+                    <Label htmlFor="proposal-name">Proposal Name *</Label>
                     <Input
                       id="proposal-name"
-                      placeholder="Jane Smith"
-                      value={proposalProspect}
-                      onChange={(e) => setProposalProspect(e.target.value)}
+                      placeholder="e.g., Enterprise Implementation Plan"
+                      value={proposalName}
+                      onChange={(e) => setProposalName(e.target.value)}
                       data-testid="input-proposal-name"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="proposal-org">Organization *</Label>
-                    <Input
-                      id="proposal-org"
-                      placeholder="Company Name"
-                      value={proposalOrg}
-                      onChange={(e) => setProposalOrg(e.target.value)}
-                      data-testid="input-proposal-org"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="proposal-tier">Suggested Tier</Label>
-                    <Select value={proposalTier} onValueChange={setProposalTier}>
-                      <SelectTrigger data-testid="select-proposal-tier">
-                        <SelectValue />
+                    <Label htmlFor="proposal-deal">Link to Deal *</Label>
+                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                      <SelectTrigger data-testid="select-proposal-deal">
+                        <SelectValue placeholder="Select a deal" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="starter">Starter ($4,999/mo)</SelectItem>
-                        <SelectItem value="professional">Professional ($9,999/mo)</SelectItem>
-                        <SelectItem value="enterprise">Enterprise ($17,999/mo)</SelectItem>
+                        {deals.length === 0 ? (
+                          <SelectItem value="none" disabled>No deals available</SelectItem>
+                        ) : (
+                          deals.map((deal) => (
+                            <SelectItem key={deal.id} value={deal.id}>
+                              {deal.name || deal.id} - ${deal.estimatedValue || 0}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="proposal-value">Estimated Value ($)</Label>
-                    <Input
-                      id="proposal-value"
-                      type="number"
-                      placeholder="50000"
-                      value={proposalValue}
-                      onChange={(e) => setProposalValue(e.target.value)}
-                      data-testid="input-proposal-value"
-                    />
+                    {deals.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Create a deal in the CRM first to link proposals</p>
+                    )}
                   </div>
 
                   <Button
                     onClick={handleCreateProposal}
-                    disabled={createProposal.isPending}
+                    disabled={createProposal.isPending || deals.length === 0}
                     className="w-full"
                     data-testid="button-create-proposal"
                   >
