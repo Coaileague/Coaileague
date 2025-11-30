@@ -196,6 +196,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </>
                 )}
               </div>
 
