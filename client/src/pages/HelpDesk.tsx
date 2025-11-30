@@ -33,7 +33,7 @@ import {
   ChevronLeft, ChevronRight, Info, Coffee, Star, Building2, Bot, Sparkles, Menu, X,
   UserCheck, FileText, Camera, PenTool, ArrowRight, Ban, AlertTriangle,
   Timer, UserX, TrendingUp, Key, Mail, ListChecks, Tag, ClipboardList,
-  History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch, Home
+  History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch, Home, Check
 } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
@@ -1151,7 +1151,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 // System messages
                 if (msg.senderType === 'system' || msg.isSystemMessage) {
                   return (
-                    <div key={idx} className="flex justify-center my-1">
+                    <div key={idx} className="flex justify-center my-1 message-arrive">
                       <span className="text-xs font-mono font-bold text-red-700 dark:text-red-400 italic bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center gap-1.5">
                         <Zap className="w-3 h-3 text-red-600 dark:text-red-400" />
                         <span dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }} />
@@ -1167,9 +1167,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                   : (msg.senderName || 'User'); // Use message's senderName for others
                 const bubbleColor = getMessageBubbleColor(msg.senderType || 'customer', role, isSelf);
                 const nameColor = getRoleColor(role);
+                
+                // Check if message has been read
+                const messageReadReceipt = readReceipts.get(msg.id);
 
                 return (
-                  <div key={idx} className={`${bubbleColor} shadow-sm p-2 sm:p-2.5 rounded-lg w-full max-w-full sm:max-w-[90%] hover:shadow-md transition-all min-w-0`}>
+                  <div key={idx} className={`${bubbleColor} shadow-sm p-2 sm:p-2.5 rounded-lg w-full max-w-full sm:max-w-[90%] hover:shadow-md transition-all min-w-0 message-arrive`}>
                     <div className="flex items-start gap-1.5 sm:gap-2 min-w-0">
                       {/* Avatar Icon - Compact, hidden on very small screens */}
                       <div className="hidden xs:block flex-shrink-0 mt-0.5">
@@ -1194,11 +1197,39 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                           className="text-inherit text-base sm:text-base leading-snug break-words whitespace-pre-wrap overflow-wrap-anywhere hyphens-auto"
                           dangerouslySetInnerHTML={{ __html: sanitizeMessage(msg.message) }}
                         />
+                        
+                        {/* Read Receipt Indicator - Shows when message is read */}
+                        {isSelf && messageReadReceipt && (
+                          <div className="text-xs text-blue-500 dark:text-blue-400 mt-1 flex items-center gap-1">
+                            <Check className="w-3 h-3 read-receipt" />
+                            <span>Read by {messageReadReceipt.readByName}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 );
               })}
+              
+              {/* Typing Indicator - Shows when other users are typing */}
+              {typingUserInfo && (
+                <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 w-full max-w-full sm:max-w-[90%] message-arrive">
+                  <div className="hidden xs:block flex-shrink-0 mt-0.5">
+                    <MessageCircle className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                      {typingUserInfo.name} {typingUserInfo.isStaff ? '(Staff)' : ''} is typing...
+                    </div>
+                    <div className="typing-indicator text-gray-400 dark:text-gray-500">
+                      <div className="typing-dot"></div>
+                      <div className="typing-dot"></div>
+                      <div className="typing-dot"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
