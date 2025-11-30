@@ -72,61 +72,21 @@ import { AgentToolbelt } from "@/components/agent-toolbelt";
 import { TicketContextPanel } from "@/components/ticket-context-panel";
 import { sanitizeMessage } from "@/lib/sanitize";
 import { MobileChatLayout } from "@/components/mobile-chat-layout";
-
-// Dynamically load chat configuration from backend
-const CHAT_CONFIG = {
-  rooms: { main: { id: 'helpdesk' } },
-  messages: {
-    guestIntake: { label: '[GUEST INTAKE]' },
-    queueUpdate: { label: '⏳ Queue Update' },
-    ticketCreated: {
-      title: '✓ Ticket Created',
-      description: (id: string) =>
-        `Ticket #${id} - CoAIleague AI is analyzing your issue. An agent will be with you shortly.`,
-    },
-    ticketAssigned: {
-      title: '✅ Agent Assigned',
-      message: (id: string) =>
-        `✅ An agent is now helping you!\n\nTicket #${id} has been assigned. Your chat is no longer read-only.`,
-      sender: 'CoAIleague AI',
-    },
-  },
-  roles: {
-    supportStaff: [
-      'root_admin',
-      'deputy_admin',
-      'support_manager',
-      'sysop',
-      'support',
-    ],
-  },
-  display: {
-    showProgressHeaderEscalated: true,
-    showUserCount: true,
-    showWaitTime: true,
-  },
-  system: {
-    storagePrefix: 'chat:',
-    sessionIdKey: 'chat-session-id',
-    ticketIdKey: 'support_ticket_id',
-    escalationDataKey: 'helpos_escalation',
-    guestIntakeDataKey: 'guest_intake_data', // Persistent guest form data throughout chat session
-  },
-  moderation: {
-    allowBan: true,
-    allowSilence: true,
-    allowKick: true,
-  },
-  queue: {
-    updateInterval: 60000,
-    estimatedWaitTime: {
-      min: 2,
-      max: 3,
-    },
-  },
-};
-
-const MAIN_ROOM_ID = CHAT_CONFIG.rooms.main.id;
+import { 
+  HELP_DESK_CONFIG as CHAT_CONFIG, 
+  MAIN_ROOM_ID,
+  sortUsersByRole,
+  generateSessionId,
+  getStoredEscalationData,
+  getStoredGuestIntakeData,
+  saveGuestIntakeData,
+  getStoredTicketNumber,
+  saveTicketNumber,
+  type GuestIntakeData,
+  type SecureRequestData,
+  type UserConnectionStatus,
+  type RoomStatus,
+} from "@/config/helpDeskConfig";
 
 interface HelpDeskProps {
   forceMobileLayout?: boolean; // Force mobile layout regardless of screen size
@@ -181,48 +141,20 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);
   
-  // Generate or get session ID for tracking (using config key)
-  const [sessionId] = useState(() => {
-    const stored = sessionStorage.getItem(
-      CHAT_CONFIG.system.sessionIdKey
-    );
-    if (stored) return stored;
-    const newId = crypto.randomUUID();
-    sessionStorage.setItem(CHAT_CONFIG.system.sessionIdKey, newId);
-    return newId;
-  });
+  // Generate or get session ID for tracking (using config helper)
+  const [sessionId] = useState(() => generateSessionId());
 
   // Read URL parameters for direct conversation links (from escalation)
   const urlParams = new URLSearchParams(window.location.search);
   const urlConversationId = urlParams.get('conversationId');
   const urlGuestToken = urlParams.get('guestToken');
   
-  // Check sessionStorage for escalation data (using config key)
-  const escalationData = sessionStorage.getItem(
-    CHAT_CONFIG.system.escalationDataKey
-  );
-  const parsedEscalation = escalationData ? JSON.parse(escalationData) : null;
+  // Check sessionStorage for escalation data (using config helper)
+  const parsedEscalation = getStoredEscalationData();
   
-  // Guest intake form state (now parsedEscalation is defined)
+  // Guest intake form state (using config helper)
   const [showGuestIntakeForm, setShowGuestIntakeForm] = useState(!user); // Show for guests on load
-  const [guestIntakeData, setGuestIntakeData] = useState(() => {
-    // Load persisted data from session storage if available
-    const stored = sessionStorage.getItem(CHAT_CONFIG.system.guestIntakeDataKey);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        // If parse fails, use default
-      }
-    }
-    // Default values
-    return {
-      name: parsedEscalation?.guestName || '',
-      email: '',
-      issueType: '',
-      problemDescription: ''
-    };
-  });
+  const [guestIntakeData, setGuestIntakeData] = useState<GuestIntakeData>(() => getStoredGuestIntakeData());
   const [hasCompletedIntake, setHasCompletedIntake] = useState(false);
 
   // Check if form is complete and valid
@@ -238,9 +170,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
   // Auto-save guest intake data to session storage whenever it changes
   useEffect(() => {
-    sessionStorage.setItem(CHAT_CONFIG.system.guestIntakeDataKey, JSON.stringify(guestIntakeData));
+    saveGuestIntakeData(guestIntakeData);
   }, [guestIntakeData]);
-  const [ticketNumber, setTicketNumber] = useState<string | null>(() => sessionStorage.getItem(CHAT_CONFIG.system.ticketIdKey) || null);
+  const [ticketNumber, setTicketNumber] = useState<string | null>(() => getStoredTicketNumber());
   const [queueJoinTime] = useState(() => new Date());
   const [queueUpdateInterval, setQueueUpdateInterval] = useState<NodeJS.Timeout | null>(null);
   
@@ -528,7 +460,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     },
     onSuccess: (data: any) => {
       const newTicketId = data.ticketId;
-      sessionStorage.setItem(CHAT_CONFIG.system.ticketIdKey, newTicketId);
+      saveTicketNumber(newTicketId);
       setTicketNumber(newTicketId);
       
       // Send intake data to agents via system message with guest's actual name
@@ -573,30 +505,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     },
   });
 
-  // Sort users: Root admin at top, then bot, then staff (by role hierarchy), then subscribers, org users, guests
-  const sortedUsers = [...onlineUsers].sort((a, b) => {
-    // Role priority (lower number = higher priority)
-    const rolePriority: Record<string, number> = {
-      'root_admin': 0,        // Root admin at absolute top (you)
-      'bot': 1,               // CoAIleague AI bot
-      'deputy_admin': 2,      // Deputy administrators
-      'support_manager': 3,   // Support managers
-      'sysop': 4,             // System operators
-      'subscriber': 5,        // Paid subscribers
-      'org_user': 6,          // Organization users
-      'guest': 7,             // Guest users
-    };
-    
-    const aPriority = rolePriority[a.role] ?? 99;
-    const bPriority = rolePriority[b.role] ?? 99;
-    
-    if (aPriority !== bPriority) {
-      return aPriority - bPriority;
-    }
-    
-    // Within same role, sort by name
-    return a.name.localeCompare(b.name);
-  });
+  // Sort users using centralized helper (role hierarchy + alphabetical)
+  const sortedUsers = sortUsersByRole(onlineUsers);
 
   const uniqueUsers = sortedUsers.map(u => ({
     ...u,
