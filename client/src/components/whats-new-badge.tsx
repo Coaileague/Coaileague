@@ -120,17 +120,19 @@ export function WhatsNewBadge() {
       <PopoverTrigger asChild>
         <Button 
           variant="ghost" 
-          size="sm" 
-          className="justify-start gap-2 h-9 w-full relative"
+          size="icon"
+          className="relative h-9 w-9 hover:bg-white/10"
           data-testid="button-whats-new"
+          title="What's New"
         >
-          <Sparkles className={`h-4 w-4 ${unviewedCount > 0 ? 'animate-sparkles-combined' : ''}`} />
-          <span className="text-xs">What's New</span>
-          {unviewedCount > 0 && (
-            <span className="ml-auto h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center text-xs font-medium animate-badge-glow">
-              {unviewedCount > 9 ? '9+' : unviewedCount}
-            </span>
-          )}
+          <div className="relative">
+            <Sparkles className="h-4 w-4 animate-sparkles-combined" />
+            {unviewedCount > 0 && (
+              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center text-[10px] font-bold animate-badge-glow">
+                {unviewedCount > 9 ? '9+' : unviewedCount}
+              </span>
+            )}
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start" side="right" sideOffset={8}>
