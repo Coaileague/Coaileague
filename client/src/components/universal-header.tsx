@@ -13,6 +13,7 @@ import { queryClient } from "@/lib/queryClient";
 import { LOGOUT_CONFIG } from "@/config/logout";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
+import { AnimatedNotificationBell } from "@/components/animated-notification-bell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -154,45 +155,57 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                     </Button>
                   </>
                 ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-2 px-2 h-9"
-                        data-testid="button-user-menu"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs font-bold">
-                            {getInitials(user?.firstName, user?.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        onClick={() => setLocation("/dashboard")}
-                        data-testid="menu-go-dashboard"
-                      >
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>Go to Dashboard</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={handleLogout}
-                        data-testid="menu-logout"
-                        className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
-                      >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Sign Out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <>
+                    <AnimatedNotificationBell
+                      hasNotifications={true}
+                      onClick={() => setLocation("/dashboard")}
+                      className="mr-2"
+                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2 px-2 h-9"
+                          data-testid="button-user-menu"
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs font-bold">
+                              {getInitials(user?.firstName, user?.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() => setLocation("/dashboard")}
+                          data-testid="menu-go-dashboard"
+                        >
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Go to Dashboard</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={handleLogout}
+                          data-testid="menu-logout"
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Sign Out</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 )}
               </div>
 
               {/* Mobile Menu */}
               <div className="flex md:hidden items-center gap-2 shrink-0">
+                {user && (
+                  <AnimatedNotificationBell
+                    hasNotifications={true}
+                    onClick={() => setLocation("/dashboard")}
+                  />
+                )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
