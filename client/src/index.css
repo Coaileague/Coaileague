@@ -304,6 +304,47 @@
   animation: bellFlashRainbow 3s ease-in-out infinite;
 }
 
+@keyframes sparklesRotate {
+  0% { transform: rotate(0deg) scale(1); opacity: 0.8; }
+  50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.8; }
+}
+
+@keyframes cyanPulse {
+  0% { color: #06b6d4; filter: drop-shadow(0 0 4px #06b6d4); }
+  25% { color: #0891b2; filter: drop-shadow(0 0 8px #0891b2); }
+  50% { color: #4ecdc4; filter: drop-shadow(0 0 10px #4ecdc4); }
+  75% { color: #06b6d4; filter: drop-shadow(0 0 8px #06b6d4); }
+  100% { color: #06b6d4; filter: drop-shadow(0 0 4px #06b6d4); }
+}
+
+@keyframes whatsnewBadgeGlow {
+  0% { 
+    background: linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4);
+    box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+  }
+  50% { 
+    background: linear-gradient(225deg, #4ecdc4, #06b6d4, #0891b2);
+    box-shadow: 0 0 16px rgba(78, 205, 196, 0.8);
+  }
+  100% { 
+    background: linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4);
+    box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+  }
+}
+
+.animate-sparkles-rotate {
+  animation: sparklesRotate 2s ease-in-out infinite;
+}
+
+.animate-cyan-pulse {
+  animation: cyanPulse 3s ease-in-out infinite;
+}
+
+.animate-whatsnew-badge-glow {
+  animation: whatsnewBadgeGlow 3s ease-in-out infinite;
+}
+
 /* ============================================================================
    SPLAT & PARTICLE ANIMATIONS - Professional Burst Effects
    ============================================================================ */

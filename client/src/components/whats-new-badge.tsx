@@ -116,10 +116,10 @@ export function WhatsNewBadge() {
   };
 
   const sparkles = [
-    { top: "-5px", right: "1px", delay: "0s" },
-    { top: "3px", right: "-5px", delay: "0.4s" },
-    { bottom: "-3px", right: "3px", delay: "0.8s" },
-    { top: "1px", left: "-4px", delay: "1.2s" },
+    { top: "-6px", right: "0px", delay: "0s" },
+    { top: "2px", right: "-6px", delay: "0.3s" },
+    { bottom: "-5px", right: "2px", delay: "0.6s" },
+    { top: "0px", left: "-6px", delay: "0.9s" },
   ];
 
   return (
@@ -133,32 +133,31 @@ export function WhatsNewBadge() {
           title="What's New"
         >
           <div className="relative inline-flex">
-            {/* Main sparkles icon with rainbow flash */}
-            <Sparkles className={`h-4 w-4 relative z-10 transition-all ${unviewedCount > 0 ? "animate-bell-flash-rainbow animate-bell-ring-continuous" : ""}`} />
+            {/* Main sparkles icon with cyan pulse animation */}
+            <Sparkles className={`h-4 w-4 relative z-10 transition-all ${unviewedCount > 0 ? "animate-cyan-pulse animate-sparkles-rotate" : ""}`} />
             
-            {/* Twinkling stars around icon - only when unviewed updates exist */}
+            {/* Rotating sparkling dots around icon - cyan theme */}
             {unviewedCount > 0 && sparkles.map((sparkle, idx) => (
               <div
                 key={idx}
-                className="absolute pointer-events-none sparkle-star animate-star-sparkle"
+                className="absolute pointer-events-none sparkle-star animate-sparkles-rotate"
                 style={{
                   top: sparkle.top,
                   right: sparkle.right,
                   bottom: sparkle.bottom,
                   left: sparkle.left,
                   animationDelay: sparkle.delay,
-                  color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
-                  filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
+                  color: ["#06b6d4", "#4ecdc4", "#0891b2", "#14b8a6"][idx],
+                  filter: `drop-shadow(0 0 4px ${["#06b6d4", "#4ecdc4", "#0891b2", "#14b8a6"][idx]})`,
                 }}
               />
             ))}
             
-            {/* Badge showing unviewed count with rainbow effect */}
+            {/* Badge with cyan glow effect */}
             {unviewedCount > 0 && (
-              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-badge-pulse"
+              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-whatsnew-badge-glow"
                 style={{
-                  background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
-                  animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
+                  background: "linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4)",
                 }}
               >
                 {unviewedCount > 9 ? '9+' : unviewedCount}
