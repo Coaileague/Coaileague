@@ -12,7 +12,7 @@ import { Menu, LogOut, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
-import { AnimatedNotificationBell } from "@/components/animated-notification-bell";
+import { NotificationsPopover } from "@/components/notifications-popover";
 import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { AISearchTrigger } from "@/components/ai-search";
 import {
@@ -158,10 +158,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                         <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                           <AISearchTrigger />
                           <WhatsNewBadge />
-                          <AnimatedNotificationBell
-                            notificationCount={3}
-                            onClick={() => setLocation("/dashboard")}
-                          />
+                          <NotificationsPopover />
                         </div>
                       )}
                       <DropdownMenu>
@@ -208,10 +205,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 {showNotificationFeatures && (
                   <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                     <WhatsNewBadge />
-                    <AnimatedNotificationBell
-                      notificationCount={3}
-                      onClick={() => setLocation("/dashboard")}
-                    />
+                    <NotificationsPopover />
                   </div>
                 )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

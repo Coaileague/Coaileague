@@ -9956,6 +9956,94 @@ export type UserNotificationPreferences = typeof userNotificationPreferences.$in
 export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSchema>;
 export type NotificationDigest = typeof notificationDigests.$inferSelect;
 
+// ============================================================================
+// MAINTENANCE ALERTS - Support Staff System Notifications
+// ============================================================================
+
+// Maintenance alert severity enum
+export const maintenanceAlertSeverityEnum = pgEnum('maintenance_alert_severity', [
+  'info',       // Informational - no service impact expected
+  'warning',    // Planned maintenance - some services may be affected
+  'critical',   // Critical - significant service disruption expected
+]);
+
+// Maintenance alert status enum
+export const maintenanceAlertStatusEnum = pgEnum('maintenance_alert_status', [
+  'scheduled',   // Alert is scheduled but not yet started
+  'in_progress', // Maintenance is currently in progress
+  'completed',   // Maintenance has been completed
+  'cancelled',   // Maintenance was cancelled
+]);
+
+// Maintenance alerts - for support staff to notify users of platform maintenance
+export const maintenanceAlerts = pgTable("maintenance_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // null = platform-wide
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Alert details
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  severity: maintenanceAlertSeverityEnum("severity").notNull(),
+  
+  // Timing
+  scheduledStartTime: timestamp("scheduled_start_time").notNull(),
+  scheduledEndTime: timestamp("scheduled_end_time").notNull(),
+  actualStartTime: timestamp("actual_start_time"),
+  actualEndTime: timestamp("actual_end_time"),
+  
+  // Impact
+  affectedServices: jsonb("affected_services").$type<string[]>().notNull(), // Array of service names
+  estimatedImpactMinutes: integer("estimated_impact_minutes"),
+  
+  // Status tracking
+  status: maintenanceAlertStatusEnum("status").default("scheduled"),
+  isBroadcast: boolean("is_broadcast").default(false), // Sent to all workspaces if true
+  
+  // Admin tracking
+  acknowledgedByCount: integer("acknowledged_by_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("maintenance_alerts_workspace_idx").on(table.workspaceId),
+  statusIdx: index("maintenance_alerts_status_idx").on(table.status),
+  severityIdx: index("maintenance_alerts_severity_idx").on(table.severity),
+  scheduledIdx: index("maintenance_alerts_scheduled_idx").on(table.scheduledStartTime),
+  createdIdx: index("maintenance_alerts_created_idx").on(table.createdAt),
+}));
+
+export const insertMaintenanceAlertSchema = createInsertSchema(maintenanceAlerts).omit({
+  id: true,
+  acknowledgedByCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMaintenanceAlert = z.infer<typeof insertMaintenanceAlertSchema>;
+export type MaintenanceAlert = typeof maintenanceAlerts.$inferSelect;
+
+// Maintenance acknowledgments - tracks which users have acknowledged alerts
+export const maintenanceAcknowledgments = pgTable("maintenance_acknowledgments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertId: varchar("alert_id").notNull().references(() => maintenanceAlerts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  acknowledgedAt: timestamp("acknowledged_at").defaultNow(),
+}, (table) => ({
+  alertIdx: index("maintenance_acks_alert_idx").on(table.alertId),
+  userIdx: index("maintenance_acks_user_idx").on(table.userId),
+  uniqueAck: uniqueIndex("maintenance_acks_unique").on(table.alertId, table.userId),
+}));
+
+export const insertMaintenanceAcknowledgmentSchema = createInsertSchema(maintenanceAcknowledgments).omit({
+  id: true,
+  acknowledgedAt: true,
+});
+
+export type InsertMaintenanceAcknowledgment = z.infer<typeof insertMaintenanceAcknowledgmentSchema>;
+export type MaintenanceAcknowledgment = typeof maintenanceAcknowledgments.$inferSelect;
+
 // Update Notification Preferences Schema - Partial update for user preferences
 export const updateNotificationPreferencesSchema = z.object({
   // Digest settings

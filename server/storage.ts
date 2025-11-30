@@ -224,6 +224,18 @@ import {
   type InsertAlertConfiguration,
   type AlertHistory,
   type InsertAlertHistory,
+  platformUpdates,
+  userPlatformUpdateViews,
+  maintenanceAlerts,
+  maintenanceAcknowledgments,
+  type PlatformUpdate,
+  type InsertPlatformUpdate,
+  type UserPlatformUpdateView,
+  type InsertUserPlatformUpdateView,
+  type MaintenanceAlert,
+  type InsertMaintenanceAlert,
+  type MaintenanceAcknowledgment,
+  type InsertMaintenanceAcknowledgment,
 } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
