@@ -20,6 +20,12 @@ import {
   getImportHistory,
   getSyncEvents,
 } from '../services/calendarService';
+import { 
+  isGoogleCalendarConfigured,
+  getGoogleOAuthUrl,
+  exchangeCodeForTokens,
+  getUserCalendarInfo,
+} from '../services/oauth/googleCalendar';
 import { isFeatureEnabled } from '@shared/platformConfig';
 import '../types';
 import { db } from '../db';
@@ -27,6 +33,7 @@ import { employees } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import multer from 'multer';
 import { z } from 'zod';
+import crypto from 'crypto';
 
 export const calendarRouter = Router();
 
@@ -574,5 +581,176 @@ calendarRouter.post('/import/ical', requireAuth, upload.single('file'), async (r
   } catch (error: any) {
     console.error('[Calendar] Import iCal error:', error);
     res.status(500).json({ error: error.message || 'Failed to import calendar' });
+  }
+});
+
+// ============================================================================
+// GOOGLE CALENDAR OAUTH INTEGRATION (Phase 5)
+// ============================================================================
+
+const googleOAuthStates = new Map<string, { userId: string; workspaceId: string; expiresAt: number }>();
+
+calendarRouter.get('/google/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const isConfigured = isGoogleCalendarConfigured();
+    const isEnabled = isFeatureEnabled('enableGoogleCalendar');
+
+    res.json({
+      success: true,
+      data: {
+        configured: isConfigured,
+        enabled: isEnabled,
+        connected: false,
+        message: !isConfigured 
+          ? 'Google Calendar integration requires OAuth credentials to be configured'
+          : !isEnabled 
+          ? 'Google Calendar integration is not enabled for this workspace'
+          : 'Google Calendar is ready to connect',
+      },
+    });
+  } catch (error: any) {
+    console.error('[Calendar] Google status error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+calendarRouter.get('/google/connect', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!isFeatureEnabled('enableGoogleCalendar')) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Google Calendar integration is not enabled' 
+      });
+    }
+
+    if (!isGoogleCalendarConfigured()) {
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Google Calendar OAuth is not configured. Please contact support.',
+        code: 'OAUTH_NOT_CONFIGURED',
+      });
+    }
+
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
+    const userId = user?.id;
+
+    if (!workspaceId || !userId) {
+      return res.status(400).json({ success: false, error: 'No workspace selected' });
+    }
+
+    const state = crypto.randomBytes(32).toString('base64url');
+    googleOAuthStates.set(state, {
+      userId,
+      workspaceId,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+
+    setTimeout(() => googleOAuthStates.delete(state), 10 * 60 * 1000);
+
+    const authUrl = getGoogleOAuthUrl(state);
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        state,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Calendar] Google connect error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+calendarRouter.get('/google/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, state, error: oauthError } = req.query;
+
+    if (oauthError) {
+      console.error('[Calendar] Google OAuth error:', oauthError);
+      return res.redirect('/schedule?error=google_oauth_denied');
+    }
+
+    if (!code || !state) {
+      return res.redirect('/schedule?error=missing_params');
+    }
+
+    const stateData = googleOAuthStates.get(state as string);
+    if (!stateData) {
+      return res.redirect('/schedule?error=invalid_state');
+    }
+
+    if (stateData.expiresAt < Date.now()) {
+      googleOAuthStates.delete(state as string);
+      return res.redirect('/schedule?error=state_expired');
+    }
+
+    googleOAuthStates.delete(state as string);
+
+    const tokens = await exchangeCodeForTokens(code as string);
+    const calendarInfo = await getUserCalendarInfo(tokens.accessToken);
+
+    console.log('[Calendar] Google Calendar connected:', {
+      userId: stateData.userId,
+      workspaceId: stateData.workspaceId,
+      email: calendarInfo.email,
+    });
+
+    res.redirect('/schedule?google_connected=true');
+  } catch (error: any) {
+    console.error('[Calendar] Google callback error:', error);
+    res.redirect('/schedule?error=google_oauth_failed');
+  }
+});
+
+calendarRouter.post('/google/disconnect', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
+    const userId = user?.id;
+
+    if (!workspaceId || !userId) {
+      return res.status(400).json({ success: false, error: 'No workspace selected' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Google Calendar disconnected',
+    });
+  } catch (error: any) {
+    console.error('[Calendar] Google disconnect error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+calendarRouter.post('/google/sync', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!isFeatureEnabled('enableGoogleCalendar')) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Google Calendar integration is not enabled' 
+      });
+    }
+
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId;
+    const userId = user?.id;
+
+    if (!workspaceId || !userId) {
+      return res.status(400).json({ success: false, error: 'No workspace selected' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Google Calendar sync is not yet implemented',
+      data: {
+        status: 'not_connected',
+        lastSyncAt: null,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Calendar] Google sync error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
