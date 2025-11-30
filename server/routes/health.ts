@@ -8,6 +8,7 @@ import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { getHealthSummary, getServiceHealth, getGatewayHealth } from '../services/healthCheck';
+import { getDetailedHealthReport, getSystemMetrics, getResponseTimeHistory, getErrorLogs } from '../services/healthService';
 import { storage } from '../storage';
 import type { ServiceIncidentReportPayload } from '../../shared/healthTypes';
 import { objectStorageClient } from '../objectStorage';
@@ -118,6 +119,70 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
         criticalServicesCount: 0,
         operationalServicesCount: 0,
         error: 'Failed to fetch health summary',
+      });
+    }
+  });
+
+  // Get detailed health report with system metrics, uptime, and error logs
+  // GET /api/health/detailed
+  healthRouter.get('/detailed', async (req: Request, res: Response) => {
+    try {
+      const report = await getDetailedHealthReport();
+      res.json(report);
+    } catch (error: any) {
+      console.error('Error fetching detailed health report:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch detailed health report',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  // Get current system metrics (memory, CPU, uptime)
+  // GET /api/health/metrics
+  healthRouter.get('/metrics', async (req: Request, res: Response) => {
+    try {
+      const metrics = getSystemMetrics();
+      res.json({ success: true, data: metrics });
+    } catch (error: any) {
+      console.error('Error fetching system metrics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch system metrics',
+      });
+    }
+  });
+
+  // Get response time history
+  // GET /api/health/response-times?service=xxx&limit=50
+  healthRouter.get('/response-times', async (req: Request, res: Response) => {
+    try {
+      const service = req.query.service as string | undefined;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const history = getResponseTimeHistory(service, limit);
+      res.json({ success: true, data: history });
+    } catch (error: any) {
+      console.error('Error fetching response time history:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch response time history',
+      });
+    }
+  });
+
+  // Get error logs
+  // GET /api/health/errors?limit=20
+  healthRouter.get('/errors', async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const logs = getErrorLogs(limit);
+      res.json({ success: true, data: logs });
+    } catch (error: any) {
+      console.error('Error fetching error logs:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch error logs',
       });
     }
   });

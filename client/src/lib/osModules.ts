@@ -28,6 +28,7 @@ import {
   FileBarChart,
   Zap,
   CheckCircle,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -659,6 +660,17 @@ export const platformSupportModule: OSModule = {
       badge: 'Root',
       isPrimary: true,
       order: 0,
+    },
+    {
+      id: 'system-health',
+      label: 'System Health',
+      href: '/system-health',
+      icon: Activity,
+      description: 'Monitor platform services and performance',
+      familyId: 'platform',
+      badge: 'Admin',
+      isPrimary: false,
+      order: 1,
     },
   ],
 };

@@ -29387,5 +29387,603 @@ app.get("/api/analytics/rooms", requireAuth, readLimiter, async (req: Authentica
   }
 });
 
+// ============================================================================
+// ALERT SYSTEM ENDPOINTS - Real-time Alert Configuration & History
+// ============================================================================
+
+/**
+ * GET /api/alerts/config
+ * Get all alert configurations for the workspace
+ */
+app.get("/api/alerts/config", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertService } = await import("./services/alertService");
+    
+    let configs = await alertService.getAlertConfigurations(workspaceId);
+    
+    // Initialize default configs if none exist
+    if (configs.length === 0) {
+      configs = await alertService.initializeDefaultConfigs(workspaceId, req.userId!);
+    }
+    
+    res.json({ success: true, data: configs });
+  } catch (error: any) {
+    console.error("Error fetching alert configs:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert configurations" });
+  }
+});
+
+/**
+ * GET /api/alerts/config/:alertType
+ * Get a specific alert configuration by type
+ */
+app.get("/api/alerts/config/:alertType", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.params;
+    const { alertService } = await import("./services/alertService");
+    
+    const config = await alertService.getAlertConfiguration(workspaceId, alertType);
+    
+    if (!config) {
+      return res.status(404).json({ error: "Alert configuration not found" });
+    }
+    
+    res.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("Error fetching alert config:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert configuration" });
+  }
+});
+
+/**
+ * PUT /api/alerts/config/:alertType
+ * Update or create an alert configuration
+ */
+app.put("/api/alerts/config/:alertType", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.params;
+    const { alertService } = await import("./services/alertService");
+    
+    const validAlertTypes = ['overtime', 'low_coverage', 'compliance_violation', 'payment_overdue', 
+                             'shift_unfilled', 'clock_anomaly', 'budget_exceeded', 'approval_pending'];
+    
+    if (!validAlertTypes.includes(alertType)) {
+      return res.status(400).json({ error: "Invalid alert type" });
+    }
+    
+    const config = await alertService.upsertAlertConfiguration(
+      workspaceId,
+      { ...req.body, alertType },
+      req.userId!
+    );
+    
+    res.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("Error updating alert config:", error);
+    res.status(500).json({ error: error.message || "Failed to update alert configuration" });
+  }
+});
+
+/**
+ * PATCH /api/alerts/config/:alertType/toggle
+ * Quick toggle for enabling/disabling an alert type
+ */
+app.patch("/api/alerts/config/:alertType/toggle", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.params;
+    const { isEnabled } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    if (typeof isEnabled !== 'boolean') {
+      return res.status(400).json({ error: "isEnabled must be a boolean" });
+    }
+    
+    const config = await alertService.upsertAlertConfiguration(
+      workspaceId,
+      { alertType, isEnabled },
+      req.userId!
+    );
+    
+    res.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("Error toggling alert:", error);
+    res.status(500).json({ error: error.message || "Failed to toggle alert" });
+  }
+});
+
+/**
+ * GET /api/alerts/history
+ * Get alert history for the workspace
+ */
+app.get("/api/alerts/history", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType, severity, acknowledged, resolved, limit = '50', offset = '0' } = req.query;
+    const { alertService } = await import("./services/alertService");
+    
+    const alerts = await alertService.getAlertHistory(workspaceId, {
+      alertType: alertType as string | undefined,
+      severity: severity as string | undefined,
+      acknowledged: acknowledged === 'true' ? true : acknowledged === 'false' ? false : undefined,
+      resolved: resolved === 'true' ? true : resolved === 'false' ? false : undefined,
+      limit: Math.min(parseInt(limit as string) || 50, 100),
+      offset: parseInt(offset as string) || 0,
+    });
+    
+    res.json({ success: true, data: alerts });
+  } catch (error: any) {
+    console.error("Error fetching alert history:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert history" });
+  }
+});
+
+/**
+ * GET /api/alerts/history/:id
+ * Get a specific alert by ID
+ */
+app.get("/api/alerts/history/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { alertService } = await import("./services/alertService");
+    
+    const alert = await alertService.getAlert(id);
+    
+    if (!alert) {
+      return res.status(404).json({ error: "Alert not found" });
+    }
+    
+    if (alert.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    res.json({ success: true, data: alert });
+  } catch (error: any) {
+    console.error("Error fetching alert:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert" });
+  }
+});
+
+/**
+ * POST /api/alerts/:id/acknowledge
+ * Acknowledge an alert
+ */
+app.post("/api/alerts/:id/acknowledge", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    const existingAlert = await alertService.getAlert(id);
+    if (!existingAlert) {
+      return res.status(404).json({ error: "Alert not found" });
+    }
+    if (existingAlert.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    const alert = await alertService.acknowledgeAlert(id, req.userId!, notes);
+    
+    res.json({ success: true, data: alert });
+  } catch (error: any) {
+    console.error("Error acknowledging alert:", error);
+    res.status(500).json({ error: error.message || "Failed to acknowledge alert" });
+  }
+});
+
+/**
+ * POST /api/alerts/:id/resolve
+ * Resolve an alert
+ */
+app.post("/api/alerts/:id/resolve", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    const existingAlert = await alertService.getAlert(id);
+    if (!existingAlert) {
+      return res.status(404).json({ error: "Alert not found" });
+    }
+    if (existingAlert.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    const alert = await alertService.resolveAlert(id, req.userId!, notes);
+    
+    res.json({ success: true, data: alert });
+  } catch (error: any) {
+    console.error("Error resolving alert:", error);
+    res.status(500).json({ error: error.message || "Failed to resolve alert" });
+  }
+});
+
+/**
+ * GET /api/alerts/unacknowledged-count
+ * Get count of unacknowledged alerts
+ */
+app.get("/api/alerts/unacknowledged-count", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertService } = await import("./services/alertService");
+    
+    const count = await alertService.getUnacknowledgedCount(workspaceId);
+    
+    res.json({ success: true, data: { count } });
+  } catch (error: any) {
+    console.error("Error fetching unacknowledged count:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch count" });
+  }
+});
+
+/**
+ * POST /api/alerts/test
+ * Trigger a test alert for testing configuration
+ */
+app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    const validAlertTypes = ['overtime', 'low_coverage', 'compliance_violation', 'payment_overdue', 
+                             'shift_unfilled', 'clock_anomaly', 'budget_exceeded', 'approval_pending'];
+    
+    if (!alertType || !validAlertTypes.includes(alertType)) {
+      return res.status(400).json({ error: "Invalid or missing alert type" });
+    }
+    
+    const alert = await alertService.triggerAlert({
+      workspaceId,
+      alertType,
+      title: `Test Alert: ${alertType.replace(/_/g, ' ').toUpperCase()}`,
+      message: `This is a test alert for the ${alertType.replace(/_/g, ' ')} alert type.`,
+      severity: 'low',
+      triggerData: { isTest: true, triggeredBy: req.userId },
+      deduplicationKey: `test:${alertType}:${Date.now()}`,
+    });
+    
+    if (!alert) {
+      return res.status(400).json({ error: "Alert was not triggered - check if this alert type is enabled" });
+    }
+    
+    res.json({ success: true, data: alert, message: "Test alert triggered successfully" });
+  } catch (error: any) {
+    console.error("Error triggering test alert:", error);
+    res.status(500).json({ error: error.message || "Failed to trigger test alert" });
+  }
+});
+
   return server;
 }
+
+// ============================================================================
+// USER FEEDBACK PORTAL - Feature Requests, Bug Reports, and Suggestions
+// ============================================================================
+
+/**
+ * POST /api/feedback
+ * Submit new feedback (bug report, feature request, improvement, general)
+ */
+app.post("/api/feedback", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { title, description, type, priority, category, attachmentUrls } = req.body;
+    
+    if (!title || !description || !type) {
+      return res.status(400).json({ success: false, error: "Title, description, and type are required" });
+    }
+    
+    const validTypes = ['bug', 'feature_request', 'improvement', 'general', 'question'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ success: false, error: "Invalid feedback type" });
+    }
+    
+    const validPriorities = ['low', 'medium', 'high', 'critical'];
+    if (priority && !validPriorities.includes(priority)) {
+      return res.status(400).json({ success: false, error: "Invalid priority level" });
+    }
+    
+    const feedback = await storage.createFeedback({
+      workspaceId: req.workspaceId!,
+      userId: req.userId!,
+      title,
+      description,
+      type,
+      priority: priority || 'medium',
+      category: category || null,
+      attachmentUrls: attachmentUrls || [],
+    });
+    
+    res.status(201).json({ success: true, data: feedback });
+  } catch (error: any) {
+    console.error("Error creating feedback:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to create feedback" });
+  }
+});
+
+/**
+ * GET /api/feedback
+ * List feedback with filtering and sorting
+ */
+app.get("/api/feedback", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { type, status, priority, sortBy, sortOrder, limit, offset, myFeedback } = req.query;
+    
+    const filters: any = {
+      workspaceId: req.workspaceId!,
+    };
+    
+    if (type) filters.type = type as string;
+    if (status) filters.status = status as string;
+    if (priority) filters.priority = priority as string;
+    if (sortBy) filters.sortBy = sortBy as string;
+    if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
+    if (limit) filters.limit = parseInt(limit as string, 10);
+    if (offset) filters.offset = parseInt(offset as string, 10);
+    if (myFeedback === 'true') filters.userId = req.userId!;
+    
+    const feedbackList = await storage.getFeedbackList(filters);
+    
+    const feedbackWithUserVotes = await Promise.all(
+      feedbackList.map(async (fb) => {
+        const userVote = await storage.getUserFeedbackVote(fb.id, req.userId!);
+        return { ...fb, userVote: userVote?.voteType || null };
+      })
+    );
+    
+    res.json({ success: true, data: feedbackWithUserVotes });
+  } catch (error: any) {
+    console.error("Error fetching feedback:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
+  }
+});
+
+/**
+ * GET /api/feedback/:id
+ * Get feedback detail with comments
+ */
+app.get("/api/feedback/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    const comments = await storage.getFeedbackComments(id);
+    const userVote = await storage.getUserFeedbackVote(id, req.userId!);
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        ...feedback, 
+        comments,
+        userVote: userVote?.voteType || null 
+      } 
+    });
+  } catch (error: any) {
+    console.error("Error fetching feedback detail:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
+  }
+});
+
+/**
+ * PATCH /api/feedback/:id
+ * Update feedback (only owner can update title/description)
+ */
+app.patch("/api/feedback/:id", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, type, priority, category } = req.body;
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    if (feedback.userId !== req.userId) {
+      return res.status(403).json({ success: false, error: "Only the author can edit this feedback" });
+    }
+    
+    const updateData: any = {};
+    if (title) updateData.title = title;
+    if (description) updateData.description = description;
+    if (type) updateData.type = type;
+    if (priority) updateData.priority = priority;
+    if (category !== undefined) updateData.category = category;
+    
+    const updated = await storage.updateFeedback(id, updateData);
+    res.json({ success: true, data: updated });
+  } catch (error: any) {
+    console.error("Error updating feedback:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to update feedback" });
+  }
+});
+
+/**
+ * PATCH /api/feedback/:id/status
+ * Update feedback status (admin only)
+ */
+app.patch("/api/feedback/:id/status", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { status, note } = req.body;
+    
+    const validStatuses = ['submitted', 'under_review', 'planned', 'in_progress', 'completed', 'declined', 'duplicate'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: "Invalid status" });
+    }
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
+    res.json({ success: true, data: updated });
+  } catch (error: any) {
+    console.error("Error updating feedback status:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to update status" });
+  }
+});
+
+/**
+ * POST /api/feedback/:id/vote
+ * Upvote or downvote feedback
+ */
+app.post("/api/feedback/:id/vote", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { voteType } = req.body;
+    
+    if (!voteType || !['up', 'down'].includes(voteType)) {
+      return res.status(400).json({ success: false, error: "Invalid vote type. Use 'up' or 'down'" });
+    }
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    const result = await storage.voteFeedback(id, req.userId!, voteType);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Error voting on feedback:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to vote" });
+  }
+});
+
+/**
+ * POST /api/feedback/:id/comments
+ * Add a comment to feedback
+ */
+app.post("/api/feedback/:id/comments", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { content, parentId } = req.body;
+    
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ success: false, error: "Comment content is required" });
+    }
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    const comment = await storage.createFeedbackComment({
+      feedbackId: id,
+      userId: req.userId!,
+      content: content.trim(),
+      parentId: parentId || null,
+    });
+    
+    res.status(201).json({ success: true, data: comment });
+  } catch (error: any) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to add comment" });
+  }
+});
+
+/**
+ * GET /api/feedback/:id/comments
+ * Get comments for a feedback item
+ */
+app.get("/api/feedback/:id/comments", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    const comments = await storage.getFeedbackComments(id);
+    res.json({ success: true, data: comments });
+  } catch (error: any) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to fetch comments" });
+  }
+});
+
+/**
+ * DELETE /api/feedback/:id/comments/:commentId
+ * Delete a comment (only author can delete)
+ */
+app.delete("/api/feedback/:id/comments/:commentId", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id, commentId } = req.params;
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    await storage.deleteFeedbackComment(commentId);
+    res.json({ success: true, message: "Comment deleted" });
+  } catch (error: any) {
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to delete comment" });
+  }
+});
+
+/**
+ * DELETE /api/feedback/:id
+ * Delete feedback (only author can delete)
+ */
+app.delete("/api/feedback/:id", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    
+    const feedback = await storage.getFeedback(id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, error: "Feedback not found" });
+    }
+    
+    if (feedback.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ success: false, error: "Access denied" });
+    }
+    
+    if (feedback.userId !== req.userId) {
+      return res.status(403).json({ success: false, error: "Only the author can delete this feedback" });
+    }
+    
+    await storage.deleteFeedback(id);
+    res.json({ success: true, message: "Feedback deleted" });
+  } catch (error: any) {
+    console.error("Error deleting feedback:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to delete feedback" });
+  }
+});

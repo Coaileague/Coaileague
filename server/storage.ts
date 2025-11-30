@@ -81,6 +81,9 @@ import {
   passwordResetAuditLog,
   aiResponses,
   aiSuggestions,
+  userFeedback,
+  feedbackComments,
+  feedbackVotes,
   type User,
   type OrgInvitation,
   type InsertOrgInvitation,
@@ -208,6 +211,19 @@ import {
   type InsertAiResponse,
   type AiSuggestion,
   type InsertAiSuggestion,
+  type UserFeedback,
+  type InsertUserFeedback,
+  type FeedbackComment,
+  type InsertFeedbackComment,
+  type FeedbackVote,
+  type InsertFeedbackVote,
+  alertConfigurations,
+  alertHistory,
+  alertRateLimits,
+  type AlertConfiguration,
+  type InsertAlertConfiguration,
+  type AlertHistory,
+  type InsertAlertHistory,
 } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
@@ -783,6 +799,23 @@ export interface IStorage {
   acceptAiSuggestion(id: string, userId: string): Promise<AiSuggestion | undefined>;
   rejectAiSuggestion(id: string, userId: string, reason?: string): Promise<AiSuggestion | undefined>;
   implementAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
+
+  // ========================================================================
+  // USER FEEDBACK PORTAL - Feature Requests, Bug Reports, and Suggestions
+  // ========================================================================
+  createFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
+  getFeedback(id: string): Promise<UserFeedback | undefined>;
+  getFeedbackList(filters?: { type?: string; status?: string; priority?: string; workspaceId?: string; userId?: string; sortBy?: string; sortOrder?: 'asc' | 'desc'; limit?: number; offset?: number }): Promise<UserFeedback[]>;
+  updateFeedback(id: string, data: Partial<InsertUserFeedback>): Promise<UserFeedback | undefined>;
+  updateFeedbackStatus(id: string, status: string, updatedBy: string, note?: string): Promise<UserFeedback | undefined>;
+  deleteFeedback(id: string): Promise<boolean>;
+  
+  createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment>;
+  getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]>;
+  deleteFeedbackComment(id: string): Promise<boolean>;
+  
+  voteFeedback(feedbackId: string, userId: string, voteType: 'up' | 'down'): Promise<{ feedback: UserFeedback; userVote: string | null }>;
+  getUserFeedbackVote(feedbackId: string, userId: string): Promise<FeedbackVote | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -6368,6 +6401,230 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aiSuggestions.id, id))
       .returning();
     return suggestion;
+  }
+
+  // ============================================================================
+  // USER FEEDBACK PORTAL OPERATIONS
+  // ============================================================================
+
+  async createFeedback(feedback: InsertUserFeedback): Promise<UserFeedback> {
+    const [result] = await db
+      .insert(userFeedback)
+      .values(feedback)
+      .returning();
+    return result;
+  }
+
+  async getFeedback(id: string): Promise<UserFeedback | undefined> {
+    const [result] = await db
+      .select()
+      .from(userFeedback)
+      .where(eq(userFeedback.id, id));
+    return result;
+  }
+
+  async getFeedbackList(filters?: { 
+    type?: string; 
+    status?: string; 
+    priority?: string; 
+    workspaceId?: string; 
+    userId?: string; 
+    sortBy?: string; 
+    sortOrder?: 'asc' | 'desc'; 
+    limit?: number; 
+    offset?: number 
+  }): Promise<UserFeedback[]> {
+    const conditions: any[] = [];
+    
+    if (filters?.type) {
+      conditions.push(eq(userFeedback.type, filters.type as any));
+    }
+    if (filters?.status) {
+      conditions.push(eq(userFeedback.status, filters.status as any));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(userFeedback.priority, filters.priority as any));
+    }
+    if (filters?.workspaceId) {
+      conditions.push(eq(userFeedback.workspaceId, filters.workspaceId));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(userFeedback.userId, filters.userId));
+    }
+    
+    let query = db.select().from(userFeedback);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc';
+    if (filters?.sortBy === 'votes') {
+      query = sortOrder === 'desc' 
+        ? query.orderBy(desc(userFeedback.upvoteCount)) as any
+        : query.orderBy(userFeedback.upvoteCount) as any;
+    } else if (filters?.sortBy === 'createdAt') {
+      query = sortOrder === 'desc'
+        ? query.orderBy(desc(userFeedback.createdAt)) as any
+        : query.orderBy(userFeedback.createdAt) as any;
+    } else {
+      query = query.orderBy(desc(userFeedback.createdAt)) as any;
+    }
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as any;
+    }
+    
+    return await query;
+  }
+
+  async updateFeedback(id: string, data: Partial<InsertUserFeedback>): Promise<UserFeedback | undefined> {
+    const [result] = await db
+      .update(userFeedback)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(userFeedback.id, id))
+      .returning();
+    return result;
+  }
+
+  async updateFeedbackStatus(id: string, status: string, updatedBy: string, note?: string): Promise<UserFeedback | undefined> {
+    const [result] = await db
+      .update(userFeedback)
+      .set({
+        status: status as any,
+        statusUpdatedBy: updatedBy,
+        statusUpdatedAt: new Date(),
+        statusNote: note,
+        updatedAt: new Date(),
+      })
+      .where(eq(userFeedback.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteFeedback(id: string): Promise<boolean> {
+    const result = await db
+      .delete(userFeedback)
+      .where(eq(userFeedback.id, id));
+    return true;
+  }
+
+  async createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment> {
+    const [result] = await db
+      .insert(feedbackComments)
+      .values(comment)
+      .returning();
+    
+    await db
+      .update(userFeedback)
+      .set({ 
+        commentCount: sql`${userFeedback.commentCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(userFeedback.id, comment.feedbackId));
+    
+    return result;
+  }
+
+  async getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]> {
+    return await db
+      .select()
+      .from(feedbackComments)
+      .where(eq(feedbackComments.feedbackId, feedbackId))
+      .orderBy(feedbackComments.createdAt);
+  }
+
+  async deleteFeedbackComment(id: string): Promise<boolean> {
+    const [comment] = await db
+      .select()
+      .from(feedbackComments)
+      .where(eq(feedbackComments.id, id));
+    
+    if (comment) {
+      await db.delete(feedbackComments).where(eq(feedbackComments.id, id));
+      await db
+        .update(userFeedback)
+        .set({ 
+          commentCount: sql`GREATEST(${userFeedback.commentCount} - 1, 0)`,
+          updatedAt: new Date()
+        })
+        .where(eq(userFeedback.id, comment.feedbackId));
+    }
+    return true;
+  }
+
+  async voteFeedback(feedbackId: string, userId: string, voteType: 'up' | 'down'): Promise<{ feedback: UserFeedback; userVote: string | null }> {
+    const existingVote = await this.getUserFeedbackVote(feedbackId, userId);
+    
+    if (existingVote) {
+      if (existingVote.voteType === voteType) {
+        await db
+          .delete(feedbackVotes)
+          .where(eq(feedbackVotes.id, existingVote.id));
+        
+        const updateField = voteType === 'up' ? userFeedback.upvoteCount : userFeedback.downvoteCount;
+        await db
+          .update(userFeedback)
+          .set({ 
+            [voteType === 'up' ? 'upvoteCount' : 'downvoteCount']: sql`GREATEST(${updateField} - 1, 0)`,
+            updatedAt: new Date()
+          })
+          .where(eq(userFeedback.id, feedbackId));
+        
+        const [feedback] = await db.select().from(userFeedback).where(eq(userFeedback.id, feedbackId));
+        return { feedback, userVote: null };
+      } else {
+        await db
+          .update(feedbackVotes)
+          .set({ voteType })
+          .where(eq(feedbackVotes.id, existingVote.id));
+        
+        const increaseField = voteType === 'up' ? 'upvoteCount' : 'downvoteCount';
+        const decreaseField = voteType === 'up' ? 'downvoteCount' : 'upvoteCount';
+        
+        await db
+          .update(userFeedback)
+          .set({ 
+            [increaseField]: sql`${voteType === 'up' ? userFeedback.upvoteCount : userFeedback.downvoteCount} + 1`,
+            [decreaseField]: sql`GREATEST(${voteType === 'up' ? userFeedback.downvoteCount : userFeedback.upvoteCount} - 1, 0)`,
+            updatedAt: new Date()
+          })
+          .where(eq(userFeedback.id, feedbackId));
+        
+        const [feedback] = await db.select().from(userFeedback).where(eq(userFeedback.id, feedbackId));
+        return { feedback, userVote: voteType };
+      }
+    } else {
+      await db
+        .insert(feedbackVotes)
+        .values({ feedbackId, userId, voteType });
+      
+      const updateField = voteType === 'up' ? userFeedback.upvoteCount : userFeedback.downvoteCount;
+      await db
+        .update(userFeedback)
+        .set({ 
+          [voteType === 'up' ? 'upvoteCount' : 'downvoteCount']: sql`${updateField} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(userFeedback.id, feedbackId));
+      
+      const [feedback] = await db.select().from(userFeedback).where(eq(userFeedback.id, feedbackId));
+      return { feedback, userVote: voteType };
+    }
+  }
+
+  async getUserFeedbackVote(feedbackId: string, userId: string): Promise<FeedbackVote | undefined> {
+    const [vote] = await db
+      .select()
+      .from(feedbackVotes)
+      .where(and(
+        eq(feedbackVotes.feedbackId, feedbackId),
+        eq(feedbackVotes.userId, userId)
+      ));
+    return vote;
   }
 }
 

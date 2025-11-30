@@ -61,6 +61,7 @@ import Clients from "@/pages/clients";
 import Invoices from "@/pages/invoices";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
+import AlertSettings from "@/pages/alert-settings";
 import Reports from "@/pages/reports";
 import OnboardingPage from "@/pages/onboarding";
 import HiringWorkflowBuilder from "@/pages/hireos-workflow-builder";
@@ -143,6 +144,7 @@ import AdminTicketReviews from "@/pages/admin-ticket-reviews";
 import AutomationAuditLog from "@/pages/automation-audit-log";
 import AutomationSettings from "@/pages/automation-settings";
 import AIBrainDashboard from "@/pages/ai-brain-dashboard";
+import SystemHealth from "@/pages/system-health";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -397,6 +399,11 @@ function AppContent() {
               <Route path="/automation/audit-log" component={AutomationAuditLog} />
               <Route path="/automation/settings" component={AutomationSettings} />
               <Route path="/ai/brain" component={AIBrainDashboard} />
+              <Route path="/system-health">
+                <PlatformAdminRoute>
+                  <SystemHealth />
+                </PlatformAdminRoute>
+              </Route>
               <Route path="/owner/hireos/workflow-builder" component={HiringWorkflowBuilder} />
               <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
               <Route path="/platform/users" component={PlatformUsers} />
@@ -406,6 +413,7 @@ function AppContent() {
               <Route path="/auditor/portal" component={AuditorPortal} />
               <Route path="/client/portal" component={ClientPortal} />
               <Route path="/settings" component={Settings} />
+              <Route path="/alert-settings" component={AlertSettings} />
               <Route path="/employee/profile" component={EmployeeProfile} />
               <Route path="/pricing" component={UniversalMarketing} />
               <Route path="/contact" component={Contact} />
@@ -567,6 +575,11 @@ function AppContent() {
                 <Route path="/automation-control" component={AutomationControl} />
                 <Route path="/ai/command-center" component={AICommandCenter} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
+                <Route path="/system-health">
+                  <PlatformAdminRoute>
+                    <SystemHealth />
+                  </PlatformAdminRoute>
+                </Route>
                 <Route path="/billing" component={Billing} />
                 <Route path="/usage" component={UsageDashboard} />
                 <Route path="/integrations" component={IntegrationsPage} />
@@ -652,6 +665,7 @@ function AppContent() {
                 <Route path="/auditor/portal" component={AuditorPortal} />
                 <Route path="/client/portal" component={ClientPortal} />
                 <Route path="/settings" component={Settings} />
+              <Route path="/alert-settings" component={AlertSettings} />
                 <Route path="/employee/profile" component={EmployeeProfile} />
                 <Route path="/pricing" component={UniversalMarketing} />
                 <Route path="/contact" component={Contact} />

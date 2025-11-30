@@ -11698,7 +11698,14 @@ export const alertTypeEnum = pgEnum('alert_type', [
   'schedule_conflict',
   'compliance_violation',
   'timecard_anomaly',
-  'system_alert'
+  'system_alert',
+  'overtime',
+  'low_coverage',
+  'payment_overdue',
+  'shift_unfilled',
+  'clock_anomaly',
+  'budget_exceeded',
+  'approval_pending'
 ]);
 
 export const alertSeverityEnum = pgEnum('alert_severity', [
@@ -11711,7 +11718,8 @@ export const alertSeverityEnum = pgEnum('alert_severity', [
 export const alertChannelEnum = pgEnum('alert_channel', [
   'helpos',
   'email',
-  'sms'
+  'sms',
+  'in_app'
 ]);
 
 export const alertStatusEnum = pgEnum('alert_status', [
@@ -14732,3 +14740,263 @@ export const calendarSyncEvents = pgTable("calendar_sync_events", {
   index("calendar_sync_events_type_idx").on(table.eventType),
   index("calendar_sync_events_created_idx").on(table.createdAt),
 ]);
+
+// ============================================================================
+// REAL-TIME ALERTS SYSTEM - Configurable Alert System for Critical Events
+// ============================================================================
+// Alert Configurations - Per-workspace alert settings
+export const alertConfigurations = pgTable("alert_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Alert type and settings
+  alertType: alertTypeEnum("alert_type").notNull(),
+  isEnabled: boolean("is_enabled").default(true),
+  
+  // Threshold configuration (JSON for flexibility)
+  thresholds: jsonb("thresholds").default('{}'), // e.g., { "hours": 10, "percentage": 80 }
+  
+  // Severity level for this alert type
+  severity: alertSeverityEnum("severity").default('medium'),
+  
+  // Delivery channels (array of channels)
+  channels: text("channels").array().default(sql`ARRAY['in_app']::text[]`),
+  
+  // Who receives alerts
+  notifyRoles: text("notify_roles").array().default(sql`ARRAY['org_owner', 'org_admin']::text[]`),
+  notifyUserIds: text("notify_user_ids").array(), // Specific user IDs (optional)
+  
+  // Rate limiting (prevent alert flooding)
+  cooldownMinutes: integer("cooldown_minutes").default(60), // Minimum time between duplicate alerts
+  maxAlertsPerHour: integer("max_alerts_per_hour").default(10), // Max alerts of this type per hour
+  
+  // Schedule restrictions
+  alertSchedule: jsonb("alert_schedule").default('{}'), // e.g., { "daysOfWeek": [1,2,3,4,5], "startHour": 8, "endHour": 18 }
+  
+  // Custom message template (optional)
+  customTitle: varchar("custom_title"),
+  customMessage: text("custom_message"),
+  
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("alert_configurations_workspace_idx").on(table.workspaceId),
+  index("alert_configurations_type_idx").on(table.alertType),
+  index("alert_configurations_enabled_idx").on(table.isEnabled),
+  uniqueIndex("alert_configurations_workspace_type_unique").on(table.workspaceId, table.alertType),
+]);
+
+export const insertAlertConfigurationSchema = createInsertSchema(alertConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAlertConfiguration = z.infer<typeof insertAlertConfigurationSchema>;
+export type AlertConfiguration = typeof alertConfigurations.$inferSelect;
+
+// Alert History - Triggered alerts log
+export const alertHistory = pgTable("alert_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  configurationId: varchar("configuration_id").references(() => alertConfigurations.id, { onDelete: 'set null' }),
+  
+  // Alert details
+  alertType: alertTypeEnum("alert_type").notNull(),
+  severity: alertSeverityEnum("severity").notNull(),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  
+  // Context data (what triggered the alert)
+  triggerData: jsonb("trigger_data").default('{}'), // e.g., { "employeeId": "...", "hours": 12.5 }
+  relatedEntityType: varchar("related_entity_type"), // 'employee', 'shift', 'invoice', etc.
+  relatedEntityId: varchar("related_entity_id"),
+  
+  // Delivery tracking
+  channelsNotified: text("channels_notified").array().default(sql`ARRAY[]::text[]`),
+  deliveryStatus: jsonb("delivery_status").default('{}'), // { "in_app": "sent", "email": "pending", "sms": "failed" }
+  
+  // Acknowledgment tracking
+  isAcknowledged: boolean("is_acknowledged").default(false),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id, { onDelete: 'set null' }),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgmentNotes: text("acknowledgment_notes"),
+  
+  // Resolution tracking
+  isResolved: boolean("is_resolved").default(false),
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  
+  // Metadata
+  expiresAt: timestamp("expires_at"), // When alert is no longer relevant
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("alert_history_workspace_idx").on(table.workspaceId),
+  index("alert_history_type_idx").on(table.alertType),
+  index("alert_history_severity_idx").on(table.severity),
+  index("alert_history_acknowledged_idx").on(table.isAcknowledged),
+  index("alert_history_resolved_idx").on(table.isResolved),
+  index("alert_history_created_idx").on(table.createdAt),
+  index("alert_history_config_idx").on(table.configurationId),
+]);
+
+export const insertAlertHistorySchema = createInsertSchema(alertHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAlertHistory = z.infer<typeof insertAlertHistorySchema>;
+export type AlertHistory = typeof alertHistory.$inferSelect;
+
+// Alert Rate Limiting - Track alert frequency to prevent flooding
+export const alertRateLimits = pgTable("alert_rate_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  alertType: alertTypeEnum("alert_type").notNull(),
+  
+  // Unique key for deduplication (e.g., "overtime:employee:123")
+  deduplicationKey: varchar("deduplication_key").notNull(),
+  
+  // Rate tracking
+  lastTriggeredAt: timestamp("last_triggered_at").notNull(),
+  triggerCount: integer("trigger_count").default(1),
+  
+  // Window tracking
+  windowStart: timestamp("window_start").notNull(),
+  windowAlertCount: integer("window_alert_count").default(1),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("alert_rate_limits_workspace_idx").on(table.workspaceId),
+  index("alert_rate_limits_type_idx").on(table.alertType),
+  index("alert_rate_limits_dedup_idx").on(table.deduplicationKey),
+  uniqueIndex("alert_rate_limits_workspace_type_key_unique").on(table.workspaceId, table.alertType, table.deduplicationKey),
+]);
+
+// ============================================================================
+// USER FEEDBACK PORTAL - Feature Requests, Bug Reports, and Suggestions
+// ============================================================================
+
+export const feedbackTypeEnum = pgEnum('feedback_type', [
+  'bug',
+  'feature_request',
+  'improvement',
+  'general'
+]);
+
+export const feedbackPriorityEnum = pgEnum('feedback_priority', [
+  'low',
+  'medium',
+  'high'
+]);
+
+export const feedbackStatusEnum = pgEnum('feedback_status', [
+  'new',
+  'under_review',
+  'planned',
+  'in_progress',
+  'completed',
+  'closed'
+]);
+
+export const userFeedback = pgTable("user_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  type: feedbackTypeEnum("type").notNull().default('general'),
+  priority: feedbackPriorityEnum("priority").notNull().default('medium'),
+  status: feedbackStatusEnum("status").notNull().default('new'),
+  
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  
+  upvoteCount: integer("upvote_count").default(0),
+  downvoteCount: integer("downvote_count").default(0),
+  commentCount: integer("comment_count").default(0),
+  
+  statusUpdatedBy: varchar("status_updated_by").references(() => users.id, { onDelete: 'set null' }),
+  statusUpdatedAt: timestamp("status_updated_at"),
+  statusNote: text("status_note"),
+  
+  adminResponse: text("admin_response"),
+  adminRespondedBy: varchar("admin_responded_by").references(() => users.id, { onDelete: 'set null' }),
+  adminRespondedAt: timestamp("admin_responded_at"),
+  
+  isPublic: boolean("is_public").default(true),
+  isPinned: boolean("is_pinned").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("user_feedback_workspace_idx").on(table.workspaceId),
+  index("user_feedback_user_idx").on(table.userId),
+  index("user_feedback_type_idx").on(table.type),
+  index("user_feedback_status_idx").on(table.status),
+  index("user_feedback_priority_idx").on(table.priority),
+  index("user_feedback_created_idx").on(table.createdAt),
+  index("user_feedback_upvote_idx").on(table.upvoteCount),
+]);
+
+export const insertUserFeedbackSchema = createInsertSchema(userFeedback).omit({
+  id: true,
+  upvoteCount: true,
+  downvoteCount: true,
+  commentCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserFeedback = z.infer<typeof insertUserFeedbackSchema>;
+export type UserFeedback = typeof userFeedback.$inferSelect;
+
+export const feedbackComments = pgTable("feedback_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  feedbackId: varchar("feedback_id").notNull().references(() => userFeedback.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  parentId: varchar("parent_id").references((): any => feedbackComments.id, { onDelete: 'cascade' }),
+  
+  content: text("content").notNull(),
+  isFromAdmin: boolean("is_from_admin").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("feedback_comments_feedback_idx").on(table.feedbackId),
+  index("feedback_comments_user_idx").on(table.userId),
+  index("feedback_comments_parent_idx").on(table.parentId),
+  index("feedback_comments_created_idx").on(table.createdAt),
+]);
+
+export const insertFeedbackCommentSchema = createInsertSchema(feedbackComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFeedbackComment = z.infer<typeof insertFeedbackCommentSchema>;
+export type FeedbackComment = typeof feedbackComments.$inferSelect;
+
+export const feedbackVotes = pgTable("feedback_votes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  feedbackId: varchar("feedback_id").notNull().references(() => userFeedback.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  voteType: varchar("vote_type").notNull(), // 'up' or 'down'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("feedback_votes_feedback_idx").on(table.feedbackId),
+  index("feedback_votes_user_idx").on(table.userId),
+  uniqueIndex("feedback_votes_unique").on(table.feedbackId, table.userId),
+]);
+
+export const insertFeedbackVoteSchema = createInsertSchema(feedbackVotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFeedbackVote = z.infer<typeof insertFeedbackVoteSchema>;
+export type FeedbackVote = typeof feedbackVotes.$inferSelect;

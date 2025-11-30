@@ -22,13 +22,14 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Sparkles, Plus, ChevronLeft, ChevronRight, 
   Calendar, Users, Clock, BarChart3, CheckCircle,
-  AlertCircle, CalendarDays, ArrowRightLeft, LayoutTemplate
+  AlertCircle, CalendarDays, ArrowRightLeft, LayoutTemplate, Download
 } from 'lucide-react';
 import { EmployeeShiftCard } from '@/components/schedule/EmployeeShiftCard';
 import { ShiftBottomSheet } from '@/components/schedule/ShiftBottomSheet';
 import { ShiftDetailSheet } from '@/components/schedule/ShiftDetailSheet';
 import { ShiftSwapDrawer } from '@/components/schedule/ShiftSwapDrawer';
 import { ScheduleTemplates } from '@/components/schedule/ScheduleTemplates';
+import { CalendarSyncDialog } from '@/components/schedule/CalendarSyncDialog';
 import { ApprovalsDrawer } from '@/components/mobile/schedule/ApprovalsDrawer';
 import { ReportsSheet } from '@/components/mobile/schedule/ReportsSheet';
 import type { Shift, Employee, Client } from '@shared/schema';
@@ -58,6 +59,7 @@ export default function ScheduleMobileFirst() {
   const [showReports, setShowReports] = useState(false);
   const [showSwaps, setShowSwaps] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [swapShift, setSwapShift] = useState<Shift | null>(null);
   
   // Shift detail popup state
@@ -506,6 +508,16 @@ export default function ScheduleMobileFirst() {
             <ArrowRightLeft className="h-4 w-4 text-cyan-600" />
             Swaps
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCalendarSync(true)}
+            className="flex-shrink-0 gap-1.5"
+            data-testid="button-calendar-sync"
+          >
+            <Download className="h-4 w-4 text-indigo-600" />
+            Calendar
+          </Button>
         </div>
       </div>
 
@@ -731,6 +743,13 @@ export default function ScheduleMobileFirst() {
           onApplyTemplate={handleApplyTemplate}
         />
       )}
+
+      {/* Calendar Sync Dialog */}
+      <CalendarSyncDialog
+        open={showCalendarSync}
+        onOpenChange={setShowCalendarSync}
+        employeeId={currentEmployee?.id}
+      />
     </div>
   );
 }
