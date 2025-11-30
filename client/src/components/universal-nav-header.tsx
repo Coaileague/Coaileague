@@ -4,13 +4,15 @@
  * Matches Fortune 500 professional aesthetic with CoAIleague branding
  */
 
-import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle, Calendar, Clock, MessageSquare, Sparkles } from "lucide-react";
+import { Menu, ChevronDown, ChevronRight, GraduationCap, Search, Monitor, AlertCircle, Calendar, Clock, MessageSquare, Sparkles, Check, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { selectCondensedMobileFamilies, getDesktopOnlyRoutes } from "@/lib/osModules";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,6 +27,160 @@ import { PlanBadge } from "@/components/plan-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { performLogout } from "@/lib/logoutHandler";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
+
+interface FeatureUpdate {
+  id: string;
+  title: string;
+  description: string;
+  category: 'new' | 'improvement' | 'fix' | 'security' | 'maintenance';
+  releaseDate: Date;
+  learnMoreUrl?: string;
+}
+
+function WhatsNewHeaderBadge() {
+  const [open, setOpen] = useState(false);
+
+  const { data: updates = [] } = useQuery<FeatureUpdate[]>({
+    queryKey: ['/api/feature-updates'],
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', '/api/feature-updates/clear-all');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/feature-updates'] });
+      setOpen(false);
+    },
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: async (updateId: string) => {
+      await apiRequest('POST', `/api/feature-updates/${updateId}/dismiss`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/feature-updates'] });
+    },
+  });
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'new':
+        return 'bg-cyan-500/20 text-cyan-300';
+      case 'improvement':
+        return 'bg-blue-500/20 text-blue-300';
+      case 'fix':
+        return 'bg-orange-500/20 text-orange-300';
+      case 'security':
+        return 'bg-red-500/20 text-red-300';
+      default:
+        return 'bg-gray-500/20 text-gray-300';
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="h-9 w-9 relative"
+          data-testid="button-whats-new-header"
+          title="What's New"
+        >
+          <Sparkles className="h-4 w-4" />
+          {updates.length > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center text-[10px] font-bold">
+              {updates.length > 9 ? '9+' : updates.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0 bg-slate-900 border-slate-700" align="end" sideOffset={8}>
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-400" />
+            <h3 className="font-semibold text-white">What's New</h3>
+          </div>
+          {updates.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800"
+              onClick={() => clearAllMutation.mutate()}
+              disabled={clearAllMutation.isPending}
+              data-testid="button-clear-all-updates-header"
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Clear All
+            </Button>
+          )}
+        </div>
+        <Separator className="bg-slate-700" />
+        <ScrollArea className="h-[320px]">
+          {updates.length === 0 ? (
+            <div className="p-8 text-center">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 text-slate-600" />
+              <p className="text-sm text-slate-400">
+                No new updates
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-700">
+              {updates.map((update) => (
+                <div key={update.id} className="p-4 space-y-2 relative group" data-testid={`update-header-${update.id}`}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-white hover:bg-slate-800"
+                    onClick={() => dismissMutation.mutate(update.id)}
+                    disabled={dismissMutation.isPending}
+                    data-testid={`button-dismiss-header-${update.id}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <div className="flex items-start justify-between gap-2 pr-8">
+                    <h4 className="font-medium text-sm text-white">{update.title}</h4>
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs ${getCategoryColor(update.category)}`}
+                    >
+                      {update.category}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {update.description}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-500">
+                      {formatDistanceToNow(new Date(update.releaseDate), { addSuffix: true })}
+                    </p>
+                    {update.learnMoreUrl && (
+                      <a
+                        href={update.learnMoreUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-cyan-400 hover:underline flex items-center gap-1"
+                        data-testid={`link-learn-more-header-${update.id}`}
+                      >
+                        Learn more
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function UniversalNavHeader() {
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -379,24 +535,16 @@ export function UniversalNavHeader() {
           </Link>
         </div>
 
-        {/* Right: What's New + User Initials + Notifications */}
+        {/* Right: What's New + Notifications + User Menu */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* What's New Badge - Mobile */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-white hover:bg-white/20 relative"
-              onClick={() => {
-                if ((window as any).openWhatsNew) {
-                  (window as any).openWhatsNew();
-                }
-              }}
-              data-testid="button-whats-new-mobile"
-              title="What's New"
-            >
-              <Sparkles className="h-4 w-4" />
-            </Button>
+          {/* What's New Badge - All Screen Sizes */}
+          <div className="[&_button]:text-white [&_button]:hover:bg-white/20 flex-shrink-0">
+            <WhatsNewHeaderBadge />
+          </div>
+          
+          {/* Notifications */}
+          <div className="[&_button]:text-white [&_button]:hover:bg-white/20 flex-shrink-0">
+            <NotificationsCenter />
           </div>
 
           {/* User Initials Display */}
@@ -405,11 +553,6 @@ export function UniversalNavHeader() {
             data-testid="display-user-initials"
           >
             <span className="text-sm font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
-          </div>
-          
-          {/* Notifications */}
-          <div className="[&_button]:text-white [&_button]:hover:bg-white/20 flex-shrink-0">
-            <NotificationsCenter />
           </div>
         </div>
       </div>
