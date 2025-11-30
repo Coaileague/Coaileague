@@ -52,7 +52,13 @@ export function WhatsNewBadge() {
   });
 
   const updates = updatesData?.updates || [];
-  const unviewedCount = unviewedData?.count || 0;
+  // Calculate unviewed count from both API and local updates (fallback)
+  const apiUnviewedCount = unviewedData?.count || 0;
+  const localUnviewedCount = updates.filter(u => !u.hasViewed).length;
+  // Use whichever is higher - ensures animation shows when there are new updates
+  const unviewedCount = Math.max(apiUnviewedCount, localUnviewedCount);
+  // Show animation if there are ANY unviewed updates OR user hasn't opened the popover yet
+  const hasNewUpdates = unviewedCount > 0 || (updates.length > 0 && !open);
 
   const markViewedMutation = useMutation({
     mutationFn: async (updateId: string) => {
@@ -133,14 +139,14 @@ export function WhatsNewBadge() {
           title="What's New"
         >
           <div className="relative inline-flex">
-            {/* Main sparkles icon with spinning color-cycling animation */}
+            {/* Main sparkles icon with spinning color-cycling animation - shows when there are new updates */}
             <Sparkles 
-              className={`h-4 w-4 relative z-10 transition-all ${unviewedCount > 0 ? "animate-star-spin-colors" : ""}`} 
-              style={unviewedCount > 0 ? { willChange: 'transform, filter' } : undefined}
+              className={`h-4 w-4 relative z-10 transition-all ${hasNewUpdates ? "animate-star-spin-colors" : ""}`} 
+              style={hasNewUpdates ? { willChange: 'transform, filter' } : undefined}
             />
             
             {/* Rotating sparkling dots around icon - spinning color-cycling theme */}
-            {unviewedCount > 0 && sparkles.map((sparkle, idx) => (
+            {hasNewUpdates && sparkles.map((sparkle, idx) => (
               <div
                 key={idx}
                 className="absolute pointer-events-none sparkle-star animate-star-spin-colors"
@@ -155,14 +161,14 @@ export function WhatsNewBadge() {
               />
             ))}
             
-            {/* Badge with cyan glow effect */}
-            {unviewedCount > 0 && (
+            {/* Badge with cyan glow effect - shows count when there are unviewed updates */}
+            {hasNewUpdates && (
               <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-whatsnew-badge-glow"
                 style={{
                   background: "linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4)",
                 }}
               >
-                {unviewedCount > 9 ? '9+' : unviewedCount}
+                {updates.length > 9 ? '9+' : updates.length}
               </span>
             )}
           </div>
