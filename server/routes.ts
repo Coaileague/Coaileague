@@ -444,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
 
-  // Combined notifications endpoint - returns notifications + maintenance alerts for universal popover
+  // Combined notifications endpoint - returns platform updates, notifications, and maintenance alerts
   app.get('/api/notifications/combined', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -456,27 +456,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.json({
+          platformUpdates: [],
           maintenanceAlerts: [],
           notifications: [],
-          unreadCount: 0,
+          unreadPlatformUpdates: 0,
+          unreadNotifications: 0,
+          unreadAlerts: 0,
+          totalUnread: 0,
         });
       }
       
+      // Get platform updates (What's New) with user read state
+      const platformUpdatesData = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 20);
+      const unreadPlatformUpdates = platformUpdatesData.filter(u => !u.isViewed).length;
+      
       // Get notifications
-      const notifications = await storage.getNotificationsByUser(userId, workspaceId);
-      const unreadCount = notifications.filter(n => !n.isRead).length;
+      const notifications = await storage.getNotificationsByUser(userId, workspaceId, 20);
+      const unreadNotifications = notifications.filter(n => !n.isRead).length;
       
       // Get active maintenance alerts
       const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      const unreadAlerts = maintenanceAlerts.filter((a: any) => !a.isAcknowledged).length;
       
       res.json({
+        platformUpdates: platformUpdatesData,
         maintenanceAlerts,
-        notifications: notifications.slice(0, 20),
-        unreadCount,
+        notifications,
+        unreadPlatformUpdates,
+        unreadNotifications,
+        unreadAlerts,
+        totalUnread: unreadPlatformUpdates + unreadNotifications + unreadAlerts,
       });
     } catch (error) {
       console.error('Error fetching combined notifications:', error);
       res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+  
+  // Mark all notifications as read (comprehensive - handles all types)
+  app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      const member = await storage.getWorkspaceMemberByUserId(userId);
+      const workspaceId = workspace?.id || member?.workspaceId;
+      
+      if (!workspaceId) {
+        return res.json({ 
+          success: true, 
+          markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } 
+        });
+      }
+      
+      // Mark all platform updates as viewed
+      const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
+      
+      // Mark all notifications as read
+      const notificationsMarked = await storage.markAllNotificationsAsRead(userId, workspaceId);
+      
+      // Acknowledge all maintenance alerts
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      let alertsMarked = 0;
+      for (const alert of alerts) {
+        if (!(alert as any).isAcknowledged) {
+          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
+          alertsMarked++;
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        markedRead: { 
+          platformUpdates: platformUpdatesMarked, 
+          notifications: notificationsMarked, 
+          alerts: alertsMarked 
+        } 
+      });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ message: 'Failed to mark notifications as read' });
     }
   });
 

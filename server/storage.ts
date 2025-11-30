@@ -791,6 +791,14 @@ export interface IStorage {
   createOrUpdateNotificationPreferences(userId: string, workspaceId: string, data: Partial<InsertUserNotificationPreferences>): Promise<UserNotificationPreferences>;
 
   // ========================================================================
+  // PLATFORM UPDATES - WHAT'S NEW FEED
+  // ========================================================================
+  getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit?: number): Promise<Array<PlatformUpdate & { isViewed: boolean }>>;
+  markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void>;
+  markAllPlatformUpdatesAsViewed(userId: string, workspaceId: string): Promise<number>;
+  createPlatformUpdate(update: InsertPlatformUpdate): Promise<PlatformUpdate>;
+
+  // ========================================================================
   // AI RESPONSES - TRACK AND LEARN FROM AI INTERACTIONS
   // ========================================================================
   createAiResponse(response: InsertAiResponse): Promise<AiResponse>;
@@ -6208,6 +6216,101 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return prefs;
+  }
+
+  // ============================================================================
+  // PLATFORM UPDATES METHODS - WHAT'S NEW FEED
+  // ============================================================================
+
+  async getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit: number = 20): Promise<Array<PlatformUpdate & { isViewed: boolean }>> {
+    const results = await db
+      .select({
+        update: platformUpdates,
+        viewedAt: userPlatformUpdateViews.viewedAt,
+      })
+      .from(platformUpdates)
+      .leftJoin(
+        userPlatformUpdateViews,
+        and(
+          eq(userPlatformUpdateViews.updateId, platformUpdates.id),
+          eq(userPlatformUpdateViews.userId, userId)
+        )
+      )
+      .where(
+        or(
+          eq(platformUpdates.visibility, 'global'),
+          eq(platformUpdates.workspaceId, workspaceId)
+        )
+      )
+      .orderBy(desc(platformUpdates.createdAt))
+      .limit(limit);
+
+    return results.map(r => ({
+      ...r.update,
+      isViewed: r.viewedAt !== null,
+    }));
+  }
+
+  async markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void> {
+    await db
+      .insert(userPlatformUpdateViews)
+      .values({
+        id: `${userId}-${updateId}`,
+        userId,
+        updateId,
+        viewedAt: new Date(),
+        viewSource: 'popover',
+      })
+      .onConflictDoNothing();
+  }
+
+  async markAllPlatformUpdatesAsViewed(userId: string, workspaceId: string): Promise<number> {
+    // Get all unviewed platform updates for this user/workspace
+    const unviewedUpdates = await db
+      .select({ id: platformUpdates.id })
+      .from(platformUpdates)
+      .leftJoin(
+        userPlatformUpdateViews,
+        and(
+          eq(userPlatformUpdateViews.updateId, platformUpdates.id),
+          eq(userPlatformUpdateViews.userId, userId)
+        )
+      )
+      .where(
+        and(
+          or(
+            eq(platformUpdates.visibility, 'global'),
+            eq(platformUpdates.workspaceId, workspaceId)
+          ),
+          sql`${userPlatformUpdateViews.viewedAt} IS NULL`
+        )
+      );
+
+    if (unviewedUpdates.length === 0) return 0;
+
+    // Insert view records for all unviewed updates
+    await db
+      .insert(userPlatformUpdateViews)
+      .values(
+        unviewedUpdates.map(u => ({
+          id: `${userId}-${u.id}`,
+          userId,
+          updateId: u.id,
+          viewedAt: new Date(),
+          viewSource: 'mark_all_read',
+        }))
+      )
+      .onConflictDoNothing();
+
+    return unviewedUpdates.length;
+  }
+
+  async createPlatformUpdate(update: InsertPlatformUpdate): Promise<PlatformUpdate> {
+    const [result] = await db
+      .insert(platformUpdates)
+      .values(update)
+      .returning();
+    return result;
   }
 
   // ============================================================================
