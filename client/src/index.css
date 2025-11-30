@@ -157,18 +157,33 @@
   100% { color: #ffd700; filter: drop-shadow(0 0 8px #ffd700); }
 }
 
-@keyframes starOrbit {
-  0% {
-    transform: rotate(0deg) translateX(16px) rotate(0deg) scale(1);
+@keyframes starTwinkle {
+  0%, 100% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+@keyframes starSparkle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  25% {
+    transform: scale(1.3);
     opacity: 1;
   }
   50% {
-    transform: rotate(180deg) translateX(16px) rotate(-180deg) scale(1.1);
-    opacity: 0.9;
+    transform: scale(0.7);
+    opacity: 0.5;
   }
-  100% {
-    transform: rotate(360deg) translateX(16px) rotate(-360deg) scale(1);
-    opacity: 1;
+  75% {
+    transform: scale(1.1);
+    opacity: 0.8;
   }
 }
 
@@ -247,9 +262,42 @@
   animation: rainbowFlash 3s ease-in-out infinite;
 }
 
-.animate-star-orbit {
-  animation: starOrbit 4s linear infinite;
-  transform-origin: center;
+.animate-star-twinkle {
+  animation: starTwinkle 1.5s ease-in-out infinite;
+}
+
+.animate-star-sparkle {
+  animation: starSparkle 2s ease-in-out infinite;
+}
+
+.sparkle-star {
+  position: relative;
+  width: 6px;
+  height: 6px;
+}
+
+.sparkle-star::before,
+.sparkle-star::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.sparkle-star::before {
+  width: 100%;
+  height: 2px;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.sparkle-star::after {
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
 }
 
 .animate-bell-flash-rainbow {
