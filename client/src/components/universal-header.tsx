@@ -1,6 +1,7 @@
 /**
  * Universal Header - Consistent navigation for ALL pages (public + workspace)
  * Shows appropriate nav based on variant prop (not auth state for public pages)
+ * Configuration-driven for easy editing (see config/headerConfig.ts)
  */
 
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,6 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, LogOut, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
-import { queryClient } from "@/lib/queryClient";
-import { LOGOUT_CONFIG } from "@/config/logout";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { AnimatedNotificationBell } from "@/components/animated-notification-bell";
@@ -23,6 +22,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { HEADER_CONFIG, HEADER_SPACING, HEADER_HEIGHTS } from "@/config/headerConfig";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -75,7 +75,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-3 sm:px-6">
-        <div className="flex h-16 sm:h-20 items-center justify-between gap-2">
+        <div className={`flex ${HEADER_HEIGHTS.mobile} ${HEADER_HEIGHTS.desktop} items-center justify-between gap-2`}>
           {/* Logo - Uses the provided CoAIleagueLogo component */}
           <button 
             onClick={handleLogoClick}
@@ -116,31 +116,20 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
           {variant === "public" ? (
             <>
               {/* Desktop Navigation */}
-              <div className="hidden md:flex items-center gap-4 lg:gap-6 flex-1">
-                <button
-                  onClick={() => setLocation("/pricing")}
-                  className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
-                  data-testid="link-pricing"
-                >
-                  Pricing
-                </button>
-                <button
-                  onClick={handleFeaturesClick}
-                  className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
-                  data-testid="link-features"
-                >
-                  Features
-                </button>
-                <button
-                  onClick={() => setLocation("/contact")}
-                  className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
-                  data-testid="link-contact"
-                >
-                  Contact
-                </button>
+              <div className={`hidden md:flex items-center ${HEADER_SPACING.desktopNavGap} flex-1`}>
+                {HEADER_CONFIG.public.navItems.map((item) => (
+                  <button
+                    key={item.href}
+                    onClick={item.isSpecial ? handleFeaturesClick : () => setLocation(item.href)}
+                    className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
+                    data-testid={item.testid}
+                  >
+                    {item.label}
+                  </button>
+                ))}
                 
                 {/* Show Login/Register if not authenticated, Dashboard link if authenticated */}
-                <div className="ml-auto flex items-center gap-3">
+                <div className={`ml-auto flex items-center ${HEADER_SPACING.rightSideGap}`}>
                   {!user ? (
                     <>
                       <Button
@@ -162,7 +151,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   ) : (
                     <>
                       {showNotificationFeatures && (
-                        <div className="flex items-center gap-1">
+                        <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                           <WhatsNewBadge />
                           <AnimatedNotificationBell
                             hasNotifications={true}
@@ -177,8 +166,8 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="gap-2 px-2 h-9"
+                            size="icon"
+                            className={HEADER_HEIGHTS.iconButton}
                             data-testid="button-user-menu"
                           >
                             <Avatar className="h-8 w-8">
@@ -213,9 +202,9 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               </div>
 
               {/* Mobile Menu */}
-              <div className="flex md:hidden items-center gap-1 shrink-0">
+              <div className={`flex md:hidden items-center ${HEADER_SPACING.mobileIconGap} shrink-0`}>
                 {showNotificationFeatures && (
-                  <div className="flex items-center gap-1">
+                  <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                     <WhatsNewBadge />
                     <AnimatedNotificationBell
                       hasNotifications={true}
@@ -231,7 +220,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="min-h-[44px] min-w-[44px]"
+                      className={HEADER_HEIGHTS.iconButton}
                       data-testid="button-mobile-menu"
                     >
                       <Menu className="h-5 w-5" />
@@ -239,36 +228,20 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[280px] sm:w-[320px]">
                     <nav className="flex flex-col gap-4 mt-8">
-                      <Button
-                        variant="ghost"
-                        className="justify-start text-base"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/pricing");
-                        }}
-                        data-testid="mobile-link-pricing"
-                      >
-                        Pricing
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start text-base"
-                        onClick={handleFeaturesClick}
-                        data-testid="mobile-link-features"
-                      >
-                        Features
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start text-base"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/contact");
-                        }}
-                        data-testid="mobile-link-contact"
-                      >
-                        Contact
-                      </Button>
+                      {HEADER_CONFIG.public.navItems.map((item) => (
+                        <Button
+                          key={item.href}
+                          variant="ghost"
+                          className="justify-start text-base"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            item.isSpecial ? handleFeaturesClick() : setLocation(item.href);
+                          }}
+                          data-testid={`mobile-${item.testid}`}
+                        >
+                          {item.label}
+                        </Button>
+                      ))}
                       <div className="border-t my-2" />
                       
                       {!user ? (
