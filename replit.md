@@ -47,6 +47,20 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **PostgreSQL**: Primary relational database.
 
 ## Recent Changes
+- **Codebase Refactoring Sprint (Nov 30, 2025):** Improved code organization and maintainability:
+  - **Route Modularization**: Created new modular route files in `server/routes/`:
+    - `analyticsRoutes.ts`: Consolidated analytics, heatmap, and room analytics endpoints
+    - `salesRoutes.ts`: Sales invitations and proposals endpoints
+    - `ratingsRoutes.ts`: Employer ratings and composite scores endpoints
+  - **Settings Components**: Created reusable component library in `client/src/components/settings/`:
+    - `SettingsSection.tsx`: Consistent card wrapper with icon and title
+    - `AutomationToggle.tsx`: Reusable automation on/off switch pattern
+    - `ScheduleSelector.tsx`: Schedule frequency selector with custom interval support
+    - `NotificationChannel.tsx`: Notification channel toggle with status indicators
+  - **Database Tables**: Created missing tables via direct SQL:
+    - `user_notification_preferences`: User notification settings storage
+    - `calendar_subscriptions`: Calendar sync subscription management
+  - **Bug Fixes**: Fixed Settings page crash (laborLawRules filter error), corrected apiRequest signatures
 - **Comprehensive Gamification System Integration (Nov 30, 2025 - Phase 1):** Event-driven engagement platform:
   - **Event Tracking Service**: Integrated with 8+ key endpoints (clock-in, shifts, approvals, features, scheduling)
   - **AI Brain Notifications**: Real-time milestone notifications to AI orchestration for personalized insights
