@@ -101,9 +101,9 @@ export function UniversalWelcomeNotification({
   const displayName = firstName + (lastName ? ` ${lastName}` : "");
 
   return (
-    <div className="fixed inset-x-0 bottom-0 sm:bottom-6 sm:right-6 sm:left-auto sm:w-full sm:max-w-sm z-50 p-4 sm:p-0">
+    <div className="fixed bottom-3 left-3 right-3 sm:bottom-5 sm:right-5 sm:left-auto sm:max-w-xs md:max-w-sm z-50">
       <div
-        className="animate-in fade-in slide-in-from-bottom-5 sm:slide-in-from-right-5 duration-500"
+        className="animate-in fade-in slide-in-from-bottom-5 duration-500"
         style={{
           animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
         }}
@@ -134,66 +134,64 @@ export function UniversalWelcomeNotification({
           }
         `}</style>
 
-        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 dark:from-blue-700 dark:via-blue-600 dark:to-cyan-600 rounded-lg sm:rounded-xl p-5 sm:p-6 shadow-2xl text-white">
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 dark:from-blue-700 dark:via-blue-600 dark:to-cyan-600 rounded-xl p-3 sm:p-4 md:p-5 shadow-xl text-white border border-white/10">
           {/* Header with Icon and Welcome */}
-          <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <RoleIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <RoleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+              <h3 className="text-sm sm:text-base font-semibold text-white leading-tight truncate">
                 Welcome back, {displayName}!
               </h3>
-              <p className="text-blue-100 text-xs sm:text-sm mt-0.5">
+              <p className="text-blue-100/80 text-xs mt-0.5">
                 {roleInfo.label}
               </p>
             </div>
           </div>
 
-          {/* Body with Info */}
-          <div className="space-y-2 sm:space-y-3 text-white/90 text-xs sm:text-sm">
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
-              <div className="w-2 h-2 bg-white/60 rounded-full" />
-              <span className="truncate">
+          {/* Body with Info - More Compact */}
+          <div className="space-y-1.5 sm:space-y-2 text-white/90 text-xs">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white/10 rounded-md backdrop-blur-sm">
+              <div className="w-1.5 h-1.5 bg-white/60 rounded-full flex-shrink-0" />
+              <span className="truncate text-xs">
                 {email || "Email not displayed"}
               </span>
             </div>
 
-            {/* Quick Status - Org Aware */}
-            <div className="flex gap-2 pt-1">
-              <div className="flex-1 px-3 py-2 bg-white/10 rounded-lg backdrop-blur-sm text-center">
-                <div className="text-xs font-medium opacity-75">Status</div>
-                <div className="text-white font-semibold text-sm">
-                  {statusLoading ? 'Loading...' : orgStatus === 'active' ? 'Active' : 'Review Required'}
-                </div>
+            {/* Quick Status - Compact */}
+            <div className="px-2.5 py-1.5 bg-white/10 rounded-md backdrop-blur-sm text-center">
+              <div className="text-[10px] font-medium opacity-70 uppercase tracking-wide">Status</div>
+              <div className="text-white font-semibold text-xs">
+                {statusLoading ? 'Loading...' : orgStatus === 'active' ? 'Active' : 'Review Required'}
               </div>
             </div>
           </div>
 
-          {/* Footer with Loading Progress */}
-          <div className="mt-4 sm:mt-5 space-y-3">
+          {/* Footer with Loading Progress - Compact */}
+          <div className="mt-2.5 sm:mt-3 space-y-1.5">
             {/* Loading message */}
-            <p className="text-white/80 text-xs sm:text-sm font-medium h-5 sm:h-6 flex items-center">
+            <p className="text-white/70 text-[11px] sm:text-xs font-medium truncate">
               {loadingMessage}
             </p>
             
-            {/* Progress section with large percentage */}
-            <div className="space-y-2">
+            {/* Progress section */}
+            <div className="space-y-1">
               {/* Progress bar */}
-              <div className="w-full h-2 sm:h-2.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+              <div className="w-full h-1.5 sm:h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
                 <div
-                  className="h-full bg-white/95 rounded-full transition-all duration-100 ease-out"
+                  className="h-full bg-white/90 rounded-full transition-all duration-100 ease-out"
                   style={{
                     width: `${progress}%`,
-                    boxShadow: "0 0 15px rgba(255, 255, 255, 0.6)"
+                    boxShadow: "0 0 10px rgba(255, 255, 255, 0.5)"
                   }}
                 />
               </div>
               
-              {/* Large, bold percentage text */}
+              {/* Percentage text */}
               <div className="flex items-center justify-between">
-                <span className="text-white/70 text-xs">Loading...</span>
-                <span className="text-white font-bold text-base sm:text-lg tabular-nums">
+                <span className="text-white/60 text-[10px]">Loading...</span>
+                <span className="text-white font-semibold text-sm tabular-nums">
                   {Math.round(progress)}%
                 </span>
               </div>
