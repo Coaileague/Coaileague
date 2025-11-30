@@ -38,79 +38,77 @@ export function AnimatedNotificationBell({
   ];
 
   return (
-    <div className="relative inline-flex items-center group">
-      <button
-        onClick={onClick}
-        className={`relative inline-flex items-center justify-center min-h-9 min-w-9 rounded-md hover-elevate transition-all duration-300 ${
-          fadeOut ? "opacity-50" : "opacity-100"
-        } ${className}`}
-        aria-label="Notifications"
-        data-testid="button-notifications"
-      >
-        <div className="relative">
-          <div
-            className={`transition-all ${
-              showSparkles ? "animate-bell-ring-continuous animate-bell-flash-rainbow" : ""
-            }`}
-          >
-            <Bell className="h-5 w-5" />
-          </div>
+    <button
+      onClick={onClick}
+      className={`relative inline-flex h-10 w-10 items-center justify-center rounded-md hover-elevate transition-all duration-200 group ${
+        fadeOut ? "opacity-50" : "opacity-100"
+      } ${className}`}
+      aria-label="Notifications"
+      data-testid="button-notifications"
+    >
+      <div className="relative">
+        <div
+          className={`transition-all ${
+            showSparkles ? "animate-bell-ring-continuous animate-bell-flash-rainbow" : ""
+          }`}
+        >
+          <Bell className="h-5 w-5" />
+        </div>
 
-          {showSparkles && (
+        {showSparkles && (
+          <div
+            className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full shadow-lg animate-badge-pulse ${
+              fadeOut ? "opacity-0" : "opacity-100"
+            } transition-opacity duration-300`}
+            style={{
+              background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
+              backgroundSize: "200% 200%",
+              animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
+            }}
+          />
+        )}
+
+        {showSparkles &&
+          sparkles.map((sparkle, idx) => (
             <div
-              className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full shadow-lg animate-badge-pulse ${
-                fadeOut ? "opacity-0" : "opacity-100"
+              key={idx}
+              className={`absolute pointer-events-none sparkle-star animate-star-sparkle ${
+                fadeOut ? "opacity-0" : ""
               } transition-opacity duration-300`}
               style={{
-                background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
-                backgroundSize: "200% 200%",
-                animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
+                top: sparkle.top,
+                right: sparkle.right,
+                bottom: sparkle.bottom,
+                left: sparkle.left,
+                animationDelay: sparkle.delay,
+                color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
+                filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
               }}
             />
-          )}
+          ))}
 
-          {showSparkles &&
-            sparkles.map((sparkle, idx) => (
-              <div
-                key={idx}
-                className={`absolute pointer-events-none sparkle-star animate-star-sparkle ${
-                  fadeOut ? "opacity-0" : ""
-                } transition-opacity duration-300`}
-                style={{
-                  top: sparkle.top,
-                  right: sparkle.right,
-                  bottom: sparkle.bottom,
-                  left: sparkle.left,
-                  animationDelay: sparkle.delay,
-                  color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
-                  filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
-                }}
-              />
-            ))}
-
-          {showSparkles && (
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
+        {showSparkles && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClearNotifications();
+            }}
+            className="absolute -bottom-1 -right-1 bg-destructive rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover-elevate cursor-pointer"
+            role="button"
+            tabIndex={0}
+            aria-label="Clear notifications"
+            data-testid="button-clear-notifications"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 handleClearNotifications();
-              }}
-              className="absolute -bottom-1 -right-1 bg-destructive rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover-elevate cursor-pointer"
-              role="button"
-              tabIndex={0}
-              aria-label="Clear notifications"
-              data-testid="button-clear-notifications"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleClearNotifications();
-                }
-              }}
-            >
-              <X className="h-2.5 w-2.5 text-white" />
-            </div>
-          )}
-        </div>
-      </button>
-    </div>
+              }
+            }}
+          >
+            <X className="h-2.5 w-2.5 text-white" />
+          </div>
+        )}
+      </div>
+    </button>
   );
 }

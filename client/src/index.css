@@ -40,11 +40,11 @@
   }
 }
 
-/* Message Arrival Animation - Slide in from bottom with fade */
+/* Message Arrival Animation - Enterprise-grade slide in with fade */
 @keyframes messageSlideIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.95);
+    transform: translateY(8px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -52,27 +52,51 @@
   }
 }
 
-/* Typing Indicator Animation - Bouncing dots */
-@keyframes typingBounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.7;
+/* Typing Indicator Animation - Scale+opacity wave */
+@keyframes typingWave {
+  0%, 100% {
+    transform: scale(0.75);
+    opacity: 0.5;
   }
-  30% {
-    transform: translateY(-8px);
+  50% {
+    transform: scale(1);
     opacity: 1;
   }
 }
 
-/* Read Receipt Animation - Subtle check mark pulse */
-@keyframes readReceiptCheck {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.6;
+/* Read Receipt Animation - Single fade-in (not infinite) */
+@keyframes readReceiptReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
   }
-  50% {
-    transform: scale(1.15);
+  to {
     opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Overlay Entrance Animation - Layered fade+translate */
+@keyframes overlayEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Overlay Exit Animation */
+@keyframes overlayExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 
@@ -89,14 +113,16 @@
   animation: chatBubbleMinimize 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+/* Enterprise entrance easing: cubic-bezier(0.16, 1, 0.3, 1) - smooth deceleration */
+/* Standard easing: cubic-bezier(0.4, 0, 0.2, 1) - material design standard */
 .message-arrive {
-  animation: messageSlideIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: messageSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .typing-indicator {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .typing-dot {
@@ -104,7 +130,7 @@
   height: 6px;
   border-radius: 50%;
   background-color: currentColor;
-  animation: typingBounce 1.4s infinite;
+  animation: typingWave 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .typing-dot:nth-child(1) {
@@ -112,15 +138,51 @@
 }
 
 .typing-dot:nth-child(2) {
-  animation-delay: 200ms;
+  animation-delay: 120ms;
 }
 
 .typing-dot:nth-child(3) {
-  animation-delay: 400ms;
+  animation-delay: 240ms;
 }
 
+/* Read receipt - single reveal animation, then hold steady */
 .read-receipt {
-  animation: readReceiptCheck 1.5s ease-in-out infinite;
+  animation: readReceiptReveal 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Overlay animations for modals, popups, notifications */
+.overlay-enter {
+  animation: overlayEnter 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.overlay-exit {
+  animation: overlayExit 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .message-arrive,
+  .typing-dot,
+  .read-receipt,
+  .overlay-enter,
+  .overlay-exit,
+  .chat-bubble-opening,
+  .chat-bubble-closing,
+  .chat-bubble-minimizing {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .message-arrive,
+  .overlay-enter {
+    opacity: 1;
+    transform: none;
+  }
+  
+  .read-receipt {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ============================================================================

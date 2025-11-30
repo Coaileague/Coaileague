@@ -161,17 +161,16 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 ) : (
                   <>
                     {showNotificationFeatures && (
-                      <>
+                      <div className="flex items-center gap-1">
                         <WhatsNewBadge />
                         <AnimatedNotificationBell
                           hasNotifications={true}
                           onClick={() => setLocation("/dashboard")}
-                          className="mr-2"
                           onClear={() => {
                             // Notifications cleared
                           }}
                         />
-                      </>
+                      </div>
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -212,9 +211,9 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               </div>
 
               {/* Mobile Menu */}
-              <div className="flex md:hidden items-center gap-2 shrink-0">
+              <div className="flex md:hidden items-center gap-1 shrink-0">
                 {showNotificationFeatures && (
-                  <>
+                  <div className="flex items-center gap-1">
                     <WhatsNewBadge />
                     <AnimatedNotificationBell
                       hasNotifications={true}
@@ -223,7 +222,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                         // Notifications cleared
                       }}
                     />
-                  </>
+                  </div>
                 )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
