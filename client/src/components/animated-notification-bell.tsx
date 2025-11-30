@@ -47,13 +47,13 @@ export function AnimatedNotificationBell({
         aria-label="Notifications"
         data-testid="button-notifications"
       >
-        <div className="relative">
+        <div className="relative flex items-center justify-center">
           <div
-            className={`transition-all ${
+            className={`flex items-center justify-center transition-all ${
               showSparkles ? "animate-bell-ring-continuous animate-bell-flash-rainbow" : ""
             }`}
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-5 w-5 text-foreground flex-shrink-0" strokeWidth={2} />
           </div>
 
           {showSparkles && (
