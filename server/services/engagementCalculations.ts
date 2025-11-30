@@ -657,6 +657,87 @@ export async function getEngagementTrend(
 }
 
 /**
+ * Check engagement trends and trigger alerts for declining scores
+ * Gap #4 Enhancement: Threshold-based alerts for at-risk employees
+ */
+export async function checkEngagementAlertsForWorkspace(workspaceId: string): Promise<{
+  alertsTriggered: number;
+  criticalAlerts: string[];
+  warningAlerts: string[];
+}> {
+  const criticalAlerts: string[] = [];
+  const warningAlerts: string[] = [];
+  
+  try {
+    // Get employees with declining engagement trends
+    // Use SQL cast to ensure numeric comparison (not lexicographic)
+    const atRiskEmployees = await db
+      .select({
+        employeeId: employeeHealthScores.employeeId,
+        turnoverRiskScore: employeeHealthScores.turnoverRiskScore,
+        riskLevel: employeeHealthScores.riskLevel,
+        overallEngagement: employeeHealthScores.overallEngagementScore,
+        requiresManagerAction: employeeHealthScores.requiresManagerAction,
+      })
+      .from(employeeHealthScores)
+      .where(
+        and(
+          eq(employeeHealthScores.workspaceId, workspaceId),
+          sql`CAST(${employeeHealthScores.turnoverRiskScore} AS DECIMAL) >= 60` // Numeric comparison
+        )
+      )
+      .orderBy(sql`CAST(${employeeHealthScores.turnoverRiskScore} AS DECIMAL) DESC`)
+      .limit(20);
+    
+    for (const employee of atRiskEmployees) {
+      const riskScore = parseFloat(employee.turnoverRiskScore || '0');
+      const engagementScore = parseFloat(employee.overallEngagement || '0');
+      
+      if (riskScore >= 80 || engagementScore < 30) {
+        criticalAlerts.push(
+          `Critical: Employee ${employee.employeeId} has ${riskScore}% turnover risk and ${engagementScore}% engagement`
+        );
+      } else if (riskScore >= 60 || engagementScore < 50) {
+        warningAlerts.push(
+          `Warning: Employee ${employee.employeeId} has ${riskScore}% turnover risk and ${engagementScore}% engagement`
+        );
+      }
+    }
+    
+    // Log alerts
+    if (criticalAlerts.length > 0) {
+      console.log(`[EngagementOS] ${criticalAlerts.length} CRITICAL engagement alerts for workspace ${workspaceId}`);
+    }
+    if (warningAlerts.length > 0) {
+      console.log(`[EngagementOS] ${warningAlerts.length} WARNING engagement alerts for workspace ${workspaceId}`);
+    }
+    
+    return {
+      alertsTriggered: criticalAlerts.length + warningAlerts.length,
+      criticalAlerts,
+      warningAlerts,
+    };
+  } catch (error) {
+    console.error('[EngagementOS] Error checking engagement alerts:', error);
+    return { alertsTriggered: 0, criticalAlerts: [], warningAlerts: [] };
+  }
+}
+
+/**
+ * Get moving average for engagement score trend smoothing
+ */
+export function calculateMovingAverage(scores: number[], windowSize: number = 3): number[] {
+  if (scores.length < windowSize) return scores;
+  
+  const result: number[] = [];
+  for (let i = windowSize - 1; i < scores.length; i++) {
+    const windowSum = scores.slice(i - windowSize + 1, i + 1).reduce((a, b) => a + b, 0);
+    result.push(Math.round((windowSum / windowSize) * 100) / 100);
+  }
+  return result;
+}
+
+/**
  * Batch calculate health scores for all employees in a workspace
  */
 export async function batchCalculateHealthScores(workspaceId: string, periodStart: Date, periodEnd: Date) {

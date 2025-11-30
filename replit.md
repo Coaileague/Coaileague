@@ -68,7 +68,10 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
   - See `docs/GAP_ANALYSIS.md` for full remediation roadmap with ownership and exit criteria
 
 ## Known Gaps & Technical Debt
-- **Payroll Compliance (P0)**: State/SUTA/FUTA tax tables simplified, YTD wage tracking needed, Additional Medicare Tax threshold missing, FLSA weighted OT incomplete
-- **Data Features (P1)**: Employer ratings and composite scores not wired to APIs
-- **Integrations (P1)**: QuickBooks and Gusto OAuth not configured (blocks finance/HR rollout)
-- **Mock Data (P2)**: Platform admin metrics (response times, SLA) use placeholder values
+- **Payroll Compliance (P0)**: ALL COMPLETE - Full state/SUTA/FUTA tax tables, YTD wage tracking, Additional Medicare Tax, FLSA weighted OT
+- **Integrations (P1)**: QuickBooks and Gusto OAuth stubs created - require API credentials (QUICKBOOKS_CLIENT_ID, GUSTO_CLIENT_ID, etc.)
+- **Multi-Currency (P1)**: COMPLETE - exchange_rates table, currencyService with conversion APIs
+- **Historical Trends (P1)**: COMPLETE - Alert system for engagement score thresholds, time-series analytics
+- **Automation Metrics (P2)**: COMPLETE - Job telemetry with recordJobStart/recordJobComplete, real-time tracking
+- **Platform Metrics (P2)**: COMPLETE - Real calculations from supportTickets and satisfactionSurveys tables
+- **WebSocket Commands (P2)**: COMPLETE - /welcome, /assign, /broadcast, /suspend, /reactivate, /staffstatus

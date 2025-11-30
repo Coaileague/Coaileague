@@ -2129,6 +2129,260 @@ export function setupWebSocket(server: Server) {
                   break;
                 }
                 
+                case 'welcome': {
+                  // Send welcome message to customer
+                  const customerName = parsedCommand.args.join(' ') || 'valued customer';
+                  const welcomeMessage = `Welcome ${customerName}!\n\nThank you for reaching out to CoAIleague Support. ${staffDisplayName} (${staffRoleName}) is here to assist you.\n\nHow may we help you today?`;
+                  
+                  const welcomeMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: welcomeMessage,
+                    messageType: 'text',
+                  });
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: welcomeMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+                
+                case 'assign': {
+                  // Assign conversation to staff member
+                  const assignee = parsedCommand.args.join(' ') || staffDisplayName;
+                  
+                  // Update conversation assignment in database via direct query
+                  try {
+                    const { chatConversations } = await import('@shared/schema');
+                    await db.update(chatConversations)
+                      .set({ 
+                        supportAgentId: ws.userId,
+                        supportAgentName: staffDisplayName,
+                        updatedAt: new Date()
+                      })
+                      .where(eq(chatConversations.id, ws.conversationId));
+                    
+                    const assignMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: `Conversation assigned to ${assignee}`,
+                      messageType: 'text',
+                      isSystemMessage: true,
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: assignMsg }));
+                        }
+                      });
+                    }
+                  } catch (error) {
+                    console.error('[WebSocket] Error assigning conversation:', error);
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to assign conversation' }));
+                  }
+                  break;
+                }
+                
+                case 'broadcast': {
+                  // Broadcast announcement to all connected users (admin only)
+                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Broadcast requires admin privileges' }));
+                    break;
+                  }
+                  
+                  const announcement = parsedCommand.args.join(' ');
+                  if (!announcement) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /broadcast <message>' }));
+                    break;
+                  }
+                  
+                  // Broadcast to all connected clients
+                  const broadcastPayload = JSON.stringify({
+                    type: 'system_announcement',
+                    message: `[ANNOUNCEMENT] ${announcement}`,
+                    from: staffDisplayName,
+                    timestamp: new Date().toISOString(),
+                  });
+                  
+                  let broadcastCount = 0;
+                  conversationClients.forEach((clientSet) => {
+                    clientSet.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(broadcastPayload);
+                        broadcastCount++;
+                      }
+                    });
+                  });
+                  
+                  ws.send(JSON.stringify({ 
+                    type: 'system_message', 
+                    message: `Broadcast sent to ${broadcastCount} connections` 
+                  }));
+                  break;
+                }
+                
+                case 'suspend': {
+                  // Suspend a staff member (admin only)
+                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Suspend requires admin privileges' }));
+                    break;
+                  }
+                  
+                  const targetUsername = parsedCommand.args[0];
+                  const reason = parsedCommand.args.slice(1).join(' ') || 'No reason provided';
+                  
+                  if (!targetUsername) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /suspend <username> [reason]' }));
+                    break;
+                  }
+                  
+                  try {
+                    const targetUser = await storage.getUserByUsernameOrEmail(targetUsername);
+                    if (!targetUser) {
+                      ws.send(JSON.stringify({ type: 'error', message: `User "${targetUsername}" not found` }));
+                      break;
+                    }
+                    
+                    // Suspend the user via direct query
+                    const { users: usersTable } = await import('@shared/schema');
+                    await db.update(usersTable)
+                      .set({ 
+                        isSuspended: true,
+                        suspendedReason: reason,
+                        suspendedAt: new Date(),
+                        suspendedBy: ws.userId,
+                        updatedAt: new Date()
+                      })
+                      .where(eq(usersTable.id, targetUser.id));
+                    
+                    ws.send(JSON.stringify({ 
+                      type: 'system_message', 
+                      message: `User ${targetUsername} has been suspended. Reason: ${reason}` 
+                    }));
+                  } catch (error) {
+                    console.error('[WebSocket] Error suspending user:', error);
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to suspend user' }));
+                  }
+                  break;
+                }
+                
+                case 'reactivate': {
+                  // Reactivate a suspended staff member (admin only)
+                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Reactivate requires admin privileges' }));
+                    break;
+                  }
+                  
+                  const targetUsername = parsedCommand.args[0];
+                  
+                  if (!targetUsername) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /reactivate <username>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const targetUser = await storage.getUserByUsernameOrEmail(targetUsername);
+                    if (!targetUser) {
+                      ws.send(JSON.stringify({ type: 'error', message: `User "${targetUsername}" not found` }));
+                      break;
+                    }
+                    
+                    // Reactivate the user via direct query
+                    const { users: usersTable } = await import('@shared/schema');
+                    await db.update(usersTable)
+                      .set({ 
+                        isSuspended: false,
+                        suspendedReason: null,
+                        suspendedAt: null,
+                        suspendedBy: null,
+                        updatedAt: new Date()
+                      })
+                      .where(eq(usersTable.id, targetUser.id));
+                    
+                    ws.send(JSON.stringify({ 
+                      type: 'system_message', 
+                      message: `User ${targetUsername} has been reactivated` 
+                    }));
+                  } catch (error) {
+                    console.error('[WebSocket] Error reactivating user:', error);
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to reactivate user' }));
+                  }
+                  break;
+                }
+                
+                case 'staffstatus': {
+                  // Check staff member status
+                  const targetUsername = parsedCommand.args[0];
+                  
+                  if (!targetUsername) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /staffstatus <username>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const targetUser = await storage.getUserByUsernameOrEmail(targetUsername);
+                    if (!targetUser) {
+                      ws.send(JSON.stringify({ type: 'error', message: `User "${targetUsername}" not found` }));
+                      break;
+                    }
+                    
+                    const platformRole = await storage.getUserPlatformRole(targetUser.id);
+                    const isOnline = Array.from(conversationClients.values()).some(clientSet => 
+                      Array.from(clientSet).some((client: any) => client.userId === targetUser.id && client.readyState === WebSocket.OPEN)
+                    );
+                    
+                    // Check suspension status from user record
+                    const isSuspended = (targetUser as any).isSuspended === true;
+                    
+                    const statusMsg = `Staff Status: ${targetUsername}\n` +
+                      `Role: ${platformRole || 'N/A'}\n` +
+                      `Status: ${isOnline ? 'Online' : 'Offline'}\n` +
+                      `Account: ${isSuspended ? 'Suspended' : 'Active'}`;
+                    
+                    ws.send(JSON.stringify({ type: 'system_message', message: statusMsg }));
+                  } catch (error) {
+                    console.error('[WebSocket] Error checking staff status:', error);
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to check staff status' }));
+                  }
+                  break;
+                }
+                
+                case 'restart': {
+                  // Restart chat services (admin only)
+                  if (!ws.serverAuth || !['root_admin'].includes(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Restart requires root admin privileges' }));
+                    break;
+                  }
+                  
+                  // Send restart notification to all clients
+                  const restartPayload = JSON.stringify({
+                    type: 'system_announcement',
+                    message: 'Chat services are being restarted by an administrator. Please reconnect in a moment.',
+                    from: 'System',
+                    timestamp: new Date().toISOString(),
+                  });
+                  
+                  conversationClients.forEach((clientSet) => {
+                    clientSet.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(restartPayload);
+                      }
+                    });
+                  });
+                  
+                  ws.send(JSON.stringify({ type: 'system_message', message: 'Restart notification sent to all clients' }));
+                  break;
+                }
+                
                 default: {
                   // Command Not Implemented Handler
                   const errorMsg = await storage.createChatMessage({
@@ -2136,7 +2390,7 @@ export function setupWebSocket(server: Server) {
                     senderId: null,
                     senderName: 'System',
                     senderType: 'system',
-                    message: `❌ Command '/${parsedCommand.command}' is not yet implemented.\n\nUse /help to see available commands.`,
+                    message: `Command '/${parsedCommand.command}' is not available.\n\nUse /help to see available commands.`,
                     messageType: 'text',
                     isSystemMessage: true,
                   });

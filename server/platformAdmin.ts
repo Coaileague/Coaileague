@@ -7,13 +7,14 @@ import {
   subscriptions, 
   invoices, 
   supportTickets,
+  satisfactionSurveys,
   employees,
   clients,
   timeEntries,
   shifts,
   platformRoles
 } from "@shared/schema";
-import { eq, sql, and, or, desc, gte } from "drizzle-orm";
+import { eq, sql, and, or, desc, gte, isNotNull, lte } from "drizzle-orm";
 
 const db = (storage as any).db;
 
@@ -168,7 +169,7 @@ export async function getPlatformStats(req: Request, res: Response) {
     recentActivity.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     const topActivity = recentActivity.slice(0, 10);
 
-    // Support metrics
+    // Support metrics - REAL CALCULATIONS
     const [openTicketCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(supportTickets)
@@ -179,11 +180,74 @@ export async function getPlatformStats(req: Request, res: Response) {
         )
       );
 
+    // Calculate Average Response Time (in hours) from resolved tickets
+    const [avgResponseData] = await db
+      .select({
+        avgHours: sql<string>`
+          COALESCE(
+            EXTRACT(EPOCH FROM AVG(${supportTickets.resolvedAt} - ${supportTickets.createdAt})) / 3600,
+            0
+          )::numeric(10,2)
+        `
+      })
+      .from(supportTickets)
+      .where(
+        and(
+          isNotNull(supportTickets.resolvedAt),
+          gte(supportTickets.resolvedAt, firstDayOfMonth)
+        )
+      );
+    
+    // Calculate SLA Compliance - tickets resolved within SLA threshold by priority
+    // SLA: urgent=4h, high=8h, normal=24h, low=48h
+    const [slaData] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        withinSla: sql<number>`
+          SUM(CASE 
+            WHEN ${supportTickets.priority} = 'urgent' 
+              AND EXTRACT(EPOCH FROM (${supportTickets.resolvedAt} - ${supportTickets.createdAt})) <= 14400 THEN 1
+            WHEN ${supportTickets.priority} = 'high' 
+              AND EXTRACT(EPOCH FROM (${supportTickets.resolvedAt} - ${supportTickets.createdAt})) <= 28800 THEN 1
+            WHEN ${supportTickets.priority} = 'normal' 
+              AND EXTRACT(EPOCH FROM (${supportTickets.resolvedAt} - ${supportTickets.createdAt})) <= 86400 THEN 1
+            WHEN ${supportTickets.priority} = 'low' 
+              AND EXTRACT(EPOCH FROM (${supportTickets.resolvedAt} - ${supportTickets.createdAt})) <= 172800 THEN 1
+            ELSE 0
+          END)::int
+        `
+      })
+      .from(supportTickets)
+      .where(
+        and(
+          isNotNull(supportTickets.resolvedAt),
+          gte(supportTickets.resolvedAt, firstDayOfMonth)
+        )
+      );
+    
+    // Calculate Customer Satisfaction from surveys (1-5 scale → percentage)
+    const [csatData] = await db
+      .select({
+        avgRating: sql<string>`COALESCE(AVG(${satisfactionSurveys.rating}), 0)::numeric(10,2)`,
+        totalSurveys: sql<number>`count(*)::int`
+      })
+      .from(satisfactionSurveys)
+      .where(gte(satisfactionSurveys.createdAt, firstDayOfMonth));
+    
+    const avgResponseTime = parseFloat(avgResponseData?.avgHours || "0");
+    const slaCompliance = slaData?.total > 0 
+      ? Math.round((slaData.withinSla / slaData.total) * 100) 
+      : 100; // 100% if no tickets to measure
+    const customerSatisfaction = csatData?.totalSurveys > 0
+      ? Math.round((parseFloat(csatData.avgRating) / 5) * 100) // Convert 1-5 scale to percentage
+      : 0; // No data available
+
     const supportMetrics = {
       openTickets: openTicketCount?.count || 0,
-      avgResponseTime: 2.5, // Mock: 2.5 hours average
-      slaCompliance: 94, // Mock: 94% compliance
-      customerSatisfaction: 92 // Mock: 92% CSAT
+      avgResponseTime: avgResponseTime > 0 ? Math.round(avgResponseTime * 10) / 10 : 0, // Round to 1 decimal
+      slaCompliance,
+      customerSatisfaction,
+      surveyCount: csatData?.totalSurveys || 0 // Include survey count for transparency
     };
 
     // Top workspaces by revenue

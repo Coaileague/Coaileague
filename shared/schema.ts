@@ -2272,6 +2272,108 @@ export const insertPaymentRecordSchema = createInsertSchema(paymentRecords).omit
 export type InsertPaymentRecord = z.infer<typeof insertPaymentRecordSchema>;
 export type PaymentRecord = typeof paymentRecords.$inferSelect;
 
+// ============================================================================
+// MULTI-CURRENCY SUPPORT (Gap #P1)
+// ============================================================================
+
+// Exchange Rates - Stores daily exchange rates for multi-currency support
+export const exchangeRates = pgTable("exchange_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Currency pair
+  baseCurrency: varchar("base_currency", { length: 3 }).notNull().default('USD'),
+  targetCurrency: varchar("target_currency", { length: 3 }).notNull(),
+  
+  // Exchange rate (amount of target currency per 1 base currency)
+  rate: decimal("rate", { precision: 18, scale: 8 }).notNull(),
+  inverseRate: decimal("inverse_rate", { precision: 18, scale: 8 }), // Precomputed for faster lookups
+  
+  // Source and freshness
+  source: varchar("source").default('system'), // 'system', 'api', 'manual'
+  rateDate: timestamp("rate_date").notNull(),
+  fetchedAt: timestamp("fetched_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // When rate should be refreshed
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("exchange_rates_pair_idx").on(table.baseCurrency, table.targetCurrency),
+  index("exchange_rates_date_idx").on(table.rateDate),
+]);
+
+export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
+  id: true,
+  createdAt: true,
+  fetchedAt: true,
+});
+
+export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+
+// Workspace Currency Settings - Stores per-workspace currency configuration
+export const workspaceCurrencySettings = pgTable("workspace_currency_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }).unique(),
+  
+  // Primary currency for the workspace
+  primaryCurrency: varchar("primary_currency", { length: 3 }).notNull().default('USD'),
+  
+  // Supported currencies for transactions
+  supportedCurrencies: text("supported_currencies").array().default(sql`ARRAY['USD']::text[]`),
+  
+  // Display preferences
+  currencyDisplayFormat: varchar("currency_display_format").default('symbol'), // 'symbol', 'code', 'both'
+  decimalPlaces: integer("decimal_places").default(2),
+  
+  // Auto-conversion settings
+  autoConvertToBase: boolean("auto_convert_to_base").default(true),
+  exchangeRateMarginPercent: decimal("exchange_rate_margin_percent", { precision: 5, scale: 2 }).default('0.00'),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("workspace_currency_settings_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertWorkspaceCurrencySettingsSchema = createInsertSchema(workspaceCurrencySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWorkspaceCurrencySettings = z.infer<typeof insertWorkspaceCurrencySettingsSchema>;
+export type WorkspaceCurrencySettings = typeof workspaceCurrencySettings.$inferSelect;
+
+// Currency Conversion Audit Log - Tracks all currency conversions
+export const currencyConversionLog = pgTable("currency_conversion_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Original transaction details
+  sourceAmount: decimal("source_amount", { precision: 18, scale: 4 }).notNull(),
+  sourceCurrency: varchar("source_currency", { length: 3 }).notNull(),
+  
+  // Converted amount
+  targetAmount: decimal("target_amount", { precision: 18, scale: 4 }).notNull(),
+  targetCurrency: varchar("target_currency", { length: 3 }).notNull(),
+  
+  // Rate used
+  exchangeRate: decimal("exchange_rate", { precision: 18, scale: 8 }).notNull(),
+  rateSource: varchar("rate_source").default('system'),
+  rateDate: timestamp("rate_date").notNull(),
+  
+  // Reference to related record
+  referenceType: varchar("reference_type"), // 'invoice', 'payroll', 'payment', etc.
+  referenceId: varchar("reference_id"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("currency_conversion_log_workspace_idx").on(table.workspaceId),
+  index("currency_conversion_log_reference_idx").on(table.referenceType, table.referenceId),
+]);
+
 // Invoice Reminders (for delinquency automation)
 export const reminderTypeEnum = pgEnum('reminder_type', ['7_day', '14_day', '30_day', 'custom']);
 

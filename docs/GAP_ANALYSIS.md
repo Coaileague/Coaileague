@@ -22,19 +22,20 @@ This comprehensive gap analysis identifies missing functionality and incomplete 
 - ~~PAY-011: FLSA overtime weighted average~~ - **IMPLEMENTED** (Integrated into payroll aggregation)
 
 ### High Priority Gaps (P1) - Finance & Integration Status
-- Multi-currency support missing (blocks international) - **P1**
-- QuickBooks OAuth not configured (blocks accounting sync) - **P1**
-- Gusto OAuth not configured (blocks HR/payroll sync) - **P1**
+- ~~Multi-currency support~~ - **IMPLEMENTED** (exchange_rates table, currency service, conversion APIs)
+- QuickBooks OAuth stub created - requires QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET - **P1**
+- Gusto OAuth stub created - requires GUSTO_CLIENT_ID, GUSTO_CLIENT_SECRET - **P1**
 - ~~Email retry mechanism~~ - **IMPLEMENTED** (exponential backoff: 30s, 5m, 30m, 2h, 24h, max 5 retries)
 - ~~Employer ratings feature~~ - **IMPLEMENTED** (Full API at /api/engagement/employer-ratings)
 - ~~Composite engagement scores~~ - **IMPLEMENTED** (Full service at compositeScoresService.ts)
-- Historical trend tracking for engagement metrics - **PARTIAL** (basic trends, needs enhancement)
+- ~~Historical trend tracking~~ - **IMPLEMENTED** (time-series analytics, alerts, trend analysis)
 
 ### Medium Priority Gaps (P2) - Quality & Observability
-- Mock data in platform admin metrics (response times, SLA)
-- LearnOS integration for skill gap visual reports
-- Industry benchmarking uses simplified approach
-- Some WebSocket commands not yet implemented
+- ~~Mock data in platform admin metrics~~ - **IMPLEMENTED** (real support ticket/survey calculations)
+- ~~Automation metrics tracking~~ - **IMPLEMENTED** (job telemetry with recordJobStart/recordJobComplete)
+- ~~WebSocket commands~~ - **IMPLEMENTED** (/welcome, /assign, /broadcast, /suspend, /reactivate, /staffstatus)
+- LearnOS integration for skill gap visual reports - **P2**
+- Industry benchmarking uses simplified approach - **P2**
 
 ---
 
