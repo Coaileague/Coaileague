@@ -5,6 +5,9 @@ import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connec
 import { monitoringService } from "./monitoring";
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { initializeChatServerHub } from "./services/ChatServerHub";
+import { GamificationEventTracker } from "./services/gamification/eventTracker";
+import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
+import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
 
 const app = express();
 app.use(express.json());
