@@ -45,8 +45,8 @@ function createSystemMessage(message: string, conversationId: string): ChatMessa
     sentimentScore: null,
     sentimentConfidence: null,
     urgencyLevel: null,
-    urgencyReason: null,
     sentimentAnalyzedAt: null,
+    shouldEscalate: false,
   };
 }
 

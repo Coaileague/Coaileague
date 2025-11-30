@@ -15836,7 +15836,16 @@ Summary:`;
   });
 
   // DEMO WORKSPACE REFRESH - Idempotent data repopulation for testing
+  // ⚠️  SECURITY: Only allowed in development/staging for E2E testing
   app.post('/api/admin/demo-workspace/refresh', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    // Block demo data refresh in production environments
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  Demo workspace refresh blocked in production environment');
+      return res.status(403).json({ 
+        message: "Demo workspace refresh is disabled in production for security reasons." 
+      });
+    }
+
     try {
       console.log("🔧 [DEBUG] Starting demo workspace refresh...");
       const { refreshDemoData } = await import("./seed-demo");

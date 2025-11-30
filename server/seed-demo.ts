@@ -16,7 +16,7 @@ export async function refreshDemoData() {
   // Delete dependent data in correct FK order (transaction-safe)
   await db.delete(payrollEntries).where(eq(payrollEntries.workspaceId, DEMO_WORKSPACE_ID));
   await db.delete(payrollRuns).where(eq(payrollRuns.workspaceId, DEMO_WORKSPACE_ID));
-  await db.delete(invoiceLineItems).where(eq(invoiceLineItems.workspaceId, DEMO_WORKSPACE_ID));
+  // Delete invoice line items through parent invoices (cascade delete)
   await db.delete(invoices).where(eq(invoices.workspaceId, DEMO_WORKSPACE_ID));
   await db.delete(timeEntries).where(eq(timeEntries.workspaceId, DEMO_WORKSPACE_ID));
   await db.delete(shifts).where(eq(shifts.workspaceId, DEMO_WORKSPACE_ID));
