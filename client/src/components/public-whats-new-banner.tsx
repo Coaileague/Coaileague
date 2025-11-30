@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Sparkles, TrendingUp, Zap, Shield, MessageCircle } from "lucide-react";
 
@@ -8,25 +6,18 @@ interface PlatformUpdate {
   id: string;
   title: string;
   description: string;
-  date: string;
   category: 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
-  version?: string;
 }
 
-interface UpdatesResponse {
-  success: boolean;
-  updates: PlatformUpdate[];
-}
+const STATIC_UPDATES: PlatformUpdate[] = [
+  { id: '1', title: 'AI-Powered Scheduling', description: 'Intelligent shift optimization with conflict detection', category: 'feature' },
+  { id: '2', title: 'Real-Time Analytics', description: 'Live dashboards with workforce insights', category: 'improvement' },
+  { id: '3', title: '50-State Compliance', description: 'Automated break and overtime rules', category: 'security' },
+];
 
 export function PublicWhatsNewBanner() {
   const [hidden, setHidden] = useState(false);
-
-  const { data: updatesData } = useQuery<UpdatesResponse>({
-    queryKey: ['/api/whats-new/latest'],
-    staleTime: 60000,
-  });
-
-  const updates = updatesData?.updates?.slice(0, 3) || [];
+  const updates = STATIC_UPDATES;
 
   if (hidden || updates.length === 0) return null;
 
