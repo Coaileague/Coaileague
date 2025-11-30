@@ -201,17 +201,17 @@ export function NotificationsPopover() {
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="text-xs relative" data-testid="tab-notifications">
                   Alerts
-                  {(unreadNotifications + unreadAlerts) > 0 && (
+                  {unreadNotifications > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
-                      {unreadNotifications + unreadAlerts}
+                      {unreadNotifications}
                     </span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="maintenance" className="text-xs relative" data-testid="tab-maintenance">
                   System
-                  {activeAlerts.length > 0 && (
+                  {unreadAlerts > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center">
-                      {activeAlerts.length}
+                      {unreadAlerts}
                     </span>
                   )}
                 </TabsTrigger>
