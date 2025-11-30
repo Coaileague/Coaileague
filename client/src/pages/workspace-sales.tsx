@@ -20,6 +20,7 @@ import {
   Mail, Send, Users, Target, CheckCircle2, Clock, Plus, ArrowRight, TrendingUp, FileText, Sparkles
 } from "lucide-react";
 import type { OrgInvitation, Proposal, Deal, Lead } from "@shared/schema";
+import { MARKETING } from "@shared/marketingConfig";
 
 /**
  * UNIFIED WORKSPACE SALES PAGE
@@ -254,9 +255,14 @@ export default function WorkspaceSales() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="free">Free (30 days)</SelectItem>
-                        <SelectItem value="starter">Starter (14 days)</SelectItem>
-                        <SelectItem value="professional">Professional (30 days)</SelectItem>
+                        {MARKETING.pricing.getTiers()
+                          .filter(tier => tier.id !== 'enterprise')
+                          .map(tier => (
+                            <SelectItem key={tier.id} value={tier.id}>
+                              {tier.name} ({tier.id === 'free' ? '30 days' : '14 days'})
+                            </SelectItem>
+                          ))
+                        }
                       </SelectContent>
                     </Select>
                   </div>
@@ -373,7 +379,7 @@ export default function WorkspaceSales() {
                         ) : (
                           deals.map((deal) => (
                             <SelectItem key={deal.id} value={deal.id}>
-                              {deal.name || deal.id} - ${deal.estimatedValue || 0}
+                              {deal.companyName || deal.id} - ${deal.estimatedValue || 0}
                             </SelectItem>
                           ))
                         )}
