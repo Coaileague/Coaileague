@@ -166,7 +166,7 @@ export function WhatsNewBadge() {
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start" side="right" sideOffset={8}>
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 max-h-[85vh] sm:max-h-[600px] p-0" align="start" side="right" sideOffset={8}>
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
@@ -187,7 +187,7 @@ export function WhatsNewBadge() {
           )}
         </div>
         <Separator />
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[40vh] sm:h-[400px]">
           {updates.length === 0 ? (
             <div className="p-8 text-center">
               <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />

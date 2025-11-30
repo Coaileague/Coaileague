@@ -149,7 +149,7 @@ export function NotificationsCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 max-h-[85vh] sm:max-h-[600px] p-0" align="end">
         <div className="flex items-center justify-between p-4">
           <h3 className="font-semibold">Notifications</h3>
           {unreadCount > 0 && (
@@ -164,7 +164,7 @@ export function NotificationsCenter() {
           )}
         </div>
         <Separator />
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[40vh] sm:h-[400px]">
           {isLoading ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               Loading notifications...
