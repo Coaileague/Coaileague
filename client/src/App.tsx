@@ -6,10 +6,16 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { GraduationCap, Settings2, Search, Menu } from "lucide-react";
+import { GraduationCap, Settings2, Search, Menu, Sparkles, LogOut, User, Bell } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { cn } from "@/lib/utils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeProvider as WorkspaceThemeProvider } from "@/contexts/ThemeContext";
 import { OverlayControllerProvider } from "@/contexts/overlay-controller";
@@ -28,6 +34,9 @@ import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
+import { performLogout } from "@/lib/logoutHandler";
+import { useTransition } from "@/contexts/transition-context";
+import { showLogoutTransition } from "@/lib/transition-utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import NotFound from "@/pages/not-found";
@@ -136,7 +145,6 @@ import AIBrainDashboard from "@/pages/ai-brain-dashboard";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
-import { Sparkles } from "lucide-react";
 import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
@@ -449,7 +457,66 @@ function AppContent() {
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* What's New Badge - Sparkles icon */}
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-9 w-9 relative hover:bg-white/10"
+                      data-testid="button-whats-new"
+                      title="What's New"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
+                    {/* Notifications Bell */}
                     <NotificationsCenter />
+                    {/* User Menu Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30"
+                          data-testid="button-user-menu"
+                          title="User Menu"
+                        >
+                          <span className="text-sm font-bold">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <div className="px-2 py-1.5">
+                          <p className="text-sm font-semibold">{user?.firstName} {user?.lastName}</p>
+                          <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="cursor-pointer" 
+                          onClick={() => setLocation('/profile')}
+                          data-testid="menu-profile"
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="cursor-pointer" 
+                          onClick={() => setLocation('/settings')}
+                          data-testid="menu-settings"
+                        >
+                          <Settings2 className="h-4 w-4 mr-2" />
+                          Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="cursor-pointer text-destructive"
+                          onClick={async () => {
+                            await performLogout();
+                          }}
+                          data-testid="menu-sign-out"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
