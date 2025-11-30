@@ -15231,6 +15231,36 @@ Summary:`;
     }
   });
 
+  // Helper function to map audit event types to LiveActivity types
+  function mapEventTypeToActivityType(eventType) {
+    if (eventType.includes('LOGIN') || eventType.includes('SESSION')) return 'login';
+    if (eventType.includes('SHIFT') || eventType.includes('SCHEDULE')) return 'shift_created';
+    if (eventType.includes('INVOICE') || eventType.includes('PAYMENT')) return 'invoice_generated';
+    if (eventType.includes('EMPLOYEE') || eventType.includes('USER_CREATED')) return 'employee_added';
+    if (eventType.includes('ERROR') || eventType.includes('FAIL')) return 'error';
+    return 'login'; // Default
+  }
+
+  // Platform live activities - real data from audit_events
+  app.get('/api/admin/platform/activities', requirePlatformStaff, async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 20, 100);
+      const activities = await storage.getAuditEvents({ limit });
+      const liveActivities = activities.map((event) => ({
+        id: event.id,
+        timestamp: event.createdAt?.toISOString() || new Date().toISOString(),
+        user: event.actorName || event.actorId || 'System',
+        action: event.payload?.description || `${event.eventType}: ${event.aggregateType}`,
+        workspace: event.workspaceId || 'Platform',
+        type: mapEventTypeToActivityType(event.eventType),
+      }));
+      res.json(liveActivities);
+    } catch (error) {
+      console.error("Error fetching platform activities:", error);
+      res.status(500).json({ message: "Failed to fetch platform activities" });
+    }
+  });
+
   // ============================================================================
   // EXTERNAL IDENTIFIER LOOKUP SYSTEM
   // ============================================================================
@@ -19727,8 +19757,31 @@ Return ONLY valid JSON array with this exact structure:
 
       // Analyze each employee's capacity
       for (const employee of employees) {
-        // Calculate scheduled hours for next week
-        const scheduledHours = 45; // Mock - would actually query schedules
+        // Calculate scheduled hours for next week from actual shifts data
+        const nextWeekEnd = new Date(nextWeekStart);
+        nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
+        
+        const employeeShifts = await db
+          .select()
+          .from(shifts)
+          .where(
+            and(
+              eq(shifts.employeeId, employee.id),
+              gte(shifts.date, nextWeekStart.toISOString().split('T')[0]),
+              lte(shifts.date, nextWeekEnd.toISOString().split('T')[0])
+            )
+          );
+        
+        // Calculate total scheduled hours from shifts
+        let scheduledHours = 0;
+        for (const shift of employeeShifts) {
+          if (shift.startTime && shift.endTime) {
+            const start = new Date(`1970-01-01T${shift.startTime}`);
+            const end = new Date(`1970-01-01T${shift.endTime}`);
+            scheduledHours += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          }
+        }
+        
         const availableHours = 40; // Standard work week
         const overageHours = Math.max(0, scheduledHours - availableHours);
 

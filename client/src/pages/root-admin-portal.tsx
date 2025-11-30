@@ -133,44 +133,18 @@ export default function RootAdminPortal() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Simulated live activity feed
+  // Real-time platform activity feed from database
+  const { data: liveActivitiesData } = useQuery<LiveActivity[]>({
+    queryKey: ["/api/admin/platform/activities", refreshKey],
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Update state when data changes
   useEffect(() => {
-    const mockActivities: LiveActivity[] = [
-      {
-        id: "1",
-        timestamp: new Date().toISOString(),
-        user: "john@security.com",
-        action: "Created shift for Emily Chen",
-        workspace: "SecureGuard Inc",
-        type: "shift_created",
-      },
-      {
-        id: "2",
-        timestamp: new Date(Date.now() - 30000).toISOString(),
-        user: "admin@hospital.com",
-        action: "Generated invoice #INV-2024-047",
-        workspace: "Healthcare Plus",
-        type: "invoice_generated",
-      },
-      {
-        id: "3",
-        timestamp: new Date(Date.now() - 60000).toISOString(),
-        user: "manager@construction.com",
-        action: "Added new employee: Mike Rodriguez",
-        workspace: "BuildPro Construction",
-        type: "employee_added",
-      },
-      {
-        id: "4",
-        timestamp: new Date(Date.now() - 90000).toISOString(),
-        user: "sarah@retail.com",
-        action: "Logged in from 192.168.1.100",
-        workspace: "RetailMax",
-        type: "login",
-      },
-    ];
-    setLiveActivities(mockActivities);
-  }, [refreshKey]);
+    if (liveActivitiesData && liveActivitiesData.length > 0) {
+      setLiveActivities(liveActivitiesData);
+    }
+  }, [liveActivitiesData]);
 
   // Fetch queries
   const { data: platformStats } = useQuery({
@@ -202,15 +176,28 @@ export default function RootAdminPortal() {
     refetchInterval: 2000,
   });
 
-  // System health metrics
+  // System health metrics - fetched from real monitoring API
+  const { data: systemHealthData } = useQuery<{
+    cpu?: { percent?: number };
+    memory?: { percent?: number };
+    database?: { latencyMs?: number };
+    uptime?: string;
+    requests?: { total?: number };
+    errors?: { count?: number };
+    connections?: { activeUsers?: number };
+  }>({
+    queryKey: ["/api/monitoring/system-health", refreshKey],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   const systemHealth = {
-    cpu: 42,
-    memory: 67,
-    database: 45,
-    uptime: "12d 5h 32m",
-    requests: "1,247",
-    errors: 3,
-    activeUsers: 156,
+    cpu: systemHealthData?.cpu?.percent || 0,
+    memory: systemHealthData?.memory?.percent || 0,
+    database: systemHealthData?.database?.latencyMs ? Math.min(100, 100 - systemHealthData.database.latencyMs / 10) : 0,
+    uptime: systemHealthData?.uptime || "N/A",
+    requests: systemHealthData?.requests?.total?.toLocaleString() || "0",
+    errors: systemHealthData?.errors?.count || 0,
+    activeUsers: systemHealthData?.connections?.activeUsers || 0,
   };
 
   // Mutations
