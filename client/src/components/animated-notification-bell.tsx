@@ -22,7 +22,6 @@ export function AnimatedNotificationBell({
     setFadeOut(false);
   }, [hasNotifications]);
 
-  // Handle clearing notifications with animation
   const handleClearNotifications = () => {
     setFadeOut(true);
     setTimeout(() => {
@@ -31,12 +30,11 @@ export function AnimatedNotificationBell({
     }, 400);
   };
 
-  // Generate sparkle positions around the bell for orbital animation
   const sparkles = [
-    { id: 0, delay: "0s" },
-    { id: 1, delay: "0.5s" },
-    { id: 2, delay: "1s" },
-    { id: 3, delay: "1.5s" },
+    { top: "-6px", right: "2px", delay: "0s" },
+    { top: "4px", right: "-6px", delay: "0.4s" },
+    { bottom: "-4px", right: "4px", delay: "0.8s" },
+    { top: "2px", left: "-5px", delay: "1.2s" },
   ];
 
   return (
@@ -50,7 +48,6 @@ export function AnimatedNotificationBell({
         data-testid="button-notifications"
       >
         <div className="relative">
-          {/* Bell Icon with continuous ring when has notifications */}
           <div
             className={`transition-all ${
               showSparkles ? "animate-bell-ring-continuous animate-bell-flash-rainbow" : ""
@@ -59,7 +56,6 @@ export function AnimatedNotificationBell({
             <Bell className="h-5 w-5" />
           </div>
 
-          {/* Notification badge indicator - flashes with rainbow */}
           {showSparkles && (
             <div
               className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full shadow-lg animate-badge-pulse ${
@@ -67,47 +63,37 @@ export function AnimatedNotificationBell({
               } transition-opacity duration-300`}
               style={{
                 background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4, #a78bfa, #f472b6)",
-                animation: "rainbowFlash 3s ease-in-out infinite",
+                backgroundSize: "200% 200%",
+                animation: "rainbowFlash 3s ease-in-out infinite, badgePulse 2s ease-in-out infinite",
               }}
             />
           )}
 
-          {/* Orbiting Stars - spinning around the bell */}
           {showSparkles &&
-            sparkles.map((sparkle) => (
+            sparkles.map((sparkle, idx) => (
               <div
-                key={sparkle.id}
-                className="absolute pointer-events-none"
+                key={idx}
+                className={`absolute pointer-events-none sparkle-star animate-star-sparkle ${
+                  fadeOut ? "opacity-0" : ""
+                } transition-opacity duration-300`}
                 style={{
-                  width: "24px",
-                  height: "24px",
-                  left: "50%",
-                  top: "50%",
-                  marginLeft: "-12px",
-                  marginTop: "-12px",
+                  top: sparkle.top,
+                  right: sparkle.right,
+                  bottom: sparkle.bottom,
+                  left: sparkle.left,
+                  animationDelay: sparkle.delay,
+                  color: idx % 2 === 0 ? "#ffd700" : "#a78bfa",
+                  filter: `drop-shadow(0 0 3px ${idx % 2 === 0 ? "#ffd700" : "#a78bfa"})`,
                 }}
-              >
-                <div
-                  className={`absolute w-1.5 h-1.5 rounded-full animate-star-orbit ${
-                    fadeOut ? "opacity-0" : "opacity-100"
-                  } transition-opacity duration-300`}
-                  style={{
-                    left: "50%",
-                    top: "50%",
-                    marginLeft: "-3px",
-                    marginTop: "-3px",
-                    animationDelay: sparkle.delay,
-                    background: "currentColor",
-                    filter: "drop-shadow(0 0 6px rgba(168, 85, 247, 0.8))",
-                  }}
-                />
-              </div>
+              />
             ))}
 
-          {/* Clear notifications button - appears on hover */}
           {showSparkles && (
             <button
-              onClick={handleClearNotifications}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClearNotifications();
+              }}
               className="absolute -bottom-1 -right-1 bg-destructive rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover-elevate"
               aria-label="Clear notifications"
               data-testid="button-clear-notifications"
