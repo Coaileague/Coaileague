@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { DashboardPreview } from "@/components/dashboard-preview";
 import { TimeTrackingPreview } from "@/components/time-tracking-preview";
+import { PublicWhatsNewBanner } from "@/components/public-whats-new-banner";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -53,6 +54,9 @@ export default function Landing() {
     <div className="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
       {/* Universal Header */}
       <UniversalHeader variant="public" />
+      
+      {/* What's New Banner - Shows latest platform updates to visitors */}
+      <PublicWhatsNewBanner />
       
       {/* Hero Section - SALES FOCUSED */}
       <section className="relative overflow-x-hidden border-b bg-gradient-to-b from-background via-background to-muted/20">
