@@ -159,11 +159,8 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                           <AISearchTrigger />
                           <WhatsNewBadge />
                           <AnimatedNotificationBell
-                            hasNotifications={true}
+                            notificationCount={3}
                             onClick={() => setLocation("/dashboard")}
-                            onClear={() => {
-                              // Notifications cleared
-                            }}
                           />
                         </div>
                       )}
@@ -212,11 +209,8 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                     <WhatsNewBadge />
                     <AnimatedNotificationBell
-                      hasNotifications={true}
+                      notificationCount={3}
                       onClick={() => setLocation("/dashboard")}
-                      onClear={() => {
-                        // Notifications cleared
-                      }}
                     />
                   </div>
                 )}
