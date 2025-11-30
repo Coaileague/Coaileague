@@ -32,13 +32,6 @@ export function AnimatedNotificationBell({
     }, 400);
   };
 
-  const sparkles = [
-    { top: "-6px", right: "0px", delay: "0s" },
-    { top: "2px", right: "-6px", delay: "0.3s" },
-    { bottom: "-5px", right: "2px", delay: "0.6s" },
-    { top: "0px", left: "-6px", delay: "0.9s" },
-  ];
-
   return (
     <button
       onClick={onClick}
@@ -50,33 +43,16 @@ export function AnimatedNotificationBell({
       style={{ willChange: 'auto' }}
     >
       <div className="relative inline-flex items-center justify-center" style={{ width: '20px', height: '20px', willChange: 'transform' }}>
-        {/* Main bell icon with spinning color-cycling animation when notifications exist */}
-        <div
-          className={`absolute inset-0 flex items-center justify-center ${
-            showSparkles ? "animate-star-spin-colors" : ""
+        {/* Main bell icon with glow effect when notifications exist */}
+        <Bell 
+          className={`h-5 w-5 transition-all duration-300 ${
+            showSparkles ? "animate-whatsnew-badge-glow" : ""
           }`}
-          style={showSparkles ? { willChange: 'transform, filter' } : undefined}
-        >
-          <Bell className="h-5 w-5" />
-        </div>
-
-        {/* Rotating sparkling dots around icon - same pattern as WhatsNew badge */}
-        {showSparkles && sparkles.map((sparkle, idx) => (
-          <div
-            key={idx}
-            className={`absolute pointer-events-none sparkle-star animate-star-spin-colors ${
-              fadeOut ? "opacity-0" : "opacity-100"
-            } transition-opacity duration-300`}
-            style={{
-              top: sparkle.top,
-              right: sparkle.right,
-              bottom: sparkle.bottom,
-              left: sparkle.left,
-              animationDelay: sparkle.delay,
-              willChange: 'transform, filter, color',
-            }}
-          />
-        ))}
+          style={showSparkles ? { 
+            filter: 'drop-shadow(0 0 6px rgba(6, 182, 212, 0.6))',
+            willChange: 'filter'
+          } : undefined}
+        />
 
         {/* Number badge with glowing effect - shows notification count */}
         {showSparkles && notificationCount > 0 && (
