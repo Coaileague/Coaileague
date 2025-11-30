@@ -160,6 +160,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                       hasNotifications={true}
                       onClick={() => setLocation("/dashboard")}
                       className="mr-2"
+                      onClear={() => console.log("Notifications cleared")}
                     />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -204,6 +205,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   <AnimatedNotificationBell
                     hasNotifications={true}
                     onClick={() => setLocation("/dashboard")}
+                    onClear={() => console.log("Notifications cleared")}
                   />
                 )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
