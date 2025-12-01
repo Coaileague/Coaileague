@@ -102,7 +102,6 @@ import FileGrievance from "@/pages/file-grievance";
 import ReviewDisputes from "@/pages/review-disputes";
 import PayrollDeductions from "@/pages/payroll-deductions";
 import PayrollGarnishments from "@/pages/payroll-garnishments";
-import Communications from "@/pages/communications";
 import CommunicationsOnboarding from "@/pages/communications-onboarding";
 import Diagnostics from "@/pages/diagnostics";
 import PrivateMessages from "@/pages/private-messages";
@@ -346,7 +345,7 @@ function AppContent() {
               <Route path="/review-disputes" component={ReviewDisputes} />
               <Route path="/payroll/deductions" component={PayrollDeductions} />
               <Route path="/payroll/garnishments" component={PayrollGarnishments} />
-              <Route path="/communications" component={Communications} />
+              <Route path="/communications"><Redirect to="/chatrooms" /></Route>
               <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
               <Route path="/diagnostics" component={Diagnostics} />
               <Route path="/messages" component={PrivateMessages} />
@@ -622,7 +621,7 @@ function AppContent() {
                 <Route path="/my-audit-record" component={MyAuditRecord} />
                 <Route path="/file-grievance" component={FileGrievance} />
                 <Route path="/review-disputes" component={ReviewDisputes} />
-                <Route path="/communications" component={Communications} />
+                <Route path="/communications"><Redirect to="/chatrooms" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
                 <Route path="/chatrooms" component={Chatrooms} />
                 <Route path="/diagnostics" component={Diagnostics} />
