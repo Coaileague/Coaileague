@@ -15,6 +15,7 @@
 import { helpaiOrchestrator, type ActionRequest, type ActionResult, type ActionHandler } from '../helpai/helpaiActionOrchestrator';
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { AIBrainService } from './aiBrainService';
+import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
 import { db } from '../../db';
 import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import {
@@ -748,11 +749,13 @@ class AIBrainMasterOrchestrator {
 
   /**
    * Execute a workflow chain (sequence of orchestrated tasks)
+   * Validates authorization at each step
    */
   async executeWorkflowChain(
     name: string,
     steps: Omit<OrchestrationTask, 'id' | 'executedAt' | 'result' | 'error'>[],
-    userId: string
+    userId: string,
+    userRole: string
   ): Promise<WorkflowChain> {
     const workflowId = `wf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -770,7 +773,22 @@ class AIBrainMasterOrchestrator {
     
     this.activeWorkflows.set(workflowId, workflow);
     
-    console.log(`[AI Brain Master Orchestrator] Starting workflow: ${name} (${workflowId})`);
+    // Validate user authorization before executing workflow
+    const authCheck = await aiBrainAuthorizationService.validateSupportStaff(userId);
+    if (!authCheck.valid) {
+      workflow.status = 'failed';
+      await aiBrainAuthorizationService.logCommandExecution({
+        userId,
+        userRole,
+        actionId: `workflow.${name}`,
+        category: 'automation',
+        error: `Authorization failed: ${authCheck.reason}`
+      });
+      console.warn(`[AI Brain Master Orchestrator] Unauthorized workflow execution: ${authCheck.reason}`);
+      throw new Error(`Unauthorized: ${authCheck.reason}`);
+    }
+    
+    console.log(`[AI Brain Master Orchestrator] Starting workflow: ${name} (${workflowId}) by ${userId} (${userRole})`);
     
     workflow.status = 'running';
     
@@ -779,18 +797,50 @@ class AIBrainMasterOrchestrator {
       const step = workflow.steps[i];
       
       try {
+        // Check authorization for this specific action
+        const actionAuthCheck = await aiBrainAuthorizationService.canExecuteAction(
+          { userId, userRole, platformRole: userRole },
+          step.category,
+          step.action
+        );
+        
+        if (!actionAuthCheck.isAuthorized) {
+          step.executedAt = new Date();
+          step.error = actionAuthCheck.reason;
+          workflow.status = 'failed';
+          await aiBrainAuthorizationService.logCommandExecution({
+            userId,
+            userRole,
+            actionId: `${step.category}.${step.action}`,
+            category: step.category,
+            parameters: step.parameters,
+            error: actionAuthCheck.reason
+          });
+          break;
+        }
+        
         const result = await helpaiOrchestrator.executeAction({
           actionId: `${step.category}.${step.action}`,
           category: step.category as any,
           name: step.action,
           payload: step.parameters,
           userId,
-          userRole: 'admin',
+          userRole,
           priority: step.priority
         });
         
         step.executedAt = new Date();
         step.result = result;
+        
+        // Log successful execution
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole,
+          actionId: `${step.category}.${step.action}`,
+          category: step.category,
+          parameters: step.parameters,
+          result: result.success
+        });
         
         if (!result.success) {
           workflow.status = 'failed';
@@ -801,6 +851,13 @@ class AIBrainMasterOrchestrator {
         step.executedAt = new Date();
         step.error = error.message;
         workflow.status = 'failed';
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole,
+          actionId: `${step.category}.${step.action}`,
+          category: step.category,
+          error: error.message
+        });
         break;
       }
     }
