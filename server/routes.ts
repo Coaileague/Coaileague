@@ -83,6 +83,7 @@ import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
 import { supportCommandRouter } from "./routes/support-command-console";
+import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
 import codeEditorRouter from "./routes/code-editor";
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
@@ -2561,6 +2562,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/whats-new", whatsNewRouter);
   // Register Support Command Console routes (Force-push updates for support staff)
   app.use("/api/support/command", supportCommandRouter);
+  // Register AI Brain Console routes (Interactive AI chat and control for support staff)
+  app.use("/api/ai-brain/console", aiBrainConsoleRouter);
 
   // Register AI Brain Code Editor routes (staged code changes, approval workflow)
   app.use("/api/code-editor", codeEditorRouter);
