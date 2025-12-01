@@ -1,6 +1,8 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server, IncomingMessage } from 'http';
 import { storage } from './storage';
+import { db } from './db';
+import { eq, sql } from 'drizzle-orm';
 import { formatUserDisplayName, formatUserDisplayNameForChat } from './utils/formatUserDisplayName';
 import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } from '@shared/commands';
 import { queueManager } from './services/helpOsQueue';
@@ -10,6 +12,109 @@ import { randomUUID } from 'crypto';
 import { sanitizeChatMessage, sanitizePlainText } from './lib/sanitization';
 import { CHAT_SERVER_CONFIG } from './config/chatServer';
 import { ChatServerHub } from './services/ChatServerHub';
+import cookie from 'cookie';
+import { unsign } from 'cookie-signature';
+
+// ============================================================================
+// SESSION-BASED WEBSOCKET AUTHENTICATION
+// Securely extracts user identity from HTTP session (not client-supplied IDs)
+// ============================================================================
+
+interface AuthenticatedSession {
+  userId: string;
+  workspaceId?: string;
+  role?: string;
+  email?: string;
+}
+
+/**
+ * Parse the session from WebSocket upgrade request cookies
+ * This is the ONLY secure way to authenticate WebSocket connections
+ * @param request - The HTTP upgrade request containing cookies
+ * @returns The authenticated session or null if not authenticated
+ */
+async function getSessionFromRequest(request: IncomingMessage): Promise<AuthenticatedSession | null> {
+  try {
+    // Parse cookies from request headers
+    const cookies = cookie.parse(request.headers.cookie || '');
+    const signedSessionId = cookies['connect.sid'];
+    
+    if (!signedSessionId) {
+      return null;
+    }
+    
+    // Remove 's:' prefix and unsign the session ID
+    // connect.sid format: s:sessionId.signature
+    const sessionSecret = process.env.SESSION_SECRET;
+    if (!sessionSecret) {
+      console.error('[WebSocket Auth] SESSION_SECRET not configured');
+      return null;
+    }
+    
+    // Extract session ID from signed cookie (format: s:sessionId.signature)
+    let sessionId = signedSessionId;
+    if (sessionId.startsWith('s:')) {
+      sessionId = sessionId.substring(2);
+      const unsigned = unsign(sessionId, sessionSecret);
+      if (unsigned === false) {
+        console.warn('[WebSocket Auth] Invalid session signature');
+        return null;
+      }
+      sessionId = unsigned;
+    }
+    
+    // Look up session in PostgreSQL sessions table
+    const result = await db.execute(
+      sql`SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()`
+    );
+    
+    if (!result.rows || result.rows.length === 0) {
+      return null;
+    }
+    
+    const sess = result.rows[0].sess as any;
+    
+    // Extract user info from session data
+    // Session structure: { userId: "...", passport: { user: { claims: {...} } } }
+    // OR: { passport: { user: { id: "..." } } }
+    const userId = sess?.userId || sess?.passport?.user?.id || sess?.passport?.user?.claims?.sub;
+    
+    if (!userId) {
+      console.log('[WebSocket Auth] No userId found in session');
+      return null;
+    }
+    
+    // Get email from various possible locations
+    const email = sess?.email || sess?.passport?.user?.claims?.email || sess?.passport?.user?.email;
+    
+    // Extract workspace from various possible locations in session
+    // Priority: explicit workspaceId > currentWorkspaceId > passport claims > membership
+    let workspaceId = sess.workspaceId || 
+                      sess.currentWorkspaceId || 
+                      sess.passport?.user?.workspaceId ||
+                      sess.passport?.user?.claims?.workspaceId ||
+                      sess.passport?.user?.claims?.currentWorkspaceId;
+    
+    // If still no workspace, try to get from tenant membership list
+    if (!workspaceId && sess.passport?.user?.claims?.tenantMembership) {
+      const memberships = sess.passport.user.claims.tenantMembership;
+      if (Array.isArray(memberships) && memberships.length > 0) {
+        // Use first membership workspace as default
+        workspaceId = memberships[0]?.workspaceId || memberships[0];
+      }
+    }
+    
+    return {
+      userId,
+      workspaceId,
+      role: sess.role || sess.passport?.user?.role || sess.passport?.user?.claims?.role,
+      email,
+    };
+  } catch (error) {
+    console.error('[WebSocket Auth] Session lookup failed:', error);
+    return null;
+  }
+}
 
 /**
  * Helper function to create system messages with all required ChatMessage fields
@@ -71,6 +176,14 @@ function createSystemMessage(
     readAt: null,
     isEdited: null,
     editedAt: null,
+    
+    // Sentiment analysis fields
+    sentiment: null,
+    sentimentScore: null,
+    sentimentConfidence: null,
+    urgencyLevel: null,
+    sentimentKeywords: null,
+    sentimentAnalyzedAt: null,
     
     // Timestamps
     createdAt: new Date(),
@@ -680,14 +793,35 @@ export function setupWebSocket(server: Server) {
     const userAgent = request.headers['user-agent'] || 'unknown';
     
     // Generate unique session ID for connection tracking
-    const sessionId = randomUUID();
-    ws.sessionId = sessionId;
+    const connectionId = randomUUID();
+    ws.sessionId = connectionId;
     
     // Store for audit trail
     ws.ipAddress = ipAddress;
     ws.userAgent = userAgent;
     
-    console.log(`New WebSocket connection from ${ipAddress} (session: ${sessionId})`);
+    // =========================================================================
+    // SESSION-BASED AUTHENTICATION AT CONNECTION TIME
+    // Securely extract authenticated user identity from HTTP session cookies
+    // This is done ONCE at connection time - not per-message
+    // =========================================================================
+    const authenticatedSession = await getSessionFromRequest(request);
+    if (authenticatedSession) {
+      // Store authenticated identity on WebSocket - NEVER trust client-supplied IDs
+      ws.userId = authenticatedSession.userId;
+      ws.workspaceId = authenticatedSession.workspaceId;
+      ws.serverAuth = {
+        userId: authenticatedSession.userId,
+        workspaceId: authenticatedSession.workspaceId || '',
+        role: authenticatedSession.role || 'user',
+        sessionId: connectionId,
+        authenticatedAt: new Date(),
+      };
+      console.log(`New authenticated WebSocket connection from ${ipAddress} (user: ${authenticatedSession.userId}, connection: ${connectionId})`);
+    } else {
+      // Guest/anonymous connection - allowed for helpdesk but limited permissions
+      console.log(`New guest WebSocket connection from ${ipAddress} (connection: ${connectionId})`);
+    }
     
     // Initialize heartbeat
     ws.isAlive = true;
@@ -757,8 +891,52 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // CHECK FOR GUEST/ANONYMOUS USERS FIRST - Short-circuit all database lookups
-            const isGuestUser = payload.userId?.startsWith('guest-');
+            // =========================================================================
+            // SECURITY: Use session-based authentication - NEVER trust client-supplied IDs
+            // The authenticated user ID was set at connection time from HTTP session
+            // =========================================================================
+            
+            // Check for valid authentication
+            const hasSessionAuth = ws.serverAuth !== undefined;
+            
+            // Guest access rules:
+            // 1. Must NOT have a valid session (session users should use their real ID)
+            // 2. Must claim guest status with proper prefix (guest-*)
+            // 3. Must be joining the main helpdesk room only
+            const claimsGuest = typeof payload.userId === 'string' && 
+                               payload.userId.startsWith('guest-') && 
+                               /^guest-[a-f0-9-]{8,}$/i.test(payload.userId);
+            const isMainRoomRequest = isMainRoom || payload.conversationId === MAIN_ROOM_ID;
+            const isGuestUser = !hasSessionAuth && claimsGuest && isMainRoomRequest;
+            
+            // For authenticated users, use the server-verified identity only
+            // For guests, use the claimed guest ID (only allowed in helpdesk)
+            let effectiveUserId: string | null = null;
+            
+            if (hasSessionAuth) {
+              // Session-authenticated: use server-verified identity
+              effectiveUserId = ws.serverAuth!.userId;
+            } else if (isGuestUser) {
+              // Valid guest user for helpdesk
+              effectiveUserId = payload.userId;
+            }
+            
+            // If not authenticated and not a valid guest, reject
+            if (!effectiveUserId) {
+              const reason = !hasSessionAuth && payload.userId && !claimsGuest 
+                ? 'Invalid user ID format. Guests must use guest-* prefix.'
+                : !isMainRoomRequest && claimsGuest
+                ? 'Guests can only join the public HelpDesk.'
+                : 'Authentication required. Please log in or connect as a guest.';
+              
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: reason,
+              }));
+              console.warn(`[Security] Rejected join attempt - ${reason} (IP: ${ws.ipAddress})`);
+              return;
+            }
+            
             let displayName = 'Guest';
             let userType: 'staff' | 'subscriber' | 'org_user' | 'guest' = 'guest';
             let platformRole: string | null = null;
@@ -782,8 +960,8 @@ export function setupWebSocket(server: Server) {
                 return;
               }
             } else {
-              // Authenticated user - fetch display info from database
-              const userInfo = await storage.getUserDisplayInfo(payload.userId);
+              // Authenticated user - use session-verified userId
+              const userInfo = await storage.getUserDisplayInfo(effectiveUserId);
               displayName = userInfo ? formatUserDisplayNameForChat({
                 firstName: userInfo.firstName,
                 lastName: userInfo.lastName,
@@ -793,7 +971,7 @@ export function setupWebSocket(server: Server) {
               }) : 'User';
 
               // Determine user type and set initial status
-              platformRole = await storage.getUserPlatformRole(payload.userId).catch(() => null);
+              platformRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null);
               isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
               
               if (isStaff) {
@@ -813,24 +991,52 @@ export function setupWebSocket(server: Server) {
                 }
               }
               
-              // =========================================================================
-              // SECURITY: Populate server-derived authentication context
-              // This binds the user session to the WebSocket for /verify and /resetpass
-              // =========================================================================
-              ws.serverAuth = {
-                userId: payload.userId,
-                workspaceId: conversation.workspaceId || '',
-                role: platformRole || 'user',
-                sessionId: ws.sessionId!,
-                authenticatedAt: new Date(),
-              };
+              // SECURITY: Validate workspace access for authenticated users
+              // Non-staff users must have workspace context and can only access matching workspaces
+              if (!isMainRoom) {
+                const userWorkspaceId = ws.serverAuth?.workspaceId;
+                
+                // Authenticated non-staff users REQUIRE valid workspace in session
+                if (!isStaff && !userWorkspaceId) {
+                  ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Your session lacks workspace context. Please refresh and try again.',
+                  }));
+                  console.warn(`[Security] User ${effectiveUserId} has no workspace in session`);
+                  return;
+                }
+                
+                // Conversations without workspace are only accessible in helpdesk
+                // For non-helpdesk, conversation MUST have a workspace
+                if (!conversation.workspaceId && !isStaff) {
+                  ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Invalid conversation: no workspace context.',
+                  }));
+                  console.warn(`[Security] Conversation ${conversationId} has no workspace - blocked for user ${effectiveUserId}`);
+                  return;
+                }
+                
+                // Verify conversation workspace matches user's workspace (staff exempt)
+                if (conversation.workspaceId && !isStaff && conversation.workspaceId !== userWorkspaceId) {
+                  ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Access denied: You do not have permission to access this conversation.',
+                  }));
+                  console.warn(`[Security] User ${effectiveUserId} blocked from workspace ${conversation.workspaceId} (belongs to ${userWorkspaceId})`);
+                  return;
+                }
+              }
+              
+              // Do NOT update serverAuth.workspaceId from conversation - keep session-derived workspace
+              // serverAuth was set at connection time and should remain stable
             }
 
             // RATE LIMITING: Track connection (enforce 3 concurrent connections max)
             // Skip tracking for guest users since they don't have user records
             if (!isGuestUser) {
               const connectionTracking = await trackConnection(
-                payload.userId,
+                effectiveUserId,
                 ws.sessionId!,
                 ws.ipAddress,
                 ws.userAgent
@@ -846,10 +1052,11 @@ export function setupWebSocket(server: Server) {
               }
             }
 
-            // Associate this client with the conversation
-            ws.userId = payload.userId;
+            // Associate this client with the conversation (using server-verified ID)
+            // SECURITY: Guests don't get workspace assignment; authenticated users keep session workspace
+            ws.userId = effectiveUserId;
             ws.userName = displayName;
-            ws.workspaceId = conversation.workspaceId;
+            ws.workspaceId = isGuestUser ? undefined : (ws.serverAuth?.workspaceId || undefined);
             ws.conversationId = conversationId; // Use resolved conversation ID
             ws.userStatus = 'online'; // Default status
             ws.userType = userType;
@@ -857,7 +1064,7 @@ export function setupWebSocket(server: Server) {
             // Check if user already has an active connection in this room
             const existingClients = conversationClients.get(conversationId);
             const userAlreadyInRoom = existingClients ? Array.from(existingClients).some(
-              client => client.userId === payload.userId && client.readyState === WebSocket.OPEN
+              client => client.userId === effectiveUserId && client.readyState === WebSocket.OPEN
             ) : false;
 
             if (!conversationClients.has(conversationId)) {
@@ -867,12 +1074,12 @@ export function setupWebSocket(server: Server) {
 
             // GLOBAL TRACKING: Add to platform-wide stats
             globalConnections.totalConnections++;
-            globalConnections.allUsers.set(payload.userId, ws);
+            globalConnections.allUsers.set(effectiveUserId, ws);
             if (userType === 'staff') {
-              globalConnections.staffUsers.add(payload.userId);
+              globalConnections.staffUsers.add(effectiveUserId);
             } else if (userType === 'org_user' || userType === 'guest') {
               // Track non-staff users as subscribers
-              globalConnections.subscriberUsers.add(payload.userId);
+              globalConnections.subscriberUsers.add(effectiveUserId);
             }
 
             // CRITICAL: Send join acknowledgment FIRST so client updates resolvedConversationId
@@ -882,6 +1089,18 @@ export function setupWebSocket(server: Server) {
               conversationId: conversationId, // Send back the resolved UUID, not the slug
               success: true,
             }));
+
+            // REAL-TIME NOTIFICATIONS: Notify other users that someone joined
+            // Only emit for non-guests and when user wasn't already in the room
+            if (!isGuestUser && !userAlreadyInRoom) {
+              ChatServerHub.emitUserJoinedRoom({
+                conversationId: conversationId,
+                roomName: conversation.subject || 'Chat',
+                workspaceId: conversation.workspaceId || undefined,
+                userId: effectiveUserId,
+                userName: displayName,
+              }).catch(err => console.error('[ChatServerHub] Failed to emit user_joined_room:', err));
+            }
 
             // Send conversation history - but only for escalated tickets, not main HelpDesk
             // Main HelpDesk starts fresh each time (users get individual help)
@@ -895,7 +1114,7 @@ export function setupWebSocket(server: Server) {
               }));
               
               // Mark messages as read for escalated tickets
-              await storage.markMessagesAsRead(conversationId, payload.userId);
+              await storage.markMessagesAsRead(conversationId, effectiveUserId);
             } else {
               // For main HelpDesk: Send empty history (start fresh)
               ws.send(JSON.stringify({
@@ -2716,6 +2935,48 @@ export function setupWebSocket(server: Server) {
               messagePreview: sanitizedMessage.substring(0, 100),
             }).catch(err => console.error('[ChatServerHub] Failed to emit message_posted:', err));
 
+            // REAL-TIME NOTIFICATIONS: Send toast notifications to users not viewing this chat
+            // Get users currently in the conversation to exclude from notifications
+            const activeUserIds = new Set<string>();
+            if (clients) {
+              clients.forEach((client) => {
+                if (client.userId && client.readyState === WebSocket.OPEN) {
+                  activeUserIds.add(client.userId);
+                }
+              });
+            }
+            
+            // Broadcast notification to all notification-subscribed users not in this conversation
+            notificationClients.forEach((userClients, notifWorkspaceId) => {
+              userClients.forEach((userClient, userId) => {
+                // Skip the sender and users currently viewing the conversation
+                if (userId === ws.userId || activeUserIds.has(userId)) {
+                  return;
+                }
+                
+                // Only notify users in the same workspace (if workspace-scoped)
+                if (ws.workspaceId && ws.workspaceId !== notifWorkspaceId) {
+                  return;
+                }
+                
+                if (userClient.readyState === WebSocket.OPEN) {
+                  try {
+                    userClient.send(JSON.stringify({
+                      type: 'new_chatroom_message',
+                      chatroomId: ws.conversationId,
+                      chatroomName: conversation?.subject || 'Chat',
+                      senderName: displayName,
+                      messagePreview: sanitizedMessage.substring(0, 50) + (sanitizedMessage.length > 50 ? '...' : ''),
+                      timestamp: new Date().toISOString(),
+                    }));
+                    console.log(`💬 Chat notification sent to user ${userId}`);
+                  } catch (err) {
+                    console.error('[ChatNotification] Failed to send notification:', err);
+                  }
+                }
+              });
+            });
+
             // GEMINI Q&A BOT: Intelligent responses using Gemini 2.0 Flash
             const { shouldBotRespond, getAiResponse } = await import('./services/geminiQABot');
             
@@ -3536,106 +3797,120 @@ export function setupWebSocket(server: Server) {
 
           case 'join_shift_updates': {
             // Subscribe to real-time shift updates for a workspace
-            if (!payload.userId || !payload.workspaceId) {
+            // SECURITY: Require session authentication - no client-supplied IDs
+            
+            // Must have server-authenticated identity
+            if (!ws.serverAuth) {
               ws.send(JSON.stringify({
                 type: 'error',
-                message: 'User ID and Workspace ID are required',
+                message: 'Authentication required. Please log in first.',
               }));
+              console.warn(`[Shifts] Rejected unauthenticated shift subscription from ${ws.ipAddress}`);
               return;
             }
-
-            // SECURITY: Verify user belongs to the workspace they're trying to subscribe to
-            try {
-              const userWorkspace = await storage.getWorkspaceByOwnerId(payload.userId);
-              const workspaceMember = await storage.getEmployeeByUserId(payload.userId);
-              
-              // User must either own the workspace or be a member of the workspace
-              const hasAccess = (userWorkspace && userWorkspace.id === payload.workspaceId) || (workspaceMember && workspaceMember.workspaceId === payload.workspaceId);
-              
-              if (!hasAccess) {
+            
+            // SECURITY: Guests cannot subscribe to shift updates
+            if (ws.serverAuth.userId.startsWith('guest-')) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Guests cannot subscribe to shift updates.',
+              }));
+              console.warn(`[Shifts] Rejected guest shift subscription from ${ws.ipAddress}`);
+              return;
+            }
+            
+            const userId = ws.serverAuth.userId;
+            const workspaceId = ws.serverAuth.workspaceId;
+            const role = ws.serverAuth.role;
+            
+            // SECURITY: Require workspace context for shift updates
+            // Staff can receive updates for any workspace they specify (if implemented)
+            // Regular users must have workspace in session
+            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(role);
+            if (!workspaceId) {
+              if (isStaff) {
+                // Staff without workspace context get platform-wide access (logged for audit)
+                console.log(`[Shifts] Staff ${userId} (${role}) accessing shifts without workspace context`);
+              } else {
                 ws.send(JSON.stringify({
                   type: 'error',
-                  message: 'Access denied: You do not have permission to view this workspace',
+                  message: 'Your session lacks workspace context. Please refresh and try again.',
                 }));
-                console.warn(`⚠️ User ${payload.userId} attempted unauthorized shift subscription to workspace ${payload.workspaceId}`);
+                console.warn(`[Shifts] User ${userId} rejected - no workspace in session`);
                 return;
               }
-            } catch (authError) {
-              console.error('Shift WebSocket authorization error:', authError);
-              ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Authorization failed',
-              }));
-              return;
             }
 
-            ws.userId = payload.userId;
-            ws.workspaceId = payload.workspaceId;
-
-            // Add to shift update clients for this workspace
-            if (!shiftUpdateClients.has(payload.workspaceId)) {
-              shiftUpdateClients.set(payload.workspaceId, new Set());
+            // Add to shift update clients for this workspace (or undefined for staff platform access)
+            const effectiveWorkspaceId = workspaceId || 'platform-staff';
+            if (!shiftUpdateClients.has(effectiveWorkspaceId)) {
+              shiftUpdateClients.set(effectiveWorkspaceId, new Set());
             }
-            shiftUpdateClients.get(payload.workspaceId)!.add(ws);
+            shiftUpdateClients.get(effectiveWorkspaceId)!.add(ws);
 
-            console.log(`✅ User ${payload.userId} subscribed to shift updates for workspace ${payload.workspaceId}`);
+            console.log(`✅ User ${userId} subscribed to shift updates for workspace ${workspaceId || 'platform-wide (staff)'}`);
 
             // Send confirmation
             ws.send(JSON.stringify({
               type: 'shift_updates_subscribed',
-              workspaceId: payload.workspaceId,
+              workspaceId: workspaceId,
             }));
             break;
           }
 
           case 'join_notifications': {
             // Subscribe to real-time notifications for a user
-            if (!payload.userId || !payload.workspaceId) {
+            // SECURITY: Require session authentication - no fallback to other sources
+            
+            // Must have server-authenticated identity from HTTP session
+            if (!ws.serverAuth) {
               ws.send(JSON.stringify({
                 type: 'error',
-                message: 'User ID and Workspace ID are required',
+                message: 'Authentication required. Please log in first.',
               }));
+              console.warn(`[Notifications] Rejected unauthenticated subscription attempt from ${ws.ipAddress}`);
               return;
             }
-
-            // SECURITY: Verify user belongs to the workspace they're trying to subscribe to
-            try {
-              const userWorkspace = await storage.getWorkspaceByOwnerId(payload.userId);
-              const workspaceMember = await storage.getEmployeeByUserId(payload.userId);
-              
-              // User must either own the workspace or be a member of the workspace
-              const hasAccess = (userWorkspace && userWorkspace.id === payload.workspaceId) || (workspaceMember && workspaceMember.workspaceId === payload.workspaceId);
-              
-              if (!hasAccess) {
-                ws.send(JSON.stringify({
-                  type: 'error',
-                  message: 'Access denied: You do not have permission to view this workspace',
-                }));
-                console.warn(`⚠️ User ${payload.userId} attempted unauthorized notification subscription to workspace ${payload.workspaceId}`);
-                return;
-              }
-            } catch (authError) {
-              console.error('Notification WebSocket authorization error:', authError);
+            
+            // SECURITY: Guests cannot subscribe to notifications (they shouldn't receive workspace data)
+            if (ws.serverAuth.userId.startsWith('guest-')) {
               ws.send(JSON.stringify({
                 type: 'error',
-                message: 'Authorization failed',
+                message: 'Guests cannot subscribe to notifications.',
               }));
+              console.warn(`[Notifications] Rejected guest notification subscription from ${ws.ipAddress}`);
               return;
             }
-
-            ws.userId = payload.userId;
-            ws.workspaceId = payload.workspaceId;
+            
+            // Use authenticated credentials only from session
+            const userId = ws.serverAuth.userId;
+            const workspaceId = ws.serverAuth.workspaceId;
+            const role = ws.serverAuth.role;
+            
+            // SECURITY: Non-staff users require workspace context
+            // Staff can receive platform-wide notifications without workspace
+            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(role);
+            if (!isStaff && !workspaceId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Your session lacks workspace context. Please refresh and try again.',
+              }));
+              console.warn(`[Notifications] User ${userId} rejected - no workspace in session`);
+              return;
+            }
+            
+            console.log(`[Notifications] Authenticated subscription for ${userId} in workspace ${workspaceId || 'platform-wide (staff)'}`);
 
             // Add to notification clients for this workspace/user combination
-            if (!notificationClients.has(payload.workspaceId)) {
-              notificationClients.set(payload.workspaceId, new Map());
+            if (!notificationClients.has(workspaceId)) {
+              notificationClients.set(workspaceId, new Map());
             }
-            notificationClients.get(payload.workspaceId)!.set(payload.userId, ws);
+            notificationClients.get(workspaceId)!.set(userId, ws);
 
             // Get initial unread count
-            const unreadCount = await storage.getUnreadNotificationCount(payload.userId, payload.workspaceId);
+            const unreadCount = await storage.getUnreadNotificationCount(userId, workspaceId);
 
-            console.log(`✅ User ${payload.userId} subscribed to notifications for workspace ${payload.workspaceId} (${unreadCount} unread)`);
+            console.log(`✅ User ${userId} subscribed to notifications for workspace ${workspaceId} (${unreadCount} unread)`);
 
             // Send confirmation with current unread count
             ws.send(JSON.stringify({
