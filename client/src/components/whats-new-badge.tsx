@@ -64,11 +64,23 @@ export function WhatsNewBadge() {
     mutationFn: async (updateId: string) => {
       await apiRequest('POST', `/api/whats-new/${updateId}/viewed`, { source: 'badge' });
     },
-    onSuccess: () => {
+    onSuccess: (_, updateId) => {
+      // Immediately update cache with this item marked as viewed
+      const updatedUpdates = updates.map(u => 
+        u.id === updateId ? { ...u, hasViewed: true } : u
+      );
+      queryClient.setQueryData(['/api/whats-new/latest'], { updates: updatedUpdates });
+      const newUnviewedCount = updatedUpdates.filter(u => !u.hasViewed).length;
+      queryClient.setQueryData(['/api/whats-new/unviewed-count'], { count: newUnviewedCount, success: true });
+      // Then invalidate to sync with backend
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
     },
+    onError: (error) => {
+      console.error('Failed to mark as viewed:', error);
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
+    }
   });
 
   const markAllViewedMutation = useMutation({
@@ -79,13 +91,18 @@ export function WhatsNewBadge() {
       }
     },
     onSuccess: () => {
-      queryClient.setQueryData(['/api/whats-new/unviewed-count'], { count: 0 });
+      // Immediately update cache with all items marked as viewed
+      const markedUpdates = updates.map(u => ({ ...u, hasViewed: true }));
+      queryClient.setQueryData(['/api/whats-new/latest'], { updates: markedUpdates });
+      queryClient.setQueryData(['/api/whats-new/unviewed-count'], { count: 0, success: true });
+      // Then invalidate to sync with backend
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
       setOpen(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to mark all as viewed:', error);
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
     }
   });

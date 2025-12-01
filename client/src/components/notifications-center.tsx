@@ -71,9 +71,18 @@ export function NotificationsCenter() {
     mutationFn: async (id: string) => {
       return apiRequest(`/api/notifications/${id}/read`, 'PATCH');
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+    onSuccess: (_, id) => {
+      // Immediately update cache with this notification marked as read
+      queryClient.setQueryData(queryKeys.notifications.all, (old: Notification[] = []) =>
+        old.map(n => n.id === id ? { ...n, isRead: true } : n)
+      );
+      // Then invalidate to sync with backend
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
+    onError: (error) => {
+      console.error('Failed to mark notification as read:', error);
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    }
   });
 
   const markAllAsReadMutation = useMutation({
@@ -81,12 +90,17 @@ export function NotificationsCenter() {
       return apiRequest('/api/notifications/mark-all-read', 'POST');
     },
     onSuccess: () => {
+      // Immediately update cache - mark all notifications as read
       queryClient.setQueryData(queryKeys.notifications.all, (old: Notification[] = []) =>
         old.map(n => ({ ...n, isRead: true }))
       );
+      // Close popover after marking all read
+      setOpen(false);
+      // Then invalidate to sync with backend
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to mark all notifications as read:', error);
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     }
   });
