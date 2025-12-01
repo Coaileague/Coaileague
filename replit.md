@@ -31,6 +31,7 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **System Health:** A `/health` endpoint for monitoring database, Stripe, Gemini, WebSocket, and session health.
 - **HelpAI Orchestration:** Multi-tenant AI brain for autonomous operations with encrypted credential storage (AES-256-GCM), SHA-256 integrity checksums, API registry, and per-org credential management.
 - **Session Management:** Explicit session saves with PostgreSQL-backed session storage.
+- **WebSocket Security (Dec 2025):** Session-based authentication for all WebSocket handlers. Identity derived from HTTP session cookies at connection time (`ws.serverAuth`), preventing client-supplied ID spoofing. Workspace validation enforces tenant isolation - non-staff users can only access conversations/notifications in their workspace. Guests isolated to helpdesk room without workspace context. Staff access audited for platform-wide operations.
 - **Time Tracking:** Clock-in/out, timesheet reports, AI anomaly detection, and approval workflow.
 - **Client Billing:** Invoice generation from tracked hours, PDF export, email sending.
 - **Advanced Scheduling:** Recurring shifts, shift swapping, one-click duplication.

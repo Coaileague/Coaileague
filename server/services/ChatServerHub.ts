@@ -1303,6 +1303,59 @@ class ChatServerHubClass {
   }
 
   /**
+   * Emit when a user joins a chatroom - notify other workspace members
+   * Used for WhatsApp-style notifications
+   */
+  async emitUserJoinedRoom(params: {
+    conversationId: string;
+    roomName: string;
+    workspaceId?: string;
+    userId: string;
+    userName: string;
+    addedBy?: string;
+    addedByName?: string;
+  }): Promise<void> {
+    // Broadcast user_added_to_chatroom to notification subscribers
+    if (this.wsBroadcaster) {
+      this.wsBroadcaster({
+        type: 'user_added_to_chatroom',
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        payload: {
+          chatroomId: params.conversationId,
+          chatroomName: params.roomName,
+          userId: params.userId,
+          userName: params.userName,
+          addedBy: params.addedBy,
+          addedByName: params.addedByName,
+          timestamp: new Date().toISOString(),
+        }
+      });
+    }
+
+    // Track analytics
+    await this.emit({
+      type: 'user_joined_room',
+      title: `${params.userName} joined ${params.roomName}`,
+      description: params.addedByName 
+        ? `${params.userName} was added to ${params.roomName} by ${params.addedByName}`
+        : `${params.userName} joined ${params.roomName}`,
+      metadata: {
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        userName: params.userName,
+        targetUserId: params.addedBy,
+        targetUserName: params.addedByName,
+        audience: 'room',
+      },
+      shouldPersistToWhatsNew: false,
+      shouldNotify: false, // Already handled via WebSocket broadcast above
+    });
+  }
+
+  /**
    * Emit when AI job encounters an error
    * Informs users in chatroom that AI processing failed
    */
