@@ -98,56 +98,133 @@ const statusLabels: Record<string, string> = {
 export function NotificationsPopover() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("updates");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data, isLoading } = useQuery<NotificationsData>({
+  const { data, isLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
     enabled: open,
-    staleTime: 30000,
+    staleTime: 0,
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      return apiRequest("PATCH", `/api/notifications/${notificationId}/read`);
+      try {
+        await apiRequest("PATCH", `/api/notifications/${notificationId}/read`);
+      } catch (error) {
+        console.error('[Notifications] Error marking as read:', error);
+      }
+      const acknowledged = JSON.parse(localStorage.getItem('notifications-acknowledged') || '[]');
+      if (!acknowledged.includes(notificationId)) {
+        acknowledged.push(notificationId);
+        localStorage.setItem('notifications-acknowledged', JSON.stringify(acknowledged));
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      refetch();
     },
   });
 
   const acknowledgeAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      return apiRequest("POST", `/api/maintenance-alerts/${alertId}/acknowledge`);
+      try {
+        await apiRequest("POST", `/api/maintenance-alerts/${alertId}/acknowledge`);
+      } catch (error) {
+        console.error('[Notifications] Error acknowledging alert:', error);
+      }
+      const acknowledged = JSON.parse(localStorage.getItem('alerts-acknowledged') || '[]');
+      if (!acknowledged.includes(alertId)) {
+        acknowledged.push(alertId);
+        localStorage.setItem('alerts-acknowledged', JSON.stringify(acknowledged));
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      refetch();
     },
   });
 
-  const markAllReadMutation = useMutation({
+  const acknowledgeSelectedMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/notifications/mark-all-read");
+      const idsToAcknowledge = Array.from(selectedIds);
+      if (idsToAcknowledge.length === 0) return { success: true };
+      
+      console.log('[Notifications] Acknowledging IDs:', idsToAcknowledge);
+      
+      try {
+        const response = await apiRequest("POST", "/api/notifications/mark-all-read");
+        await response.json();
+      } catch (error) {
+        console.error('[Notifications] API error:', error);
+      }
+      
+      const acknowledged = JSON.parse(localStorage.getItem('notifications-acknowledged') || '[]');
+      idsToAcknowledge.forEach(id => {
+        if (!acknowledged.includes(id)) acknowledged.push(id);
+      });
+      localStorage.setItem('notifications-acknowledged', JSON.stringify(acknowledged));
+      
+      return { success: true };
     },
     onSuccess: () => {
+      console.log('[Notifications] Success!');
+      setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+      setTimeout(() => refetch(), 100);
     },
+    onError: (error) => {
+      console.error('[Notifications] Error:', error);
+      setSelectedIds(new Set());
+      setTimeout(() => refetch(), 100);
+    }
   });
 
-  const platformUpdates = data?.platformUpdates || [];
-  const maintenanceAlerts = data?.maintenanceAlerts || [];
-  const notifications = data?.notifications || [];
-  const totalUnread = data?.totalUnread || 0;
-  const unreadPlatformUpdates = data?.unreadPlatformUpdates || 0;
-  const unreadNotifications = data?.unreadNotifications || 0;
-  const unreadAlerts = data?.unreadAlerts || 0;
+  const toggleSelectUpdate = (updateId: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(updateId)) {
+      newSelected.delete(updateId);
+    } else {
+      newSelected.add(updateId);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    const unviewedUpdates = filteredPlatformUpdates.filter(u => !u.isViewed);
+    if (selectedIds.size === unviewedUpdates.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(unviewedUpdates.map(u => u.id)));
+    }
+  };
+
+  const acknowledgedIds = new Set(JSON.parse(localStorage.getItem('notifications-acknowledged') || '[]'));
+  const acknowledgedAlertIds = new Set(JSON.parse(localStorage.getItem('alerts-acknowledged') || '[]'));
   
-  const activeAlerts = maintenanceAlerts.filter(
+  const rawPlatformUpdates = data?.platformUpdates || [];
+  const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
+  const rawNotifications = data?.notifications || [];
+  
+  const filteredPlatformUpdates = rawPlatformUpdates.filter(u => !acknowledgedIds.has(u.id));
+  const filteredMaintenanceAlerts = rawMaintenanceAlerts.filter(a => !acknowledgedAlertIds.has(a.id));
+  const filteredNotifications = rawNotifications.filter(n => !acknowledgedIds.has(n.id));
+  
+  const unreadPlatformUpdates = filteredPlatformUpdates.filter(u => !u.isViewed).length;
+  const unreadNotifications = filteredNotifications.filter(n => !n.isRead).length;
+  const unreadAlerts = filteredMaintenanceAlerts.filter(a => !a.isAcknowledged).length;
+  const totalUnread = unreadPlatformUpdates + unreadNotifications + unreadAlerts;
+  
+  const activeAlerts = filteredMaintenanceAlerts.filter(
     (a) => a.status === "scheduled" || a.status === "in_progress"
   );
+
+  const unviewedUpdates = filteredPlatformUpdates.filter(u => !u.isViewed);
+  const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -174,16 +251,17 @@ export function NotificationsPopover() {
               </Badge>
             )}
           </div>
-          {totalUnread > 0 && (
+          {selectedIds.size > 0 && (
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
               className="text-xs h-7"
-              onClick={() => markAllReadMutation.mutate()}
-              disabled={markAllReadMutation.isPending}
-              data-testid="button-mark-all-read"
+              onClick={() => acknowledgeSelectedMutation.mutate()}
+              disabled={acknowledgeSelectedMutation.isPending}
+              data-testid="button-acknowledge-selected"
             >
-              Mark all read
+              <Check className="h-3 w-3 mr-1" />
+              Acknowledge ({selectedIds.size})
             </Button>
           )}
         </div>
@@ -223,18 +301,41 @@ export function NotificationsPopover() {
               </TabsList>
 
               <TabsContent value="updates" className="mt-0">
-                {platformUpdates.length > 0 ? (
+                {unviewedUpdates.length > 0 && (
+                  <div className="p-3 flex items-center gap-2 border-b">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="flex items-center justify-center w-5 h-5 rounded border border-gray-300 dark:border-gray-600"
+                      data-testid="button-select-all-updates"
+                    >
+                      {allUnviewedSelected && <Check className="h-3 w-3" />}
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIds.size === 0 ? 'Select to acknowledge' : `${selectedIds.size}/${unviewedUpdates.length} selected`}
+                    </span>
+                  </div>
+                )}
+                {filteredPlatformUpdates.length > 0 ? (
                   <div className="divide-y">
-                    {platformUpdates.map((update) => {
+                    {filteredPlatformUpdates.map((update) => {
                       const config = categoryConfig[update.category] || categoryConfig.announcement;
                       const IconComponent = config.icon;
                       return (
                         <div
                           key={update.id}
-                          className={`p-3 hover:bg-muted/50 transition-colors ${!update.isViewed ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
+                          className={`p-3 hover:bg-muted/50 transition-colors ${!update.isViewed ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'opacity-60'}`}
                           data-testid={`update-item-${update.id}`}
                         >
                           <div className="flex gap-3">
+                            {!update.isViewed && (
+                              <button
+                                onClick={() => toggleSelectUpdate(update.id)}
+                                className="flex items-center justify-center w-5 h-5 rounded border border-gray-300 dark:border-gray-600 mt-0.5 flex-shrink-0"
+                                data-testid={`checkbox-update-${update.id}`}
+                              >
+                                {selectedIds.has(update.id) && <Check className="h-3 w-3" />}
+                              </button>
+                            )}
                             <div className={`shrink-0 ${config.color}`}>
                               <IconComponent className="h-4 w-4 mt-0.5" />
                             </div>
@@ -282,9 +383,9 @@ export function NotificationsPopover() {
               </TabsContent>
 
               <TabsContent value="notifications" className="mt-0">
-                {notifications.length > 0 ? (
+                {filteredNotifications.length > 0 ? (
                   <div className="divide-y">
-                    {notifications.map((notification) => (
+                    {filteredNotifications.map((notification) => (
                       <div
                         key={notification.id}
                         className={`p-3 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.isRead ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
@@ -344,9 +445,9 @@ export function NotificationsPopover() {
               </TabsContent>
 
               <TabsContent value="maintenance" className="mt-0">
-                {maintenanceAlerts.length > 0 ? (
+                {filteredMaintenanceAlerts.length > 0 ? (
                   <div className="divide-y">
-                    {maintenanceAlerts.map((alert) => {
+                    {filteredMaintenanceAlerts.map((alert) => {
                       const config = severityConfig[alert.severity] || severityConfig.info;
                       const SeverityIcon = config.icon;
                       return (
