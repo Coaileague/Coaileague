@@ -416,11 +416,13 @@ Keep the tone positive and professional. Focus on user benefits.`;
         // CRITICAL: Broadcast notifications to all connected WebSocket clients
         // This ensures real-time delivery to users watching the notification bell
         for (const notification of createdNotifications) {
-          broadcastNotificationToUser(
-            notification.workspaceId,
-            notification.userId,
-            notification
-          );
+          if (notification.workspaceId) {
+            broadcastNotificationToUser(
+              notification.workspaceId,
+              notification.userId,
+              notification
+            );
+          }
         }
       }
 
