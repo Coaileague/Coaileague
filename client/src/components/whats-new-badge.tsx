@@ -40,79 +40,67 @@ interface UnviewedCountResponse {
 
 export function WhatsNewBadge() {
   const [open, setOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data: updatesData } = useQuery<UpdatesResponse>({
+  const { data: updatesData, refetch: refetchUpdates } = useQuery<UpdatesResponse>({
     queryKey: ['/api/whats-new/latest'],
-    staleTime: 60000,
+    staleTime: 0,
   });
 
-  const { data: unviewedData } = useQuery<UnviewedCountResponse>({
+  const { data: unviewedData, refetch: refetchUnviewed } = useQuery<UnviewedCountResponse>({
     queryKey: ['/api/whats-new/unviewed-count'],
-    staleTime: 30000,
+    staleTime: 0,
   });
 
   const updates = updatesData?.updates || [];
-  // Calculate unviewed count from both API and local updates (fallback)
   const apiUnviewedCount = unviewedData?.count || 0;
   const localUnviewedCount = updates.filter(u => !u.hasViewed).length;
-  // Use whichever is higher - ensures animation shows when there are new updates
   const unviewedCount = Math.max(apiUnviewedCount, localUnviewedCount);
-  // Show animation ONLY if there are unviewed updates - properly synced with database
   const hasNewUpdates = unviewedCount > 0;
 
-  const markViewedMutation = useMutation({
-    mutationFn: async (updateId: string) => {
-      await apiRequest('POST', `/api/whats-new/${updateId}/viewed`, { source: 'badge' });
-    },
-    onSuccess: (_, updateId) => {
-      // Immediately update cache with this item marked as viewed
-      const updatedUpdates = updates.map(u => 
-        u.id === updateId ? { ...u, hasViewed: true } : u
-      );
-      queryClient.setQueryData(['/api/whats-new/latest'], { updates: updatedUpdates });
-      const newUnviewedCount = updatedUpdates.filter(u => !u.hasViewed).length;
-      queryClient.setQueryData(['/api/whats-new/unviewed-count'], { count: newUnviewedCount, success: true });
-      // Then invalidate to sync with backend
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
-    },
-    onError: (error) => {
-      console.error('Failed to mark as viewed:', error);
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
-    }
-  });
-
-  const markAllViewedMutation = useMutation({
+  const acknowledgeSelectedMutation = useMutation({
     mutationFn: async () => {
-      const unviewedIds = updates.filter(u => !u.hasViewed).map(u => u.id);
-      if (unviewedIds.length > 0) {
-        await apiRequest('POST', `/api/whats-new/mark-all-viewed`, { updateIds: unviewedIds, source: 'badge-clear-all' });
-      }
+      const idsToAcknowledge = Array.from(selectedIds);
+      if (idsToAcknowledge.length === 0) return;
+      
+      console.log('[WhatsNew] Acknowledging IDs:', idsToAcknowledge);
+      const response = await apiRequest('POST', '/api/whats-new/mark-all-viewed', { 
+        updateIds: idsToAcknowledge, 
+        source: 'badge-selection' 
+      });
+      const data = await response.json();
+      console.log('[WhatsNew] Response:', data);
+      return data;
     },
-    onSuccess: () => {
-      // Immediately update cache with all items marked as viewed
-      const markedUpdates = updates.map(u => ({ ...u, hasViewed: true }));
-      queryClient.setQueryData(['/api/whats-new/latest'], { updates: markedUpdates });
-      queryClient.setQueryData(['/api/whats-new/unviewed-count'], { count: 0, success: true });
-      // Then invalidate to sync with backend
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
-      setOpen(false);
+    onSuccess: (data) => {
+      console.log('[WhatsNew] Success! Marked:', data);
+      setSelectedIds(new Set());
+      // Force refresh immediately
+      refetchUpdates();
+      refetchUnviewed();
     },
     onError: (error) => {
-      console.error('Failed to mark all as viewed:', error);
-      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
+      console.error('[WhatsNew] Error acknowledging updates:', error);
     }
   });
 
-  const handleMarkViewed = (updateId: string) => {
-    markViewedMutation.mutate(updateId);
+  const toggleSelectUpdate = (updateId: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(updateId)) {
+      newSelected.delete(updateId);
+    } else {
+      newSelected.add(updateId);
+    }
+    setSelectedIds(newSelected);
   };
 
-  const handleClearAll = () => {
-    markAllViewedMutation.mutate();
+  const toggleSelectAll = () => {
+    if (selectedIds.size === updates.filter(u => !u.hasViewed).length) {
+      setSelectedIds(new Set());
+    } else {
+      const unviewedIds = updates.filter(u => !u.hasViewed).map(u => u.id);
+      setSelectedIds(new Set(unviewedIds));
+    }
   };
 
   const getCategoryIcon = (category: string) => {
@@ -150,6 +138,9 @@ export function WhatsNewBadge() {
     { top: "0px", left: "-6px", delay: "0.9s" },
   ];
 
+  const unviewedUpdates = updates.filter(u => !u.hasViewed);
+  const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -161,13 +152,11 @@ export function WhatsNewBadge() {
           title="What's New"
         >
           <div className="relative inline-flex">
-            {/* Main sparkles icon with spinning color-cycling animation - shows when there are new updates */}
             <Sparkles 
               className={`h-4 w-4 relative z-10 transition-all ${hasNewUpdates ? "animate-star-spin-colors" : ""}`} 
               style={hasNewUpdates ? { willChange: 'transform, filter' } : undefined}
             />
             
-            {/* Rotating sparkling dots around icon - spinning color-cycling theme */}
             {hasNewUpdates && sparkles.map((sparkle, idx) => (
               <div
                 key={idx}
@@ -183,14 +172,13 @@ export function WhatsNewBadge() {
               />
             ))}
             
-            {/* Badge with cyan glow effect - shows count when there are unviewed updates */}
             {hasNewUpdates && (
               <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-whatsnew-badge-glow"
                 style={{
                   background: "linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4)",
                 }}
               >
-                {updates.length > 9 ? '9+' : updates.length}
+                {unviewedCount > 9 ? '9+' : unviewedCount}
               </span>
             )}
           </div>
@@ -202,21 +190,39 @@ export function WhatsNewBadge() {
             <Sparkles className="h-5 w-5 text-purple-500" />
             <h3 className="font-semibold">What's New</h3>
           </div>
-          {unviewedCount > 0 && (
+          {selectedIds.size > 0 && (
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
               className="h-6 px-2 text-xs"
-              onClick={handleClearAll}
-              disabled={markAllViewedMutation.isPending}
-              data-testid="button-clear-all-updates"
+              onClick={() => acknowledgeSelectedMutation.mutate()}
+              disabled={acknowledgeSelectedMutation.isPending}
+              data-testid="button-acknowledge-selected"
             >
               <Check className="h-3 w-3 mr-1" />
-              Mark All Read
+              Acknowledge ({selectedIds.size})
             </Button>
           )}
         </div>
         <Separator />
+        
+        {unviewedUpdates.length > 0 && (
+          <>
+            <div className="p-3 flex items-center gap-2 border-b">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center justify-center w-5 h-5 rounded border border-gray-300 dark:border-gray-600"
+                data-testid="button-select-all"
+              >
+                {allUnviewedSelected && <Check className="h-3 w-3" />}
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size === 0 ? 'Select to acknowledge' : `${selectedIds.size}/${unviewedUpdates.length} selected`}
+              </span>
+            </div>
+          </>
+        )}
+
         <ScrollArea className="h-[40vh] sm:h-[400px]">
           {updates.length === 0 ? (
             <div className="p-8 text-center">
@@ -230,56 +236,70 @@ export function WhatsNewBadge() {
               {updates.map((update) => (
                 <div 
                   key={update.id} 
-                  className={`p-4 space-y-2 relative group cursor-pointer hover-elevate ${!update.hasViewed ? 'bg-primary/5' : ''}`}
-                  onClick={() => !update.hasViewed && handleMarkViewed(update.id)}
+                  className={`p-4 space-y-2 relative group ${!update.hasViewed ? 'bg-primary/5' : 'opacity-60'}`}
                   data-testid={`update-${update.id}`}
                 >
                   {!update.hasViewed && (
                     <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" />
                   )}
-                  <div className="flex items-start justify-between gap-2 pr-6">
-                    <h4 className="font-medium text-sm">{update.title}</h4>
-                    {update.badge && (
-                      <Badge variant="default" className="text-xs bg-primary">
-                        {update.badge}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {update.description}
-                  </p>
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${getCategoryColor(update.category)}`}
+                  
+                  <div className="flex items-start gap-3 pr-6">
+                    {!update.hasViewed && (
+                      <button
+                        onClick={() => toggleSelectUpdate(update.id)}
+                        className="flex items-center justify-center w-5 h-5 rounded border border-gray-300 dark:border-gray-600 mt-0.5 flex-shrink-0"
+                        data-testid={`checkbox-${update.id}`}
                       >
-                        <span className="flex items-center gap-1">
-                          {getCategoryIcon(update.category)}
-                          {update.category}
-                        </span>
-                      </Badge>
-                      {update.version && (
-                        <span className="text-xs text-muted-foreground">v{update.version}</span>
+                        {selectedIds.has(update.id) && <Check className="h-3 w-3" />}
+                      </button>
+                    )}
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-medium text-sm">{update.title}</h4>
+                        {update.badge && (
+                          <Badge variant="default" className="text-xs bg-primary flex-shrink-0">
+                            {update.badge}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {update.description}
+                      </p>
+                      <div className="flex items-center justify-between pt-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${getCategoryColor(update.category)}`}
+                          >
+                            <span className="flex items-center gap-1">
+                              {getCategoryIcon(update.category)}
+                              {update.category}
+                            </span>
+                          </Badge>
+                          {update.version && (
+                            <span className="text-xs text-muted-foreground">v{update.version}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(update.date), { addSuffix: true })}
+                        </p>
+                      </div>
+                      {update.learnMoreUrl && (
+                        <a
+                          href={update.learnMoreUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 pt-2"
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`link-learn-more-${update.id}`}
+                        >
+                          Learn more
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(update.date), { addSuffix: true })}
-                    </p>
                   </div>
-                  {update.learnMoreUrl && (
-                    <a
-                      href={update.learnMoreUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline flex items-center gap-1 pt-1"
-                      onClick={(e) => e.stopPropagation()}
-                      data-testid={`link-learn-more-${update.id}`}
-                    >
-                      Learn more
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
                 </div>
               ))}
             </div>

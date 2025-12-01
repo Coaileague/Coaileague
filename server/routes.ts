@@ -532,6 +532,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
+      // ✅ AI BRAIN LOGGING: Log to audit trail for command console
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+      
       res.json({ 
         success: true, 
         markedRead: { 
