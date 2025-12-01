@@ -1,5 +1,5 @@
 /**
- * Header Chat Button - Mounted in top header middle
+ * Header Chat Button - Mounted in top header
  * Clean, compact button that opens support chat
  */
 
@@ -7,18 +7,16 @@ import { useState } from 'react';
 import { MessageCircle, X, Headset, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { useLocation } from 'wouter';
 
 export function HeaderChatButton() {
-  const [location] = useLocation();
   const [showChat, setShowChat] = useState(false);
   const [inputValue, setInputValue] = useState('');
 
-  // Hide chat on dedicated chat pages
-  const shouldHide = location.startsWith('/chat') || 
-                     location.startsWith('/org-chat') || 
-                     location.startsWith('/support/chatrooms');
+  // Hide on chat pages
+  const currentPath = window.location.pathname;
+  const shouldHide = currentPath.startsWith('/chat') || 
+                     currentPath.startsWith('/org-chat') || 
+                     currentPath.startsWith('/support/chatrooms');
 
   if (shouldHide) return null;
 
@@ -31,7 +29,7 @@ export function HeaderChatButton() {
 
   return (
     <>
-      {/* Header Button - Always visible */}
+      {/* Header Button */}
       <Button
         variant="ghost"
         size="icon"
@@ -41,11 +39,10 @@ export function HeaderChatButton() {
         title={showChat ? "Close support chat" : "Get help"}
       >
         <MessageCircle className="w-4 h-4" />
-        {/* Unread indicator dot */}
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
       </Button>
 
-      {/* Chat Modal Popup - Fixed centered position below header */}
+      {/* Chat Modal */}
       {showChat && (
         <div className="fixed top-14 left-1/2 transform -translate-x-1/2 z-50 w-[380px] max-w-[calc(100vw-16px)] animate-in fade-in slide-in-from-top-2">
           <div className="bg-card border rounded-lg shadow-2xl flex flex-col h-[500px]">
@@ -66,7 +63,7 @@ export function HeaderChatButton() {
               </Button>
             </div>
 
-            {/* Messages Area */}
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               <div className="flex gap-2">
                 <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
@@ -78,11 +75,11 @@ export function HeaderChatButton() {
               </div>
             </div>
 
-            {/* Input Area */}
+            {/* Input */}
             <div className="p-3 border-t space-y-2">
               <Button
                 onClick={() => window.location.href = '/chat'}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white"
                 size="sm"
                 data-testid="button-full-chat"
               >
