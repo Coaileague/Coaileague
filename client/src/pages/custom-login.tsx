@@ -13,6 +13,7 @@ import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -52,6 +53,7 @@ export default function CustomLogin() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
   const [loadingDuration, setLoadingDuration] = useState(0);
+  const animationContext = useUniversalAnimation();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -64,6 +66,16 @@ export default function CustomLogin() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     const startTime = Date.now();
+
+    // Show login animation
+    if (animationContext?.show) {
+      animationContext.show({
+        mode: 'search',
+        mainText: 'Verifying',
+        subText: 'Authenticating your credentials...',
+        source: 'system'
+      });
+    }
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -82,17 +94,40 @@ export default function CustomLogin() {
         throw new Error(result.message || "Login failed");
       }
 
+      // Update animation to success
+      if (animationContext?.update) {
+        animationContext.update({
+          mode: 'success',
+          mainText: 'Welcome!',
+          subText: `Welcome back, ${result.user.firstName || 'friend'}`,
+        });
+      }
+
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
       // Show personalized welcome notification with actual loading duration
       setLoginData(result.user);
       setShowWelcome(true);
 
-      // Redirect after welcome notification completes (4 seconds)
+      // Hide animation and redirect after welcome notification completes
       setTimeout(() => {
+        if (animationContext?.hide) {
+          animationContext.hide();
+        }
         setLocation("/dashboard");
       }, 4500);
     } catch (error: any) {
+      // Show error animation
+      if (animationContext?.show) {
+        animationContext.show({
+          mode: 'error',
+          mainText: 'Login Failed',
+          subText: error.message || "Invalid email or password",
+          duration: 2000,
+          source: 'system'
+        });
+      }
+
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",

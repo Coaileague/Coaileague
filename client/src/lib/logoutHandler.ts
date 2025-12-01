@@ -9,14 +9,33 @@
 import { LOGOUT_CONFIG } from "@/config/logout";
 import { queryClient } from "@/lib/queryClient";
 
+// Global animation context reference (set by logout trigger)
+let animationContextRef: any = null;
+
+export function setLogoutAnimationContext(context: any) {
+  animationContextRef = context;
+}
+
 /**
  * Perform logout across the entire application
  * Handles API call, cache clearing, and redirect
+ * Integrates with animation system for smooth logout transition
  * 
  * Usage: await performLogout()
  */
 export async function performLogout() {
   try {
+    // Show logout animation if animation context is available
+    if (animationContextRef?.show) {
+      animationContextRef.show({
+        mode: 'warp',
+        mainText: 'Logging Out',
+        subText: 'See you soon!',
+        duration: 1800,
+        source: 'system'
+      });
+    }
+
     // 1. Clear all cached auth data IMMEDIATELY before API call
     // This ensures component re-renders as unauthenticated right away
     LOGOUT_CONFIG.cacheKeysToClear.forEach((key) => {
@@ -44,14 +63,25 @@ export async function performLogout() {
     // Some browsers need explicit cookie clearing
     document.cookie = "connect.sid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     
-    // 5. Redirect user to homepage (from centralized config)
-    // Safe redirect using window.location to ensure fresh page load
+    // 5. Redirect user to homepage after animation completes
+    // Animation duration is 1800ms, so redirect after
     setTimeout(() => {
       window.location.href = LOGOUT_CONFIG.redirectPath;
-    }, 100); // Small delay to ensure cookies are cleared
+    }, 1900);
     
   } catch (error) {
     console.error(LOGOUT_CONFIG.logoutErrorMessage, error);
+
+    // Show error animation if available
+    if (animationContextRef?.show) {
+      animationContextRef.show({
+        mode: 'error',
+        mainText: 'Logout Error',
+        subText: 'Redirecting...',
+        duration: 1800,
+        source: 'system'
+      });
+    }
 
     // Still clear cache and redirect even if cache clearing fails
     LOGOUT_CONFIG.cacheKeysToClear.forEach((key) => {
@@ -61,10 +91,10 @@ export async function performLogout() {
     // Clear cookies as backup
     document.cookie = "connect.sid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     
-    // Force redirect to home
+    // Force redirect to home after animation completes
     setTimeout(() => {
       window.location.href = LOGOUT_CONFIG.redirectPath;
-    }, 100);
+    }, 1900);
   }
 }
 

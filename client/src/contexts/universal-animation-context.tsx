@@ -45,7 +45,7 @@ interface NavigationAnimationOptions {
   mainText?: string;
 }
 
-const AnimationContext = createContext<AnimationContextValue | null>(null);
+export const AnimationContext = createContext<AnimationContextValue | null>(null);
 
 export function UniversalAnimationProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
