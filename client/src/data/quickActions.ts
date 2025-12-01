@@ -144,15 +144,15 @@ export const quickActionsRegistry: QuickAction[] = [
   },
   {
     id: 'live-chat',
-    label: 'Live Chat',
+    label: 'Chatrooms',
     icon: MessageSquare,
     color: 'text-blue-400',
     category: 'support',
-    desktopPath: '/communications', // Desktop: Full AI Communications
-    mobilePath: '/private-messages', // Mobile: Mobile-optimized chat
+    desktopPath: '/chatrooms', // Unified Chatrooms
+    mobilePath: '/chatrooms', // Mobile: Same unified chatrooms
     requiresAuth: true,
     testId: 'quick-chat',
-    description: 'Real-time team communication and messaging'
+    description: 'Discover and join team chatrooms'
   },
   {
     id: 'helpdesk',

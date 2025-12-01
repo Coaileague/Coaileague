@@ -68,7 +68,7 @@ const onboardingSteps: OnboardingStep[] = [
     title: "AI Communications - Team Chatrooms",
     description: "Organization-specific chatrooms with access control and real-time messaging",
     icon: MessageSquare,
-    url: "/communications",
+    url: "/chatrooms",
     features: [
       "Create public and private rooms for teams",
       "Manage room members and access permissions",
