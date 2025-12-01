@@ -9749,6 +9749,13 @@ export type UserPlatformUpdateView = typeof userPlatformUpdateViews.$inferSelect
 // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
 // ============================================================================
 
+// Notification scope enum - determines routing and persistence rules
+export const notificationScopeEnum = pgEnum('notification_scope', [
+  'workspace',  // Tenant-scoped notification (requires workspaceId)
+  'user',       // User-scoped notification (no workspace required, for global admins)
+  'global',     // Platform-wide notification (broadcast to all users)
+]);
+
 // Notification type enum
 export const notificationTypeEnum = pgEnum('notification_type', [
   'shift_assigned',      // New shift assigned to user
@@ -9778,10 +9785,15 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'deadline_approaching', // Deadline approaching for approval/action
 ]);
 
-// Notifications table - user-specific, organization-scoped
+// Notifications table - supports workspace, user, and global scopes
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Scope determines routing and validation rules
+  scope: notificationScopeEnum("scope").notNull().default('workspace'),
+  
+  // workspaceId is nullable for user-scoped and global notifications
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   
   // Notification content
@@ -9811,9 +9823,12 @@ export const notifications = pgTable("notifications", {
 }, (table) => ({
   userIdx: index("notifications_user_idx").on(table.userId),
   workspaceIdx: index("notifications_workspace_idx").on(table.workspaceId),
+  scopeIdx: index("notifications_scope_idx").on(table.scope),
   isReadIdx: index("notifications_is_read_idx").on(table.isRead),
   createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
   typeIdx: index("notifications_type_idx").on(table.type),
+  // Composite index for user-scoped notifications
+  userScopeIdx: index("notifications_user_scope_idx").on(table.userId, table.scope),
 }));
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({

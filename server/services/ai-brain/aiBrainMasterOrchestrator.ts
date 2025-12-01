@@ -16,6 +16,8 @@ import { helpaiOrchestrator, type ActionRequest, type ActionResult, type ActionH
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { AIBrainService } from './aiBrainService';
 import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
+import { aiNotificationService } from '../aiNotificationService';
+import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcastToAllClients } from '../../websocket';
 import { db } from '../../db';
 import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import {
@@ -88,6 +90,274 @@ class AIBrainMasterOrchestrator {
 
   constructor() {
     this.aiBrain = new AIBrainService();
+  }
+
+  // ============================================================================
+  // NOTIFICATION BRIDGE - Connect orchestration to notification system
+  // ============================================================================
+
+  /**
+   * Notify a specific user about an orchestration outcome
+   * Supports dual-scope notification model: workspace-scoped or user-scoped
+   */
+  async notifyUser(
+    userId: string,
+    workspaceId: string | null | undefined,
+    title: string,
+    message: string,
+    notificationType: 'info' | 'success' | 'warning' | 'error' = 'info',
+    actionId?: string
+  ): Promise<boolean> {
+    try {
+      const { storage } = await import('../../storage');
+      
+      const typeMap: Record<string, string> = {
+        'info': 'system',
+        'success': 'ai_action_completed',
+        'warning': 'alert',
+        'error': 'alert',
+      };
+      
+      const notificationType_db = typeMap[notificationType] || 'system';
+      const metadata = { 
+        actionId, 
+        source: 'ai_brain_orchestrator', 
+        generatedAt: new Date().toISOString(),
+        notificationLevel: notificationType,
+      };
+      
+      let notification;
+      
+      if (workspaceId) {
+        // Workspace-scoped notification (standard path)
+        notification = await storage.createNotification({
+          userId,
+          workspaceId,
+          scope: 'workspace' as any,
+          title,
+          message,
+          type: notificationType_db as any,
+          isRead: false,
+          actionUrl: '/notifications',
+          metadata,
+        });
+        
+        // Broadcast to user's workspace subscription
+        broadcastNotificationToUser(workspaceId, userId, {
+          id: notification.id,
+          type: notification.type,
+          title,
+          message,
+          scope: 'workspace',
+          createdAt: notification.createdAt,
+        });
+      } else {
+        // User-scoped notification (for users without workspace context)
+        notification = await storage.createUserScopedNotification(
+          userId,
+          notificationType_db,
+          title,
+          message,
+          metadata
+        );
+        
+        // Use dedicated user-scoped broadcast helper for unread counter parity
+        broadcastUserScopedNotification(userId, {
+          id: notification.id,
+          type: notification.type,
+          title,
+          message,
+          createdAt: notification.createdAt,
+        });
+      }
+
+      console.log(`[AI Brain Orchestrator] Notified user ${userId} (scope: ${workspaceId ? 'workspace' : 'user'}): ${title}`);
+      return true;
+    } catch (error) {
+      console.error('[AI Brain Orchestrator] Failed to notify user:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Broadcast an orchestration outcome to all connected users in a workspace
+   */
+  async broadcastToWorkspace(
+    workspaceId: string,
+    title: string,
+    message: string,
+    category: 'feature' | 'automation' | 'system' | 'alert' = 'automation'
+  ): Promise<boolean> {
+    try {
+      const categoryMap: Record<string, 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement'> = {
+        'feature': 'feature',
+        'automation': 'feature',
+        'system': 'announcement',
+        'alert': 'security',
+      };
+
+      await aiNotificationService.pushAIInsight('automation', {
+        title,
+        description: message,
+        workspaceId,
+        category: categoryMap[category] || 'announcement',
+        priority: category === 'alert' ? 3 : 2,
+        metadata: { source: 'ai_brain_orchestrator', broadcastAt: new Date().toISOString() },
+      });
+
+      broadcastToAllClients({
+        type: 'orchestration_update',
+        workspaceId,
+        title,
+        message,
+        category,
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log(`[AI Brain Orchestrator] Broadcast to workspace ${workspaceId}: ${title}`);
+      return true;
+    } catch (error) {
+      console.error('[AI Brain Orchestrator] Failed to broadcast:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Notify about action completion with detailed result
+   */
+  async notifyActionComplete(
+    request: ActionRequest,
+    result: ActionResult,
+    actionName: string
+  ): Promise<void> {
+    const title = result.success 
+      ? `AI Action Complete: ${actionName}`
+      : `AI Action Failed: ${actionName}`;
+    
+    const message = result.success
+      ? result.message || `${actionName} completed successfully`
+      : `Error: ${result.message || 'Unknown error occurred'}`;
+
+    const notificationType = result.success ? 'success' : 'error';
+
+    if (request.userId && request.workspaceId) {
+      await this.notifyUser(
+        request.userId,
+        request.workspaceId,
+        title,
+        message,
+        notificationType,
+        request.actionId
+      );
+    }
+
+    if (result.success && request.workspaceId) {
+      await platformEventBus.publish({
+        type: 'ai_brain_action',
+        category: 'feature',
+        title,
+        description: message,
+        workspaceId: request.workspaceId,
+        userId: request.userId,
+        metadata: {
+          actionId: request.actionId,
+          actionName,
+          result: result.data,
+          executionTimeMs: result.executionTimeMs,
+        },
+      });
+    }
+  }
+
+  /**
+   * Notify about workflow chain completion
+   */
+  async notifyWorkflowComplete(
+    workflow: WorkflowChain,
+    userId: string,
+    workspaceId?: string
+  ): Promise<void> {
+    const isSuccess = workflow.status === 'completed';
+    const title = isSuccess
+      ? `Workflow Complete: ${workflow.name}`
+      : `Workflow Failed: ${workflow.name}`;
+
+    const completedSteps = workflow.steps.filter(s => s.result?.success).length;
+    const totalSteps = workflow.steps.length;
+    const failedStep = workflow.steps.find(s => s.error);
+    
+    const message = isSuccess
+      ? `All ${totalSteps} steps completed successfully`
+      : `Completed ${completedSteps}/${totalSteps} steps before failure${failedStep?.error ? `: ${failedStep.error}` : ''}`;
+
+    try {
+      // Use notifyUser consistently for all notification paths to ensure unread counter parity
+      if (workspaceId) {
+        // Send workspace-scoped notification with persistence + WebSocket broadcast
+        await this.notifyUser(
+          userId,
+          workspaceId,
+          title,
+          message,
+          isSuccess ? 'success' : 'error',
+          workflow.id
+        );
+      } else if (userId) {
+        // No workspaceId provided - use dual-scope notification model
+        // First try to find user's workspace membership for workspace-scoped notification
+        try {
+          const { storage } = await import('../../storage');
+          const memberInfo = await storage.getWorkspaceMemberByUserId(userId);
+          
+          // Use notifyUser consistently - it handles both workspace and user scopes
+          await this.notifyUser(
+            userId,
+            memberInfo?.workspaceId || null,
+            title,
+            message,
+            isSuccess ? 'success' : 'error',
+            workflow.id
+          );
+          console.log(`[AI Brain Orchestrator] Sent ${memberInfo?.workspaceId ? 'workspace' : 'user'}-scoped notification to user ${userId}`);
+        } catch (lookupError: any) {
+          console.error(`[AI Brain Orchestrator] Failed to lookup workspace, falling back to user-scoped: ${lookupError.message}`);
+          // Fall back to user-scoped notification via notifyUser with null workspaceId
+          await this.notifyUser(
+            userId,
+            null,
+            title,
+            message,
+            isSuccess ? 'success' : 'error',
+            workflow.id
+          );
+        }
+      }
+
+      // Publish event for other services to react to
+      await platformEventBus.publish({
+        type: 'automation_completed',
+        category: isSuccess ? 'feature' : 'announcement',
+        title,
+        description: message,
+        workspaceId,
+        userId,
+        metadata: {
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          status: workflow.status,
+          completedSteps,
+          totalSteps,
+          duration: workflow.completedAt && workflow.startedAt 
+            ? workflow.completedAt.getTime() - workflow.startedAt.getTime()
+            : 0,
+          source: 'ai_brain_orchestrator',
+        },
+      });
+
+      console.log(`[AI Brain Orchestrator] Workflow ${workflow.id} ${workflow.status}: ${completedSteps}/${totalSteps} steps, notification sent`);
+    } catch (error: any) {
+      console.error(`[AI Brain Orchestrator] Failed to send workflow notification: ${error.message}`);
+    }
   }
 
   /**
@@ -418,10 +688,11 @@ class AIBrainMasterOrchestrator {
         
         try {
           await publishPlatformUpdate({
+            type: 'announcement',
             title: title || 'Platform Update',
             description: content || 'New features available',
             category: 'feature',
-            priority: priority || 'normal',
+            priority: priority === 'high' ? 3 : priority === 'low' ? 1 : 2,
             visibility: targetAudience || 'all'
           });
           
@@ -456,13 +727,17 @@ class AIBrainMasterOrchestrator {
         const { message, type, workspaceId } = request.payload || {};
         
         try {
-          platformEventBus.publish('system_broadcast', {
-            message,
-            type: type || 'info',
-            workspaceId
-          }, {
-            source: 'ai_brain_orchestrator',
-            userId: request.userId
+          await platformEventBus.publish({
+            type: 'announcement',
+            category: 'announcement',
+            title: 'System Broadcast',
+            description: message || 'System notification',
+            workspaceId,
+            metadata: {
+              broadcastType: type || 'info',
+              source: 'ai_brain_orchestrator',
+              userId: request.userId,
+            },
           });
           
           return {
@@ -517,12 +792,18 @@ class AIBrainMasterOrchestrator {
         }
         
         try {
-          platformEventBus.publish('automation_trigger', {
-            jobName,
-            manualTrigger: true
-          }, {
-            source: 'ai_brain_orchestrator',
-            userId: request.userId
+          await platformEventBus.publish({
+            type: 'automation_completed',
+            category: 'feature',
+            title: `Job Triggered: ${jobName}`,
+            description: `Automation job '${jobName}' was manually triggered`,
+            userId: request.userId,
+            workspaceId: request.workspaceId,
+            metadata: {
+              jobName,
+              manualTrigger: true,
+              source: 'ai_brain_orchestrator',
+            },
           });
           
           return {
@@ -586,11 +867,13 @@ class AIBrainMasterOrchestrator {
         
         try {
           const { animationControlService } = await import('../animationControlService');
-          const result = animationControlService.setAnimationState(
-            mode || 'analyze',
-            message,
-            duration
-          );
+          const result = await animationControlService.executeCommand({
+            action: 'show',
+            mode: mode || 'analyze',
+            mainText: message || 'Processing',
+            duration,
+            source: 'ai-brain',
+          }, request.userId || 'ai_brain');
           
           return {
             success: result.success,
@@ -868,6 +1151,10 @@ class AIBrainMasterOrchestrator {
     
     workflow.completedAt = new Date();
     
+    // Send notifications about workflow completion
+    const workspaceId = workflow.steps[0]?.parameters?.workspaceId;
+    await this.notifyWorkflowComplete(workflow, userId, workspaceId);
+    
     console.log(`[AI Brain Master Orchestrator] Workflow ${workflowId} ${workflow.status}`);
     
     return workflow;
@@ -915,8 +1202,166 @@ class AIBrainMasterOrchestrator {
         if (event.type.startsWith('ai_') || event.type.includes('automation')) {
           console.log(`[AI Brain Master Orchestrator] Event: ${event.type}`);
         }
+
+        // Bridge automation_completed events to notifications based on metadata
+        if (event.type === 'automation_completed' && event.metadata) {
+          const metadata = event.metadata as Record<string, any>;
+          const workspaceId = event.workspaceId;
+          
+          if (workspaceId && metadata.automationType) {
+            await aiNotificationService.notifyAutomationComplete(
+              metadata.automationType || 'scheduling',
+              workspaceId,
+              metadata.details || {}
+            );
+          }
+
+          // Handle specific automation types
+          if (metadata.jobName === 'scheduling' && workspaceId) {
+            await this.broadcastToWorkspace(
+              workspaceId,
+              'AI Schedule Generated',
+              `Your optimized schedule has been generated.`,
+              'automation'
+            );
+          }
+
+          if (metadata.jobName === 'payroll' && workspaceId) {
+            await this.broadcastToWorkspace(
+              workspaceId,
+              'Payroll Processed',
+              `Payroll has been calculated successfully.`,
+              'automation'
+            );
+          }
+
+          if (metadata.jobName === 'billing' && workspaceId) {
+            await this.broadcastToWorkspace(
+              workspaceId,
+              'Invoices Generated',
+              `Invoice(s) have been automatically generated.`,
+              'automation'
+            );
+          }
+
+          if (metadata.jobName === 'compliance' && workspaceId) {
+            await this.broadcastToWorkspace(
+              workspaceId,
+              'Compliance Check Complete',
+              `Compliance verification completed successfully.`,
+              'system'
+            );
+          }
+        }
+
+        // Bridge system_maintenance events to notifications
+        if (event.type === 'system_maintenance' && event.workspaceId) {
+          await aiNotificationService.notifySystemIssue(
+            event.title,
+            event.description,
+            event.workspaceId
+          );
+        }
+
+        // Bridge AI brain action events to notifications (from external sources)
+        // Skip if source is ai_brain_orchestrator to avoid duplicate notifications
+        if (event.type === 'ai_brain_action' && event.userId && event.workspaceId) {
+          const metadata = event.metadata as Record<string, any> | undefined;
+          if (metadata?.source !== 'ai_brain_orchestrator') {
+            await this.notifyUser(
+              event.userId,
+              event.workspaceId,
+              event.title,
+              event.description,
+              'success'
+            );
+          }
+        }
+
+        // Bridge AI error events to notifications
+        if (event.type === 'ai_error' && event.userId && event.workspaceId) {
+          await this.notifyUser(
+            event.userId,
+            event.workspaceId,
+            event.title || 'AI Error',
+            event.description || 'An error occurred during AI processing',
+            'error'
+          );
+        }
+
+        // Bridge AI suggestion events to platform updates
+        if (event.type === 'ai_suggestion' && event.workspaceId) {
+          await aiNotificationService.pushAIInsight('automation', {
+            title: event.title,
+            description: event.description,
+            workspaceId: event.workspaceId,
+            category: 'feature',
+            priority: 2,
+          });
+        }
+
+        // Bridge AI escalation events to alerts
+        if (event.type === 'ai_escalation' && event.userId && event.workspaceId) {
+          await this.notifyUser(
+            event.userId,
+            event.workspaceId,
+            event.title || 'AI Escalation',
+            event.description || 'An issue requires your attention',
+            'warning'
+          );
+        }
       }
     });
+
+    console.log('[AI Brain Master Orchestrator] Event subscriptions active');
+  }
+
+  /**
+   * Execute a single action and notify about the result
+   * This is the main entry point for AI Brain action execution with notifications
+   */
+  async executeActionWithNotification(
+    actionId: string,
+    payload: Record<string, any>,
+    userId: string,
+    userRole: string,
+    workspaceId?: string
+  ): Promise<ActionResult> {
+    const request: ActionRequest = {
+      actionId,
+      category: actionId.split('.')[0] as any,
+      name: actionId,
+      payload,
+      userId,
+      userRole,
+      workspaceId,
+      priority: 'normal',
+    };
+
+    const action = helpaiOrchestrator.getAvailableActions(userRole)
+      .find((a: ActionHandler) => a.actionId === actionId);
+
+    const actionName = action?.name || actionId;
+
+    try {
+      const result = await helpaiOrchestrator.executeAction(request);
+      
+      // Always notify about action completion
+      await this.notifyActionComplete(request, result, actionName);
+
+      return result;
+    } catch (error: any) {
+      const errorResult: ActionResult = {
+        success: false,
+        actionId,
+        message: error.message,
+        executionTimeMs: 0,
+      };
+
+      await this.notifyActionComplete(request, errorResult, actionName);
+
+      return errorResult;
+    }
   }
 }
 

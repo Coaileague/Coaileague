@@ -342,6 +342,49 @@ export function broadcastNotificationToUser(
   }
 }
 
+/**
+ * Broadcast user-scoped notification (for users without workspace context)
+ * Mirrors broadcastNotificationToUser but works for workspace-less users
+ * Ensures unread counter parity with workspace-scoped notifications
+ */
+export function broadcastUserScopedNotification(
+  userId: string,
+  notification: any
+) {
+  if (!globalWSS) {
+    console.warn('[WebSocket] Global WSS not initialized for user-scoped notification');
+    return false;
+  }
+  
+  try {
+    const payload = JSON.stringify({
+      type: 'notification_new',
+      notification: {
+        ...notification,
+        scope: 'user',
+      },
+      targetUserId: userId,
+    });
+    
+    let sentCount = 0;
+    globalWSS.clients.forEach((client: any) => {
+      if (client.readyState === WebSocket.OPEN) {
+        const clientUserId = client.userId || client._userId;
+        if (clientUserId === userId) {
+          client.send(payload);
+          sentCount++;
+        }
+      }
+    });
+    
+    console.log(`[WebSocket] User-scoped notification sent to ${sentCount} connections for user ${userId}`);
+    return sentCount > 0;
+  } catch (err) {
+    console.warn('[WebSocket] Failed to broadcast user-scoped notification:', err);
+    return false;
+  }
+}
+
 export function broadcastToAllClients(message: any) {
   if (!globalWSS) {
     console.warn('[WebSocket] Global WSS not initialized for broadcast');

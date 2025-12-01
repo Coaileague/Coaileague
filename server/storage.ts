@@ -775,11 +775,14 @@ export interface IStorage {
   getPrivateConversationForExport(conversationId: string, userId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date; auditInfo: any } | null>;
   
   // ========================================================================
-  // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
+  // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS (Dual-Scope Model)
   // ========================================================================
   createNotification(notification: InsertNotification): Promise<Notification>;
+  createUserScopedNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification>;
   getNotificationsByUser(userId: string, workspaceId: string, limit?: number): Promise<Notification[]>;
+  getAllNotificationsForUser(userId: string, workspaceId?: string, limit?: number): Promise<Notification[]>;
   getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number>;
+  getTotalUnreadCountForUser(userId: string, workspaceId?: string): Promise<number>;
   markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined>;
   toggleNotificationReadStatus(id: string, userId: string): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number>;
@@ -6075,6 +6078,33 @@ export class DatabaseStorage implements IStorage {
     return notification;
   }
 
+  /**
+   * Create a user-scoped notification that doesn't require a workspaceId.
+   * Used for platform-wide notifications, global admin alerts, and orchestrator workflows
+   * that execute outside of a tenant context.
+   */
+  async createUserScopedNotification(
+    userId: string,
+    type: string,
+    title: string,
+    message: string,
+    metadata?: any
+  ): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values({
+        userId,
+        scope: 'user' as any,
+        workspaceId: null as any,
+        type: type as any,
+        title,
+        message,
+        metadata,
+      })
+      .returning();
+    return notification;
+  }
+
   async getNotificationsByUser(userId: string, workspaceId: string, limit: number = 50): Promise<Notification[]> {
     return await db
       .select()
@@ -6087,6 +6117,39 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
+  /**
+   * Get all notifications for a user including both workspace-scoped and user-scoped.
+   * This is the primary method for fetching notifications in the dual-scope model.
+   */
+  async getAllNotificationsForUser(userId: string, workspaceId?: string, limit: number = 50): Promise<Notification[]> {
+    if (workspaceId) {
+      // Include both workspace-scoped for this workspace AND user-scoped notifications
+      return await db
+        .select()
+        .from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          or(
+            eq(notifications.workspaceId, workspaceId),
+            eq(notifications.scope, 'user' as any)
+          )
+        ))
+        .orderBy(desc(notifications.createdAt))
+        .limit(limit);
+    } else {
+      // Only user-scoped notifications (for users without workspace context)
+      return await db
+        .select()
+        .from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.scope, 'user' as any)
+        ))
+        .orderBy(desc(notifications.createdAt))
+        .limit(limit);
+    }
+  }
+
   async getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -6097,6 +6160,36 @@ export class DatabaseStorage implements IStorage {
         eq(notifications.isRead, false)
       ));
     return result?.count || 0;
+  }
+
+  /**
+   * Get total unread count including both workspace-scoped and user-scoped notifications.
+   */
+  async getTotalUnreadCountForUser(userId: string, workspaceId?: string): Promise<number> {
+    if (workspaceId) {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          or(
+            eq(notifications.workspaceId, workspaceId),
+            eq(notifications.scope, 'user' as any)
+          ),
+          eq(notifications.isRead, false)
+        ));
+      return result?.count || 0;
+    } else {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.scope, 'user' as any),
+          eq(notifications.isRead, false)
+        ));
+      return result?.count || 0;
+    }
   }
 
   async markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined> {
