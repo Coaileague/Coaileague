@@ -137,6 +137,7 @@ import IntegrationsPage from "@/pages/integrations-page";
 import OversightHub from "@/pages/oversight-hub";
 import WorkflowApprovals from "@/pages/workflow-approvals";
 import AICommandCenter from "@/pages/ai-command-center";
+import SupportCommandConsole from "@/pages/support-command-console";
 import AuditLogs from "@/pages/audit-logs";
 import AutomationControl from "@/pages/automation-control";
 import AdminBanners from "@/pages/admin-banners";
@@ -315,6 +316,7 @@ function AppContent() {
               <Route path="/audit-logs" component={AuditLogs} />
               <Route path="/automation-control" component={AutomationControl} />
               <Route path="/ai/command-center" component={AICommandCenter} />
+              <Route path="/support/console" component={SupportCommandConsole} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
               <Route path="/integrations" component={IntegrationsPage} />
@@ -574,6 +576,7 @@ function AppContent() {
                 <Route path="/audit-logs" component={AuditLogs} />
                 <Route path="/automation-control" component={AutomationControl} />
                 <Route path="/ai/command-center" component={AICommandCenter} />
+                <Route path="/support/console" component={SupportCommandConsole} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/system-health">
                   <PlatformAdminRoute>

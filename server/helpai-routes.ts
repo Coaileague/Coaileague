@@ -406,3 +406,219 @@ helpaiRouter.post(
     }
   }
 );
+
+// ============================================================================
+// HELPAI ACTION ORCHESTRATOR ROUTES
+// Universal action handler that routes all actions through AI Brain
+// ============================================================================
+
+import { helpaiOrchestrator, type ActionRequest } from './services/helpai/helpaiActionOrchestrator';
+
+/**
+ * GET /api/helpai/orchestrator/actions
+ * Get all available actions for the current user's role
+ */
+helpaiRouter.get(
+  '/orchestrator/actions',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userRole = req.user?.role || 'employee';
+      const actions = helpaiOrchestrator.getAvailableActions(userRole);
+
+      res.json({
+        success: true,
+        count: actions.length,
+        actions: actions.map(a => ({
+          actionId: a.actionId,
+          name: a.name,
+          category: a.category,
+          description: a.description,
+          isTestTool: a.isTestTool || false
+        }))
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to get available actions',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/helpai/orchestrator/test-tools
+ * Get all test tools available for support users
+ */
+helpaiRouter.get(
+  '/orchestrator/test-tools',
+  requireAuth,
+  requireHelpAIAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const testTools = helpaiOrchestrator.getTestTools();
+
+      res.json({
+        success: true,
+        count: testTools.length,
+        tools: testTools.map(t => ({
+          actionId: t.actionId,
+          name: t.name,
+          category: t.category,
+          description: t.description
+        }))
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to get test tools',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/helpai/orchestrator/execute
+ * Execute an action through the AI Brain orchestrator
+ */
+helpaiRouter.post(
+  '/orchestrator/execute',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { actionId, payload, priority, isTestMode } = req.body;
+
+      if (!actionId) {
+        return res.status(400).json({ error: 'actionId is required' });
+      }
+
+      const request: ActionRequest = {
+        actionId,
+        category: 'system',
+        name: actionId,
+        payload,
+        workspaceId: req.user?.currentWorkspaceId,
+        userId: req.user?.id || 'unknown',
+        userRole: req.user?.role || 'employee',
+        priority: priority || 'normal',
+        isTestMode: isTestMode || false
+      };
+
+      const result = await helpaiOrchestrator.executeAction(request);
+
+      res.json({
+        success: result.success,
+        actionId: result.actionId,
+        message: result.message,
+        data: result.data,
+        executionTimeMs: result.executionTimeMs,
+        notificationSent: result.notificationSent,
+        broadcastSent: result.broadcastSent
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to execute action',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/helpai/orchestrator/health
+ * Get health status of all monitored services
+ */
+helpaiRouter.get(
+  '/orchestrator/health',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const healthStatus = await helpaiOrchestrator.getAllServiceHealth();
+
+      const allHealthy = healthStatus.every(s => s.isHealthy);
+
+      res.json({
+        success: true,
+        status: allHealthy ? 'healthy' : 'degraded',
+        services: healthStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to get health status',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/helpai/orchestrator/command
+ * Process a natural language command through the AI Brain
+ * This is the main entry point for the Support Command Console
+ */
+helpaiRouter.post(
+  '/orchestrator/command',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { command, context } = req.body;
+
+      if (!command) {
+        return res.status(400).json({ error: 'command is required' });
+      }
+
+      // Parse the command to determine action
+      let actionId = 'ai.query';
+      let payload: Record<string, any> = { query: command, context };
+
+      // Check for special command prefixes
+      if (command.startsWith('/health')) {
+        actionId = 'system.health_check';
+        payload = {};
+      } else if (command.startsWith('/test-notification')) {
+        actionId = 'test.send_notification';
+        const parts = command.replace('/test-notification', '').trim();
+        payload = { message: parts || 'Test notification' };
+      } else if (command.startsWith('/test-alert')) {
+        actionId = 'test.send_maintenance_alert';
+        const parts = command.replace('/test-alert', '').trim();
+        payload = { message: parts || 'Test maintenance alert' };
+      } else if (command.startsWith('/broadcast')) {
+        actionId = 'support.broadcast';
+        const parts = command.replace('/broadcast', '').trim();
+        payload = { message: parts };
+      } else if (command.startsWith('/push-update')) {
+        actionId = 'system.push_update';
+        const parts = command.replace('/push-update', '').trim();
+        payload = { title: 'Platform Update', description: parts };
+      }
+
+      const request: ActionRequest = {
+        actionId,
+        category: 'support',
+        name: 'Command Console',
+        payload,
+        workspaceId: req.user?.currentWorkspaceId,
+        userId: req.user?.id || 'unknown',
+        userRole: req.user?.role || 'employee'
+      };
+
+      const result = await helpaiOrchestrator.executeAction(request);
+
+      res.json({
+        success: result.success,
+        command,
+        actionId: result.actionId,
+        response: result.message,
+        data: result.data,
+        executionTimeMs: result.executionTimeMs
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to process command',
+        message: error.message
+      });
+    }
+  }
+);
