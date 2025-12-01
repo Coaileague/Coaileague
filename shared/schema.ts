@@ -15389,3 +15389,143 @@ export const insertPlatformChangeEventSchema = createInsertSchema(platformChange
 
 export type InsertPlatformChangeEvent = z.infer<typeof insertPlatformChangeEventSchema>;
 export type PlatformChangeEvent = typeof platformChangeEvents.$inferSelect;
+
+// ============================================================================
+// ADVANCED USAGE ANALYTICS - Business Owner Dashboard
+// ============================================================================
+
+// Feature usage events - tracks UI interactions and feature adoption
+export const featureUsageEvents = pgTable("feature_usage_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  featureKey: varchar("feature_key", { length: 100 }).notNull(),
+  featureCategory: varchar("feature_category", { length: 50 }).notNull(),
+  actionType: varchar("action_type", { length: 50 }).notNull(),
+  
+  pageRoute: varchar("page_route", { length: 255 }),
+  componentName: varchar("component_name", { length: 100 }),
+  
+  durationMs: integer("duration_ms"),
+  clickCount: integer("click_count").default(1),
+  
+  sessionId: varchar("session_id", { length: 100 }),
+  deviceType: varchar("device_type", { length: 20 }),
+  
+  relatedEntityType: varchar("related_entity_type", { length: 50 }),
+  relatedEntityId: varchar("related_entity_id"),
+  
+  metadata: jsonb("metadata"),
+  
+  ingestedAt: timestamp("ingested_at").defaultNow(),
+}, (table) => [
+  index("feature_usage_workspace_idx").on(table.workspaceId),
+  index("feature_usage_user_idx").on(table.userId),
+  index("feature_usage_feature_idx").on(table.featureKey),
+  index("feature_usage_category_idx").on(table.featureCategory),
+  index("feature_usage_action_idx").on(table.actionType),
+  index("feature_usage_ingested_idx").on(table.ingestedAt),
+  index("feature_usage_session_idx").on(table.sessionId),
+]);
+
+export const insertFeatureUsageEventSchema = createInsertSchema(featureUsageEvents).omit({
+  id: true,
+  ingestedAt: true,
+});
+
+export type InsertFeatureUsageEvent = z.infer<typeof insertFeatureUsageEventSchema>;
+export type FeatureUsageEvent = typeof featureUsageEvents.$inferSelect;
+
+// API usage events - tracks backend API calls and partner integrations
+export const apiUsageEvents = pgTable("api_usage_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  endpoint: varchar("endpoint", { length: 255 }).notNull(),
+  method: varchar("method", { length: 10 }).notNull(),
+  statusCode: integer("status_code"),
+  
+  apiType: varchar("api_type", { length: 50 }).notNull(),
+  partnerName: varchar("partner_name", { length: 50 }),
+  
+  requestDurationMs: integer("request_duration_ms"),
+  responseSize: integer("response_size"),
+  
+  isAutomated: boolean("is_automated").default(false),
+  automationJobId: varchar("automation_job_id"),
+  
+  errorMessage: text("error_message"),
+  
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 6 }),
+  
+  metadata: jsonb("metadata"),
+  
+  ingestedAt: timestamp("ingested_at").defaultNow(),
+}, (table) => [
+  index("api_usage_workspace_idx").on(table.workspaceId),
+  index("api_usage_user_idx").on(table.userId),
+  index("api_usage_endpoint_idx").on(table.endpoint),
+  index("api_usage_api_type_idx").on(table.apiType),
+  index("api_usage_partner_idx").on(table.partnerName),
+  index("api_usage_ingested_idx").on(table.ingestedAt),
+  index("api_usage_automated_idx").on(table.isAutomated),
+]);
+
+export const insertApiUsageEventSchema = createInsertSchema(apiUsageEvents).omit({
+  id: true,
+  ingestedAt: true,
+});
+
+export type InsertApiUsageEvent = z.infer<typeof insertApiUsageEventSchema>;
+export type ApiUsageEvent = typeof apiUsageEvents.$inferSelect;
+
+// Usage aggregates - pre-computed daily summaries for fast dashboard queries
+export const usageAggregates = pgTable("usage_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  aggregateDate: timestamp("aggregate_date").notNull(),
+  aggregatePeriod: varchar("aggregate_period", { length: 20 }).notNull(),
+  
+  activeUsers: integer("active_users").default(0),
+  totalSessions: integer("total_sessions").default(0),
+  totalPageViews: integer("total_page_views").default(0),
+  
+  featureAdoptionScore: decimal("feature_adoption_score", { precision: 5, scale: 2 }),
+  engagementScore: decimal("engagement_score", { precision: 5, scale: 2 }),
+  
+  aiActionsExecuted: integer("ai_actions_executed").default(0),
+  aiActionsSuccessful: integer("ai_actions_successful").default(0),
+  manualOverrides: integer("manual_overrides").default(0),
+  
+  apiCallsTotal: integer("api_calls_total").default(0),
+  apiCallsInternal: integer("api_calls_internal").default(0),
+  apiCallsPartner: integer("api_calls_partner").default(0),
+  
+  totalCostEstimate: decimal("total_cost_estimate", { precision: 12, scale: 4 }),
+  aiCostEstimate: decimal("ai_cost_estimate", { precision: 12, scale: 4 }),
+  partnerApiCostEstimate: decimal("partner_api_cost_estimate", { precision: 12, scale: 4 }),
+  
+  topFeatures: jsonb("top_features"),
+  topEndpoints: jsonb("top_endpoints"),
+  userBreakdown: jsonb("user_breakdown"),
+  
+  metadata: jsonb("metadata"),
+  
+  computedAt: timestamp("computed_at").defaultNow(),
+}, (table) => [
+  index("usage_agg_workspace_idx").on(table.workspaceId),
+  index("usage_agg_date_idx").on(table.aggregateDate),
+  index("usage_agg_period_idx").on(table.aggregatePeriod),
+  index("usage_agg_workspace_date_idx").on(table.workspaceId, table.aggregateDate),
+]);
+
+export const insertUsageAggregateSchema = createInsertSchema(usageAggregates).omit({
+  id: true,
+  computedAt: true,
+});
+
+export type InsertUsageAggregate = z.infer<typeof insertUsageAggregateSchema>;
+export type UsageAggregate = typeof usageAggregates.$inferSelect;

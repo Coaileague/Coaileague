@@ -26,6 +26,7 @@ import { UniversalAnimationProvider } from "@/contexts/universal-animation-conte
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
+import { OwnerRoute } from "@/components/owner-route";
 import { PlatformAdminRoute } from "@/components/platform-admin-route";
 import { DemoBanner } from "@/components/demo-banner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -82,6 +83,7 @@ import ClientPortal from "@/pages/client-portal";
 import Workspace from "@/pages/workspace";
 import Billing from "@/pages/billing";
 import UsageDashboard from "@/pages/usage-dashboard";
+import OwnerAnalytics from "@/pages/owner-analytics";
 import HRBenefits from "@/pages/hr-benefits";
 import HRReviews from "@/pages/hr-reviews";
 import HRPTO from "@/pages/hr-pto";
@@ -319,6 +321,11 @@ function AppContent() {
               <Route path="/support/console" component={SupportCommandConsole} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
+              <Route path="/owner-analytics">
+                <OwnerRoute>
+                  <OwnerAnalytics />
+                </OwnerRoute>
+              </Route>
               <Route path="/integrations" component={IntegrationsPage} />
               <Route path="/oversight" component={OversightHub} />
               <Route path="/expenses" component={Expenses} />

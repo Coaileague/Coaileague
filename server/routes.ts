@@ -88,6 +88,7 @@ import { onboardingRouter } from "./routes/onboardingRoutes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
 import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
+import { ownerAnalyticsRouter } from "./routes/ownerAnalytics";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -2566,6 +2567,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Onboarding Pipeline routes (tasks, progress, rewards)
   app.use("/api/onboarding", onboardingRouter);
+
+  // Register Business Owner Analytics routes (usage metrics, trends, team engagement)
+  app.use("/api/analytics/owner", requireAuth, attachWorkspaceId, ownerAnalyticsRouter);
 
   // Register Timesheet Report routes (reports, CSV export, compliance)
   app.use("/api/timesheet-reports", timesheetReportRouter);

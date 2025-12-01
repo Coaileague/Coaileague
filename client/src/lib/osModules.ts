@@ -612,6 +612,17 @@ export const osModules: OSModule[] = [
         isPrimary: false,
         order: 1,
       },
+      {
+        id: 'owner-analytics',
+        label: 'Usage Analytics',
+        href: '/owner-analytics',
+        icon: BarChart3,
+        description: 'Executive usage insights for business owners',
+        capabilities: ['manage_workspace'],
+        familyId: 'platform',
+        isPrimary: false,
+        order: 2,
+      },
     ],
   },
   {
