@@ -1469,13 +1469,16 @@ let isSchedulerRunning = false;
  * Start all autonomous job schedulers
  */
 export function startAutonomousScheduler() {
-  if (isSchedulerRunning) {
-    console.log('⚠️  Autonomous scheduler is already running');
-    return;
-  }
+  console.log('[SCHEDULER] startAutonomousScheduler() called');
+  
+  try {
+    if (isSchedulerRunning) {
+      console.log('⚠️  Autonomous scheduler is already running');
+      return;
+    }
 
-  // Define scheduler configuration (was previously called customSchedulerIntervals)
-  const SCHEDULER_CONFIG = {
+    // Define scheduler configuration (was previously called customSchedulerIntervals)
+    const SCHEDULER_CONFIG = {
     invoicing: { enabled: true, schedule: '0 2 * * *', description: 'Nightly invoice generation' },
     scheduling: { enabled: true, schedule: '0 23 * * *', description: 'Weekly AI schedule generation' },
     payroll: { enabled: true, schedule: '0 3 * * *', description: 'Automatic payroll processing' },
@@ -1649,6 +1652,10 @@ export function startAutonomousScheduler() {
   console.log('╔════════════════════════════════════════════════╗');
   console.log('║  ✅ AUTONOMOUS SCHEDULER RUNNING SUCCESSFULLY  ║');
   console.log('╚════════════════════════════════════════════════╝\n');
+  
+  } catch (error) {
+    console.error('[SCHEDULER] CRITICAL ERROR during initialization:', error);
+  }
 }
 
 /**
