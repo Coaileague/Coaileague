@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployee } from "@/hooks/useEmployee";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -527,11 +528,29 @@ function RoomCard({
   );
 }
 
+// Default HelpDesk room - always visible even when API returns empty
+const DEFAULT_HELPDESK_ROOM: ChatRoom = {
+  roomId: 'helpdesk',
+  id: 'helpdesk',
+  name: 'CoAIleague HelpDesk',
+  subject: 'CoAIleague HelpDesk',
+  slug: 'helpdesk',
+  type: 'support',
+  conversationType: 'dm_support',
+  participantsCount: 1, // HelpAI bot is always present
+  status: 'open',
+  isParticipant: false,
+  visibility: 'public',
+  isPlatformOwned: true,
+  createdBy: 'platform',
+};
+
 export default function Chatrooms() {
   const { user } = useAuth();
   const { employee } = useEmployee();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState('all');
@@ -546,6 +565,13 @@ export default function Chatrooms() {
 
   const hasSupportRole = isSupportRole(user?.platformRole);
   const userWorkspaceId = employee?.workspaceId;
+  
+  // Auto-switch to grid view on mobile for better UX
+  useEffect(() => {
+    if (isMobile && viewMode === 'table') {
+      setViewMode('grid');
+    }
+  }, [isMobile, viewMode]);
 
   const { data: workspacesData } = useQuery<{ workspaces: { id: string; name: string; slug: string }[] }>({
     queryKey: ['/api/chat/rooms/workspaces'],
@@ -595,17 +621,25 @@ export default function Chatrooms() {
   });
 
   const filteredRooms = useMemo(() => {
-    if (!roomsData?.rooms) return [];
-
-    let normalized = roomsData.rooms.map(normalizeRoom);
+    // Start with rooms from API or empty array
+    let normalized = (roomsData?.rooms || []).map(normalizeRoom);
+    
+    // Always ensure HelpDesk room is present (merge with API data if exists)
+    const hasHelpDesk = normalized.some(r => r.slug === 'helpdesk' || r.id === 'helpdesk');
+    if (!hasHelpDesk) {
+      normalized = [DEFAULT_HELPDESK_ROOM, ...normalized];
+    }
+    
     let filtered = normalized;
 
+    // Filter by workspace for non-support roles
     if (!hasSupportRole && userWorkspaceId) {
       filtered = filtered.filter((r: ChatRoom) => 
-        r.workspaceId === userWorkspaceId || !r.workspaceId
+        r.workspaceId === userWorkspaceId || !r.workspaceId || r.slug === 'helpdesk'
       );
     }
 
+    // Apply active filter
     const currentFilter = ROOM_FILTERS.find(f => f.id === activeFilter);
     if (currentFilter) {
       filtered = filtered.filter((r: ChatRoom) => 
@@ -613,6 +647,7 @@ export default function Chatrooms() {
       );
     }
 
+    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((r: ChatRoom) => {

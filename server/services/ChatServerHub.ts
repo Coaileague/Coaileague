@@ -27,10 +27,12 @@ import {
   chatParticipants,
   supportRooms,
   organizationChatRooms,
+  users,
 } from '@shared/schema';
-import { eq, and, or, isNull, gte, count } from 'drizzle-orm';
+import { eq, and, or, isNull, gte, count, sql } from 'drizzle-orm';
 import { CHAT_SERVER_HUB } from '@shared/platformConfig';
 import { roomAnalyticsService } from './roomAnalyticsService';
+import { PLATFORM_WORKSPACE_ID, seedPlatformWorkspace } from '../seed-platform-workspace';
 
 // ============================================================================
 // CHAT-SPECIFIC EVENT TYPES
@@ -74,6 +76,9 @@ export interface ChatEventMetadata {
   messageId?: string;
   severity?: 'low' | 'medium' | 'high' | 'critical';
   audience?: 'room' | 'workspace' | 'user' | 'staff' | 'all';
+  // Escalation context
+  escalationLevel?: 'tier1' | 'tier2' | 'tier3' | 'management';
+  escalationReason?: string;
   // AI Error/Timeout context
   jobId?: string;
   skill?: string;
@@ -159,6 +164,9 @@ class ChatServerHubClass {
     console.log(`[ChatServerHub] Initializing gateway v${CHAT_SERVER_HUB.version}...`);
     
     try {
+      // Seed HelpDesk room with HelpAI bot (idempotent)
+      await this.seedHelpDeskRoom();
+      
       // Load all active rooms from database
       await this.loadAllActiveRooms();
       
@@ -177,18 +185,161 @@ class ChatServerHubClass {
   }
 
   /**
+   * Seed the HelpDesk support room with HelpAI bot as a participant
+   * Idempotent - safe to call multiple times
+   * 
+   * This method is designed to be fail-safe - if any step fails,
+   * the gateway initialization will still proceed with a warning.
+   */
+  private async seedHelpDeskRoom(): Promise<void> {
+    const HELPDESK_SLUG = 'helpdesk';
+    const HELPAI_BOT_ID = 'helpai-bot';
+    const HELPAI_BOT_NAME = 'HelpAI';
+
+    console.log('[ChatServerHub] Seeding HelpDesk room with HelpAI bot...');
+    
+    try {
+      // Ensure platform workspace exists before creating HelpDesk room
+      // This creates the workspace with PLATFORM_WORKSPACE_ID if it doesn't exist
+      await seedPlatformWorkspace();
+    } catch (wsError) {
+      console.warn('[ChatServerHub] Failed to seed platform workspace, HelpDesk seeding may fail:', wsError);
+      // Continue anyway - the workspace might already exist from previous runs
+    }
+
+    try {
+      // Check if HelpDesk support room exists
+      const [existingRoom] = await db
+        .select()
+        .from(supportRooms)
+        .where(eq(supportRooms.slug, HELPDESK_SLUG))
+        .limit(1);
+
+      let conversationId: string;
+
+      if (existingRoom) {
+        console.log('[ChatServerHub] HelpDesk room exists, checking conversation...');
+        
+        if (existingRoom.conversationId) {
+          conversationId = existingRoom.conversationId;
+        } else {
+          // Create conversation for existing room
+          const [conversation] = await db.insert(chatConversations).values({
+            workspaceId: PLATFORM_WORKSPACE_ID,
+            subject: 'CoAIleague HelpDesk',
+            conversationType: 'dm_support',
+            visibility: 'public',
+            status: 'active',
+          }).returning();
+          
+          conversationId = conversation.id;
+          
+          // Update support room with conversation ID
+          await db.update(supportRooms)
+            .set({ conversationId })
+            .where(eq(supportRooms.id, existingRoom.id));
+          
+          console.log('[ChatServerHub] Created conversation for HelpDesk room');
+        }
+      } else {
+        // Create the conversation first
+        const [conversation] = await db.insert(chatConversations).values({
+          workspaceId: PLATFORM_WORKSPACE_ID,
+          subject: 'CoAIleague HelpDesk',
+          conversationType: 'dm_support',
+          visibility: 'public',
+          status: 'active',
+        }).returning();
+        
+        conversationId = conversation.id;
+
+        // Create the HelpDesk support room
+        await db.insert(supportRooms).values({
+          slug: HELPDESK_SLUG,
+          name: 'CoAIleague HelpDesk',
+          description: 'Live support chat powered by CoAIleague AI - HelpAI is always here to assist you',
+          status: 'open',
+          workspaceId: null, // Platform-wide room
+          conversationId,
+          requiresTicket: false,
+          allowedRoles: JSON.stringify(['*']), // Allow everyone
+        });
+
+        console.log('[ChatServerHub] Created HelpDesk support room');
+      }
+
+      // Ensure HelpAI bot user exists (use raw SQL for custom ID)
+      const [existingBot] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, HELPAI_BOT_ID))
+        .limit(1);
+
+      if (!existingBot) {
+        // Use raw SQL insert for custom ID to work around type constraints
+        await db.execute(sql`
+          INSERT INTO users (id, email, first_name, last_name, role, current_workspace_id)
+          VALUES (${HELPAI_BOT_ID}, 'helpai@coaileague.ai', 'HelpAI', 'Bot', 'system', ${PLATFORM_WORKSPACE_ID})
+          ON CONFLICT (id) DO NOTHING
+        `);
+        console.log('[ChatServerHub] Created HelpAI bot user');
+      }
+
+      // Ensure HelpAI bot is a participant in the conversation
+      const [existingParticipant] = await db
+        .select()
+        .from(chatParticipants)
+        .where(
+          and(
+            eq(chatParticipants.conversationId, conversationId),
+            eq(chatParticipants.participantId, HELPAI_BOT_ID)
+          )
+        )
+        .limit(1);
+
+      if (!existingParticipant) {
+        await db.insert(chatParticipants).values({
+          conversationId,
+          workspaceId: PLATFORM_WORKSPACE_ID,
+          participantId: HELPAI_BOT_ID,
+          participantName: HELPAI_BOT_NAME,
+          participantEmail: 'helpai@coaileague.ai',
+          participantRole: 'admin',
+          canSendMessages: true,
+          canViewHistory: true,
+          canInviteOthers: true,
+          joinedAt: new Date(),
+          isActive: true,
+        });
+        console.log('[ChatServerHub] Added HelpAI bot as HelpDesk participant');
+      } else if (!existingParticipant.isActive) {
+        // Reactivate if inactive
+        await db.update(chatParticipants)
+          .set({ isActive: true, joinedAt: new Date() })
+          .where(eq(chatParticipants.id, existingParticipant.id));
+        console.log('[ChatServerHub] Reactivated HelpAI bot in HelpDesk');
+      }
+
+      console.log('[ChatServerHub] HelpDesk room seeded successfully with HelpAI bot');
+    } catch (error) {
+      console.error('[ChatServerHub] Error seeding HelpDesk room:', error);
+      // Don't throw - allow gateway to continue initialization
+    }
+  }
+
+  /**
    * Load all active conversations from all room types
    */
   private async loadAllActiveRooms(): Promise<void> {
     this.activeRooms.clear();
 
     try {
-      // Load Support Rooms
+      // Load Support Rooms (include 'open' status for HelpDesk)
       if (CHAT_SERVER_HUB.roomTypes.support.enabled) {
         const supportRoomsList = await db
           .select()
           .from(supportRooms)
-          .where(eq(supportRooms.status, 'active'))
+          .where(or(eq(supportRooms.status, 'active'), eq(supportRooms.status, 'open')))
           .limit(1000);
 
         for (const room of supportRoomsList) {
@@ -198,11 +349,11 @@ class ChatServerHubClass {
               id: room.id,
               type: 'support',
               conversationId: room.conversationId,
-              workspaceId: room.workspaceId,
+              workspaceId: room.workspaceId || 'coaileague-platform-workspace',
               subject: room.name,
               participantCount,
-              status: room.status,
-              createdAt: room.createdAt,
+              status: room.status || 'open',
+              createdAt: room.createdAt || new Date(),
               lastActivity: new Date(),
             });
           }
@@ -226,10 +377,10 @@ class ChatServerHubClass {
               type: 'org',
               conversationId: room.conversationId,
               workspaceId: room.workspaceId,
-              subject: room.name,
+              subject: room.roomName,
               participantCount,
-              status: room.status,
-              createdAt: room.createdAt,
+              status: room.status || 'active',
+              createdAt: room.createdAt || new Date(),
               lastActivity: new Date(),
             });
           }
@@ -261,11 +412,11 @@ class ChatServerHubClass {
               id: conv.id,
               type: roomType,
               conversationId: conv.id,
-              workspaceId: conv.workspaceId,
-              subject: conv.subject,
+              workspaceId: conv.workspaceId || 'coaileague-platform-workspace',
+              subject: conv.subject || 'Untitled',
               participantCount,
-              status: conv.status,
-              createdAt: conv.createdAt,
+              status: conv.status || 'active',
+              createdAt: conv.createdAt || new Date(),
               lastActivity: new Date(),
             });
           }
