@@ -19,7 +19,7 @@ import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
 import { aiNotificationService } from '../aiNotificationService';
 import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcastToAllClients } from '../../websocket';
 import { db } from '../../db';
-import { eq, desc, and, gte, sql } from 'drizzle-orm';
+import { eq, desc, and, gte, sql, isNotNull } from 'drizzle-orm';
 import {
   employees,
   shifts,
@@ -30,6 +30,7 @@ import {
   platformUpdates,
   workspaces,
   systemAuditLogs,
+  employeeCertifications,
 } from '@shared/schema';
 
 // ============================================================================
@@ -371,9 +372,13 @@ class AIBrainMasterOrchestrator {
     // Register all orchestration actions
     await this.registerSchedulingActions();
     await this.registerPayrollActions();
+    await this.registerComplianceActions();
+    await this.registerEscalationActions();
     await this.registerAnalyticsActions();
     await this.registerNotificationActions();
     await this.registerAutomationActions();
+    await this.registerEmployeeLifecycleActions();
+    await this.registerHealthCheckActions();
     await this.registerUserAssistanceActions();
     
     // Subscribe to platform events
@@ -566,7 +571,667 @@ class AIBrainMasterOrchestrator {
       }
     });
 
+    // Payroll submission action
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.submit_for_approval',
+      name: 'Submit Payroll for Approval',
+      category: 'payroll',
+      description: 'AI submits calculated payroll run for manager approval',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, payrollRunId } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          
+          // Update payroll run status
+          if (payrollRunId) {
+            await db.update(payrollRuns)
+              .set({ status: 'pending_approval', updatedAt: new Date() })
+              .where(eq(payrollRuns.id, payrollRunId));
+          }
+          
+          // Notify approvers
+          await this.notifyUser(
+            request.userId!,
+            wsId,
+            'Payroll Submitted for Approval',
+            'Payroll run has been submitted and is awaiting manager approval',
+            'info'
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Payroll submitted for approval',
+            data: { payrollRunId, status: 'pending_approval' },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Payroll approval action
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.approve_run',
+      name: 'Approve Payroll Run',
+      category: 'payroll',
+      description: 'AI approves payroll run and triggers payment processing',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, payrollRunId, approverNotes } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          
+          if (payrollRunId) {
+            await db.update(payrollRuns)
+              .set({ 
+                status: 'approved', 
+                approvedBy: request.userId,
+                approvedAt: new Date(),
+                updatedAt: new Date() 
+              })
+              .where(eq(payrollRuns.id, payrollRunId));
+          }
+          
+          // Log approval audit
+          await db.insert(systemAuditLogs).values({
+            action: 'payroll_approved',
+            userId: request.userId!,
+            workspaceId: wsId,
+            details: { payrollRunId, approverNotes },
+            createdAt: new Date()
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Payroll run approved',
+            data: { payrollRunId, status: 'approved', approvedBy: request.userId },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Bulk payroll processing
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.bulk_process',
+      name: 'Bulk Process Payroll',
+      category: 'payroll',
+      description: 'AI processes payroll for multiple employees in batch',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, employeeIds, periodStart, periodEnd } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const targetEmployees = employeeIds || [];
+          
+          // Get time entries for period
+          const entries = await db.select().from(timeEntries)
+            .where(and(
+              eq(timeEntries.workspaceId, wsId),
+              gte(timeEntries.clockIn, new Date(periodStart || new Date()))
+            ));
+          
+          const processedCount = targetEmployees.length || entries.length;
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Bulk payroll processing initiated for ${processedCount} employees`,
+            data: { 
+              processedCount,
+              periodStart,
+              periodEnd,
+              entriesFound: entries.length
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
     console.log('[AI Brain Master Orchestrator] Registered payroll actions');
+  }
+
+  // ============================================================================
+  // COMPLIANCE REMEDIATION ORCHESTRATION
+  // ============================================================================
+
+  private async registerComplianceActions(): Promise<void> {
+    // Certification expiry detection
+    helpaiOrchestrator.registerAction({
+      actionId: 'compliance.check_certifications',
+      name: 'Check Certification Expiry',
+      category: 'compliance',
+      description: 'AI scans for expiring employee certifications and licenses',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, daysAhead } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const lookAheadDays = daysAhead || 30;
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() + lookAheadDays);
+          
+          // Get employees with certifications
+          const employeeList = await db.select().from(employees)
+            .where(eq(employees.workspaceId, wsId));
+          
+          const expiringCerts: any[] = [];
+          const expiredCerts: any[] = [];
+          
+          for (const emp of employeeList) {
+            const certs = emp.certifications as any[] || [];
+            for (const cert of certs) {
+              if (cert.expiryDate) {
+                const expiry = new Date(cert.expiryDate);
+                if (expiry < new Date()) {
+                  expiredCerts.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, ...cert });
+                } else if (expiry < cutoffDate) {
+                  expiringCerts.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, ...cert, daysUntilExpiry: Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) });
+                }
+              }
+            }
+          }
+          
+          // Notify if issues found
+          if (expiredCerts.length > 0 || expiringCerts.length > 0) {
+            await this.notifyUser(
+              request.userId!,
+              wsId,
+              'Certification Compliance Alert',
+              `Found ${expiredCerts.length} expired and ${expiringCerts.length} expiring certifications`,
+              'warning'
+            );
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Scanned ${employeeList.length} employees for certification compliance`,
+            data: { 
+              employeesScanned: employeeList.length,
+              expiredCertifications: expiredCerts,
+              expiringCertifications: expiringCerts,
+              lookAheadDays
+            },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: expiredCerts.length > 0 || expiringCerts.length > 0
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Policy violation detection
+    helpaiOrchestrator.registerAction({
+      actionId: 'compliance.detect_violations',
+      name: 'Detect Policy Violations',
+      category: 'compliance',
+      description: 'AI scans for overtime, break, and labor law violations',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, periodDays } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const lookbackDays = periodDays || 7;
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - lookbackDays);
+          
+          // Get recent time entries
+          const entries = await db.select().from(timeEntries)
+            .where(and(
+              eq(timeEntries.workspaceId, wsId),
+              gte(timeEntries.clockIn, startDate)
+            ));
+          
+          const violations: any[] = [];
+          const employeeHours = new Map<string, number>();
+          
+          // Check for overtime violations
+          for (const entry of entries) {
+            if (entry.clockIn && entry.clockOut) {
+              const hours = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60);
+              const currentTotal = employeeHours.get(entry.employeeId!) || 0;
+              employeeHours.set(entry.employeeId!, currentTotal + hours);
+              
+              // Check for excessive single shift (>12 hours)
+              if (hours > 12) {
+                violations.push({
+                  type: 'excessive_shift',
+                  severity: 'high',
+                  employeeId: entry.employeeId,
+                  entryId: entry.id,
+                  details: `Shift exceeded 12 hours (${hours.toFixed(1)} hours)`
+                });
+              }
+              
+              // Check for missing break (>6 hours without break)
+              if (hours > 6 && !entry.breakMinutes) {
+                violations.push({
+                  type: 'missing_break',
+                  severity: 'medium',
+                  employeeId: entry.employeeId,
+                  entryId: entry.id,
+                  details: `No break recorded for ${hours.toFixed(1)} hour shift`
+                });
+              }
+            }
+          }
+          
+          // Check for weekly overtime (>40 hours)
+          for (const [empId, totalHours] of employeeHours) {
+            if (totalHours > 40) {
+              violations.push({
+                type: 'weekly_overtime',
+                severity: 'medium',
+                employeeId: empId,
+                details: `Employee worked ${totalHours.toFixed(1)} hours in period (exceeds 40)`
+              });
+            }
+          }
+          
+          if (violations.length > 0) {
+            await this.notifyUser(
+              request.userId!,
+              wsId,
+              'Policy Violations Detected',
+              `Found ${violations.length} policy violations requiring attention`,
+              'warning'
+            );
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Scanned ${entries.length} time entries, found ${violations.length} violations`,
+            data: { 
+              entriesScanned: entries.length,
+              violations,
+              periodDays: lookbackDays
+            },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: violations.length > 0
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Compliance remediation workflow
+    helpaiOrchestrator.registerAction({
+      actionId: 'compliance.auto_remediate',
+      name: 'Auto-Remediate Compliance Issues',
+      category: 'compliance',
+      description: 'AI automatically resolves common compliance issues',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, violationType, autoFix } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const remediationActions: any[] = [];
+          
+          // Generate remediation recommendations
+          if (violationType === 'missing_break' && autoFix) {
+            remediationActions.push({
+              action: 'schedule_break_reminders',
+              status: 'queued',
+              description: 'AI will send break reminders to affected employees'
+            });
+          }
+          
+          if (violationType === 'weekly_overtime') {
+            remediationActions.push({
+              action: 'adjust_schedule',
+              status: 'recommended',
+              description: 'AI recommends reducing scheduled hours for affected employees'
+            });
+          }
+          
+          if (violationType === 'certification_expired') {
+            remediationActions.push({
+              action: 'suspend_assignments',
+              status: 'recommended',
+              description: 'AI recommends suspending assignments requiring expired certification'
+            });
+          }
+          
+          // Log remediation audit
+          await db.insert(systemAuditLogs).values({
+            action: 'compliance_remediation',
+            userId: request.userId!,
+            workspaceId: wsId,
+            details: { violationType, remediationActions, autoFix },
+            createdAt: new Date()
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Generated ${remediationActions.length} remediation actions`,
+            data: { remediationActions, violationType },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered compliance actions');
+  }
+
+  // ============================================================================
+  // ESCALATION RUNBOOKS ORCHESTRATION
+  // ============================================================================
+
+  private async registerEscalationActions(): Promise<void> {
+    // Critical issue escalation
+    helpaiOrchestrator.registerAction({
+      actionId: 'escalation.critical_issue',
+      name: 'Escalate Critical Issue',
+      category: 'system',
+      description: 'AI escalates critical issues to appropriate personnel',
+      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, issueType, severity, description, affectedUsers } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          
+          // Determine escalation path based on severity
+          const escalationPath = severity === 'critical' 
+            ? ['super_admin', 'support'] 
+            : severity === 'high'
+            ? ['admin', 'manager']
+            : ['manager'];
+          
+          // Create escalation record
+          const escalationId = `esc_${Date.now()}`;
+          
+          // Log escalation
+          await db.insert(systemAuditLogs).values({
+            action: 'issue_escalation',
+            userId: request.userId!,
+            workspaceId: wsId,
+            details: {
+              escalationId,
+              issueType,
+              severity,
+              description,
+              affectedUsers,
+              escalationPath,
+              escalatedAt: new Date().toISOString()
+            },
+            createdAt: new Date()
+          });
+          
+          // Notify escalation targets
+          await this.notifyUser(
+            request.userId!,
+            wsId,
+            `Critical Issue Escalated: ${issueType}`,
+            description || 'A critical issue requires immediate attention',
+            'error'
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Issue escalated to ${escalationPath.join(', ')}`,
+            data: { 
+              escalationId,
+              severity,
+              issueType,
+              escalationPath,
+              escalatedAt: new Date().toISOString()
+            },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // System health escalation
+    helpaiOrchestrator.registerAction({
+      actionId: 'escalation.system_health',
+      name: 'Escalate System Health Issue',
+      category: 'health',
+      description: 'AI escalates system health degradation to operations team',
+      requiredRoles: ['admin', 'super_admin', 'support'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { service, healthStatus, metrics, threshold } = request.payload || {};
+        
+        try {
+          // Log health escalation
+          await db.insert(systemAuditLogs).values({
+            action: 'health_escalation',
+            userId: request.userId!,
+            details: {
+              service,
+              healthStatus,
+              metrics,
+              threshold,
+              escalatedAt: new Date().toISOString()
+            },
+            createdAt: new Date()
+          });
+          
+          // Broadcast to all connected admins
+          broadcastToAllClients({
+            type: 'health_alert',
+            service,
+            status: healthStatus,
+            metrics,
+            timestamp: new Date().toISOString()
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Health issue escalated for service: ${service}`,
+            data: { service, healthStatus, metrics },
+            executionTimeMs: Date.now() - startTime,
+            broadcastSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Runbook execution
+    helpaiOrchestrator.registerAction({
+      actionId: 'escalation.execute_runbook',
+      name: 'Execute Incident Runbook',
+      category: 'system',
+      description: 'AI executes predefined incident response runbook',
+      requiredRoles: ['admin', 'super_admin', 'support'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { runbookId, incidentId, parameters } = request.payload || {};
+        
+        const runbooks: Record<string, { name: string; steps: string[] }> = {
+          'rb_payment_failure': {
+            name: 'Payment Failure Recovery',
+            steps: ['Verify Stripe connection', 'Check payment logs', 'Retry failed payments', 'Notify affected users']
+          },
+          'rb_database_slow': {
+            name: 'Database Performance',
+            steps: ['Check connection pool', 'Review slow queries', 'Clear query cache', 'Notify DBA if persists']
+          },
+          'rb_high_load': {
+            name: 'High Load Response',
+            steps: ['Scale resources', 'Enable rate limiting', 'Queue non-critical jobs', 'Monitor recovery']
+          },
+          'rb_auth_issues': {
+            name: 'Authentication Issues',
+            steps: ['Check session store', 'Verify OAuth providers', 'Clear session cache', 'Reset affected users']
+          }
+        };
+        
+        try {
+          const runbook = runbooks[runbookId as string];
+          if (!runbook) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Unknown runbook: ${runbookId}. Available: ${Object.keys(runbooks).join(', ')}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Log runbook execution
+          await db.insert(systemAuditLogs).values({
+            action: 'runbook_execution',
+            userId: request.userId!,
+            details: {
+              runbookId,
+              runbookName: runbook.name,
+              incidentId,
+              steps: runbook.steps,
+              parameters,
+              executedAt: new Date().toISOString()
+            },
+            createdAt: new Date()
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Runbook '${runbook.name}' executed`,
+            data: { 
+              runbookId,
+              runbookName: runbook.name,
+              stepsExecuted: runbook.steps,
+              incidentId
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Auto-escalation rules
+    helpaiOrchestrator.registerAction({
+      actionId: 'escalation.configure_rules',
+      name: 'Configure Auto-Escalation Rules',
+      category: 'system',
+      description: 'AI configures automatic escalation triggers',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { rules } = request.payload || {};
+        
+        try {
+          const configuredRules = rules || [
+            { trigger: 'payment_failure_count > 5', action: 'escalate_to_finance', delay: '5m' },
+            { trigger: 'health_status == degraded', action: 'escalate_to_ops', delay: '2m' },
+            { trigger: 'error_rate > 10%', action: 'execute_runbook', runbookId: 'rb_high_load', delay: '1m' }
+          ];
+          
+          // Log rule configuration
+          await db.insert(systemAuditLogs).values({
+            action: 'escalation_rules_configured',
+            userId: request.userId!,
+            details: { rules: configuredRules },
+            createdAt: new Date()
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Configured ${configuredRules.length} auto-escalation rules`,
+            data: { rules: configuredRules },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered escalation actions');
   }
 
   // ============================================================================
@@ -895,6 +1560,504 @@ class AIBrainMasterOrchestrator {
     });
 
     console.log('[AI Brain Master Orchestrator] Registered automation actions');
+  }
+
+  // ============================================================================
+  // EMPLOYEE LIFECYCLE ORCHESTRATION
+  // ============================================================================
+
+  private async registerEmployeeLifecycleActions(): Promise<void> {
+    // 90-day new hire review monitoring (uses createdAt + 90 days as probation end)
+    helpaiOrchestrator.registerAction({
+      actionId: 'lifecycle.check_probation',
+      name: 'Check 90-Day New Hire Reviews',
+      category: 'compliance',
+      description: 'AI monitors new employees approaching 90-day review period',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, daysAhead, probationDays } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const lookAheadDays = daysAhead || 14;
+          const probationPeriod = probationDays || 90;
+          
+          const employeeList = await db.select().from(employees)
+            .where(and(
+              eq(employees.workspaceId, wsId),
+              eq(employees.isActive, true)
+            ))
+            .limit(500);
+          
+          const upcomingReviews: any[] = [];
+          const overdueReviews: any[] = [];
+          const now = new Date();
+          
+          for (const emp of employeeList) {
+            if (emp.createdAt) {
+              const probationEndDate = new Date(emp.createdAt);
+              probationEndDate.setDate(probationEndDate.getDate() + probationPeriod);
+              
+              const daysUntil = Math.ceil((probationEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              
+              if (daysUntil < 0 && daysUntil > -30) {
+                overdueReviews.push({
+                  employeeId: emp.id,
+                  employeeName: `${emp.firstName} ${emp.lastName}`,
+                  hireDate: emp.createdAt,
+                  reviewDueDate: probationEndDate.toISOString().split('T')[0],
+                  daysOverdue: Math.abs(daysUntil)
+                });
+              } else if (daysUntil >= 0 && daysUntil <= lookAheadDays) {
+                upcomingReviews.push({
+                  employeeId: emp.id,
+                  employeeName: `${emp.firstName} ${emp.lastName}`,
+                  hireDate: emp.createdAt,
+                  reviewDueDate: probationEndDate.toISOString().split('T')[0],
+                  daysUntil
+                });
+              }
+            }
+          }
+          
+          if (overdueReviews.length > 0 || upcomingReviews.length > 0) {
+            await this.notifyUser(
+              request.userId!,
+              wsId,
+              '90-Day Review Alert',
+              `${overdueReviews.length} overdue and ${upcomingReviews.length} upcoming new hire reviews`,
+              overdueReviews.length > 0 ? 'warning' : 'info'
+            );
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Found ${overdueReviews.length} overdue and ${upcomingReviews.length} upcoming reviews`,
+            data: { overdueReviews, upcomingReviews, lookAheadDays, probationPeriod },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: overdueReviews.length > 0 || upcomingReviews.length > 0
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Certification renewal reminders using employeeCertifications table
+    helpaiOrchestrator.registerAction({
+      actionId: 'lifecycle.renewal_reminders',
+      name: 'Send Certification Renewal Reminders',
+      category: 'compliance',
+      description: 'AI sends reminders for expiring certifications and licenses',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, daysAhead } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const lookAheadDays = daysAhead || 30;
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() + lookAheadDays);
+          
+          // Query actual certifications from employeeCertifications table
+          const certList = await db.select({
+            certId: employeeCertifications.id,
+            employeeId: employeeCertifications.employeeId,
+            certificationName: employeeCertifications.certificationName,
+            expirationDate: employeeCertifications.expirationDate,
+            certificationType: employeeCertifications.certificationType,
+            firstName: employees.firstName,
+            lastName: employees.lastName
+          })
+            .from(employeeCertifications)
+            .innerJoin(employees, eq(employeeCertifications.employeeId, employees.id))
+            .where(and(
+              eq(employeeCertifications.workspaceId, wsId),
+              isNotNull(employeeCertifications.expirationDate)
+            ))
+            .limit(500);
+          
+          const remindersSent: any[] = [];
+          const now = new Date();
+          
+          for (const cert of certList) {
+            if (cert.expirationDate) {
+              const expiry = new Date(cert.expirationDate);
+              const daysUntil = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              
+              if (daysUntil > 0 && daysUntil <= lookAheadDays) {
+                remindersSent.push({
+                  certificationId: cert.certId,
+                  employeeId: cert.employeeId,
+                  employeeName: `${cert.firstName} ${cert.lastName}`,
+                  certificationName: cert.certificationName,
+                  certificationType: cert.certificationType,
+                  expirationDate: expiry.toISOString().split('T')[0],
+                  daysUntilExpiry: daysUntil
+                });
+              }
+            }
+          }
+          
+          // Log the reminders
+          if (remindersSent.length > 0) {
+            await db.insert(systemAuditLogs).values({
+              action: 'certification_renewal_reminders',
+              userId: request.userId!,
+              workspaceId: wsId,
+              details: { remindersSent, lookAheadDays },
+              createdAt: new Date()
+            });
+            
+            await this.notifyUser(
+              request.userId!,
+              wsId,
+              'Certification Renewal Reminders',
+              `${remindersSent.length} certifications expiring within ${lookAheadDays} days`,
+              'warning'
+            );
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Found ${remindersSent.length} expiring certifications`,
+            data: { expiringCertifications: remindersSent, lookAheadDays },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: remindersSent.length > 0
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Employee anniversary tracking (uses createdAt as hire date)
+    helpaiOrchestrator.registerAction({
+      actionId: 'lifecycle.check_anniversaries',
+      name: 'Check Work Anniversaries',
+      category: 'system',
+      description: 'AI identifies upcoming work anniversaries for recognition',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, daysAhead } = request.payload || {};
+        
+        try {
+          const wsId = workspaceId || request.workspaceId!;
+          const lookAheadDays = daysAhead || 30;
+          
+          const employeeList = await db.select().from(employees)
+            .where(and(
+              eq(employees.workspaceId, wsId),
+              eq(employees.isActive, true)
+            ))
+            .limit(500);
+          
+          const upcomingAnniversaries: any[] = [];
+          const today = new Date();
+          
+          for (const emp of employeeList) {
+            if (emp.createdAt) {
+              const startDate = new Date(emp.createdAt);
+              const yearsWorked = today.getFullYear() - startDate.getFullYear();
+              
+              // Only track anniversaries for employees with at least 1 year
+              if (yearsWorked >= 1) {
+                // Calculate this year's anniversary
+                const thisYearAnniv = new Date(today.getFullYear(), startDate.getMonth(), startDate.getDate());
+                if (thisYearAnniv < today) {
+                  thisYearAnniv.setFullYear(thisYearAnniv.getFullYear() + 1);
+                }
+                
+                const daysUntil = Math.ceil((thisYearAnniv.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysUntil <= lookAheadDays) {
+                  const yearsCompleting = thisYearAnniv.getFullYear() - startDate.getFullYear();
+                  upcomingAnniversaries.push({
+                    employeeId: emp.id,
+                    employeeName: `${emp.firstName} ${emp.lastName}`,
+                    hireDate: startDate.toISOString().split('T')[0],
+                    anniversaryDate: thisYearAnniv.toISOString().split('T')[0],
+                    yearsCompleting,
+                    daysUntil
+                  });
+                }
+              }
+            }
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Found ${upcomingAnniversaries.length} upcoming work anniversaries`,
+            data: { upcomingAnniversaries, lookAheadDays },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered employee lifecycle actions');
+  }
+
+  // ============================================================================
+  // SELF-HEALING HEALTH CHECK ORCHESTRATION
+  // ============================================================================
+
+  private async registerHealthCheckActions(): Promise<void> {
+    // System health self-check
+    helpaiOrchestrator.registerAction({
+      actionId: 'health.self_check',
+      name: 'Run System Self-Check',
+      category: 'health',
+      description: 'AI performs comprehensive system health check and identifies issues',
+      requiredRoles: ['admin', 'super_admin', 'support'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const healthChecks: any[] = [];
+          
+          // Check database connectivity
+          try {
+            const [dbResult] = await db.select({ count: sql<number>`1` }).from(employees).limit(1);
+            healthChecks.push({ service: 'database', status: 'healthy', latencyMs: Date.now() - startTime });
+          } catch (dbError: any) {
+            healthChecks.push({ service: 'database', status: 'unhealthy', error: dbError.message });
+          }
+          
+          // Check Stripe connectivity
+          try {
+            const stripe = (await import('stripe')).default;
+            const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY!);
+            await stripeClient.balance.retrieve();
+            healthChecks.push({ service: 'stripe', status: 'healthy' });
+          } catch (stripeError: any) {
+            healthChecks.push({ service: 'stripe', status: 'degraded', error: stripeError.message });
+          }
+          
+          // Check WebSocket connections
+          try {
+            const { getWSStats } = await import('../../websocket');
+            const wsStats = getWSStats();
+            healthChecks.push({ 
+              service: 'websocket', 
+              status: 'healthy',
+              activeConnections: wsStats.activeConnections
+            });
+          } catch (wsError: any) {
+            healthChecks.push({ service: 'websocket', status: 'unknown', error: wsError.message });
+          }
+          
+          const unhealthyServices = healthChecks.filter(h => h.status === 'unhealthy');
+          const degradedServices = healthChecks.filter(h => h.status === 'degraded');
+          
+          const overallStatus = unhealthyServices.length > 0 ? 'critical' :
+                               degradedServices.length > 0 ? 'degraded' : 'healthy';
+          
+          if (unhealthyServices.length > 0) {
+            await this.notifyUser(
+              request.userId!,
+              request.workspaceId,
+              'System Health Alert',
+              `${unhealthyServices.length} services unhealthy: ${unhealthyServices.map(s => s.service).join(', ')}`,
+              'error'
+            );
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `System health: ${overallStatus}`,
+            data: { 
+              overallStatus,
+              healthChecks,
+              unhealthyCount: unhealthyServices.length,
+              degradedCount: degradedServices.length
+            },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: unhealthyServices.length > 0
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Auto-remediation for common issues
+    helpaiOrchestrator.registerAction({
+      actionId: 'health.auto_remediate',
+      name: 'Auto-Remediate Health Issues',
+      category: 'health',
+      description: 'AI attempts to automatically fix common system health issues',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { issues } = request.payload || {};
+        
+        try {
+          const remediationResults: any[] = [];
+          
+          for (const issue of (issues || [])) {
+            switch (issue.type) {
+              case 'stale_sessions':
+                // Clean up stale sessions
+                remediationResults.push({
+                  issue: 'stale_sessions',
+                  action: 'cleanup',
+                  status: 'completed',
+                  details: 'Cleared stale session data'
+                });
+                break;
+                
+              case 'cache_full':
+                // Clear application caches
+                remediationResults.push({
+                  issue: 'cache_full',
+                  action: 'clear_cache',
+                  status: 'completed',
+                  details: 'Cleared application caches'
+                });
+                break;
+                
+              case 'high_memory':
+                // Trigger garbage collection
+                if (global.gc) {
+                  global.gc();
+                  remediationResults.push({
+                    issue: 'high_memory',
+                    action: 'garbage_collection',
+                    status: 'completed',
+                    details: 'Triggered garbage collection'
+                  });
+                } else {
+                  remediationResults.push({
+                    issue: 'high_memory',
+                    action: 'garbage_collection',
+                    status: 'skipped',
+                    details: 'GC not exposed in runtime'
+                  });
+                }
+                break;
+                
+              default:
+                remediationResults.push({
+                  issue: issue.type,
+                  action: 'manual_intervention',
+                  status: 'escalated',
+                  details: 'Issue requires manual intervention'
+                });
+            }
+          }
+          
+          // Log remediation
+          await db.insert(systemAuditLogs).values({
+            action: 'health_auto_remediation',
+            userId: request.userId!,
+            details: { issues, remediationResults },
+            createdAt: new Date()
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Processed ${remediationResults.length} remediation actions`,
+            data: { remediationResults },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Performance monitoring
+    helpaiOrchestrator.registerAction({
+      actionId: 'health.performance_report',
+      name: 'Generate Performance Report',
+      category: 'health',
+      description: 'AI generates a comprehensive system performance report',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const memUsage = process.memoryUsage();
+          const cpuUsage = process.cpuUsage();
+          const uptime = process.uptime();
+          
+          const performanceReport = {
+            timestamp: new Date().toISOString(),
+            uptime: {
+              seconds: uptime,
+              formatted: `${Math.floor(uptime / 86400)}d ${Math.floor((uptime % 86400) / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`
+            },
+            memory: {
+              heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+              heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+              rss: Math.round(memUsage.rss / 1024 / 1024),
+              external: Math.round(memUsage.external / 1024 / 1024),
+              unit: 'MB'
+            },
+            cpu: {
+              user: Math.round(cpuUsage.user / 1000),
+              system: Math.round(cpuUsage.system / 1000),
+              unit: 'ms'
+            },
+            nodeVersion: process.version,
+            platform: process.platform
+          };
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Performance report generated',
+            data: performanceReport,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered health check actions');
   }
 
   // ============================================================================

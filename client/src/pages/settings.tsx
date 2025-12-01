@@ -95,6 +95,13 @@ export default function Settings() {
   const [smsVerified, setSmsVerified] = useState<boolean>(false);
   const [testingSmS, setTestingSms] = useState<boolean>(false);
   
+  // Digest and quiet hours state
+  const [digestFrequency, setDigestFrequency] = useState<string>('realtime');
+  const [enableAiSummarization, setEnableAiSummarization] = useState<boolean>(true);
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState<boolean>(false);
+  const [quietHoursStart, setQuietHoursStart] = useState<number>(22);
+  const [quietHoursEnd, setQuietHoursEnd] = useState<number>(7);
+  
   // Track original values to detect changes
   const [originalValues, setOriginalValues] = useState<any>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -270,11 +277,53 @@ export default function Settings() {
       setShiftReminderChannels(notificationPrefs.shiftReminderChannels ?? ['email', 'push']);
       setSmsPhoneNumber(notificationPrefs.smsPhoneNumber ?? '');
       setSmsVerified(notificationPrefs.smsVerified ?? false);
+      // Digest and quiet hours
+      setDigestFrequency(notificationPrefs.digestFrequency ?? 'realtime');
+      setEnableAiSummarization(notificationPrefs.enableAiSummarization ?? true);
+      setQuietHoursEnabled(notificationPrefs.quietHoursStart !== null && notificationPrefs.quietHoursStart !== undefined);
+      setQuietHoursStart(notificationPrefs.quietHoursStart ?? 22);
+      setQuietHoursEnd(notificationPrefs.quietHoursEnd ?? 7);
     }
   }, [notificationPrefs]);
 
+  // Helper to format quiet hours range for display
+  const formatQuietHoursRange = () => {
+    if (!quietHoursEnabled) return '';
+    const formatHour = (h: number) => h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`;
+    const startStr = formatHour(quietHoursStart);
+    const endStr = formatHour(quietHoursEnd);
+    if (quietHoursStart > quietHoursEnd) {
+      return `${startStr} to ${endStr} (overnight)`;
+    }
+    return `${startStr} to ${endStr}`;
+  };
+
   // Handle notification preferences save
   const handleSaveNotificationPrefs = () => {
+    // Validate quiet hours before saving
+    if (quietHoursEnabled) {
+      const validStart = typeof quietHoursStart === 'number' && quietHoursStart >= 0 && quietHoursStart <= 23;
+      const validEnd = typeof quietHoursEnd === 'number' && quietHoursEnd >= 0 && quietHoursEnd <= 23;
+      
+      if (!validStart || !validEnd) {
+        toast({
+          title: "Invalid Quiet Hours",
+          description: "Please select valid hours between 12:00 AM and 11:00 PM",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (quietHoursStart === quietHoursEnd) {
+        toast({
+          title: "Invalid Quiet Hours",
+          description: "Start and end times cannot be the same. Please adjust your quiet hours.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Note: start > end is valid for overnight periods (e.g., 10 PM to 7 AM)
+    }
+    
     updateNotificationPrefsMutation.mutate({
       enableEmail,
       enableSms,
@@ -284,6 +333,15 @@ export default function Settings() {
       shiftReminderCustomMinutes: shiftReminderTiming === 'custom' ? shiftReminderCustomMinutes : null,
       shiftReminderChannels,
       smsPhoneNumber: enableSms ? smsPhoneNumber : null,
+      // Digest and quiet hours
+      digestFrequency,
+      enableAiSummarization,
+      quietHoursStart: quietHoursEnabled ? quietHoursStart : null,
+      quietHoursEnd: quietHoursEnabled ? quietHoursEnd : null,
+    }, {
+      onSuccess: () => {
+        setHasUnsavedChanges(false);
+      }
     });
   };
 
@@ -1071,6 +1129,151 @@ export default function Settings() {
                     </p>
                   </div>
                 </>
+              )}
+            </div>
+
+            <Separator />
+            
+            {/* Notification Digest Settings */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold">Notification Digest</h3>
+                <p className="text-xs text-muted-foreground">Choose how often to receive notification summaries</p>
+              </div>
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="digestFrequency">Digest Frequency</Label>
+                  <Select 
+                    value={digestFrequency} 
+                    onValueChange={(value) => {
+                      setDigestFrequency(value);
+                      setHasUnsavedChanges(true);
+                    }}
+                  >
+                    <SelectTrigger id="digestFrequency" data-testid="select-digest-frequency">
+                      <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="realtime" data-testid="option-digest-realtime">Real-time (Immediate)</SelectItem>
+                      <SelectItem value="15min" data-testid="option-digest-15min">Every 15 minutes</SelectItem>
+                      <SelectItem value="1hour" data-testid="option-digest-1hour">Every hour</SelectItem>
+                      <SelectItem value="4hours" data-testid="option-digest-4hours">Every 4 hours</SelectItem>
+                      <SelectItem value="daily" data-testid="option-digest-daily">Daily digest</SelectItem>
+                      <SelectItem value="never" data-testid="option-digest-never">Never (Disable digests)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {digestFrequency === 'realtime' ? 'Receive notifications immediately as they happen' :
+                     digestFrequency === 'never' ? 'Notifications will be available in-app only' :
+                     'Notifications will be batched and summarized'}
+                  </p>
+                </div>
+                
+                {digestFrequency !== 'realtime' && digestFrequency !== 'never' && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">AI Summarization</p>
+                        <p className="text-xs text-muted-foreground">Use AI to create smart notification summaries</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={enableAiSummarization} 
+                      onCheckedChange={(checked) => {
+                        setEnableAiSummarization(checked);
+                        setHasUnsavedChanges(true);
+                      }}
+                      data-testid="switch-ai-summarization"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+            
+            {/* Quiet Hours */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-sm font-semibold">Quiet Hours</h3>
+                    <p className="text-xs text-muted-foreground">Pause notifications during specific hours</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={quietHoursEnabled} 
+                  onCheckedChange={(checked) => {
+                    setQuietHoursEnabled(checked);
+                    setHasUnsavedChanges(true);
+                  }}
+                  data-testid="switch-quiet-hours-enabled"
+                />
+              </div>
+              
+              {quietHoursEnabled && (
+                <div className="grid gap-4 md:grid-cols-2 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="quietStart">Start Time</Label>
+                    <Select 
+                      value={String(quietHoursStart)} 
+                      onValueChange={(v) => {
+                        const hour = Math.min(23, Math.max(0, Number(v)));
+                        setQuietHoursStart(hour);
+                        setHasUnsavedChanges(true);
+                      }}
+                    >
+                      <SelectTrigger id="quietStart" data-testid="select-quiet-hours-start">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)} data-testid={`option-quiet-start-${i}`}>
+                            {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quietEnd">End Time</Label>
+                    <Select 
+                      value={String(quietHoursEnd)} 
+                      onValueChange={(v) => {
+                        const hour = Math.min(23, Math.max(0, Number(v)));
+                        setQuietHoursEnd(hour);
+                        setHasUnsavedChanges(true);
+                      }}
+                    >
+                      <SelectTrigger id="quietEnd" data-testid="select-quiet-hours-end">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)} data-testid={`option-quiet-end-${i}`}>
+                            {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {quietHoursStart === quietHoursEnd && (
+                    <p className="text-xs text-yellow-600 md:col-span-2" data-testid="text-quiet-hours-warning">
+                      Warning: Start and end times are the same - quiet hours will be disabled
+                    </p>
+                  )}
+                  {quietHoursStart !== quietHoursEnd && quietHoursStart > quietHoursEnd && (
+                    <p className="text-xs text-blue-600 md:col-span-2" data-testid="text-quiet-hours-overnight">
+                      Overnight quiet hours: {formatQuietHoursRange()}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground md:col-span-2">
+                    Notifications will be held during quiet hours and delivered when they end
+                  </p>
+                </div>
               )}
             </div>
 
