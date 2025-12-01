@@ -27,6 +27,7 @@ import {
 import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { SupportCommandPanel } from "@/components/support-command-panel";
+import { CodeChangeReviewPanel } from "@/components/code-change-review-panel";
 import { 
   ROOM_TYPES, 
   CHATROOM_UI, 
@@ -873,8 +874,9 @@ export default function Chatrooms() {
 
         {hasSupportRole && viewMode === 'table' ? (
           <>
-            <div className="mb-4">
+            <div className="mb-4 space-y-4">
               <SupportCommandPanel />
+              <CodeChangeReviewPanel />
             </div>
             <div className="mb-4 flex flex-wrap gap-2">
               <Select value={orgFilter} onValueChange={setOrgFilter}>
