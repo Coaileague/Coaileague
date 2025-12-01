@@ -18,32 +18,47 @@ export function AnimatedNotificationBell({
     <button
       onClick={onClick}
       className={`relative inline-flex h-10 w-10 items-center justify-center rounded-md hover-elevate transition-all duration-200 ${className}`}
-      aria-label="Notifications"
+      aria-label={showAnimation ? `${notificationCount} new notifications` : "Notifications"}
       data-testid="button-notifications"
       style={{ willChange: 'auto' }}
     >
       <div className="relative inline-flex items-center justify-center">
-        {/* Main bell icon with glow effect when notifications exist and popover is closed */}
+        {/* Main bell icon with glow effect when notifications exist */}
         <Bell 
-          className={`h-4 w-4 transition-all duration-300 ${
-            showAnimation ? "animate-whatsnew-badge-glow" : ""
+          className={`h-5 w-5 transition-all duration-300 ${
+            showAnimation ? "animate-bell-ring-continuous text-amber-500" : "text-muted-foreground"
           }`}
           style={showAnimation ? { 
-            filter: 'drop-shadow(0 0 6px rgba(6, 182, 212, 0.6))',
+            filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))',
             willChange: 'filter'
           } : undefined}
         />
 
-        {/* Number badge with glowing effect - shows notification count */}
+        {/* Number badge with pulsing + scaling animation - shows notification count */}
         {showAnimation && notificationCount > 0 && (
-          <span 
-            className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold animate-whatsnew-badge-glow"
-            style={{
-              background: "linear-gradient(135deg, #06b6d4, #0891b2, #4ecdc4)",
-            }}
-          >
-            {notificationCount > 9 ? '9+' : notificationCount}
-          </span>
+          <>
+            {/* Outer pulse ring */}
+            <span 
+              className="absolute -top-1 -right-1 h-6 w-6 rounded-full animate-pulse"
+              style={{
+                background: "radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, transparent 70%)",
+                animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
+              }}
+            />
+            
+            {/* Main badge with number - prominent and animated */}
+            <span 
+              className="absolute -top-2 -right-2 h-6 w-6 rounded-full text-white flex items-center justify-center text-[11px] font-bold shadow-lg animate-badge-pulse animate-bounce"
+              style={{
+                background: "linear-gradient(135deg, #ef4444, #dc2626, #b91c1c)",
+                boxShadow: "0 0 12px rgba(239, 68, 68, 0.8), inset 0 1px 3px rgba(255, 255, 255, 0.2)",
+                animation: "badge-pulse 2s ease-in-out infinite, bounce 1s ease-in-out infinite",
+              }}
+              data-testid="badge-unread-count"
+            >
+              {notificationCount > 9 ? '9+' : notificationCount}
+            </span>
+          </>
         )}
       </div>
     </button>
