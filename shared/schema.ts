@@ -15088,3 +15088,163 @@ export const insertFeedbackVoteSchema = createInsertSchema(feedbackVotes).omit({
 
 export type InsertFeedbackVote = z.infer<typeof insertFeedbackVoteSchema>;
 export type FeedbackVote = typeof feedbackVotes.$inferSelect;
+
+// ============================================================================
+// AI BRAIN CODE EDITOR - STAGED CODE CHANGES
+// ============================================================================
+
+// Status enum for code change requests
+export const codeChangeStatusEnum = pgEnum('code_change_status', [
+  'pending',      // Awaiting review
+  'approved',     // Approved, ready to apply
+  'rejected',     // Rejected by reviewer
+  'applied',      // Successfully applied to codebase
+  'failed',       // Failed to apply
+  'expired',      // Expired without action
+]);
+
+// Change type enum
+export const codeChangeTypeEnum = pgEnum('code_change_type', [
+  'create',       // Create new file
+  'modify',       // Modify existing file
+  'delete',       // Delete file
+  'rename',       // Rename file
+]);
+
+// Staged code changes table - AI Brain code edits awaiting approval
+export const stagedCodeChanges = pgTable("staged_code_changes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Change request details
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  changeType: codeChangeTypeEnum("change_type").notNull(),
+  
+  // File details
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  originalContent: text("original_content"), // Content before change (for modify/delete)
+  proposedContent: text("proposed_content"), // New content (for create/modify)
+  diffPatch: text("diff_patch"), // Unified diff format
+  
+  // For rename operations
+  newFilePath: varchar("new_file_path", { length: 500 }),
+  
+  // Request context
+  requestedBy: varchar("requested_by").notNull(), // 'ai-brain', 'helpai', support user ID
+  requestReason: text("request_reason"), // Why this change was requested
+  conversationId: varchar("conversation_id"), // Chat conversation that triggered this
+  ticketId: varchar("ticket_id"), // Support ticket if applicable
+  
+  // Approval workflow
+  status: codeChangeStatusEnum("status").notNull().default('pending'),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"), // Reviewer's comments
+  
+  // Rollback support
+  appliedAt: timestamp("applied_at"),
+  appliedBy: varchar("applied_by").references(() => users.id),
+  rollbackAvailable: boolean("rollback_available").default(true),
+  
+  // What's New integration
+  whatsNewSent: boolean("whats_new_sent").default(false),
+  whatsNewId: varchar("whats_new_id").references(() => platformUpdates.id),
+  
+  // Priority and categorization
+  priority: integer("priority").default(2), // 1=critical, 2=normal, 3=low
+  category: varchar("category", { length: 100 }), // e.g., 'bugfix', 'feature', 'enhancement'
+  affectedModule: varchar("affected_module", { length: 100 }), // e.g., 'scheduling', 'payroll', 'chat'
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  // Expiry
+  expiresAt: timestamp("expires_at"), // Auto-expire if not reviewed
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("staged_code_changes_status_idx").on(table.status),
+  index("staged_code_changes_requested_by_idx").on(table.requestedBy),
+  index("staged_code_changes_file_path_idx").on(table.filePath),
+  index("staged_code_changes_created_idx").on(table.createdAt),
+  index("staged_code_changes_priority_idx").on(table.priority),
+  index("staged_code_changes_expires_idx").on(table.expiresAt),
+]);
+
+export const insertStagedCodeChangeSchema = createInsertSchema(stagedCodeChanges).omit({
+  id: true,
+  reviewedAt: true,
+  appliedAt: true,
+  whatsNewSent: true,
+  whatsNewId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertStagedCodeChange = z.infer<typeof insertStagedCodeChangeSchema>;
+export type StagedCodeChange = typeof stagedCodeChanges.$inferSelect;
+
+// Batch change requests - group multiple file changes together
+export const codeChangeBatches = pgTable("code_change_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Batch details
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  
+  // Request context
+  requestedBy: varchar("requested_by").notNull(),
+  conversationId: varchar("conversation_id"),
+  
+  // Approval workflow
+  status: codeChangeStatusEnum("status").notNull().default('pending'),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  
+  // Stats
+  totalChanges: integer("total_changes").default(0),
+  approvedChanges: integer("approved_changes").default(0),
+  rejectedChanges: integer("rejected_changes").default(0),
+  
+  // What's New
+  whatsNewTitle: varchar("whats_new_title", { length: 255 }),
+  whatsNewDescription: text("whats_new_description"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("code_change_batches_status_idx").on(table.status),
+  index("code_change_batches_requested_by_idx").on(table.requestedBy),
+  index("code_change_batches_created_idx").on(table.createdAt),
+]);
+
+export const insertCodeChangeBatchSchema = createInsertSchema(codeChangeBatches).omit({
+  id: true,
+  reviewedAt: true,
+  totalChanges: true,
+  approvedChanges: true,
+  rejectedChanges: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCodeChangeBatch = z.infer<typeof insertCodeChangeBatchSchema>;
+export type CodeChangeBatch = typeof codeChangeBatches.$inferSelect;
+
+// Link table for batch -> individual changes
+export const batchCodeChangeLinks = pgTable("batch_code_change_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchId: varchar("batch_id").notNull().references(() => codeChangeBatches.id, { onDelete: 'cascade' }),
+  changeId: varchar("change_id").notNull().references(() => stagedCodeChanges.id, { onDelete: 'cascade' }),
+  order: integer("order").default(0), // Order of changes within batch
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("batch_code_change_links_batch_idx").on(table.batchId),
+  index("batch_code_change_links_change_idx").on(table.changeId),
+  uniqueIndex("batch_code_change_links_unique").on(table.batchId, table.changeId),
+]);
+
+export type BatchCodeChangeLink = typeof batchCodeChangeLinks.$inferSelect;
