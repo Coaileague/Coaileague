@@ -33,7 +33,15 @@ export type ActionCategory =
   | 'support'
   | 'analytics'
   | 'integration'
-  | 'test';
+  | 'test'
+  | 'compliance'
+  | 'gamification'
+  | 'automation'
+  | 'communication'
+  | 'health'
+  | 'user_assistance'
+  | 'lifecycle'
+  | 'escalation';
 
 export type ActionPriority = 'low' | 'normal' | 'high' | 'critical';
 
@@ -827,24 +835,125 @@ class HelpaiActionOrchestrator {
     }
   }
 
+  // Track recent events to prevent duplicates (in-memory cache with 5-minute TTL)
+  private recentEventCache: Map<string, number> = new Map();
+  private readonly EVENT_DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
   /**
-   * Emit action event to platform event bus
+   * Generate a dedup key for an event based on action, workspace, and category
+   */
+  private getEventDedupKey(request: ActionRequest): string {
+    return `${request.actionId}:${request.workspaceId || 'global'}:${request.category}`;
+  }
+
+  /**
+   * Check if a similar event was published recently (within dedup window)
+   */
+  private isDuplicateEvent(dedupKey: string): boolean {
+    const lastPublished = this.recentEventCache.get(dedupKey);
+    if (!lastPublished) return false;
+    
+    const elapsed = Date.now() - lastPublished;
+    if (elapsed < this.EVENT_DEDUP_WINDOW_MS) {
+      return true; // Still within dedup window
+    }
+    
+    // Clean up expired entry
+    this.recentEventCache.delete(dedupKey);
+    return false;
+  }
+
+  /**
+   * Mark an event as published for dedup tracking
+   */
+  private markEventPublished(dedupKey: string): void {
+    this.recentEventCache.set(dedupKey, Date.now());
+    
+    // Periodically clean up old entries (keep cache size manageable)
+    if (this.recentEventCache.size > 1000) {
+      const now = Date.now();
+      for (const [key, timestamp] of this.recentEventCache.entries()) {
+        if (now - timestamp > this.EVENT_DEDUP_WINDOW_MS) {
+          this.recentEventCache.delete(key);
+        }
+      }
+    }
+  }
+
+  /**
+   * Emit action event to platform event bus with user-friendly What's New updates
    */
   private async emitActionEvent(request: ActionRequest, result: ActionResult): Promise<void> {
+    // Only emit events for successful actions (reduce noise)
+    if (!result.success) return;
+
+    // Check for duplicate events within dedup window
+    const dedupKey = this.getEventDedupKey(request);
+    if (this.isDuplicateEvent(dedupKey)) {
+      console.log(`[HelpAI Orchestrator] Skipping duplicate event: ${dedupKey}`);
+      return;
+    }
+
+    // Map action categories to user-friendly event types and visibility
+    const EVENT_POLICY: Record<ActionCategory, { 
+      eventType: 'feature_released' | 'feature_updated' | 'automation_completed' | 'announcement';
+      category: 'feature' | 'improvement' | 'announcement';
+      visibility: 'all' | 'staff' | 'manager' | 'admin';
+      titlePrefix: string;
+    }> = {
+      'scheduling': { eventType: 'automation_completed', category: 'feature', visibility: 'staff', titlePrefix: 'Scheduling' },
+      'payroll': { eventType: 'automation_completed', category: 'feature', visibility: 'manager', titlePrefix: 'Payroll' },
+      'invoicing': { eventType: 'automation_completed', category: 'feature', visibility: 'manager', titlePrefix: 'Invoicing' },
+      'notifications': { eventType: 'feature_updated', category: 'improvement', visibility: 'all', titlePrefix: 'Notifications' },
+      'health_check': { eventType: 'automation_completed', category: 'announcement', visibility: 'admin', titlePrefix: 'System Health' },
+      'system': { eventType: 'feature_updated', category: 'announcement', visibility: 'admin', titlePrefix: 'System' },
+      'support': { eventType: 'announcement', category: 'announcement', visibility: 'admin', titlePrefix: 'Support' },
+      'analytics': { eventType: 'automation_completed', category: 'feature', visibility: 'manager', titlePrefix: 'Analytics' },
+      'integration': { eventType: 'feature_released', category: 'feature', visibility: 'admin', titlePrefix: 'Integration' },
+      'test': { eventType: 'automation_completed', category: 'announcement', visibility: 'admin', titlePrefix: 'Test' },
+      'compliance': { eventType: 'automation_completed', category: 'announcement', visibility: 'manager', titlePrefix: 'Compliance' },
+      'gamification': { eventType: 'feature_updated', category: 'feature', visibility: 'all', titlePrefix: 'Engagement' },
+      'automation': { eventType: 'automation_completed', category: 'feature', visibility: 'manager', titlePrefix: 'Automation' },
+      'communication': { eventType: 'feature_updated', category: 'improvement', visibility: 'all', titlePrefix: 'Communication' },
+      'health': { eventType: 'automation_completed', category: 'announcement', visibility: 'admin', titlePrefix: 'Platform Health' },
+      'user_assistance': { eventType: 'feature_updated', category: 'improvement', visibility: 'all', titlePrefix: 'AI Assistant' },
+      'lifecycle': { eventType: 'automation_completed', category: 'feature', visibility: 'manager', titlePrefix: 'Employee Lifecycle' },
+      'escalation': { eventType: 'automation_completed', category: 'announcement', visibility: 'manager', titlePrefix: 'Escalation' },
+    };
+
+    const policy = EVENT_POLICY[request.category] || EVENT_POLICY['system'];
+    
+    // Create user-friendly title - remove technical prefixes
+    const actionName = request.name.replace(/^(AI|Auto|System)\s*/i, '').trim();
+    const friendlyTitle = `${policy.titlePrefix}: ${actionName}`;
+    
+    // Create descriptive message
+    const friendlyDescription = result.data?.summary || result.message || `${actionName} completed successfully`;
+
     await platformEventBus.publish({
-      type: 'ai_brain_action',
-      category: 'feature',
-      title: `Action: ${request.name}`,
-      description: result.message,
+      type: policy.eventType,
+      category: policy.category,
+      title: friendlyTitle,
+      description: friendlyDescription,
       workspaceId: request.workspaceId,
       userId: request.userId,
+      visibility: policy.visibility,
+      isNew: true,
+      priority: request.priority === 'critical' ? 1 : request.priority === 'high' ? 2 : 3,
       metadata: {
         actionId: request.actionId,
         category: request.category,
         success: result.success,
-        executionTimeMs: result.executionTimeMs
+        executionTimeMs: result.executionTimeMs,
+        source: 'ai_brain_orchestrator',
+        ...result.data
       }
     });
+
+    // Mark event as published for dedup tracking
+    this.markEventPublished(dedupKey);
+    
+    console.log(`[HelpAI Orchestrator] Published What's New: "${friendlyTitle}" (visibility: ${policy.visibility})`);
   }
 
   /**
