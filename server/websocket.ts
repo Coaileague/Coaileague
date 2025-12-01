@@ -4253,7 +4253,7 @@ export function setupWebSocket(server: Server) {
   console.log('WebSocket server initialized on /ws/chat');
   
   // Export broadcast function for shift updates
-  return {
+  const broadcaster = {
     wss,
     broadcastShiftUpdate: (workspaceId: string, updateType: 'shift_created' | 'shift_updated' | 'shift_deleted', shift?: any, shiftId?: string) => {
       const clients = shiftUpdateClients.get(workspaceId);
@@ -4473,10 +4473,9 @@ export function setupWebSocket(server: Server) {
     },
   };
 
-  return {
-    wss,
-    broadcastNotification,
-    broadcastShiftUpdate,
-    broadcastPlatformUpdate,
-  };
+  // Initialize global broadcaster for use by other services (e.g., platformChangeMonitor)
+  setGlobalBroadcaster(broadcaster);
+  console.log('[WebSocket] Global broadcaster initialized');
+
+  return broadcaster;
 }
