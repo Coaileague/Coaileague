@@ -469,12 +469,48 @@ class AIBrainCodeEditorService {
         await this.sendWhatsNewNotification(change, appliedById);
       }
 
+      // Notify all support roles about the applied code change
+      try {
+        const { platformRoles, notifications } = await import('@shared/schema');
+        const { inArray } = await import('drizzle-orm');
+        
+        const supportRoles = await db.query.platformRoles.findMany({
+          where: inArray(platformRoles.role, ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin']),
+          columns: { userId: true },
+        });
+
+        for (const role of supportRoles) {
+          await db.insert(notifications).values({
+            workspaceId: 'coaileague-platform-workspace',
+            userId: role.userId,
+            type: 'code_change',
+            title: `Code Change Applied: ${change.title}`,
+            message: `Platform code change "${change.title}" has been applied. File: ${change.filePath}`,
+            actionUrl: '/dashboard',
+            relatedEntityType: 'code_change',
+            relatedEntityId: changeId,
+            metadata: { 
+              changeId,
+              filePath: change.filePath, 
+              changeType: change.changeType,
+              appliedBy: appliedById
+            },
+            isRead: false,
+          });
+        }
+
+        console.log(`[AIBrainCodeEditor] Notified ${supportRoles.length} support roles about change: ${changeId}`);
+      } catch (notifyError) {
+        console.warn('[AIBrainCodeEditor] Warning: Failed to notify support roles:', notifyError);
+      }
+
       broadcastToAllClients({
         type: 'code_change:applied',
         changeId,
         filePath: change.filePath,
         changeType: change.changeType,
         appliedBy: appliedById,
+        timestamp: new Date().toISOString(),
       });
 
       console.log(`[AIBrainCodeEditor] Applied change: ${changeId} to ${change.filePath}`);
