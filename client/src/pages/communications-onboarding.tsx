@@ -70,7 +70,7 @@ export default function AICommunicationsOnboarding() {
         title: "Setup Complete!",
         description: "Your organization chat room is ready to use",
       });
-      setLocation('/comm-os');
+      setLocation('/communications');
     },
     onError: (error: any) => {
       toast({

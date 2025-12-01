@@ -46,7 +46,7 @@ export function SupportChatroomList() {
 
   const handleJoinRoom = (chatroomId: string) => {
     // Navigate to the chatroom - support will auto-join with admin/owner access
-    setLocation(`/comm-os?room=${chatroomId}`);
+    setLocation(`/communications?room=${chatroomId}`);
   };
 
   // Filter chatrooms based on search query
@@ -102,7 +102,7 @@ export function SupportChatroomList() {
             </div>
           </div>
           <Button
-            onClick={() => setLocation('/comm-os/create')}
+            onClick={() => setLocation('/communications/create')}
             className="bg-primary hover:bg-primary"
             data-testid="button-create-room"
           >

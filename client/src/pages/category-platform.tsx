@@ -16,7 +16,7 @@ export default function PlatformFamilyPage() {
       adminOnly: true
     },
     {
-      name: "AI Integrations™",
+      name: "AI Integrations",
       icon: Zap,
       description: "External service ecosystem with marketplace, API keys, webhooks, and OAuth2 connections",
       features: ["Marketplace", "API Keys", "Webhooks", "OAuth2"],
@@ -24,11 +24,11 @@ export default function PlatformFamilyPage() {
       color: "from-blue-500 to-indigo-500"
     },
     {
-      name: "AI Budgeting™",
+      name: "AI Budgeting",
       icon: TrendingUp,
       description: "Budget planning and control with variance analysis, forecasting, and approval workflows",
       features: ["Budget Planning", "Variance Analysis", "Forecasting", "Approvals"],
-      url: "/budget",
+      url: "/budgeting",
       color: "from-primary to-blue-500"
     },
     {
@@ -67,11 +67,11 @@ export default function PlatformFamilyPage() {
             Enterprise-grade platform administration, diagnostics, and integration management for complete control
           </p>
           <Badge variant="outline" className="text-sm px-4 py-1">
-            5 OS Modules
+            5 Modules
           </Badge>
         </div>
 
-        {/* OS Modules Grid */}
+        {/* Modules Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;

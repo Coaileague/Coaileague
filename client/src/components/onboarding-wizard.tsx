@@ -29,23 +29,23 @@ const onboardingSteps: OnboardingStep[] = [
     description: "The complete workforce optimization platform built for modern enterprises",
     icon: Sparkles,
     features: [
-      "4 OS Families with 20+ integrated modules",
+      "4 Feature Families with 20+ integrated modules",
       "Replace 5+ legacy HR systems with one unified platform",
       "Save $255k annually with automation",
       "Enterprise-grade security (SOC 2, GDPR, ISO 27001)"
     ]
   },
   {
-    id: "os-families",
+    id: "feature-families",
     family: "overview",
-    title: "4 OS Families Overview",
+    title: "4 Feature Families Overview",
     description: "CoAIleague organizes features into 4 logical families for easy navigation",
     icon: Sparkles,
     features: [
-      "📡 Communication & Collaboration - Team chat, DMs, support",
-      "⚙️ Workforce Operations - Scheduling, time, payroll, billing",
-      "🚀 Growth & Intelligence - Hiring, analytics, engagement",
-      "🎛️ Platform & Control - Integrations, budgets, diagnostics"
+      "Communication & Collaboration - Team chat, DMs, support",
+      "Workforce Operations - Scheduling, time, payroll, billing",
+      "Growth & Intelligence - Hiring, analytics, engagement",
+      "Platform & Control - Integrations, budgets, diagnostics"
     ]
   },
   // Communication Family
@@ -63,12 +63,12 @@ const onboardingSteps: OnboardingStep[] = [
     ]
   },
   {
-    id: "communication-os",
+    id: "communications",
     family: "communication",
-    title: "CommunicationOS™ - Team Chatrooms",
+    title: "AI Communications - Team Chatrooms",
     description: "Organization-specific chatrooms with access control and real-time messaging",
     icon: MessageSquare,
-    url: "/communication",
+    url: "/communications",
     features: [
       "Create public and private rooms for teams",
       "Manage room members and access permissions",
@@ -106,9 +106,9 @@ const onboardingSteps: OnboardingStep[] = [
     ]
   },
   {
-    id: "schedule-os",
+    id: "schedule",
     family: "operations",
-    title: "AI Scheduling™ - Smart Scheduling",
+    title: "AI Scheduling - Smart Scheduling",
     description: "Drag-and-drop scheduling with AI conflict detection",
     icon: Calendar,
     url: "/schedule",
@@ -120,7 +120,7 @@ const onboardingSteps: OnboardingStep[] = [
     ]
   },
   {
-    id: "time-os",
+    id: "time-tracking",
     family: "operations",
     title: "Time Platform - Time Tracking",
     description: "Comprehensive time tracking with geofencing and overtime management",
@@ -149,9 +149,9 @@ const onboardingSteps: OnboardingStep[] = [
     ]
   },
   {
-    id: "hire-os",
+    id: "hiring",
     family: "growth",
-    title: "AI Hiring™ - Recruitment Workflow",
+    title: "AI Hiring - Recruitment Workflow",
     description: "Streamline hiring with candidate tracking and interview scheduling",
     icon: Briefcase,
     url: "/owner/hireos/workflow-builder",
@@ -163,9 +163,9 @@ const onboardingSteps: OnboardingStep[] = [
     ]
   },
   {
-    id: "engagement-os",
+    id: "engagement",
     family: "growth",
-    title: "EngagementOS™ - Employee Engagement",
+    title: "Engagement - Employee Engagement",
     description: "Boost morale with pulse surveys and recognition programs",
     icon: Activity,
     url: "/engagement/dashboard",
@@ -226,10 +226,10 @@ const onboardingSteps: OnboardingStep[] = [
     description: "You're ready to start using CoAIleague",
     icon: CheckCircle2,
     features: [
-      "Click any OS Family in the sidebar to explore modules",
-      "Access this tour anytime from Settings → Platform Tour",
+      "Click any Feature Family in the sidebar to explore modules",
+      "Access this tour anytime from Settings - Platform Tour",
       "Check your progress: Communication, Operations, Growth, Platform",
-      "Contact support anytime via SupportOS™ HelpDesk"
+      "Contact support anytime via HelpDesk"
     ]
   }
 ];

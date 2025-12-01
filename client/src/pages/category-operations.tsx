@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 export default function OperationsFamilyPage() {
   const modules = [
     {
-      name: "AI Scheduling™",
+      name: "AI Scheduling",
       icon: Calendar,
       description: "Smart AI-powered scheduling with drag-and-drop, conflict detection, and mobile sync",
       features: ["Drag & Drop", "Conflict Detection", "Mobile Sync", "Auto-optimization"],
@@ -23,7 +23,7 @@ export default function OperationsFamilyPage() {
       color: "from-blue-500 to-blue-600"
     },
     {
-      name: "AI Payroll™",
+      name: "AI Payroll",
       icon: DollarSign,
       description: "Automated payroll processing with tax calculations, direct deposit, and compliance",
       features: ["Auto Processing", "Tax Calculations", "Direct Deposit", "Pay Stubs"],
@@ -39,7 +39,7 @@ export default function OperationsFamilyPage() {
       color: "from-blue-500 to-indigo-500"
     },
     {
-      name: "AI Training™",
+      name: "AI Training",
       icon: Package,
       description: "Learning management system with courses, certifications, and compliance tracking",
       features: ["Course Catalog", "Certifications", "Progress Tracking", "Compliance"],
@@ -67,17 +67,17 @@ export default function OperationsFamilyPage() {
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-400 via-blue-400 to-blue-500 bg-clip-text text-transparent">
-            Workforce Operations OS
+            Workforce Operations
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Automate and optimize your daily workforce operations with integrated scheduling, time tracking, and payroll
           </p>
           <Badge variant="outline" className="text-sm px-4 py-1">
-            6 OS Modules
+            6 Modules
           </Badge>
         </div>
 
-        {/* OS Modules Grid */}
+        {/* Modules Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;

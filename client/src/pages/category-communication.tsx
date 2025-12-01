@@ -7,11 +7,11 @@ import { Badge } from "@/components/ui/badge";
 export default function CommunicationFamilyPage() {
   const modules = [
     {
-      name: "CommunicationOS™",
+      name: "AI Communications",
       icon: MessageSquare,
       description: "Organization-wide chatrooms with real-time messaging, room management, and access control",
       features: ["Public & Private Rooms", "Member Management", "Real-time Updates", "Room Archives"],
-      url: "/communication",
+      url: "/communications",
       color: "from-blue-500 to-cyan-500"
     },
     {
@@ -23,7 +23,7 @@ export default function CommunicationFamilyPage() {
       color: "from-purple-500 to-pink-500"
     },
     {
-      name: "SupportOS™ HelpDesk",
+      name: "HelpDesk",
       icon: Headphones,
       description: "Live customer support with mobile-optimized chat interface and ticket management",
       features: ["Live Chat", "Ticket System", "Mobile Interface", "Support Analytics"],
@@ -43,17 +43,17 @@ export default function CommunicationFamilyPage() {
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Communication & Collaboration OS
+            Communication & Collaboration
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Connect your entire organization with powerful communication tools designed for modern workforces
           </p>
           <Badge variant="outline" className="text-sm px-4 py-1">
-            3 OS Modules
+            3 Modules
           </Badge>
         </div>
 
-        {/* OS Modules Grid */}
+        {/* Modules Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;
@@ -92,7 +92,7 @@ export default function CommunicationFamilyPage() {
         {/* Benefits Section */}
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-2xl">Why Communication OS Family?</CardTitle>
+            <CardTitle className="text-2xl">Why Communication Family?</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-6">
