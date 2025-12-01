@@ -705,9 +705,10 @@ export default function Chatrooms() {
           <Button
             size="icon"
             variant="outline"
-            onClick={() => setLocation("/")}
-            data-testid="button-back-to-home"
+            onClick={() => setLocation("/dashboard")}
+            data-testid="button-back-to-dashboard"
             className="shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+            title="Back to Dashboard"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

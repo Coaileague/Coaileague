@@ -192,18 +192,21 @@ export const OWNERSHIP_INDICATORS = {
     label: 'Platform',
     tooltip: 'Official CoAIleague channel',
     className: 'text-amber-400 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/40',
+    color: 'text-amber-400',
   },
   organization: {
     icon: Building2,
     label: 'Organization',
     tooltip: 'Organization channel',
     className: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30',
+    color: 'text-emerald-500',
   },
   user: {
     icon: Users,
     label: 'Team',
     tooltip: 'Team channel',
     className: 'text-blue-500 bg-blue-500/10 border-blue-500/30',
+    color: 'text-blue-500',
   },
 };
 
