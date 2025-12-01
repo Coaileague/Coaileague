@@ -152,6 +152,7 @@ import SupportAIConsole from "@/pages/support-ai-console";
 import SystemHealth from "@/pages/system-health";
 import { HeaderChatButton } from "@/components/header-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
+import { ChatroomNotificationListener } from "@/components/chatroom-notification-listener";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
@@ -751,6 +752,7 @@ export default function App() {
                   <TooltipProvider>
                     <UniversalAnimationProvider>
                       <ResponsiveAppFrame>
+                        <ChatroomNotificationListener />
                         <AppContent />
                         <ReenableChatButton />
                         <Toaster />
