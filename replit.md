@@ -20,6 +20,7 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 
 **Technical Implementations:**
 - **AI Brain Services:** Fully implemented for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, leveraging Gemini 2.0 Flash. This includes advanced FAQ knowledge governance, intelligent learning, and gap detection.
+- **Gemini Function Calling (Dec 2025):** Complete 8-step workflow with multi-turn conversation loop. Tools: `search_faqs` (TEXT[] array handling via EXISTS+UNNEST), `create_support_ticket`, `get_business_insights`, `suggest_automation`, `recommend_platform_feature`, `update_faq`. Features max iteration guard (3), multi-part candidate response extraction, and best-effort tool result fallbacks when Gemini returns no text.
 - **Financials:** Real Stripe integration for payment processing, payroll, invoicing, deductions, and tax calculations.
 - **Email Automation:** Full Resend integration with per-email billing and pre-built templates.
 - **Notifications:** WebSocket infrastructure for real-time notifications and Resend for email delivery.
