@@ -13,7 +13,7 @@ import {
   organizationChatRooms,
   organizationRoomMembers,
 } from "@shared/schema";
-import { eq, and, or, sql, inArray, count, desc, gte } from "drizzle-orm";
+import { eq, and, or, sql, inArray, count, desc, gte, isNull } from "drizzle-orm";
 import { AuthenticatedRequest } from "../rbac";
 import rateLimit from "express-rate-limit";
 
@@ -369,7 +369,7 @@ router.get(
           .where(
             or(
               eq(supportRooms.workspaceId, workspaceId),
-              eq(supportRooms.workspaceId, null) // Platform-wide support rooms
+              isNull(supportRooms.workspaceId) // Platform-wide support rooms
             )
           );
 
@@ -1512,6 +1512,283 @@ router.delete(
     } catch (error: any) {
       console.error("Error deleting room:", error);
       res.status(500).json({ error: "Failed to delete room" });
+    }
+  }
+);
+
+// ============================================================================
+// PLATFORM-WIDE ROOMS - GET /api/chat/rooms/platform/all (Support Staff Only)
+// ============================================================================
+// Returns all rooms across all workspaces for support staff moderation
+router.get(
+  "/platform/all",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const userId = authReq.user?.id;
+      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+
+      if (!userId) {
+        return res.status(403).json({ error: "Authentication required" });
+      }
+
+      // Only support staff can access platform-wide rooms
+      const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+      if (!platformRole || !supportRoles.includes(platformRole)) {
+        return res.status(403).json({ error: "Support staff access required" });
+      }
+
+      const { orgFilter, categoryFilter, search, status: statusFilter } = req.query;
+
+      const rooms: any[] = [];
+
+      // Get all active conversations across all workspaces
+      let query = db
+        .select({
+          id: chatConversations.id,
+          subject: chatConversations.subject,
+          conversationType: chatConversations.conversationType,
+          visibility: chatConversations.visibility,
+          status: chatConversations.status,
+          workspaceId: chatConversations.workspaceId,
+          createdAt: chatConversations.createdAt,
+          lastMessageAt: chatConversations.lastMessageAt,
+          autoCloseAt: chatConversations.autoCloseAt,
+          customerId: chatConversations.customerId,
+          customerName: chatConversations.customerName,
+        })
+        .from(chatConversations)
+        .where(
+          statusFilter && statusFilter !== 'all'
+            ? eq(chatConversations.status, statusFilter as string)
+            : sql`1=1`
+        );
+
+      const allConversations = await query;
+
+      for (const conv of allConversations) {
+        // Apply org filter
+        if (orgFilter && orgFilter !== 'all' && conv.workspaceId !== orgFilter) {
+          continue;
+        }
+
+        // Apply category filter
+        if (categoryFilter && categoryFilter !== 'all') {
+          const typeMap: Record<string, string[]> = {
+            'support': ['dm_support'],
+            'shift': ['shift_chat'],
+            'work': ['open_chat', 'dm_user'],
+            'meeting': ['meeting'],
+          };
+          if (typeMap[categoryFilter as string] && !typeMap[categoryFilter as string].includes(conv.conversationType || '')) {
+            continue;
+          }
+        }
+
+        // Apply search filter
+        if (search && typeof search === 'string' && search.trim()) {
+          const searchLower = search.toLowerCase();
+          const nameMatch = (conv.subject || '').toLowerCase().includes(searchLower);
+          const creatorMatch = (conv.customerName || '').toLowerCase().includes(searchLower);
+          if (!nameMatch && !creatorMatch) {
+            continue;
+          }
+        }
+
+        // Get participant count
+        const [countResult] = await db
+          .select({ count: count() })
+          .from(chatParticipants)
+          .where(
+            and(
+              eq(chatParticipants.conversationId, conv.id),
+              eq(chatParticipants.isActive, true)
+            )
+          );
+
+        rooms.push({
+          id: conv.id,
+          name: conv.subject || 'Untitled Room',
+          conversationType: conv.conversationType,
+          visibility: conv.visibility,
+          status: conv.status,
+          workspaceId: conv.workspaceId,
+          participantsCount: countResult?.count || 0,
+          createdAt: conv.createdAt,
+          lastMessageAt: conv.lastMessageAt,
+          autoCloseAt: conv.autoCloseAt,
+          createdBy: conv.customerName || 'Unknown',
+          createdById: conv.customerId,
+        });
+      }
+
+      // Sort by last message time (most recent first)
+      rooms.sort((a, b) => {
+        const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      res.json({
+        success: true,
+        rooms,
+        totalRooms: rooms.length,
+        filters: {
+          orgFilter: orgFilter || 'all',
+          categoryFilter: categoryFilter || 'all',
+          search: search || '',
+          statusFilter: statusFilter || 'all',
+        }
+      });
+    } catch (error: any) {
+      console.error("[GET /api/chat/rooms/platform/all] Error:", error);
+      res.status(500).json({ error: "Failed to list platform rooms" });
+    }
+  }
+);
+
+// ============================================================================
+// MODERATE ROOM - POST /api/chat/rooms/:roomId/moderate (Support Staff Only)
+// ============================================================================
+// Allows support staff to suspend, close, or take action on any room
+router.post(
+  "/:roomId/moderate",
+  roomLimiter,
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const { roomId } = req.params;
+      const { action, reason } = req.body;
+      const userId = authReq.user?.id;
+      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const userName = (authReq.user as any)?.firstName && (authReq.user as any)?.lastName
+        ? `${(authReq.user as any).firstName} ${(authReq.user as any).lastName}`
+        : authReq.user?.email || "Support Staff";
+
+      if (!userId) {
+        return res.status(403).json({ error: "Authentication required" });
+      }
+
+      // Only support staff can moderate
+      const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+      if (!platformRole || !supportRoles.includes(platformRole)) {
+        return res.status(403).json({ error: "Support staff access required" });
+      }
+
+      // Validate action
+      const validActions = ['suspend', 'close', 'reopen', 'archive', 'warn'];
+      if (!action || !validActions.includes(action)) {
+        return res.status(400).json({ error: `Invalid action. Valid actions: ${validActions.join(', ')}` });
+      }
+
+      // Get conversation (no workspace filter for support staff)
+      const [conversation] = await db
+        .select()
+        .from(chatConversations)
+        .where(eq(chatConversations.id, roomId))
+        .limit(1);
+
+      if (!conversation) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      // Map action to status
+      const actionStatusMap: Record<string, string> = {
+        'suspend': 'suspended',
+        'close': 'closed',
+        'reopen': 'active',
+        'archive': 'archived',
+        'warn': conversation.status || 'active', // Warn doesn't change status
+      };
+
+      const newStatus = actionStatusMap[action];
+
+      // Update conversation status
+      if (action !== 'warn') {
+        await db
+          .update(chatConversations)
+          .set({ 
+            status: newStatus,
+            updatedAt: new Date(),
+          })
+          .where(eq(chatConversations.id, roomId));
+      }
+
+      // Create audit event
+      await createRoomEvent(
+        conversation.workspaceId || 'platform',
+        roomId,
+        userId,
+        userName,
+        platformRole,
+        `room_${action}`,
+        `Support staff ${userName} performed ${action} on room: ${conversation.subject || 'Untitled'}${reason ? ` - Reason: ${reason}` : ''}`,
+        {
+          action,
+          reason,
+          previousStatus: conversation.status,
+          newStatus,
+          moderatorRole: platformRole,
+        },
+        authReq.ip,
+        authReq.get("user-agent")
+      );
+
+      res.json({
+        success: true,
+        message: `Room ${action} successful`,
+        room: {
+          id: roomId,
+          name: conversation.subject,
+          previousStatus: conversation.status,
+          newStatus,
+          action,
+          reason,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error moderating room:", error);
+      res.status(500).json({ error: "Failed to moderate room" });
+    }
+  }
+);
+
+// ============================================================================
+// GET WORKSPACES LIST - GET /api/chat/rooms/workspaces (Support Staff Only)
+// ============================================================================
+// Returns list of workspaces for filtering
+router.get(
+  "/workspaces",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+
+      // Only support staff can access
+      const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+      if (!platformRole || !supportRoles.includes(platformRole)) {
+        return res.status(403).json({ error: "Support staff access required" });
+      }
+
+      // Import workspaces table
+      const { workspaces } = await import("@shared/schema");
+
+      const workspacesList = await db
+        .select({
+          id: workspaces.id,
+          name: workspaces.name,
+          slug: workspaces.organizationId, // Use organizationId as slug
+        })
+        .from(workspaces)
+        .where(eq(workspaces.subscriptionStatus, 'active'));
+
+      res.json({
+        success: true,
+        workspaces: workspacesList,
+      });
+    } catch (error: any) {
+      console.error("Error fetching workspaces:", error);
+      res.status(500).json({ error: "Failed to fetch workspaces" });
     }
   }
 );

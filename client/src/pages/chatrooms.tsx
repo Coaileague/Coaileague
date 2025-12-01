@@ -12,11 +12,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   MessageCircle, Users, Lock, Globe, Plus, Search, Loader2, Check, ArrowLeft, 
-  RefreshCw, Crown, Building2, Wifi
+  RefreshCw, Crown, Building2, Wifi, Calendar, Briefcase, Video, MoreHorizontal,
+  Pause, XCircle, Play, Archive, AlertTriangle, Eye, Filter, LayoutGrid, List
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ROOM_TYPES, 
@@ -83,6 +90,275 @@ const normalizeRoom = (room: any): ChatRoom => {
     workspaceName: room.workspaceName,
   };
 };
+
+interface CreateRoomDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+function CreateRoomDialog({ open, onOpenChange, onSuccess }: CreateRoomDialogProps) {
+  const { toast } = useToast();
+  const [subject, setSubject] = useState("");
+  const [roomType, setRoomType] = useState<string>("work");
+  const [visibility, setVisibility] = useState<string>("workspace");
+  const [duration, setDuration] = useState<string>("permanent");
+
+  const createRoomMutation = useMutation({
+    mutationFn: async (data: { subject: string; conversationType: string; visibility: string; autoCloseAt?: string }) => {
+      return await apiRequest('POST', '/api/chat/rooms', data);
+    },
+    onSuccess: () => {
+      toast({ title: "Room Created", description: "Your chatroom is now live" });
+      queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
+      onSuccess();
+      onOpenChange(false);
+      setSubject("");
+      setRoomType("work");
+      setVisibility("workspace");
+      setDuration("permanent");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create room", variant: "destructive" });
+    },
+  });
+
+  const handleCreate = () => {
+    if (!subject.trim()) {
+      toast({ title: "Required", description: "Please enter a room name", variant: "destructive" });
+      return;
+    }
+
+    const typeMap: Record<string, string> = {
+      'work': 'open_chat',
+      'shift': 'shift_chat',
+      'meeting': 'open_chat',
+    };
+
+    let autoCloseAt: string | undefined;
+    if (duration !== 'permanent') {
+      const hours = parseInt(duration);
+      const closeDate = new Date();
+      closeDate.setHours(closeDate.getHours() + hours);
+      autoCloseAt = closeDate.toISOString();
+    }
+
+    createRoomMutation.mutate({
+      subject: subject.trim(),
+      conversationType: typeMap[roomType] || 'open_chat',
+      visibility,
+      autoCloseAt,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            Create New Chatroom
+          </DialogTitle>
+          <DialogDescription>
+            Start a conversation for your team, shift, or meeting
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="room-name">Room Name</Label>
+            <Input
+              id="room-name"
+              placeholder="e.g., Morning Shift Chat, Team Standup"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              data-testid="input-room-name"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Room Type</Label>
+              <Select value={roomType} onValueChange={setRoomType}>
+                <SelectTrigger data-testid="select-room-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="work">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-blue-500" />
+                      Work
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="shift">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-amber-500" />
+                      Shift
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="meeting">
+                    <div className="flex items-center gap-2">
+                      <Video className="h-4 w-4 text-purple-500" />
+                      Meeting
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <Select value={visibility} onValueChange={setVisibility}>
+                <SelectTrigger data-testid="select-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="workspace">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Organization
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="private">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Private
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Duration</Label>
+            <Select value={duration} onValueChange={setDuration}>
+              <SelectTrigger data-testid="select-duration">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="permanent">Permanent</SelectItem>
+                <SelectItem value="2">2 Hours (Shift)</SelectItem>
+                <SelectItem value="4">4 Hours (Half Day)</SelectItem>
+                <SelectItem value="8">8 Hours (Full Day)</SelectItem>
+                <SelectItem value="24">24 Hours</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Temporary rooms auto-close after the selected duration
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={createRoomMutation.isPending} data-testid="button-create-room">
+            {createRoomMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Room
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ModerateRoomDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  room: ChatRoom | null;
+  action: string;
+  onSuccess: () => void;
+}
+
+function ModerateRoomDialog({ open, onOpenChange, room, action, onSuccess }: ModerateRoomDialogProps) {
+  const { toast } = useToast();
+  const [reason, setReason] = useState("");
+
+  const moderateMutation = useMutation({
+    mutationFn: async (data: { action: string; reason: string }) => {
+      return await apiRequest('POST', `/api/chat/rooms/${room?.id || room?.roomId}/moderate`, data);
+    },
+    onSuccess: (data: any) => {
+      toast({ 
+        title: "Action Complete", 
+        description: data.message || `Room ${action} successful` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms/platform/all'] });
+      onSuccess();
+      onOpenChange(false);
+      setReason("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Action failed", variant: "destructive" });
+    },
+  });
+
+  const actionLabels: Record<string, { title: string; description: string; icon: any; color: string }> = {
+    suspend: { title: "Suspend Room", description: "Temporarily pause this room", icon: Pause, color: "text-amber-500" },
+    close: { title: "Close Room", description: "Permanently close this room", icon: XCircle, color: "text-red-500" },
+    reopen: { title: "Reopen Room", description: "Reactivate this room", icon: Play, color: "text-green-500" },
+    archive: { title: "Archive Room", description: "Archive for records", icon: Archive, color: "text-slate-500" },
+    warn: { title: "Send Warning", description: "Issue a warning to room", icon: AlertTriangle, color: "text-orange-500" },
+  };
+
+  const config = actionLabels[action] || actionLabels.warn;
+  const ActionIcon = config.icon;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className={`flex items-center gap-2 ${config.color}`}>
+            <ActionIcon className="h-5 w-5" />
+            {config.title}
+          </DialogTitle>
+          <DialogDescription>
+            {config.description}: <strong>{room?.name || room?.subject}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="reason">Reason (optional)</Label>
+            <Textarea
+              id="reason"
+              placeholder="Enter reason for this action..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="min-h-[80px]"
+              data-testid="input-moderation-reason"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button 
+            onClick={() => moderateMutation.mutate({ action, reason })} 
+            disabled={moderateMutation.isPending}
+            variant={action === 'close' ? 'destructive' : 'default'}
+            data-testid="button-confirm-moderate"
+          >
+            {moderateMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <ActionIcon className="h-4 w-4 mr-2" />
+                Confirm
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function RoomOwnershipBadge({ ownership, workspaceLogo, workspaceName }: { 
   ownership: RoomOwnership; 
@@ -258,9 +534,34 @@ export default function Chatrooms() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [moderateDialogOpen, setModerateDialogOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
+  const [moderateAction, setModerateAction] = useState('');
+  const [orgFilter, setOrgFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const hasSupportRole = isSupportRole(user?.platformRole);
   const userWorkspaceId = employee?.workspaceId;
+
+  const { data: workspacesData } = useQuery<{ workspaces: { id: string; name: string; slug: string }[] }>({
+    queryKey: ['/api/chat/rooms/workspaces'],
+    enabled: hasSupportRole,
+  });
+
+  const { data: platformRoomsData, isLoading: platformLoading, refetch: refetchPlatform } = useQuery<{ rooms: ChatRoom[] }>({
+    queryKey: ['/api/chat/rooms/platform/all', { orgFilter, categoryFilter, search: searchQuery, status: statusFilter }],
+    enabled: hasSupportRole && viewMode === 'table',
+    staleTime: LIVE_UPDATE_CONFIG.staleTime,
+  });
+
+  const handleModerate = (room: ChatRoom, action: string) => {
+    setSelectedRoom(room);
+    setModerateAction(action);
+    setModerateDialogOpen(true);
+  };
 
   const { data: roomsData, isLoading, error, refetch, isFetching } = useQuery<ChatRoomsResponse>({
     queryKey: ['/api/chat/rooms'],
@@ -379,16 +680,48 @@ export default function Chatrooms() {
               }
             </p>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="shrink-0"
-            data-testid="button-refresh-rooms"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasSupportRole && (
+              <div className="flex items-center border rounded-md">
+                <Button
+                  size="icon"
+                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                  onClick={() => setViewMode('grid')}
+                  className="h-9 w-9 rounded-r-none"
+                  data-testid="button-view-grid"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                  onClick={() => setViewMode('table')}
+                  className="h-9 w-9 rounded-l-none"
+                  data-testid="button-view-table"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <Button
+              size="sm"
+              onClick={() => setCreateDialogOpen(true)}
+              data-testid="button-open-create-room"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">New Room</span>
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => viewMode === 'table' ? refetchPlatform() : refetch()}
+              disabled={isFetching || platformLoading}
+              className="shrink-0"
+              data-testid="button-refresh-rooms"
+            >
+              <RefreshCw className={`h-4 w-4 ${(isFetching || platformLoading) ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
@@ -489,52 +822,269 @@ export default function Chatrooms() {
           </Card>
         )}
 
-        {!isLoading && !error && (
+        {hasSupportRole && viewMode === 'table' ? (
           <>
-            {filteredRooms.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="pt-12 text-center pb-12">
-                  <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium mb-2">
-                    {searchQuery ? 'No rooms match your search' : CHATROOM_UI.emptyStateTitle}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {activeFilter === 'available'
-                      ? 'You are already a member of all available rooms'
-                      : CHATROOM_UI.emptyStateDescription}
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="mb-4 flex flex-wrap gap-2">
+              <Select value={orgFilter} onValueChange={setOrgFilter}>
+                <SelectTrigger className="w-[180px]" data-testid="select-org-filter">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="All Organizations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Organizations</SelectItem>
+                  {workspacesData?.workspaces?.map((ws) => (
+                    <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[150px]" data-testid="select-category-filter">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="work">Work</SelectItem>
+                  <SelectItem value="shift">Shift</SelectItem>
+                  <SelectItem value="support">Support</SelectItem>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[130px]" data-testid="select-status-filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {platformLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {filteredRooms.map((room: ChatRoom) => (
-                  <RoomCard
-                    key={room.id || room.roomId}
-                    room={room}
-                    isSelected={!!(room.id && selectedRooms.has(room.id))}
-                    onSelect={() => handleSelectRoom(room.id)}
-                    onJoin={() => {
-                      if (room.id) {
-                        joinRoomsMutation.mutate([room.id]);
-                      }
-                    }}
-                  />
-                ))}
+              <Card>
+                <ScrollArea className="h-[600px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Participants</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead>Last Active</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(platformRoomsData?.rooms || []).map((room) => {
+                        const typeConfig = getRoomTypeConfig(room.conversationType);
+                        const TypeIcon = typeConfig.icon;
+                        return (
+                          <TableRow key={room.id} data-testid={`row-room-${room.id}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`p-1.5 rounded ${typeConfig.bgColor}`}>
+                                  <TypeIcon className={`h-4 w-4 ${typeConfig.color}`} />
+                                </div>
+                                <div>
+                                  <p className="font-medium truncate max-w-[200px]">{room.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                    {room.workspaceId?.slice(0, 8)}...
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`${typeConfig.bgColor} ${typeConfig.color}`}>
+                                {typeConfig.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={room.status === 'active' ? 'default' : room.status === 'suspended' ? 'secondary' : 'outline'}
+                                className={room.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/30' : ''}
+                              >
+                                {room.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {room.participantsCount || 0}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">{room.createdBy || 'Unknown'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {room.lastMessageAt 
+                                ? formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })
+                                : 'Never'
+                              }
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost" data-testid={`button-room-actions-${room.id}`}>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => setLocation(`/chat/${room.id}`)}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Room
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {room.status === 'active' && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => handleModerate(room, 'suspend')}>
+                                        <Pause className="h-4 w-4 mr-2 text-amber-500" />
+                                        Suspend
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleModerate(room, 'warn')}>
+                                        <AlertTriangle className="h-4 w-4 mr-2 text-orange-500" />
+                                        Send Warning
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {room.status === 'suspended' && (
+                                    <DropdownMenuItem onClick={() => handleModerate(room, 'reopen')}>
+                                      <Play className="h-4 w-4 mr-2 text-green-500" />
+                                      Reopen
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => handleModerate(room, 'archive')}>
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Archive
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleModerate(room, 'close')}
+                                    className="text-destructive"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Close Room
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {(platformRoomsData?.rooms || []).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No rooms found matching your filters
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </Card>
+            )}
+
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Showing {(platformRoomsData?.rooms || []).length} rooms platform-wide
+            </div>
+          </>
+        ) : (
+          <>
+            {!isLoading && !error && (
+              <>
+                {filteredRooms.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="pt-12 text-center pb-12">
+                      <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                      <p className="text-muted-foreground font-medium mb-2">
+                        {searchQuery ? 'No rooms match your search' : CHATROOM_UI.emptyStateTitle}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {activeFilter === 'available'
+                          ? 'You are already a member of all available rooms'
+                          : CHATROOM_UI.emptyStateDescription}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    {filteredRooms.map((room: ChatRoom) => (
+                      <RoomCard
+                        key={room.id || room.roomId}
+                        room={room}
+                        isSelected={!!(room.id && selectedRooms.has(room.id))}
+                        onSelect={() => handleSelectRoom(room.id)}
+                        onJoin={() => {
+                          if (room.id) {
+                            joinRoomsMutation.mutate([room.id]);
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6 text-center text-xs sm:text-sm text-muted-foreground">
+                  Showing {filteredRooms.length} of {(roomsData?.rooms || []).length || 0} room{(roomsData?.rooms || []).length !== 1 ? 's' : ''} 
+                  {!hasSupportRole && userWorkspaceId && ' (organization only)'}
+                  {isFetching && !isLoading && (
+                    <span className="ml-2 text-primary">
+                      <RefreshCw className="h-3 w-3 inline animate-spin" /> Updating...
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+
+            {isLoading && (
+              <div className="flex items-center justify-center py-12 sm:py-16">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-primary" />
+                  <p className="text-muted-foreground">Loading chatrooms...</p>
+                </div>
               </div>
             )}
 
-            <div className="mt-6 text-center text-xs sm:text-sm text-muted-foreground">
-              Showing {filteredRooms.length} of {(roomsData?.rooms || []).length || 0} room{(roomsData?.rooms || []).length !== 1 ? 's' : ''} 
-              {!hasSupportRole && userWorkspaceId && ' (organization only)'}
-              {isFetching && !isLoading && (
-                <span className="ml-2 text-primary">
-                  <RefreshCw className="h-3 w-3 inline animate-spin" /> Updating...
-                </span>
-              )}
-            </div>
+            {error && (
+              <Card className="border-destructive/50 bg-destructive/5">
+                <CardContent className="pt-6 text-center">
+                  <p className="text-destructive font-medium">Failed to load chatrooms</p>
+                  <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => refetch()}
+                    className="mt-4"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
+
+      <CreateRoomDialog 
+        open={createDialogOpen} 
+        onOpenChange={setCreateDialogOpen} 
+        onSuccess={() => {}} 
+      />
+      
+      <ModerateRoomDialog
+        open={moderateDialogOpen}
+        onOpenChange={setModerateDialogOpen}
+        room={selectedRoom}
+        action={moderateAction}
+        onSuccess={() => {}}
+      />
     </div>
   );
 }
