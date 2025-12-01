@@ -436,6 +436,7 @@ function AppContent() {
               <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
               <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
               <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery and bulk join */}
+              <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
               <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
               
               {/* Redirect legacy chat routes to unified /chat */}
@@ -622,6 +623,7 @@ function AppContent() {
                 <Route path="/review-disputes" component={ReviewDisputes} />
                 <Route path="/communications" component={Communications} />
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
+                <Route path="/chatrooms" component={Chatrooms} />
                 <Route path="/diagnostics" component={Diagnostics} />
                 <Route path="/messages" component={PrivateMessages} />
                 <Route path="/training" component={Training} />
@@ -699,6 +701,7 @@ function AppContent() {
                 {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT */}
                 <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
                 <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
+                <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
                 
                 {/* Redirect legacy chat routes to unified /chat */}
                 <Route path="/support/chat"><Redirect to="/chat" /></Route>

@@ -288,8 +288,8 @@ export const osModules: OSModule[] = [
     ],
   },
   {
-    id: 'operations-os',
-    name: 'OperationsOS™',
+    id: 'operations',
+    name: 'Operations',
     description: 'Field Operations Management',
     icon: CalendarDays,
     color: 'hsl(var(--chart-1))',
@@ -297,8 +297,8 @@ export const osModules: OSModule[] = [
     familyId: 'operations',
     routes: [
       {
-        id: 'schedule-os',
-        label: 'AI Scheduling™',
+        id: 'schedule',
+        label: 'AI Scheduling',
         href: '/schedule',
         icon: CalendarDays,
         description: 'Intelligent shift scheduling',
@@ -308,7 +308,7 @@ export const osModules: OSModule[] = [
         order: 1,
       },
       {
-        id: 'time-os',
+        id: 'time-tracking',
         label: 'Time Platform',
         href: '/time-tracking',
         icon: Clock,
@@ -399,8 +399,8 @@ export const osModules: OSModule[] = [
     familyId: 'people',
     routes: [
       {
-        id: 'training-os',
-        label: 'AI Training™',
+        id: 'training',
+        label: 'AI Training',
         href: '/training',
         icon: GraduationCap,
         description: 'Employee onboarding and compliance training',
@@ -434,8 +434,8 @@ export const osModules: OSModule[] = [
     ],
   },
   {
-    id: 'intelligence-os',
-    name: 'IntelligenceOS™',
+    id: 'intelligence',
+    name: 'Intelligence',
     description: 'AI-Powered Automation & Analytics',
     icon: FileBarChart,
     color: 'hsl(var(--chart-4))',
@@ -443,8 +443,8 @@ export const osModules: OSModule[] = [
     familyId: 'intelligence',
     routes: [
       {
-        id: 'deal-os',
-        label: 'DealOS™ Sales',
+        id: 'deal-sales',
+        label: 'Sales',
         href: '/sales',
         icon: BadgeDollarSign,
         description: 'AI-powered RFP hunting and contract generation',
@@ -455,8 +455,8 @@ export const osModules: OSModule[] = [
         order: 4,
       },
       {
-        id: 'talent-os',
-        label: 'TalentOS™',
+        id: 'talent',
+        label: 'Talent Management',
         href: '/leaders-hub',
         icon: Award,
         description: 'Leadership development and recognition',
@@ -466,8 +466,8 @@ export const osModules: OSModule[] = [
         order: 3,
       },
       {
-        id: 'engagement-os',
-        label: 'EngagementOS™',
+        id: 'engagement',
+        label: 'Engagement',
         href: '/engagement/dashboard',
         icon: TrendingUp,
         description: 'Pulse surveys and employee engagement',
@@ -477,8 +477,8 @@ export const osModules: OSModule[] = [
         order: 4,
       },
       {
-        id: 'analytics-os',
-        label: 'AnalyticsOS™',
+        id: 'analytics',
+        label: 'Analytics',
         href: '/analytics',
         icon: PieChart,
         description: 'AI-powered predictive analytics',
@@ -490,8 +490,8 @@ export const osModules: OSModule[] = [
         order: 1,
       },
       {
-        id: 'report-os',
-        label: 'ReportOS™',
+        id: 'reports',
+        label: 'Reports',
         href: '/reports',
         icon: FileBarChart,
         description: 'Comprehensive business intelligence',
@@ -502,8 +502,8 @@ export const osModules: OSModule[] = [
         order: 2,
       },
       {
-        id: 'insight-os',
-        label: 'AI Analytics™ Reports',
+        id: 'insights',
+        label: 'AI Analytics Reports',
         href: '/analytics/reports',
         icon: FileCheck2,
         description: 'Management reports with role-based access',
@@ -680,13 +680,13 @@ export const platformSupportModule: OSModule = {
  * Key operational routes needed for QA/support/monitoring
  */
 const curatedWorkspaceRoutesForPlatformStaff: string[] = [
-  'schedule-os',         // AI Scheduling™ - verify schedule automation
-  'payroll-os',          // AI Payroll™ - verify payroll processing
+  'schedule',            // AI Scheduling - verify schedule automation
+  'payroll',             // AI Payroll - verify payroll processing
   'bill-os-invoices',    // Billing Platform Invoices - verify invoice generation
-  'time-os',             // Time Platform - verify time tracking
+  'time-tracking',       // Time Platform - verify time tracking
   'employees',           // Employee management
   'clients',             // Client management
-  'analytics-os',        // AnalyticsOS™ - insights and reporting
+  'analytics',           // Analytics - insights and reporting
   'bill-os-integrations', // Integrations - QuickBooks/Gusto monitoring
 ];
 

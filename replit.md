@@ -3,22 +3,29 @@
 ### Overview
 CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. Its core purpose is to eliminate hardcoded values through centralized dynamic configuration, integrating financials with real Stripe payments. The platform features dynamic configuration, advanced AI-powered automation (scheduling, sentiment analysis, onboarding, health monitoring, dispute resolution), integrated financials, robust real-time notifications, and comprehensive error handling. It includes a HelpAI Integration, providing a multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation. The project aims to deliver a production-ready solution with strong market potential for efficient workforce management.
 
-### Current Phase: AI-Powered Notification System (Foundation Complete)
-**Status: Database Schema Added - Ready for Service Implementation**
+### Current Phase: Route Naming Standardization (Complete)
+**Status: Removed all hardcoded "OS" references from UI**
 
-Successfully added 4 new database tables to support the AI notification system:
-1. **platform_updates** - Stores platform updates from AI brain (What's New badge)
-2. **maintenance_alerts** - Stores maintenance alerts from support staff (notification bell)
-3. **notification_history** - Tracks user engagement with notifications
-4. **maintenance_acknowledgments** - Tracks which users have acknowledged maintenance alerts
+Successfully standardized route naming across the platform:
+- Renamed OS-branded routes to cleaner names (comm-os → communications, query-os → diagnostics, etc.)
+- Updated category pages from os-family/* to category/* naming
+- Removed all ™ trademark symbols and "OS" suffixes from UI labels
+- Maintained backwards compatibility with redirect routes for old URLs
+- API endpoints remain unchanged (server-side routes still use original names for stability)
 
-### Next: Autonomous Multi-Phase Implementation
-The notification system requires 5 parallel phases that need Autonomous mode with subagent execution:
-1. **AI Notification Service** - AI brain generates and pushes updates
-2. **Support Staff System** - Maintenance alert CRUD and broadcasting
-3. **WebSocket Integration** - Real-time message delivery to clients
-4. **API Endpoints** - REST endpoints for notifications and alerts
-5. **Frontend Integration** - Connect What's New badge and notification bell to live updates
+### Route Mapping
+| Old Route | New Route |
+|-----------|-----------|
+| /comm-os | /communications |
+| /query-os | /diagnostics |
+| /training-os | /training |
+| /budget-os | /budgeting |
+| /record-os | /records |
+| /insight-os | /insights |
+| /os-family/communication | /category/communication |
+| /os-family/operations | /category/operations |
+| /os-family/growth | /category/growth |
+| /os-family/platform | /category/platform |
 
 ### User Preferences
 - I prefer simple language
@@ -57,7 +64,7 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **Analytics Dashboard:** 6 metrics endpoints (time, revenue, scheduling, performance), AI insights.
 - **Heat Map Visualization:** 7x24 grid staffing intensity, AI staffing analysis and optimization.
 - **Break Compliance:** 50-state labor law configuration, auto-scheduling, compliance checking.
-- **AI Brain Platform Awareness:** 100+ features registry across 4 OS families, natural language feature discovery, diagnostic endpoints for support agents.
+- **AI Brain Platform Awareness:** 100+ features registry across 4 feature families (Communication, Operations, Growth, Platform), natural language feature discovery, diagnostic endpoints for support agents.
 - **Automation Jobs:** 11 scheduled jobs (billing, scheduling, payroll, reminders, compliance, email).
 - **Notification System (NEW):** Platform updates from AI brain, support staff maintenance alerts, real-time WebSocket delivery, user notification history tracking.
 

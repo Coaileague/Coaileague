@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 export default function GrowthFamilyPage() {
   const modules = [
     {
-      name: "AI Hiring™",
+      name: "AI Hiring",
       icon: Briefcase,
       description: "Intelligent recruitment workflow with candidate tracking, interview scheduling, and offer management",
       features: ["Candidate Pipeline", "Interview Scheduling", "Offer Letters", "ATS Integration"],
@@ -15,7 +15,7 @@ export default function GrowthFamilyPage() {
       color: "from-violet-500 to-purple-500"
     },
     {
-      name: "TalentOS™",
+      name: "Talent Management",
       icon: UserCog,
       description: "Leadership development and talent management with succession planning and performance reviews",
       features: ["Succession Planning", "Performance Reviews", "Leadership Pipeline", "Skills Matrix"],
@@ -23,7 +23,7 @@ export default function GrowthFamilyPage() {
       color: "from-fuchsia-500 to-pink-500"
     },
     {
-      name: "EngagementOS™",
+      name: "Engagement",
       icon: Activity,
       description: "Employee engagement analytics with pulse surveys, feedback loops, and recognition programs",
       features: ["Pulse Surveys", "Feedback Loops", "Recognition", "Sentiment Analysis"],
@@ -31,7 +31,7 @@ export default function GrowthFamilyPage() {
       color: "from-blue-500 to-indigo-500"
     },
     {
-      name: "AnalyticsOS™",
+      name: "Analytics",
       icon: BarChart3,
       description: "Real-time workforce analytics with predictive insights and customizable dashboards",
       features: ["Real-time Dashboards", "Predictive Analytics", "Custom Reports", "KPI Tracking"],
@@ -39,7 +39,7 @@ export default function GrowthFamilyPage() {
       color: "from-blue-500 to-blue-600"
     },
     {
-      name: "ReportOS™",
+      name: "Reports",
       icon: FileText,
       description: "Automated report generation with compliance tracking and executive summaries",
       features: ["Auto Reports", "Compliance Tracking", "Executive Summaries", "Export Options"],
@@ -59,17 +59,17 @@ export default function GrowthFamilyPage() {
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-            Growth & Intelligence OS
+            Growth & Intelligence
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Scale your organization with AI-powered recruitment, talent management, and predictive analytics
           </p>
           <Badge variant="outline" className="text-sm px-4 py-1">
-            5 OS Modules
+            5 Modules
           </Badge>
         </div>
 
-        {/* OS Modules Grid */}
+        {/* Modules Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;
