@@ -447,9 +447,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Combined notifications endpoint - returns platform updates, notifications, and maintenance alerts
-  app.get('/api/notifications/combined', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/notifications/combined', async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return platform updates only
+      if (!userId) {
+        const { getLatestUpdates } = await import('./services/whatsNewService');
+        const platformUpdates = await getLatestUpdates(10, undefined, 'staff');
+        const mappedUpdates = platformUpdates.map(u => ({
+          id: u.id,
+          title: u.title,
+          description: u.description,
+          category: u.category,
+          version: u.version,
+          badge: u.badge,
+          isNew: u.isNew,
+          isViewed: false,
+          createdAt: u.date
+        }));
+        return res.json({
+          platformUpdates: mappedUpdates,
+          maintenanceAlerts: [],
+          notifications: [],
+          unreadPlatformUpdates: mappedUpdates.length,
+          unreadNotifications: 0,
+          unreadAlerts: 0,
+          totalUnread: mappedUpdates.length,
+        });
+      }
+
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -496,9 +532,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Mark all notifications as read (comprehensive - handles all types)
-  app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/notifications/mark-all-read', async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -564,7 +606,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Acknowledge maintenance alert
   app.post('/api/maintenance-alerts/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id: alertId } = req.params;
       
       const success = await aiNotificationService.acknowledgeMaintenanceAlert(alertId, userId);
@@ -583,7 +631,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user notifications
   app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -610,7 +664,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Toggle notification read status (mark as read/unread)
   app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       
       // Toggle notification read status
@@ -663,7 +723,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete notification
   app.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       
       // Delete notification (storage will verify ownership)
@@ -700,7 +766,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Edit chat message
   app.patch('/api/chat/message/:id/edit', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       const { conversationId, message } = req.body;
 
@@ -748,7 +820,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete chat message
   app.delete('/api/chat/message/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       const { conversationId } = req.body;
 
@@ -818,7 +896,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get notification preferences
   app.get('/api/notifications/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
 
       if (!workspaceId) {
@@ -837,7 +921,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update notification preferences
   app.patch('/api/notifications/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
 
       if (!workspaceId) {
@@ -871,7 +961,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Subscribe to notification type
   app.post('/api/notifications/subscribe', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const { notificationType } = req.body;
 
@@ -927,7 +1023,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Unsubscribe from notification type
   app.post('/api/notifications/unsubscribe', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const { notificationType } = req.body;
 
@@ -1022,7 +1124,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send test SMS to user
   app.post('/api/notifications/test-sms', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const { phoneNumber } = req.body;
 
@@ -1082,7 +1190,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify SMS phone number
   app.post('/api/notifications/verify-phone', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const { phoneNumber } = req.body;
 
@@ -1180,7 +1294,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user's workspace role (secure - no data leak)
   app.get('/api/me/workspace-role', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       
       if (!workspaceId) {
@@ -1206,7 +1326,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user's platform role (secure)
   app.get('/api/me/platform-role', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const [platformRole] = await db
         .select({ role: platformRoles.role })
@@ -1227,7 +1353,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get workspace features available to current user (SERVER-SIDE VALIDATION)
   app.get('/api/me/workspace-features', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       
       // Fetch workspace role
@@ -1273,7 +1405,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active feature updates (platform-wide, shown to all users)
   app.get('/api/feature-updates', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const now = new Date();
 
       // Check if user is new (created within last 7 days)
@@ -1343,7 +1481,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dismiss a specific feature update (platform-wide, user-scoped)
   app.post('/api/feature-updates/:id/dismiss', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const updateId = req.params.id;
       // Use current workspace if available, otherwise use a placeholder
       const workspaceId = req.user!.currentWorkspaceId || 'platform-global';
@@ -1389,7 +1533,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clear all feature updates for user (dismiss all in one action)
   app.post('/api/feature-updates/clear-all', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.user!.currentWorkspaceId || 'platform-global';
 
       // Get all active, undismissed updates
@@ -1483,7 +1633,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post('/api/config/apply-changes', requirePlatformAdmin, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { changes } = req.body;
 
       // Validate request body
@@ -1638,7 +1794,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit user feedback
   app.post('/api/feedback', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { type, message } = req.body;
       
       if (!type || !message) {
@@ -2041,7 +2203,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all workspaces user has access to (for workspace switcher)
   app.get('/api/workspaces/all', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get user's owned workspace
       const ownedWorkspace = await storage.getWorkspaceByOwnerId(userId);
@@ -2059,7 +2227,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Switch workspace
   app.post('/api/workspace/switch/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { workspaceId } = req.params;
       
       // Verify user has access to this workspace
@@ -2672,7 +2846,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get MFA status for current user
   app.get('/api/auth/mfa/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const status = await checkMfaStatus(userId);
       res.json(status);
     } catch (error) {
@@ -2684,7 +2864,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup MFA - Generate secret and QR code
   app.post('/api/auth/mfa/setup', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const userEmail = req.user!.email || '';
 
       if (!userEmail) {
@@ -2706,7 +2892,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enable MFA - Verify first token and activate
   app.post('/api/auth/mfa/enable', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { token } = req.body;
 
       if (!token) {
@@ -2761,7 +2953,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Disable MFA - Requires password OR MFA token confirmation
   app.post('/api/auth/mfa/disable', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { password, token } = req.body;
 
       if (!password && !token) {
@@ -2809,7 +3007,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Regenerate backup codes
   app.post('/api/auth/mfa/regenerate-backup-codes', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const newBackupCodes = await regenerateBackupCodes(userId);
 
       res.json({
@@ -2949,7 +3153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/reports/generate', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { reportType, startDate, endDate } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
@@ -3057,7 +3267,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/invoices/:id/pdf', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Get workspace from user (support both OIDC and Custom Auth)
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
@@ -3137,7 +3353,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export payroll report as CSV
   app.get('/api/payroll/export/csv', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
@@ -3190,7 +3412,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export time entries as CSV
   app.get('/api/time-entries/export/csv', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
@@ -3223,7 +3451,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { reportType, startDate, endDate, recipients, notes } = req.body;
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Create workflow notification for each recipient
       for (const email of recipients) {
@@ -3302,7 +3536,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get or create workspace for current user
   app.get('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       let workspace = await storage.getWorkspaceByOwnerId(userId);
       
       // Auto-create workspace on first login
@@ -3343,7 +3583,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update workspace (Users can only update basic settings, Platform Admin can update critical org info)
   app.patch('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -3437,7 +3683,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update workspace automation settings - Invoicing
   app.patch('/api/workspace/automation/invoicing', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
@@ -3490,7 +3742,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update workspace automation settings - Payroll
   app.patch('/api/workspace/automation/payroll', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
@@ -3544,7 +3802,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update workspace automation settings - Scheduling
   app.patch('/api/workspace/automation/scheduling', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
@@ -3625,7 +3889,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get workspace theme
   app.get('/api/workspace/theme', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
       
@@ -3655,7 +3925,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Seed form templates for workspace based on business category
   app.post('/api/workspace/seed-form-templates', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -3985,7 +4261,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/workspace/access', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get platform role FIRST (always available)
       const { getUserPlatformRole, isPlatformStaff } = await import('./rbac');
@@ -4050,7 +4332,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/workspace/usage-summary', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
 
@@ -4087,7 +4375,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/credits/balance', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
 
@@ -4132,7 +4426,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/credits/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
 
@@ -4156,7 +4456,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/credits/transactions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
 
@@ -4187,7 +4493,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/credits/packs', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
 
@@ -4233,7 +4545,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post('/api/credits/purchase', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
 
@@ -5949,7 +6267,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/shifts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Extract date range filters from query params
       const weekStart = req.query.weekStart as string | undefined;
@@ -6025,7 +6349,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/shifts', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
 
       // Extract post orders array before validation (not part of shift schema)
@@ -6206,7 +6536,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/shifts/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
 
       // Validate partial update, ensure no workspaceId override
@@ -6254,7 +6590,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/shifts/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
 
       // Get shift details before deletion for notification
@@ -6548,7 +6890,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = req.workspaceId!;
       const shiftId = req.params.id;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Get the open shift
       const shift = await storage.getShift(shiftId, workspaceId);
@@ -7978,7 +8326,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Unsupported file type. Use PNG, JPEG, or PDF" });
       }
 
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
 
       // Import migration service
@@ -8009,7 +8363,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "extractedShifts array is required" });
       }
 
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
 
       // Import shifts table and migration service schema
@@ -9048,7 +9408,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/shifts/:shiftId/acknowledgments', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       const { eq, and } = await import("drizzle-orm");
 
@@ -9111,7 +9477,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/acknowledgments/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       const { eq, and } = await import("drizzle-orm");
 
@@ -9157,7 +9529,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/acknowledgments/:id/deny', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       const { eq, and } = await import("drizzle-orm");
 
@@ -9279,7 +9657,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auto-generate invoices for all clients due for billing (Billing Platform Automation) - PROTECTED: Owner only
   app.post('/api/invoices/auto-generate', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -9464,7 +9848,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PROTECTED: Managers and auditors only
   app.get('/api/invoices', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -9482,7 +9872,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get line items for a specific invoice (with authorization check) - PROTECTED: Manager/auditor/client
   app.get('/api/invoices/:invoiceId/line-items', requireAuth, requireWorkspaceRole(['org_owner', 'department_manager', 'auditor']), async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { invoiceId } = req.params;
       
       // Get the invoice to check ownership
@@ -9829,7 +10225,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/expenses', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Find employee record for user
       const employee = await storage.getEmployeeByUserId(userId);
@@ -9857,7 +10259,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/expenses', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       
       let filters: { status?: string; employeeId?: string; categoryId?: string } = {};
@@ -10002,7 +10410,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/expenses/:id/approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { reviewNotes } = req.body;
 
       const expense = await storage.approveExpense(req.params.id, workspaceId, userId, reviewNotes);
@@ -10022,7 +10436,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/expenses/:id/reject', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { reviewNotes } = req.body;
 
       if (!reviewNotes) {
@@ -10046,7 +10466,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/expenses/:id/mark-paid', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { paymentMethod } = req.body;
 
       const expense = await storage.markExpensePaid(req.params.id, workspaceId, userId, paymentMethod);
@@ -10095,7 +10521,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/i9-records/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       
       // Employees can only view their own record, managers can view all
@@ -10125,7 +10557,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/policies', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const policy = await storage.createCompanyPolicy({
         ...req.body,
@@ -10174,7 +10612,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/policies/:id/publish', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const policy = await storage.publishPolicy(req.params.id, workspaceId, userId);
       
@@ -10193,7 +10637,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/policies/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee || employee.workspaceId !== workspaceId) {
@@ -10244,7 +10694,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/time-entries/:id/approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const timeEntry = await storage.getTimeEntry(req.params.id, workspaceId);
       if (!timeEntry) {
@@ -10289,7 +10745,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/time-entries/:id/reject', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { reason } = req.body;
       
       const timeEntry = await storage.getTimeEntry(req.params.id, workspaceId);
@@ -10385,7 +10847,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/time-entries/bulk-approve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { timeEntryIds } = req.body;
 
       if (!Array.isArray(timeEntryIds) || timeEntryIds.length === 0) {
@@ -10725,7 +11193,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/chats/create', requireAuth, chatConversationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -13196,7 +13670,13 @@ ${application.email}`,
   app.get('/api/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { includeExpired } = req.query;
       const { availabilityService } = await import("./services/availabilityService");
 
@@ -13230,7 +13710,13 @@ ${application.email}`,
   app.post('/api/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { slots } = req.body;
       const { availabilityService } = await import("./services/availabilityService");
 
@@ -13325,7 +13811,13 @@ ${application.email}`,
   app.post('/api/availability/exception', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { startDate, endDate, requestType, reason, notes } = req.body;
       const { availabilityService } = await import("./services/availabilityService");
 
@@ -14390,7 +14882,13 @@ ${application.email}`,
   // Get all report templates (with activation status per workspace)
   app.get('/api/report-templates', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(403).json({ message: "No workspace found" });
@@ -15168,7 +15666,13 @@ Keep it professional, actionable, and under 250 words.`;
   // Support Tickets - Create ticket (requires authentication to get workspaceId)
   app.post('/api/support/tickets', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
@@ -15205,7 +15709,13 @@ Keep it professional, actionable, and under 250 words.`;
   // Get support tickets for current workspace
   app.get('/api/support/tickets', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
@@ -15236,7 +15746,13 @@ Keep it professional, actionable, and under 250 words.`;
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       if (!reason) {
         return res.status(400).json({ message: "Escalation reason required" });
@@ -15406,7 +15922,13 @@ Keep it professional, actionable, and under 250 words.`;
       }).parse(req.body);
       
       const { staffId } = validated;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Verify ticket exists and is escalated
       const ticket = await db.query.supportTickets.findFirst({
@@ -15465,7 +15987,13 @@ Keep it professional, actionable, and under 250 words.`;
   app.patch('/api/support/escalated/:id/resolve', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Validate request body
       const validated = z.object({
@@ -15686,7 +16214,13 @@ Summary:`;
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Validate status value
       const validStatuses = ['open', 'in_progress', 'waiting_for_customer', 'resolved', 'closed', 'on_hold'];
@@ -15753,7 +16287,13 @@ Summary:`;
   app.delete('/api/support/tickets/:id', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Get user to verify workspace access
       const user = await storage.getUser(userId);
@@ -15810,7 +16350,13 @@ Summary:`;
     try {
       const { id } = req.params;
       const { rating, feedback } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Validate rating
       if (rating === undefined || rating === null) {
@@ -15859,7 +16405,13 @@ Summary:`;
   // GET /api/ai/responses - Get response history
   app.get('/api/ai/responses', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
@@ -15893,7 +16445,13 @@ Summary:`;
   // GET /api/ai/suggestions - Get unified suggestions
   app.get('/api/ai/suggestions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
@@ -16663,7 +17221,13 @@ Summary:`;
       
       // Check if user has platform staff role - if yes, show platform-wide stats
       // Support staff needs to see ALL clients/employees across ALL workspaces
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const [platformRole] = await db
         .select()
         .from(platformRoles)
@@ -16749,7 +17313,13 @@ Summary:`;
   // Personal staff data (assigned tickets, etc.)
   app.get('/api/platform/personal-data', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const userName = (req.user as any)?.fullName || (req.user as any)?.email || 'Admin';
 
       // Count open escalation tickets assigned to this staff member
@@ -17828,7 +18398,13 @@ Summary:`;
   // Get all conversations for workspace or all conversations for platform staff
   app.get('/api/chat/conversations', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Check if user is platform admin/staff
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -17883,7 +18459,13 @@ Summary:`;
   app.get('/api/chat/conversations/:id/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Check if user is platform admin/staff
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -18073,7 +18655,13 @@ Summary:`;
   // Send message to main room
   app.post('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = req.user!;
       
       // Ensure room exists
@@ -18299,7 +18887,13 @@ Summary:`;
   // Get all chat macros for workspace - Support agents only
   app.get('/api/chat/macros', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // RBAC: Only support agents can access macros
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -18344,7 +18938,13 @@ Summary:`;
   // Create new chat macro - Support agents only
   app.post('/api/chat/macros', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // RBAC: Only support agents can create macros
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -18416,7 +19016,13 @@ Summary:`;
   // Delete chat macro - Support agents only
   app.delete('/api/chat/macros/:id', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       
       // RBAC: Only support agents can delete macros
@@ -18458,7 +19064,13 @@ Summary:`;
   // Start typing indicator
   app.post('/api/chat/conversations/:id/typing', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const user = req.user!;
       const { id: conversationId } = req.params;
       
@@ -18510,7 +19122,13 @@ Summary:`;
   // Stop typing indicator
   app.delete('/api/chat/conversations/:id/typing', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id: conversationId } = req.params;
       
       // SECURITY: Verify conversation exists and user is a participant
@@ -18576,7 +19194,13 @@ Summary:`;
   // List all support rooms - Staff only (for room selector)
   app.get('/api/helpdesk/rooms', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // SECURITY: Only platform staff can list rooms (all staff levels)
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -18599,7 +19223,13 @@ Summary:`;
   // Create organization chatroom - Organization owners/managers only
   app.post('/api/helpdesk/rooms', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { name, description, slug } = req.body;
       
       if (!name || !slug) {
@@ -18659,7 +19289,13 @@ Summary:`;
     try {
       const { slug } = req.params;
       const { status, statusMessage } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // SECURITY: Only platform staff can toggle room status
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -18841,7 +19477,13 @@ Summary:`;
   app.post('/api/helpdesk/ai/toggle', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { enabled, workspaceId } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // SECURITY: Only platform staff can toggle AI
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -18882,7 +19524,13 @@ Summary:`;
   // Get HelpAI status - Staff only
   app.get('/api/helpdesk/ai/status', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { workspaceId } = req.query;
       
       // SECURITY: Only platform staff can view AI status
@@ -19078,7 +19726,13 @@ Summary:`;
   app.post('/api/helpdesk/verify-ticket', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { ticketNumber, roomSlug } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       if (!ticketNumber || !roomSlug) {
         return res.status(400).json({ message: "Ticket number and room slug are required" });
@@ -19195,7 +19849,13 @@ Summary:`;
   app.get('/api/helpdesk/check-access/:roomSlug', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { roomSlug } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get the room
       const room = await storage.getSupportRoomBySlug(roomSlug);
@@ -19241,7 +19901,13 @@ Summary:`;
   app.post('/api/helpdesk/revoke-access', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { accessId, reason } = req.body;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // SECURITY: Only platform staff can revoke access
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -19706,7 +20372,13 @@ Return ONLY valid JSON array with this exact structure:
   // Get all custom forms for organization
   app.get('/api/custom-forms', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -19725,7 +20397,13 @@ Return ONLY valid JSON array with this exact structure:
   app.get('/api/custom-forms/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -19753,7 +20431,13 @@ Return ONLY valid JSON array with this exact structure:
   // Create custom form (Platform Staff only)
   app.post('/api/custom-forms', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const platformRole = req.platformRole;
       
       // Validate request body
@@ -19852,7 +20536,13 @@ Return ONLY valid JSON array with this exact structure:
   // Get all form submissions for organization
   app.get('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -19871,7 +20561,13 @@ Return ONLY valid JSON array with this exact structure:
   app.get('/api/custom-form-submissions/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
@@ -19899,7 +20595,13 @@ Return ONLY valid JSON array with this exact structure:
   // Submit custom form
   app.post('/api/custom-form-submissions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Validate request body
       const validationResult = createCustomFormSubmissionSchema.safeParse(req.body);
@@ -19994,7 +20696,13 @@ Return ONLY valid JSON array with this exact structure:
   // Get active MOTD for HelpDesk
   app.get("/api/helpdesk/motd", requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get active MOTD
       const [motd] = await db
@@ -20045,7 +20753,13 @@ Return ONLY valid JSON array with this exact structure:
   // Create or update MOTD (staff only)
   app.post("/api/helpdesk/motd", requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Check if user is staff
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -20103,7 +20817,13 @@ Return ONLY valid JSON array with this exact structure:
   // Acknowledge MOTD
   app.post("/api/helpdesk/motd/acknowledge", requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { motdId } = req.body;
 
       if (!motdId) {
@@ -20473,7 +21193,13 @@ Return ONLY valid JSON array with this exact structure:
   // Create promotional banner (staff only)
   app.post('/api/promotional-banners', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const schema = z.object({
         message: z.string().min(1, "Message is required"),
@@ -20596,7 +21322,13 @@ Return ONLY valid JSON array with this exact structure:
   // AI Knowledge Retrieval - Ask questions about policies, procedures, FAQs
   app.post('/api/knowledge/ask', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspace?.id;
       
       const schema = z.object({
@@ -20735,7 +21467,13 @@ Return ONLY valid JSON array with this exact structure:
   // Create knowledge article (staff only)
   app.post('/api/knowledge/articles', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspace?.id;
       
       const schema = z.object({
@@ -20777,7 +21515,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/scheduling/generate-alerts', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Get all employees with their schedules for the next week
       const nextWeekStart = new Date();
@@ -20882,7 +21626,13 @@ Return ONLY valid JSON array with this exact structure:
   // Generate Automated Status Report for employee
   app.post('/api/reports/auto-generate', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
       
       const schema = z.object({
@@ -20984,7 +21734,13 @@ Return ONLY valid JSON array with this exact structure:
   // Get auto-generated reports
   app.get('/api/reports/auto', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
 
       const reports = await db
@@ -21013,7 +21769,13 @@ Return ONLY valid JSON array with this exact structure:
   // Create automated payroll run
   app.post('/api/payroll/create-run', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
 
       // Validate input
@@ -21098,7 +21860,13 @@ Return ONLY valid JSON array with this exact structure:
   // Approve payroll run (1% human QC)
   app.post('/api/payroll/runs/:id/approve', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
       const { id } = req.params;
 
@@ -21125,7 +21893,13 @@ Return ONLY valid JSON array with this exact structure:
   // Process approved payroll run (trigger payment distribution)
   app.post('/api/payroll/runs/:id/process', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId!;
       const { id } = req.params;
 
@@ -21152,7 +21926,13 @@ Return ONLY valid JSON array with this exact structure:
   // Get employee paychecks (employee portal)
   app.get('/api/payroll/my-paychecks', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
 
       // Find employee record for this user
       const allEmployees = await db
@@ -21288,7 +22068,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/custom-rules', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const validated = insertCustomRuleSchema.parse({
         ...req.body,
@@ -21326,7 +22112,13 @@ Return ONLY valid JSON array with this exact structure:
   app.patch('/api/custom-rules/:id', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       
       // Verify rule belongs to workspace
@@ -21474,7 +22266,13 @@ Return ONLY valid JSON array with this exact structure:
   app.patch('/api/compliance/discrepancies/:id/resolve', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       const { status, resolutionNotes } = req.body;
       
@@ -21518,7 +22316,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/engagement/pulse-surveys/templates', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       const validatedData = insertPulseSurveyTemplateSchema.parse({
         ...req.body,
@@ -21632,7 +22436,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/engagement/pulse-surveys/responses', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get employee record
       const employee = await db
@@ -21827,7 +22637,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/engagement/employer-ratings', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get employee record
       const employee = await db
@@ -21912,7 +22728,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/engagement/suggestions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get employee record
       const employee = await db
@@ -22041,7 +22863,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/engagement/recognition', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get employee record
       const employee = await db
@@ -22512,7 +23340,13 @@ Return ONLY valid JSON array with this exact structure:
   app.get('/api/training/enrollments', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get employee record
       const employee = await db
@@ -22557,7 +23391,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/training/courses/:id/enroll', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id: courseId } = req.params;
       
       // Get employee record
@@ -22628,7 +23468,13 @@ Return ONLY valid JSON array with this exact structure:
   app.patch('/api/training/enrollments/:id/progress', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { id } = req.params;
       const { progress, status, score } = req.body;
       
@@ -22689,7 +23535,13 @@ Return ONLY valid JSON array with this exact structure:
   app.get('/api/training/certifications', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Get employee record
       const employee = await db
@@ -23266,7 +24118,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/integrations/connections', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { integrationId, connectionName, authType, apiKey, apiSecret } = req.body;
       
       if (!integrationId) {
@@ -23378,7 +24236,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/integrations/api-keys', requireAuth, requireOwner, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { name, description, scopes, rateLimit, expiresAt } = req.body;
       
       if (!name) {
@@ -23463,7 +24327,13 @@ Return ONLY valid JSON array with this exact structure:
   app.post('/api/integrations/webhooks', requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const { name, targetUrl, events, filters, authType, authConfig, maxRetries } = req.body;
       
       if (!name || !targetUrl || !events || events.length === 0) {
@@ -25859,7 +26729,13 @@ Respond with valid JSON array only.`
   // POST /api/signatures - Save e-signature with immutable object storage
   app.post('/api/signatures', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspace = await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -25999,7 +26875,13 @@ Respond with valid JSON array only.`
   // GET /api/comm-os/rooms - List chat rooms (workspace-scoped for orgs, all for support)
   app.get('/api/comm-os/rooms', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
 
@@ -26024,7 +26906,13 @@ Respond with valid JSON array only.`
   // GET /api/comm-os/rooms/live - Get live room data with WebSocket connections
   app.get('/api/comm-os/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
 
@@ -26078,7 +26966,13 @@ Respond with valid JSON array only.`
   app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const roomId = req.params.id;
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       
       // Verify room exists
       const room = await storage.getOrganizationChatRoom(roomId);
@@ -26129,7 +27023,13 @@ Respond with valid JSON array only.`
   // GET /api/comm-os/messages/search - Search messages across rooms
   app.get('/api/comm-os/messages/search', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
       
@@ -26296,7 +27196,13 @@ Respond with valid JSON array only.`
   // POST /api/comm-os/complete-onboarding - Complete onboarding and create room
   app.post('/api/comm-os/complete-onboarding', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
@@ -26350,7 +27256,13 @@ Respond with valid JSON array only.`
   // POST /api/comm-os/rooms/:id/join - Support staff join room
   app.post('/api/comm-os/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const roomId = req.params.id;
       const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
 
@@ -26420,7 +27332,13 @@ Respond with valid JSON array only.`
   // POST /api/comm-os/rooms/:id/suspend - Suspend room (support staff only)
   app.post('/api/comm-os/rooms/:id/suspend', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const roomId = req.params.id;
       const { reason } = req.body;
       const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
@@ -26466,7 +27384,13 @@ Respond with valid JSON array only.`
   // POST /api/comm-os/rooms/:id/lift-suspension - Lift room suspension (support staff only)
   app.post('/api/comm-os/rooms/:id/lift-suspension', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const roomId = req.params.id;
       const isSupportStaff = req.user!.role === 'platform_admin' || req.user!.role === 'support_staff';
 
@@ -26510,7 +27434,13 @@ Respond with valid JSON array only.`
   // GET /api/private-messages/conversations - Get all user conversations
   app.get('/api/private-messages/conversations', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
 
       if (!workspaceId) {
@@ -26528,7 +27458,13 @@ Respond with valid JSON array only.`
   // GET /api/private-messages/:conversationId - Get messages in a conversation
   app.get('/api/private-messages/:conversationId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const conversationId = req.params.conversationId;
 
       const messages = await storage.getPrivateMessages(userId, conversationId);
@@ -26596,7 +27532,13 @@ Respond with valid JSON array only.`
   // POST /api/private-messages/send - Send a private message
   app.post('/api/private-messages/send', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       const { recipientId, message, attachmentUrl, attachmentName } = req.body;
 
@@ -26634,7 +27576,13 @@ Respond with valid JSON array only.`
   // POST /api/private-messages/start - Start a new conversation
   app.post('/api/private-messages/start', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       const { recipientId } = req.body;
 
@@ -26658,7 +27606,13 @@ Respond with valid JSON array only.`
   // POST /api/private-messages/:conversationId/mark-read - Mark messages as read
   app.post('/api/private-messages/:conversationId/mark-read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const conversationId = req.params.conversationId;
 
       await storage.markPrivateMessagesAsRead(conversationId, userId);
@@ -26699,7 +27653,13 @@ Respond with valid JSON array only.`
   // POST /api/dm-audit/request - Create audit request for DM access
   app.post('/api/dm-audit/request', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const workspaceId = req.workspaceId;
       const { conversationId, investigationReason, caseNumber } = req.body;
 
@@ -26748,7 +27708,13 @@ Respond with valid JSON array only.`
   // POST /api/dm-audit/requests/:id/approve - Approve audit request
   app.post('/api/dm-audit/requests/:id/approve', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const requestId = req.params.id;
       const { expiresInHours } = req.body;
 
@@ -26793,7 +27759,13 @@ Respond with valid JSON array only.`
   // GET /api/dm-audit/messages/:conversationId - View DM messages with audit access
   app.get('/api/dm-audit/messages/:conversationId', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const conversationId = req.params.conversationId;
       const auditRequestId = req.query.auditRequestId as string;
 
@@ -27006,7 +27978,13 @@ Respond with valid JSON array only.`
         return res.status(403).json({ message: "Access denied. Support staff only." });
       }
 
-      const userId = req.user!.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
       const conversationId = req.params.id;
       const { format } = req.body;
 
@@ -28987,7 +29965,13 @@ app.get("/api/employees/:employeeId/metadata", requireAuth, async (req: Authenti
 
 app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user!.id;
+    const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
     const { conversationId } = req.query;
 
     if (conversationId) {
@@ -29047,7 +30031,13 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
 
 app.post("/api/chat/mark-as-read", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user!.id;
+    const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.json({ success: true, markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
     const { conversationId } = req.body;
     if (!conversationId) return res.status(400).json({ error: 'conversationId required' });
 
