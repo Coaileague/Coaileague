@@ -24,7 +24,7 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **Email Automation:** Full Resend integration with per-email billing and pre-built templates.
 - **Notifications:** WebSocket infrastructure for real-time notifications and Resend for email delivery.
 - **Compliance:** Daily certification checks, HR alerts, and a dispute resolution system.
-- **Gamification:** Employee engagement system with achievements, points/XP, leaderboards, and streak tracking (feature-flagged).
+- **Gamification:** Employee engagement system with achievements, points/XP, leaderboards, and streak tracking (feature-flagged). Integrated with onboarding (25pts/step, 200 bonus), tutorials (10pts/step, 50 bonus), org migration (scaled rewards up to 350pts), and org setup (50/30/500pts). Emits milestone events for real-time celebration.
 - **Data Management:** PostgreSQL database with 150+ indexed and optimized tables.
 - **Error Handling:** Global error boundaries and configurable error messages.
 - **Workspace Configuration:** Customizable settings per workspace.
@@ -64,4 +64,4 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **WebSocket**: Real-time notifications.
 - **Google Cloud Storage (GCS)**: File management.
 - **PostgreSQL**: Primary relational database.
-- **Twilio**: SMS notifications.
+- **Twilio**: SMS notifications (requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER secrets).
