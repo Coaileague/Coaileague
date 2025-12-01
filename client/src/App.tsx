@@ -22,6 +22,7 @@ import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate";
 import { TransitionProvider } from "@/contexts/transition-context";
 import { LoadingProvider } from "@/contexts/loading-context";
+import { UniversalAnimationProvider } from "@/contexts/universal-animation-context";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
@@ -740,12 +741,14 @@ export default function App() {
                 <WorkspaceThemeProvider>
                   <TransitionProvider>
                   <TooltipProvider>
-                    <ResponsiveAppFrame>
-                      <AppContent />
-                      <FloatingSupportChat />
-                      <ReenableChatButton />
-                      <Toaster />
-                    </ResponsiveAppFrame>
+                    <UniversalAnimationProvider>
+                      <ResponsiveAppFrame>
+                        <AppContent />
+                        <FloatingSupportChat />
+                        <ReenableChatButton />
+                        <Toaster />
+                      </ResponsiveAppFrame>
+                    </UniversalAnimationProvider>
                   </TooltipProvider>
                   </TransitionProvider>
                 </WorkspaceThemeProvider>

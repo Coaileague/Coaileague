@@ -14,6 +14,7 @@ import { addUpdate } from '../services/whatsNewService';
 import { db } from '../db';
 import { notifications, systemAuditLogs, users } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
+import { animationControlService, type AnimationCommand } from '../services/animationControlService';
 
 export const supportCommandRouter = Router();
 
@@ -353,6 +354,85 @@ supportCommandRouter.post('/invalidate-cache', requireSupportRole, async (req: A
 });
 
 /**
+ * POST /api/support/command/animation
+ * Control universal workspace animations (show, hide, update, theme, force)
+ */
+supportCommandRouter.post('/animation', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const command: AnimationCommand = {
+      action: req.body.action || 'show',
+      mode: req.body.mode,
+      mainText: req.body.mainText,
+      subText: req.body.subText,
+      duration: req.body.duration,
+      progress: req.body.progress,
+      seasonalTheme: req.body.seasonalTheme,
+      source: 'support'
+    };
+
+    const result = await animationControlService.executeCommand(
+      command,
+      req.user?.id || 'support-console'
+    );
+
+    await logSupportAction(req.user?.id || 'unknown', 'animation_control', {
+      action: command.action,
+      mode: command.mode,
+      mainText: command.mainText
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Animation control error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/support/command/animation/state
+ * Get current animation state
+ */
+supportCommandRouter.get('/animation/state', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    res.json({
+      success: true,
+      state: animationControlService.getState(),
+      currentTheme: animationControlService.getCurrentTheme(),
+      availableThemes: animationControlService.getAvailableThemes(),
+      availableModes: animationControlService.getAvailableModes()
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/animation/seasonal
+ * Set seasonal theme for animations
+ */
+supportCommandRouter.post('/animation/seasonal', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { theme } = req.body;
+    
+    if (!theme) {
+      return res.status(400).json({ error: 'Theme is required' });
+    }
+
+    const result = await animationControlService.executeCommand(
+      { action: 'theme', seasonalTheme: theme, source: 'support' },
+      req.user?.id || 'support-console'
+    );
+
+    await logSupportAction(req.user?.id || 'unknown', 'animation_theme_change', { theme });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Seasonal theme error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/support/command/status
  * Get current status of the command console and broadcast capabilities
  */
@@ -369,8 +449,12 @@ supportCommandRouter.get('/status', requireSupportRole, async (req: Authenticate
         'broadcast-message',
         'maintenance-mode',
         'invalidate-cache',
+        'animation',
+        'animation/state',
+        'animation/seasonal',
       ],
       userRole: req.platformRole,
+      animationState: animationControlService.getState(),
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
