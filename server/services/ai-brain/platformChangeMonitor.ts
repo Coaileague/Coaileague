@@ -395,17 +395,28 @@ Keep the tone positive and professional. Focus on user benefits.`;
 
       if (notificationValues.length > 0) {
         await db.insert(notifications).values(notificationValues);
+        
+        await db
+          .update(platformChangeEvents)
+          .set({ 
+            notifiedAllUsers: true,
+            notificationCount: notificationValues.length,
+          })
+          .where(eq(platformChangeEvents.id, changeEventId));
       }
 
       await publishPlatformUpdate({
-        type: 'feature_updated',
+        type: 'announcement',
         title: summary.title,
         description: summary.summary,
-        category: 'improvement',
+        category: 'announcement',
         visibility: 'all',
+        priority: 'high',
         metadata: {
+          source: 'ai_brain_platform_monitor',
           changeEventId,
           notifiedCount: allUsers.length,
+          forceRefresh: true,
         },
       });
 
@@ -423,6 +434,14 @@ Keep the tone positive and professional. Focus on user benefits.`;
       .select()
       .from(platformChangeEvents)
       .orderBy(desc(platformChangeEvents.createdAt))
+      .limit(limit);
+  }
+
+  async getRecentScans(limit = 10): Promise<any[]> {
+    return db
+      .select()
+      .from(platformScanSnapshots)
+      .orderBy(desc(platformScanSnapshots.createdAt))
       .limit(limit);
   }
 

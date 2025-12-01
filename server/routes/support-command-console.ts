@@ -715,6 +715,84 @@ supportCommandRouter.get('/code/change/:id', requireSupportRole, async (req: Aut
 });
 
 /**
+ * POST /api/support/command/platform/scan-now
+ * Trigger immediate AI Brain platform scan for changes
+ */
+supportCommandRouter.post('/platform/scan-now', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { platformChangeMonitor } = await import('../services/ai-brain/platformChangeMonitor');
+    
+    // Log the action
+    await logSupportAction(req.user?.id || 'unknown', 'platform_scan', {
+      triggeredBy: req.user?.username || 'support_staff',
+      timestamp: new Date().toISOString(),
+    });
+
+    // Trigger the scan
+    const result = await platformChangeMonitor.triggerManualScan();
+
+    // Broadcast notification about the scan
+    broadcastForceRefresh('platform_scan', {
+      action: 'completed',
+      changesDetected: result.changesDetected,
+      notificationsSent: result.notificationsSent,
+      platformStatus: result.platformStatus,
+    });
+
+    res.json({
+      success: true,
+      message: 'Platform scan completed',
+      ...result,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Platform scan error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/support/command/platform/scan-history
+ * Get recent platform scan history
+ */
+supportCommandRouter.get('/platform/scan-history', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { platformChangeMonitor } = await import('../services/ai-brain/platformChangeMonitor');
+    
+    const limit = parseInt(req.query.limit as string) || 10;
+    const history = await platformChangeMonitor.getRecentScans(limit);
+
+    res.json({
+      success: true,
+      scans: history,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Scan history error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/support/command/platform/changes
+ * Get recent platform change events
+ */
+supportCommandRouter.get('/platform/changes', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { platformChangeMonitor } = await import('../services/ai-brain/platformChangeMonitor');
+    
+    const limit = parseInt(req.query.limit as string) || 20;
+    const changes = await platformChangeMonitor.getRecentChanges(limit);
+
+    res.json({
+      success: true,
+      changes,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Get changes error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/support/command/status
  * Get current status of the command console and broadcast capabilities
  */
@@ -742,6 +820,9 @@ supportCommandRouter.get('/status', requireSupportRole, async (req: Authenticate
         'code/apply',
         'code/rollback',
         'code/change/:id',
+        'platform/scan-now',
+        'platform/scan-history',
+        'platform/changes',
       ],
       userRole: req.platformRole,
       animationState: animationControlService.getState(),
