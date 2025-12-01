@@ -91,7 +91,7 @@ import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
 import { createHealthCheckTicket } from "./services/autoTicketCreation";
 import { sendMonitoringAlert } from "./services/externalMonitoring";
-import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI } from "./services/healthCheck";
+import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI, checkQuickBooks, checkGusto, getIntegrationHealthSummary } from "./services/healthCheck";
 import { getTimeEntriesByEmployee, getTimeEntriesByWorkspace, getPendingTimeEntries, approveTimeEntry, rejectTimeEntry, calculatePayrollHours, createTimeEntry } from "./services/timeEntryService";
 import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData } from "./services/exportService";
 import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "./services/invoiceAdjustmentService";
@@ -2096,6 +2096,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Integration health endpoint - QuickBooks and Gusto status
+  app.get('/api/integrations/health', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const healthData = await getIntegrationHealthSummary();
+      res.json(healthData);
+    } catch (error: any) {
+      console.error('[IntegrationHealth] Error:', error.message);
+      res.status(500).json({ 
+        error: 'Failed to check integration health',
+        quickbooks: { service: 'quickbooks', status: 'down', isCritical: false, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        gusto: { service: 'gusto', status: 'down', isCritical: false, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        overall: 'down',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
   // Organization status endpoint - returns org-aware status for universal toast notifications
   app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {

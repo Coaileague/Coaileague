@@ -2,7 +2,7 @@
 // Derived from schema enums to ensure type safety
 
 export type ServiceStatus = 'operational' | 'degraded' | 'down';
-export type ServiceKey = 'database' | 'chat_websocket' | 'gemini_ai' | 'object_storage' | 'stripe' | 'email';
+export type ServiceKey = 'database' | 'chat_websocket' | 'gemini_ai' | 'object_storage' | 'stripe' | 'email' | 'quickbooks' | 'gusto';
 export type ErrorType = 'connection_failed' | 'timeout' | 'server_error' | 'unknown';
 export type IncidentStatus = 'submitted' | 'triaged' | 'resolved' | 'dismissed';
 

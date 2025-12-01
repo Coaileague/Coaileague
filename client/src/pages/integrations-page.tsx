@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { FRIENDLY_LABELS, FRIENDLY_MESSAGES, FRIENDLY_HELP, friendlyError } from '@/lib/friendlyStrings';
+import { IntegrationHealthPanel } from '@/components/integration-health-panel';
 
 // Helper function for relative time
 function getRelativeTime(date: Date): string {
@@ -312,30 +313,36 @@ export default function IntegrationsPage() {
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <IntegrationCard
-          title="QuickBooks Online"
-          description="Automated invoicing and financial management"
-          partner="quickbooks"
-          connection={quickbooksConnection}
-          icon={
-            <svg className="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="currentColor">
-              <rect width="24" height="24" rx="4" />
-            </svg>
-          }
-        />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 grid gap-6 md:grid-cols-2">
+          <IntegrationCard
+            title="QuickBooks Online"
+            description="Automated invoicing and financial management"
+            partner="quickbooks"
+            connection={quickbooksConnection}
+            icon={
+              <svg className="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                <rect width="24" height="24" rx="4" />
+              </svg>
+            }
+          />
 
-        <IntegrationCard
-          title="Gusto Payroll"
-          description="Streamlined payroll processing and employee management"
-          partner="gusto"
-          connection={gustoConnection}
-          icon={
-            <svg className="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" />
-            </svg>
-          }
-        />
+          <IntegrationCard
+            title="Gusto Payroll"
+            description="Streamlined payroll processing and employee management"
+            partner="gusto"
+            connection={gustoConnection}
+            icon={
+              <svg className="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+            }
+          />
+        </div>
+
+        <div className="lg:col-span-1">
+          <IntegrationHealthPanel />
+        </div>
       </div>
 
       <Card>

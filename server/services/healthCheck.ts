@@ -378,6 +378,132 @@ export async function checkStripe(): Promise<ServiceHealth> {
   }
 }
 
+// QuickBooks health check - Check connection status and token freshness
+export async function checkQuickBooks(): Promise<ServiceHealth> {
+  const cached = getCached('quickbooks');
+  if (cached) return cached;
+
+  try {
+    // Use aggregation to get accurate counts across all connections
+    const countResult = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_connected,
+        COUNT(CASE WHEN expires_at < NOW() + INTERVAL '24 hours' THEN 1 END) as expiring_soon
+      FROM partner_connections 
+      WHERE partner_type = 'quickbooks' 
+      AND status = 'connected'
+    `);
+    
+    const row = countResult.rows?.[0] as { total_connected: string; expiring_soon: string } | undefined;
+    const connectedCount = parseInt(row?.total_connected || '0', 10);
+    const expiringCount = parseInt(row?.expiring_soon || '0', 10);
+    
+    if (connectedCount === 0) {
+      const result: ServiceHealth = {
+        service: 'quickbooks',
+        status: 'operational',
+        isCritical: false,
+        message: 'QuickBooks integration ready (no active connections)',
+        lastChecked: new Date().toISOString(),
+        metadata: { connectedAccounts: 0 },
+      };
+      setCache('quickbooks', result, CACHE_TTL_MS);
+      return result;
+    }
+
+    const status: ServiceStatus = expiringCount > 0 ? 'degraded' : 'operational';
+    const result: ServiceHealth = {
+      service: 'quickbooks',
+      status,
+      isCritical: false,
+      message: expiringCount > 0 
+        ? `QuickBooks: ${expiringCount} connection(s) need token refresh`
+        : `QuickBooks: ${connectedCount} active connection(s)`,
+      lastChecked: new Date().toISOString(),
+      metadata: {
+        connectedAccounts: connectedCount,
+        expiringTokens: expiringCount,
+      },
+    };
+
+    setCache('quickbooks', result, CACHE_TTL_MS);
+    return result;
+  } catch (error: any) {
+    const result: ServiceHealth = {
+      service: 'quickbooks',
+      status: 'degraded',
+      isCritical: false,
+      message: `QuickBooks status check failed: ${error.message}`,
+      lastChecked: new Date().toISOString(),
+    };
+    setCache('quickbooks', result, FAILURE_CACHE_TTL_MS);
+    return result;
+  }
+}
+
+// Gusto health check - Check connection status and token freshness
+export async function checkGusto(): Promise<ServiceHealth> {
+  const cached = getCached('gusto');
+  if (cached) return cached;
+
+  try {
+    // Use aggregation to get accurate counts across all connections
+    const countResult = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_connected,
+        COUNT(CASE WHEN expires_at < NOW() + INTERVAL '24 hours' THEN 1 END) as expiring_soon
+      FROM partner_connections 
+      WHERE partner_type = 'gusto' 
+      AND status = 'connected'
+    `);
+    
+    const row = countResult.rows?.[0] as { total_connected: string; expiring_soon: string } | undefined;
+    const connectedCount = parseInt(row?.total_connected || '0', 10);
+    const expiringCount = parseInt(row?.expiring_soon || '0', 10);
+    
+    if (connectedCount === 0) {
+      const result: ServiceHealth = {
+        service: 'gusto',
+        status: 'operational',
+        isCritical: false,
+        message: 'Gusto integration ready (no active connections)',
+        lastChecked: new Date().toISOString(),
+        metadata: { connectedAccounts: 0 },
+      };
+      setCache('gusto', result, CACHE_TTL_MS);
+      return result;
+    }
+
+    const status: ServiceStatus = expiringCount > 0 ? 'degraded' : 'operational';
+    const result: ServiceHealth = {
+      service: 'gusto',
+      status,
+      isCritical: false,
+      message: expiringCount > 0 
+        ? `Gusto: ${expiringCount} connection(s) need token refresh`
+        : `Gusto: ${connectedCount} active connection(s)`,
+      lastChecked: new Date().toISOString(),
+      metadata: {
+        connectedAccounts: connectedCount,
+        expiringTokens: expiringCount,
+      },
+    };
+
+    setCache('gusto', result, CACHE_TTL_MS);
+    return result;
+  } catch (error: any) {
+    const result: ServiceHealth = {
+      service: 'gusto',
+      status: 'degraded',
+      isCritical: false,
+      message: `Gusto status check failed: ${error.message}`,
+      lastChecked: new Date().toISOString(),
+    };
+    setCache('gusto', result, FAILURE_CACHE_TTL_MS);
+    return result;
+  }
+}
+
 // Email (Resend) health check - configuration check
 // Actual email send would be too expensive for health checks
 export async function checkEmail(): Promise<ServiceHealth> {
@@ -432,6 +558,8 @@ export async function getHealthSummary(): Promise<HealthSummary> {
     checkObjectStorage(),
     checkStripe(),
     checkEmail(),
+    checkQuickBooks(),
+    checkGusto(),
   ]);
 
   // Calculate stats
@@ -469,9 +597,36 @@ export async function getServiceHealth(service: string): Promise<ServiceHealth |
       return await checkStripe();
     case 'email':
       return await checkEmail();
+    case 'quickbooks':
+      return await checkQuickBooks();
+    case 'gusto':
+      return await checkGusto();
     default:
       return null;
   }
+}
+
+// Get integration-specific health summary (QuickBooks + Gusto)
+export async function getIntegrationHealthSummary(): Promise<{
+  quickbooks: ServiceHealth;
+  gusto: ServiceHealth;
+  overall: ServiceStatus;
+  timestamp: string;
+}> {
+  const [quickbooks, gusto] = await Promise.all([
+    checkQuickBooks(),
+    checkGusto(),
+  ]);
+
+  const hasDown = quickbooks.status === 'down' || gusto.status === 'down';
+  const hasDegraded = quickbooks.status === 'degraded' || gusto.status === 'degraded';
+  
+  return {
+    quickbooks,
+    gusto,
+    overall: hasDown ? 'down' : hasDegraded ? 'degraded' : 'operational',
+    timestamp: new Date().toISOString(),
+  };
 }
 
 /**
