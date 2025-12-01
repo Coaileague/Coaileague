@@ -357,6 +357,302 @@ class HelpaiActionOrchestrator {
       }
     });
 
+    // ============================================================================
+    // CODE EDITOR ACTIONS - AI Brain can propose code changes for approval
+    // ============================================================================
+
+    // Stage Code Change
+    this.registerAction({
+      actionId: 'code.stage_change',
+      name: 'Stage Code Change',
+      category: 'system',
+      description: 'Stage a code change for user approval before applying',
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const { filePath, changeType, proposedContent, title, description, requestReason, conversationId, priority, category, affectedModule } = request.payload || {};
+        
+        if (!filePath || !changeType || !title || !description) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required fields: filePath, changeType, title, description',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await aiBrainCodeEditor.stageCodeChange({
+          filePath,
+          changeType,
+          proposedContent,
+          title,
+          description,
+          requestReason: requestReason || `Requested via HelpAI by ${request.userId}`,
+          conversationId,
+          priority,
+          category,
+          affectedModule
+        }, request.userId);
+
+        return {
+          success: result.success,
+          actionId: request.actionId,
+          message: result.success ? 'Code change staged for approval' : (result.error || 'Failed to stage change'),
+          data: { changeId: result.changeId },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
+    // Stage Batch Code Changes
+    this.registerAction({
+      actionId: 'code.stage_batch',
+      name: 'Stage Batch Code Changes',
+      category: 'system',
+      description: 'Stage multiple code changes as a batch for approval',
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const { title, description, changes, conversationId, whatsNewTitle, whatsNewDescription } = request.payload || {};
+        
+        if (!title || !description || !changes || !Array.isArray(changes)) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required fields: title, description, changes[]',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await aiBrainCodeEditor.stageBatchChanges({
+          title,
+          description,
+          changes,
+          conversationId,
+          whatsNewTitle,
+          whatsNewDescription
+        }, request.userId);
+
+        return {
+          success: result.success,
+          actionId: request.actionId,
+          message: result.success ? 'Batch changes staged for approval' : (result.errors?.join(', ') || 'Failed to stage batch'),
+          data: { batchId: result.batchId, changeIds: result.changeIds },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
+    // Get Pending Code Changes
+    this.registerAction({
+      actionId: 'code.get_pending',
+      name: 'Get Pending Code Changes',
+      category: 'system',
+      description: 'Get all pending code changes awaiting approval',
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const pendingChanges = await aiBrainCodeEditor.getPendingChanges();
+
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `Found ${pendingChanges.length} pending changes`,
+          data: { pendingChanges },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
+    // Approve Code Change
+    this.registerAction({
+      actionId: 'code.approve',
+      name: 'Approve Code Change',
+      category: 'system',
+      description: 'Approve a staged code change',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const { changeId, notes } = request.payload || {};
+        
+        if (!changeId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required field: changeId',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await aiBrainCodeEditor.approveChange(changeId, request.userId, notes);
+
+        return {
+          success: result.success,
+          actionId: request.actionId,
+          message: result.message,
+          data: { changeId },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
+    // Reject Code Change
+    this.registerAction({
+      actionId: 'code.reject',
+      name: 'Reject Code Change',
+      category: 'system',
+      description: 'Reject a staged code change',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const { changeId, reason } = request.payload || {};
+        
+        if (!changeId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required field: changeId',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await aiBrainCodeEditor.rejectChange(changeId, request.userId, reason);
+
+        return {
+          success: result.success,
+          actionId: request.actionId,
+          message: result.message,
+          data: { changeId },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
+    // Apply Approved Code Change
+    this.registerAction({
+      actionId: 'code.apply',
+      name: 'Apply Approved Code Change',
+      category: 'system',
+      description: 'Apply an approved code change to the codebase',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const { changeId, sendWhatsNew } = request.payload || {};
+        
+        if (!changeId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required field: changeId',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        // Defense-in-depth: Verify the change is in a valid state before applying
+        const change = await aiBrainCodeEditor.getChangeById(changeId);
+        if (!change) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Code change not found',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        if (change.status !== 'approved') {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Can only apply approved changes (current status: ${change.status})`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await aiBrainCodeEditor.applyChange(changeId, request.userId, sendWhatsNew !== false);
+
+        return {
+          success: result.success,
+          actionId: request.actionId,
+          message: result.message,
+          data: { changeId, appliedAt: result.appliedAt },
+          executionTimeMs: Date.now() - startTime,
+          notificationSent: sendWhatsNew !== false
+        };
+      }
+    });
+
+    // Rollback Applied Change
+    this.registerAction({
+      actionId: 'code.rollback',
+      name: 'Rollback Applied Change',
+      category: 'system',
+      description: 'Rollback a previously applied code change',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { aiBrainCodeEditor } = await import('../ai-brain/aiBrainCodeEditor');
+        
+        const { changeId, reason } = request.payload || {};
+        
+        if (!changeId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required field: changeId',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        // Defense-in-depth: Verify the change is in a valid state before rollback
+        const change = await aiBrainCodeEditor.getChangeById(changeId);
+        if (!change) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Code change not found',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        if (change.status !== 'applied') {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Can only rollback applied changes (current status: ${change.status})`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        if (!change.rollbackAvailable) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Rollback not available for this change',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await aiBrainCodeEditor.rollbackChange(changeId);
+
+        return {
+          success: result.success,
+          actionId: request.actionId,
+          message: result.message,
+          data: { changeId, reason },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
     console.log(`[HelpAI Orchestrator] Registered ${ACTION_REGISTRY.size} built-in actions`);
   }
 

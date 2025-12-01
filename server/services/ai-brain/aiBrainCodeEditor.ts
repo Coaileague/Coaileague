@@ -407,42 +407,63 @@ class AIBrainCodeEditorService {
         return { success: false, message: `Change must be approved first (current status: ${change.status})` };
       }
 
-      const fullPath = path.join(WORKSPACE_ROOT, change.filePath);
-
-      switch (change.changeType) {
-        case 'create':
-        case 'modify':
-          if (!change.proposedContent) {
-            return { success: false, message: 'No proposed content for create/modify operation' };
-          }
-          await fs.mkdir(path.dirname(fullPath), { recursive: true });
-          await fs.writeFile(fullPath, change.proposedContent, 'utf-8');
-          break;
-
-        case 'delete':
-          await fs.unlink(fullPath);
-          break;
-
-        case 'rename':
-          if (!change.newFilePath) {
-            return { success: false, message: 'No new file path for rename operation' };
-          }
-          const newFullPath = path.join(WORKSPACE_ROOT, change.newFilePath);
-          await fs.mkdir(path.dirname(newFullPath), { recursive: true });
-          await fs.rename(fullPath, newFullPath);
-          break;
-      }
-
       const appliedAt = new Date();
 
-      await db.update(stagedCodeChanges)
+      const updateResult = await db.update(stagedCodeChanges)
         .set({
           status: 'applied',
           appliedAt,
           appliedBy: appliedById,
           updatedAt: new Date(),
         })
-        .where(eq(stagedCodeChanges.id, changeId));
+        .where(and(
+          eq(stagedCodeChanges.id, changeId),
+          eq(stagedCodeChanges.status, 'approved')
+        ))
+        .returning({ id: stagedCodeChanges.id });
+
+      if (updateResult.length === 0) {
+        const freshChange = await this.getChangeById(changeId);
+        const currentStatus = freshChange?.status || 'unknown';
+        console.log(`[AIBrainCodeEditor] Race condition detected - change ${changeId} status is now ${currentStatus}`);
+        return { 
+          success: false, 
+          message: `Change is no longer in approved state (current status: ${currentStatus}). Another process may have modified it.` 
+        };
+      }
+
+      const fullPath = path.join(WORKSPACE_ROOT, change.filePath);
+
+      try {
+        switch (change.changeType) {
+          case 'create':
+          case 'modify':
+            if (!change.proposedContent) {
+              await this.revertToApproved(changeId);
+              return { success: false, message: 'No proposed content for create/modify operation' };
+            }
+            await fs.mkdir(path.dirname(fullPath), { recursive: true });
+            await fs.writeFile(fullPath, change.proposedContent, 'utf-8');
+            break;
+
+          case 'delete':
+            await fs.unlink(fullPath);
+            break;
+
+          case 'rename':
+            if (!change.newFilePath) {
+              await this.revertToApproved(changeId);
+              return { success: false, message: 'No new file path for rename operation' };
+            }
+            const newFullPath = path.join(WORKSPACE_ROOT, change.newFilePath);
+            await fs.mkdir(path.dirname(newFullPath), { recursive: true });
+            await fs.rename(fullPath, newFullPath);
+            break;
+        }
+      } catch (fileError) {
+        await this.revertToApproved(changeId);
+        throw fileError;
+      }
 
       if (sendWhatsNew) {
         await this.sendWhatsNewNotification(change, appliedById);
@@ -485,31 +506,59 @@ class AIBrainCodeEditorService {
         return { success: false, message: 'Rollback not available for this change' };
       }
 
+      const updateResult = await db.update(stagedCodeChanges)
+        .set({
+          status: 'rolling_back',
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(stagedCodeChanges.id, changeId),
+          eq(stagedCodeChanges.status, 'applied')
+        ))
+        .returning({ id: stagedCodeChanges.id });
+
+      if (updateResult.length === 0) {
+        const freshChange = await this.getChangeById(changeId);
+        const currentStatus = freshChange?.status || 'unknown';
+        console.log(`[AIBrainCodeEditor] Race condition detected during rollback - change ${changeId} status is now ${currentStatus}`);
+        return { 
+          success: false, 
+          message: `Change is no longer in applied state (current status: ${currentStatus}). Another process may have modified it.` 
+        };
+      }
+
       const fullPath = path.join(WORKSPACE_ROOT, change.filePath);
 
-      switch (change.changeType) {
-        case 'create':
-          await fs.unlink(fullPath);
-          break;
+      try {
+        switch (change.changeType) {
+          case 'create':
+            await fs.unlink(fullPath);
+            break;
 
-        case 'modify':
-          if (change.originalContent !== null) {
-            await fs.writeFile(fullPath, change.originalContent, 'utf-8');
-          }
-          break;
+          case 'modify':
+            if (change.originalContent !== null) {
+              await fs.writeFile(fullPath, change.originalContent, 'utf-8');
+            }
+            break;
 
-        case 'delete':
-          if (change.originalContent !== null) {
-            await fs.writeFile(fullPath, change.originalContent, 'utf-8');
-          }
-          break;
+          case 'delete':
+            if (change.originalContent !== null) {
+              await fs.writeFile(fullPath, change.originalContent, 'utf-8');
+            }
+            break;
 
-        case 'rename':
-          if (change.newFilePath) {
-            const newFullPath = path.join(WORKSPACE_ROOT, change.newFilePath);
-            await fs.rename(newFullPath, fullPath);
-          }
-          break;
+          case 'rename':
+            if (change.newFilePath) {
+              const newFullPath = path.join(WORKSPACE_ROOT, change.newFilePath);
+              await fs.rename(newFullPath, fullPath);
+            }
+            break;
+        }
+      } catch (fileError) {
+        await db.update(stagedCodeChanges)
+          .set({ status: 'applied', updatedAt: new Date() })
+          .where(eq(stagedCodeChanges.id, changeId));
+        throw fileError;
       }
 
       await db.update(stagedCodeChanges)
@@ -534,6 +583,22 @@ class AIBrainCodeEditorService {
     } catch (error) {
       console.error('[AIBrainCodeEditor] Error rolling back change:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  private async revertToApproved(changeId: string): Promise<void> {
+    try {
+      await db.update(stagedCodeChanges)
+        .set({
+          status: 'approved',
+          appliedAt: null,
+          appliedBy: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(stagedCodeChanges.id, changeId));
+      console.log(`[AIBrainCodeEditor] Reverted change ${changeId} to approved status after file operation failure`);
+    } catch (error) {
+      console.error(`[AIBrainCodeEditor] Failed to revert change ${changeId} to approved:`, error);
     }
   }
 

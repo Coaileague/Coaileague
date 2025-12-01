@@ -432,6 +432,288 @@ supportCommandRouter.post('/animation/seasonal', requireSupportRole, async (req:
   }
 });
 
+// ============================================================================
+// CODE EDITOR COMMANDS - AI Brain Code Editing via Command Console
+// ============================================================================
+
+/**
+ * POST /api/support/command/code/stage
+ * Stage a code change for user approval
+ */
+supportCommandRouter.post('/code/stage', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const { filePath, changeType, proposedContent, title, description, requestReason, conversationId, priority, category, affectedModule } = req.body;
+    
+    if (!filePath || !changeType || !title || !description) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['filePath', 'changeType', 'title', 'description']
+      });
+    }
+
+    const result = await aiBrainCodeEditor.stageCodeChange({
+      filePath,
+      changeType,
+      proposedContent,
+      title,
+      description,
+      requestReason: requestReason || `Staged via Support Console by ${req.user?.id}`,
+      conversationId,
+      priority,
+      category,
+      affectedModule
+    }, req.user?.id || 'support-console');
+
+    await logSupportAction(req.user?.id || 'unknown', 'code_stage', {
+      filePath,
+      changeType,
+      title,
+      changeId: result.changeId
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Code stage error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/code/stage-batch
+ * Stage multiple code changes as a batch
+ */
+supportCommandRouter.post('/code/stage-batch', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const { title, description, changes, conversationId, whatsNewTitle, whatsNewDescription } = req.body;
+    
+    if (!title || !description || !changes || !Array.isArray(changes)) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['title', 'description', 'changes[]']
+      });
+    }
+
+    const result = await aiBrainCodeEditor.stageBatchChanges({
+      title,
+      description,
+      changes,
+      conversationId,
+      whatsNewTitle,
+      whatsNewDescription
+    }, req.user?.id || 'support-console');
+
+    await logSupportAction(req.user?.id || 'unknown', 'code_stage_batch', {
+      title,
+      batchId: result.batchId,
+      changesCount: changes.length
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Code stage batch error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/support/command/code/pending
+ * Get all pending code changes awaiting approval
+ */
+supportCommandRouter.get('/code/pending', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const pendingChanges = await aiBrainCodeEditor.getPendingChanges();
+
+    res.json({
+      success: true,
+      count: pendingChanges.length,
+      changes: pendingChanges
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Get pending changes error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/code/approve
+ * Approve a staged code change
+ */
+supportCommandRouter.post('/code/approve', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const { changeId, notes } = req.body;
+    
+    if (!changeId) {
+      return res.status(400).json({ error: 'changeId is required' });
+    }
+
+    const result = await aiBrainCodeEditor.approveChange(changeId, req.user?.id || 'support-console', notes);
+
+    await logSupportAction(req.user?.id || 'unknown', 'code_approve', {
+      changeId,
+      notes
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Code approve error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/code/reject
+ * Reject a staged code change
+ */
+supportCommandRouter.post('/code/reject', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const { changeId, reason } = req.body;
+    
+    if (!changeId) {
+      return res.status(400).json({ error: 'changeId is required' });
+    }
+
+    const result = await aiBrainCodeEditor.rejectChange(changeId, req.user?.id || 'support-console', reason);
+
+    await logSupportAction(req.user?.id || 'unknown', 'code_reject', {
+      changeId,
+      reason
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Code reject error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/code/apply
+ * Apply an approved code change to the codebase
+ */
+supportCommandRouter.post('/code/apply', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const { changeId, sendWhatsNew } = req.body;
+    
+    if (!changeId) {
+      return res.status(400).json({ error: 'changeId is required' });
+    }
+
+    // Verify the change is in a valid state for application before proceeding
+    const change = await aiBrainCodeEditor.getChangeById(changeId);
+    if (!change) {
+      return res.status(404).json({ error: 'Code change not found' });
+    }
+    if (change.status !== 'approved') {
+      return res.status(400).json({ 
+        error: 'Can only apply approved changes',
+        currentStatus: change.status
+      });
+    }
+
+    const result = await aiBrainCodeEditor.applyChange(changeId, req.user?.id || 'support-console', sendWhatsNew !== false);
+
+    await logSupportAction(req.user?.id || 'unknown', 'code_apply', {
+      changeId,
+      sendWhatsNew: sendWhatsNew !== false
+    });
+
+    // Broadcast code change applied notification
+    broadcastForceRefresh('code_change', {
+      action: 'applied',
+      changeId,
+      appliedAt: result.appliedAt
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Code apply error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/code/rollback
+ * Rollback a previously applied code change
+ */
+supportCommandRouter.post('/code/rollback', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const { changeId, reason } = req.body;
+    
+    if (!changeId) {
+      return res.status(400).json({ error: 'changeId is required' });
+    }
+
+    // Verify the change is in a valid state for rollback before proceeding
+    const change = await aiBrainCodeEditor.getChangeById(changeId);
+    if (!change) {
+      return res.status(404).json({ error: 'Code change not found' });
+    }
+    if (change.status !== 'applied') {
+      return res.status(400).json({ 
+        error: 'Can only rollback applied changes',
+        currentStatus: change.status
+      });
+    }
+
+    const result = await aiBrainCodeEditor.rollbackChange(changeId);
+
+    await logSupportAction(req.user?.id || 'unknown', 'code_rollback', {
+      changeId,
+      reason
+    });
+
+    // Broadcast rollback notification
+    broadcastForceRefresh('code_change', {
+      action: 'rolled_back',
+      changeId,
+      reason
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SupportConsole] Code rollback error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/support/command/code/change/:id
+ * Get details of a specific code change
+ */
+supportCommandRouter.get('/code/change/:id', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { aiBrainCodeEditor } = await import('../services/ai-brain/aiBrainCodeEditor');
+    
+    const change = await aiBrainCodeEditor.getChangeById(req.params.id);
+    
+    if (!change) {
+      return res.status(404).json({ error: 'Code change not found' });
+    }
+
+    res.json({
+      success: true,
+      change
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Get change error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * GET /api/support/command/status
  * Get current status of the command console and broadcast capabilities
@@ -452,6 +734,14 @@ supportCommandRouter.get('/status', requireSupportRole, async (req: Authenticate
         'animation',
         'animation/state',
         'animation/seasonal',
+        'code/stage',
+        'code/stage-batch',
+        'code/pending',
+        'code/approve',
+        'code/reject',
+        'code/apply',
+        'code/rollback',
+        'code/change/:id',
       ],
       userRole: req.platformRole,
       animationState: animationControlService.getState(),
