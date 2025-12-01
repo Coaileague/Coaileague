@@ -153,7 +153,7 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
-import { NotificationsCenter } from "@/components/notifications-center";
+import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 
 // Compact top-right utility cluster - Fortune 500 aesthetic
@@ -280,7 +280,7 @@ function AppContent() {
                 <a href="/" data-testid="link-logo-mobile" className="flex-shrink-0">
                   <CoAIleagueLogo width={140} height={46} showTagline={false} className="h-11 w-auto" />
                 </a>
-                <NotificationsCenter />
+                <NotificationsPopover />
               </div>
             </div>
           )}
@@ -482,7 +482,7 @@ function AppContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
-                    <NotificationsCenter />
+                    <NotificationsPopover />
                     {/* User Menu Dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
