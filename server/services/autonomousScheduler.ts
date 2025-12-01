@@ -1617,18 +1617,29 @@ export function startAutonomousScheduler() {
 
   // Platform Change Monitor - Every 15 minutes
   cron.schedule("*/15 * * * *", () => {
-    console.log(`🧠 [AI BRAIN] Platform change scan triggered at ${new Date().toISOString()}`);
+    console.log(`🧠 [AI BRAIN] 🕐 Scheduled platform scan triggered at ${new Date().toISOString()}`);
     (async () => {
       try {
         const result = await platformChangeMonitor.scanPlatform('scheduled');
-        if (result.changesDetected > 0) {
-          console.log(`🧠 [AI BRAIN] Platform scan complete: ${result.changesDetected} changes detected, ${result.notificationsSent} notifications sent`);
-        }
+        console.log(`🧠 [AI BRAIN] 🕐 Scheduled scan result: ${result.changesDetected} changes, ${result.notificationsSent} notifications`);
       } catch (error) {
-        console.error('[PlatformChangeMonitor] Scheduled scan error:', error);
+        console.error('🧠 [AI BRAIN] ❌ Scheduled scan error:', error);
       }
     })();
   });
+  
+  // Initial platform scan on startup
+  (async () => {
+    console.log('🧠 [AI BRAIN] Initializing platform scan on startup...');
+    try {
+      await new Promise(r => setTimeout(r, 3000));
+      console.log('🧠 [AI BRAIN] Running initial platform scan...');
+      const result = await platformChangeMonitor.scanPlatform('full');
+      console.log(`🧠 [AI BRAIN] ✅ Initial scan complete: ${result.changesDetected} changes, ${result.notificationsSent} notifications`);
+    } catch (error) {
+      console.error('🧠 [AI BRAIN] ❌ Initial scan error:', error);
+    }
+  })();
   console.log('✅ AI Brain Platform Change Monitor:');
   console.log('   Schedule: */15 * * * * (every 15 minutes)');
   console.log('   Scans platform for changes and notifies all users\n');
